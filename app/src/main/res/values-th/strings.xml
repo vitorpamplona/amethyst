@@ -185,12 +185,6 @@
     <string name="mark_all_new_as_read">ทำเครื่องหมายว่าอ่านแล้วทั้งหมดสำหรับข้อความใหม่</string>
     <string name="mark_all_as_read">ทพเครื่องหมายว่าอ่านแล้วทั้งหมด</string>
     <string name="backup_keys">สำรองข้อมูลรหัสลับ</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">        ## เคล็ดลับการสํารองข้อมูลและความปลอดภัยที่สําคัญ
-        \n\n บัญชีของคุณมีความปลอดภัยด้วยรหัสลับ key คือสตริงสุ่มยาวที่ขึ้นต้นด้วย **nsec1**  ทุกคนที่มีสิทธิ์เข้าถึงรหัสลับของคุณสามารถเผยแพร่เนื้อหาโดยใช้บัญชีของคุณได้
-        \n\n- **อย่า** ใส่รหัสลับของคุณในเว็บไซต์หรือซอฟต์แวร์ที่คุณไม่เชื่อถือ
-        \n- นักพัฒนา Amethyst จะ **ไม่เคย** ขอรหัสลับของคุณ
-        \n- **เก็บ** สําเนาสํารองคีย์ลับของคุณไว้อย่างปลอดภัยสําหรับการกู้คืนบัญชี เราขอแนะนําให้ใช้ password manager.
-    </string>
     <string name="secret_key_copied_to_clipboard">คัดลอก Secret key (nsec) ลงคลิปบอร์ด</string>
     <string name="copy_my_secret_key">คัดลอก secret key ของฉัน</string>
     <string name="biometric_authentication_failed"> เกิดข้อผิดพลาดในการตรวจสอบ</string>

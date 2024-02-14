@@ -182,12 +182,6 @@
     <string name="mark_all_new_as_read">Segna tutti i nuovi come letti</string>
     <string name="mark_all_as_read">Segna tutti come letti</string>
     <string name="backup_keys">Esegui backup delle chiavi</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Backup delle Chiavi e Consigli di Sicurezza
-        \n\nIl tuo account è reso sicuro da una chiave privata. La chiave è una lunga stringa di caratteri casuali che inizia con **nsec1**. Chiunque abbia accesso alla tua chiave privata puó pubblicare contenuti con la tua identitá.
-        \n\n- Non devi **mai** inserire la tua chiave privata in un sito o software di cui non ti fidi.
-        \n- Gli sviluppatori di Amethyst non chiederanno **mai** la tua chiave privata.
-        \n- Mantieni **sempre** al sicuro un backup della tua chiave privata per recuperare l\'account. Ti suggeriamo di usare un password manager.
-    </string>
     <string name="secret_key_copied_to_clipboard">Chiave segreta (nsec) copiata negli appunti</string>
     <string name="copy_my_secret_key">Copia la mia chiave segreta</string>
     <string name="biometric_authentication_failed">Autenticazione fallita</string>

@@ -182,12 +182,6 @@
     <string name="mark_all_new_as_read">Funga kama Mpya</string>
     <string name="mark_all_as_read">Funga kama Zimejulikana</string>
     <string name="backup_keys">Nakili Nakala za Ufunguo</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Ufundi wa Nakala ya Ufunguo na Usalama
-        \n\nAkaunti yako inalindwa na ufunguo wa siri. Ufunguo ni mfululizo mrefu wa herufi zisizo na mpangilio, ukitangulia na **nsec1**. Mtu yeyote aliye na ufikiaji wa ufunguo wako wa siri anaweza kuchapisha maudhui kwa kutumia kitambulisho chako.
-        \n\n- **Usiweke** ufunguo wako wa siri kwenye tovuti au programu usio na imani.
-        \n- Watengenezaji wa Amethyst **hawata** kuuliza ufunguo wako wa siri.
-        \n- **Tunashauri** kuwa na nakala rudufu salama ya ufunguo wako wa siri kwa ajili ya kupata akaunti. Tunapendekeza kutumia meneja wa nywila.
-    </string>
     <string name="secret_key_copied_to_clipboard">Ufunguo wa siri (nsec) umeinakiliwa kwenye ubao wa kunakili</string>
     <string name="copy_my_secret_key">Nakili Ufunguo Wangu wa Siri</string>
     <string name="biometric_authentication_failed">Uthibitishaji umeshindwa</string>

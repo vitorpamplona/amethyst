@@ -195,12 +195,6 @@
     <string name="mark_all_new_as_read">Označit všechny nové jako přečtené</string>
     <string name="mark_all_as_read">Označit všechny jako přečtené</string>
     <string name="backup_keys">Zálohovat klíče</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Tipy na zálohování a bezpečnost účtu
-        \n\nVáš účet je zabezpečen tajným klíčem. Klíč je dlouhý náhodný řetězec začínající **nsec1**. Každý, kdo má přístup k vašemu tajnému klíči, může publikovat obsah pod vaší identitou.
-        \n\n- **Nepoužívejte** svůj tajný klíč na webových stránkách nebo v softwaru, kterému nedůvěřujete.
-        \n- Vývojáři aplikace Amethyst vás **nikdy** nebudou žádat o váš tajný klíč.
-        \n- **Uchovávejte** si bezpečnou zálohu svého tajného klíče pro obnovení účtu. Doporučujeme používat správce hesel.
-    </string>
     <string name="secret_key_copied_to_clipboard">Tajný klíč (nsec) zkopírován do schránky</string>
     <string name="copy_my_secret_key">Zkopírovat můj tajný klíč</string>
     <string name="biometric_authentication_failed">Autentizace se nezdařila</string>
