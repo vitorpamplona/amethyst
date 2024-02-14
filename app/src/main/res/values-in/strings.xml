@@ -182,7 +182,6 @@
     <string name="mark_all_new_as_read">Tandai pesan baru telah dibaca</string>
     <string name="mark_all_as_read">Tandai semua telah dibaca</string>
     <string name="backup_keys">Cadangkan Kunci</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">"\n        ## Tip Pencadangan dan Keamanan Utama\n        \n\nAkun Anda diamankan dengan kunci rahasia. Kuncinya adalah string acak panjang yang dimulai dengan **nsec1**.. Siapa pun yang memiliki akses ke kunci rahasia Anda dapat mempublikasikan konten menggunakan identitas Anda.\n        \n\n- **Jangan** letakkan kunci rahasia Anda di situs web atau perangkat lunak apa pun yang tidak Anda percayai.\n        \n- Pengembang Aplikasi Amethyst **tidak akan pernah** meminta kunci rahasia Anda.\n        \n- **Pastikan** simpan cadangan aman kunci rahasia Anda untuk pemulihan akun. Kami merekomendasikan menggunakan aplikasi  khusus pengelola kata sandi.\n    "</string>
     <string name="secret_key_copied_to_clipboard">Kunci rahasia (nsec) disalin ke clipboard</string>
     <string name="copy_my_secret_key">Salin kunci rahasia saya</string>
     <string name="biometric_authentication_failed">Autentikasi gagal</string>

@@ -176,11 +176,6 @@
     <string name="mark_all_new_as_read">将所有新内容标记为已读</string>
     <string name="mark_all_as_read">将所有内容标记为已读</string>
     <string name="backup_keys">备份密匙</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">## 备份与安全提示
-        \n\n您的帐户由一个私人密钥保护。 密钥是以**nsec1**开头的长随机字符串。任何拥有您的私人密钥的人都可以使用您的身份发布内容。
-        \n\n- **不要**将您的私人密钥添加到您不信任的任何网站或软件，亦不要在网上公开。
-        \n- Amethyst 开发人员**永远不会**要求您提供私人密钥。
-        \n- **请**保留您的私人密钥的安全备份，以备帐户恢复。 我们建议使用密码管理器。</string>
     <string name="secret_key_copied_to_clipboard">私人密钥（nsec）已复制到剪贴板</string>
     <string name="copy_my_secret_key">复制我的私人密钥</string>
     <string name="biometric_authentication_failed">身份验证失败</string>
