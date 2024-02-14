@@ -50,8 +50,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -99,7 +97,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -158,9 +155,9 @@ import com.vitorpamplona.amethyst.ui.note.RegularPostIcon
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.MyTextField
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -526,23 +523,11 @@ fun NewPostView(
                             }
                         }
 
-                        val userSuggestions = postViewModel.userSuggestions
-                        if (userSuggestions.isNotEmpty()) {
-                            LazyColumn(
-                                contentPadding =
-                                    PaddingValues(
-                                        top = 10.dp,
-                                    ),
-                                modifier = Modifier.heightIn(0.dp, 300.dp),
-                            ) {
-                                itemsIndexed(
-                                    userSuggestions,
-                                    key = { _, item -> item.pubkeyHex },
-                                ) { _, item ->
-                                    UserLine(item, accountViewModel) { postViewModel.autocompleteWithUser(item) }
-                                }
-                            }
-                        }
+                        ShowUserSuggestionList(
+                            postViewModel,
+                            accountViewModel,
+                            modifier = Modifier.heightIn(0.dp, 300.dp),
+                        )
 
                         BottomRowActions(postViewModel)
                     }
@@ -649,7 +634,6 @@ private fun PollField(postViewModel: NewPostViewModel) {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun MessageField(postViewModel: NewPostViewModel) {
     val focusRequester = remember { FocusRequester() }

@@ -25,11 +25,13 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -92,6 +94,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.ServerOption
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
+import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.DisplayRoomSubject
@@ -363,12 +366,12 @@ fun PrivateMessageEditFieldRow(
     accountViewModel: AccountViewModel,
     onSendNewMessage: () -> Unit,
 ) {
-    Row(
+    Column(
         modifier = EditFieldModifier,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
     ) {
         val context = LocalContext.current
+
+        ShowUserSuggestionList(channelScreenModel, accountViewModel)
 
         MyTextField(
             value = channelScreenModel.message,
@@ -378,7 +381,7 @@ fun PrivateMessageEditFieldRow(
                     capitalization = KeyboardCapitalization.Sentences,
                 ),
             shape = EditFieldBorder,
-            modifier = Modifier.weight(1f, true),
+            modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
                     text = stringResource(R.string.reply_here),
@@ -461,7 +464,33 @@ fun PrivateMessageEditFieldRow(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                 ),
+            visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
         )
+    }
+}
+
+@Composable
+fun ShowUserSuggestionList(
+    channelScreenModel: NewPostViewModel,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier.heightIn(0.dp, 200.dp),
+) {
+    val userSuggestions = channelScreenModel.userSuggestions
+    if (userSuggestions.isNotEmpty()) {
+        LazyColumn(
+            contentPadding =
+                PaddingValues(
+                    top = 10.dp,
+                ),
+            modifier = modifier,
+        ) {
+            itemsIndexed(
+                userSuggestions,
+                key = { _, item -> item.pubkeyHex },
+            ) { _, item ->
+                UserLine(item, accountViewModel) { channelScreenModel.autocompleteWithUser(item) }
+            }
+        }
     }
 }
 
