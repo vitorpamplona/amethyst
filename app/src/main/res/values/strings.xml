@@ -142,12 +142,15 @@
     <string name="clear">Clear</string>
     <string name="app_logo">App Logo</string>
     <string name="nsec_npub_hex_private_key">nsec.. or npub..</string>
+    <string name="ncryptsec_password">password to open the key</string>
     <string name="show_password">Show Password</string>
     <string name="hide_password">Hide Password</string>
     <string name="invalid_key">Invalid key</string>
+    <string name="invalid_key_with_message">Invalid key: %1$s</string>
     <string name="i_accept_the">"I accept the "</string>
     <string name="terms_of_use">terms of use</string>
     <string name="acceptance_of_terms_is_required">Acceptance of terms is required</string>
+    <string name="password_is_required">Password is required</string>
     <string name="key_is_required">Key is required</string>
     <string name="name_is_required">A name is required</string>
     <string name="login">Login</string>
@@ -200,15 +203,22 @@
     <string name="mark_all_new_as_read">Mark all New as read</string>
     <string name="mark_all_as_read">Mark all as read</string>
     <string name="backup_keys">Backup Keys</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">
+    <string name="account_backup_tips2_md" tools:ignore="Typos">
         ## Key Backup and Safety Tips
-        \n\nYour account is secured by a secret key. The key is long random string starting with **nsec1**. Anyone who has access to your secret key can publish content using your identity.
+        \n\nYour account is secured by a secret key. The key is a long sequence of characters starting with **nsec1**. Anyone who has access to this secret key can post and change your identity.
         \n\n- Do **not** put your secret key in any website or software you do not trust.
-        \n- Amethyst developers will **never** ask you for your secret key.
+        \n- Amethyst developers will **never** ask for your secret key.
         \n- **Do** keep a secure backup of your secret key for account recovery. We recommend using a password manager.
     </string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">
+        For additional security, you can encrypt your key with a password. This key starts with **ncryptsec1** and cannot be used without your password.
+        \n\nIf you lose your password, you will not be able to recover your key.
+    </string>
+
+    <string name="failed_to_encrypt_key">Failed to encrypt your private key</string>
     <string name="secret_key_copied_to_clipboard">Secret key (nsec) copied to clipboard</string>
     <string name="copy_my_secret_key">Copy my secret key</string>
+    <string name="encrypt_and_copy_my_secret_key">Encrypt and copy my secret key</string>
     <string name="biometric_authentication_failed">Authentication failed</string>
     <string name="biometric_authentication_failed_explainer">Biometrics failed to authenticate the owner of this phone</string>
     <string name="biometric_authentication_failed_explainer_with_error">Biometrics failed to authenticate the owner of this phone. Error: %1$s</string>

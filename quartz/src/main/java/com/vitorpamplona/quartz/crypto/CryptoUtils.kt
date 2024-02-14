@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.crypto
 
 import android.util.Log
+import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.Event
 import fr.acinq.secp256k1.Secp256k1
 import java.security.MessageDigest
@@ -34,6 +35,7 @@ object CryptoUtils {
     private val nip04 = Nip04(secp256k1, random)
     private val nip44v1 = Nip44v1(secp256k1, random)
     private val nip44v2 = Nip44v2(secp256k1, random)
+    private val nip49 = Nip49(secp256k1, random)
 
     fun clearCache() {
         nip04.clearCache()
@@ -260,6 +262,21 @@ object CryptoUtils {
         } else {
             decryptNIP44FromBase64(payload, privateKey, pubKey)
         }
+    }
+
+    fun decryptNIP49(
+        payload: String,
+        password: String,
+    ): String? {
+        if (payload.isEmpty() || password.isEmpty()) return null
+        return nip49.decrypt(payload, password)
+    }
+
+    fun encryptNIP49(
+        key: HexKey,
+        password: String,
+    ): String? {
+        return nip49.encrypt(key, password, 16, Nip49.EncryptedInfo.CLIENT_DOES_NOT_TRACK)
     }
 
     class EncryptedInfoString(

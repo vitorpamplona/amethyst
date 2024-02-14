@@ -55,6 +55,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -90,10 +91,12 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
@@ -141,6 +144,16 @@ fun LoginPage(
     var connectOrbotDialogOpen by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     var loginWithExternalSigner by remember { mutableStateOf(false) }
+
+    var processingLogin by remember { mutableStateOf(false) }
+
+    val password = remember { mutableStateOf(TextFieldValue("")) }
+    val needsPassword =
+        remember {
+            derivedStateOf {
+                key.value.text.startsWith("ncryptsec1")
+            }
+        }
 
     if (loginWithExternalSigner) {
         val externalSignerLauncher = remember { ExternalSignerLauncher("", signerPackageName = "") }
@@ -243,33 +256,47 @@ fun LoginPage(
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        var showPassword by remember { mutableStateOf(false) }
+        var showCharsKey by remember { mutableStateOf(false) }
+        var showCharsPassword by remember { mutableStateOf(false) }
 
-        val autofillNode =
+        val autofillNodeKey =
             AutofillNode(
                 autofillTypes = listOf(AutofillType.Password),
                 onFill = { key.value = TextFieldValue(it) },
             )
+
+        val autofillNodePassword =
+            AutofillNode(
+                autofillTypes = listOf(AutofillType.Password),
+                onFill = { key.value = TextFieldValue(it) },
+            )
+
         val autofill = LocalAutofill.current
-        LocalAutofillTree.current += autofillNode
+        LocalAutofillTree.current += autofillNodeKey
+        LocalAutofillTree.current += autofillNodePassword
 
         OutlinedTextField(
             modifier =
                 Modifier
                     .onGloballyPositioned { coordinates ->
-                        autofillNode.boundingBox = coordinates.boundsInWindow()
+                        autofillNodeKey.boundingBox = coordinates.boundsInWindow()
                     }
                     .onFocusChanged { focusState ->
                         autofill?.run {
                             if (focusState.isFocused) {
-                                requestAutofillForNode(autofillNode)
+                                requestAutofillForNode(autofillNodeKey)
                             } else {
-                                cancelAutofillForNode(autofillNode)
+                                cancelAutofillForNode(autofillNodeKey)
                             }
                         }
                     },
             value = key.value,
-            onValueChange = { key.value = it },
+            onValueChange = {
+                key.value = it
+                if (errorMessage.isNotEmpty()) {
+                    errorMessage = ""
+                }
+            },
             keyboardOptions =
                 KeyboardOptions(
                     autoCorrect = false,
@@ -284,12 +311,12 @@ fun LoginPage(
             },
             trailingIcon = {
                 Row {
-                    IconButton(onClick = { showPassword = !showPassword }) {
+                    IconButton(onClick = { showCharsKey = !showCharsKey }) {
                         Icon(
                             imageVector =
-                                if (showPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                if (showCharsKey) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                             contentDescription =
-                                if (showPassword) {
+                                if (showCharsKey) {
                                     stringResource(R.string.show_password)
                                 } else {
                                     stringResource(
@@ -322,22 +349,32 @@ fun LoginPage(
                 }
             },
             visualTransformation =
-                if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                if (showCharsKey) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardActions =
                 KeyboardActions(
                     onGo = {
                         if (!acceptedTerms.value) {
-                            termsAcceptanceIsRequired =
-                                context.getString(R.string.acceptance_of_terms_is_required)
+                            termsAcceptanceIsRequired = context.getString(R.string.acceptance_of_terms_is_required)
                         }
 
                         if (key.value.text.isBlank()) {
                             errorMessage = context.getString(R.string.key_is_required)
                         }
 
-                        if (acceptedTerms.value && key.value.text.isNotBlank()) {
-                            accountStateViewModel.login(key.value.text, useProxy.value, proxyPort.value.toInt()) {
-                                errorMessage = context.getString(R.string.invalid_key)
+                        if (needsPassword.value && password.value.text.isBlank()) {
+                            errorMessage = context.getString(R.string.password_is_required)
+                        }
+
+                        if (acceptedTerms.value && key.value.text.isNotBlank() && !(needsPassword.value && password.value.text.isBlank())) {
+                            processingLogin = true
+                            accountStateViewModel.login(key.value.text, password.value.text, useProxy.value, proxyPort.value.toInt()) {
+                                processingLogin = false
+                                errorMessage =
+                                    if (it != null) {
+                                        context.getString(R.string.invalid_key_with_message, it)
+                                    } else {
+                                        context.getString(R.string.invalid_key)
+                                    }
                             }
                         }
                     },
@@ -353,39 +390,128 @@ fun LoginPage(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        if (PackageUtils.isOrbotInstalled(context)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = useProxy.value,
-                    onCheckedChange = {
-                        if (it) {
-                            connectOrbotDialogOpen = true
+        if (needsPassword.value) {
+            OutlinedTextField(
+                modifier =
+                    Modifier
+                        .onGloballyPositioned { coordinates ->
+                            autofillNodePassword.boundingBox = coordinates.boundsInWindow()
                         }
-                    },
-                )
-
-                Text(stringResource(R.string.connect_via_tor))
-            }
-
-            if (connectOrbotDialogOpen) {
-                ConnectOrbotDialog(
-                    onClose = { connectOrbotDialogOpen = false },
-                    onPost = {
-                        connectOrbotDialogOpen = false
-                        useProxy.value = true
-                    },
-                    onError = {
-                        scope.launch {
-                            Toast.makeText(
-                                context,
-                                it,
-                                Toast.LENGTH_LONG,
+                        .onFocusChanged { focusState ->
+                            autofill?.run {
+                                if (focusState.isFocused) {
+                                    requestAutofillForNode(autofillNodePassword)
+                                } else {
+                                    cancelAutofillForNode(autofillNodePassword)
+                                }
+                            }
+                        },
+                value = password.value,
+                onValueChange = {
+                    password.value = it
+                    if (errorMessage.isNotEmpty()) {
+                        errorMessage = ""
+                    }
+                },
+                keyboardOptions =
+                    KeyboardOptions(
+                        autoCorrect = false,
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Go,
+                    ),
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.ncryptsec_password),
+                        color = MaterialTheme.colorScheme.placeholderText,
+                    )
+                },
+                trailingIcon = {
+                    Row {
+                        IconButton(onClick = { showCharsPassword = !showCharsPassword }) {
+                            Icon(
+                                imageVector =
+                                    if (showCharsPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                contentDescription =
+                                    if (showCharsPassword) {
+                                        stringResource(R.string.show_password)
+                                    } else {
+                                        stringResource(
+                                            R.string.hide_password,
+                                        )
+                                    },
                             )
-                                .show()
                         }
-                    },
-                    proxyPort,
-                )
+                    }
+                },
+                visualTransformation =
+                    if (showCharsPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardActions =
+                    KeyboardActions(
+                        onGo = {
+                            if (!acceptedTerms.value) {
+                                termsAcceptanceIsRequired = context.getString(R.string.acceptance_of_terms_is_required)
+                            }
+
+                            if (key.value.text.isBlank()) {
+                                errorMessage = context.getString(R.string.key_is_required)
+                            }
+
+                            if (needsPassword.value && password.value.text.isBlank()) {
+                                errorMessage = context.getString(R.string.password_is_required)
+                            }
+
+                            if (acceptedTerms.value && key.value.text.isNotBlank() && !(needsPassword.value && password.value.text.isBlank())) {
+                                processingLogin = true
+                                accountStateViewModel.login(key.value.text, password.value.text, useProxy.value, proxyPort.value.toInt()) {
+                                    processingLogin = false
+                                    errorMessage =
+                                        if (it != null) {
+                                            context.getString(R.string.invalid_key_with_message, it)
+                                        } else {
+                                            context.getString(R.string.invalid_key)
+                                        }
+                                }
+                            }
+                        },
+                    ),
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            if (PackageUtils.isOrbotInstalled(context)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = useProxy.value,
+                        onCheckedChange = {
+                            if (it) {
+                                connectOrbotDialogOpen = true
+                            }
+                        },
+                    )
+
+                    Text(stringResource(R.string.connect_via_tor))
+                }
+
+                if (connectOrbotDialogOpen) {
+                    ConnectOrbotDialog(
+                        onClose = { connectOrbotDialogOpen = false },
+                        onPost = {
+                            connectOrbotDialogOpen = false
+                            useProxy.value = true
+                        },
+                        onError = {
+                            scope.launch {
+                                Toast.makeText(
+                                    context,
+                                    it,
+                                    Toast.LENGTH_LONG,
+                                )
+                                    .show()
+                            }
+                        },
+                        proxyPort,
+                    )
+                }
             }
         }
 
@@ -448,19 +574,33 @@ fun LoginPage(
                         errorMessage = context.getString(R.string.key_is_required)
                     }
 
-                    if (acceptedTerms.value && key.value.text.isNotBlank()) {
-                        accountStateViewModel.login(key.value.text, useProxy.value, proxyPort.value.toInt()) {
-                            errorMessage = context.getString(R.string.invalid_key)
+                    if (needsPassword.value && password.value.text.isBlank()) {
+                        errorMessage = context.getString(R.string.password_is_required)
+                    }
+
+                    if (acceptedTerms.value && key.value.text.isNotBlank() && !(needsPassword.value && password.value.text.isBlank())) {
+                        processingLogin = true
+                        accountStateViewModel.login(key.value.text, password.value.text, useProxy.value, proxyPort.value.toInt()) {
+                            processingLogin = false
+                            errorMessage =
+                                if (it != null) {
+                                    context.getString(R.string.invalid_key_with_message, it)
+                                } else {
+                                    context.getString(R.string.invalid_key)
+                                }
                         }
                     }
                 },
                 shape = RoundedCornerShape(Size35dp),
                 modifier = Modifier.height(50.dp),
             ) {
-                Text(
-                    text = stringResource(R.string.login),
-                    modifier = Modifier.padding(horizontal = 40.dp),
-                )
+                Row(modifier = Modifier.padding(horizontal = 40.dp)) {
+                    if (processingLogin) {
+                        LoadingAnimation()
+                        Spacer(modifier = DoubleHorzSpacer)
+                    }
+                    Text(stringResource(R.string.login))
+                }
             }
         }
 

@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.Nip19
@@ -195,6 +196,42 @@ class AccountStateViewModel() : ViewModel() {
 
     fun login(
         key: String,
+        password: String,
+        useProxy: Boolean,
+        proxyPort: Int,
+        loginWithExternalSigner: Boolean = false,
+        packageName: String = "",
+        onError: (String?) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (key.startsWith("ncryptsec")) {
+                val newKey =
+                    try {
+                        CryptoUtils.decryptNIP49(key, password)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        onError(e.message)
+                        return@launch
+                    }
+
+                if (newKey == null) {
+                    onError("Could not decrypt key with provided password")
+                    Log.e("Login", "Could not decrypt ncryptsec")
+                } else {
+                    loginSync(newKey, useProxy, proxyPort, loginWithExternalSigner, packageName) {
+                        onError(null)
+                    }
+                }
+            } else {
+                loginSync(key, useProxy, proxyPort, loginWithExternalSigner, packageName) {
+                    onError(null)
+                }
+            }
+        }
+    }
+
+    fun login(
+        key: String,
         useProxy: Boolean,
         proxyPort: Int,
         loginWithExternalSigner: Boolean = false,
@@ -202,13 +239,24 @@ class AccountStateViewModel() : ViewModel() {
         onError: () -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                loginAndStartUI(key, useProxy, proxyPort, loginWithExternalSigner, packageName)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e("Login", "Could not sign in", e)
-                onError()
-            }
+            loginSync(key, useProxy, proxyPort, loginWithExternalSigner, packageName, onError)
+        }
+    }
+
+    suspend fun loginSync(
+        key: String,
+        useProxy: Boolean,
+        proxyPort: Int,
+        loginWithExternalSigner: Boolean = false,
+        packageName: String = "",
+        onError: () -> Unit,
+    ) {
+        try {
+            loginAndStartUI(key, useProxy, proxyPort, loginWithExternalSigner, packageName)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e("Login", "Could not sign in", e)
+            onError()
         }
     }
 

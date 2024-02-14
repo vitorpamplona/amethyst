@@ -39,14 +39,14 @@ class Nip49(val secp256k1: Secp256k1, val random: SecureRandom) {
     fun decrypt(
         nCryptSec: String,
         password: String,
-    ): HexKey? {
+    ): HexKey {
         return decrypt(EncryptedInfo.decodePayload(nCryptSec), password)
     }
 
     fun decrypt(
         encryptedInfo: EncryptedInfo?,
         password: String = "",
-    ): String? {
+    ): String {
         check(encryptedInfo != null) { "Couldn't decode key" }
         check(encryptedInfo.version == EncryptedInfo.V) { "invalid version" }
 
@@ -65,6 +65,8 @@ class Nip49(val secp256k1: Secp256k1, val random: SecureRandom) {
             encryptedInfo.nonce,
             key,
         )
+
+        check(m.any { it > 0 }) { "Incorrect password" }
 
         return m.toHexKey()
     }
@@ -129,9 +131,9 @@ class Nip49(val secp256k1: Secp256k1, val random: SecureRandom) {
         companion object {
             const val V: Byte = 0x02
 
-            const val UNSAFE_HANDLING = 0x00
-            const val SAFE_HANDLING = 0x01
-            const val CLIENT_DOES_NOT_TRACK = 0x02
+            const val UNSAFE_HANDLING: Byte = 0x00
+            const val SAFE_HANDLING: Byte = 0x01
+            const val CLIENT_DOES_NOT_TRACK: Byte = 0x02
 
             fun decodePayload(nCryptSec: String): EncryptedInfo? {
                 val byteArray =
