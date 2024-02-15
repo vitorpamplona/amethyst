@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.crypto
 import android.util.Log
 import com.goterl.lazysodium.LazySodiumAndroid
 import com.goterl.lazysodium.SodiumAndroid
-import com.lambdaworks.crypto.SCrypt
 import com.vitorpamplona.quartz.encoders.Bech32
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.bechToBytes

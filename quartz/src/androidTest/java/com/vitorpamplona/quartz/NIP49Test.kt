@@ -46,6 +46,10 @@ public class NIP49Test {
                 Nip49TestCase(".ksjabdk.aselqwe", "14c226dbdd865d5e1645e72c7470fd0a17feb42cc87b750bab6538171b3a3f8a", 7, 0x00),
                 Nip49TestCase("skjdaklrnçurbç l", "f7f2f77f98890885462764afb15b68eb5f69979c8046ecb08cad7c4ae6b221ab", 8, 0x01),
                 Nip49TestCase("777z7z7z7z7z7z7z", "11b25a101667dd9208db93c0827c6bdad66729a5b521156a7e9d3b22b3ae8944", 9, 0x02),
+                Nip49TestCase("", "f7f2f77f98890885462764afb15b68eb5f69979c8046ecb08cad7c4ae6b221ab", 4, 0x00),
+                Nip49TestCase("", "11b25a101667dd9208db93c0827c6bdad66729a5b521156a7e9d3b22b3ae8944", 5, 0x01),
+                Nip49TestCase("", "f7f2f77f98890885462764afb15b68eb5f69979c8046ecb08cad7c4ae6b221ab", 1, 0x00),
+                Nip49TestCase("", "11b25a101667dd9208db93c0827c6bdad66729a5b521156a7e9d3b22b3ae8944", 9, 0x01),
             )
     }
 
