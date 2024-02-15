@@ -104,7 +104,7 @@
     <string name="image_saved_to_the_gallery">Imagem salva para a galeria</string>
     <string name="failed_to_save_the_image">Falha ao salvar a imagem</string>
     <string name="upload_image">Enviar Imagem</string>
-    <string name="uploading">Enviando...</string>
+    <string name="uploading">Enviando…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Usuário não tem um endereço lightning configurado para receber sats</string>
     <string name="reply_here">"responda aqui.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Copia o ID do canal (note) para compartilhar</string>
@@ -269,7 +269,7 @@
     <string name="post_poll">Postar enquete</string>
     <string name="poll_heading_required">Campos obrigatórios:</string>
     <string name="poll_zap_recipients">Destinatários Zap</string>
-    <string name="poll_primary_description">Descrição da enquete principal...</string>
+    <string name="poll_primary_description">Descrição da enquete principal…</string>
     <string name="poll_option_index">Opção %s</string>
     <string name="poll_option_description">Descrição da opção de enquete</string>
     <string name="poll_heading_optional">Campos opcionais:</string>
