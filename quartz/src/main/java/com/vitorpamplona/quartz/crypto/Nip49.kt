@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import fr.acinq.secp256k1.Secp256k1
 import java.security.SecureRandom
+import java.text.Normalizer
 
 class Nip49(val secp256k1: Secp256k1, val random: SecureRandom) {
     private val libSodium = SodiumAndroid()
@@ -50,8 +51,9 @@ class Nip49(val secp256k1: Secp256k1, val random: SecureRandom) {
         check(encryptedInfo != null) { "Couldn't decode key" }
         check(encryptedInfo.version == EncryptedInfo.V) { "invalid version" }
 
+        val normalizedPassword = Normalizer.normalize(password, Normalizer.Form.NFKC).toByteArray(Charsets.UTF_8)
         val n = Math.pow(2.0, encryptedInfo.logn.toDouble()).toInt()
-        val key = SCrypt.scrypt(password.toByteArray(Charsets.UTF_8), encryptedInfo.salt, n, 8, 1, 32)
+        val key = SCrypt.scrypt(normalizedPassword, encryptedInfo.salt, n, 8, 1, 32)
         val m = ByteArray(32)
 
         lazySodium.cryptoAeadXChaCha20Poly1305IetfDecrypt(
@@ -93,8 +95,9 @@ class Nip49(val secp256k1: Secp256k1, val random: SecureRandom) {
         val nonce = ByteArray(24)
         random.nextBytes(nonce)
 
+        val normalizedPassword = Normalizer.normalize(password, Normalizer.Form.NFKC).toByteArray(Charsets.UTF_8)
         val n = Math.pow(2.0, logn.toDouble()).toInt()
-        val key = SCrypt.scrypt(password.toByteArray(Charsets.UTF_8), salt, n, 8, 1, 32)
+        val key = SCrypt.scrypt(normalizedPassword, salt, n, 8, 1, 32)
         val ciphertext = ByteArray(48)
 
         // byte[] c, long[] cLen,

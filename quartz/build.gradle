@@ -49,15 +49,17 @@ dependencies {
     // Bitcoin secp256k1 bindings to Android
     api 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.13.0'
 
-    // LibSodium for ChaCha encryption
+    // LibSodium for ChaCha encryption (NIP-44)
     implementation "com.goterl:lazysodium-android:5.1.0@aar"
     implementation 'net.java.dev.jna:jna:5.14.0@aar'
 
+    // Performant Parser of JSONs into Events
     api 'com.fasterxml.jackson.module:jackson-module-kotlin:2.16.1'
 
     // immutable collections to avoid recomposition
     api('org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.7')
 
+    // scrypt for NIP-49
     api('com.lambdaworks:scrypt:1.4.0')
 
     // Parses URLs from Text:
