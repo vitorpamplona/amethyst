@@ -637,4 +637,23 @@ anz der Bedingungen ist erforderlich</string>
     <string name="add_content_warning">Inhaltswarnung hinzufügen</string>
     <string name="remove_content_warning">Inhaltswarnung entfernen</string>
     <string name="show_npub_as_a_qr_code">Npub als QR-Code anzeigen</string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">
+    ## Schlüsselsicherheits-Tipps
+    \n\nIhr Konto ist durch einen geheimen Schlüssel gesichert. Der Schlüssel ist eine lange Zeichenfolge, die mit **nsec1** beginnt. Jeder, der Zugriff auf diesen geheimen Schlüssel hat, kann Ihre Identität posten und ändern.
+    \n\n- Legen Sie Ihren geheimen Schlüssel **nicht** auf eine Website oder in eine Software, der Sie nicht vertrauen.
+    \n- Die Entwickler von Amethyst werden Sie **niemals** nach Ihrem geheimen Schlüssel fragen.
+    \n- **Bewahren Sie** eine sichere Sicherung Ihres geheimen Schlüssels zur Kontowiederherstellung auf. Wir empfehlen die Verwendung eines Passwort-Managers.
+</string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">
+    Für zusätzliche Sicherheit können Sie Ihren Schlüssel mit einem Passwort verschlüsseln. Dieser Schlüssel beginnt mit **ncryptsec1** und kann ohne Ihr Passwort nicht verwendet werden.
+    \n\nWenn Sie Ihr Passwort verlieren, können Sie Ihren Schlüssel nicht wiederherstellen.
+</string>
+
+    <string name="failed_to_encrypt_key">Fehler beim Verschlüsseln Ihres privaten Schlüssels</string>
+    <string name="encrypt_and_copy_my_secret_key">Verschlüsseln und kopieren Sie meinen geheimen Schlüssel</string>
+    <string name="password_is_required">Passwort ist erforderlich</string>
+    <string name="invalid_key_with_message">Ungültiger Schlüssel: %1$s</string>
+    <string name="ncryptsec_password">Passwort zum Öffnen des Schlüssels</string>
+    <string name="invalid_nip19_uri">Ungültige Adresse</string>
+    <string name="invalid_nip19_uri_description">Amethyst hat eine URI zum Öffnen erhalten, aber diese URI war ungültig: %1$s</string>
 </resources>

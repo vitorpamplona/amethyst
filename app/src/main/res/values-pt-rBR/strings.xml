@@ -632,4 +632,23 @@
     <string name="add_content_warning">Adicionar aviso de conteúdo</string>
     <string name="remove_content_warning">Remover aviso de conteúdo</string>
     <string name="show_npub_as_a_qr_code">Mostrar npub como um código QR</string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">
+    ## Dicas de Backup de Chave e Segurança
+    \n\nSua conta é protegida por uma chave secreta. A chave é uma sequência longa de caracteres que começa com **nsec1**. Qualquer pessoa que tenha acesso a esta chave secreta pode postar e alterar sua identidade.
+    \n\n- **Não** coloque sua chave secreta em nenhum site ou software que você não confie.
+    \n- Os desenvolvedores da Amethyst **nunca** pedirão sua chave secreta.
+    \n- **Mantenha** uma cópia de segurança segura de sua chave secreta para recuperação da conta. Recomendamos o uso de um gerenciador de senhas.
+</string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">
+    Para segurança adicional, você pode criptografar sua chave com uma senha. Esta chave começa com **ncryptsec1** e não pode ser usada sem sua senha.
+    \n\nSe você perder sua senha, não será possível recuperar sua chave.
+</string>
+
+    <string name="failed_to_encrypt_key">Falha ao criptografar sua chave privada</string>
+    <string name="encrypt_and_copy_my_secret_key">Criptografar e copiar minha chave secreta</string>
+    <string name="password_is_required">Senha é necessária</string>
+    <string name="invalid_key_with_message">Chave inválida: %1$s</string>
+    <string name="ncryptsec_password">senha para abrir a chave</string>
+    <string name="invalid_nip19_uri">Endereço inválido</string>
+    <string name="invalid_nip19_uri_description">O Amethyst recebeu um URI para abrir, mas esse URI era inválido: %1$s</string>
 </resources>
