@@ -139,12 +139,15 @@
     <string name="clear">Rensa</string>
     <string name="app_logo">App Logo</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex privat nyckel</string>
+    <string name="ncryptsec_password">lösenord för att öppna nyckeln</string>
     <string name="show_password">Visa lösenord</string>
     <string name="hide_password">Göm lösenord</string>
     <string name="invalid_key">Ogiltig nyckel</string>
+    <string name="invalid_key_with_message">Ogiltig nyckel: %1$s</string>
     <string name="i_accept_the">"Jag accepterar  "</string>
     <string name="terms_of_use">villkor</string>
     <string name="acceptance_of_terms_is_required">Godkännande av villkor krävs</string>
+    <string name="password_is_required">Lösenord krävs</string>
     <string name="key_is_required">Nyckel krävs</string>
     <string name="name_is_required">Namn är obligatoriskt</string>
     <string name="login">Inloggning</string>
@@ -195,8 +198,17 @@
     <string name="mark_all_new_as_read">Markera alla nya som lästa</string>
     <string name="mark_all_as_read">Markera allt som läst</string>
     <string name="backup_keys">Backup-nycklar</string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">    ## Nyckelsäkerhetsråd
+    \n\nDitt konto är säkrat med en hemlig nyckel. Nyckeln är en lång följd av tecken som börjar med **nsec1**. Den som har tillgång till denna hemliga nyckel kan posta och ändra din identitet.
+    \n\n- **Lägg inte** din hemliga nyckel på någon webbplats eller i någon mjukvara som du inte litar på.
+    \n- Utvecklarna av Amethyst kommer **aldrig** att be om din hemliga nyckel.
+    \n- **Spara** en säkerhetskopia av din hemliga nyckel för återställning av kontot. Vi rekommenderar att du använder en lösenordshanterare.</string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">    För extra säkerhet kan du kryptera din nyckel med ett lösenord. Denna nyckel börjar med **ncryptsec1** och kan inte användas utan ditt lösenord.
+    \n\nOm du tappar bort ditt lösenord kommer du inte att kunna återställa din nyckel.</string>
+    <string name="failed_to_encrypt_key">Misslyckades med att kryptera din privata nyckel</string>
     <string name="secret_key_copied_to_clipboard">Hemlig nyckel (nsec) kopierad till urklipp</string>
     <string name="copy_my_secret_key">Kopiera min hemliga nyckel</string>
+    <string name="encrypt_and_copy_my_secret_key">Kryptera och kopiera min hemliga nyckel</string>
     <string name="biometric_authentication_failed">Autentisering misslyckades</string>
     <string name="biometric_authentication_failed_explainer">Biometri misslyckades med att autentisera ägaren av denna telefon</string>
     <string name="biometric_authentication_failed_explainer_with_error">Biometri misslyckades med att autentisera ägaren av denna telefon. Fel: %1$s</string>
@@ -631,23 +643,6 @@
     <string name="add_content_warning">Lägg till varning för innehåll</string>
     <string name="remove_content_warning">Ta bort varning för innehåll</string>
     <string name="show_npub_as_a_qr_code">Visa npub som en QR-kod</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">
-    ## Nyckelsäkerhetsråd
-    \n\nDitt konto är säkrat med en hemlig nyckel. Nyckeln är en lång följd av tecken som börjar med **nsec1**. Den som har tillgång till denna hemliga nyckel kan posta och ändra din identitet.
-    \n\n- **Lägg inte** din hemliga nyckel på någon webbplats eller i någon mjukvara som du inte litar på.
-    \n- Utvecklarna av Amethyst kommer **aldrig** att be om din hemliga nyckel.
-    \n- **Spara** en säkerhetskopia av din hemliga nyckel för återställning av kontot. Vi rekommenderar att du använder en lösenordshanterare.
-</string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">
-    För extra säkerhet kan du kryptera din nyckel med ett lösenord. Denna nyckel börjar med **ncryptsec1** och kan inte användas utan ditt lösenord.
-    \n\nOm du tappar bort ditt lösenord kommer du inte att kunna återställa din nyckel.
-</string>
-
-    <string name="failed_to_encrypt_key">Misslyckades med att kryptera din privata nyckel</string>
-    <string name="encrypt_and_copy_my_secret_key">Kryptera och kopiera min hemliga nyckel</string>
-    <string name="password_is_required">Lösenord krävs</string>
-    <string name="invalid_key_with_message">Ogiltig nyckel: %1$s</string>
-    <string name="ncryptsec_password">lösenord för att öppna nyckeln</string>
     <string name="invalid_nip19_uri">Ogiltig adress</string>
     <string name="invalid_nip19_uri_description">Amethyst fick en URI att öppna men den URI var ogiltig: %1$s</string>
 </resources>
