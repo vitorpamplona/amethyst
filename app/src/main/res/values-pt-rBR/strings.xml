@@ -139,12 +139,15 @@
     <string name="clear">Limpar</string>
     <string name="app_logo">Logo do aplicativo</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex chave privada</string>
+    <string name="ncryptsec_password">senha para abrir a chave</string>
     <string name="show_password">Mostrar senha</string>
     <string name="hide_password">Esconder senha</string>
     <string name="invalid_key">Chave inválida</string>
+    <string name="invalid_key_with_message">Chave inválida: %1$s</string>
     <string name="i_accept_the">"Eu aceito os "</string>
     <string name="terms_of_use">termos de uso</string>
     <string name="acceptance_of_terms_is_required">É necessário aceitar os termos de uso</string>
+    <string name="password_is_required">Senha é necessária</string>
     <string name="key_is_required">Chave é obrigatória</string>
     <string name="name_is_required">Um nome é necessário</string>
     <string name="login">Entrar</string>
@@ -195,8 +198,17 @@
     <string name="mark_all_new_as_read">Marcar todas novas solicitações como lidas</string>
     <string name="mark_all_as_read">Marcar todas como lidas</string>
     <string name="backup_keys">Copia de segurança das chaves</string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">    ## Dicas de Backup de Chave e Segurança
+    \n\nSua conta é protegida por uma chave secreta. A chave é uma sequência longa de caracteres que começa com **nsec1**. Qualquer pessoa que tenha acesso a esta chave secreta pode postar e alterar sua identidade.
+    \n\n- **Não** coloque sua chave secreta em nenhum site ou software que você não confie.
+    \n- Os desenvolvedores da Amethyst **nunca** pedirão sua chave secreta.
+    \n- **Mantenha** uma cópia de segurança segura de sua chave secreta para recuperação da conta. Recomendamos o uso de um gerenciador de senhas.</string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">    Para segurança adicional, você pode criptografar sua chave com uma senha. Esta chave começa com **ncryptsec1** e não pode ser usada sem sua senha.
+    \n\nSe você perder sua senha, não será possível recuperar sua chave.</string>
+    <string name="failed_to_encrypt_key">Falha ao criptografar sua chave privada</string>
     <string name="secret_key_copied_to_clipboard">Chave secreta (nsec) copiada</string>
     <string name="copy_my_secret_key">Copiar minha chave secreta</string>
+    <string name="encrypt_and_copy_my_secret_key">Criptografar e copiar minha chave secreta</string>
     <string name="biometric_authentication_failed">Autenticação falhou</string>
     <string name="biometric_authentication_failed_explainer">A autenticação biométrica falhou ao autenticar o proprietário deste telefone</string>
     <string name="biometric_authentication_failed_explainer_with_error">A autenticação biométrica falhou ao autenticar o proprietário deste telefone. Erro: %1$s</string>
@@ -632,23 +644,6 @@
     <string name="add_content_warning">Adicionar aviso de conteúdo</string>
     <string name="remove_content_warning">Remover aviso de conteúdo</string>
     <string name="show_npub_as_a_qr_code">Mostrar npub como um código QR</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">
-    ## Dicas de Backup de Chave e Segurança
-    \n\nSua conta é protegida por uma chave secreta. A chave é uma sequência longa de caracteres que começa com **nsec1**. Qualquer pessoa que tenha acesso a esta chave secreta pode postar e alterar sua identidade.
-    \n\n- **Não** coloque sua chave secreta em nenhum site ou software que você não confie.
-    \n- Os desenvolvedores da Amethyst **nunca** pedirão sua chave secreta.
-    \n- **Mantenha** uma cópia de segurança segura de sua chave secreta para recuperação da conta. Recomendamos o uso de um gerenciador de senhas.
-</string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">
-    Para segurança adicional, você pode criptografar sua chave com uma senha. Esta chave começa com **ncryptsec1** e não pode ser usada sem sua senha.
-    \n\nSe você perder sua senha, não será possível recuperar sua chave.
-</string>
-
-    <string name="failed_to_encrypt_key">Falha ao criptografar sua chave privada</string>
-    <string name="encrypt_and_copy_my_secret_key">Criptografar e copiar minha chave secreta</string>
-    <string name="password_is_required">Senha é necessária</string>
-    <string name="invalid_key_with_message">Chave inválida: %1$s</string>
-    <string name="ncryptsec_password">senha para abrir a chave</string>
     <string name="invalid_nip19_uri">Endereço inválido</string>
     <string name="invalid_nip19_uri_description">O Amethyst recebeu um URI para abrir, mas esse URI era inválido: %1$s</string>
 </resources>

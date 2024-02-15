@@ -139,12 +139,15 @@
     <string name="clear">Nettoyer</string>
     <string name="app_logo">Logo de l\'App</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex private key</string>
+    <string name="ncryptsec_password">mot de passe pour ouvrir la clé</string>
     <string name="show_password">Révéler le mot de passe</string>
     <string name="hide_password">Cacher le mot de passe</string>
     <string name="invalid_key">Clé non valide</string>
+    <string name="invalid_key_with_message">Clé invalide : %1$s</string>
     <string name="i_accept_the">"J'accepte les "</string>
     <string name="terms_of_use">conditions d\'utilisation</string>
     <string name="acceptance_of_terms_is_required">L\'acceptation des conditions est requise</string>
+    <string name="password_is_required">Mot de passe requis</string>
     <string name="key_is_required">La clé est requise</string>
     <string name="name_is_required">Un nom est requis</string>
     <string name="login">Connexion</string>
@@ -195,8 +198,19 @@
     <string name="mark_all_new_as_read">Marquer tous les Nouveaux comme lu</string>
     <string name="mark_all_as_read">Tout marquer comme lu</string>
     <string name="backup_keys">Clés de sauvegarde</string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Sauvegarde des Clés et Conseils de Sécurité
+        \n\nVotre compte est sécurisé par une clé secrète. La clé est une longue séquence de caractères commençant par **nsec1**. Toute personne ayant accès à cette clé secrète peut publier et modifier votre identité.
+        \n\n- Ne mettez **pas** votre clé secrète sur un site web ou un logiciel auquel vous ne faites pas confiance.
+        \n- Les développeurs d\'Amethyst ne vous demanderont **jamais** votre clé secrète.
+        \n- **Faites** une sauvegarde sécurisée de votre clé secrète pour la récupération de votre compte. Nous vous recommandons d\'utiliser un gestionnaire de mots de passe.
+    </string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">        Pour plus de sécurité, vous pouvez chiffrer votre clé avec un mot de passe. Cette clé commence par **ncryptsec1** et ne peut être utilisée sans votre mot de passe.
+        \n\nSi vous perdez votre mot de passe, vous ne pourrez pas récupérer votre clé.
+    </string>
+    <string name="failed_to_encrypt_key">Échec du chiffrement de votre clé privée</string>
     <string name="secret_key_copied_to_clipboard">Clé secrète (nsec) copiée dans le presse-papiers</string>
     <string name="copy_my_secret_key">Copier ma clé secrète</string>
+    <string name="encrypt_and_copy_my_secret_key">Chiffrer et copier ma clé secrète</string>
     <string name="biometric_authentication_failed">Échec de l\'authentification</string>
     <string name="biometric_authentication_failed_explainer">La biométrie n\'a pas pu authentifier le propriétaire de ce téléphone</string>
     <string name="biometric_authentication_failed_explainer_with_error">La biométrie n\'a pas pu authentifier le propriétaire de ce téléphone. Erreur : %1$s</string>
@@ -632,4 +646,6 @@
     <string name="add_content_warning">Ajouter un avertissement de contenu</string>
     <string name="remove_content_warning">Retirer l\'avertissement de contenu</string>
     <string name="show_npub_as_a_qr_code">Afficher npub en tant que QR code</string>
+    <string name="invalid_nip19_uri">Adresse invalide</string>
+    <string name="invalid_nip19_uri_description">Amethyst a reçu une URI à ouvrir mais cette URI était invalide : %1$s</string>
 </resources>
