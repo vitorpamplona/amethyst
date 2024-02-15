@@ -28,11 +28,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
@@ -49,7 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -62,8 +60,10 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
@@ -174,7 +174,73 @@ fun RichTextViewer(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@Preview()
+@Composable
+fun RenderRegularPreview() {
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val backgroundColorState =
+        remember {
+            mutableStateOf(backgroundColor)
+        }
+
+    val nav: (String) -> Unit = {}
+
+    Column(modifier = Modifier.padding(10.dp)) {
+        RenderRegular(
+            "nostr:npub1e0z776cpe0gllgktjk54fuzv8pdfxmq6smsmh8xd7t8s7n474n9smk0txy but i'm Monthly funding" +
+                " 7 other humans vitor@vitorpamplona.com at the moment so spread #test a bit thin, but won't always be the case.",
+            EmptyTagList,
+        ) { word, state ->
+            when (word) {
+                // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
+                // is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
+                is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+                is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
+                is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
+                // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
+                is EmailSegment -> ClickableEmail(word.segmentText)
+                is PhoneSegment -> ClickablePhone(word.segmentText)
+                is BechSegment -> {
+                    CreateClickableText(
+                        word.segmentText.substring(0, 10),
+                        "",
+                        1,
+                        route = "",
+                        nav = nav,
+                    )
+                }
+                is HashTagSegment -> HashTag(word, nav)
+                // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
+                // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
+                is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
+                is RegularTextSegment -> Text(word.segmentText)
+            }
+        }
+
+        RenderRegular(
+            "#Amethyst v0.84.1: ncryptsec support (NIP-49)",
+            EmptyTagList,
+        ) { word, state ->
+            when (word) {
+                // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
+                // is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
+                is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+                is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
+                is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
+                // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
+                is EmailSegment -> ClickableEmail(word.segmentText)
+                is PhoneSegment -> ClickablePhone(word.segmentText)
+                // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
+                is HashTagSegment -> HashTag(word, nav)
+                // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
+                // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
+                is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
+                is RegularTextSegment -> Text(word.segmentText)
+            }
+        }
+    }
+}
+
 @Composable
 private fun RenderRegular(
     content: String,
@@ -184,75 +250,65 @@ private fun RenderRegular(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    RenderRegular(content, tags) { word, state ->
+        if (canPreview) {
+            RenderWordWithPreview(
+                word,
+                state,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        } else {
+            RenderWordWithoutPreview(
+                word,
+                state,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RenderRegular(
+    content: String,
+    tags: ImmutableListOfLists<String>,
+    wordRenderer: @Composable (Segment, RichTextViewerState) -> Unit,
+) {
     val state by remember(content, tags) { mutableStateOf(CachedRichTextParser.parseText(content, tags)) }
 
+    val spaceWidth = measureSpaceWidth(LocalTextStyle.current)
+
     val currentTextStyle = LocalTextStyle.current
-    val currentTextColor = LocalContentColor.current
 
     val textStyle =
-        remember(currentTextStyle, currentTextColor) {
+        remember(currentTextStyle) {
             currentTextStyle.copy(
                 lineHeight = 1.4.em,
-                color = currentTextStyle.color.takeOrElse { currentTextColor },
             )
         }
 
-    val spaceWidth = measureSpaceWidth(textStyle)
-
     Column {
-        if (canPreview) {
-            // FlowRow doesn't work well with paragraphs. So we need to split them
-            state.paragraphs.forEach { paragraph ->
-                val direction =
+        // FlowRow doesn't work well with paragraphs. So we need to split them
+        state.paragraphs.forEach { paragraph ->
+            CompositionLocalProvider(
+                LocalLayoutDirection provides
                     if (paragraph.isRTL) {
                         LayoutDirection.Rtl
                     } else {
                         LayoutDirection.Ltr
-                    }
-
-                CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                    FlowRow(
-                        modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
-                        horizontalArrangement = Arrangement.spacedBy(spaceWidth),
-                    ) {
-                        paragraph.words.forEach { word ->
-                            RenderWordWithPreview(
-                                word,
-                                state,
-                                backgroundColor,
-                                textStyle,
-                                accountViewModel,
-                                nav,
-                            )
-                        }
-                    }
-                }
-            }
-        } else {
-            // FlowRow doesn't work well with paragraphs. So we need to split them
-            state.paragraphs.forEach { paragraph ->
-                val direction =
-                    if (paragraph.isRTL) {
-                        LayoutDirection.Rtl
-                    } else {
-                        LayoutDirection.Ltr
-                    }
-
-                CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(spaceWidth),
-                        modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
-                    ) {
-                        paragraph.words.forEach { word ->
-                            RenderWordWithoutPreview(
-                                word,
-                                state,
-                                backgroundColor,
-                                textStyle,
-                                accountViewModel,
-                                nav,
-                            )
-                        }
+                    },
+                LocalTextStyle provides textStyle,
+            ) {
+                FlowRow(
+                    modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
+                    horizontalArrangement = Arrangement.spacedBy(spaceWidth),
+                ) {
+                    paragraph.words.forEach { word ->
+                        wordRenderer(word, state)
                     }
                 }
             }
@@ -281,7 +337,6 @@ private fun RenderWordWithoutPreview(
     word: Segment,
     state: RichTextViewerState,
     backgroundColor: MutableState<Color>,
-    style: TextStyle,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -291,10 +346,10 @@ private fun RenderWordWithoutPreview(
         is LinkSegment -> ClickableUrl(word.segmentText, word.segmentText)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
         // Don't offer to pay invoices
-        is InvoiceSegment -> NormalWord(word.segmentText, style)
+        is InvoiceSegment -> Text(word.segmentText)
         // Don't offer to withdraw
-        is WithdrawSegment -> NormalWord(word.segmentText, style)
-        is CashuSegment -> NormalWord(word.segmentText, style)
+        is WithdrawSegment -> Text(word.segmentText)
+        is CashuSegment -> Text(word.segmentText)
         is EmailSegment -> ClickableEmail(word.segmentText)
         is PhoneSegment -> ClickablePhone(word.segmentText)
         is BechSegment -> BechLink(word.segmentText, false, backgroundColor, accountViewModel, nav)
@@ -302,7 +357,7 @@ private fun RenderWordWithoutPreview(
         is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
         is HashIndexEventSegment -> TagLink(word, false, backgroundColor, accountViewModel, nav)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
-        is RegularTextSegment -> NormalWord(word.segmentText, style)
+        is RegularTextSegment -> Text(word.segmentText)
     }
 }
 
@@ -311,7 +366,6 @@ private fun RenderWordWithPreview(
     word: Segment,
     state: RichTextViewerState,
     backgroundColor: MutableState<Color>,
-    style: TextStyle,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -329,7 +383,7 @@ private fun RenderWordWithPreview(
         is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
         is HashIndexEventSegment -> TagLink(word, true, backgroundColor, accountViewModel, nav)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
-        is RegularTextSegment -> NormalWord(word.segmentText, style)
+        is RegularTextSegment -> Text(word.segmentText)
     }
 }
 
@@ -347,23 +401,7 @@ private fun ZoomableContentView(
 }
 
 @Composable
-private fun NormalWord(
-    word: String,
-    style: TextStyle,
-) {
-    BasicText(
-        text = word,
-        style = style,
-    )
-}
-
-@Composable
-private fun NoProtocolUrlRenderer(word: SchemelessUrlSegment) {
-    RenderUrl(word)
-}
-
-@Composable
-private fun RenderUrl(segment: SchemelessUrlSegment) {
+private fun NoProtocolUrlRenderer(segment: SchemelessUrlSegment) {
     ClickableUrl(segment.url, "https://${segment.url}")
     segment.extras?.let { it1 -> Text(it1) }
 }
@@ -649,7 +687,7 @@ fun HashTag(
                     }
                 }
 
-                segment.extras?.ifBlank { "" }?.let { withStyle(regularText) { append(it) } }
+                segment.extras?.let { withStyle(regularText) { append(it) } }
             }
         }
 

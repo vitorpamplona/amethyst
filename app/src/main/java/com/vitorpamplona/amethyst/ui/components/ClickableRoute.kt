@@ -24,7 +24,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.LocalContentColor
@@ -298,27 +297,24 @@ fun CreateClickableText(
     suffix: String?,
     maxLines: Int = Int.MAX_VALUE,
     overrideColor: Color? = null,
-    fontWeight: FontWeight = FontWeight.Normal,
+    fontWeight: FontWeight? = null,
     route: String,
     nav: (String) -> Unit,
 ) {
-    val currentStyle = LocalTextStyle.current
     val primaryColor = MaterialTheme.colorScheme.primary
     val onBackgroundColor = MaterialTheme.colorScheme.onBackground
 
     val clickablePartStyle =
-        remember(primaryColor, overrideColor) {
-            currentStyle
-                .copy(color = overrideColor ?: primaryColor, fontWeight = fontWeight)
-                .toSpanStyle()
-        }
+        SpanStyle(
+            color = overrideColor ?: primaryColor,
+            fontWeight = fontWeight,
+        )
 
     val nonClickablePartStyle =
-        remember(onBackgroundColor, overrideColor) {
-            currentStyle
-                .copy(color = overrideColor ?: onBackgroundColor, fontWeight = fontWeight)
-                .toSpanStyle()
-        }
+        SpanStyle(
+            color = overrideColor ?: onBackgroundColor,
+            fontWeight = fontWeight,
+        )
 
     val text =
         remember(clickablePartStyle, nonClickablePartStyle, clickablePart, suffix) {
@@ -333,8 +329,42 @@ fun CreateClickableText(
     ClickableText(
         text = text,
         maxLines = maxLines,
-        style = currentStyle,
         onClick = { nav(route) },
+    )
+}
+
+@Composable
+fun ClickableText(
+    text: AnnotatedString,
+    modifier: Modifier = Modifier,
+    style: TextStyle = LocalTextStyle.current,
+    softWrap: Boolean = true,
+    overflow: TextOverflow = TextOverflow.Clip,
+    maxLines: Int = Int.MAX_VALUE,
+    onTextLayout: (TextLayoutResult) -> Unit = {},
+    onClick: (Int) -> Unit,
+) {
+    val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
+    val pressIndicator =
+        Modifier.pointerInput(onClick) {
+            detectTapGestures { pos ->
+                layoutResult.value?.let { layoutResult ->
+                    onClick(layoutResult.getOffsetForPosition(pos))
+                }
+            }
+        }
+
+    Text(
+        text = text,
+        modifier = modifier.then(pressIndicator),
+        style = style,
+        softWrap = softWrap,
+        overflow = overflow,
+        maxLines = maxLines,
+        onTextLayout = {
+            layoutResult.value = it
+            onTextLayout(it)
+        },
     )
 }
 
