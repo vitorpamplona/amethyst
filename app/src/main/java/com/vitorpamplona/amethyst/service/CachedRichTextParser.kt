@@ -257,7 +257,7 @@ class RichTextParser() {
             parseHash(word, tags)
         } else if (word.contains(".") && schemelessMatcher.find()) {
             val url = schemelessMatcher.group(1) // url
-            val additionalChars = schemelessMatcher.group(4) // additional chars
+            val additionalChars = schemelessMatcher.group(4).ifEmpty { null } // additional chars
             val pattern =
                 """^([A-Za-z0-9-_]+(\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\?[^#]*)?(#.*)?"""
                     .toRegex(RegexOption.IGNORE_CASE)
@@ -307,7 +307,7 @@ class RichTextParser() {
             if (hashtagMatcher.find()) {
                 val hashtag = hashtagMatcher.group(1)
                 if (hashtag != null) {
-                    return HashTagSegment(word, hashtag, hashtagMatcher.group(2))
+                    return HashTagSegment(word, hashtag, hashtagMatcher.group(2).ifEmpty { null })
                 }
             }
         } catch (e: Exception) {
