@@ -632,4 +632,23 @@
     <string name="add_content_warning">Přidat upozornění na obsah</string>
     <string name="remove_content_warning">Odstranit upozornění na obsah</string>
     <string name="show_npub_as_a_qr_code">Zobrazit npub jako QR kód</string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">
+    ## Tipy pro zálohování klíčů a bezpečnost
+    \n\nVaše konto je zabezpečeno tajným klíčem. Klíč je dlouhá posloupnost znaků začínající s **nsec1**. Kdo má přístup k tomuto tajnému klíči, může přispívat a měnit vaši identitu.
+    \n\n- **Nedávejte** svůj tajný klíč na žádnou webovou stránku nebo do žádného softwaru, kterému nedůvěřujete.
+    \n- Vývojáři Amethystu nikdy **nebudou** žádat o váš tajný klíč.
+    \n- **Udržujte** bezpečnou zálohu vašeho tajného klíče pro obnovení účtu. Doporučujeme použití správce hesel.
+</string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">
+    Pro další zabezpečení můžete svůj klíč zašifrovat heslem. Tento klíč začíná s **ncryptsec1** a nelze ho použít bez vašeho hesla.
+    \n\nPokud zapomenete heslo, nebudete moci obnovit svůj klíč.
+</string>
+
+    <string name="failed_to_encrypt_key">Nepodařilo se zašifrovat váš privátní klíč</string>
+    <string name="encrypt_and_copy_my_secret_key">Zašifrovat a zkopírovat můj tajný klíč</string>
+    <string name="password_is_required">Heslo je vyžadováno</string>
+    <string name="invalid_key_with_message">Neplatný klíč: %1$s</string>
+    <string name="ncryptsec_password">heslo pro otevření klíče</string>
+    <string name="invalid_nip19_uri">Neplatná adresa</string>
+    <string name="invalid_nip19_uri_description">Amethyst obdržel URI k otevření, ale tento URI byl neplatný: %1$s</string>
 </resources>
