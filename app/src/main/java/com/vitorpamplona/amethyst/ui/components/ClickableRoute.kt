@@ -304,20 +304,20 @@ fun CreateClickableText(
     val primaryColor = MaterialTheme.colorScheme.primary
     val onBackgroundColor = MaterialTheme.colorScheme.onBackground
 
-    val clickablePartStyle =
-        SpanStyle(
-            color = overrideColor ?: primaryColor,
-            fontWeight = fontWeight,
-        )
-
-    val nonClickablePartStyle =
-        SpanStyle(
-            color = overrideColor ?: onBackgroundColor,
-            fontWeight = fontWeight,
-        )
-
     val text =
-        remember(clickablePartStyle, nonClickablePartStyle, clickablePart, suffix) {
+        remember(clickablePart, suffix) {
+            val clickablePartStyle =
+                SpanStyle(
+                    color = overrideColor ?: primaryColor,
+                    fontWeight = fontWeight,
+                )
+
+            val nonClickablePartStyle =
+                SpanStyle(
+                    color = overrideColor ?: onBackgroundColor,
+                    fontWeight = fontWeight,
+                )
+
             buildAnnotatedString {
                 withStyle(clickablePartStyle) { append(clickablePart) }
                 if (!suffix.isNullOrBlank()) {
