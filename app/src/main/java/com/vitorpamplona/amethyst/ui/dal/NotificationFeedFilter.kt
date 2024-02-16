@@ -69,7 +69,7 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
         val loggedInUserHex = loggedInUser.pubkeyHex
 
         return collection
-            .filter {
+            .filterTo(HashSet()) {
                 it.event !is ChannelCreateEvent &&
                     it.event !is ChannelMetadataEvent &&
                     it.event !is LnZapRequestEvent &&
@@ -82,7 +82,6 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
                     (isHiddenList || it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&
                     tagsAnEventByUser(it, loggedInUserHex)
             }
-            .toSet()
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
