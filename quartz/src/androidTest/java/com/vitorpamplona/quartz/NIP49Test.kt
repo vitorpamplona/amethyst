@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import fr.acinq.secp256k1.Secp256k1
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
+import junit.framework.TestCase.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.security.SecureRandom
@@ -96,6 +97,24 @@ public class NIP49Test {
 
             assertEquals(it.secretKey, decrypted)
         }
+    }
+
+    @Test
+    fun normalization() {
+        val samePassword1 = String(byteArrayOf(0xE2.toByte(), 0x84.toByte(), 0xAB.toByte(), 0xE2.toByte(), 0x84.toByte(), 0xA6.toByte(), 0xE1.toByte(), 0xBA.toByte(), 0x9B.toByte(), 0xCC.toByte(), 0xA3.toByte()))
+        val samePassword2 = String(byteArrayOf(0xC3.toByte(), 0x85.toByte(), 0xCE.toByte(), 0xA9.toByte(), 0xE1.toByte(), 0xB9.toByte(), 0xA9.toByte()))
+
+        if (samePassword1.toByteArray().contentEquals(samePassword2.toByteArray())) {
+            fail("Passwords should have a different byte representation")
+        }
+
+        val encrypted = nip49.encrypt(TEST_CASE_EXPECTED, samePassword1, 8, 0)
+
+        assertNotNull(encrypted)
+
+        val decrypted = nip49.decrypt(encrypted!!, samePassword2)
+
+        assertEquals(TEST_CASE_EXPECTED, decrypted)
     }
 
     class Nip49TestCase(
