@@ -64,9 +64,9 @@ open class BaseTextNoteEvent(
         return newStyleReply ?: newStyleRoot ?: oldStylePositional
     }
 
-    @Transient private var citedUsersCache: Set<HexKey>? = null
+    @Transient private var citedUsersCache: Set<String>? = null
 
-    @Transient private var citedNotesCache: Set<HexKey>? = null
+    @Transient private var citedNotesCache: Set<String>? = null
 
     fun citedUsers(): Set<HexKey> {
         citedUsersCache?.let {
@@ -96,10 +96,8 @@ open class BaseTextNoteEvent(
                 val parsed = Nip19.parseComponents(uriScheme, type, key, additionalChars)
 
                 if (parsed != null) {
-                    val tag = tags.firstOrNull { it.size > 1 && it[1] == parsed.hex }
-
-                    if (tag != null && tag[0] == "p") {
-                        returningList.add(tag[1])
+                    if (parsed.type == Nip19.Type.USER) {
+                        returningList.add(parsed.hex)
                     }
                 }
             } catch (e: Exception) {
@@ -142,16 +140,8 @@ open class BaseTextNoteEvent(
             val parsed = Nip19.parseComponents(uriScheme, type, key, additionalChars)
 
             if (parsed != null) {
-                try {
-                    val tag = tags.firstOrNull { it.size > 1 && it[1] == parsed.hex }
-
-                    if (tag != null && tag[0] == "e") {
-                        citations.add(tag[1])
-                    }
-                    if (tag != null && tag[0] == "a") {
-                        citations.add(tag[1])
-                    }
-                } catch (e: Exception) {
+                if (parsed.type == Nip19.Type.EVENT || parsed.type == Nip19.Type.ADDRESS || parsed.type == Nip19.Type.NOTE) {
+                    citations.add(parsed.hex)
                 }
             }
         }
