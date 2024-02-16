@@ -95,17 +95,12 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
         val event = note.event
 
         if (event is BaseTextNoteEvent) {
-            val isAuthoredPostCited =
-                event.findCitations().any {
-                    LocalCache.notes[it]?.author?.pubkeyHex == authorHex ||
-                        LocalCache.addressables[it]?.author?.pubkeyHex == authorHex
-                }
+            if (note.replyTo?.any { it.author?.pubkeyHex == authorHex } == true) return true
 
-            return isAuthoredPostCited ||
-                (
-                    event.citedUsers().contains(authorHex) ||
-                        note.replyTo?.any { it.author?.pubkeyHex == authorHex } == true
-                )
+            val isAuthoredPostCited = event.findCitations().any { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == authorHex }
+            val isAuthorDirectlyCited = event.citedUsers().contains(authorHex)
+
+            return isAuthoredPostCited || isAuthorDirectlyCited
         }
 
         if (event is ReactionEvent) {
