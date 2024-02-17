@@ -8,7 +8,7 @@
 
 ### Nostr Client for Android
 
-Bringing the best social network to your Android phone. Just insert your Nostr private key and start posting.
+Join the social network you control.
 
 [![GitHub downloads](https://img.shields.io/github/downloads/vitorpamplona/amethyst/total?label=downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/vitorpamplona/amethyst/releases)
 
