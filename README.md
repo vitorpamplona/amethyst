@@ -1,7 +1,7 @@
 <div align="center">
      
-<a href="https://mihon.app">
-    <img src="./amethyst.png" alt="Amethyst Logo" title="Amethyst logo" width="80"/>
+<a href="https://amethyst.social">
+    <img src="./docs/design/3rd%20Logo%20-%20Zitron/amethyst.svg" alt="Amethyst Logo" title="Amethyst logo" width="80"/>
 </a>
 
 # Amethyst
@@ -12,7 +12,7 @@ Bringing the best social network to your Android phone. Just insert your Nostr p
 
 [![GitHub downloads](https://img.shields.io/github/downloads/vitorpamplona/amethyst/total?label=downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/vitorpamplona/amethyst/releases)
 
-[![Last Version](https://img.shields.io/github/release/vitorpamplona/amethyst.svg?maxAge=3600&label=Stable&labelColor=06599d&color=043b69)](https://github.com/mihonapp/vitorpamplona/amethyst)
+[![Last Version](https://img.shields.io/github/release/vitorpamplona/amethyst.svg?maxAge=3600&label=Stable&labelColor=06599d&color=043b69)](https://github.com/vitorpamplona/amethyst)
 [![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/amethyst/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/amethyst/actions/workflows/build.yml)
 [![License: Apache-2.0](https://img.shields.io/github/license/vitorpamplona/amethyst?labelColor=27303D&color=0877d2)](/LICENSE)
 
