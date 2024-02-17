@@ -1,22 +1,41 @@
-# Amethyst: Nostr client for Android
+<div align="center">
+     
+<a href="https://amethyst.social">
+    <img src="./docs/design/3rd%20Logo%20-%20Zitron/amethyst.svg" alt="Amethyst Logo" title="Amethyst logo" width="80"/>
+</a>
 
-<img align="right" src="./docs/screenshots/home.png" data-canonical-src="./docs/screenshots/home.png" width="350px"/>
+# Amethyst
 
-Amethyst brings the best social network to your Android phone. Just insert your Nostr private key and start posting.
+### Nostr Client for Android
+
+Join the social network you control.
+
+[![GitHub downloads](https://img.shields.io/github/downloads/vitorpamplona/amethyst/total?label=Downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/vitorpamplona/amethyst/releases)
+[![PlayStore downloads](https://img.shields.io/endpoint?color=green&logo=google-play&logoColor=green&url=https%3A%2F%2Fplay.cuzi.workers.dev%2Fplay%3Fi%3Dcom.vitorpamplona.amethyst%26gl%3DUS%26hl%3Den%26l%3DPlayStore%26m%3D%24shortinstalls)](https://play.google.com/store/apps/details?id=com.vitorpamplona.amethyst)
+
+[![Last Version](https://img.shields.io/github/release/vitorpamplona/amethyst.svg?maxAge=3600&label=Stable&labelColor=06599d&color=043b69)](https://github.com/vitorpamplona/amethyst)
+[![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/amethyst/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/amethyst/actions/workflows/build.yml)
+[![License: Apache-2.0](https://img.shields.io/github/license/vitorpamplona/amethyst?labelColor=27303D&color=0877d2)](/LICENSE)
+
+## Download
 
 [<img src="./docs/design/obtainium.png"
 alt="Get it on Obtaininum"
-height="80">](https://github.com/ImranR98/Obtainium)
+height="70">](https://github.com/ImranR98/Obtainium)
 [<img src="https://github.com/machiav3lli/oandbackupx/raw/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" alt="Get it on GitHub"
-height="80">](https://github.com/vitorpamplona/amethyst/releases)
+height="70">](https://github.com/vitorpamplona/amethyst/releases)
 [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
      alt="Get it on F-Droid"
-     height="80">](https://f-droid.org/packages/com.vitorpamplona.amethyst/)
+     height="70">](https://f-droid.org/packages/com.vitorpamplona.amethyst/)
 [<img src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png"
      alt="Get it on Google Play"
-     height="80">](https://play.google.com/store/apps/details?id=com.vitorpamplona.amethyst)
+     height="70">](https://play.google.com/store/apps/details?id=com.vitorpamplona.amethyst)
 
-# Current Features
+</div>
+
+## Supported Features
+
+<img align="right" src="./docs/screenshots/home.png" data-canonical-src="./docs/screenshots/home.png" width="350px">
 
 - [x] Events / Relay Subscriptions (NIP-01)
 - [x] Follow List (NIP-02)
@@ -103,31 +122,41 @@ height="80">](https://github.com/vitorpamplona/amethyst/releases)
 - [ ] Workspaces
 - [ ] Infinity Scroll
 
+## Privacy and Information Permanence
+
+Relays know your IP address, your name, your location (guessed from IP), your pub key, all your contacts, and other relays, and can read every action you do (post, like, boost, quote, report, etc) except for Private Zaps and Private DMs. While the content of direct messages (DMs) is only visible to you and your DM counterparty, everyone can see when you and your counterparty DM each other.
+
+If you want to improve your privacy, consider utilizing a service that masks your IP address (e.g. a VPN or Tor) from trackers online.
+
+The relay also learns which public keys you are requesting, meaning your public key will be tied to your IP address.
+
+Information shared on Nostr can be re-broadcasted to other servers and should be assumed permanent for privacy purposes. There is no way to guarantee the deletion of any content once posted.
+
 # Development Overview
 
-## Overall Architecture
+This repository is split between Amethyst and Quartz: 
+- Amethyst is a native Android app made with Kotlin and Jetpack Compose.
+- Quartz is our own Nostr-commons library to host classes that are of interest to other Nostr Clients. 
 
-This is a native Android app made with Kotlin and Jetpack Compose.
-The app uses a modified version of the [nostrpostrlib](https://github.com/Giszmo/NostrPostr/tree/master/nostrpostrlib) to talk to Nostr relays.
-The overall architecture consists of the UI, which uses the usual State/ViewModel/Composition, the service layer that connects with Nostr relays,
+The app architecture consists of the UI, which uses the usual State/ViewModel/Composition, the service layer that connects with Nostr relays,
 and the model/repository layer, which keeps all Nostr objects in memory, in a full OO graph.
 
-The repository layer stores Nostr Events as Notes and Users separately. Those classes use LiveData objects to
+The repository layer stores Nostr Events as Notes and Users separately. Those classes use LiveData and Flow objects to
 allow the UI and other parts of the app to subscribe to each Note/User and receive updates when they happen.
-They are also responsible for updating viewModels when needed. Filters react to changes in the screen. As the user
-sees different Events, the Datasource classes are used to receive more information about those particular Events.
+They are also responsible for updating viewModels when needed. As the user scrolls through Events, the Datasource classes 
+are updated to receive more information about those particular Events.
 
 Most of the UI is reactive to changes in the repository classes. The service layer assembles Nostr filters for each need of the app,
 receives the data from the Relay, and sends it to the repository. Connection with relays is never closed during the use of the app.
 The UI receives a notification that objects have been updated. Instances of User and Notes are mutable directly.
 There will never be two Notes with the same ID or two User instances with the same pubkey.
 
-Lastly, the user's account information (priv key/pub key) is stored in the Android KeyStore for security.
+Lastly, the user's account information (private key/pub key) is stored in the Android KeyStore for security.
 
 ## Setup
 
 Make sure to have the following pre-requisites installed:
-1. Java 17
+1. Java 17+
 2. Android Studio
 3. Android 8.0+ Phone or Emulation setup
 
@@ -136,7 +165,7 @@ Fork and clone this repository and import it into Android Studio
 git clone https://github.com/vitorpamplona/amethyst.git
 ```
 
-Use one of the Android Studio builds to install and run the app in your device or a simulator.
+Use an Android Studio build action to install and run the app on your device or a simulator.
 
 ## Building
 Build the app:
@@ -168,19 +197,7 @@ For the Play build:
 ./gradlew installPlayDebug
 ```
 
-## Contributing
-
-[Issues](https://github.com/vitorpamplona/amethyst/issues) and [pull requests](https://github.com/vitorpamplona/amethyst/pulls) here are also very welcome.
-
-Translations can be provided via [Crowdin](https://crowdin.com/project/amethyst-social)
-
-You can also send patches through Nostr using [GitStr](https://github.com/fiatjaf/gitstr) to [this nostr address](https://patch34.pages.dev/naddr1qqyxzmt9w358jum5qyg8v6t5daezumn0wd68yvfwvdhk6qg7waehxw309ahx7um5wgkhqatz9emk2mrvdaexgetj9ehx2ap0qy2hwumn8ghj7un9d3shjtnwdaehgu3wvfnj7q3qgcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqxpqqqpmej720gac)
-
-By contributing to this repository, you agree to license your work under the MIT license. Any work
-contributed where you are not the original author must contain its license header with the original
-author(s) and source.
-
-## How to Deploy
+## Deploying
 
 1. Generate a new signing key
 ```
@@ -199,23 +216,13 @@ openssl base64 < <my-release-key.keystore> | tr -d '\n' | tee some_signing_key.j
 7. Add your CHANGE LOG to the description of the new release
 8. Download the `aab` file and upload it to the PlayStore.
 
-# Privacy on Relays & nostr
-Your internet protocol (IP) address is exposed to the relays you connect to. If you want to improve your privacy, consider utilizing a service that masks your IP address (e.g. a VPN) from trackers online.
+## Contributing
 
-The relay also learns which public keys you are requesting, meaning your public key will be tied to your IP address.
+[Issues](https://github.com/vitorpamplona/amethyst/issues) and [pull requests](https://github.com/vitorpamplona/amethyst/pulls) here are very welcome. Translations can be provided via [Crowdin](https://crowdin.com/project/amethyst-social)
 
-Relays have all your data in raw text. They know your IP, your name, your location (guessed from IP), your pub key, all your contacts, and other relays, and can read every action you do (post, like, boost, quote, report, etc) with the exception of Private Zaps and Private DMs.
+You can also send patches through Nostr using [GitStr](https://github.com/fiatjaf/gitstr) to [this nostr address](https://patch34.pages.dev/naddr1qqyxzmt9w358jum5qyg8v6t5daezumn0wd68yvfwvdhk6qg7waehxw309ahx7um5wgkhqatz9emk2mrvdaexgetj9ehx2ap0qy2hwumn8ghj7un9d3shjtnwdaehgu3wvfnj7q3qgcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqxpqqqpmej720gac)
 
-# DM Privacy #
-While the content of direct messages (DMs) is only visible to you and your DM counterparty, everyone can see when you and your counterparty DM each other.
-
-# Visibility & Permanence of Your Content on nostr
-## Information Visibility ##
-Content that you share can be shared to other relays.
-Information that you share publicly is visible to anyone reading from relays that have your information. Your information may also be visible to nostr users who do not share relays with you.
-
-## Information Permanence ##
-Information shared on nostr should be assumed permanent for privacy purposes. There is no way to guarantee edit or deletion of any content once posted.
+By contributing to this repository, you agree to license your work under the MIT license. Any work contributed where you are not the original author must contain its license header with the original author(s) and source.
 
 # Screenshots
 
@@ -223,7 +230,7 @@ Information shared on nostr should be assumed permanent for privacy purposes. Th
 |-------------------------------------------|----------------------------------------------|-------------------------------------------------|--------------------------------------------------------|
 | ![Home Feed](./docs/screenshots/home.png) | ![Messages](./docs/screenshots/messages.png) | ![Live Streams](./docs/screenshots/replies.png) | ![Notifications](./docs/screenshots/notifications.png) |
 
-## Contributors
+# Contributors
 
 <a align="center" href="https://github.com/vitorpamplona/amethyst/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=vitorpamplona/amethyst" />
@@ -231,6 +238,7 @@ Information shared on nostr should be assumed permanent for privacy purposes. Th
 
 # MIT License
 
+<pre>
 Copyright (c) 2023 Vitor Pamplona
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -250,3 +258,4 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+</pre>
