@@ -16,6 +16,8 @@ Join the social network you control.
 [![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/amethyst/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/amethyst/actions/workflows/build.yml)
 [![License: Apache-2.0](https://img.shields.io/github/license/vitorpamplona/amethyst?labelColor=27303D&color=0877d2)](/LICENSE)
 
+<img align="right" src="./docs/screenshots/home.png" data-canonical-src="./docs/screenshots/home.png" width="350px"/>
+
 ## Download
 
 [<img src="./docs/design/obtainium.png"
@@ -33,8 +35,6 @@ height="80">](https://github.com/vitorpamplona/amethyst/releases)
 </div>
 
 # Current Features
-
-<img align="right" src="./docs/screenshots/home.png" data-canonical-src="./docs/screenshots/home.png" width="350px"/>
 
 - [x] Events / Relay Subscriptions (NIP-01)
 - [x] Follow List (NIP-02)
@@ -229,7 +229,7 @@ By contributing to this repository, you agree to license your work under the MIT
 |-------------------------------------------|----------------------------------------------|-------------------------------------------------|--------------------------------------------------------|
 | ![Home Feed](./docs/screenshots/home.png) | ![Messages](./docs/screenshots/messages.png) | ![Live Streams](./docs/screenshots/replies.png) | ![Notifications](./docs/screenshots/notifications.png) |
 
-## Contributors
+# Contributors
 
 <a align="center" href="https://github.com/vitorpamplona/amethyst/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=vitorpamplona/amethyst" />
