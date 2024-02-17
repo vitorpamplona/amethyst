@@ -16,25 +16,25 @@ Join the social network you control.
 [![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/amethyst/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/amethyst/actions/workflows/build.yml)
 [![License: Apache-2.0](https://img.shields.io/github/license/vitorpamplona/amethyst?labelColor=27303D&color=0877d2)](/LICENSE)
 
-<img align="right" src="./docs/screenshots/home.png" data-canonical-src="./docs/screenshots/home.png" width="350px"/>
-
 ## Download
 
 [<img src="./docs/design/obtainium.png"
 alt="Get it on Obtaininum"
-height="80">](https://github.com/ImranR98/Obtainium)
+height="70">](https://github.com/ImranR98/Obtainium)
 [<img src="https://github.com/machiav3lli/oandbackupx/raw/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" alt="Get it on GitHub"
-height="80">](https://github.com/vitorpamplona/amethyst/releases)
+height="70">](https://github.com/vitorpamplona/amethyst/releases)
 [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
      alt="Get it on F-Droid"
-     height="80">](https://f-droid.org/packages/com.vitorpamplona.amethyst/)
+     height="70">](https://f-droid.org/packages/com.vitorpamplona.amethyst/)
 [<img src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png"
      alt="Get it on Google Play"
-     height="80">](https://play.google.com/store/apps/details?id=com.vitorpamplona.amethyst)
+     height="70">](https://play.google.com/store/apps/details?id=com.vitorpamplona.amethyst)
 
 </div>
 
-# Current Features
+## Supported Features
+
+<img align="right" src="./docs/screenshots/home.png" data-canonical-src="./docs/screenshots/home.png" width="350px">
 
 - [x] Events / Relay Subscriptions (NIP-01)
 - [x] Follow List (NIP-02)
@@ -121,7 +121,7 @@ height="80">](https://github.com/vitorpamplona/amethyst/releases)
 - [ ] Workspaces
 - [ ] Infinity Scroll
 
-# Privacy and Information Permanence
+## Privacy and Information Permanence
 
 Relays know your IP address, your name, your location (guessed from IP), your pub key, all your contacts, and other relays, and can read every action you do (post, like, boost, quote, report, etc) except for Private Zaps and Private DMs. While the content of direct messages (DMs) is only visible to you and your DM counterparty, everyone can see when you and your counterparty DM each other.
 
