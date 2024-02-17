@@ -11,6 +11,7 @@
 Join the social network you control.
 
 [![GitHub downloads](https://img.shields.io/github/downloads/vitorpamplona/amethyst/total?label=downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/vitorpamplona/amethyst/releases)
+[![PlayStore downloads](https://img.shields.io/endpoint?color=green&logo=google-play&logoColor=green&url=https%3A%2F%2Fplay.cuzi.workers.dev%2Fplay%3Fi%3Dcom.vitorpamplona.amethyst%26gl%3DUS%26hl%3Den%26l%3DPlayStore%26m%3D%24shortinstalls)](https://play.google.com/store/apps/details?id=com.vitorpamplona.amethyst)
 
 [![Last Version](https://img.shields.io/github/release/vitorpamplona/amethyst.svg?maxAge=3600&label=Stable&labelColor=06599d&color=043b69)](https://github.com/vitorpamplona/amethyst)
 [![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/amethyst/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/amethyst/actions/workflows/build.yml)
