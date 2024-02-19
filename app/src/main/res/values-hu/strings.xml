@@ -139,12 +139,15 @@
     <string name="clear">Törlés</string>
     <string name="app_logo">App Logó</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex privát kulcs</string>
+    <string name="ncryptsec_password">jelszót a kulcs kinyitásához</string>
     <string name="show_password">Jelszó megjelenítése</string>
     <string name="hide_password">Jelszó elrejtése</string>
     <string name="invalid_key">Érvénytelen kulcs</string>
+    <string name="invalid_key_with_message">Érvénytelen kulcs: %1$s</string>
     <string name="i_accept_the">"Elfogadom a "</string>
     <string name="terms_of_use">használati feltételeket</string>
     <string name="acceptance_of_terms_is_required">A feltételek elfogadása szükséges</string>
+    <string name="password_is_required">Jelszó megadása kötelező</string>
     <string name="key_is_required">Kulcs szükséges</string>
     <string name="name_is_required">Név megadása kötelező</string>
     <string name="login">Bejelentkezés</string>
@@ -195,8 +198,18 @@
     <string name="mark_all_new_as_read">Az összes új megjelölése olvasottként</string>
     <string name="mark_all_as_read">Összes megjelölése olvasottként</string>
     <string name="backup_keys">Biztonsági Kulcsok</string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Kulcs- és biztonsági mentési tippek
+        \n\nFiókodat titkos kulcs védi. A kulcs egy hosszú véletlenszerű karakterlánc, amely **nsec1**-el kezdődik. Bárki, aki a Te titkos kulcsodhoz hozzáfér, az a személyazonosságod használatával bármilyen tartalmat közzétehet.
+        \n\n- **Ne** helyezd el titkos kulcsodat olyan webhelyen vagy szoftverben, amelyben nem bízol.
+        \n- Az Amethyst fejlesztők a titkos kulcsodat **soha** nem fogják elkérni.
+        \n- A fiók-helyreállításhoz, titkos kulcsodról **mindig** készíts biztonságos biztonsági másolatot. Javasoljuk a jelszókezelő használatát.
+    </string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">A nagyobb biztonság érdekében a kulcsot jelszóval titkosíthatod. Ez a kulcs **ncryptsec1**-val kezdődik, és a jelszavad nélkül nem használható.
+         \n\nHa elveszíted a jelszavát, nem tudod a kulcsodat visszaállítani.    </string>
+    <string name="failed_to_encrypt_key">Nem sikerült a privát kulcsot titkosítani</string>
     <string name="secret_key_copied_to_clipboard">A titkos kulcs (nsec) a vágólapra másolva</string>
     <string name="copy_my_secret_key">A titkos kulcsom másolása</string>
+    <string name="encrypt_and_copy_my_secret_key">Titkosítsd és másold a titkos kulcsomat</string>
     <string name="biometric_authentication_failed">Hitelesítés nem sikerült</string>
     <string name="biometric_authentication_failed_explainer">A telefon tulajdonosát a biometrikus adatokkal nem sikerült hitelesíteni</string>
     <string name="biometric_authentication_failed_explainer_with_error">A telefon tulajdonosát a biometrikus adatokkal nem sikerült hitelesíteni. Hiba: %1$s</string>
