@@ -31,6 +31,7 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.switchMap
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
@@ -96,6 +97,7 @@ import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.collections.immutable.toPersistentSet
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -181,10 +183,9 @@ class Account(
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: Boolean = true,
     var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>(),
+    var hasDonatedInVersion: Set<String> = setOf<String>(),
+    val scope: CoroutineScope = Amethyst.instance.applicationIOScope,
 ) {
-    // Uses a single scope for the entire application.
-    val scope = Amethyst.instance.applicationIOScope
-
     var transientHiddenUsers: ImmutableSet<String> = persistentSetOf()
 
     data class PaymentRequest(
@@ -2352,6 +2353,16 @@ class Account(
 
     fun loadLastRead(route: String): Long {
         return lastReadPerRoute[route] ?: 0
+    }
+
+    fun hasDonatedInThisVersion(): Boolean {
+        return hasDonatedInVersion.contains(BuildConfig.VERSION_NAME)
+    }
+
+    fun markDonatedInThisVersion() {
+        hasDonatedInVersion = hasDonatedInVersion + BuildConfig.VERSION_NAME
+        saveable.invalidateData()
+        live.invalidateData()
     }
 
     suspend fun registerObservers() =

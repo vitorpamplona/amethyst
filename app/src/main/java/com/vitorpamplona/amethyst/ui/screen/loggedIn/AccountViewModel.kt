@@ -647,6 +647,12 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         account.updateShowSensitiveContent(null)
     }
 
+    fun markDonatedInThisVersion() {
+        viewModelScope.launch {
+            account.markDonatedInThisVersion()
+        }
+    }
+
     fun defaultZapType(): LnZapEvent.ZapType {
         return account.defaultZapType
     }

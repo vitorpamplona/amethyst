@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 class KeyPair(
     privKey: ByteArray? = null,
     pubKey: ByteArray? = null,
+    forcePubKeyCheck: Boolean = true,
 ) {
     val privKey: ByteArray?
     val pubKey: ByteArray
@@ -44,7 +45,12 @@ class KeyPair(
         } else {
             // as private key is provided, ignore the public key and set keys according to private key
             this.privKey = privKey
-            this.pubKey = CryptoUtils.pubkeyCreate(privKey)
+
+            if (pubKey == null || forcePubKeyCheck) {
+                this.pubKey = CryptoUtils.pubkeyCreate(privKey)
+            } else {
+                this.pubKey = pubKey
+            }
         }
     }
 

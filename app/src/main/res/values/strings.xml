@@ -766,4 +766,12 @@
 
     <string name="invalid_nip19_uri">Invalid address</string>
     <string name="invalid_nip19_uri_description">Amethyst received a URI to open but that uri was invalid: %1$s</string>
+
+    <string name="zap_the_devs_title">Zap the Devs!</string>
+    <string name="zap_the_devs_description">Your donation helps us make a difference. Every sat counts!</string>
+    <string name="donate_now">Donate Now</string>
+    <string name="brought_to_you_by">was brought to you by:</string>
+    <string name="this_version_brought_to_you_by">This version was brought to you by:</string>
+    <string name="version_name">Version %1$s</string>
+    <string name="thank_you">Thank you!</string>
 </resources>

@@ -625,7 +625,7 @@ fun TextCount(
 }
 
 @Composable
-private fun SlidingAnimationAmount(
+fun SlidingAnimationAmount(
     amount: MutableState<String>,
     textColor: Color,
 ) {
@@ -1028,7 +1028,7 @@ fun ZapReaction(
     }
 }
 
-private fun zapClick(
+fun zapClick(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     context: Context,
@@ -1065,7 +1065,7 @@ private fun zapClick(
 }
 
 @Composable
-private fun ObserveZapIcon(
+fun ObserveZapIcon(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     inner: @Composable (MutableState<Boolean>) -> Unit,
@@ -1088,7 +1088,7 @@ private fun ObserveZapIcon(
 }
 
 @Composable
-private fun ObserveZapAmountText(
+fun ObserveZapAmountText(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     inner: @Composable (MutableState<String>) -> Unit,

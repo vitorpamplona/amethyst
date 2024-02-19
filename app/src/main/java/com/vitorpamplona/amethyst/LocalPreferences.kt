@@ -112,6 +112,7 @@ private object PrefKeys {
     const val LOGIN_WITH_EXTERNAL_SIGNER = "login_with_external_signer"
     const val AUTOMATICALLY_SHOW_PROFILE_PICTURE = "automatically_show_profile_picture"
     const val SIGNER_PACKAGE_NAME = "signer_package_name"
+    const val HAS_DONATED_IN_VERSION = "has_donated_in_version"
 
     const val ALL_ACCOUNT_INFO = "all_saved_accounts_info"
     const val SHARED_SETTINGS = "shared_settings"
@@ -331,6 +332,7 @@ object LocalPreferences {
                         PrefKeys.LAST_READ_PER_ROUTE,
                         Event.mapper.writeValueAsString(account.lastReadPerRoute),
                     )
+                    putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, account.hasDonatedInVersion)
 
                     if (account.showSensitiveContent == null) {
                         remove(PrefKeys.SHOW_SENSITIVE_CONTENT)
@@ -617,6 +619,8 @@ object LocalPreferences {
                         NostrSignerInternal(keyPair)
                     }
 
+                val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
+
                 val account =
                     Account(
                         keyPair = keyPair,
@@ -644,6 +648,7 @@ object LocalPreferences {
                         warnAboutPostsWithReports = warnAboutReports,
                         filterSpamFromStrangers = filterSpam,
                         lastReadPerRoute = lastReadPerRoute,
+                        hasDonatedInVersion = hasDonatedInVersion,
                     )
 
                 // Loads from DB
