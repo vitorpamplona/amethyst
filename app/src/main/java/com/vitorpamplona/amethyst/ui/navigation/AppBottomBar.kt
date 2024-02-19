@@ -23,13 +23,9 @@ package com.vitorpamplona.amethyst.ui.navigation
 import android.graphics.Rect
 import android.view.View
 import android.view.ViewTreeObserver
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -45,7 +41,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -59,7 +54,7 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
 import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.bottomIconModifier
 import kotlinx.collections.immutable.persistentListOf
 
 val bottomNavigationItems =
@@ -205,11 +200,9 @@ fun AddNotifIconIfNeeded(
 
 @Composable
 private fun NotificationDotIcon(modifier: Modifier) {
-    Box(modifier.size(Size10dp)) {
+    Box(Size10Modifier) {
         Box(
-            modifier =
-                remember { Size10Modifier.clip(shape = CircleShape) }
-                    .background(MaterialTheme.colorScheme.primary),
+            modifier = MaterialTheme.colorScheme.bottomIconModifier,
             contentAlignment = Alignment.TopEnd,
         ) {
             Text(
@@ -217,12 +210,7 @@ private fun NotificationDotIcon(modifier: Modifier) {
                 color = Color.White,
                 textAlign = TextAlign.Center,
                 fontSize = Font12SP,
-                modifier =
-                    remember {
-                        Modifier
-                            .wrapContentHeight()
-                            .align(Alignment.TopEnd)
-                    },
+                // modifier = Modifier.wrapContentHeight().align(Alignment.TopEnd),
             )
         }
     }
