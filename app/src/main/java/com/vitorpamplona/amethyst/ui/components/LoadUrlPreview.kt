@@ -32,7 +32,6 @@ import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
-import kotlinx.collections.immutable.persistentListOf
 
 @Composable
 fun LoadUrlPreview(
@@ -68,19 +67,17 @@ fun LoadUrlPreview(
                     if (state.previewInfo.mimeType.type == "image") {
                         Box(modifier = HalfVertPadding) {
                             ZoomableContentView(
-                                ZoomableUrlImage(url),
-                                persistentListOf(),
+                                content = ZoomableUrlImage(url),
                                 roundedCorner = true,
-                                accountViewModel,
+                                accountViewModel = accountViewModel,
                             )
                         }
                     } else if (state.previewInfo.mimeType.type == "video") {
                         Box(modifier = HalfVertPadding) {
                             ZoomableContentView(
-                                ZoomableUrlVideo(url),
-                                persistentListOf(),
+                                content = ZoomableUrlVideo(url),
                                 roundedCorner = true,
-                                accountViewModel,
+                                accountViewModel = accountViewModel,
                             )
                         }
                     } else {

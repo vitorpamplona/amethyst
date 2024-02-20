@@ -229,12 +229,12 @@ fun figureOutMimeType(fullUrl: String): ZoomableContent {
 @OptIn(ExperimentalFoundationApi::class)
 fun ZoomableContentView(
     content: ZoomableContent,
-    images: ImmutableList<ZoomableContent> = listOf(content).toImmutableList(),
+    images: ImmutableList<ZoomableContent> = remember(content) { listOf(content).toImmutableList() },
     roundedCorner: Boolean,
     accountViewModel: AccountViewModel,
 ) {
     // store the dialog open or close state
-    var dialogOpen by remember { mutableStateOf(false) }
+    var dialogOpen by remember(content) { mutableStateOf(false) }
 
     // store the dialog open or close state
     val shareOpen = remember { mutableStateOf(false) }
@@ -847,14 +847,16 @@ private fun DialogContent(
         SlidingCarousel(
             pagerState = pagerState,
         ) { index ->
-            RenderImageOrVideo(
-                content = allImages[index],
-                roundedCorner = false,
-                topPaddingForControllers = Size55dp,
-                onControllerVisibilityChanged = { controllerVisible.value = it },
-                onToggleControllerVisibility = { controllerVisible.value = !controllerVisible.value },
-                accountViewModel = accountViewModel,
-            )
+            allImages.getOrNull(index)?.let {
+                RenderImageOrVideo(
+                    content = it,
+                    roundedCorner = false,
+                    topPaddingForControllers = Size55dp,
+                    onControllerVisibilityChanged = { controllerVisible.value = it },
+                    onToggleControllerVisibility = { controllerVisible.value = !controllerVisible.value },
+                    accountViewModel = accountViewModel,
+                )
+            }
         }
     } else {
         RenderImageOrVideo(
@@ -879,18 +881,19 @@ private fun DialogContent(
         ) {
             CloseButton(onPress = onDismiss)
 
-            val myContent = allImages[pagerState.currentPage]
-            if (myContent is ZoomableUrlContent) {
-                Row {
-                    CopyToClipboard(content = myContent)
-                    Spacer(modifier = StdHorzSpacer)
-                    SaveToGallery(url = myContent.url)
+            allImages.getOrNull(pagerState.currentPage)?.let { myContent ->
+                if (myContent is ZoomableUrlContent) {
+                    Row {
+                        CopyToClipboard(content = myContent)
+                        Spacer(modifier = StdHorzSpacer)
+                        SaveToGallery(url = myContent.url)
+                    }
+                } else if (myContent is ZoomableLocalImage && myContent.localFile != null) {
+                    SaveToGallery(
+                        localFile = myContent.localFile,
+                        mimeType = myContent.mimeType,
+                    )
                 }
-            } else if (myContent is ZoomableLocalImage && myContent.localFile != null) {
-                SaveToGallery(
-                    localFile = myContent.localFile,
-                    mimeType = myContent.mimeType,
-                )
             }
         }
     }
