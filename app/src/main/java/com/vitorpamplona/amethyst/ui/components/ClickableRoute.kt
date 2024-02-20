@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.components
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.LocalContentColor
@@ -566,24 +565,29 @@ fun CreateClickableTextWithEmoji(
     if (emojiLists == null) {
         CreateClickableText(clickablePart, suffix, maxLines, overrideColor, fontWeight, route, nav)
     } else {
+        val clickablePartStyle =
+            SpanStyle(
+                color = overrideColor ?: MaterialTheme.colorScheme.primary,
+                fontWeight = fontWeight,
+            )
+
+        val nonClickablePartStyle =
+            SpanStyle(
+                color = overrideColor ?: MaterialTheme.colorScheme.onBackground,
+                fontWeight = fontWeight,
+            )
+
         ClickableInLineIconRenderer(
             emojiLists!!.part1,
             maxLines,
-            LocalTextStyle.current
-                .copy(color = overrideColor ?: MaterialTheme.colorScheme.primary, fontWeight = fontWeight)
-                .toSpanStyle(),
+            clickablePartStyle,
         ) {
             nav(route)
         }
 
         InLineIconRenderer(
             emojiLists!!.part2,
-            LocalTextStyle.current
-                .copy(
-                    color = overrideColor ?: MaterialTheme.colorScheme.onBackground,
-                    fontWeight = fontWeight,
-                )
-                .toSpanStyle(),
+            nonClickablePartStyle,
             maxLines = maxLines,
         )
     }
@@ -677,7 +681,7 @@ fun ClickableInLineIconRenderer(
             }
         }
 
-    BasicText(
+    Text(
         text = annotatedText,
         modifier = pressIndicator,
         inlineContent = inlineContent,
