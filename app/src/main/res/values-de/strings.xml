@@ -651,4 +651,12 @@ anz der Bedingungen ist erforderlich</string>
     <string name="show_npub_as_a_qr_code">Npub als QR-Code anzeigen</string>
     <string name="invalid_nip19_uri">Ungültige Adresse</string>
     <string name="invalid_nip19_uri_description">Amethyst hat eine URI zum Öffnen erhalten, aber diese URI war ungültig: %1$s</string>
+
+    <string name="zap_the_devs_title">Zap die Entwickler!</string>
+    <string name="zap_the_devs_description">Deine Spende hilft uns, einen Unterschied zu machen. Jeder Sat zählt!</string>
+    <string name="donate_now">Jetzt spenden</string>
+    <string name="brought_to_you_by">wurde Ihnen präsentiert von:</string>
+    <string name="this_version_brought_to_you_by">Diese Version wurde Ihnen präsentiert von:</string>
+    <string name="version_name">Version %1$s</string>
+    <string name="thank_you">Vielen Dank!</string>
 </resources>
