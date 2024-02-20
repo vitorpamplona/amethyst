@@ -14,6 +14,7 @@ android {
         targetSdk 34
         versionCode 358
         versionName "0.84.3"
+        buildConfigField "String", "RELEASE_NOTES_ID", "\"4d5a05aec61d8798f30f76b2efab81b98d75a03f935fb82823a1080bd56473cd\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

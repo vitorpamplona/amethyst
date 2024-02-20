@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
@@ -207,7 +208,7 @@ private fun ShowDonationCard(
     val account by accountViewModel.account.live.observeAsState()
     if (account?.account?.hasDonatedInThisVersion() == false) {
         LoadNote(
-            "4d5a05aec61d8798f30f76b2efab81b98d75a03f935fb82823a1080bd56473cd",
+            BuildConfig.RELEASE_NOTES_ID,
             accountViewModel,
         ) { loadedNoteId ->
             if (loadedNoteId != null) {
