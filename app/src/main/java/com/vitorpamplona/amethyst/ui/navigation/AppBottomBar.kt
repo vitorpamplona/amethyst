@@ -26,6 +26,7 @@ import android.view.ViewTreeObserver
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -53,7 +54,7 @@ import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
-import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.bottomIconModifier
 import kotlinx.collections.immutable.persistentListOf
 
@@ -200,7 +201,7 @@ fun AddNotifIconIfNeeded(
 
 @Composable
 private fun NotificationDotIcon(modifier: Modifier) {
-    Box(Size10Modifier) {
+    Box(modifier.size(Size10dp)) {
         Box(
             modifier = MaterialTheme.colorScheme.bottomIconModifier,
             contentAlignment = Alignment.TopEnd,
