@@ -646,7 +646,6 @@
     <string name="show_npub_as_a_qr_code">Zobrazit npub jako QR kód</string>
     <string name="invalid_nip19_uri">Neplatná adresa</string>
     <string name="invalid_nip19_uri_description">Amethyst obdržel URI k otevření, ale tento URI byl neplatný: %1$s</string>
-
     <string name="zap_the_devs_title">Zapni vývojáře!</string>
     <string name="zap_the_devs_description">Váš příspěvek nám pomáhá dělat rozdíl. Každý sat se počítá!</string>
     <string name="donate_now">Přispět nyní</string>

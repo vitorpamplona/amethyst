@@ -646,7 +646,6 @@
     <string name="show_npub_as_a_qr_code">Mostrar npub como um código QR</string>
     <string name="invalid_nip19_uri">Endereço inválido</string>
     <string name="invalid_nip19_uri_description">O Amethyst recebeu um URI para abrir, mas esse URI era inválido: %1$s</string>
-
     <string name="zap_the_devs_title">Zap os desenvolvedores!</string>
     <string name="zap_the_devs_description">Sua doação nos ajuda a fazer a diferença. Cada sat conta!</string>
     <string name="donate_now">Doar agora</string>
