@@ -76,12 +76,7 @@ class GiftWrapBenchmark {
             expectedLength,
             events!!
                 .wraps
-                .map {
-                    println("TEST ${it.toJson()}")
-                    it.toJson()
-                }
-                .joinToString("")
-                .length,
+                .sumOf { it.toJson().length },
         )
 
         // Simulate Receiver
