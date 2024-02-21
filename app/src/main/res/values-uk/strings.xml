@@ -195,7 +195,7 @@
     <string name="copy_my_secret_key">Скопіювати мій приватний ключ</string>
     <string name="biometric_authentication_failed">Помилка входу</string>
     <string name="biometric_authentication_failed_explainer">Не вдалося виконати біометрику для автентифікації власника цього телефону</string>
-    <string name="biometric_authentication_failed_explainer_with_error">Не вдалося виконати біометрику для автентифікації власника цього телефону</string>
+    <string name="biometric_authentication_failed_explainer_with_error">Не вдалося виконати біометрику для автентифікації власника цього телефону. Помилка: %1$s</string>
     <string name="biometric_error">Помилка</string>
     <string name="badge_created_by">"Створено %1$s"</string>
     <string name="badge_award_image_for">"Картинка значка-нагороди %1$s"</string>
