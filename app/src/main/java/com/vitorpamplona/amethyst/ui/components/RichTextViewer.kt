@@ -68,28 +68,29 @@ import androidx.compose.ui.unit.em
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
 import com.halilibo.richtext.ui.material3.Material3RichText
+import com.vitorpamplona.amethyst.commons.BechSegment
+import com.vitorpamplona.amethyst.commons.CashuSegment
+import com.vitorpamplona.amethyst.commons.EmailSegment
+import com.vitorpamplona.amethyst.commons.EmojiSegment
+import com.vitorpamplona.amethyst.commons.HashIndexEventSegment
+import com.vitorpamplona.amethyst.commons.HashIndexUserSegment
+import com.vitorpamplona.amethyst.commons.HashTagSegment
+import com.vitorpamplona.amethyst.commons.ImageSegment
+import com.vitorpamplona.amethyst.commons.InvoiceSegment
+import com.vitorpamplona.amethyst.commons.LinkSegment
+import com.vitorpamplona.amethyst.commons.PhoneSegment
+import com.vitorpamplona.amethyst.commons.RegularTextSegment
+import com.vitorpamplona.amethyst.commons.RichTextParser
+import com.vitorpamplona.amethyst.commons.RichTextViewerState
+import com.vitorpamplona.amethyst.commons.SchemelessUrlSegment
+import com.vitorpamplona.amethyst.commons.Segment
+import com.vitorpamplona.amethyst.commons.WithdrawSegment
+import com.vitorpamplona.amethyst.commons.ZoomableUrlImage
 import com.vitorpamplona.amethyst.model.HashtagIcon
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
-import com.vitorpamplona.amethyst.service.BechSegment
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
-import com.vitorpamplona.amethyst.service.CashuSegment
-import com.vitorpamplona.amethyst.service.EmailSegment
-import com.vitorpamplona.amethyst.service.EmojiSegment
-import com.vitorpamplona.amethyst.service.HashIndexEventSegment
-import com.vitorpamplona.amethyst.service.HashIndexUserSegment
-import com.vitorpamplona.amethyst.service.HashTagSegment
-import com.vitorpamplona.amethyst.service.ImageSegment
-import com.vitorpamplona.amethyst.service.InvoiceSegment
-import com.vitorpamplona.amethyst.service.LinkSegment
-import com.vitorpamplona.amethyst.service.PhoneSegment
-import com.vitorpamplona.amethyst.service.RegularTextSegment
-import com.vitorpamplona.amethyst.service.RichTextParser
-import com.vitorpamplona.amethyst.service.RichTextViewerState
-import com.vitorpamplona.amethyst.service.SchemelessUrlSegment
-import com.vitorpamplona.amethyst.service.Segment
-import com.vitorpamplona.amethyst.service.WithdrawSegment
 import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -106,45 +107,6 @@ import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.net.MalformedURLException
-import java.net.URISyntaxException
-import java.net.URL
-import java.util.regex.Pattern
-
-val imageExtensions = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg")
-val videoExtensions = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8")
-
-val tagIndex = Pattern.compile("\\#\\[([0-9]+)\\](.*)")
-val hashTagsPattern: Pattern =
-    Pattern.compile("#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)(.*)", Pattern.CASE_INSENSITIVE)
-
-fun removeQueryParamsForExtensionComparison(fullUrl: String): String {
-    return if (fullUrl.contains("?")) {
-        fullUrl.split("?")[0].lowercase()
-    } else if (fullUrl.contains("#")) {
-        fullUrl.split("#")[0].lowercase()
-    } else {
-        fullUrl.lowercase()
-    }
-}
-
-fun isImageOrVideoUrl(url: String): Boolean {
-    val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
-
-    return imageExtensions.any { removedParamsFromUrl.endsWith(it) } ||
-        videoExtensions.any { removedParamsFromUrl.endsWith(it) }
-}
-
-fun isValidURL(url: String?): Boolean {
-    return try {
-        URL(url).toURI()
-        true
-    } catch (e: MalformedURLException) {
-        false
-    } catch (e: URISyntaxException) {
-        false
-    }
-}
 
 fun isMarkdown(content: String): Boolean {
     return content.startsWith("> ") ||
@@ -420,7 +382,7 @@ fun RenderCustomEmoji(
 val markdownParseOptions =
     MarkdownParseOptions(
         autolink = true,
-        isImage = { url -> isImageOrVideoUrl(url) },
+        isImage = { url -> RichTextParser.isImageOrVideoUrl(url) },
     )
 
 @Composable

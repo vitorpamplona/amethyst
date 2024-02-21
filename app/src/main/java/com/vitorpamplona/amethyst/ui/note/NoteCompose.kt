@@ -95,6 +95,12 @@ import coil.request.SuccessResult
 import com.fonfon.kgeohash.GeoHash
 import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.RichTextParser
+import com.vitorpamplona.amethyst.commons.ZoomableContent
+import com.vitorpamplona.amethyst.commons.ZoomableLocalImage
+import com.vitorpamplona.amethyst.commons.ZoomableLocalVideo
+import com.vitorpamplona.amethyst.commons.ZoomableUrlImage
+import com.vitorpamplona.amethyst.commons.ZoomableUrlVideo
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
@@ -113,17 +119,9 @@ import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.VideoView
-import com.vitorpamplona.amethyst.ui.components.ZoomableContent
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
-import com.vitorpamplona.amethyst.ui.components.ZoomableLocalImage
-import com.vitorpamplona.amethyst.ui.components.ZoomableLocalVideo
-import com.vitorpamplona.amethyst.ui.components.ZoomableUrlImage
-import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
-import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
-import com.vitorpamplona.amethyst.ui.components.imageExtensions
 import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
-import com.vitorpamplona.amethyst.ui.components.removeQueryParamsForExtensionComparison
 import com.vitorpamplona.amethyst.ui.elements.AddButton
 import com.vitorpamplona.amethyst.ui.elements.DisplayFollowingCommunityInPost
 import com.vitorpamplona.amethyst.ui.elements.DisplayFollowingHashtagsInPost
@@ -1447,7 +1445,7 @@ fun RenderAppDefinition(
 
                 if (zoomImageDialogOpen) {
                     ZoomableImageDialog(
-                        imageUrl = figureOutMimeType(it.banner!!),
+                        imageUrl = RichTextParser.parseImageOrVideo(it.banner!!),
                         onDismiss = { zoomImageDialogOpen = false },
                         accountViewModel = accountViewModel,
                     )
@@ -1503,7 +1501,7 @@ fun RenderAppDefinition(
 
                     if (zoomImageDialogOpen) {
                         ZoomableImageDialog(
-                            imageUrl = figureOutMimeType(it.banner!!),
+                            imageUrl = RichTextParser.parseImageOrVideo(it.banner!!),
                             onDismiss = { zoomImageDialogOpen = false },
                             accountViewModel = accountViewModel,
                         )
@@ -3064,10 +3062,7 @@ fun FileHeaderDisplay(
             val hash = event.hash()
             val dimensions = event.dimensions()
             val description = event.alt() ?: event.content
-            val isImage =
-                imageExtensions.any {
-                    removeQueryParamsForExtensionComparison(fullUrl).lowercase().endsWith(it)
-                }
+            val isImage = RichTextParser.isImageUrl(fullUrl)
             val uri = note.toNostrUri()
 
             mutableStateOf<ZoomableContent>(
@@ -3126,10 +3121,7 @@ fun VideoDisplay(
             val hash = event.hash()
             val dimensions = event.dimensions()
             val description = event.alt() ?: event.content
-            val isImage =
-                imageExtensions.any {
-                    removeQueryParamsForExtensionComparison(fullUrl).lowercase().endsWith(it)
-                }
+            val isImage = RichTextParser.isImageUrl(fullUrl)
             val uri = note.toNostrUri()
 
             mutableStateOf<ZoomableContent>(

@@ -112,6 +112,7 @@ import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -127,7 +128,6 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
-import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -826,7 +826,7 @@ private fun ProfileHeader(
     val profilePic = baseUser.profilePicture()
     if (zoomImageDialogOpen && profilePic != null) {
         ZoomableImageDialog(
-            figureOutMimeType(profilePic),
+            RichTextParser.parseImageOrVideo(profilePic),
             onDismiss = { zoomImageDialogOpen = false },
             accountViewModel = accountViewModel,
         )
@@ -1477,7 +1477,7 @@ fun DrawBanner(
 
         if (zoomImageDialogOpen) {
             ZoomableImageDialog(
-                imageUrl = figureOutMimeType(banner),
+                imageUrl = RichTextParser.parseImageOrVideo(banner),
                 onDismiss = { zoomImageDialogOpen = false },
                 accountViewModel = accountViewModel,
             )

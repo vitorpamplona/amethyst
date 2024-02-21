@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.util.Log
 import android.util.Patterns
+import com.vitorpamplona.amethyst.commons.RichTextParser
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.startsWithNIP19Scheme
 import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.coroutines.CancellationException
@@ -34,7 +34,7 @@ class MarkdownParser {
         tag: String,
         tags: ImmutableListOfLists<String>,
     ): Pair<String, String>? {
-        val matcher = tagIndex.matcher(tag)
+        val matcher = RichTextParser.tagIndex.matcher(tag)
         val (index, suffix) =
             try {
                 matcher.find()
@@ -95,7 +95,7 @@ class MarkdownParser {
         val listOfReferences = mutableListOf<Nip19.Return>()
         content.split('\n').forEach { paragraph ->
             paragraph.split(' ').forEach { word: String ->
-                if (startsWithNIP19Scheme(word)) {
+                if (RichTextParser.startsWithNIP19Scheme(word)) {
                     val parsedNip19 = Nip19.uriToRoute(word)
                     parsedNip19?.let { listOfReferences.add(it) }
                 }
@@ -122,9 +122,8 @@ class MarkdownParser {
         var returnContent = ""
         content.split('\n').forEach { paragraph ->
             paragraph.split(' ').forEach { word: String ->
-                if (isValidURL(word)) {
-                    val removedParamsFromUrl = removeQueryParamsForExtensionComparison(word)
-                    if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
+                if (RichTextParser.isValidURL(word)) {
+                    if (RichTextParser.isImageUrl(word)) {
                         returnContent += "![]($word) "
                     } else {
                         returnContent += "[$word]($word) "
@@ -133,7 +132,7 @@ class MarkdownParser {
                     returnContent += "[$word](mailto:$word) "
                 } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
                     returnContent += "[$word](tel:$word) "
-                } else if (startsWithNIP19Scheme(word)) {
+                } else if (RichTextParser.startsWithNIP19Scheme(word)) {
                     val parsedNip19 = Nip19.uriToRoute(word)
                     returnContent +=
                         if (parsedNip19 !== null) {
@@ -148,15 +147,15 @@ class MarkdownParser {
                             "$word "
                         }
                 } else if (word.startsWith("#")) {
-                    if (tagIndex.matcher(word).matches() && tags != null) {
+                    if (RichTextParser.tagIndex.matcher(word).matches() && tags != null) {
                         val pair = getDisplayNameAndNIP19FromTag(word, tags)
                         if (pair != null) {
                             returnContent += "[${pair.first}](nostr:${pair.second}) "
                         } else {
                             returnContent += "$word "
                         }
-                    } else if (hashTagsPattern.matcher(word).matches()) {
-                        val hashtagMatcher = hashTagsPattern.matcher(word)
+                    } else if (RichTextParser.hashTagsPattern.matcher(word).matches()) {
+                        val hashtagMatcher = RichTextParser.hashTagsPattern.matcher(word)
 
                         val (myTag, mySuffix) =
                             try {

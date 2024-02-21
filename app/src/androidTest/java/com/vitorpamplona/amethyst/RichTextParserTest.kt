@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.amethyst.service.RichTextParser
-import com.vitorpamplona.amethyst.service.RichTextViewerState
+import com.vitorpamplona.amethyst.commons.RichTextParser
+import com.vitorpamplona.amethyst.commons.RichTextViewerState
 import com.vitorpamplona.quartz.events.EmptyTagList
 import org.junit.Assert
 import org.junit.Test

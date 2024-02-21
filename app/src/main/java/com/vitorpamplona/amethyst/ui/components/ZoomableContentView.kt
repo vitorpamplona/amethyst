@@ -69,7 +69,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
@@ -107,6 +106,13 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.imageLoader
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ZoomableContent
+import com.vitorpamplona.amethyst.commons.ZoomableLocalImage
+import com.vitorpamplona.amethyst.commons.ZoomableLocalVideo
+import com.vitorpamplona.amethyst.commons.ZoomablePreloadedContent
+import com.vitorpamplona.amethyst.commons.ZoomableUrlContent
+import com.vitorpamplona.amethyst.commons.ZoomableUrlImage
+import com.vitorpamplona.amethyst.commons.ZoomableUrlVideo
 import com.vitorpamplona.amethyst.service.BlurHashRequester
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
@@ -137,93 +143,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
-import java.io.File
-
-@Immutable
-abstract class ZoomableContent(
-    val description: String? = null,
-    val dim: String? = null,
-)
-
-@Immutable
-abstract class ZoomableUrlContent(
-    val url: String,
-    description: String? = null,
-    val hash: String? = null,
-    dim: String? = null,
-    val uri: String? = null,
-) : ZoomableContent(description, dim)
-
-@Immutable
-class ZoomableUrlImage(
-    url: String,
-    description: String? = null,
-    hash: String? = null,
-    val blurhash: String? = null,
-    dim: String? = null,
-    uri: String? = null,
-    val contentWarning: String? = null,
-) : ZoomableUrlContent(url, description, hash, dim, uri)
-
-@Immutable
-class ZoomableUrlVideo(
-    url: String,
-    description: String? = null,
-    hash: String? = null,
-    dim: String? = null,
-    uri: String? = null,
-    val artworkUri: String? = null,
-    val authorName: String? = null,
-    val blurhash: String? = null,
-    val contentWarning: String? = null,
-) : ZoomableUrlContent(url, description, hash, dim, uri)
-
-@Immutable
-abstract class ZoomablePreloadedContent(
-    val localFile: File?,
-    description: String? = null,
-    val mimeType: String? = null,
-    val isVerified: Boolean? = null,
-    dim: String? = null,
-    val uri: String,
-) : ZoomableContent(description, dim)
-
-@Immutable
-class ZoomableLocalImage(
-    localFile: File?,
-    mimeType: String? = null,
-    description: String? = null,
-    val blurhash: String? = null,
-    dim: String? = null,
-    isVerified: Boolean? = null,
-    uri: String,
-) : ZoomablePreloadedContent(localFile, description, mimeType, isVerified, dim, uri)
-
-@Immutable
-class ZoomableLocalVideo(
-    localFile: File?,
-    mimeType: String? = null,
-    description: String? = null,
-    dim: String? = null,
-    isVerified: Boolean? = null,
-    uri: String,
-    val artworkUri: String? = null,
-    val authorName: String? = null,
-) : ZoomablePreloadedContent(localFile, description, mimeType, isVerified, dim, uri)
-
-fun figureOutMimeType(fullUrl: String): ZoomableContent {
-    val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
-    val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
-    val isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
-
-    return if (isImage) {
-        ZoomableUrlImage(fullUrl)
-    } else if (isVideo) {
-        ZoomableUrlVideo(fullUrl)
-    } else {
-        ZoomableUrlImage(fullUrl)
-    }
-}
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
@@ -316,7 +235,7 @@ private fun LocalImageView(
     accountViewModel: AccountViewModel,
     alwayShowImage: Boolean = false,
 ) {
-    if (content.localFile != null && content.localFile.exists()) {
+    if (content.localFileExists()) {
         BoxWithConstraints(contentAlignment = Alignment.Center) {
             val showImage =
                 remember {
@@ -549,8 +468,8 @@ private fun AddedImageFeatures(
                 BlankNote()
             }
             is AsyncImagePainter.State.Success -> {
-                if (content.isVerified != null) {
-                    HashVerificationSymbol(content.isVerified, verifiedModifier)
+                content.isVerified?.let {
+                    HashVerificationSymbol(it, verifiedModifier)
                 }
             }
             else -> {}
@@ -888,9 +807,9 @@ private fun DialogContent(
                         Spacer(modifier = StdHorzSpacer)
                         SaveToGallery(url = myContent.url)
                     }
-                } else if (myContent is ZoomableLocalImage && myContent.localFile != null) {
+                } else if (myContent is ZoomableLocalImage && myContent.localFileExists()) {
                     SaveToGallery(
-                        localFile = myContent.localFile,
+                        localFile = myContent.localFile!!,
                         mimeType = myContent.mimeType,
                     )
                 }
@@ -975,11 +894,11 @@ private fun ShareImageAction(
                     onDismiss()
                 },
             )
-            if (content.uri != null) {
+            content.uri?.let {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.copy_the_note_id_to_the_clipboard)) },
                     onClick = {
-                        clipboardManager.setText(AnnotatedString(content.uri))
+                        clipboardManager.setText(AnnotatedString(it))
                         onDismiss()
                     },
                 )

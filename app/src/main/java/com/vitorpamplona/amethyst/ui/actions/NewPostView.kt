@@ -129,23 +129,18 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
-import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
-import com.vitorpamplona.amethyst.service.startsWithNIP19Scheme
 import com.vitorpamplona.amethyst.ui.components.BechLink
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZapRaiserRequest
-import com.vitorpamplona.amethyst.ui.components.imageExtensions
-import com.vitorpamplona.amethyst.ui.components.isValidURL
-import com.vitorpamplona.amethyst.ui.components.removeQueryParamsForExtensionComparison
-import com.vitorpamplona.amethyst.ui.components.videoExtensions
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.CancelIcon
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
@@ -476,10 +471,8 @@ fun NewPostView(
                                 val myUrlPreview = postViewModel.urlPreview
                                 if (myUrlPreview != null) {
                                     Row(modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)) {
-                                        if (isValidURL(myUrlPreview)) {
-                                            val removedParamsFromUrl =
-                                                removeQueryParamsForExtensionComparison(myUrlPreview)
-                                            if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
+                                        if (RichTextParser.isValidURL(myUrlPreview)) {
+                                            if (RichTextParser.isImageUrl(myUrlPreview)) {
                                                 AsyncImage(
                                                     model = myUrlPreview,
                                                     contentDescription = myUrlPreview,
@@ -495,7 +488,7 @@ fun NewPostView(
                                                                 QuoteBorder,
                                                             ),
                                                 )
-                                            } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
+                                            } else if (RichTextParser.isVideoUrl(myUrlPreview)) {
                                                 VideoView(
                                                     myUrlPreview,
                                                     roundedCorner = true,
@@ -504,7 +497,7 @@ fun NewPostView(
                                             } else {
                                                 LoadUrlPreview(myUrlPreview, myUrlPreview, accountViewModel)
                                             }
-                                        } else if (startsWithNIP19Scheme(myUrlPreview)) {
+                                        } else if (RichTextParser.startsWithNIP19Scheme(myUrlPreview)) {
                                             val bgColor = MaterialTheme.colorScheme.background
                                             val backgroundColor = remember { mutableStateOf(bgColor) }
 
@@ -515,7 +508,7 @@ fun NewPostView(
                                                 accountViewModel,
                                                 nav,
                                             )
-                                        } else if (noProtocolUrlValidator.matcher(myUrlPreview).matches()) {
+                                        } else if (RichTextParser.isUrlWithoutScheme(myUrlPreview)) {
                                             LoadUrlPreview("https://$myUrlPreview", myUrlPreview, accountViewModel)
                                         }
                                     }
