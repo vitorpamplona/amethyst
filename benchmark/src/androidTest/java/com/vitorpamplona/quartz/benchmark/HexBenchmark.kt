@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.quartz.encoders.HexValidator
 import junit.framework.TestCase.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -64,5 +65,10 @@ class HexBenchmark {
         val bytes = fr.acinq.secp256k1.Hex.decode(testHex)
 
         benchmarkRule.measureRepeated { assertEquals(testHex, fr.acinq.secp256k1.Hex.encode(bytes)) }
+    }
+
+    @Test
+    fun isHex() {
+        benchmarkRule.measureRepeated { HexValidator.isHex(testHex) }
     }
 }
