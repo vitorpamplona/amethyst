@@ -656,5 +656,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="donate_now">Jetzt spenden</string>
     <string name="brought_to_you_by">wurde Ihnen präsentiert von:</string>
     <string name="this_version_brought_to_you_by">Diese Version wurde Ihnen präsentiert von:</string>
+    <string name="version_name">Version %1$s</string>
     <string name="thank_you">Vielen Dank!</string>
 </resources>
