@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.amethyst.commons.ExpandableTextParser
+import com.vitorpamplona.amethyst.commons.ExpandableTextCutOffCalculator
 import com.vitorpamplona.amethyst.commons.nthIndexOf
 import junit.framework.TestCase
 import org.junit.Rule
@@ -60,7 +60,7 @@ class ExpandableViewComputationBenchmark {
         benchmarkRule.measureRepeated {
             TestCase.assertEquals(
                 293,
-                ExpandableTextParser.computeWhereToCutIfPostIsTooLong(testCase1),
+                ExpandableTextCutOffCalculator.indexToCutOff(testCase1),
             )
         }
     }
@@ -70,7 +70,7 @@ class ExpandableViewComputationBenchmark {
         benchmarkRule.measureRepeated {
             TestCase.assertEquals(
                 355,
-                ExpandableTextParser.computeWhereToCutIfPostIsTooLong(testCase2),
+                ExpandableTextCutOffCalculator.indexToCutOff(testCase2),
             )
         }
     }
@@ -80,7 +80,7 @@ class ExpandableViewComputationBenchmark {
         benchmarkRule.measureRepeated {
             TestCase.assertEquals(
                 65,
-                ExpandableTextParser.computeWhereToCutIfPostIsTooLong(testCase3),
+                ExpandableTextCutOffCalculator.indexToCutOff(testCase3),
             )
         }
     }

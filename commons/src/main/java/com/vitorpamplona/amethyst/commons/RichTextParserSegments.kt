@@ -28,8 +28,8 @@ import kotlinx.collections.immutable.ImmutableSet
 @Immutable
 data class RichTextViewerState(
     val urlSet: ImmutableSet<String>,
-    val imagesForPager: ImmutableMap<String, ZoomableUrlContent>,
-    val imageList: ImmutableList<ZoomableUrlContent>,
+    val imagesForPager: ImmutableMap<String, MediaUrlContent>,
+    val imageList: ImmutableList<MediaUrlContent>,
     val customEmoji: ImmutableMap<String, String>,
     val paragraphs: ImmutableList<ParagraphState>,
 )

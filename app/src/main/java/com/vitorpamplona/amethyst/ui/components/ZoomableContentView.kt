@@ -106,13 +106,13 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.imageLoader
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.ZoomableContent
-import com.vitorpamplona.amethyst.commons.ZoomableLocalImage
-import com.vitorpamplona.amethyst.commons.ZoomableLocalVideo
-import com.vitorpamplona.amethyst.commons.ZoomablePreloadedContent
-import com.vitorpamplona.amethyst.commons.ZoomableUrlContent
-import com.vitorpamplona.amethyst.commons.ZoomableUrlImage
-import com.vitorpamplona.amethyst.commons.ZoomableUrlVideo
+import com.vitorpamplona.amethyst.commons.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.MediaLocalImage
+import com.vitorpamplona.amethyst.commons.MediaLocalVideo
+import com.vitorpamplona.amethyst.commons.MediaPreloadedContent
+import com.vitorpamplona.amethyst.commons.MediaUrlContent
+import com.vitorpamplona.amethyst.commons.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.MediaUrlVideo
 import com.vitorpamplona.amethyst.service.BlurHashRequester
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
@@ -147,8 +147,8 @@ import net.engawapg.lib.zoomable.zoomable
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 fun ZoomableContentView(
-    content: ZoomableContent,
-    images: ImmutableList<ZoomableContent> = remember(content) { listOf(content).toImmutableList() },
+    content: BaseMediaContent,
+    images: ImmutableList<BaseMediaContent> = remember(content) { listOf(content).toImmutableList() },
     roundedCorner: Boolean,
     accountViewModel: AccountViewModel,
 ) {
@@ -169,13 +169,13 @@ fun ZoomableContentView(
             Modifier.fillMaxWidth()
         }
 
-    if (content is ZoomableUrlContent) {
+    if (content is MediaUrlContent) {
         mainImageModifier =
             mainImageModifier.combinedClickable(
                 onClick = { dialogOpen = true },
                 onLongClick = { shareOpen.value = true },
             )
-    } else if (content is ZoomablePreloadedContent) {
+    } else if (content is MediaPreloadedContent) {
         mainImageModifier =
             mainImageModifier.combinedClickable(
                 onClick = { dialogOpen = true },
@@ -186,11 +186,11 @@ fun ZoomableContentView(
     }
 
     when (content) {
-        is ZoomableUrlImage ->
+        is MediaUrlImage ->
             SensitivityWarning(content.contentWarning != null, accountViewModel) {
                 UrlImageView(content, mainImageModifier, accountViewModel = accountViewModel)
             }
-        is ZoomableUrlVideo ->
+        is MediaUrlVideo ->
             SensitivityWarning(content.contentWarning != null, accountViewModel) {
                 VideoView(
                     videoUri = content.url,
@@ -205,9 +205,9 @@ fun ZoomableContentView(
                     accountViewModel = accountViewModel,
                 )
             }
-        is ZoomableLocalImage ->
+        is MediaLocalImage ->
             LocalImageView(content, mainImageModifier, accountViewModel = accountViewModel)
-        is ZoomableLocalVideo ->
+        is MediaLocalVideo ->
             content.localFile?.let {
                 VideoView(
                     videoUri = it.toUri().toString(),
@@ -229,7 +229,7 @@ fun ZoomableContentView(
 
 @Composable
 private fun LocalImageView(
-    content: ZoomableLocalImage,
+    content: MediaLocalImage,
     mainImageModifier: Modifier,
     topPaddingForControllers: Dp = Dp.Unspecified,
     accountViewModel: AccountViewModel,
@@ -296,7 +296,7 @@ private fun LocalImageView(
 
 @Composable
 private fun UrlImageView(
-    content: ZoomableUrlImage,
+    content: MediaUrlImage,
     mainImageModifier: Modifier,
     topPaddingForControllers: Dp = Dp.Unspecified,
     accountViewModel: AccountViewModel,
@@ -419,7 +419,7 @@ private fun InlineDownloadIcon(showImage: MutableState<Boolean>) =
 @OptIn(ExperimentalLayoutApi::class)
 private fun AddedImageFeatures(
     painter: MutableState<AsyncImagePainter.State?>,
-    content: ZoomableLocalImage,
+    content: MediaLocalImage,
     contentScale: ContentScale,
     myModifier: Modifier,
     verifiedModifier: Modifier,
@@ -481,7 +481,7 @@ private fun AddedImageFeatures(
 @OptIn(ExperimentalLayoutApi::class)
 private fun AddedImageFeatures(
     painter: MutableState<AsyncImagePainter.State?>,
-    content: ZoomableUrlImage,
+    content: MediaUrlImage,
     contentScale: ContentScale,
     myModifier: Modifier,
     verifiedModifier: Modifier,
@@ -576,8 +576,8 @@ fun aspectRatio(dim: String?): Float? {
 }
 
 @Composable
-private fun DisplayUrlWithLoadingSymbol(content: ZoomableContent) {
-    var cnt by remember { mutableStateOf<ZoomableContent?>(null) }
+private fun DisplayUrlWithLoadingSymbol(content: BaseMediaContent) {
+    var cnt by remember { mutableStateOf<BaseMediaContent?>(null) }
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
@@ -590,7 +590,7 @@ private fun DisplayUrlWithLoadingSymbol(content: ZoomableContent) {
 }
 
 @Composable
-private fun DisplayUrlWithLoadingSymbolWait(content: ZoomableContent) {
+private fun DisplayUrlWithLoadingSymbolWait(content: BaseMediaContent) {
     val uri = LocalUriHandler.current
 
     val primary = MaterialTheme.colorScheme.primary
@@ -602,7 +602,7 @@ private fun DisplayUrlWithLoadingSymbolWait(content: ZoomableContent) {
     val annotatedTermsString =
         remember {
             buildAnnotatedString {
-                if (content is ZoomableUrlContent) {
+                if (content is MediaUrlContent) {
                     withStyle(clickableTextStyle) {
                         pushStringAnnotation("routeToImage", "")
                         append(content.url + " ")
@@ -624,7 +624,7 @@ private fun DisplayUrlWithLoadingSymbolWait(content: ZoomableContent) {
 
     val pressIndicator =
         remember {
-            if (content is ZoomableUrlContent) {
+            if (content is MediaUrlContent) {
                 Modifier.clickable { runCatching { uri.openUri(content.url) } }
             } else {
                 Modifier
@@ -676,8 +676,8 @@ fun DisplayBlurHash(
 
 @Composable
 fun ZoomableImageDialog(
-    imageUrl: ZoomableContent,
-    allImages: ImmutableList<ZoomableContent> = listOf(imageUrl).toImmutableList(),
+    imageUrl: BaseMediaContent,
+    allImages: ImmutableList<BaseMediaContent> = listOf(imageUrl).toImmutableList(),
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
@@ -740,8 +740,8 @@ fun ZoomableImageDialog(
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun DialogContent(
-    allImages: ImmutableList<ZoomableContent>,
-    imageUrl: ZoomableContent,
+    allImages: ImmutableList<BaseMediaContent>,
+    imageUrl: BaseMediaContent,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
@@ -801,13 +801,13 @@ private fun DialogContent(
             CloseButton(onPress = onDismiss)
 
             allImages.getOrNull(pagerState.currentPage)?.let { myContent ->
-                if (myContent is ZoomableUrlContent) {
+                if (myContent is MediaUrlContent) {
                     Row {
                         CopyToClipboard(content = myContent)
                         Spacer(modifier = StdHorzSpacer)
                         SaveToGallery(url = myContent.url)
                     }
-                } else if (myContent is ZoomableLocalImage && myContent.localFileExists()) {
+                } else if (myContent is MediaLocalImage && myContent.localFileExists()) {
                     SaveToGallery(
                         localFile = myContent.localFile!!,
                         mimeType = myContent.mimeType,
@@ -857,7 +857,7 @@ fun InlineCarrousel(
 }
 
 @Composable
-private fun CopyToClipboard(content: ZoomableContent) {
+private fun CopyToClipboard(content: BaseMediaContent) {
     val popupExpanded = remember { mutableStateOf(false) }
 
     OutlinedButton(
@@ -877,7 +877,7 @@ private fun CopyToClipboard(content: ZoomableContent) {
 @Composable
 private fun ShareImageAction(
     popupExpanded: MutableState<Boolean>,
-    content: ZoomableContent,
+    content: BaseMediaContent,
     onDismiss: () -> Unit,
 ) {
     DropdownMenu(
@@ -886,7 +886,7 @@ private fun ShareImageAction(
     ) {
         val clipboardManager = LocalClipboardManager.current
 
-        if (content is ZoomableUrlContent) {
+        if (content is MediaUrlContent) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.copy_url_to_clipboard)) },
                 onClick = {
@@ -905,7 +905,7 @@ private fun ShareImageAction(
             }
         }
 
-        if (content is ZoomablePreloadedContent) {
+        if (content is MediaPreloadedContent) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.copy_the_note_id_to_the_clipboard)) },
                 onClick = {
@@ -919,7 +919,7 @@ private fun ShareImageAction(
 
 @Composable
 private fun RenderImageOrVideo(
-    content: ZoomableContent,
+    content: BaseMediaContent,
     roundedCorner: Boolean,
     topPaddingForControllers: Dp = Dp.Unspecified,
     onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
@@ -928,7 +928,7 @@ private fun RenderImageOrVideo(
 ) {
     val automaticallyStartPlayback = remember { mutableStateOf<Boolean>(true) }
 
-    if (content is ZoomableUrlImage) {
+    if (content is MediaUrlImage) {
         val mainModifier =
             Modifier.fillMaxSize()
                 .zoomable(
@@ -947,7 +947,7 @@ private fun RenderImageOrVideo(
             accountViewModel,
             alwayShowImage = true,
         )
-    } else if (content is ZoomableUrlVideo) {
+    } else if (content is MediaUrlVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             VideoViewInner(
                 videoUri = content.url,
@@ -960,7 +960,7 @@ private fun RenderImageOrVideo(
                 onControllerVisibilityChanged = onControllerVisibilityChanged,
             )
         }
-    } else if (content is ZoomableLocalImage) {
+    } else if (content is MediaLocalImage) {
         val mainModifier =
             Modifier.fillMaxSize()
                 .zoomable(
@@ -979,7 +979,7 @@ private fun RenderImageOrVideo(
             accountViewModel,
             alwayShowImage = true,
         )
-    } else if (content is ZoomableLocalVideo) {
+    } else if (content is MediaLocalVideo) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize(1f)) {
             content.localFile?.let {
                 VideoViewInner(
@@ -999,7 +999,7 @@ private fun RenderImageOrVideo(
 
 @OptIn(ExperimentalCoilApi::class)
 private fun verifyHash(
-    content: ZoomableUrlContent,
+    content: MediaUrlContent,
     context: Context,
 ): Boolean? {
     if (content.hash == null) return null

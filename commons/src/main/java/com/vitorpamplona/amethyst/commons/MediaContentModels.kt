@@ -24,33 +24,35 @@ import androidx.compose.runtime.Immutable
 import java.io.File
 
 @Immutable
-abstract class ZoomableContent(
+abstract class BaseMediaContent(
     val description: String? = null,
     val dim: String? = null,
+    val blurhash: String? = null,
 )
 
 @Immutable
-abstract class ZoomableUrlContent(
+abstract class MediaUrlContent(
     val url: String,
     description: String? = null,
     val hash: String? = null,
     dim: String? = null,
+    blurhash: String? = null,
     val uri: String? = null,
-) : ZoomableContent(description, dim)
+) : BaseMediaContent(description, dim, blurhash)
 
 @Immutable
-class ZoomableUrlImage(
+class MediaUrlImage(
     url: String,
     description: String? = null,
     hash: String? = null,
-    val blurhash: String? = null,
+    blurhash: String? = null,
     dim: String? = null,
     uri: String? = null,
     val contentWarning: String? = null,
-) : ZoomableUrlContent(url, description, hash, dim, uri)
+) : MediaUrlContent(url, description, hash, dim, blurhash, uri)
 
 @Immutable
-class ZoomableUrlVideo(
+class MediaUrlVideo(
     url: String,
     description: String? = null,
     hash: String? = null,
@@ -58,41 +60,43 @@ class ZoomableUrlVideo(
     uri: String? = null,
     val artworkUri: String? = null,
     val authorName: String? = null,
-    val blurhash: String? = null,
+    blurhash: String? = null,
     val contentWarning: String? = null,
-) : ZoomableUrlContent(url, description, hash, dim, uri)
+) : MediaUrlContent(url, description, hash, dim, blurhash, uri)
 
 @Immutable
-abstract class ZoomablePreloadedContent(
+abstract class MediaPreloadedContent(
     val localFile: File?,
     description: String? = null,
     val mimeType: String? = null,
     val isVerified: Boolean? = null,
     dim: String? = null,
+    blurhash: String? = null,
     val uri: String,
-) : ZoomableContent(description, dim) {
+) : BaseMediaContent(description, dim, blurhash) {
     fun localFileExists() = localFile != null && localFile.exists()
 }
 
 @Immutable
-class ZoomableLocalImage(
+class MediaLocalImage(
     localFile: File?,
     mimeType: String? = null,
     description: String? = null,
-    val blurhash: String? = null,
     dim: String? = null,
+    blurhash: String? = null,
     isVerified: Boolean? = null,
     uri: String,
-) : ZoomablePreloadedContent(localFile, description, mimeType, isVerified, dim, uri)
+) : MediaPreloadedContent(localFile, description, mimeType, isVerified, dim, blurhash, uri)
 
 @Immutable
-class ZoomableLocalVideo(
+class MediaLocalVideo(
     localFile: File?,
     mimeType: String? = null,
     description: String? = null,
     dim: String? = null,
+    blurhash: String? = null,
     isVerified: Boolean? = null,
     uri: String,
     val artworkUri: String? = null,
     val authorName: String? = null,
-) : ZoomablePreloadedContent(localFile, description, mimeType, isVerified, dim, uri)
+) : MediaPreloadedContent(localFile, description, mimeType, isVerified, dim, blurhash, uri)

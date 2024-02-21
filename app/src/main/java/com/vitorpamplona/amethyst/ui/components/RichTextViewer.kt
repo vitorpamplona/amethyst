@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.HashTagSegment
 import com.vitorpamplona.amethyst.commons.ImageSegment
 import com.vitorpamplona.amethyst.commons.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.LinkSegment
+import com.vitorpamplona.amethyst.commons.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.PhoneSegment
 import com.vitorpamplona.amethyst.commons.RegularTextSegment
 import com.vitorpamplona.amethyst.commons.RichTextParser
@@ -85,7 +86,6 @@ import com.vitorpamplona.amethyst.commons.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.SchemelessUrlSegment
 import com.vitorpamplona.amethyst.commons.Segment
 import com.vitorpamplona.amethyst.commons.WithdrawSegment
-import com.vitorpamplona.amethyst.commons.ZoomableUrlImage
 import com.vitorpamplona.amethyst.model.HashtagIcon
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -417,7 +417,7 @@ private fun RenderContentAsMarkdown(
                         ZoomableContentView(
                             content =
                                 remember(destination, tags) {
-                                    RichTextParser().parseMediaUrl(destination, tags ?: EmptyTagList) ?: ZoomableUrlImage(url = destination)
+                                    RichTextParser().parseMediaUrl(destination, tags ?: EmptyTagList) ?: MediaUrlImage(url = destination)
                                 },
                             roundedCorner = true,
                             accountViewModel = accountViewModel,

@@ -44,13 +44,13 @@ class RichTextParser() {
     fun parseMediaUrl(
         fullUrl: String,
         eventTags: ImmutableListOfLists<String>,
-    ): ZoomableUrlContent? {
+    ): MediaUrlContent? {
         val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
         return if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
             val frags = Nip54().parse(fullUrl)
             val tags = Nip92().parse(fullUrl, eventTags.lists)
 
-            ZoomableUrlImage(
+            MediaUrlImage(
                 url = fullUrl,
                 description = frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
                 hash = frags[FileHeaderEvent.HASH] ?: tags[FileHeaderEvent.HASH],
@@ -61,7 +61,7 @@ class RichTextParser() {
         } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
             val frags = Nip54().parse(fullUrl)
             val tags = Nip92().parse(fullUrl, eventTags.lists)
-            ZoomableUrlVideo(
+            MediaUrlVideo(
                 url = fullUrl,
                 description = frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
                 hash = frags[FileHeaderEvent.HASH] ?: tags[FileHeaderEvent.HASH],
@@ -289,7 +289,9 @@ class RichTextParser() {
         val hashTagsPattern: Pattern =
             Pattern.compile("#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)(.*)", Pattern.CASE_INSENSITIVE)
 
-        fun removeQueryParamsForExtensionComparison(fullUrl: String): String {
+        val acceptedNIP19schemes = listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1")
+
+        private fun removeQueryParamsForExtensionComparison(fullUrl: String): String {
             return if (fullUrl.contains("?")) {
                 fullUrl.split("?")[0].lowercase()
             } else if (fullUrl.contains("#")) {
@@ -327,24 +329,24 @@ class RichTextParser() {
             }
         }
 
-        fun parseImageOrVideo(fullUrl: String): ZoomableContent {
+        fun parseImageOrVideo(fullUrl: String): BaseMediaContent {
             val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
             val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
             val isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
 
             return if (isImage) {
-                ZoomableUrlImage(fullUrl)
+                MediaUrlImage(fullUrl)
             } else if (isVideo) {
-                ZoomableUrlVideo(fullUrl)
+                MediaUrlVideo(fullUrl)
             } else {
-                ZoomableUrlImage(fullUrl)
+                MediaUrlImage(fullUrl)
             }
         }
 
         fun startsWithNIP19Scheme(word: String): Boolean {
             val cleaned = word.lowercase().removePrefix("@").removePrefix("nostr:").removePrefix("@")
 
-            return listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1").any { cleaned.startsWith(it) }
+            return acceptedNIP19schemes.any { cleaned.startsWith(it) }
         }
 
         fun isUrlWithoutScheme(url: String) = noProtocolUrlValidator.matcher(url).matches()

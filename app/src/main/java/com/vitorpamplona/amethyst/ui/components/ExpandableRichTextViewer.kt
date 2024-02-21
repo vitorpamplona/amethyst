@@ -43,7 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.ExpandableTextParser
+import com.vitorpamplona.amethyst.commons.ExpandableTextCutOffCalculator
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -63,7 +63,7 @@ fun ExpandableRichTextViewer(
 ) {
     var showFullText by remember { mutableStateOf(false) }
 
-    val whereToCut = remember(content) { ExpandableTextParser.computeWhereToCutIfPostIsTooLong(content) }
+    val whereToCut = remember(content) { ExpandableTextCutOffCalculator.indexToCutOff(content) }
 
     val text by
         remember(content) {

@@ -18,13 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst
+package com.vitorpamplona.amethyst.commons
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.amethyst.commons.RichTextParser
-import com.vitorpamplona.amethyst.commons.RichTextViewerState
 import com.vitorpamplona.quartz.events.EmptyTagList
-import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -688,8 +685,10 @@ class RichTextParserTest {
 
     @Test
     fun testTextToParse() {
-        val state = RichTextParser().parseText(textToParse, EmptyTagList)
-        Assert.assertEquals(
+        val state =
+            com.vitorpamplona.amethyst.commons.RichTextParser()
+                .parseText(textToParse, EmptyTagList)
+        org.junit.Assert.assertEquals(
             "relay.shitforce.one, relayable.org, universe.nostrich.land, nos.lol, universe.nostrich.land?lang=zh, universe.nostrich.land?lang=en, relay.damus.io, relay.nostr.wirednet.jp, offchain.pub, nostr.rocks, relay.wellorder.net, nostr.oxtr.dev, universe.nostrich.land?lang=ja, relay.mostr.pub, nostr.bitcoiner.social, Nostr-Check.com, MR.Rabbit, Ancap.su, zapper.lol, smies.me, baller.hodl",
             state.urlSet.joinToString(", "),
         )
@@ -4021,26 +4020,28 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                Assert.assertEquals(
+                org.junit.Assert.assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
             }
 
-        Assert.assertTrue(state.imagesForPager.isEmpty())
-        Assert.assertTrue(state.imageList.isEmpty())
-        Assert.assertTrue(state.customEmoji.isEmpty())
-        Assert.assertEquals(651, state.paragraphs.size)
+        org.junit.Assert.assertTrue(state.imagesForPager.isEmpty())
+        org.junit.Assert.assertTrue(state.imageList.isEmpty())
+        org.junit.Assert.assertTrue(state.customEmoji.isEmpty())
+        org.junit.Assert.assertEquals(651, state.paragraphs.size)
     }
 
     @Test
     fun testShortTextToParse() {
-        val state = RichTextParser().parseText("Hi, how are you doing? ", EmptyTagList)
-        Assert.assertTrue(state.urlSet.isEmpty())
-        Assert.assertTrue(state.imagesForPager.isEmpty())
-        Assert.assertTrue(state.imageList.isEmpty())
-        Assert.assertTrue(state.customEmoji.isEmpty())
-        Assert.assertEquals(
+        val state =
+            com.vitorpamplona.amethyst.commons.RichTextParser()
+                .parseText("Hi, how are you doing? ", EmptyTagList)
+        org.junit.Assert.assertTrue(state.urlSet.isEmpty())
+        org.junit.Assert.assertTrue(state.imagesForPager.isEmpty())
+        org.junit.Assert.assertTrue(state.imageList.isEmpty())
+        org.junit.Assert.assertTrue(state.customEmoji.isEmpty())
+        org.junit.Assert.assertEquals(
             "Hi, how are you doing? ",
             state.paragraphs.firstOrNull()?.words?.firstOrNull()?.segmentText,
         )
@@ -4048,12 +4049,14 @@ class RichTextParserTest {
 
     @Test
     fun testShortNewLinesTextToParse() {
-        val state = RichTextParser().parseText("\nHi, \nhow\n\n\n are you doing? \n", EmptyTagList)
-        Assert.assertTrue(state.urlSet.isEmpty())
-        Assert.assertTrue(state.imagesForPager.isEmpty())
-        Assert.assertTrue(state.imageList.isEmpty())
-        Assert.assertTrue(state.customEmoji.isEmpty())
-        Assert.assertEquals(
+        val state =
+            com.vitorpamplona.amethyst.commons.RichTextParser()
+                .parseText("\nHi, \nhow\n\n\n are you doing? \n", EmptyTagList)
+        org.junit.Assert.assertTrue(state.urlSet.isEmpty())
+        org.junit.Assert.assertTrue(state.imagesForPager.isEmpty())
+        org.junit.Assert.assertTrue(state.imageList.isEmpty())
+        org.junit.Assert.assertTrue(state.customEmoji.isEmpty())
+        org.junit.Assert.assertEquals(
             "\nHi, \nhow\n\n\n are you doing? \n",
             state.paragraphs.joinToString("\n") { it.words.joinToString(" ") { it.segmentText } },
         )
@@ -4071,17 +4074,22 @@ class RichTextParserTest {
             """
                 .trimIndent()
 
-        val state = RichTextParser().parseText(text, EmptyTagList)
-        Assert.assertEquals("https://lnshort.it/live-stream-embeds/", state.urlSet.firstOrNull())
-        Assert.assertEquals(
+        val state =
+            com.vitorpamplona.amethyst.commons.RichTextParser()
+                .parseText(text, EmptyTagList)
+        org.junit.Assert.assertEquals(
+            "https://lnshort.it/live-stream-embeds/",
+            state.urlSet.firstOrNull(),
+        )
+        org.junit.Assert.assertEquals(
             "https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg",
             state.imagesForPager.keys.firstOrNull(),
         )
-        Assert.assertEquals(
+        org.junit.Assert.assertEquals(
             "https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg",
             state.imageList.firstOrNull()?.url,
         )
-        Assert.assertTrue(state.customEmoji.isEmpty())
+        org.junit.Assert.assertTrue(state.customEmoji.isEmpty())
 
         printStateForDebug(state)
 
@@ -4131,7 +4139,7 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                Assert.assertEquals(
+                org.junit.Assert.assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
@@ -4143,7 +4151,9 @@ class RichTextParserTest {
         val text =
             "That’s it ! That’s the #note https://cdn.nostr.build/i/1dc0726b6cb0f94a92bd66765ffb90f6c67e90c17bb957fc3d5d4782cbd73de7.jpg "
 
-        val state = RichTextParser().parseText(text, EmptyTagList)
+        val state =
+            com.vitorpamplona.amethyst.commons.RichTextParser()
+                .parseText(text, EmptyTagList)
 
         printStateForDebug(state)
 
@@ -4162,7 +4172,7 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                Assert.assertEquals(
+                org.junit.Assert.assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
@@ -4174,7 +4184,9 @@ class RichTextParserTest {
         val text =
             "That’s it! https://cdn.nostr.build/i/1dc0726b6cb0f94a92bd66765ffb90f6c67e90c17bb957fc3d5d4782cbd73de7.jpg That’s the #note"
 
-        val state = RichTextParser().parseText(text, EmptyTagList)
+        val state =
+            com.vitorpamplona.amethyst.commons.RichTextParser()
+                .parseText(text, EmptyTagList)
 
         printStateForDebug(state)
 
@@ -4192,7 +4204,7 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                Assert.assertEquals(
+                org.junit.Assert.assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
@@ -4203,7 +4215,9 @@ class RichTextParserTest {
     fun testUrlsEndingInPeriod() {
         val text = "That’s it! http://vitorpamplona.com/. That’s the note"
 
-        val state = RichTextParser().parseText(text, EmptyTagList)
+        val state =
+            com.vitorpamplona.amethyst.commons.RichTextParser()
+                .parseText(text, EmptyTagList)
 
         printStateForDebug(state)
 
@@ -4221,14 +4235,14 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                Assert.assertEquals(
+                org.junit.Assert.assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
             }
     }
 
-    private fun printStateForDebug(state: RichTextViewerState) {
+    private fun printStateForDebug(state: com.vitorpamplona.amethyst.commons.RichTextViewerState) {
         state.paragraphs.forEach { paragraph ->
             paragraph.words.forEach { seg ->
                 println(

@@ -95,12 +95,12 @@ import coil.request.SuccessResult
 import com.fonfon.kgeohash.GeoHash
 import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.MediaLocalImage
+import com.vitorpamplona.amethyst.commons.MediaLocalVideo
+import com.vitorpamplona.amethyst.commons.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.RichTextParser
-import com.vitorpamplona.amethyst.commons.ZoomableContent
-import com.vitorpamplona.amethyst.commons.ZoomableLocalImage
-import com.vitorpamplona.amethyst.commons.ZoomableLocalVideo
-import com.vitorpamplona.amethyst.commons.ZoomableUrlImage
-import com.vitorpamplona.amethyst.commons.ZoomableUrlVideo
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
@@ -3065,9 +3065,9 @@ fun FileHeaderDisplay(
             val isImage = RichTextParser.isImageUrl(fullUrl)
             val uri = note.toNostrUri()
 
-            mutableStateOf<ZoomableContent>(
+            mutableStateOf<BaseMediaContent>(
                 if (isImage) {
-                    ZoomableUrlImage(
+                    MediaUrlImage(
                         url = fullUrl,
                         description = description,
                         hash = hash,
@@ -3076,7 +3076,7 @@ fun FileHeaderDisplay(
                         uri = uri,
                     )
                 } else {
-                    ZoomableUrlVideo(
+                    MediaUrlVideo(
                         url = fullUrl,
                         description = description,
                         hash = hash,
@@ -3124,9 +3124,9 @@ fun VideoDisplay(
             val isImage = RichTextParser.isImageUrl(fullUrl)
             val uri = note.toNostrUri()
 
-            mutableStateOf<ZoomableContent>(
+            mutableStateOf<BaseMediaContent>(
                 if (isImage) {
-                    ZoomableUrlImage(
+                    MediaUrlImage(
                         url = fullUrl,
                         description = description,
                         hash = hash,
@@ -3135,7 +3135,7 @@ fun VideoDisplay(
                         uri = uri,
                     )
                 } else {
-                    ZoomableUrlVideo(
+                    MediaUrlVideo(
                         url = fullUrl,
                         description = description,
                         hash = hash,
@@ -3265,17 +3265,17 @@ private fun ObserverAndRenderNIP95(
 
             val newContent =
                 if (mimeType?.startsWith("image") == true) {
-                    ZoomableLocalImage(
+                    MediaLocalImage(
                         localFile = localDir,
                         mimeType = mimeType,
                         description = description,
-                        blurhash = blurHash,
                         dim = dimensions,
+                        blurhash = blurHash,
                         isVerified = true,
                         uri = uri,
                     )
                 } else {
-                    ZoomableLocalVideo(
+                    MediaLocalVideo(
                         localFile = localDir,
                         mimeType = mimeType,
                         description = description,
@@ -3286,7 +3286,7 @@ private fun ObserverAndRenderNIP95(
                     )
                 }
 
-            mutableStateOf<ZoomableContent?>(newContent)
+            mutableStateOf<BaseMediaContent?>(newContent)
         }
 
     Crossfade(targetState = content) {

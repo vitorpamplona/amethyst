@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons
 
-class ExpandableTextParser {
+class ExpandableTextCutOffCalculator {
     companion object {
         private const val SHORT_TEXT_LENGTH = 350
         private const val SHORTEN_AFTER_LINES = 10
 
-        fun computeWhereToCutIfPostIsTooLong(content: String): Int {
+        fun indexToCutOff(content: String): Int {
             // Cuts the text in the first space or new line after SHORT_TEXT_LENGTH characters
             val firstSpaceAfterCut =
                 content.indexOf(' ', SHORT_TEXT_LENGTH).let { if (it < 0) content.length else it }
