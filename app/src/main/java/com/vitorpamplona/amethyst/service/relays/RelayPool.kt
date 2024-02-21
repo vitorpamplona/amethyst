@@ -81,8 +81,8 @@ object RelayPool : Relay.Listener {
         relays.forEach { it.sendFilter(subscriptionId) }
     }
 
-    fun sendFilterOnlyIfDisconnected(subscriptionId: String) {
-        relays.forEach { it.sendFilterOnlyIfDisconnected(subscriptionId) }
+    fun connectAndSendFiltersIfDisconnected() {
+        relays.forEach { it.connectAndSendFiltersIfDisconnected() }
     }
 
     fun sendToSelectedRelays(

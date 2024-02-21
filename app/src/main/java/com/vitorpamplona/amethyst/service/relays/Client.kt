@@ -108,7 +108,7 @@ object Client : RelayPool.Listener {
         checkNotInMainThread()
 
         subscriptions = subscriptions + Pair(subscriptionId, filters)
-        RelayPool.sendFilterOnlyIfDisconnected(subscriptionId)
+        RelayPool.connectAndSendFiltersIfDisconnected()
     }
 
     fun send(
@@ -292,7 +292,7 @@ object Client : RelayPool.Listener {
         open fun onRelayStateChange(
             type: Relay.StateType,
             relay: Relay,
-            channel: String?,
+            subscriptionId: String?,
         ) = Unit
 
         /** When an relay saves or rejects a new event. */

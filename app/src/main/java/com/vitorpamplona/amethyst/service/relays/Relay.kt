@@ -409,7 +409,7 @@ class Relay(
         return buffer.toString()
     }
 
-    fun sendFilterOnlyIfDisconnected(subscriptionId: String) {
+    fun connectAndSendFiltersIfDisconnected() {
         checkNotInMainThread()
 
         if (socket == null) {
