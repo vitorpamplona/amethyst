@@ -18,10 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.amethyst.commons
 
 import android.util.Log
-import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexValidator
@@ -55,9 +54,7 @@ object Robohash {
     private fun reduce(
         start: Int,
         channel: Byte,
-    ): Int {
-        return (start + (channel.toUByte().toInt() * 0.3906f)).toInt()
-    }
+    ) = (start + (channel.toUByte().toInt() * 0.3906f)).toInt()
 
     private fun bytesToRGB(
         r: Byte,
@@ -85,6 +82,7 @@ object Robohash {
                 Log.w("Robohash", "$msg is not a hex")
                 CryptoUtils.sha256(msg.toByteArray())
             }
+
         val bgColor = bytesToRGB(hash[0], hash[1], hash[2], isLightTheme)
         val fgColor = bytesToRGB(hash[3], hash[4], hash[5], !isLightTheme)
         val body = bodies[byteMod10(hash[6])]
@@ -110,41 +108,42 @@ object Robohash {
                 BACKGROUND.length +
                 END.length
 
-        val result = StringBuilder(capacity)
+        val result =
+            buildString(capacity) {
+                append(HEADER)
 
-        result.append(HEADER)
+                append(".cls-bg{fill:")
+                append(bgColor)
+                append(";}.cls-fill-1{fill:")
+                append(fgColor)
+                append(";}.cls-fill-2{fill:")
+                append(fgColor)
+                append(";}")
 
-        result.append(".cls-bg{fill:")
-        result.append(bgColor)
-        result.append(";}.cls-fill-1{fill:")
-        result.append(fgColor)
-        result.append(";}.cls-fill-2{fill:")
-        result.append(fgColor)
-        result.append(";}")
+                append(body.style)
+                append(face.style)
+                append(eye.style)
+                append(mouth.style)
+                append(accessory.style)
 
-        result.append(body.style)
-        result.append(face.style)
-        result.append(eye.style)
-        result.append(mouth.style)
-        result.append(accessory.style)
+                append(MID)
 
-        result.append(MID)
+                append(BACKGROUND)
+                append(body.paths)
+                append(face.paths)
+                append(eye.paths)
+                append(mouth.paths)
+                append(accessory.paths)
 
-        result.append(BACKGROUND)
-        result.append(body.paths)
-        result.append(face.paths)
-        result.append(eye.paths)
-        result.append(mouth.paths)
-        result.append(accessory.paths)
+                append(END)
+            }
 
-        result.append(END)
+        check(result.length == capacity) { "${result.length} was different from $capacity" }
 
-        val resultStr = result.toString()
-        check(resultStr.length == capacity) { "${resultStr.length} was different from $capacity" }
-        return resultStr
+        return result
     }
 
-    @Immutable private data class Part(val style: String, val paths: String)
+    private data class Part(val style: String, val paths: String)
 
     const val HEADER =
         "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 300\"><defs><style>"

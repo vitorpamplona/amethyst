@@ -18,16 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.benchmark
+package com.vitorpamplona.amethyst.benchmark
 
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.utils.Robohash
+import com.vitorpamplona.amethyst.commons.Robohash
 import junit.framework.TestCase.assertEquals
+import okio.Buffer
+import okio.buffer
+import okio.source
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.nio.charset.Charset
 
 /**
  * Benchmark, which will execute on an Android device.
@@ -41,7 +45,7 @@ class RobohashBenchmark {
 
     val warmHex = "f4f016c739b8ec0d6313540a8b12cf48a72b485d38338627ec9d427583551f9a"
     val testHex = "48a72b485d38338627ec9d427583551f9af4f016c739b8ec0d6313540a8b12cf"
-    val resultingSVG =
+    val expectedTestSVG =
         "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 300\">" +
             "<defs>" +
             "<style>" +
@@ -196,7 +200,26 @@ class RobohashBenchmark {
         Robohash.assemble(warmHex, true)
         benchmarkRule.measureRepeated {
             val result = Robohash.assemble(testHex, true)
-            assertEquals(resultingSVG, result)
+            assertEquals(expectedTestSVG, result)
+        }
+    }
+
+    @Test
+    fun createSVGInBufferCopy() {
+        // warm up
+        Robohash.assemble(warmHex, true)
+        benchmarkRule.measureRepeated {
+            val buffer = Buffer()
+            buffer.writeString(Robohash.assemble(testHex, true), Charset.defaultCharset())
+        }
+    }
+
+    @Test
+    fun createSVGInBufferViaInputStream() {
+        // warm up
+        Robohash.assemble(warmHex, true)
+        benchmarkRule.measureRepeated {
+            Robohash.assemble(testHex, true).byteInputStream(Charset.defaultCharset()).source().buffer()
         }
     }
 }
