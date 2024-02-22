@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service
 
 import android.util.Log
 import android.util.LruCache
-import com.vitorpamplona.amethyst.model.RelayInformation
+import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
 import kotlinx.coroutines.CancellationException
 import okhttp3.Call
 import okhttp3.Callback
@@ -31,12 +31,12 @@ import okhttp3.Response
 import java.io.IOException
 
 object Nip11CachedRetriever {
-    val relayInformationDocumentCache = LruCache<String, RelayInformation>(100)
+    val relayInformationDocumentCache = LruCache<String, Nip11RelayInformation>(100)
     val retriever = Nip11Retriever()
 
     suspend fun loadRelayInfo(
         dirtyUrl: String,
-        onInfo: (RelayInformation) -> Unit,
+        onInfo: (Nip11RelayInformation) -> Unit,
         onError: (String, Nip11Retriever.ErrorCode, String?) -> Unit,
     ) {
         val url = retriever.cleanUrl(dirtyUrl)
@@ -78,7 +78,7 @@ class Nip11Retriever {
     suspend fun loadRelayInfo(
         url: String,
         dirtyUrl: String,
-        onInfo: (RelayInformation) -> Unit,
+        onInfo: (Nip11RelayInformation) -> Unit,
         onError: (String, ErrorCode, String?) -> Unit,
     ) {
         try {
@@ -98,7 +98,7 @@ class Nip11Retriever {
                                 val body = it.body.string()
                                 try {
                                     if (it.isSuccessful) {
-                                        onInfo(RelayInformation.fromJson(body))
+                                        onInfo(Nip11RelayInformation.fromJson(body))
                                     } else {
                                         onError(dirtyUrl, ErrorCode.FAIL_WITH_HTTP_STATUS, it.code.toString())
                                     }

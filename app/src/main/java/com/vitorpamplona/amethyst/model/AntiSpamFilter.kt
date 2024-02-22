@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.events.Event
 import kotlinx.coroutines.Dispatchers
 
@@ -58,7 +58,7 @@ class AntiSpamFilter {
         // really long, make it ok.
         // The idea here is to avoid considering repeated "@Bot, command" messages spam, while still
         // blocking repeated "lnbc..." invoices or fishing urls
-        if (event.content.length < 180 && Nip19.nip19regex.matcher(event.content).find()) return false
+        if (event.content.length < 180 && Nip19Bech32.nip19regex.matcher(event.content).find()) return false
 
         // double list strategy:
         // if duplicated, it goes into spam. 1000 spam messages are saved into the spam list.
@@ -71,7 +71,7 @@ class AntiSpamFilter {
         ) {
             Log.w(
                 "Potential SPAM Message for sharing",
-                "${Nip19.createNEvent(event.id, event.pubKey, event.kind, null)}",
+                "${Nip19Bech32.createNEvent(event.id, event.pubKey, event.kind, null)}",
             )
             Log.w(
                 "Potential SPAM Message",

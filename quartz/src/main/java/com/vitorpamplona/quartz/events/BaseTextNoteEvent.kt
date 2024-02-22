@@ -23,8 +23,8 @@ package com.vitorpamplona.quartz.events
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip19
-import com.vitorpamplona.quartz.encoders.Nip19.nip19regex
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
+import com.vitorpamplona.quartz.encoders.Nip19Bech32.nip19regex
 import java.util.regex.Pattern
 
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
@@ -93,10 +93,10 @@ open class BaseTextNoteEvent(
             val additionalChars = matcher2.group(4) // additional chars
 
             try {
-                val parsed = Nip19.parseComponents(uriScheme, type, key, additionalChars)
+                val parsed = Nip19Bech32.parseComponents(uriScheme, type, key, additionalChars)
 
                 if (parsed != null) {
-                    if (parsed.type == Nip19.Type.USER) {
+                    if (parsed.type == Nip19Bech32.Type.USER) {
                         returningList.add(parsed.hex)
                     }
                 }
@@ -137,10 +137,10 @@ open class BaseTextNoteEvent(
             val key = matcher2.group(3) // bech32
             val additionalChars = matcher2.group(4) // additional chars
 
-            val parsed = Nip19.parseComponents(uriScheme, type, key, additionalChars)
+            val parsed = Nip19Bech32.parseComponents(uriScheme, type, key, additionalChars)
 
             if (parsed != null) {
-                if (parsed.type == Nip19.Type.EVENT || parsed.type == Nip19.Type.ADDRESS || parsed.type == Nip19.Type.NOTE) {
+                if (parsed.type == Nip19Bech32.Type.EVENT || parsed.type == Nip19Bech32.Type.ADDRESS || parsed.type == Nip19Bech32.Type.NOTE) {
                     citations.add(parsed.hex)
                 }
             }

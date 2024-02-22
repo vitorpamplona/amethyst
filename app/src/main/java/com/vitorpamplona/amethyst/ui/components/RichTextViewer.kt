@@ -106,7 +106,7 @@ import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.markdownStyle
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import fr.acinq.secp256k1.Hex
@@ -526,7 +526,7 @@ fun ObserverAllNIP19References(
     accountViewModel: AccountViewModel,
     onRefresh: () -> Unit,
 ) {
-    var nip19References by remember(content) { mutableStateOf<List<Nip19.Return>>(emptyList()) }
+    var nip19References by remember(content) { mutableStateOf<List<Nip19Bech32.Return>>(emptyList()) }
 
     LaunchedEffect(key1 = content) {
         accountViewModel.returnNIP19References(content, tags) {
@@ -540,20 +540,20 @@ fun ObserverAllNIP19References(
 
 @Composable
 fun ObserveNIP19(
-    it: Nip19.Return,
+    it: Nip19Bech32.Return,
     accountViewModel: AccountViewModel,
     onRefresh: () -> Unit,
 ) {
-    if (it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS) {
+    if (it.type == Nip19Bech32.Type.NOTE || it.type == Nip19Bech32.Type.EVENT || it.type == Nip19Bech32.Type.ADDRESS) {
         ObserveNIP19Event(it, accountViewModel, onRefresh)
-    } else if (it.type == Nip19.Type.USER) {
+    } else if (it.type == Nip19Bech32.Type.USER) {
         ObserveNIP19User(it, accountViewModel, onRefresh)
     }
 }
 
 @Composable
 private fun ObserveNIP19Event(
-    it: Nip19.Return,
+    it: Nip19Bech32.Return,
     accountViewModel: AccountViewModel,
     onRefresh: () -> Unit,
 ) {
@@ -562,7 +562,7 @@ private fun ObserveNIP19Event(
     if (baseNote == null) {
         LaunchedEffect(key1 = it.hex) {
             if (
-                it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS
+                it.type == Nip19Bech32.Type.NOTE || it.type == Nip19Bech32.Type.EVENT || it.type == Nip19Bech32.Type.ADDRESS
             ) {
                 accountViewModel.checkGetOrCreateNote(it.hex) { note ->
                     launch(Dispatchers.Main) { baseNote = note }
@@ -590,7 +590,7 @@ fun ObserveNote(
 
 @Composable
 private fun ObserveNIP19User(
-    it: Nip19.Return,
+    it: Nip19Bech32.Return,
     accountViewModel: AccountViewModel,
     onRefresh: () -> Unit,
 ) {
@@ -598,7 +598,7 @@ private fun ObserveNIP19User(
 
     if (baseUser == null) {
         LaunchedEffect(key1 = it.hex) {
-            if (it.type == Nip19.Type.USER) {
+            if (it.type == Nip19Bech32.Type.USER) {
                 accountViewModel.checkGetOrCreateUser(it.hex)?.let { user ->
                     launch(Dispatchers.Main) { baseUser = user }
                 }

@@ -18,14 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.quartz.encoders
 
 import androidx.compose.runtime.Stable
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 
 @Stable
-class RelayInformation(
+class Nip11RelayInformation(
     val id: String?,
     val name: String?,
     val description: String?,
@@ -47,7 +47,7 @@ class RelayInformation(
         val mapper =
             jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
-        fun fromJson(json: String): RelayInformation = mapper.readValue(json, RelayInformation::class.java)
+        fun fromJson(json: String): Nip11RelayInformation = mapper.readValue(json, Nip11RelayInformation::class.java)
     }
 }
 

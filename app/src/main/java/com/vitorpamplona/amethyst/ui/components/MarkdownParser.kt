@@ -25,7 +25,7 @@ import android.util.Patterns
 import com.vitorpamplona.amethyst.commons.RichTextParser
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.coroutines.CancellationException
 
@@ -64,20 +64,20 @@ class MarkdownParser {
         return null
     }
 
-    private fun getDisplayNameFromNip19(nip19: Nip19.Return): Pair<String, String>? {
-        if (nip19.type == Nip19.Type.USER) {
+    private fun getDisplayNameFromNip19(nip19: Nip19Bech32.Return): Pair<String, String>? {
+        if (nip19.type == Nip19Bech32.Type.USER) {
             LocalCache.users[nip19.hex]?.let {
                 return Pair(it.toBestDisplayName(), it.pubkeyNpub())
             }
-        } else if (nip19.type == Nip19.Type.NOTE) {
+        } else if (nip19.type == Nip19Bech32.Type.NOTE) {
             LocalCache.notes[nip19.hex]?.let {
                 return Pair(it.idDisplayNote(), it.toNEvent())
             }
-        } else if (nip19.type == Nip19.Type.ADDRESS) {
+        } else if (nip19.type == Nip19Bech32.Type.ADDRESS) {
             LocalCache.addressables[nip19.hex]?.let {
                 return Pair(it.idDisplayNote(), it.toNEvent())
             }
-        } else if (nip19.type == Nip19.Type.EVENT) {
+        } else if (nip19.type == Nip19Bech32.Type.EVENT) {
             LocalCache.notes[nip19.hex]?.let {
                 return Pair(it.idDisplayNote(), it.toNEvent())
             }
@@ -89,14 +89,14 @@ class MarkdownParser {
     fun returnNIP19References(
         content: String,
         tags: ImmutableListOfLists<String>?,
-    ): List<Nip19.Return> {
+    ): List<Nip19Bech32.Return> {
         checkNotInMainThread()
 
-        val listOfReferences = mutableListOf<Nip19.Return>()
+        val listOfReferences = mutableListOf<Nip19Bech32.Return>()
         content.split('\n').forEach { paragraph ->
             paragraph.split(' ').forEach { word: String ->
                 if (RichTextParser.startsWithNIP19Scheme(word)) {
-                    val parsedNip19 = Nip19.uriToRoute(word)
+                    val parsedNip19 = Nip19Bech32.uriToRoute(word)
                     parsedNip19?.let { listOfReferences.add(it) }
                 }
             }
@@ -104,11 +104,11 @@ class MarkdownParser {
 
         tags?.lists?.forEach {
             if (it[0] == "p" && it.size > 1) {
-                listOfReferences.add(Nip19.Return(Nip19.Type.USER, it[1], null, null, null, ""))
+                listOfReferences.add(Nip19Bech32.Return(Nip19Bech32.Type.USER, it[1], null, null, null, ""))
             } else if (it[0] == "e" && it.size > 1) {
-                listOfReferences.add(Nip19.Return(Nip19.Type.NOTE, it[1], null, null, null, ""))
+                listOfReferences.add(Nip19Bech32.Return(Nip19Bech32.Type.NOTE, it[1], null, null, null, ""))
             } else if (it[0] == "a" && it.size > 1) {
-                listOfReferences.add(Nip19.Return(Nip19.Type.ADDRESS, it[1], null, null, null, ""))
+                listOfReferences.add(Nip19Bech32.Return(Nip19Bech32.Type.ADDRESS, it[1], null, null, null, ""))
             }
         }
 
@@ -133,7 +133,7 @@ class MarkdownParser {
                 } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
                     returnContent += "[$word](tel:$word) "
                 } else if (RichTextParser.startsWithNIP19Scheme(word)) {
-                    val parsedNip19 = Nip19.uriToRoute(word)
+                    val parsedNip19 = Nip19Bech32.uriToRoute(word)
                     returnContent +=
                         if (parsedNip19 !== null) {
                             val pair = getDisplayNameFromNip19(parsedNip19)

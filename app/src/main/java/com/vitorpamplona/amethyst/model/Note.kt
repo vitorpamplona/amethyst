@@ -39,7 +39,7 @@ import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toNote
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
@@ -138,17 +138,17 @@ open class Note(val idHex: String) {
         return if (myEvent is WrappedEvent) {
             val host = myEvent.host
             if (host != null) {
-                Nip19.createNEvent(
+                Nip19Bech32.createNEvent(
                     host.id,
                     host.pubKey,
                     host.kind(),
                     relays.firstOrNull()?.url,
                 )
             } else {
-                Nip19.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull()?.url)
+                Nip19Bech32.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull()?.url)
             }
         } else {
-            Nip19.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull()?.url)
+            Nip19Bech32.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull()?.url)
         }
     }
 

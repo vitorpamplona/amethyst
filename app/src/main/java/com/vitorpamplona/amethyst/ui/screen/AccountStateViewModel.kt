@@ -33,7 +33,7 @@ import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.Hex
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
@@ -85,7 +85,7 @@ class AccountStateViewModel() : ViewModel() {
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
     ) = withContext(Dispatchers.IO) {
-        val parsed = Nip19.uriToRoute(key)
+        val parsed = Nip19Bech32.uriToRoute(key)
         val pubKeyParsed = parsed?.hex?.hexToByteArray()
         val proxy = HttpClientManager.initProxy(useProxy, "127.0.0.1", proxyPort)
 

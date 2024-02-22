@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexValidator
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
@@ -66,7 +66,7 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SearchEventFeed") {
                         null
                     }
 
-                Nip19.uriToRoute(mySearchString)?.hex ?: isAStraightHex
+                Nip19Bech32.uriToRoute(mySearchString)?.hex ?: isAStraightHex
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 null

@@ -30,10 +30,10 @@ data class ATag(val kind: Int, val pubKeyHex: String, val dTag: String, val rela
     fun toNAddr(): String {
         return TlvBuilder()
             .apply {
-                addString(Nip19.TlvTypes.SPECIAL, dTag)
-                addStringIfNotNull(Nip19.TlvTypes.RELAY, relay)
-                addHex(Nip19.TlvTypes.AUTHOR, pubKeyHex)
-                addInt(Nip19.TlvTypes.KIND, kind)
+                addString(Nip19Bech32.TlvTypes.SPECIAL, dTag)
+                addStringIfNotNull(Nip19Bech32.TlvTypes.RELAY, relay)
+                addHex(Nip19Bech32.TlvTypes.AUTHOR, pubKeyHex)
+                addInt(Nip19Bech32.TlvTypes.KIND, kind)
             }
             .build()
             .toNAddress()
@@ -76,10 +76,10 @@ data class ATag(val kind: Int, val pubKeyHex: String, val dTag: String, val rela
                 if (key.startsWith("naddr")) {
                     val tlv = Tlv.parse(key.bechToBytes())
 
-                    val d = tlv.firstAsString(Nip19.TlvTypes.SPECIAL) ?: ""
-                    val relay = tlv.firstAsString(Nip19.TlvTypes.RELAY)
-                    val author = tlv.firstAsHex(Nip19.TlvTypes.AUTHOR)
-                    val kind = tlv.firstAsInt(Nip19.TlvTypes.KIND)
+                    val d = tlv.firstAsString(Nip19Bech32.TlvTypes.SPECIAL) ?: ""
+                    val relay = tlv.firstAsString(Nip19Bech32.TlvTypes.RELAY)
+                    val author = tlv.firstAsHex(Nip19Bech32.TlvTypes.AUTHOR)
+                    val kind = tlv.firstAsInt(Nip19Bech32.TlvTypes.KIND)
 
                     if (kind != null && author != null) {
                         return ATag(kind, author, d, relay)

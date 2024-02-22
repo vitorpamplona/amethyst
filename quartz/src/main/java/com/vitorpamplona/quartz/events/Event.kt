@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -253,7 +253,7 @@ open class Event(
         return if (this is AddressableEvent) {
             ATag(kind, pubKey, dTag(), null).toNAddr()
         } else {
-            Nip19.createNEvent(id, pubKey, kind, null)
+            Nip19Bech32.createNEvent(id, pubKey, kind, null)
         }
     }
 

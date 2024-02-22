@@ -43,7 +43,6 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
@@ -69,7 +68,8 @@ import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.SettingsState
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
 import com.vitorpamplona.quartz.events.Event
@@ -806,7 +806,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
 
     fun retrieveRelayDocument(
         dirtyUrl: String,
-        onInfo: (RelayInformation) -> Unit,
+        onInfo: (Nip11RelayInformation) -> Unit,
         onError: (String, Nip11Retriever.ErrorCode, String?) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -943,7 +943,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     fun returnNIP19References(
         content: String,
         tags: ImmutableListOfLists<String>?,
-        onNewReferences: (List<Nip19.Return>) -> Unit,
+        onNewReferences: (List<Nip19Bech32.Return>) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             onNewReferences(MarkdownParser().returnNIP19References(content, tags))
@@ -965,10 +965,10 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         onNote: (LoadedBechLink) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            Nip19.uriToRoute(str)?.let {
+            Nip19Bech32.uriToRoute(str)?.let {
                 var returningNote: Note? = null
                 if (
-                    it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS
+                    it.type == Nip19Bech32.Type.NOTE || it.type == Nip19Bech32.Type.EVENT || it.type == Nip19Bech32.Type.ADDRESS
                 ) {
                     LocalCache.checkGetOrCreateNote(it.hex)?.let { note -> returningNote = note }
                 }
@@ -1270,7 +1270,7 @@ class HasNotificationDot(bottomNavigationItems: ImmutableList<Route>) {
     }
 }
 
-@Immutable data class LoadedBechLink(val baseNote: Note?, val nip19: Nip19.Return)
+@Immutable data class LoadedBechLink(val baseNote: Note?, val nip19: Nip19Bech32.Return)
 
 public fun <T, K> allOrNothingSigningOperations(
     remainingTos: List<T>,

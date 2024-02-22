@@ -25,7 +25,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.crypto.KeyPair
 import java.util.regex.Pattern
 
-object Nip19 {
+object Nip19Bech32 {
     enum class Type {
         USER,
         NOTE,
@@ -173,7 +173,7 @@ object Nip19 {
 }
 
 fun decodePublicKey(key: String): ByteArray {
-    val parsed = Nip19.uriToRoute(key)
+    val parsed = Nip19Bech32.uriToRoute(key)
     val pubKeyParsed = parsed?.hex?.hexToByteArray()
 
     return if (key.startsWith("nsec")) {
@@ -187,7 +187,7 @@ fun decodePublicKey(key: String): ByteArray {
 
 fun decodePublicKeyAsHexOrNull(key: String): HexKey? {
     return try {
-        val parsed = Nip19.uriToRoute(key)
+        val parsed = Nip19Bech32.uriToRoute(key)
         val pubKeyParsed = parsed?.hex
 
         if (key.startsWith("nsec")) {
@@ -203,37 +203,37 @@ fun decodePublicKeyAsHexOrNull(key: String): HexKey? {
 }
 
 fun TlvBuilder.addString(
-    type: Nip19.TlvTypes,
+    type: Nip19Bech32.TlvTypes,
     string: String,
 ) = addString(type.id, string)
 
 fun TlvBuilder.addHex(
-    type: Nip19.TlvTypes,
+    type: Nip19Bech32.TlvTypes,
     key: HexKey,
 ) = addHex(type.id, key)
 
 fun TlvBuilder.addInt(
-    type: Nip19.TlvTypes,
+    type: Nip19Bech32.TlvTypes,
     data: Int,
 ) = addInt(type.id, data)
 
 fun TlvBuilder.addStringIfNotNull(
-    type: Nip19.TlvTypes,
+    type: Nip19Bech32.TlvTypes,
     data: String?,
 ) = addStringIfNotNull(type.id, data)
 
 fun TlvBuilder.addHexIfNotNull(
-    type: Nip19.TlvTypes,
+    type: Nip19Bech32.TlvTypes,
     data: HexKey?,
 ) = addHexIfNotNull(type.id, data)
 
 fun TlvBuilder.addIntIfNotNull(
-    type: Nip19.TlvTypes,
+    type: Nip19Bech32.TlvTypes,
     data: Int?,
 ) = addIntIfNotNull(type.id, data)
 
-fun Tlv.firstAsInt(type: Nip19.TlvTypes) = firstAsInt(type.id)
+fun Tlv.firstAsInt(type: Nip19Bech32.TlvTypes) = firstAsInt(type.id)
 
-fun Tlv.firstAsHex(type: Nip19.TlvTypes) = firstAsHex(type.id)
+fun Tlv.firstAsHex(type: Nip19Bech32.TlvTypes) = firstAsHex(type.id)
 
-fun Tlv.firstAsString(type: Nip19.TlvTypes) = firstAsString(type.id)
+fun Tlv.firstAsString(type: Nip19Bech32.TlvTypes) = firstAsString(type.id)

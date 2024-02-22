@@ -56,7 +56,7 @@ import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
@@ -311,11 +311,11 @@ fun uriToRoute(uri: String?): String? {
         if (uri?.startsWith("nostr:Hashtag?id=") == true) {
             Route.Hashtag.route.replace("{id}", uri.removePrefix("nostr:Hashtag?id="))
         } else {
-            val nip19 = Nip19.uriToRoute(uri)
+            val nip19 = Nip19Bech32.uriToRoute(uri)
             when (nip19?.type) {
-                Nip19.Type.USER -> "User/${nip19.hex}"
-                Nip19.Type.NOTE -> "Note/${nip19.hex}"
-                Nip19.Type.EVENT -> {
+                Nip19Bech32.Type.USER -> "User/${nip19.hex}"
+                Nip19Bech32.Type.NOTE -> "Note/${nip19.hex}"
+                Nip19Bech32.Type.EVENT -> {
                     if (nip19.kind == PrivateDmEvent.KIND) {
                         nip19.author?.let { "RoomByAuthor/$it" }
                     } else if (
@@ -328,7 +328,7 @@ fun uriToRoute(uri: String?): String? {
                         "Event/${nip19.hex}"
                     }
                 }
-                Nip19.Type.ADDRESS ->
+                Nip19Bech32.Type.ADDRESS ->
                     if (nip19.kind == CommunityDefinitionEvent.KIND) {
                         "Community/${nip19.hex}"
                     } else if (nip19.kind == LiveActivitiesEvent.KIND) {

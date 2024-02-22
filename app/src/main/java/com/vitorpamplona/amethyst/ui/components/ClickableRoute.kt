@@ -61,7 +61,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
@@ -72,21 +72,21 @@ import kotlinx.collections.immutable.ImmutableMap
 
 @Composable
 fun ClickableRoute(
-    nip19: Nip19.Return,
+    nip19: Nip19Bech32.Return,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     when (nip19.type) {
-        Nip19.Type.USER -> {
+        Nip19Bech32.Type.USER -> {
             DisplayUser(nip19, accountViewModel, nav)
         }
-        Nip19.Type.ADDRESS -> {
+        Nip19Bech32.Type.ADDRESS -> {
             DisplayAddress(nip19, accountViewModel, nav)
         }
-        Nip19.Type.NOTE -> {
+        Nip19Bech32.Type.NOTE -> {
             DisplayNote(nip19, accountViewModel, nav)
         }
-        Nip19.Type.EVENT -> {
+        Nip19Bech32.Type.EVENT -> {
             DisplayEvent(nip19, accountViewModel, nav)
         }
         else -> {
@@ -99,7 +99,7 @@ fun ClickableRoute(
 
 @Composable
 private fun DisplayEvent(
-    nip19: Nip19.Return,
+    nip19: Nip19Bech32.Return,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -119,7 +119,7 @@ private fun DisplayEvent(
 
 @Composable
 private fun DisplayNote(
-    nip19: Nip19.Return,
+    nip19: Nip19Bech32.Return,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -140,7 +140,7 @@ private fun DisplayNote(
 @Composable
 private fun DisplayNoteLink(
     it: Note,
-    nip19: Nip19.Return,
+    nip19: Nip19Bech32.Return,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -194,7 +194,7 @@ private fun DisplayNoteLink(
 
 @Composable
 private fun DisplayAddress(
-    nip19: Nip19.Return,
+    nip19: Nip19Bech32.Return,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -229,7 +229,7 @@ private fun DisplayAddress(
 
 @Composable
 private fun DisplayUser(
-    nip19: Nip19.Return,
+    nip19: Nip19Bech32.Return,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -258,7 +258,7 @@ private fun DisplayUser(
 @Composable
 private fun RenderUserAsClickableText(
     baseUser: User,
-    nip19: Nip19.Return,
+    nip19: Nip19Bech32.Return,
     nav: (String) -> Unit,
 ) {
     val userState by baseUser.live().metadata.observeAsState()

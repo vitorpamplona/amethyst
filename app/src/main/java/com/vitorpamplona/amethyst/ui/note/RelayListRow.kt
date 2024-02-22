@@ -51,7 +51,6 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
-import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.actions.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -62,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.relayIconModifier
+import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
 
 @Composable
 public fun RelayBadgesHorizontal(
@@ -132,7 +132,7 @@ fun RenderRelay(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    var relayInfo: RelayInformation? by remember { mutableStateOf(null) }
+    var relayInfo: Nip11RelayInformation? by remember { mutableStateOf(null) }
 
     if (relayInfo != null) {
         RelayInformationDialog(
