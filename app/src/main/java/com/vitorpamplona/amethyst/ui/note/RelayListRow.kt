@@ -39,6 +39,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -51,6 +52,7 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
+import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.actions.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -61,7 +63,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.relayIconModifier
-import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
 
 @Composable
 public fun RelayBadgesHorizontal(
@@ -132,11 +133,27 @@ fun RenderRelay(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    var relayInfo: Nip11RelayInformation? by remember { mutableStateOf(null) }
+    val relayInfo by
+        produceState(
+            initialValue = Nip11CachedRetriever.getFromCache(relay.url),
+        ) {
+            if (value == null) {
+                accountViewModel.retrieveRelayDocument(
+                    relay.url,
+                    onInfo = {
+                        value = it
+                    },
+                    onError = { url, errorCode, exceptionMessage ->
+                    },
+                )
+            }
+        }
 
-    if (relayInfo != null) {
+    var openRelayDialog by remember { mutableStateOf(false) }
+
+    if (openRelayDialog && relayInfo != null) {
         RelayInformationDialog(
-            onClose = { relayInfo = null },
+            onClose = { openRelayDialog = false },
             relayInfo = relayInfo!!,
             relayBriefInfo = relay,
             accountViewModel = accountViewModel,
@@ -148,11 +165,6 @@ fun RenderRelay(
 
     val interactionSource = remember { MutableInteractionSource() }
     val ripple = rememberRipple(bounded = false, radius = Size15dp)
-
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
 
     val clickableModifier =
         remember(relay) {
@@ -166,7 +178,9 @@ fun RenderRelay(
                     onClick = {
                         accountViewModel.retrieveRelayDocument(
                             relay.url,
-                            onInfo = { relayInfo = it },
+                            onInfo = {
+                                openRelayDialog = true
+                            },
                             onError = { url, errorCode, exceptionMessage ->
                                 val msg =
                                     when (errorCode) {
@@ -213,14 +227,18 @@ fun RenderRelay(
         modifier = clickableModifier,
         contentAlignment = Alignment.Center,
     ) {
-        RenderRelayIcon(relay.displayUrl, relay.favIcon, automaticallyShowProfilePicture)
+        RenderRelayIcon(
+            displayUrl = relay.displayUrl,
+            iconUrl = relayInfo?.icon ?: relay.favIcon,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        )
     }
 }
 
 @Composable
 fun RenderRelayIcon(
     displayUrl: String,
-    iconUrl: String,
+    iconUrl: String?,
     loadProfilePicture: Boolean,
     iconModifier: Modifier = MaterialTheme.colorScheme.relayIconModifier,
 ) {

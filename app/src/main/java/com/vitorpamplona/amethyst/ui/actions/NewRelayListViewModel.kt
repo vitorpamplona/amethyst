@@ -62,7 +62,9 @@ class NewRelayListViewModel : ViewModel() {
             _relays.value.forEach { item ->
                 Nip11CachedRetriever.loadRelayInfo(
                     dirtyUrl = item.url,
-                    onInfo = { togglePaidRelay(item, it.limitation?.payment_required ?: false) },
+                    onInfo = {
+                        togglePaidRelay(item, it.limitation?.payment_required ?: false)
+                    },
                     onError = { url, errorCode, exceptionMessage -> },
                 )
             }

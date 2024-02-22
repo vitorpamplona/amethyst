@@ -774,4 +774,6 @@
     <string name="this_version_brought_to_you_by">This version was brought to you by:</string>
     <string name="version_name">Version %1$s</string>
     <string name="thank_you">Thank you!</string>
+    <string name="max_limit">Max Limit</string>
+    <string name="restricted_writes">Restricted Writes</string>
 </resources>

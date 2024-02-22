@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service
 import android.util.Log
 import android.util.LruCache
 import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import okhttp3.Call
 import okhttp3.Callback
@@ -31,8 +32,20 @@ import okhttp3.Response
 import java.io.IOException
 
 object Nip11CachedRetriever {
-    val relayInformationDocumentCache = LruCache<String, Nip11RelayInformation>(100)
+    open class RetrieveResult(val time: Long)
+
+    class RetrieveResultError(val error: Nip11Retriever.ErrorCode, val msg: String? = null) : RetrieveResult(TimeUtils.now())
+
+    class RetrieveResultSuccess(val data: Nip11RelayInformation) : RetrieveResult(TimeUtils.now())
+
+    val relayInformationDocumentCache = LruCache<String, RetrieveResult?>(100)
     val retriever = Nip11Retriever()
+
+    fun getFromCache(dirtyUrl: String): Nip11RelayInformation? {
+        val result = relayInformationDocumentCache.get(retriever.cleanUrl(dirtyUrl)) ?: return null
+        if (result is RetrieveResultSuccess) return result.data
+        return null
+    }
 
     suspend fun loadRelayInfo(
         dirtyUrl: String,
@@ -43,17 +56,40 @@ object Nip11CachedRetriever {
         val doc = relayInformationDocumentCache.get(url)
 
         if (doc != null) {
-            onInfo(doc)
+            if (doc is RetrieveResultSuccess) {
+                onInfo(doc.data)
+            } else if (doc is RetrieveResultError) {
+                if (TimeUtils.now() - doc.time < TimeUtils.ONE_HOUR) {
+                    onError(dirtyUrl, doc.error, null)
+                } else {
+                    Nip11Retriever()
+                        .loadRelayInfo(
+                            url = url,
+                            dirtyUrl = dirtyUrl,
+                            onInfo = {
+                                relayInformationDocumentCache.put(url, RetrieveResultSuccess(it))
+                                onInfo(it)
+                            },
+                            onError = { dirtyUrl, code, errorMsg ->
+                                relayInformationDocumentCache.put(url, RetrieveResultError(code, errorMsg))
+                                onError(url, code, errorMsg)
+                            },
+                        )
+                }
+            }
         } else {
             Nip11Retriever()
                 .loadRelayInfo(
-                    url,
-                    dirtyUrl,
+                    url = url,
+                    dirtyUrl = dirtyUrl,
                     onInfo = {
-                        relayInformationDocumentCache.put(url, it)
+                        relayInformationDocumentCache.put(url, RetrieveResultSuccess(it))
                         onInfo(it)
                     },
-                    onError,
+                    onError = { dirtyUrl, code, errorMsg ->
+                        relayInformationDocumentCache.put(url, RetrieveResultError(code, errorMsg))
+                        onError(url, code, errorMsg)
+                    },
                 )
         }
     }
@@ -81,6 +117,7 @@ class Nip11Retriever {
         onInfo: (Nip11RelayInformation) -> Unit,
         onError: (String, ErrorCode, String?) -> Unit,
     ) {
+        checkNotInMainThread()
         try {
             val request: Request =
                 Request.Builder().header("Accept", "application/nostr+json").url(url).build()

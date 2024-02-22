@@ -29,6 +29,7 @@ class Nip11RelayInformation(
     val id: String?,
     val name: String?,
     val description: String?,
+    val icon: String?,
     val pubkey: String?,
     val contact: String?,
     val supported_nips: List<Int>?,
@@ -41,7 +42,9 @@ class Nip11RelayInformation(
     val tags: List<String>?,
     val posting_policy: String?,
     val payments_url: String?,
+    val retention: List<RelayInformationRetentionData>?,
     val fees: RelayInformationFees?,
+    val nip50: List<String>?,
 ) {
     companion object {
         val mapper =
@@ -63,7 +66,6 @@ class RelayInformationFees(
     val admission: List<RelayInformationFee>?,
     val subscription: List<RelayInformationFee>?,
     val publication: List<RelayInformationFee>?,
-    val retention: List<RelayInformationFee>?,
 )
 
 class RelayInformationLimitation(
@@ -78,4 +80,13 @@ class RelayInformationLimitation(
     val min_pow_difficulty: Int?,
     val auth_required: Boolean?,
     val payment_required: Boolean?,
+    val restricted_writes: Boolean?,
+    val created_at_lower_limit: Int?,
+    val created_at_upper_limit: Int?,
+)
+
+class RelayInformationRetentionData(
+    val kinds: ArrayList<Int>,
+    val tiem: Int?,
+    val count: Int?,
 )
