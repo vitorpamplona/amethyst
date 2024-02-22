@@ -24,7 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.HexValidator
-import com.vitorpamplona.quartz.encoders.Nip54
+import com.vitorpamplona.quartz.encoders.Nip54InlineMetadata
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.persistentSetOf
@@ -130,7 +130,7 @@ class PrivateDmEvent(
             nip94attachments?.forEach {
                 val myUrl = it.url()
                 if (myUrl != null) {
-                    message = message.replace(myUrl, Nip54().createUrl(myUrl, it.tags))
+                    message = message.replace(myUrl, Nip54InlineMetadata().createUrl(myUrl, it.tags))
                 }
             }
 

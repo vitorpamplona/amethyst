@@ -33,7 +33,6 @@ import com.vitorpamplona.amethyst.model.DefaultReactions
 import com.vitorpamplona.amethyst.model.DefaultZapAmounts
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
-import com.vitorpamplona.amethyst.model.Nip47URI
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.Settings
 import com.vitorpamplona.amethyst.model.ThemeType
@@ -44,6 +43,7 @@ import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.encoders.toNpub
@@ -523,7 +523,7 @@ object LocalPreferences {
                 val zapPaymentRequestServer =
                     try {
                         getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)?.let {
-                            Event.mapper.readValue<Nip47URI?>(it)
+                            Event.mapper.readValue<Nip47WalletConnect.Nip47URI?>(it)
                         }
                     } catch (e: Throwable) {
                         if (e is CancellationException) throw e

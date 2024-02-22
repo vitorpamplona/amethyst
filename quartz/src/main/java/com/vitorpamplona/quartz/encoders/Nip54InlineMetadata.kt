@@ -26,7 +26,7 @@ import java.net.URLDecoder
 import java.net.URLEncoder
 import kotlin.coroutines.cancellation.CancellationException
 
-class Nip54 {
+class Nip54InlineMetadata {
     fun convertFromFileHeader(header: FileHeaderEvent): String? {
         val myUrl = header.url() ?: return null
         return createUrl(

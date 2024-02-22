@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.BookmarkListEvent
@@ -172,7 +173,7 @@ class Account(
     var defaultStoriesFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
     var defaultNotificationFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
     var defaultDiscoveryFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
-    var zapPaymentRequest: Nip47URI? = null,
+    var zapPaymentRequest: Nip47WalletConnect.Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
     var hideNIP24WarningDialog: Boolean = false,
@@ -2038,7 +2039,7 @@ class Account(
         saveable.invalidateData()
     }
 
-    fun changeZapPaymentRequest(newServer: Nip47URI?) {
+    fun changeZapPaymentRequest(newServer: Nip47WalletConnect.Nip47URI?) {
         zapPaymentRequest = newServer
         live.invalidateData()
         saveable.invalidateData()

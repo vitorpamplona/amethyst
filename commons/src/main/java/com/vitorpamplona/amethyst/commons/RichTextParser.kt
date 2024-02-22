@@ -25,8 +25,8 @@ import android.util.Patterns
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
-import com.vitorpamplona.quartz.encoders.Nip54
-import com.vitorpamplona.quartz.encoders.Nip92
+import com.vitorpamplona.quartz.encoders.Nip54InlineMetadata
+import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
@@ -48,8 +48,8 @@ class RichTextParser() {
     ): MediaUrlContent? {
         val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
         return if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-            val frags = Nip54().parse(fullUrl)
-            val tags = Nip92().parse(fullUrl, eventTags.lists)
+            val frags = Nip54InlineMetadata().parse(fullUrl)
+            val tags = Nip92MediaAttachments().parse(fullUrl, eventTags.lists)
 
             MediaUrlImage(
                 url = fullUrl,
@@ -60,8 +60,8 @@ class RichTextParser() {
                 contentWarning = frags["content-warning"] ?: tags["content-warning"],
             )
         } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-            val frags = Nip54().parse(fullUrl)
-            val tags = Nip92().parse(fullUrl, eventTags.lists)
+            val frags = Nip54InlineMetadata().parse(fullUrl)
+            val tags = Nip92MediaAttachments().parse(fullUrl, eventTags.lists)
             MediaUrlVideo(
                 url = fullUrl,
                 description = frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],

@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.encoders
 
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 
-class Nip92 {
+class Nip92MediaAttachments {
     companion object {
         private const val IMETA = "imeta"
     }

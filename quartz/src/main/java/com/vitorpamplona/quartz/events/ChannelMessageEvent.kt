@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.events
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip92
+import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -78,7 +78,7 @@ class ChannelMessageEvent(
             geohash?.let { tags.addAll(geohashMipMap(it)) }
             nip94attachments?.let {
                 it.forEach {
-                    Nip92().convertFromFileHeader(it)?.let {
+                    Nip92MediaAttachments().convertFromFileHeader(it)?.let {
                         tags.add(it)
                     }
                 }
