@@ -36,6 +36,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.commons.RichTextParser
+import com.vitorpamplona.amethyst.commons.insertUrlAtCursor
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -736,10 +737,7 @@ open class NewPostViewModel() : ViewModel() {
                     isUploadingImage = false
                     nip94attachments = nip94attachments + event
 
-                    message =
-                        TextFieldValue(
-                            message.text + "\n" + imageUrl,
-                        )
+                    message = message.insertUrlAtCursor(imageUrl)
                     urlPreview = findUrlInMessage()
                 }
             },
@@ -776,7 +774,9 @@ open class NewPostViewModel() : ViewModel() {
 
                         isUploadingImage = false
 
-                        note?.let { message = TextFieldValue(message.text + "\nnostr:" + it.toNEvent()) }
+                        note?.let {
+                            message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
+                        }
 
                         urlPreview = findUrlInMessage()
                     }
