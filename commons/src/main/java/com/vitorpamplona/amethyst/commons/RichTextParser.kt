@@ -74,29 +74,35 @@ class RichTextParser() {
         }
     }
 
+    fun parseValidUrls(content: String): LinkedHashSet<String> {
+        val urls = UrlDetector(content, UrlDetectorOptions.Default).detect()
+
+        return urls.mapNotNullTo(LinkedHashSet(urls.size)) {
+            if (it.originalUrl.contains("@")) {
+                if (Patterns.EMAIL_ADDRESS.matcher(it.originalUrl).matches()) {
+                    null
+                } else {
+                    it.originalUrl
+                }
+            } else if (isNumber(it.originalUrl)) {
+                null // avoids urls that look like 123.22
+            } else if (it.originalUrl.contains("。")) {
+                null // avoids Japanese characters as fake urls
+            } else {
+                if (HTTPRegex.matches(it.originalUrl)) {
+                    it.originalUrl
+                } else {
+                    null
+                }
+            }
+        }
+    }
+
     fun parseText(
         content: String,
         tags: ImmutableListOfLists<String>,
     ): RichTextViewerState {
-        val urls = UrlDetector(content, UrlDetectorOptions.Default).detect()
-
-        val urlSet =
-            urls.mapNotNullTo(LinkedHashSet(urls.size)) {
-                // removes e-mails
-                if (Patterns.EMAIL_ADDRESS.matcher(it.originalUrl).matches()) {
-                    null
-                } else if (isNumber(it.originalUrl)) {
-                    null
-                } else if (it.originalUrl.contains("。")) {
-                    null
-                } else {
-                    if (HTTPRegex.matches(it.originalUrl)) {
-                        it.originalUrl
-                    } else {
-                        null
-                    }
-                }
-            }
+        val urlSet = parseValidUrls(content)
 
         val imagesForPager =
             urlSet.mapNotNull { fullUrl -> parseMediaUrl(fullUrl, tags) }.associateBy { it.url }
@@ -153,8 +159,29 @@ class RichTextParser() {
         return paragraphSegments.toImmutableList()
     }
 
-    fun isNumber(word: String): Boolean {
-        return numberPattern.matcher(word).matches()
+    private fun isNumber(word: String) = numberPattern.matcher(word).matches()
+
+    private fun isPhoneNumberChar(c: Char): Boolean {
+        return when (c) {
+            in '0'..'9' -> true
+            '-' -> true
+            ' ' -> true
+            '.' -> true
+            else -> false
+        }
+    }
+
+    fun isPotentialPhoneNumber(word: String): Boolean {
+        if (word.length !in 7..14) return false
+        var isPotentialNumber = true
+
+        for (c in word) {
+            if (!isPhoneNumberChar(c)) {
+                isPotentialNumber = false
+                break
+            }
+        }
+        return isPotentialNumber
     }
 
     fun isDate(word: String): Boolean {
@@ -172,46 +199,48 @@ class RichTextParser() {
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
     ): Segment {
-        val emailMatcher = Patterns.EMAIL_ADDRESS.matcher(word)
-        val phoneMatcher = Patterns.PHONE.matcher(word)
-        val schemelessMatcher = noProtocolUrlValidator.matcher(word)
+        if (word.isEmpty()) return RegularTextSegment(word)
 
-        return if (word.isEmpty()) {
-            RegularTextSegment(word)
-        } else if (images.contains(word)) {
-            ImageSegment(word)
-        } else if (urls.contains(word)) {
-            LinkSegment(word)
-        } else if (emojis.any { word.contains(it.key) }) {
-            EmojiSegment(word)
-        } else if (word.startsWith("lnbc", true)) {
-            InvoiceSegment(word)
-        } else if (word.startsWith("lnurl", true)) {
-            WithdrawSegment(word)
-        } else if (word.startsWith("cashuA", true)) {
-            CashuSegment(word)
-        } else if (emailMatcher.matches()) {
-            EmailSegment(word)
-        } else if (word.length in 7..14 && !isDate(word) && phoneMatcher.matches()) {
-            PhoneSegment(word)
-        } else if (startsWithNIP19Scheme(word)) {
-            BechSegment(word)
-        } else if (word.startsWith("#")) {
-            parseHash(word, tags)
-        } else if (word.contains(".") && schemelessMatcher.find()) {
-            val url = schemelessMatcher.group(1) // url
-            val additionalChars = schemelessMatcher.group(4).ifEmpty { null } // additional chars
-            val pattern =
-                """^([A-Za-z0-9-_]+(\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\?[^#]*)?(#.*)?"""
-                    .toRegex(RegexOption.IGNORE_CASE)
-            if (pattern.find(word) != null) {
-                SchemelessUrlSegment(word, url, additionalChars)
-            } else {
-                RegularTextSegment(word)
-            }
-        } else {
-            RegularTextSegment(word)
+        if (images.contains(word)) return ImageSegment(word)
+
+        if (urls.contains(word)) return LinkSegment(word)
+
+        if (word.startsWith(":") && emojis.any { word.contains(it.key) }) return EmojiSegment(word)
+
+        if (word.startsWith("lnbc", true)) return InvoiceSegment(word)
+
+        if (word.startsWith("lnurl", true)) return WithdrawSegment(word)
+
+        if (word.startsWith("cashuA", true)) return CashuSegment(word)
+
+        if (startsWithNIP19Scheme(word)) return BechSegment(word)
+
+        if (word.startsWith("#")) return parseHash(word, tags)
+
+        if (word.contains("@")) {
+            if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) return EmailSegment(word)
         }
+
+        if (isPotentialPhoneNumber(word) && !isDate(word)) {
+            if (Patterns.PHONE.matcher(word).matches()) return PhoneSegment(word)
+        }
+
+        val indexOfPeriod = word.indexOf(".")
+        if (indexOfPeriod > 0 && indexOfPeriod < word.length - 1) { // periods cannot be the last one
+            val schemelessMatcher = noProtocolUrlValidator.matcher(word)
+            if (schemelessMatcher.find()) {
+                val url = schemelessMatcher.group(1) // url
+                val additionalChars = schemelessMatcher.group(4).ifEmpty { null } // additional chars
+                val pattern =
+                    """^([A-Za-z0-9-_]+(\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\?[^#]*)?(#.*)?"""
+                        .toRegex(RegexOption.IGNORE_CASE)
+                if (pattern.find(word) != null && url != null) {
+                    return SchemelessUrlSegment(word, url, additionalChars)
+                }
+            }
+        }
+
+        return RegularTextSegment(word)
     }
 
     private fun parseHash(
@@ -289,7 +318,11 @@ class RichTextParser() {
         val hashTagsPattern: Pattern =
             Pattern.compile("#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)(.*)", Pattern.CASE_INSENSITIVE)
 
-        val acceptedNIP19schemes = listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1")
+        val acceptedNIP19schemes =
+            listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1") +
+                listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1").map {
+                    it.uppercase()
+                }
 
         private fun removeQueryParamsForExtensionComparison(fullUrl: String): String {
             return if (fullUrl.contains("?")) {
@@ -344,9 +377,18 @@ class RichTextParser() {
         }
 
         fun startsWithNIP19Scheme(word: String): Boolean {
-            val cleaned = word.lowercase().removePrefix("@").removePrefix("nostr:").removePrefix("@")
-
-            return acceptedNIP19schemes.any { cleaned.startsWith(it) }
+            if (word.isEmpty()) return false
+            return if (word[0] == 'n' || word[0] == 'N') {
+                if (word.startsWith("nostr:n") || word.startsWith("NOSTR:N")) {
+                    acceptedNIP19schemes.any { word.startsWith(it, 6) }
+                } else {
+                    acceptedNIP19schemes.any { word.startsWith(it) }
+                }
+            } else if (word[0] == '@') {
+                acceptedNIP19schemes.any { word.startsWith(it, 1) }
+            } else {
+                false
+            }
         }
 
         fun isUrlWithoutScheme(url: String) = noProtocolUrlValidator.matcher(url).matches()
