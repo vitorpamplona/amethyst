@@ -99,9 +99,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
-import com.vitorpamplona.amethyst.ui.components.ImageUrlType
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
-import com.vitorpamplona.amethyst.ui.components.TextType
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -128,6 +126,7 @@ import com.vitorpamplona.amethyst.ui.theme.TinyBorders
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.placeholderTextColorFilter
+import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
@@ -808,10 +807,9 @@ private fun RenderReactionType(
     if (reactionType.isNotEmpty() && reactionType[0] == ':') {
         val renderable =
             remember(reactionType) {
-                listOf(
-                    ImageUrlType(reactionType.removePrefix(":").substringAfter(":")),
+                persistentListOf(
+                    Nip30CustomEmoji.ImageUrlType(reactionType.removePrefix(":").substringAfter(":")),
                 )
-                    .toImmutableList()
             }
 
         InLineIconRenderer(
@@ -1284,11 +1282,10 @@ private fun ActionableReactionButton(
             val url = noStartColon.substringAfter(":")
 
             val renderable =
-                listOf(
-                    ImageUrlType(url),
-                    TextType(removeSymbol),
+                persistentListOf(
+                    Nip30CustomEmoji.ImageUrlType(url),
+                    Nip30CustomEmoji.TextType(removeSymbol),
                 )
-                    .toImmutableList()
 
             InLineIconRenderer(
                 renderable,

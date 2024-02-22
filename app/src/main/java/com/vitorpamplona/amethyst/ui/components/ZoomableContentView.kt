@@ -376,11 +376,13 @@ fun ImageUrlWithDownloadButton(
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("routeToImage", "")
                     append("$url ")
+                    pop()
                 }
 
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("routeToImage", "")
                     appendInlineContent("inlineContent", "[icon]")
+                    pop()
                 }
 
                 withStyle(regularText) { append(" ") }
@@ -606,6 +608,7 @@ private fun DisplayUrlWithLoadingSymbolWait(content: BaseMediaContent) {
                     withStyle(clickableTextStyle) {
                         pushStringAnnotation("routeToImage", "")
                         append(content.url + " ")
+                        pop()
                     }
                 } else {
                     withStyle(regularText) { append("Loading content...") }
@@ -614,6 +617,7 @@ private fun DisplayUrlWithLoadingSymbolWait(content: BaseMediaContent) {
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("routeToImage", "")
                     appendInlineContent("inlineContent", "[icon]")
+                    pop()
                 }
 
                 withStyle(regularText) { append(" ") }

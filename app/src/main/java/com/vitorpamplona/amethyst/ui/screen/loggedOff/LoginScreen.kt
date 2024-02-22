@@ -533,6 +533,7 @@ fun LoginPage(
                         withStyle(clickableTextStyle) {
                             pushStringAnnotation("openTerms", "")
                             append(stringResource(R.string.terms_of_use))
+                            pop()
                         }
                     }
 

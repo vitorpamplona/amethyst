@@ -30,7 +30,6 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -59,21 +58,17 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.Nip30CustomEmoji
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun ClickableRoute(
@@ -155,7 +150,7 @@ private fun DisplayNoteLink(
 
     val channelHex = remember(noteState) { note.channelHex() }
     val noteIdDisplayNote = remember(noteState) { "@${note.idDisplayNote()}" }
-    val addedCharts = remember { "${nip19.additionalChars}" }
+    val addedCharts = nip19.additionalChars
 
     if (note.event is ChannelCreateEvent || nip19.kind == ChannelCreateEvent.KIND) {
         CreateClickableText(
@@ -216,11 +211,10 @@ private fun DisplayAddress(
 
         val route = remember(noteState) { "Note/${nip19.hex}" }
         val displayName = remember(noteState) { "@${noteState?.note?.idDisplayNote()}" }
-        val addedCharts = remember { "${nip19.additionalChars}" }
 
         CreateClickableText(
             clickablePart = displayName,
-            suffix = addedCharts,
+            suffix = nip19.additionalChars,
             route = route,
             nav = nav,
         )
@@ -281,12 +275,15 @@ private fun RenderUserAsClickableText(
     userDisplayName?.let {
         CreateClickableTextWithEmoji(
             clickablePart = it,
-            suffix = nip19.additionalChars,
             maxLines = 1,
             route = route,
             nav = nav,
             tags = userTags,
         )
+
+        nip19.additionalChars.ifBlank { null }?.let {
+            Text(text = it, maxLines = 1)
+        }
     }
 }
 
@@ -368,6 +365,74 @@ fun ClickableText(
 }
 
 @Composable
+fun CustomEmojiChecker(
+    text: String,
+    tags: ImmutableListOfLists<String>?,
+    onRegularText: @Composable (String) -> Unit,
+    onEmojiText: @Composable (ImmutableList<Nip30CustomEmoji.Renderable>) -> Unit,
+) {
+    val mayContainEmoji by remember(text, tags) {
+        mutableStateOf(Nip30CustomEmoji.fastMightContainEmoji(text, tags))
+    }
+
+    if (mayContainEmoji) {
+        var emojiList by
+            remember(text, tags) {
+                mutableStateOf<ImmutableList<Nip30CustomEmoji.Renderable>?>(null)
+            }
+
+        LaunchedEffect(text, tags) {
+            val newEmojiList = Nip30CustomEmoji.assembleAnnotatedList(text, tags)
+            if (newEmojiList != null) {
+                emojiList = newEmojiList
+            }
+        }
+
+        emojiList?.let {
+            onEmojiText(it)
+        } ?: run {
+            onRegularText(text)
+        }
+    } else {
+        onRegularText(text)
+    }
+}
+
+@Composable
+fun CustomEmojiChecker(
+    text: String,
+    emojis: ImmutableMap<String, String>,
+    onRegularText: @Composable (String) -> Unit,
+    onEmojiText: @Composable (ImmutableList<Nip30CustomEmoji.Renderable>) -> Unit,
+) {
+    val mayContainEmoji by remember(text, emojis) {
+        mutableStateOf(Nip30CustomEmoji.fastMightContainEmoji(text, emojis))
+    }
+
+    if (mayContainEmoji) {
+        var emojiList by
+            remember(text, emojis) {
+                mutableStateOf<ImmutableList<Nip30CustomEmoji.Renderable>?>(null)
+            }
+
+        LaunchedEffect(text, emojis) {
+            val newEmojiList = Nip30CustomEmoji.assembleAnnotatedList(text, emojis)
+            if (newEmojiList != null) {
+                emojiList = newEmojiList
+            }
+        }
+
+        emojiList?.let {
+            onEmojiText(it)
+        } ?: run {
+            onRegularText(text)
+        }
+    } else {
+        onRegularText(text)
+    }
+}
+
+@Composable
 fun CreateTextWithEmoji(
     text: String,
     tags: ImmutableListOfLists<String>?,
@@ -379,52 +444,40 @@ fun CreateTextWithEmoji(
     overflow: TextOverflow = TextOverflow.Clip,
     modifier: Modifier = Modifier,
 ) {
-    var emojiList by remember(text) { mutableStateOf<ImmutableList<Renderable>>(persistentListOf()) }
-
-    LaunchedEffect(key1 = text) {
-        launch(Dispatchers.Default) {
-            val emojis =
-                tags?.lists?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] }
-                    ?: emptyMap()
-
-            if (emojis.isNotEmpty()) {
-                val newEmojiList = assembleAnnotatedList(text, emojis)
-                if (newEmojiList.isNotEmpty()) {
-                    emojiList = newEmojiList.toImmutableList()
-                }
-            }
-        }
-    }
-
     val textColor =
         color.takeOrElse { LocalTextStyle.current.color.takeOrElse { LocalContentColor.current } }
 
-    if (emojiList.isEmpty()) {
-        Text(
-            text = text,
-            color = textColor,
-            textAlign = textAlign,
-            fontWeight = fontWeight,
-            fontSize = fontSize,
-            maxLines = maxLines,
-            overflow = overflow,
-            modifier = modifier,
-        )
-    } else {
-        val style =
-            LocalTextStyle.current
-                .merge(
-                    TextStyle(
-                        color = textColor,
-                        textAlign = TextAlign.Unspecified,
-                        fontWeight = fontWeight,
-                        fontSize = fontSize,
-                    ),
-                )
-                .toSpanStyle()
+    CustomEmojiChecker(
+        text,
+        tags,
+        onEmojiText = {
+            val style =
+                LocalTextStyle.current
+                    .merge(
+                        TextStyle(
+                            color = textColor,
+                            textAlign = TextAlign.Unspecified,
+                            fontWeight = fontWeight,
+                            fontSize = fontSize,
+                        ),
+                    )
+                    .toSpanStyle()
 
-        InLineIconRenderer(emojiList, style, fontSize, maxLines, overflow, modifier)
-    }
+            InLineIconRenderer(it, style, fontSize, maxLines, overflow, modifier)
+        },
+        onRegularText = {
+            Text(
+                text = it,
+                color = textColor,
+                textAlign = textAlign,
+                fontWeight = fontWeight,
+                fontSize = fontSize,
+                maxLines = maxLines,
+                overflow = overflow,
+                modifier = modifier,
+            )
+        },
+    )
 }
 
 @Composable
@@ -439,51 +492,43 @@ fun CreateTextWithEmoji(
     overflow: TextOverflow = TextOverflow.Clip,
     modifier: Modifier = Modifier,
 ) {
-    var emojiList by remember(text) { mutableStateOf<ImmutableList<Renderable>>(persistentListOf()) }
-
-    if (emojis.isNotEmpty()) {
-        LaunchedEffect(key1 = text) {
-            launch(Dispatchers.Default) {
-                val newEmojiList = assembleAnnotatedList(text, emojis)
-                if (newEmojiList.isNotEmpty()) {
-                    emojiList = newEmojiList.toImmutableList()
-                }
-            }
-        }
-    }
-
     val textColor =
         color.takeOrElse { LocalTextStyle.current.color.takeOrElse { LocalContentColor.current } }
 
-    if (emojiList.isEmpty()) {
-        Text(
-            text = text,
-            color = textColor,
-            textAlign = textAlign,
-            fontWeight = fontWeight,
-            fontSize = fontSize,
-            maxLines = maxLines,
-            overflow = overflow,
-            modifier = modifier,
-        )
-    } else {
-        val currentStyle = LocalTextStyle.current
-        val style =
-            remember(currentStyle) {
-                currentStyle
-                    .merge(
-                        TextStyle(
-                            color = textColor,
-                            textAlign = TextAlign.Unspecified,
-                            fontWeight = fontWeight,
-                            fontSize = fontSize,
-                        ),
-                    )
-                    .toSpanStyle()
-            }
+    CustomEmojiChecker(
+        text,
+        emojis,
+        onEmojiText = {
+            val currentStyle = LocalTextStyle.current
+            val style =
+                remember(currentStyle) {
+                    currentStyle
+                        .merge(
+                            TextStyle(
+                                color = textColor,
+                                textAlign = TextAlign.Unspecified,
+                                fontWeight = fontWeight,
+                                fontSize = fontSize,
+                            ),
+                        )
+                        .toSpanStyle()
+                }
 
-        InLineIconRenderer(emojiList, style, fontSize, maxLines, overflow, modifier)
-    }
+            InLineIconRenderer(it, style, fontSize, maxLines, overflow, modifier)
+        },
+        onRegularText = {
+            Text(
+                text = it,
+                color = textColor,
+                textAlign = textAlign,
+                fontWeight = fontWeight,
+                fontSize = fontSize,
+                maxLines = maxLines,
+                overflow = overflow,
+                modifier = modifier,
+            )
+        },
+    )
 }
 
 @Composable
@@ -494,46 +539,26 @@ fun CreateClickableTextWithEmoji(
     style: TextStyle,
     onClick: (Int) -> Unit,
 ) {
-    var emojiList by
-        remember(clickablePart) { mutableStateOf<ImmutableList<Renderable>>(persistentListOf()) }
-
-    LaunchedEffect(key1 = clickablePart) {
-        launch(Dispatchers.Default) {
-            val emojis =
-                tags?.lists?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] }
-                    ?: emptyMap()
-
-            if (emojis.isNotEmpty()) {
-                val newEmojiList = assembleAnnotatedList(clickablePart, emojis)
-                if (newEmojiList.isNotEmpty()) {
-                    emojiList = newEmojiList.toImmutableList()
-                }
-            }
-        }
-    }
-
-    if (emojiList.isEmpty()) {
-        ClickableText(
-            text = AnnotatedString(clickablePart),
-            style = style,
-            maxLines = maxLines,
-            onClick = onClick,
-        )
-    } else {
-        ClickableInLineIconRenderer(emojiList, maxLines, style.toSpanStyle()) { onClick(it) }
-    }
+    CustomEmojiChecker(
+        text = clickablePart,
+        tags = tags,
+        onRegularText = {
+            ClickableText(
+                text = AnnotatedString(clickablePart),
+                style = style,
+                maxLines = maxLines,
+                onClick = onClick,
+            )
+        },
+        onEmojiText = {
+            ClickableInLineIconRenderer(it, maxLines, style.toSpanStyle()) { onClick(it) }
+        },
+    )
 }
-
-@Immutable
-data class DoubleEmojiList(
-    val part1: ImmutableList<Renderable>,
-    val part2: ImmutableList<Renderable>,
-)
 
 @Composable
 fun CreateClickableTextWithEmoji(
     clickablePart: String,
-    suffix: String?,
     maxLines: Int = Int.MAX_VALUE,
     overrideColor: Color? = null,
     fontWeight: FontWeight = FontWeight.Normal,
@@ -541,84 +566,33 @@ fun CreateClickableTextWithEmoji(
     nav: (String) -> Unit,
     tags: ImmutableListOfLists<String>?,
 ) {
-    var emojiLists by remember(clickablePart) { mutableStateOf<DoubleEmojiList?>(null) }
+    CustomEmojiChecker(
+        text = clickablePart,
+        tags = tags,
+        onRegularText = {
+            CreateClickableText(it, null, maxLines, overrideColor, fontWeight, route, nav)
+        },
+        onEmojiText = {
+            val clickablePartStyle =
+                SpanStyle(
+                    color = overrideColor ?: MaterialTheme.colorScheme.primary,
+                    fontWeight = fontWeight,
+                )
 
-    LaunchedEffect(key1 = clickablePart) {
-        launch(Dispatchers.Default) {
-            val emojis =
-                tags?.lists?.filter { it.size > 2 && it[0] == "emoji" }?.associate { ":${it[1]}:" to it[2] }
-                    ?: emptyMap()
-
-            if (emojis.isNotEmpty()) {
-                val newEmojiList1 = assembleAnnotatedList(clickablePart, emojis)
-                val newEmojiList2 =
-                    suffix?.let { assembleAnnotatedList(it, emojis) } ?: emptyList<Renderable>()
-
-                if (newEmojiList1.isNotEmpty() || newEmojiList2.isNotEmpty()) {
-                    emojiLists =
-                        DoubleEmojiList(newEmojiList1.toImmutableList(), newEmojiList2.toImmutableList())
-                }
+            ClickableInLineIconRenderer(
+                it,
+                maxLines,
+                clickablePartStyle,
+            ) {
+                nav(route)
             }
-        }
-    }
-
-    if (emojiLists == null) {
-        CreateClickableText(clickablePart, suffix, maxLines, overrideColor, fontWeight, route, nav)
-    } else {
-        val clickablePartStyle =
-            SpanStyle(
-                color = overrideColor ?: MaterialTheme.colorScheme.primary,
-                fontWeight = fontWeight,
-            )
-
-        val nonClickablePartStyle =
-            SpanStyle(
-                color = overrideColor ?: MaterialTheme.colorScheme.onBackground,
-                fontWeight = fontWeight,
-            )
-
-        ClickableInLineIconRenderer(
-            emojiLists!!.part1,
-            maxLines,
-            clickablePartStyle,
-        ) {
-            nav(route)
-        }
-
-        InLineIconRenderer(
-            emojiLists!!.part2,
-            nonClickablePartStyle,
-            maxLines = maxLines,
-        )
-    }
+        },
+    )
 }
-
-suspend fun assembleAnnotatedList(
-    text: String,
-    emojis: Map<String, String>,
-): ImmutableList<Renderable> {
-    return Nip30CustomEmoji()
-        .buildArray(text)
-        .map {
-            val url = emojis[it]
-            if (url != null) {
-                ImageUrlType(url)
-            } else {
-                TextType(it)
-            }
-        }
-        .toImmutableList()
-}
-
-@Immutable open class Renderable()
-
-@Immutable class TextType(val text: String) : Renderable()
-
-@Immutable class ImageUrlType(val url: String) : Renderable()
 
 @Composable
 fun ClickableInLineIconRenderer(
-    wordsInOrder: ImmutableList<Renderable>,
+    wordsInOrder: ImmutableList<Nip30CustomEmoji.Renderable>,
     maxLines: Int = Int.MAX_VALUE,
     style: SpanStyle,
     onClick: (Int) -> Unit,
@@ -635,7 +609,7 @@ fun ClickableInLineIconRenderer(
     val inlineContent =
         wordsInOrder
             .mapIndexedNotNull { idx, value ->
-                if (value is ImageUrlType) {
+                if (value is Nip30CustomEmoji.ImageUrlType) {
                     Pair(
                         "inlineContent$idx",
                         InlineTextContent(
@@ -664,9 +638,9 @@ fun ClickableInLineIconRenderer(
                 withStyle(
                     style,
                 ) {
-                    if (value is TextType) {
+                    if (value is Nip30CustomEmoji.TextType) {
                         append(value.text)
-                    } else if (value is ImageUrlType) {
+                    } else if (value is Nip30CustomEmoji.ImageUrlType) {
                         appendInlineContent("inlineContent$idx", "[icon]")
                     }
                 }
@@ -692,7 +666,7 @@ fun ClickableInLineIconRenderer(
 
 @Composable
 fun InLineIconRenderer(
-    wordsInOrder: ImmutableList<Renderable>,
+    wordsInOrder: ImmutableList<Nip30CustomEmoji.Renderable>,
     style: SpanStyle,
     fontSize: TextUnit = TextUnit.Unspecified,
     maxLines: Int = Int.MAX_VALUE,
@@ -711,7 +685,7 @@ fun InLineIconRenderer(
     val inlineContent =
         wordsInOrder
             .mapIndexedNotNull { idx, value ->
-                if (value is ImageUrlType) {
+                if (value is Nip30CustomEmoji.ImageUrlType) {
                     Pair(
                         "inlineContent$idx",
                         InlineTextContent(
@@ -741,9 +715,9 @@ fun InLineIconRenderer(
                     withStyle(
                         style,
                     ) {
-                        if (value is TextType) {
+                        if (value is Nip30CustomEmoji.TextType) {
                             append(value.text)
-                        } else if (value is ImageUrlType) {
+                        } else if (value is Nip30CustomEmoji.ImageUrlType) {
                             appendInlineContent("inlineContent$idx", "[icon]")
                         }
                     }

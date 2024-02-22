@@ -787,7 +787,6 @@ private fun DisplayMessageUsername(
     Spacer(modifier = StdHorzSpacer)
     CreateClickableTextWithEmoji(
         clickablePart = userDisplayName,
-        suffix = "",
         maxLines = 1,
         tags = userTags,
         fontWeight = FontWeight.Bold,

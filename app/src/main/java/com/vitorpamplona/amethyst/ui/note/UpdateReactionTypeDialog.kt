@@ -80,17 +80,17 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.firstFullChar
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
-import com.vitorpamplona.amethyst.ui.components.ImageUrlType
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
-import com.vitorpamplona.amethyst.ui.components.TextType
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.EmojiUrl
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
@@ -283,11 +283,10 @@ private fun RenderReactionOption(
             val url = noStartColon.substringAfter(":")
 
             val renderable =
-                listOf(
-                    ImageUrlType(url),
-                    TextType(" ✖"),
+                persistentListOf(
+                    Nip30CustomEmoji.ImageUrlType(url),
+                    Nip30CustomEmoji.TextType(" ✖"),
                 )
-                    .toImmutableList()
 
             InLineIconRenderer(
                 renderable,

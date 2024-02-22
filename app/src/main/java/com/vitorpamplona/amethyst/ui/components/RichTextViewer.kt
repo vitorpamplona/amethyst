@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
 import com.halilibo.richtext.ui.material3.Material3RichText
@@ -86,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.SchemelessUrlSegment
 import com.vitorpamplona.amethyst.commons.Segment
 import com.vitorpamplona.amethyst.commons.WithdrawSegment
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.HashtagIcon
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -94,6 +96,7 @@ import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
+import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadedBechLink
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
@@ -102,10 +105,14 @@ import com.vitorpamplona.amethyst.ui.theme.MarkdownTextStyle
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.markdownStyle
 import com.vitorpamplona.amethyst.ui.uriToRoute
+import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.Nip19
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import fr.acinq.secp256k1.Hex
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 fun isMarkdown(content: String): Boolean {
@@ -136,15 +143,9 @@ fun RichTextViewer(
     }
 }
 
-@Preview()
+@Preview
 @Composable
 fun RenderRegularPreview() {
-    val backgroundColor = MaterialTheme.colorScheme.background
-    val backgroundColorState =
-        remember {
-            mutableStateOf(backgroundColor)
-        }
-
     val nav: (String) -> Unit = {}
 
     Column(modifier = Modifier.padding(10.dp)) {
@@ -171,6 +172,7 @@ fun RenderRegularPreview() {
                         nav = nav,
                     )
                 }
+
                 is HashTagSegment -> HashTag(word, nav)
                 // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                 // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
@@ -178,27 +180,93 @@ fun RenderRegularPreview() {
                 is RegularTextSegment -> Text(word.segmentText)
             }
         }
+    }
+}
 
-        RenderRegular(
-            "#Amethyst v0.84.1: ncryptsec support (NIP-49)",
-            EmptyTagList,
-        ) { word, state ->
-            when (word) {
-                // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
-                // is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
-                is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
-                is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
-                is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
-                // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
-                is EmailSegment -> ClickableEmail(word.segmentText)
-                is PhoneSegment -> ClickablePhone(word.segmentText)
-                // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
-                is HashTagSegment -> HashTag(word, nav)
-                // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
-                // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
-                is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
-                is RegularTextSegment -> Text(word.segmentText)
-            }
+@Preview
+@Composable
+fun RenderRegularPreview2() {
+    val nav: (String) -> Unit = {}
+    RenderRegular(
+        "#Amethyst v0.84.1: ncryptsec support (NIP-49)",
+        EmptyTagList,
+    ) { word, state ->
+        when (word) {
+            // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
+            // is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
+            is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+            is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
+            is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
+            // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
+            is EmailSegment -> ClickableEmail(word.segmentText)
+            is PhoneSegment -> ClickablePhone(word.segmentText)
+            // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
+            is HashTagSegment -> HashTag(word, nav)
+            // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
+            // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
+            is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
+            is RegularTextSegment -> Text(word.segmentText)
+        }
+    }
+}
+
+@Composable
+fun mockAccountViewModel(): AccountViewModel {
+    val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
+    sharedPreferencesViewModel.init()
+
+    return AccountViewModel(
+        Account(
+            // blank keys
+            keyPair =
+                KeyPair(
+                    privKey = Hex.decode("0f761f8a5a481e26f06605a1d9b3e9eba7a107d351f43c43a57469b788274499"),
+                    pubKey = Hex.decode("989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"),
+                    forcePubKeyCheck = false,
+                ),
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+        ),
+        sharedPreferencesViewModel.sharedPrefs,
+    )
+}
+
+@Preview
+@Composable
+fun RenderRegularPreview3() {
+    val tags =
+        ImmutableListOfLists(
+            arrayOf(
+                arrayOf("t", "ioメシヨソイゲーム"),
+                arrayOf("emoji", "_ri", "https://media.misskeyusercontent.com/emoji/_ri.png"),
+                arrayOf("emoji", "petthex_japanesecake", "https://media.misskeyusercontent.com/emoji/petthex_japanesecake.gif"),
+                arrayOf("emoji", "ai_nomming", "https://media.misskeyusercontent.com/misskey/f6294900-f678-43cc-bc36-3ee5deeca4c2.gif"),
+                arrayOf("proxy", "https://misskey.io/notes/9q0x6gtdysir03qh", "activitypub"),
+            ),
+        )
+    val nav: (String) -> Unit = {}
+    val accountViewModel = mockAccountViewModel()
+
+    RenderRegular(
+        "\u200B:_ri:\u200B\u200B:_ri:\u200Bはﾍﾞｲｸﾄﾞﾓﾁｮﾁｮ\u200B:petthex_japanesecake:\u200Bを食べました\u200B:ai_nomming:\u200B\n" +
+            "#ioメシヨソイゲーム\n" +
+            "https://misskey.io/play/9g3qza4jow",
+        tags,
+    ) { word, state ->
+        when (word) {
+            // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
+            is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
+            is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+            is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
+            is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
+            // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
+            is EmailSegment -> ClickableEmail(word.segmentText)
+            is PhoneSegment -> ClickablePhone(word.segmentText)
+            // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
+            is HashTagSegment -> HashTag(word, nav)
+            // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
+            // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
+            is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
+            is RegularTextSegment -> Text(word.segmentText)
         }
     }
 }
@@ -629,23 +697,25 @@ fun HashTag(
     val primary = MaterialTheme.colorScheme.primary
     val background = MaterialTheme.colorScheme.onBackground
     val hashtagIcon: HashtagIcon? =
-        remember(segment.hashtag) { checkForHashtagWithIcon(segment.hashtag, primary) }
+        remember(segment.segmentText) { checkForHashtagWithIcon(segment.hashtag, primary) }
 
     val regularText = remember { SpanStyle(color = background) }
     val clickableTextStyle = remember { SpanStyle(color = primary) }
 
     val annotatedTermsString =
-        remember {
+        remember(segment.segmentText) {
             buildAnnotatedString {
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("routeToHashtag", "")
                     append("#${segment.hashtag}")
+                    pop()
                 }
 
                 if (hashtagIcon != null) {
                     withStyle(clickableTextStyle) {
                         pushStringAnnotation("routeToHashtag", "")
                         appendInlineContent("inlineContent", "[icon]")
+                        pop()
                     }
                 }
 
@@ -696,7 +766,12 @@ fun TagLink(
         if (it == null) {
             Text(text = word.segmentText)
         } else {
-            Row { DisplayUserFromTag(it, word.extras, nav) }
+            Row {
+                DisplayUserFromTag(it, nav)
+                word.extras?.let {
+                    Text(text = it)
+                }
+            }
         }
     }
 }
@@ -773,7 +848,6 @@ private fun DisplayNoteFromTag(
 @Composable
 private fun DisplayUserFromTag(
     baseUser: User,
-    addedChars: String?,
     nav: (String) -> Unit,
 ) {
     val route = remember { "User/${baseUser.pubkeyHex}" }
@@ -781,12 +855,11 @@ private fun DisplayUserFromTag(
 
     val meta by baseUser.live().userMetadataInfo.observeAsState(baseUser.info)
 
-    Crossfade(targetState = meta) {
+    Crossfade(targetState = meta, label = "DisplayUserFromTag") {
         Row {
             val displayName = remember(it) { it?.bestDisplayName() ?: it?.bestUsername() ?: hex }
             CreateClickableTextWithEmoji(
                 clickablePart = displayName,
-                suffix = addedChars,
                 maxLines = 1,
                 route = route,
                 nav = nav,

@@ -2930,7 +2930,6 @@ private fun LoadAndDisplayUser(
     if (userDisplayName != null) {
         CreateClickableTextWithEmoji(
             clickablePart = userDisplayName,
-            suffix = " ",
             maxLines = 1,
             route = route,
             nav = nav,

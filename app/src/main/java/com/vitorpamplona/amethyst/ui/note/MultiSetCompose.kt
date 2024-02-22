@@ -65,7 +65,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.components.ImageUrlType
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -90,10 +89,10 @@ import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.ui.theme.profile35dpModifier
+import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import com.vitorpamplona.quartz.events.EmptyTagList
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.time.ExperimentalTime
@@ -232,10 +231,7 @@ fun RenderLikeGallery(
                     val url = noStartColon.substringAfter(":")
 
                     val renderable =
-                        listOf(
-                            ImageUrlType(url),
-                        )
-                            .toImmutableList()
+                        persistentListOf(Nip30CustomEmoji.ImageUrlType(url))
 
                     InLineIconRenderer(
                         renderable,

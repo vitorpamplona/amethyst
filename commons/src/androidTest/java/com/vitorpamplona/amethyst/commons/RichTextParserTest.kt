@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.events.EmptyTagList
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -4229,6 +4230,44 @@ class RichTextParserTest {
                 "RegularText(That’s)",
                 "RegularText(the)",
                 "RegularText(note)",
+            )
+
+        state.paragraphs
+            .map { it.words }
+            .flatten()
+            .forEachIndexed { index, seg ->
+                org.junit.Assert.assertEquals(
+                    expectedResult[index],
+                    "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
+                )
+            }
+    }
+
+    @Test
+    fun testJapaneseWithEmojis() {
+        val tags =
+            arrayOf(
+                arrayOf("t", "ioメシヨソイゲーム"),
+                arrayOf("emoji", "_ri", "https://media.misskeyusercontent.com/emoji/_ri.png"),
+                arrayOf("emoji", "petthex_japanesecake", "https://media.misskeyusercontent.com/emoji/petthex_japanesecake.gif"),
+                arrayOf("emoji", "ai_nomming", "https://media.misskeyusercontent.com/misskey/f6294900-f678-43cc-bc36-3ee5deeca4c2.gif"),
+                arrayOf("proxy", "https://misskey.io/notes/9q0x6gtdysir03qh", "activitypub"),
+            )
+        val text =
+            "\u200B:_ri:\u200B\u200B:_ri:\u200Bはﾍﾞｲｸﾄﾞﾓﾁｮﾁｮ\u200B:petthex_japanesecake:\u200Bを食べました\u200B:ai_nomming:\u200B\n" +
+                "#ioメシヨソイゲーム\n" +
+                "https://misskey.io/play/9g3qza4jow"
+
+        val state =
+            RichTextParser().parseText(text, ImmutableListOfLists(tags))
+
+        printStateForDebug(state)
+
+        val expectedResult =
+            listOf<String>(
+                "Emoji(\u200B:_ri:\u200B\u200B:_ri:\u200Bはﾍﾞｲｸﾄﾞﾓﾁｮﾁｮ\u200B:petthex_japanesecake:\u200Bを食べました\u200B:ai_nomming:\u200B)",
+                "HashTag(#ioメシヨソイゲーム)",
+                "Link(https://misskey.io/play/9g3qza4jow)",
             )
 
         state.paragraphs

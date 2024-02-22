@@ -24,6 +24,7 @@ import android.util.Log
 import android.util.Patterns
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
+import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import com.vitorpamplona.quartz.encoders.Nip54
 import com.vitorpamplona.quartz.encoders.Nip92
 import com.vitorpamplona.quartz.events.FileHeaderEvent
@@ -108,8 +109,7 @@ class RichTextParser() {
             urlSet.mapNotNull { fullUrl -> parseMediaUrl(fullUrl, tags) }.associateBy { it.url }
         val imageList = imagesForPager.values.toList()
 
-        val emojiMap =
-            tags.lists.filter { it.size > 2 && it[0] == "emoji" }.associate { ":${it[1]}:" to it[2] }
+        val emojiMap = Nip30CustomEmoji.createEmojiMap(tags)
 
         val segments = findTextSegments(content, imagesForPager.keys, urlSet, emojiMap, tags)
 
@@ -205,7 +205,7 @@ class RichTextParser() {
 
         if (urls.contains(word)) return LinkSegment(word)
 
-        if (word.startsWith(":") && emojis.any { word.contains(it.key) }) return EmojiSegment(word)
+        if (Nip30CustomEmoji.fastMightContainEmoji(word, emojis) && emojis.any { word.contains(it.key) }) return EmojiSegment(word)
 
         if (word.startsWith("lnbc", true)) return InvoiceSegment(word)
 
