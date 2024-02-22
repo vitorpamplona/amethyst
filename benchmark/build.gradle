@@ -28,7 +28,7 @@ android {
         testInstrumentationRunner 'androidx.benchmark.junit4.AndroidBenchmarkRunner'
     }
 
-    testBuildType = "release"
+    testBuildType = "benchmark"
     buildTypes {
         debug {
             // Since debuggable can"t be modified by gradle for library modules,
