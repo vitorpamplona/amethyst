@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.ImageSegment
 import com.vitorpamplona.amethyst.commons.LinkSegment
 import com.vitorpamplona.amethyst.commons.RichTextParser
 import com.vitorpamplona.quartz.events.EmptyTagList
+import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
@@ -111,6 +112,13 @@ class RichTextParserBenchmark {
     }
 
     @Test
+    fun computeTestCase2UrlDetectorWJapanese() {
+        benchmarkRule.measureRepeated {
+            UrlDetector(testCaseJapanese, UrlDetectorOptions.Default).detect()
+        }
+    }
+
+    @Test
     fun computeTestCase2ParseUrls() {
         benchmarkRule.measureRepeated {
             RichTextParser().parseValidUrls(testCase2)
@@ -121,6 +129,13 @@ class RichTextParserBenchmark {
     fun computeTestCase3All() {
         benchmarkRule.measureRepeated {
             RichTextParser().parseText(testCase3, EmptyTagList)
+        }
+    }
+
+    @Test
+    fun computeTestCaseJapanese() {
+        benchmarkRule.measureRepeated {
+            RichTextParser().parseText(testCaseJapanese, testCaseJapaneseTags)
         }
     }
 
@@ -191,4 +206,19 @@ Download:
 Day 5 ✔️
 
 Seems like they may be getting easier"""
+
+    val testCaseJapaneseTags =
+        ImmutableListOfLists(
+            arrayOf(
+                arrayOf("t", "ioメシヨソイゲーム"),
+                arrayOf("emoji", "_ri", "https://media.misskeyusercontent.com/emoji/_ri.png"),
+                arrayOf("emoji", "petthex_japanesecake", "https://media.misskeyusercontent.com/emoji/petthex_japanesecake.gif"),
+                arrayOf("emoji", "ai_nomming", "https://media.misskeyusercontent.com/misskey/f6294900-f678-43cc-bc36-3ee5deeca4c2.gif"),
+                arrayOf("proxy", "https://misskey.io/notes/9q0x6gtdysir03qh", "activitypub"),
+            ),
+        )
+    val testCaseJapanese =
+        "\u200B:_ri:\u200B\u200B:_ri:\u200Bはﾍﾞｲｸﾄﾞﾓﾁｮﾁｮ\u200B:petthex_japanesecake:\u200Bを食べました\u200B:ai_nomming:\u200B\n" +
+            "#ioメシヨソイゲーム\n" +
+            "https://misskey.io/play/9g3qza4jow"
 }
