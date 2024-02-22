@@ -53,7 +53,7 @@ class Amethyst : Application() {
         newCache
     }
 
-    private val imageCache: DiskCache by lazy {
+    val coilCache: DiskCache by lazy {
         DiskCache.Builder()
             .directory(applicationContext.safeCacheDir.resolve("image_cache"))
             .maxSizePercent(0.2)
@@ -85,7 +85,7 @@ class Amethyst : Application() {
     }
 
     fun imageLoaderBuilder(): ImageLoader.Builder {
-        return ImageLoader.Builder(applicationContext).diskCache { imageCache }
+        return ImageLoader.Builder(applicationContext).diskCache { coilCache }
     }
 
     fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences {

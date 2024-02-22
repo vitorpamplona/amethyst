@@ -104,7 +104,7 @@ import androidx.core.view.ViewCompat
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
-import coil.imageLoader
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.MediaLocalImage
@@ -305,7 +305,7 @@ private fun UrlImageView(
     BoxWithConstraints(contentAlignment = Alignment.Center) {
         val showImage =
             remember {
-                mutableStateOf<Boolean>(
+                mutableStateOf(
                     if (alwayShowImage) true else accountViewModel.settings.showImages.value,
                 )
             }
@@ -313,19 +313,9 @@ private fun UrlImageView(
         val myModifier =
             remember {
                 mainImageModifier.widthIn(max = maxWidth).heightIn(max = maxHeight)
-                /* Is this necessary? It makes images bleed into other pages
-      .run {
-          aspectRatio(content.dim)?.let { ratio ->
-              this.aspectRatio(ratio, false)
-          } ?: this
-      }
-                 */
             }
 
-        val contentScale =
-            remember {
-                if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
-            }
+        val contentScale = if (maxHeight.isFinite) ContentScale.Fit else ContentScale.FillWidth
 
         val verifierModifier =
             if (topPaddingForControllers.isSpecified) {
@@ -342,7 +332,9 @@ private fun UrlImageView(
                 contentDescription = content.description,
                 contentScale = contentScale,
                 modifier = myModifier,
-                onState = { painterState.value = it },
+                onState = {
+                    painterState.value = it
+                },
             )
         }
 
@@ -489,7 +481,7 @@ private fun AddedImageFeatures(
     verifiedModifier: Modifier,
     showImage: MutableState<Boolean>,
 ) {
-    val ratio = remember { aspectRatio(content.dim) }
+    val ratio = remember(content.url) { aspectRatio(content.dim) }
 
     if (!showImage.value) {
         if (content.blurhash != null && ratio != null) {
@@ -509,7 +501,7 @@ private fun AddedImageFeatures(
             ImageUrlWithDownloadButton(content.url, showImage)
         }
     } else {
-        var verifiedHash by remember { mutableStateOf<Boolean?>(null) }
+        var verifiedHash by remember(content.url) { mutableStateOf<Boolean?>(null) }
 
         when (painter.value) {
             null,
@@ -537,10 +529,9 @@ private fun AddedImageFeatures(
             }
             is AsyncImagePainter.State.Success -> {
                 if (content.hash != null) {
-                    val context = LocalContext.current
                     LaunchedEffect(key1 = content.url) {
                         launch(Dispatchers.IO) {
-                            val newVerifiedHash = verifyHash(content, context)
+                            val newVerifiedHash = verifyHash(content)
                             if (newVerifiedHash != verifiedHash) {
                                 verifiedHash = newVerifiedHash
                             }
@@ -1002,13 +993,10 @@ private fun RenderImageOrVideo(
 }
 
 @OptIn(ExperimentalCoilApi::class)
-private fun verifyHash(
-    content: MediaUrlContent,
-    context: Context,
-): Boolean? {
+private suspend fun verifyHash(content: MediaUrlContent): Boolean? {
     if (content.hash == null) return null
 
-    context.imageLoader.diskCache?.get(content.url)?.use { snapshot ->
+    Amethyst.instance.coilCache.openSnapshot(content.url)?.use { snapshot ->
         val hash = CryptoUtils.sha256(snapshot.data.toFile().readBytes()).toHexKey()
 
         Log.d("Image Hash Verification", "$hash == ${content.hash}")
