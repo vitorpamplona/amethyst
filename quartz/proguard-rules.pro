@@ -61,5 +61,8 @@
 -keep class com.vitorpamplona.quartz.crypto.** { *; }
 -keep class com.vitorpamplona.quartz.encoders.** { *; }
 -keep class com.vitorpamplona.quartz.events.** { *; }
+-keep class com.vitorpamplona.quartz.signers.** { *; }
+-keep class com.vitorpamplona.quartz.utils.** { *; }
+
 -keep class com.vitorpamplona.amethyst.model.** { *; }
 -keep class com.vitorpamplona.amethyst.service.** { *; }
