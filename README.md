@@ -6,7 +6,7 @@
 
 # Amethyst
 
-### Nostr Client for Android
+## Nostr Client for Android
 
 Join the social network you control.
 
@@ -18,7 +18,7 @@ Join the social network you control.
 [![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/amethyst/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/amethyst/actions/workflows/build.yml)
 [![License: Apache-2.0](https://img.shields.io/github/license/vitorpamplona/amethyst?labelColor=27303D&color=0877d2)](/LICENSE)
 
-## Install
+## Download and Install
 
 [<img src="./docs/design/obtainium.png"
 alt="Get it on Obtaininum"
