@@ -225,6 +225,7 @@ import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.events.VideoEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
+import com.vitorpamplona.quartz.events.WikiNoteEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -1159,6 +1160,9 @@ private fun RenderNoteRow(
         }
         is LongTextNoteEvent -> {
             RenderLongFormContent(baseNote, accountViewModel, nav)
+        }
+        is WikiNoteEvent -> {
+            RenderWikiContent(baseNote, accountViewModel, nav)
         }
         is BadgeAwardEvent -> {
             RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
@@ -2916,12 +2920,19 @@ private fun LoadAndDisplayUrl(url: String) {
 }
 
 @Composable
-private fun LoadAndDisplayUser(
+fun LoadAndDisplayUser(
     userBase: User,
     nav: (String) -> Unit,
 ) {
-    val route = remember { "User/${userBase.pubkeyHex}" }
+    LoadAndDisplayUser(userBase, "User/${userBase.pubkeyHex}", nav)
+}
 
+@Composable
+fun LoadAndDisplayUser(
+    userBase: User,
+    route: String,
+    nav: (String) -> Unit,
+) {
     val userState by userBase.live().metadata.observeAsState()
     val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
     val userTags =
@@ -3660,6 +3671,92 @@ private fun LongFormHeader(
             }
 
             summary?.let {
+                Spacer(modifier = StdVertSpacer)
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                    color = Color.Gray,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RenderWikiContent(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val noteEvent = note.event as? WikiNoteEvent ?: return
+
+    WikiNoteHeader(noteEvent, note, accountViewModel, nav)
+}
+
+@Composable
+private fun WikiNoteHeader(
+    noteEvent: WikiNoteEvent,
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val title = remember(noteEvent) { noteEvent.title() }
+    val forkedAddress = remember(noteEvent) { noteEvent.forkFromAddress() }
+    val summary =
+        remember(noteEvent) {
+            noteEvent.summary()?.ifBlank { null } ?: noteEvent.content.take(200).ifBlank { null }
+        }
+    val image = remember(noteEvent) { noteEvent.image() }
+
+    Row(
+        modifier =
+            Modifier
+                .padding(top = Size5dp)
+                .clip(shape = QuoteBorder)
+                .border(
+                    1.dp,
+                    MaterialTheme.colorScheme.subtleBorder,
+                    QuoteBorder,
+                ),
+    ) {
+        Column {
+            val automaticallyShowUrlPreview = remember { accountViewModel.settings.showUrlPreview.value }
+
+            if (automaticallyShowUrlPreview) {
+                image?.let {
+                    AsyncImage(
+                        model = it,
+                        contentDescription =
+                            stringResource(
+                                R.string.preview_card_image_for,
+                                it,
+                            ),
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                    ?: CreateImageHeader(note, accountViewModel)
+            }
+
+            title?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 10.dp, end = 10.dp, top = 10.dp),
+                )
+            }
+
+            summary?.let {
+                Spacer(modifier = StdVertSpacer)
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodySmall,

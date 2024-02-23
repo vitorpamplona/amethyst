@@ -76,21 +76,27 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.InlineCarrousel
+import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
+import com.vitorpamplona.amethyst.ui.components.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.elements.DisplayFollowingCommunityInPost
 import com.vitorpamplona.amethyst.ui.elements.DisplayFollowingHashtagsInPost
 import com.vitorpamplona.amethyst.ui.elements.DisplayPoW
 import com.vitorpamplona.amethyst.ui.elements.DisplayReward
 import com.vitorpamplona.amethyst.ui.elements.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.elements.Reward
+import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.AudioHeader
 import com.vitorpamplona.amethyst.ui.note.AudioTrackHeader
@@ -104,6 +110,8 @@ import com.vitorpamplona.amethyst.ui.note.DisplayRelaySet
 import com.vitorpamplona.amethyst.ui.note.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.note.LoadAndDisplayUser
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
@@ -131,6 +139,7 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.selectedNote
@@ -144,6 +153,7 @@ import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
+import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
@@ -155,11 +165,13 @@ import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.RelaySetEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.VideoEvent
+import com.vitorpamplona.quartz.events.WikiNoteEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -444,6 +456,8 @@ fun NoteMaster(
                 BadgeDisplay(baseNote = note)
             } else if (noteEvent is LongTextNoteEvent) {
                 RenderLongFormHeaderForThread(noteEvent)
+            } else if (noteEvent is WikiNoteEvent) {
+                RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
             } else if (noteEvent is ClassifiedsEvent) {
                 RenderClassifiedsReaderForThread(noteEvent, note, accountViewModel, nav)
             }
@@ -794,6 +808,140 @@ private fun RenderLongFormHeaderForThread(noteEvent: LongTextNoteEvent) {
                         color = Color.Gray,
                     )
                 }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun RenderWikiHeaderForThreadPreview() {
+    val event = Event.fromJson("{\"id\":\"277f982a4cd3f67cc47ad9282176acabee1713848f547d6021e0c155572078e1\",\"pubkey\":\"460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c\",\"created_at\":1708695717,\"kind\":30818,\"tags\":[[\"d\",\"amethyst\"],[\"a\",\"30818:f03e7c5262648e0b7823dfb49f8f17309cfec9cb14711413dcabdf3d7fc6369a:amethyst\",\"wss://relay.nostr.band\",\"fork\"],[\"e\",\"ceabc60c8022c472c727aa25ae7691885964366386ce265c47e5a78be6cb00be\",\"wss://relay.nostr.band\",\"fork\"],[\"title\",\"Amethyst\"],[\"published_at\",\"1708707133\"]],\"content\":\"An Android-only app written in Kotlin with support for over 90 event kinds. \\n\\n![](https://play-lh.googleusercontent.com/lvZlAm9dBrpHeOo7sIPKCsiKOLYLhR2b0FiOT4tyiwWO2dvsR2gDS0xk9tOOr9U-6uM=w240-h480-rw)\\n\",\"sig\":\"6748126a909a20dbdb67947a09d64e41d7140a79335a4ad675c6173d7dd5dbcab9c360dec617bd67bbbc20dfad416b15056eda2e20716cd6c425a84301a125a0\"}") as WikiNoteEvent
+    val accountViewModel = mockAccountViewModel()
+    val nav: (String) -> Unit = {}
+
+    runBlocking {
+        withContext(Dispatchers.IO) {
+            LocalCache.justConsume(event, null)
+        }
+    }
+
+    LoadNote(baseNoteHex = "277f982a4cd3f67cc47ad9282176acabee1713848f547d6021e0c155572078e1", accountViewModel = accountViewModel) { baseNote ->
+        ThemeComparisonColumn(
+            onDark = {
+                val bg = MaterialTheme.colorScheme.background
+                val backgroundColor =
+                    remember {
+                        mutableStateOf(bg)
+                    }
+
+                Column {
+                    RenderWikiHeaderForThread(noteEvent = event, accountViewModel = accountViewModel, nav)
+                    RenderTextEvent(
+                        baseNote!!,
+                        false,
+                        true,
+                        backgroundColor,
+                        accountViewModel,
+                        nav,
+                    )
+                }
+            },
+            onLight = {
+                val bg = MaterialTheme.colorScheme.background
+                val backgroundColor =
+                    remember {
+                        mutableStateOf(bg)
+                    }
+
+                Column {
+                    RenderWikiHeaderForThread(noteEvent = event, accountViewModel = accountViewModel, nav)
+                    RenderTextEvent(
+                        baseNote!!,
+                        false,
+                        true,
+                        backgroundColor,
+                        accountViewModel,
+                        nav,
+                    )
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun RenderWikiHeaderForThread(
+    noteEvent: WikiNoteEvent,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val forkedAddress = remember(noteEvent) { noteEvent.forkFromAddress() }
+
+    Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
+        Column {
+            noteEvent.image()?.let {
+                AsyncImage(
+                    model = it,
+                    contentDescription =
+                        stringResource(
+                            R.string.preview_card_image_for,
+                            it,
+                        ),
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            noteEvent.title()?.let {
+                Spacer(modifier = DoubleVertSpacer)
+                Text(
+                    text = it,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            forkedAddress?.let {
+                LoadAddressableNote(aTag = it, accountViewModel = accountViewModel) { originalVersion ->
+                    if (originalVersion != null) {
+                        ShowForkInformation(originalVersion, Modifier.fillMaxWidth(), accountViewModel, nav)
+                    }
+                }
+            }
+
+            noteEvent
+                .summary()
+                ?.ifBlank { null }
+                ?.let {
+                    Spacer(modifier = DoubleVertSpacer)
+                    Text(
+                        text = it,
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color.Gray,
+                    )
+                }
+        }
+    }
+}
+
+@Composable
+fun ShowForkInformation(
+    originalVersion: AddressableNote,
+    modifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val noteState by originalVersion.live().metadata.observeAsState()
+    val note = noteState?.note ?: return
+    val author = note.author ?: return
+    val route = remember(note) { routeFor(note, accountViewModel.userProfile()) }
+
+    if (route != null) {
+        Row(modifier) {
+            Text(stringResource(id = R.string.forked_from))
+            Spacer(modifier = StdHorzSpacer)
+            LoadAndDisplayUser(author, route, nav)
         }
     }
 }

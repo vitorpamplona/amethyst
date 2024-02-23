@@ -96,6 +96,7 @@ import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
+import com.vitorpamplona.quartz.events.WikiNoteEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
@@ -362,6 +363,41 @@ object LocalCache {
 
     fun consume(
         event: LongTextNoteEvent,
+        relay: Relay?,
+    ) {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
+        }
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event?.id() == event.id()) return
+
+        if (antiSpam.isSpam(event, relay)) {
+            relay?.let { it.spamCounter++ }
+            return
+        }
+
+        val replyTo = event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, replyTo)
+
+            refreshObservers(note)
+        }
+    }
+
+    fun consume(
+        event: WikiNoteEvent,
         relay: Relay?,
     ) {
         val version = getOrCreateNote(event.id)
@@ -1848,6 +1884,7 @@ object LocalCache {
                 is TextNoteEvent -> consume(event, relay)
                 is VideoHorizontalEvent -> consume(event, relay)
                 is VideoVerticalEvent -> consume(event, relay)
+                is WikiNoteEvent -> consume(event, relay)
                 else -> {
                     Log.w("Event Not Supported", event.toJson())
                 }

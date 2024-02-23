@@ -123,6 +123,7 @@ class EventFactory {
             VideoHorizontalEvent.KIND -> VideoHorizontalEvent(id, pubKey, createdAt, tags, content, sig)
             VideoVerticalEvent.KIND -> VideoVerticalEvent(id, pubKey, createdAt, tags, content, sig)
             VideoViewEvent.KIND -> VideoViewEvent(id, pubKey, createdAt, tags, content, sig)
+            WikiNoteEvent.KIND -> WikiNoteEvent(id, pubKey, createdAt, tags, content, sig)
             else -> Event(id, pubKey, createdAt, kind, tags, content, sig)
         }
     }

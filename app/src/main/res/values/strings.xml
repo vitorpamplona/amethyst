@@ -776,4 +776,5 @@
     <string name="thank_you">Thank you!</string>
     <string name="max_limit">Max Limit</string>
     <string name="restricted_writes">Restricted Writes</string>
+    <string name="forked_from">Forked from</string>
 </resources>

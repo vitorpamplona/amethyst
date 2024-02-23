@@ -43,7 +43,7 @@ open class BaseTextNoteEvent(
     fun mentions() = taggedUsers()
 
     open fun replyTos(): List<HexKey> {
-        val oldStylePositional = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
+        val oldStylePositional = tags.filter { it.size > 1 && it.size <= 3 && it[0] == "e" }.map { it[1] }
         val newStyleReply = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "reply" }?.get(1)
         val newStyleRoot = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
 
@@ -153,7 +153,10 @@ open class BaseTextNoteEvent(
     fun tagsWithoutCitations(): List<String> {
         val repliesTo = replyTos()
         val tagAddresses =
-            taggedAddresses().filter { it.kind != CommunityDefinitionEvent.KIND }.map { it.toTag() }
+            taggedAddresses().filter {
+                it.kind != CommunityDefinitionEvent.KIND &&
+                    it.kind != WikiNoteEvent.KIND
+            }.map { it.toTag() }
         if (repliesTo.isEmpty() && tagAddresses.isEmpty()) return emptyList()
 
         val citations = findCitations()
