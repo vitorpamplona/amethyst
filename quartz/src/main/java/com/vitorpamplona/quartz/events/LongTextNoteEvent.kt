@@ -35,17 +35,17 @@ class LongTextNoteEvent(
     content: String,
     sig: HexKey,
 ) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig), AddressableEvent {
-    override fun dTag() = tags.filter { it.firstOrNull() == "d" }.mapNotNull { it.getOrNull(1) }.firstOrNull() ?: ""
+    override fun dTag() = tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: ""
 
     override fun address() = ATag(kind, pubKey, dTag(), null)
 
-    fun topics() = tags.filter { it.firstOrNull() == "t" }.mapNotNull { it.getOrNull(1) }
+    fun topics() = hashtags()
 
-    fun title() = tags.filter { it.firstOrNull() == "title" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
+    fun title() = tags.firstOrNull { it.size > 1 && it[0] == "title" }?.get(1)
 
-    fun image() = tags.filter { it.firstOrNull() == "image" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
+    fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
 
-    fun summary() = tags.filter { it.firstOrNull() == "summary" }.mapNotNull { it.getOrNull(1) }.firstOrNull()
+    fun summary() = tags.firstOrNull { it.size > 1 && it[0] == "summary" }?.get(1)
 
     fun publishedAt() =
         try {
