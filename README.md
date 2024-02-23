@@ -14,10 +14,11 @@ Join the social network you control.
 [![PlayStore downloads](https://img.shields.io/endpoint?color=green&logo=google-play&logoColor=green&url=https%3A%2F%2Fplay.cuzi.workers.dev%2Fplay%3Fi%3Dcom.vitorpamplona.amethyst%26gl%3DUS%26hl%3Den%26l%3DPlayStore%26m%3D%24shortinstalls)](https://play.google.com/store/apps/details?id=com.vitorpamplona.amethyst)
 
 [![Last Version](https://img.shields.io/github/release/vitorpamplona/amethyst.svg?maxAge=3600&label=Stable&labelColor=06599d&color=043b69)](https://github.com/vitorpamplona/amethyst)
+[![JitPack version](https://jitpack.io/v/vitorpamplona/amethyst.svg)](https://jitpack.io/#vitorpamplona/amethyst)
 [![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/amethyst/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/amethyst/actions/workflows/build.yml)
 [![License: Apache-2.0](https://img.shields.io/github/license/vitorpamplona/amethyst?labelColor=27303D&color=0877d2)](/LICENSE)
 
-## Download
+## Install
 
 [<img src="./docs/design/obtainium.png"
 alt="Get it on Obtaininum"
@@ -215,6 +216,30 @@ openssl base64 < <my-release-key.keystore> | tr -d '\n' | tee some_signing_key.j
 6. Let the [Create Release GitHub Action](https://github.com/vitorpamplona/amethyst/actions/workflows/create-release.yml) build a new `aab` file.
 7. Add your CHANGE LOG to the description of the new release
 8. Download the `aab` file and upload it to the PlayStore.
+
+## Using the Quartz library
+
+Setup [JitPack.io](https://jitpack.io/#vitorpamplona/amethyst/v0.84.3) to your build file
+
+Add `maven { url 'https://jitpack.io' }` to settings.gradle at the end of repositories:
+
+```gradle
+dependencyResolutionManagement {
+  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+  repositories {
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+  }
+}
+```
+
+Add the dependency
+
+```gradle
+implementation('com.github.vitorpamplona.amethyst:quartz:v0.84.3') {
+   exclude group: 'net.java.dev.jna'
+}
+```
 
 ## Contributing
 
