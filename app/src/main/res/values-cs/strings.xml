@@ -653,4 +653,6 @@
     <string name="this_version_brought_to_you_by">Tato verze byla představena pro vás:</string>
     <string name="version_name">Verze %1$s</string>
     <string name="thank_you">Děkujeme!</string>
+    <string name="max_limit">Maximální limit</string>
+    <string name="restricted_writes">Omezené zápisy</string>
 </resources>

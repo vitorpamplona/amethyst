@@ -655,4 +655,6 @@
     <string name="this_version_brought_to_you_by">Cette version vous a été apportée par :</string>
     <string name="version_name">Version %1$s</string>
     <string name="thank_you">Merci !</string>
+    <string name="max_limit">Limite maximale</string>
+    <string name="restricted_writes">Écritures limitées</string>
 </resources>
