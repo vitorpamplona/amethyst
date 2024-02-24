@@ -71,6 +71,10 @@ import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
+import com.vitorpamplona.quartz.events.GitIssueEvent
+import com.vitorpamplona.quartz.events.GitPatchEvent
+import com.vitorpamplona.quartz.events.GitReplyEvent
+import com.vitorpamplona.quartz.events.GitRepositoryEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
@@ -362,6 +366,87 @@ object LocalCache {
     }
 
     fun consume(
+        event: GitPatchEvent,
+        relay: Relay? = null,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        if (antiSpam.isSpam(event, relay)) {
+            relay?.let { it.spamCounter++ }
+            return
+        }
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(
+        event: GitIssueEvent,
+        relay: Relay? = null,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        if (antiSpam.isSpam(event, relay)) {
+            relay?.let { it.spamCounter++ }
+            return
+        }
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(
+        event: GitReplyEvent,
+        relay: Relay? = null,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        if (antiSpam.isSpam(event, relay)) {
+            relay?.let { it.spamCounter++ }
+            return
+        }
+
+        val replyTo =
+            event
+                .tagsWithoutCitations()
+                .filter { it != event.repository()?.toTag() }
+                .mapNotNull { checkGetOrCreateNote(it) }
+
+        note.loadEvent(event, author, replyTo)
+
+        refreshObservers(note)
+    }
+
+    fun consume(
         event: LongTextNoteEvent,
         relay: Relay?,
     ) {
@@ -503,6 +588,13 @@ object LocalCache {
 
     fun consume(
         event: CommunityListEvent,
+        relay: Relay?,
+    ) {
+        consumeBaseReplaceable(event, relay)
+    }
+
+    fun consume(
+        event: GitRepositoryEvent,
         relay: Relay?,
     ) {
         consumeBaseReplaceable(event, relay)
@@ -1847,6 +1939,10 @@ object LocalCache {
                 is FileStorageEvent -> consume(event, relay)
                 is FileStorageHeaderEvent -> consume(event, relay)
                 is GiftWrapEvent -> consume(event, relay)
+                is GitIssueEvent -> consume(event, relay)
+                is GitReplyEvent -> consume(event, relay)
+                is GitPatchEvent -> consume(event, relay)
+                is GitRepositoryEvent -> consume(event, relay)
                 is HighlightEvent -> consume(event, relay)
                 is LiveActivitiesEvent -> consume(event, relay)
                 is LiveActivitiesChatMessageEvent -> consume(event, relay)

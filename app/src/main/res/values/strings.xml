@@ -777,4 +777,7 @@
     <string name="max_limit">Max Limit</string>
     <string name="restricted_writes">Restricted Writes</string>
     <string name="forked_from">Forked from</string>
+    <string name="git_repository">Git Repository: %1$s</string>
+    <string name="git_web_address">Web:</string>
+    <string name="git_clone_address">Clone:</string>
 </resources>

@@ -120,6 +120,8 @@ import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.RenderAppDefinition
 import com.vitorpamplona.amethyst.ui.note.RenderEmojiPack
+import com.vitorpamplona.amethyst.ui.note.RenderGitPatchEvent
+import com.vitorpamplona.amethyst.ui.note.RenderGitRepositoryEvent
 import com.vitorpamplona.amethyst.ui.note.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.RenderPostApproval
@@ -157,6 +159,8 @@ import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.GitPatchEvent
+import com.vitorpamplona.quartz.events.GitRepositoryEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
@@ -526,6 +530,10 @@ fun NoteMaster(
                             accountViewModel,
                             nav,
                         )
+                    } else if (noteEvent is GitRepositoryEvent) {
+                        RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
+                    } else if (noteEvent is GitPatchEvent) {
+                        RenderGitPatchEvent(baseNote, false, true, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is AppDefinitionEvent) {
                         RenderAppDefinition(baseNote, accountViewModel, nav)
                     } else if (noteEvent is HighlightEvent) {

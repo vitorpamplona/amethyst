@@ -48,6 +48,7 @@ import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -204,6 +205,8 @@ import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.GitPatchEvent
+import com.vitorpamplona.quartz.events.GitRepositoryEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
@@ -1181,6 +1184,19 @@ private fun RenderNoteRow(
         }
         is LiveActivitiesEvent -> {
             RenderLiveActivityEvent(baseNote, accountViewModel, nav)
+        }
+        is GitRepositoryEvent -> {
+            RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
+        }
+        is GitPatchEvent -> {
+            RenderGitPatchEvent(
+                baseNote,
+                makeItShort,
+                canPreview,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
         }
         is PrivateDmEvent -> {
             RenderPrivateMessage(
@@ -3458,6 +3474,211 @@ fun AudioHeader(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = CenterVertically) {
                     val hashtags = remember(noteEvent) { noteEvent.hashtags().toImmutableList() }
                     DisplayUncitedHashtags(hashtags, content ?: "", nav)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderGitPatchEvent(
+    baseNote: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val event = baseNote.event as? GitPatchEvent ?: return
+
+    RenderGitPatchEvent(event, baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+}
+
+@Composable
+private fun RenderShortRepositoryHeader(
+    baseNote: AddressableNote,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val noteState = baseNote.live().metadata.observeAsState()
+    val note = remember(noteState) { noteState.value?.note } ?: return
+    val noteEvent = note.event as? GitRepositoryEvent ?: return
+
+    Column(
+        modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
+    ) {
+        val title = remember(noteEvent) { noteEvent.name() ?: noteEvent.dTag() }
+        Text(
+            text = stringResource(id = R.string.git_repository, title),
+            style = MaterialTheme.typography.titleLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        noteEvent.description()?.let {
+            Spacer(modifier = DoubleVertSpacer)
+            Text(
+                text = it,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RenderGitPatchEvent(
+    noteEvent: GitPatchEvent,
+    note: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val repository = remember(noteEvent) { noteEvent.repository() }
+
+    if (repository != null) {
+        LoadAddressableNote(aTag = repository, accountViewModel = accountViewModel) {
+            if (it != null) {
+                RenderShortRepositoryHeader(it, accountViewModel, nav)
+                Spacer(modifier = DoubleVertSpacer)
+            }
+        }
+    }
+
+    LoadDecryptedContent(note, accountViewModel) { body ->
+        val eventContent by
+            remember(note.event) {
+                derivedStateOf {
+                    val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
+
+                    if (!subject.isNullOrBlank() && !body.split("\n")[0].contains(subject)) {
+                        "### $subject\n$body"
+                    } else {
+                        body
+                    }
+                }
+            }
+
+        val isAuthorTheLoggedUser = remember(note.event) { accountViewModel.isLoggedUser(note.author) }
+
+        if (makeItShort && isAuthorTheLoggedUser) {
+            Text(
+                text = eventContent,
+                color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        } else {
+            SensitivityWarning(
+                note = note,
+                accountViewModel = accountViewModel,
+            ) {
+                val modifier = remember(note) { Modifier.fillMaxWidth() }
+                val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+
+                TranslatableRichTextViewer(
+                    content = eventContent,
+                    canPreview = canPreview && !makeItShort,
+                    modifier = modifier,
+                    tags = tags,
+                    backgroundColor = backgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+
+            if (note.event?.hasHashtags() == true) {
+                val hashtags =
+                    remember(note.event) { note.event?.hashtags()?.toImmutableList() ?: persistentListOf() }
+                DisplayUncitedHashtags(hashtags, eventContent, nav)
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderGitRepositoryEvent(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val event = baseNote.event as? GitRepositoryEvent ?: return
+
+    RenderGitRepositoryEvent(event, baseNote, accountViewModel, nav)
+}
+
+@Composable
+private fun RenderGitRepositoryEvent(
+    noteEvent: GitRepositoryEvent,
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val title = remember(noteEvent) { noteEvent.name() ?: noteEvent.dTag() }
+    val summary = remember(noteEvent) { noteEvent.description() }
+    val web = remember(noteEvent) { noteEvent.web() }
+    val clone = remember(noteEvent) { noteEvent.clone() }
+
+    Row(
+        modifier =
+            Modifier
+                .clip(shape = QuoteBorder)
+                .border(
+                    1.dp,
+                    MaterialTheme.colorScheme.subtleBorder,
+                    QuoteBorder,
+                ).padding(Size10dp),
+    ) {
+        Column {
+            Text(
+                text = stringResource(id = R.string.git_repository, title),
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            summary?.let {
+                Text(
+                    text = it,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = Size5dp),
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            HorizontalDivider(thickness = DividerThickness)
+
+            web?.let {
+                Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
+                    Text(
+                        text = stringResource(id = R.string.git_web_address),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = StdHorzSpacer)
+                    ClickableUrl(
+                        url = it,
+                        urlText = it.removePrefix("https://").removePrefix("http://"),
+                    )
+                }
+            }
+
+            clone?.let {
+                Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
+                    Text(
+                        text = stringResource(id = R.string.git_clone_address),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = StdHorzSpacer)
+                    ClickableUrl(
+                        url = it,
+                        urlText = it.removePrefix("https://").removePrefix("http://"),
+                    )
                 }
             }
         }

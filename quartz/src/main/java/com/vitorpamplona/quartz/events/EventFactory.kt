@@ -89,6 +89,10 @@ class EventFactory {
                 FileStorageHeaderEvent(id, pubKey, createdAt, tags, content, sig)
             GenericRepostEvent.KIND -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)
             GiftWrapEvent.KIND -> GiftWrapEvent(id, pubKey, createdAt, tags, content, sig)
+            GitIssueEvent.KIND -> GitIssueEvent(id, pubKey, createdAt, tags, content, sig)
+            GitReplyEvent.KIND -> GitReplyEvent(id, pubKey, createdAt, tags, content, sig)
+            GitPatchEvent.KIND -> GitPatchEvent(id, pubKey, createdAt, tags, content, sig)
+            GitRepositoryEvent.KIND -> GitRepositoryEvent(id, pubKey, createdAt, tags, content, sig)
             GoalEvent.KIND -> GoalEvent(id, pubKey, createdAt, tags, content, sig)
             HighlightEvent.KIND -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
             HTTPAuthorizationEvent.KIND ->
