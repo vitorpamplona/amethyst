@@ -120,27 +120,50 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         }
 
         return groupByEOSEPresence(eventsToWatch).map {
-            TypedFilter(
-                types = COMMON_FEED_TYPES,
-                filter =
-                    JsonFilter(
-                        kinds =
-                            listOf(
-                                TextNoteEvent.KIND,
-                                ReactionEvent.KIND,
-                                RepostEvent.KIND,
-                                GenericRepostEvent.KIND,
-                                ReportEvent.KIND,
-                                LnZapEvent.KIND,
-                                PollNoteEvent.KIND,
-                            ),
-                        tags = mapOf("e" to it.map { it.idHex }, "q" to it.map { it.idHex }),
-                        since = findMinimumEOSEs(it),
-                        // Max amount of "replies" to download on a specific event.
-                        limit = 1000,
-                    ),
+            listOf(
+                TypedFilter(
+                    types = COMMON_FEED_TYPES,
+                    filter =
+                        JsonFilter(
+                            kinds =
+                                listOf(
+                                    TextNoteEvent.KIND,
+                                    ReactionEvent.KIND,
+                                    RepostEvent.KIND,
+                                    GenericRepostEvent.KIND,
+                                    ReportEvent.KIND,
+                                    LnZapEvent.KIND,
+                                    PollNoteEvent.KIND,
+                                ),
+                            tags = mapOf("e" to it.map { it.idHex }),
+                            since = findMinimumEOSEs(it),
+                            // Max amount of "replies" to download on a specific event.
+                            limit = 1000,
+                        ),
+                ),
             )
+        }.flatten()
+    }
+
+    private fun createQuotesFilter(): List<TypedFilter>? {
+        if (eventsToWatch.isEmpty()) {
+            return null
         }
+
+        return groupByEOSEPresence(eventsToWatch).map {
+            listOf(
+                TypedFilter(
+                    types = COMMON_FEED_TYPES,
+                    filter =
+                        JsonFilter(
+                            tags = mapOf("q" to it.map { it.idHex }),
+                            since = findMinimumEOSEs(it),
+                            // Max amount of "replies" to download on a specific event.
+                            limit = 1000,
+                        ),
+                ),
+            )
+        }.flatten()
     }
 
     fun createLoadEventsIfNotLoadedFilter(): List<TypedFilter>? {
@@ -205,9 +228,10 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         val missing = createLoadEventsIfNotLoadedFilter()
         val addresses = createAddressFilter()
         val addressReactions = createReactionsToWatchInAddressFilter()
+        val quotes = createQuotesFilter()
 
         singleEventChannel.typedFilters =
-            listOfNotNull(missing, addresses, reactions, addressReactions).flatten().ifEmpty { null }
+            listOfNotNull(missing, addresses, reactions, addressReactions, quotes).flatten().ifEmpty { null }
     }
 
     fun add(eventId: Note) {
