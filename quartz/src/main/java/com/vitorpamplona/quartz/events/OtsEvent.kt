@@ -24,6 +24,7 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.hexToByteArray
+import com.vitorpamplona.quartz.ots.BlockstreamExplorer
 import com.vitorpamplona.quartz.ots.DetachedTimestampFile
 import com.vitorpamplona.quartz.ots.Hash
 import com.vitorpamplona.quartz.ots.OpenTimestamps
@@ -57,7 +58,7 @@ class OtsEvent(
 
             val detachedOts = DetachedTimestampFile.deserialize(otsByteArray())
 
-            val result = OpenTimestamps.verify(detachedOts, digest)
+            val result = OpenTimestamps(BlockstreamExplorer()).verify(detachedOts, digest)
             if (result == null || result.isEmpty()) {
                 return null
             } else {
@@ -72,7 +73,7 @@ class OtsEvent(
 
     fun info(): String {
         val detachedOts = DetachedTimestampFile.deserialize(otsByteArray())
-        return OpenTimestamps.info(detachedOts)
+        return OpenTimestamps(BlockstreamExplorer()).info(detachedOts)
     }
 
     companion object {
@@ -82,7 +83,7 @@ class OtsEvent(
         fun stamp(eventId: HexKey): ByteArray {
             val hash = Hash(eventId.hexToByteArray(), OpSHA256._TAG)
             val file = DetachedTimestampFile.from(hash)
-            val timestamp = OpenTimestamps.stamp(file)
+            val timestamp = OpenTimestamps(BlockstreamExplorer()).stamp(file)
             val detachedToSerialize = DetachedTimestampFile(hash.getOp(), timestamp)
             return detachedToSerialize.serialize()
         }

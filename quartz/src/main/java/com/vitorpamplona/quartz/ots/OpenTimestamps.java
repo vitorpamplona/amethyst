@@ -32,13 +32,19 @@ import java.util.concurrent.Executors;
  */
 public class OpenTimestamps {
 
+    BitcoinExplorer explorer;
+
+    public OpenTimestamps(BitcoinExplorer explorer) {
+        this.explorer = explorer;
+    }
+
     /**
      * Show information on a detached timestamp.
      *
      * @param detachedTimestampFile The DetachedTimestampFile ots.
      * @return the string representation of the timestamp.
      */
-    public static String info(DetachedTimestampFile detachedTimestampFile) {
+    public String info(DetachedTimestampFile detachedTimestampFile) {
         return info(detachedTimestampFile, false);
     }
 
@@ -49,7 +55,7 @@ public class OpenTimestamps {
      * @param verbose               Show verbose output.
      * @return the string representation of the timestamp.
      */
-    public static String info(DetachedTimestampFile detachedTimestampFile, boolean verbose) {
+    public String info(DetachedTimestampFile detachedTimestampFile, boolean verbose) {
         if (detachedTimestampFile == null) {
             return "No ots file";
         }
@@ -68,7 +74,7 @@ public class OpenTimestamps {
      * @param timestamp The timestamp buffered.
      * @return the string representation of the timestamp.
      */
-    public static String info(Timestamp timestamp) {
+    public String info(Timestamp timestamp) {
         if (timestamp == null) {
             return "No timestamp";
         }
@@ -86,8 +92,8 @@ public class OpenTimestamps {
      * @return The plain array buffer of stamped.
      * @throws IOException if fileTimestamp is not valid, or the stamp procedure fails.
      */
-    public static Timestamp stamp(DetachedTimestampFile fileTimestamp) throws IOException {
-        return OpenTimestamps.stamp(fileTimestamp, null, 0);
+    public Timestamp stamp(DetachedTimestampFile fileTimestamp) throws IOException {
+        return stamp(fileTimestamp, null, 0);
     }
 
     /**
@@ -99,11 +105,11 @@ public class OpenTimestamps {
      * @return The plain array buffer of stamped.
      * @throws IOException if fileTimestamp is not valid, or the stamp procedure fails.
      */
-    public static Timestamp stamp(DetachedTimestampFile fileTimestamp, List<String> calendarsUrl, Integer m) throws IOException {
+    public Timestamp stamp(DetachedTimestampFile fileTimestamp, List<String> calendarsUrl, Integer m) throws IOException {
         List<DetachedTimestampFile> fileTimestamps = new ArrayList<DetachedTimestampFile>();
         fileTimestamps.add(fileTimestamp);
 
-        return OpenTimestamps.stamp(fileTimestamps, calendarsUrl, m);
+        return stamp(fileTimestamps, calendarsUrl, m);
     }
 
     /**
@@ -115,7 +121,7 @@ public class OpenTimestamps {
      * @return The plain array buffer of stamped.
      * @throws IOException if fileTimestamp is not valid, or the stamp procedure fails.
      */
-    public static Timestamp stamp(List<DetachedTimestampFile> fileTimestamps, List<String> calendarsUrl, Integer m) throws IOException {
+    public Timestamp stamp(List<DetachedTimestampFile> fileTimestamps, List<String> calendarsUrl, Integer m) throws IOException {
         // Parse parameters
         if (fileTimestamps == null || fileTimestamps.size() == 0) {
             throw new IOException();
@@ -144,14 +150,14 @@ public class OpenTimestamps {
         }
 
         // Build markle tree
-        Timestamp merkleTip = OpenTimestamps.makeMerkleTree(fileTimestamps);
+        Timestamp merkleTip = makeMerkleTree(fileTimestamps);
 
         if (merkleTip == null) {
             throw new IOException();
         }
 
         // Stamping
-        Timestamp resultTimestamp = OpenTimestamps.create(merkleTip, calendarsUrl, m);
+        Timestamp resultTimestamp = create(merkleTip, calendarsUrl, m);
 
         if (resultTimestamp == null) {
             throw new IOException();
@@ -173,7 +179,7 @@ public class OpenTimestamps {
      * @param m            Number of calendars to use.
      * @return The created timestamp.
      */
-    private static Timestamp create(Timestamp timestamp, List<String> calendarUrls, Integer m) {
+    private Timestamp create(Timestamp timestamp, List<String> calendarUrls, Integer m) {
         int capacity = calendarUrls.size();
         ExecutorService executor = Executors.newFixedThreadPool(4);
         ArrayBlockingQueue<Optional<Timestamp>> queue = new ArrayBlockingQueue<>(capacity);
@@ -227,7 +233,7 @@ public class OpenTimestamps {
      * @param fileTimestamps The list of DetachedTimestampFile.
      * @return merkle tip timestamp.
      */
-    public static Timestamp makeMerkleTree(List<DetachedTimestampFile> fileTimestamps) {
+    public Timestamp makeMerkleTree(List<DetachedTimestampFile> fileTimestamps) {
         List<Timestamp> merkleRoots = new ArrayList<>();
 
         for (DetachedTimestampFile fileTimestamp : fileTimestamps) {
@@ -259,14 +265,14 @@ public class OpenTimestamps {
      * @throws Exception if the verification procedure fails.
      */
 
-    public static HashMap<VerifyResult.Chains, VerifyResult> verify(DetachedTimestampFile ots, byte[] diggest) throws Exception {
+    public HashMap<VerifyResult.Chains, VerifyResult> verify(DetachedTimestampFile ots, byte[] diggest) throws Exception {
         if (!Arrays.equals(ots.fileDigest(), diggest)) {
             Log.e("OpenTimestamp", "Expected digest " + Hex.encode(ots.fileDigest()).toLowerCase());
             Log.e("OpenTimestamp", "File does not match original!");
             throw new Exception("File does not match original!");
         }
 
-        return OpenTimestamps.verify(ots.timestamp);
+        return verify(ots.timestamp);
     }
 
     /**
@@ -276,7 +282,7 @@ public class OpenTimestamps {
      * @return HashMap of block heights and timestamps indexed by chain: timestamp in seconds from 1 January 1970.
      * @throws Exception if the verification procedure fails.
      */
-    public static HashMap<VerifyResult.Chains, VerifyResult> verify(Timestamp timestamp) throws Exception {
+    public HashMap<VerifyResult.Chains, VerifyResult> verify(Timestamp timestamp) throws Exception {
         HashMap<VerifyResult.Chains, VerifyResult> verifyResults = new HashMap<>();
 
         for (Map.Entry<byte[], TimeAttestation> item : timestamp.allAttestations().entrySet()) {
@@ -339,13 +345,13 @@ public class OpenTimestamps {
      * @throws VerificationException if it doesn't check the merkle root of the block.
      * @throws Exception             if the verification procedure fails.
      */
-    public static Long verify(BitcoinBlockHeaderAttestation attestation, byte[] msg) throws VerificationException, Exception {
+    public Long verify(BitcoinBlockHeaderAttestation attestation, byte[] msg) throws VerificationException, Exception {
         Integer height = attestation.getHeight();
         BlockHeader blockInfo;
 
         try {
-            String blockHash = Esplora.blockHash(height);
-            blockInfo = Esplora.block(blockHash);
+            String blockHash = explorer.blockHash(height);
+            blockInfo = explorer.block(blockHash);
             Log.i("OpenTimestamps", "Lite-client verification, assuming block " + blockHash + " is valid");
         } catch (Exception e2) {
             e2.printStackTrace();
@@ -364,13 +370,13 @@ public class OpenTimestamps {
      * @throws VerificationException if it doesn't check the merkle root of the block.
      * @throws Exception             if the verification procedure fails.
      */
-    public static Long verify(LitecoinBlockHeaderAttestation attestation, byte[] msg) throws VerificationException, Exception {
+    public Long verify(LitecoinBlockHeaderAttestation attestation, byte[] msg) throws VerificationException, Exception {
         Integer height = attestation.getHeight();
         BlockHeader blockInfo;
 
         try {
-            String blockHash = Esplora.blockHash(height);
-            blockInfo = Esplora.block(blockHash);
+            String blockHash = explorer.blockHash(height);
+            blockInfo = explorer.block(blockHash);
             Log.i("OpenTimestamps", "Lite-client verification, assuming block " + blockHash + " is valid");
         } catch (Exception e2) {
             e2.printStackTrace();
@@ -387,9 +393,9 @@ public class OpenTimestamps {
      * @return a boolean representing if the timestamp has changed.
      * @throws Exception if the upgrading procedure fails.
      */
-    public static boolean upgrade(DetachedTimestampFile detachedTimestamp) throws Exception {
+    public boolean upgrade(DetachedTimestampFile detachedTimestamp) throws Exception {
         // Upgrade timestamp
-        boolean changed = OpenTimestamps.upgrade(detachedTimestamp.timestamp);
+        boolean changed = upgrade(detachedTimestamp.timestamp);
         return changed;
     }
 
@@ -401,7 +407,7 @@ public class OpenTimestamps {
      * @return a boolean representing if the timestamp has changed.
      * @throws Exception if the upgrading procedure fails.
      */
-    public static boolean upgrade(Timestamp timestamp) throws Exception {
+    public boolean upgrade(Timestamp timestamp) throws Exception {
         // Check remote calendars for upgrades.
         // This time we only check PendingAttestations - we can't be as agressive.
 
@@ -417,7 +423,7 @@ public class OpenTimestamps {
 
                     try {
                         Calendar calendar = new Calendar(calendarUrl);
-                        Timestamp upgradedStamp = OpenTimestamps.upgrade(subStamp, calendar, commitment, existingAttestations);
+                        Timestamp upgradedStamp = upgrade(subStamp, calendar, commitment, existingAttestations);
 
                         try {
                             subStamp.merge(upgradedStamp);
@@ -436,7 +442,7 @@ public class OpenTimestamps {
         return upgraded;
     }
 
-    private static Timestamp upgrade(Timestamp subStamp, Calendar calendar, byte[] commitment, Set<TimeAttestation> existingAttestations) throws Exception {
+    private Timestamp upgrade(Timestamp subStamp, Calendar calendar, byte[] commitment, Set<TimeAttestation> existingAttestations) throws Exception {
         Timestamp upgradedStamp;
 
         try {
