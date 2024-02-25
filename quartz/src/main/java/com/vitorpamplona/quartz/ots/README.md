@@ -1,6 +1,10 @@
 This code came from https://github.com/opentimestamps/java-opentimestamps
 
-And includes modifications to avoid dependencies that do not work on Android
+And includes modifications to
+1 - Avoid dependencies that do not work on Android
+2 - Move from org.json to jackson
+3 - Move from basic Url connection to OkHttp (and obey Tor settings)
+4 - Generalize the use of Blockstream as a Bitcoin Block explorer.
 
 —
 
