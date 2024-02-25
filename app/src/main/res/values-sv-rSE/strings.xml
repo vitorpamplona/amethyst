@@ -654,4 +654,8 @@
     <string name="thank_you">Tack!</string>
     <string name="max_limit">Maximal gräns</string>
     <string name="restricted_writes">Begränsade skrivningar</string>
+    <string name="forked_from">Forkad från</string>
+    <string name="git_repository">Git Repository: %1$s</string>
+    <string name="git_web_address">Webbplats:</string>
+    <string name="git_clone_address">Klona:</string>
 </resources>
