@@ -1,7 +1,7 @@
 package com.vitorpamplona.quartz.ots.http;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -69,10 +69,9 @@ public class Response {
         return buffer.toByteArray();
     }
 
-    public JSONObject getJson() throws IOException, JSONException {
+    public JsonNode getJson() throws IOException {
         String jsonString = getString();
-        JSONObject json = new JSONObject(jsonString);
-
-        return json;
+        JsonMapper builder = JsonMapper.builder().build();
+        return builder.readTree(jsonString);
     }
 }
