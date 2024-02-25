@@ -209,7 +209,7 @@ class PollNoteViewModel : ViewModel() {
         return false
     }
 
-    fun isPollOptionZappedBy(
+    suspend fun isPollOptionZappedBy(
         option: Int,
         user: User,
         onWasZappedByAuthor: () -> Unit,

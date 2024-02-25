@@ -729,7 +729,7 @@ class Account(
         zapResponseEvent.response(signer, onReady)
     }
 
-    fun calculateIfNoteWasZappedByAccount(
+    suspend fun calculateIfNoteWasZappedByAccount(
         zappedNote: Note?,
         onWasZapped: () -> Unit,
     ) {

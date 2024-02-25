@@ -56,6 +56,7 @@ import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.events.RepostEvent
@@ -66,10 +67,13 @@ import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.coroutines.resume
 
 @Stable
 class AddressableNote(val address: ATag) : Note(address.toTag()) {
@@ -521,7 +525,7 @@ open class Note(val idHex: String) {
         }
     }
 
-    private fun recursiveIsZappedByCalculation(
+    private suspend fun isZappedByCalculation(
         option: Int?,
         user: User,
         account: Account,
@@ -532,48 +536,65 @@ open class Note(val idHex: String) {
             return
         }
 
-        val next = remainingZapEvents.first()
+        remainingZapEvents.forEach { next ->
+            val zapRequest = next.first.event as LnZapRequestEvent
+            val zapEvent = next.second?.event as? LnZapEvent
 
-        if (next.first.author?.pubkeyHex == user.pubkeyHex) {
-            onWasZappedByAuthor()
-        } else {
-            account.decryptZapContentAuthor(next.first) {
-                if (
-                    it.pubKey == user.pubkeyHex &&
-                    (option == null || option == (it as? LnZapEvent)?.zappedPollOption())
-                ) {
+            if (!zapRequest.isPrivateZap()) {
+                // public events
+                if (zapRequest.pubKey == user.pubkeyHex && (option == null || option == zapEvent?.zappedPollOption())) {
                     onWasZappedByAuthor()
+                    return
+                }
+            } else {
+                // private events
+
+                // if has already decrypted
+                val privateZap = zapRequest.cachedPrivateZap()
+                if (privateZap != null) {
+                    if (privateZap.pubKey == user.pubkeyHex && (option == null || option == zapEvent?.zappedPollOption())) {
+                        onWasZappedByAuthor()
+                        return
+                    }
                 } else {
-                    recursiveIsZappedByCalculation(
-                        option,
-                        user,
-                        account,
-                        remainingZapEvents.minus(next),
-                        onWasZappedByAuthor,
-                    )
+                    if (account.isWriteable()) {
+                        val result =
+                            withTimeoutOrNull(1000) {
+                                suspendCancellableCoroutine { continuation ->
+                                    zapRequest.decryptPrivateZap(account.signer) {
+                                        continuation.resume(it)
+                                    }
+                                }
+                            }
+
+                        if (result?.pubKey == user.pubkeyHex && (option == null || option == zapEvent?.zappedPollOption())) {
+                            onWasZappedByAuthor()
+                            return
+                        }
+                    }
                 }
             }
         }
     }
 
-    fun isZappedBy(
+    suspend fun isZappedBy(
         user: User,
         account: Account,
         onWasZappedByAuthor: () -> Unit,
     ) {
-        recursiveIsZappedByCalculation(null, user, account, zaps.toList(), onWasZappedByAuthor)
+        isZappedByCalculation(null, user, account, zaps.toList(), onWasZappedByAuthor)
         if (account.userProfile() == user) {
             recursiveIsPaidByCalculation(account, zapPayments.toList(), onWasZappedByAuthor)
         }
     }
 
-    fun isZappedBy(
+    suspend fun isZappedBy(
         option: Int?,
         user: User,
         account: Account,
         onWasZappedByAuthor: () -> Unit,
     ) {
-        recursiveIsZappedByCalculation(option, user, account, zaps.toList(), onWasZappedByAuthor)
+        isZappedByCalculation(option, user, account, zaps.toList(), onWasZappedByAuthor)
     }
 
     fun getReactionBy(user: User): String? {
