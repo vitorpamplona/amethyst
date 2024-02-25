@@ -655,4 +655,8 @@
     <string name="thank_you">Děkujeme!</string>
     <string name="max_limit">Maximální limit</string>
     <string name="restricted_writes">Omezené zápisy</string>
+    <string name="forked_from">Rozštěpováno od</string>
+    <string name="git_repository">Git repositář: %1$s</string>
+    <string name="git_web_address">Internet:</string>
+    <string name="git_clone_address">Klon:</string>
 </resources>
