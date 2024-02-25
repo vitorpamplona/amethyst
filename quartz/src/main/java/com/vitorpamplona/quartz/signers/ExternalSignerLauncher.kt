@@ -34,9 +34,9 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
-import org.json.JSONArray
 
 enum class SignerType {
     SIGN_EVENT,
@@ -86,15 +86,13 @@ class Result(
 
         fun fromJson(json: String): Result = mapper.readValue(json, Result::class.java)
 
+        /**
+         * Parses the json with a string of events to an Array of Event objects.
+         */
         fun fromJsonArray(json: String): Array<Result> {
-            val result: MutableList<Result> = mutableListOf()
-            val array = JSONArray(json)
-            (0 until array.length()).forEach {
-                val resultJson = array.getJSONObject(it)
-                val localResult = fromJson(resultJson.toString())
-                result.add(localResult)
-            }
-            return result.toTypedArray()
+            return Event.mapper.readTree(json).map {
+                fromJson(it.asText())
+            }.toTypedArray()
         }
     }
 }
