@@ -657,4 +657,8 @@
     <string name="thank_you">Merci !</string>
     <string name="max_limit">Limite maximale</string>
     <string name="restricted_writes">Écritures limitées</string>
+    <string name="forked_from">Forké depuis</string>
+    <string name="git_repository">Dépôt Git : %1$s</string>
+    <string name="git_web_address">Web :</string>
+    <string name="git_clone_address">Clone :</string>
 </resources>

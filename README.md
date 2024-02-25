@@ -236,9 +236,7 @@ dependencyResolutionManagement {
 Add the dependency
 
 ```gradle
-implementation('com.github.vitorpamplona.amethyst:quartz:v0.84.3') {
-   exclude group: 'net.java.dev.jna'
-}
+implementation('com.github.vitorpamplona.amethyst:quartz:v0.84.3')
 ```
 
 ## Contributing
