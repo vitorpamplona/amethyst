@@ -79,6 +79,11 @@ class TextNoteEvent(
                     tags.add(arrayOf("p", it))
                 }
             }
+            replyTos?.forEach {
+                if (it in directMentions) {
+                    tags.add(arrayOf("q", it))
+                }
+            }
             addresses
                 ?.map { it.toTag() }
                 ?.let {

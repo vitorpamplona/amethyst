@@ -134,7 +134,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                                 LnZapEvent.KIND,
                                 PollNoteEvent.KIND,
                             ),
-                        tags = mapOf("e" to it.map { it.idHex }),
+                        tags = mapOf("e" to it.map { it.idHex }, "q" to it.map { it.idHex }),
                         since = findMinimumEOSEs(it),
                         // Max amount of "replies" to download on a specific event.
                         limit = 1000,
