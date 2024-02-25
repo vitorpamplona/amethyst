@@ -10,12 +10,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 
 /**
  * For making async calls to a calendar server
  */
-public class CalendarAsyncSubmit implements Callable<Optional<Timestamp>> {
+public class CalendarAsyncSubmit implements ICalendarAsyncSubmit {
 
     private String url;
     private byte[] digest;

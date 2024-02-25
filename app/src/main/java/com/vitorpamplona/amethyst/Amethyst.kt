@@ -29,7 +29,11 @@ import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil.ImageLoader
 import coil.disk.DiskCache
+import com.vitorpamplona.amethyst.service.ots.OkHttpBlockstreamExplorer
+import com.vitorpamplona.amethyst.service.ots.OkHttpCalendarBuilder
 import com.vitorpamplona.amethyst.service.playback.VideoCache
+import com.vitorpamplona.quartz.events.OtsEvent
+import com.vitorpamplona.quartz.ots.OpenTimestamps
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -64,6 +68,8 @@ class Amethyst : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+
+        OtsEvent.otsInstance = OpenTimestamps(OkHttpBlockstreamExplorer(), OkHttpCalendarBuilder())
 
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(

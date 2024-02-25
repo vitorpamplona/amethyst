@@ -25,6 +25,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.ots.BlockstreamExplorer
+import com.vitorpamplona.quartz.ots.CalendarPureJavaBuilder
 import com.vitorpamplona.quartz.ots.DetachedTimestampFile
 import com.vitorpamplona.quartz.ots.Hash
 import com.vitorpamplona.quartz.ots.OpenTimestamps
@@ -58,7 +59,7 @@ class OtsEvent(
 
             val detachedOts = DetachedTimestampFile.deserialize(otsByteArray())
 
-            val result = OpenTimestamps(BlockstreamExplorer()).verify(detachedOts, digest)
+            val result = otsInstance.verify(detachedOts, digest)
             if (result == null || result.isEmpty()) {
                 return null
             } else {
@@ -73,17 +74,19 @@ class OtsEvent(
 
     fun info(): String {
         val detachedOts = DetachedTimestampFile.deserialize(otsByteArray())
-        return OpenTimestamps(BlockstreamExplorer()).info(detachedOts)
+        return otsInstance.info(detachedOts)
     }
 
     companion object {
         const val KIND = 1040
         const val ALT = "Opentimestamps Attestation"
 
+        var otsInstance = OpenTimestamps(BlockstreamExplorer(), CalendarPureJavaBuilder())
+
         fun stamp(eventId: HexKey): ByteArray {
             val hash = Hash(eventId.hexToByteArray(), OpSHA256._TAG)
             val file = DetachedTimestampFile.from(hash)
-            val timestamp = OpenTimestamps(BlockstreamExplorer()).stamp(file)
+            val timestamp = otsInstance.stamp(file)
             val detachedToSerialize = DetachedTimestampFile(hash.getOp(), timestamp)
             return detachedToSerialize.serialize()
         }

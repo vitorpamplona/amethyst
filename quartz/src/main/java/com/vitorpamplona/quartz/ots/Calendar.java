@@ -14,7 +14,7 @@ import java.util.Map;
 /**
  * Class representing remote calendar server interface.
  */
-public class Calendar {
+public class Calendar implements ICalendar {
 
     private String url;
 
@@ -46,6 +46,7 @@ public class Calendar {
      * @throws UrlException          if url is not reachable.
      * @throws DeserializationException    if the data is corrupt
      */
+    @Override
     public Timestamp submit(byte[] digest)
         throws ExceededSizeException, UrlException, DeserializationException {
         try {
@@ -85,6 +86,7 @@ public class Calendar {
      * @throws CommitmentNotFoundException if commit is not found.
      * @throws DeserializationException    if the data is corrupt
      */
+    @Override
     public Timestamp getTimestamp(byte[] commitment) throws DeserializationException, ExceededSizeException, CommitmentNotFoundException, UrlException {
         try {
             Map<String, String> headers = new HashMap<>();

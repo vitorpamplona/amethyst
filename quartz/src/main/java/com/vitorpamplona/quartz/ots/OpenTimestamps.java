@@ -33,9 +33,12 @@ import java.util.concurrent.Executors;
 public class OpenTimestamps {
 
     BitcoinExplorer explorer;
+    CalendarBuilder calBuilder;
 
-    public OpenTimestamps(BitcoinExplorer explorer) {
+
+    public OpenTimestamps(BitcoinExplorer explorer, CalendarBuilder builder) {
         this.explorer = explorer;
+        this.calBuilder = builder;
     }
 
     /**
