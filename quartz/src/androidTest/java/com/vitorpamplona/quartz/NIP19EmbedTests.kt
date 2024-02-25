@@ -1,0 +1,190 @@
+/**
+ * Copyright (c) 2024 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.quartz
+
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.encoders.Bech32
+import com.vitorpamplona.quartz.encoders.Hex
+import com.vitorpamplona.quartz.encoders.bechToBytes
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.FhirResourceEvent
+import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertNotNull
+import junit.framework.TestCase.assertTrue
+import org.junit.Assert
+import org.junit.Test
+import org.junit.runner.RunWith
+import java.io.ByteArrayOutputStream
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.zip.GZIPInputStream
+import java.util.zip.GZIPOutputStream
+import kotlin.time.measureTimedValue
+
+@RunWith(AndroidJUnit4::class)
+class NIP19EmbedTests {
+    @Test
+    fun testEmbedEvent() {
+        val signer =
+            NostrSignerInternal(
+                KeyPair(Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598")),
+            )
+
+        var textNote: Event? = null
+
+        val countDownLatch = CountDownLatch(1)
+
+        TextNoteEvent.create("I like this. It could solve the ninvite problem in #1062, and it seems like it could be applied very broadly to limit the spread of events that shouldn't stand on their own or need to be private. The one question I have is how long are these embeds? If it's 50 lines of text, that breaks the human readable (or at least parseable) requirement of kind 1s. Also, encoding json in a tlv is silly, we should at least use the tlv to reduce the payload size.", signer = signer) {
+            textNote = it
+            countDownLatch.countDown()
+        }
+
+        Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+
+        assertNotNull(textNote)
+
+        val bech32 = Bech32.encodeBytes(hrp = "n", textNote!!.toJson().toByteArray(Charsets.UTF_8), Bech32.Encoding.Bech32)
+
+        println(bech32)
+
+        val decoded = String(bech32.bechToBytes())
+        val decodedNote = Event.fromJson(decoded)
+
+        assertTrue(decodedNote.hasValidSignature())
+
+        assertEquals(textNote!!.toJson(), decodedNote.toJson())
+    }
+
+    @Test
+    fun testVisionPrescriptionEmbedEvent() {
+        val signer =
+            NostrSignerInternal(
+                KeyPair(Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598")),
+            )
+
+        var eyeglassesPrescriptionEvent: Event? = null
+
+        val countDownLatch = CountDownLatch(1)
+
+        FhirResourceEvent.create(fhirPayload = visionPrescriptionFhir, signer = signer) {
+            eyeglassesPrescriptionEvent = it
+            countDownLatch.countDown()
+        }
+
+        Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+
+        assertNotNull(eyeglassesPrescriptionEvent)
+
+        val bech32 = Bech32.encodeBytes(hrp = "nembed", eyeglassesPrescriptionEvent!!.toJson().toByteArray(Charsets.UTF_8), Bech32.Encoding.Bech32)
+
+        println(eyeglassesPrescriptionEvent!!.toJson())
+        println(bech32)
+
+        val decoded = String(bech32.bechToBytes())
+        val decodedNote = Event.fromJson(decoded)
+
+        assertTrue(decodedNote.hasValidSignature())
+
+        assertEquals(eyeglassesPrescriptionEvent!!.toJson(), decodedNote.toJson())
+    }
+
+    @Test
+    fun testVisionPrescriptionEmbedEventCompression() {
+        val signer =
+            NostrSignerInternal(
+                KeyPair(Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598")),
+            )
+
+        var eyeglassesPrescriptionEvent: Event? = null
+
+        val countDownLatch = CountDownLatch(1)
+
+        FhirResourceEvent.create(fhirPayload = visionPrescriptionFhir, signer = signer) {
+            eyeglassesPrescriptionEvent = it
+            countDownLatch.countDown()
+        }
+
+        Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+
+        assertNotNull(eyeglassesPrescriptionEvent)
+
+        val bech32 = Bech32.encodeBytes(hrp = "nembed", gzip(eyeglassesPrescriptionEvent!!.toJson()), Bech32.Encoding.Bech32)
+
+        println(eyeglassesPrescriptionEvent!!.toJson())
+        println(bech32)
+
+        val decoded = ungzip(bech32.bechToBytes())
+        val decodedNote = Event.fromJson(decoded)
+
+        assertTrue(decodedNote.hasValidSignature())
+
+        assertEquals(eyeglassesPrescriptionEvent!!.toJson(), decodedNote.toJson())
+    }
+
+    @Test
+    fun testCompressionSizes() {
+        val signer =
+            NostrSignerInternal(
+                KeyPair(Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598")),
+            )
+
+        var eyeglassesPrescriptionEvent: Event? = null
+
+        val countDownLatch = CountDownLatch(1)
+
+        FhirResourceEvent.create(fhirPayload = visionPrescriptionFhir, signer = signer) {
+            eyeglassesPrescriptionEvent = it
+            countDownLatch.countDown()
+        }
+
+        Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+
+        assertNotNull(eyeglassesPrescriptionEvent)
+
+        val json = eyeglassesPrescriptionEvent!!.toJson()
+
+        Bech32.encodeBytes(hrp = "nembed", json.toByteArray(), Bech32.Encoding.Bech32)
+        Bech32.encodeBytes(hrp = "nembed", gzip(json), Bech32.Encoding.Bech32)
+
+        val (bech32json, elapsedjson) = measureTimedValue { Bech32.encodeBytes(hrp = "nembed", json.toByteArray(), Bech32.Encoding.Bech32) }
+        val (bech32gzip, elapsedgzip) = measureTimedValue { Bech32.encodeBytes(hrp = "nembed", gzip(json), Bech32.Encoding.Bech32) }
+
+        println("Raw JSON ${json.length} chars")
+        println("Bech32 JSON ${bech32json.length} chars in $elapsedjson")
+        println("Bech32 GZIP ${bech32gzip.length} chars in $elapsedgzip")
+
+        assertTrue(true)
+    }
+
+    val visionPrescriptionFhir = "{\"resourceType\":\"VisionPrescription\",\"status\":\"active\",\"created\":\"2014-06-15\",\"patient\":{\"reference\":\"Patient/example\"},\"dateWritten\":\"2014-06-15\",\"prescriber\":{\"reference\":\"Practitioner/example\"},\"lensSpecification\":[{\"eye\":\"right\",\"sphere\":-2,\"prism\":[{\"amount\":0.5,\"base\":\"down\"}],\"add\":2},{\"eye\":\"left\",\"sphere\":-1,\"cylinder\":-0.5,\"axis\":180,\"prism\":[{\"amount\":0.5,\"base\":\"up\"}],\"add\":2}]}"
+}
+
+fun gzip(content: String): ByteArray {
+    val bos = ByteArrayOutputStream()
+    GZIPOutputStream(bos).bufferedWriter(Charsets.UTF_8).use { it.write(content) }
+    val array = bos.toByteArray()
+    return array
+}
+
+fun ungzip(content: ByteArray): String = GZIPInputStream(content.inputStream()).bufferedReader(Charsets.UTF_8).use { it.readText() }

@@ -111,6 +111,7 @@ class EventFactory {
             MetadataEvent.KIND -> MetadataEvent(id, pubKey, createdAt, tags, content, sig)
             MuteListEvent.KIND -> MuteListEvent(id, pubKey, createdAt, tags, content, sig)
             NNSEvent.KIND -> NNSEvent(id, pubKey, createdAt, tags, content, sig)
+            OtsEvent.KIND -> OtsEvent(id, pubKey, createdAt, tags, content, sig)
             PeopleListEvent.KIND -> PeopleListEvent(id, pubKey, createdAt, tags, content, sig)
             PinListEvent.KIND -> PinListEvent(id, pubKey, createdAt, tags, content, sig)
             PollNoteEvent.KIND -> PollNoteEvent(id, pubKey, createdAt, tags, content, sig)
