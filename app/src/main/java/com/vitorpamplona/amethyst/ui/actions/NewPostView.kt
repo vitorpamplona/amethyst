@@ -381,6 +381,52 @@ fun NewPostView(
                                     }
                                 }
 
+                                val myUrlPreview = postViewModel.urlPreview
+                                if (myUrlPreview != null) {
+                                    Row(modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)) {
+                                        if (RichTextParser.isValidURL(myUrlPreview)) {
+                                            if (RichTextParser.isImageUrl(myUrlPreview)) {
+                                                AsyncImage(
+                                                    model = myUrlPreview,
+                                                    contentDescription = myUrlPreview,
+                                                    contentScale = ContentScale.FillWidth,
+                                                    modifier =
+                                                        Modifier
+                                                            .padding(top = 4.dp)
+                                                            .fillMaxWidth()
+                                                            .clip(shape = QuoteBorder)
+                                                            .border(
+                                                                1.dp,
+                                                                MaterialTheme.colorScheme.subtleBorder,
+                                                                QuoteBorder,
+                                                            ),
+                                                )
+                                            } else if (RichTextParser.isVideoUrl(myUrlPreview)) {
+                                                VideoView(
+                                                    myUrlPreview,
+                                                    roundedCorner = true,
+                                                    accountViewModel = accountViewModel,
+                                                )
+                                            } else {
+                                                LoadUrlPreview(myUrlPreview, myUrlPreview, accountViewModel)
+                                            }
+                                        } else if (RichTextParser.startsWithNIP19Scheme(myUrlPreview)) {
+                                            val bgColor = MaterialTheme.colorScheme.background
+                                            val backgroundColor = remember { mutableStateOf(bgColor) }
+
+                                            BechLink(
+                                                myUrlPreview,
+                                                true,
+                                                backgroundColor,
+                                                accountViewModel,
+                                                nav,
+                                            )
+                                        } else if (RichTextParser.isUrlWithoutScheme(myUrlPreview)) {
+                                            LoadUrlPreview("https://$myUrlPreview", myUrlPreview, accountViewModel)
+                                        }
+                                    }
+                                }
+
                                 if (postViewModel.wantsToMarkAsSensitive) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -466,52 +512,6 @@ fun NewPostView(
                                             stringResource(id = R.string.zapraiser),
                                             postViewModel,
                                         )
-                                    }
-                                }
-
-                                val myUrlPreview = postViewModel.urlPreview
-                                if (myUrlPreview != null) {
-                                    Row(modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)) {
-                                        if (RichTextParser.isValidURL(myUrlPreview)) {
-                                            if (RichTextParser.isImageUrl(myUrlPreview)) {
-                                                AsyncImage(
-                                                    model = myUrlPreview,
-                                                    contentDescription = myUrlPreview,
-                                                    contentScale = ContentScale.FillWidth,
-                                                    modifier =
-                                                        Modifier
-                                                            .padding(top = 4.dp)
-                                                            .fillMaxWidth()
-                                                            .clip(shape = QuoteBorder)
-                                                            .border(
-                                                                1.dp,
-                                                                MaterialTheme.colorScheme.subtleBorder,
-                                                                QuoteBorder,
-                                                            ),
-                                                )
-                                            } else if (RichTextParser.isVideoUrl(myUrlPreview)) {
-                                                VideoView(
-                                                    myUrlPreview,
-                                                    roundedCorner = true,
-                                                    accountViewModel = accountViewModel,
-                                                )
-                                            } else {
-                                                LoadUrlPreview(myUrlPreview, myUrlPreview, accountViewModel)
-                                            }
-                                        } else if (RichTextParser.startsWithNIP19Scheme(myUrlPreview)) {
-                                            val bgColor = MaterialTheme.colorScheme.background
-                                            val backgroundColor = remember { mutableStateOf(bgColor) }
-
-                                            BechLink(
-                                                myUrlPreview,
-                                                true,
-                                                backgroundColor,
-                                                accountViewModel,
-                                                nav,
-                                            )
-                                        } else if (RichTextParser.isUrlWithoutScheme(myUrlPreview)) {
-                                            LoadUrlPreview("https://$myUrlPreview", myUrlPreview, accountViewModel)
-                                        }
                                     }
                                 }
                             }
