@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
@@ -113,6 +114,7 @@ private object PrefKeys {
     const val AUTOMATICALLY_SHOW_PROFILE_PICTURE = "automatically_show_profile_picture"
     const val SIGNER_PACKAGE_NAME = "signer_package_name"
     const val HAS_DONATED_IN_VERSION = "has_donated_in_version"
+    const val PENDING_ATTESTATIONS = "pending_attestations"
 
     const val ALL_ACCOUNT_INFO = "all_saved_accounts_info"
     const val SHARED_SETTINGS = "shared_settings"
@@ -339,6 +341,11 @@ object LocalPreferences {
                     } else {
                         putBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, account.showSensitiveContent!!)
                     }
+
+                    putString(
+                        PrefKeys.PENDING_ATTESTATIONS,
+                        Event.mapper.writeValueAsString(account.pendingAttestations),
+                    )
                 }
                 .apply()
         }
@@ -556,6 +563,26 @@ object LocalPreferences {
                         null
                     }
 
+                val pendingAttestations =
+                    try {
+                        getString(PrefKeys.PENDING_ATTESTATIONS, null)?.let {
+                            println("Decoding Attestation List: " + it)
+                            if (it != null) {
+                                Event.mapper.readValue<Map<HexKey, String>>(it)
+                            } else {
+                                null
+                            }
+                        }
+                    } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
+                        Log.w(
+                            "LocalPreferences",
+                            "Error Decoding Contact List ${getString(PrefKeys.LATEST_CONTACT_LIST, null)}",
+                            e,
+                        )
+                        null
+                    }
+
                 val languagePreferences =
                     try {
                         getString(PrefKeys.LANGUAGE_PREFS, null)?.let {
@@ -649,6 +676,7 @@ object LocalPreferences {
                         filterSpamFromStrangers = filterSpam,
                         lastReadPerRoute = lastReadPerRoute,
                         hasDonatedInVersion = hasDonatedInVersion,
+                        pendingAttestations = pendingAttestations ?: emptyMap(),
                     )
 
                 // Loads from DB

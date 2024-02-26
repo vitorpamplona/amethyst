@@ -554,12 +554,27 @@ fun NoteDropDownMenu(
         DropdownMenuItem(
             text = { Text(stringResource(R.string.broadcast)) },
             onClick = {
-                scope.launch(Dispatchers.IO) {
-                    accountViewModel.broadcast(note)
-                    onDismiss()
-                }
+                accountViewModel.broadcast(note)
+                onDismiss()
             },
         )
+        Divider()
+        if (accountViewModel.account.hasPendingAttestations(note)) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.timestamp_pending)) },
+                onClick = {
+                    onDismiss()
+                },
+            )
+        } else {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.timestamp_it)) },
+                onClick = {
+                    accountViewModel.timestamp(note)
+                    onDismiss()
+                },
+            )
+        }
         Divider()
         if (state.isPrivateBookmarkNote) {
             DropdownMenuItem(

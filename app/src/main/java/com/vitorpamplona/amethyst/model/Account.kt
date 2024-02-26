@@ -76,6 +76,7 @@ import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.NIP24Factory
+import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.Price
@@ -185,6 +186,7 @@ class Account(
     var filterSpamFromStrangers: Boolean = true,
     var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>(),
     var hasDonatedInVersion: Set<String> = setOf<String>(),
+    var pendingAttestations: Map<HexKey, String> = mapOf<HexKey, String>(),
     val scope: CoroutineScope = Amethyst.instance.applicationIOScope,
 ) {
     var transientHiddenUsers: ImmutableSet<String> = persistentSetOf()
@@ -891,6 +893,38 @@ class Account(
                 Client.send(it)
             }
         }
+    }
+
+    suspend fun updateAttestations() {
+        Log.d("Pending Attestations", "Updating ${pendingAttestations.size} pending attestations")
+
+        pendingAttestations.toMap().forEach { pair ->
+            val newAttestation = OtsEvent.upgrade(pair.value, pair.key)
+
+            if (pair.value != newAttestation) {
+                OtsEvent.create(pair.key, newAttestation, signer) {
+                    LocalCache.justConsume(it, null)
+                    Client.send(it)
+
+                    pendingAttestations = pendingAttestations - pair.key
+                }
+            }
+        }
+    }
+
+    fun hasPendingAttestations(note: Note): Boolean {
+        val id = note.event?.id() ?: note.idHex
+        return pendingAttestations.get(id) != null
+    }
+
+    fun timestamp(note: Note) {
+        if (!isWriteable()) return
+
+        val id = note.event?.id() ?: note.idHex
+
+        pendingAttestations = pendingAttestations + Pair(id, OtsEvent.stamp(id))
+
+        saveable.invalidateData()
     }
 
     fun follow(user: User) {

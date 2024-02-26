@@ -86,6 +86,7 @@ import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.NNSEvent
+import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
@@ -714,6 +715,28 @@ object LocalCache {
 
             refreshObservers(note)
         }
+    }
+
+    fun consume(
+        event: OtsEvent,
+        relay: Relay?,
+    ) {
+        val version = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        // Already processed this event.
+        if (version.event?.id() == event.id()) return
+
+        if (version.event == null) {
+            // makes sure the OTS has a valid certificate
+            if (event.cacheVerify() == null) return // no valid OTS
+
+            version.loadEvent(event, author, emptyList())
+
+            version.liveSet?.innerOts?.invalidateData()
+        }
+
+        refreshObservers(version)
     }
 
     fun consume(
@@ -1626,6 +1649,25 @@ object LocalCache {
             .toImmutableList()
     }
 
+    suspend fun findEarliestOtsForNote(note: Note): Long? {
+        checkNotInMainThread()
+
+        val validOts =
+            notes
+                .mapNotNull {
+                    val noteEvent = it.value.event
+                    if ((noteEvent is OtsEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpired())) {
+                        noteEvent.verifiedTime
+                    } else {
+                        null
+                    }
+                }
+
+        if (validOts.isEmpty()) return null
+
+        return validOts.minBy { it }
+    }
+
     fun cleanObservers() {
         notes.forEach { it.value.clearLive() }
 
@@ -1960,6 +2002,7 @@ object LocalCache {
                 is MetadataEvent -> consume(event)
                 is MuteListEvent -> consume(event, relay)
                 is NNSEvent -> comsume(event, relay)
+                is OtsEvent -> consume(event, relay)
                 is PrivateDmEvent -> consume(event, relay)
                 is PinListEvent -> consume(event, relay)
                 is PeopleListEvent -> consume(event, relay)

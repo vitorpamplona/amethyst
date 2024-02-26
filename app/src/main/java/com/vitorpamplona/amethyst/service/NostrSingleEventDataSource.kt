@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.ReportEvent
@@ -134,6 +135,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                                     ReportEvent.KIND,
                                     LnZapEvent.KIND,
                                     PollNoteEvent.KIND,
+                                    OtsEvent.KIND,
                                 ),
                             tags = mapOf("e" to it.map { it.idHex }),
                             since = findMinimumEOSEs(it),

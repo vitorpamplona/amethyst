@@ -113,6 +113,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
+import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.LoadThumbAndThenVideoView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
@@ -177,6 +178,7 @@ import com.vitorpamplona.amethyst.ui.theme.boostedNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.channelNotePictureModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.nip05
@@ -2544,7 +2546,41 @@ fun SecondUserInfoRow(
             Spacer(StdHorzSpacer)
             DisplayPoW(pow)
         }
+
+        DisplayOts(note, accountViewModel)
     }
+}
+
+@Composable
+fun DisplayOts(
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
+    LoadOts(
+        note,
+        accountViewModel,
+        whenConfirmed = {
+            val context = LocalContext.current
+            val timeStr by remember(note) { mutableStateOf(timeAgo(it, context = context)) }
+
+            Text(
+                stringResource(id = R.string.existed_since, timeStr),
+                color = MaterialTheme.colorScheme.lessImportantLink,
+                fontSize = Font14SP,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+            )
+        },
+        whenPending = {
+            Text(
+                stringResource(id = R.string.timestamp_pending_short),
+                color = MaterialTheme.colorScheme.lessImportantLink,
+                fontSize = Font14SP,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+            )
+        },
+    )
 }
 
 @Composable
@@ -2636,6 +2672,37 @@ fun LoadStatuses(
     }
 
     content(statuses)
+}
+
+@Composable
+fun LoadOts(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    whenConfirmed: @Composable (Long) -> Unit,
+    whenPending: @Composable () -> Unit,
+) {
+    var earliestDate: GenericLoadable<Long> by remember { mutableStateOf(GenericLoadable.Loading()) }
+
+    val noteStatus by note.live().innerOts.observeAsState()
+
+    LaunchedEffect(key1 = noteStatus) {
+        accountViewModel.findOtsEventsForNote(noteStatus?.note ?: note) { newOts ->
+            if (newOts == null) {
+                earliestDate = GenericLoadable.Empty()
+            } else {
+                earliestDate = GenericLoadable.Loaded(newOts)
+            }
+        }
+    }
+
+    (earliestDate as? GenericLoadable.Loaded)?.let {
+        whenConfirmed(it.loaded)
+    } ?: run {
+        val account = accountViewModel.account.saveable.observeAsState()
+        if (account.value?.account?.hasPendingAttestations(note) == true) {
+            whenPending()
+        }
+    }
 }
 
 @Composable

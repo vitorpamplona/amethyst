@@ -528,7 +528,22 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     }
 
     fun broadcast(note: Note) {
-        account.broadcast(note)
+        viewModelScope.launch(Dispatchers.IO) { account.broadcast(note) }
+    }
+
+    fun timestamp(note: Note) {
+        viewModelScope.launch(Dispatchers.IO) { account.timestamp(note) }
+    }
+
+    var lastTimeItTriedToUpdateAttestations: Long = 0
+
+    fun upgradeAttestations() {
+        // only tries to upgrade every hour
+        val now = TimeUtils.now()
+        if (now - lastTimeItTriedToUpdateAttestations > TimeUtils.ONE_HOUR) {
+            lastTimeItTriedToUpdateAttestations = now
+            viewModelScope.launch(Dispatchers.IO) { account.updateAttestations() }
+        }
     }
 
     fun delete(note: Note) {
@@ -889,6 +904,13 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) { onResult(LocalCache.findStatusesForUser(myUser)) }
     }
 
+    fun findOtsEventsForNote(
+        note: Note,
+        onResult: (Long?) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) { onResult(LocalCache.findEarliestOtsForNote(note)) }
+    }
+
     private suspend fun checkGetOrCreateChannel(key: HexKey): Channel? {
         return LocalCache.checkGetOrCreateChannel(key)
     }
@@ -1100,6 +1122,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
                         "Notification Dots Calculation refresh ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()}",
                     )
                     invalidateInsertData(newNotes)
+                    upgradeAttestations()
                 }
             }
     }

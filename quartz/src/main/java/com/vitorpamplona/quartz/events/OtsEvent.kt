@@ -45,6 +45,9 @@ class OtsEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    @Transient
+    var verifiedTime: Long? = null
+
     fun digestEvent() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
 
     fun digest() = digestEvent()?.hexToByteArray()
@@ -53,23 +56,17 @@ class OtsEvent(
         return Base64.getDecoder().decode(content)
     }
 
-    fun verify(): Long? {
-        try {
-            val digest = digest() ?: return null
-
-            val detachedOts = DetachedTimestampFile.deserialize(otsByteArray())
-
-            val result = otsInstance.verify(detachedOts, digest)
-            if (result == null || result.isEmpty()) {
-                return null
-            } else {
-                return result.get(VerifyResult.Chains.BITCOIN)?.timestamp
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.e("OpenTimeStamps", "Failed to verify", e)
-            return null
+    fun cacheVerify(): Long? {
+        return if (verifiedTime != null) {
+            verifiedTime
+        } else {
+            verifiedTime = verify()
+            verifiedTime
         }
+    }
+
+    fun verify(): Long? {
+        return digestEvent()?.let { OtsEvent.verify(otsByteArray(), it) }
     }
 
     fun info(): String {
@@ -83,27 +80,77 @@ class OtsEvent(
 
         var otsInstance = OpenTimestamps(BlockstreamExplorer(), CalendarPureJavaBuilder())
 
-        fun stamp(eventId: HexKey): ByteArray {
+        fun stamp(eventId: HexKey): String {
             val hash = Hash(eventId.hexToByteArray(), OpSHA256._TAG)
             val file = DetachedTimestampFile.from(hash)
             val timestamp = otsInstance.stamp(file)
             val detachedToSerialize = DetachedTimestampFile(hash.getOp(), timestamp)
-            return detachedToSerialize.serialize()
+            return Base64.getEncoder().encodeToString(detachedToSerialize.serialize())
+        }
+
+        fun upgrade(
+            otsFile: String,
+            eventId: HexKey,
+        ): String {
+            val detachedOts = DetachedTimestampFile.deserialize(Base64.getDecoder().decode(otsFile))
+
+            return if (otsInstance.upgrade(detachedOts)) {
+                // if the change is now verifiable.
+                if (verify(detachedOts, eventId) != null) {
+                    Base64.getEncoder().encodeToString(detachedOts.serialize())
+                } else {
+                    otsFile
+                }
+            } else {
+                otsFile
+            }
+        }
+
+        fun verify(
+            otsFile: String,
+            eventId: HexKey,
+        ): Long? {
+            return verify(Base64.getDecoder().decode(otsFile), eventId)
+        }
+
+        fun verify(
+            otsFile: ByteArray,
+            eventId: HexKey,
+        ): Long? {
+            return verify(DetachedTimestampFile.deserialize(otsFile), eventId)
+        }
+
+        fun verify(
+            detachedOts: DetachedTimestampFile,
+            eventId: HexKey,
+        ): Long? {
+            try {
+                val result = otsInstance.verify(detachedOts, eventId.hexToByteArray())
+                if (result == null || result.isEmpty()) {
+                    return null
+                } else {
+                    return result.get(VerifyResult.Chains.BITCOIN)?.timestamp
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e("OpenTimeStamps", "Failed to verify", e)
+                return null
+            }
         }
 
         fun create(
             eventId: HexKey,
+            otsFileBase64: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (OtsEvent) -> Unit,
         ) {
-            val otsFile = stamp(eventId)
             val tags =
                 arrayOf(
                     arrayOf("e", eventId),
                     arrayOf("alt", ALT),
                 )
-            signer.sign(createdAt, KIND, tags, Base64.getEncoder().encodeToString(otsFile), onReady)
+            signer.sign(createdAt, KIND, tags, otsFileBase64, onReady)
         }
     }
 }

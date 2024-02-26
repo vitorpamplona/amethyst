@@ -26,8 +26,8 @@ import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.fail
 import org.junit.Assert
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.CountDownLatch
@@ -60,9 +60,33 @@ class OtsTest {
         val ots = Event.Companion.fromJson(otsPendingEvent) as OtsEvent
         println(ots.info())
         assertEquals(null, ots.verify())
+
+        val eventId =
+            ots.digestEvent() ?: run {
+                fail("Should not be null")
+                return
+            }
+
+        val upgraded = OtsEvent.upgrade(ots.content, eventId)
+
+        val signer = NostrSignerInternal(KeyPair())
+
+        var newOts: OtsEvent? = null
+        val countDownLatch = CountDownLatch(1)
+
+        OtsEvent.create(eventId, upgraded, signer) {
+            newOts = it
+            countDownLatch.countDown()
+        }
+
+        Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+
+        println(newOts!!.toJson())
+        println(newOts!!.info())
+
+        assertEquals(1708879025L, newOts!!.verify())
     }
 
-    @Ignore("Need to figure out a way to wait for Bitcoin confirmations to test thiss")
     @Test
     fun createOTSEventAndVerify() {
         val signer = NostrSignerInternal(KeyPair())
@@ -70,7 +94,7 @@ class OtsTest {
 
         val countDownLatch = CountDownLatch(1)
 
-        OtsEvent.create(otsEvent2Digest, signer) {
+        OtsEvent.create(otsEvent2Digest, OtsEvent.stamp(otsEvent2Digest), signer) {
             ots = it
             countDownLatch.countDown()
         }
@@ -80,6 +104,6 @@ class OtsTest {
         println(ots!!.toJson())
         println(ots!!.info())
 
-        assertEquals(1706322179L, ots!!.verify())
+        assertEquals(null, ots!!.verify())
     }
 }

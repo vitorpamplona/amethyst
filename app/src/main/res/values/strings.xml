@@ -24,6 +24,9 @@
     <string name="copy_user_pubkey">Copy Author ID</string>
     <string name="copy_note_id">Copy Note ID</string>
     <string name="broadcast">Broadcast</string>
+    <string name="timestamp_it">Timestamp it</string>
+    <string name="timestamp_pending">Timestamp: Pending Confirmations</string>
+    <string name="timestamp_pending_short">OTS: Pending</string>
     <string name="request_deletion">Request Deletion</string>
     <string name="block_report">Block / Report</string>
     <string name="block_hide_user"><![CDATA[Block & Hide User]]></string>
@@ -782,4 +785,5 @@
     <string name="git_repository">Git Repository: %1$s</string>
     <string name="git_web_address">Web:</string>
     <string name="git_clone_address">Clone:</string>
+    <string name="existed_since">OTS: %1$s</string>
 </resources>

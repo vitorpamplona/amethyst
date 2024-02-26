@@ -342,11 +342,9 @@ private fun RenderMainPopup(
                         icon = ImageVector.vectorResource(id = R.drawable.relays),
                         label = stringResource(R.string.broadcast),
                     ) {
-                        scope.launch(Dispatchers.IO) {
-                            accountViewModel.broadcast(note)
-                            // showSelectTextDialog = true
-                            onDismiss()
-                        }
+                        accountViewModel.broadcast(note)
+                        // showSelectTextDialog = true
+                        onDismiss()
                     }
                     VerticalDivider(primaryLight)
                     NoteQuickActionItem(
