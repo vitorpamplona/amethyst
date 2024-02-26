@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.events
 
 import android.util.Log
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.Nip19Bech32.nip19regex
@@ -41,6 +42,18 @@ open class BaseTextNoteEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
     fun mentions() = taggedUsers()
+
+    fun isAFork() = tags.any { it.size > 3 && (it[0] == "a" || it[0] == "e") && it[3] == "fork" }
+
+    fun forkFromAddress() =
+        tags.firstOrNull { it.size > 3 && it[0] == "a" && it[3] == "fork" }?.let {
+            val aTagValue = it[1]
+            val relay = it.getOrNull(2)
+
+            ATag.parse(aTagValue, relay)
+        }
+
+    fun forkFromVersion() = tags.firstOrNull { it.size > 3 && it[0] == "e" && it[3] == "fork" }?.get(1)
 
     open fun replyTos(): List<HexKey> {
         val oldStylePositional = tags.filter { it.size > 1 && it.size <= 3 && it[0] == "e" }.map { it[1] }

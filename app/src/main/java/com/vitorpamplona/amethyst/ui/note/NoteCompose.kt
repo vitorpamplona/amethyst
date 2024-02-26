@@ -80,6 +80,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -178,6 +179,7 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
+import com.vitorpamplona.amethyst.ui.theme.nip05
 import com.vitorpamplona.amethyst.ui.theme.normalNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.normalWithTopMarginNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -2512,31 +2514,105 @@ fun SecondUserInfoRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val noteEvent = remember { note.event } ?: return
-    val noteAuthor = remember { note.author } ?: return
+    val noteEvent = note.event ?: return
+    val noteAuthor = note.author ?: return
 
     Row(
         verticalAlignment = CenterVertically,
         modifier = UserNameMaxRowHeight,
     ) {
-        ObserveDisplayNip05Status(noteAuthor, remember { Modifier.weight(1f) }, accountViewModel, nav)
+        if (noteEvent is BaseTextNoteEvent && noteEvent.isAFork()) {
+            ShowForkInformation(noteEvent, remember(noteEvent) { Modifier.weight(1f) }, accountViewModel, nav)
+        } else {
+            ObserveDisplayNip05Status(noteAuthor, remember(noteEvent) { Modifier.weight(1f) }, accountViewModel, nav)
+        }
 
-        val geo = remember { noteEvent.getGeoHash() }
+        val geo = remember(noteEvent) { noteEvent.getGeoHash() }
         if (geo != null) {
             Spacer(StdHorzSpacer)
             DisplayLocation(geo, nav)
         }
 
-        val baseReward = remember { noteEvent.getReward()?.let { Reward(it) } }
+        val baseReward = remember(noteEvent) { noteEvent.getReward()?.let { Reward(it) } }
         if (baseReward != null) {
             Spacer(StdHorzSpacer)
             DisplayReward(baseReward, note, accountViewModel, nav)
         }
 
-        val pow = remember { noteEvent.getPoWRank() }
+        val pow = remember(noteEvent) { noteEvent.getPoWRank() }
         if (pow > 20) {
             Spacer(StdHorzSpacer)
             DisplayPoW(pow)
+        }
+    }
+}
+
+@Composable
+private fun ShowForkInformation(
+    noteEvent: BaseTextNoteEvent,
+    modifier: Modifier,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val forkedAddress = remember(noteEvent) { noteEvent.forkFromAddress() }
+    val forkedEvent = remember(noteEvent) { noteEvent.forkFromVersion() }
+    if (forkedAddress != null) {
+        LoadAddressableNote(aTag = forkedAddress, accountViewModel = accountViewModel) { addressableNote ->
+            if (addressableNote != null) {
+                ForkInformationRowLightColor(addressableNote, modifier, accountViewModel, nav)
+            }
+        }
+    } else if (forkedEvent != null) {
+        LoadNote(forkedEvent, accountViewModel = accountViewModel) { event ->
+            if (event != null) {
+                ForkInformationRowLightColor(event, modifier, accountViewModel, nav)
+            }
+        }
+    }
+}
+
+@Composable
+fun ForkInformationRowLightColor(
+    originalVersion: Note,
+    modifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val noteState by originalVersion.live().metadata.observeAsState()
+    val note = noteState?.note ?: return
+    val author = note.author ?: return
+    val route = remember(note) { routeFor(note, accountViewModel.userProfile()) }
+
+    if (route != null) {
+        Row(modifier) {
+            ClickableText(
+                text =
+                    buildAnnotatedString {
+                        append(stringResource(id = R.string.forked_from))
+                        append(" ")
+                    },
+                onClick = { nav(route) },
+                style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
+                maxLines = 1,
+                overflow = TextOverflow.Visible,
+            )
+
+            val userState by author.live().metadata.observeAsState()
+            val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
+            val userTags =
+                remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
+
+            if (userDisplayName != null) {
+                CreateClickableTextWithEmoji(
+                    clickablePart = userDisplayName,
+                    maxLines = 1,
+                    route = route,
+                    overrideColor = MaterialTheme.colorScheme.nip05,
+                    fontSize = Font14SP,
+                    nav = nav,
+                    tags = userTags,
+                )
+            }
         }
     }
 }
@@ -3928,7 +4004,6 @@ private fun WikiNoteHeader(
     nav: (String) -> Unit,
 ) {
     val title = remember(noteEvent) { noteEvent.title() }
-    val forkedAddress = remember(noteEvent) { noteEvent.forkFromAddress() }
     val summary =
         remember(noteEvent) {
             noteEvent.summary()?.ifBlank { null } ?: noteEvent.content.take(200).ifBlank { null }

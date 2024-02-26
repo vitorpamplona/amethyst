@@ -55,6 +55,7 @@ import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
@@ -85,10 +86,10 @@ open class NewPostViewModel() : ViewModel() {
     var requiresNIP24: Boolean = false
 
     var originalNote: Note? = null
+    var forkedFromNote: Note? = null
 
     var pTags by mutableStateOf<List<User>?>(null)
     var eTags by mutableStateOf<List<Note>?>(null)
-    var imetaTags = mutableStateListOf<Array<String>>()
 
     var nip94attachments by mutableStateOf<List<FileHeaderEvent>>(emptyList())
     var nip95attachments by
@@ -166,6 +167,7 @@ open class NewPostViewModel() : ViewModel() {
         accountViewModel: AccountViewModel,
         replyingTo: Note?,
         quote: Note?,
+        fork: Note?,
     ) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
@@ -214,6 +216,37 @@ open class NewPostViewModel() : ViewModel() {
         zapRaiserAmount = null
         forwardZapTo = Split()
         forwardZapToEditting = TextFieldValue("")
+
+        fork?.let {
+            message = TextFieldValue(it.event?.content() ?: "")
+            urlPreview = findUrlInMessage()
+
+            it.event?.isSensitive()?.let {
+                if (it) wantsToMarkAsSensitive = true
+            }
+
+            it.event?.zapraiserAmount()?.let {
+                zapRaiserAmount = it
+            }
+
+            it.event?.zapSplitSetup()?.let {
+                val totalWeight = it.sumOf { if (it.isLnAddress) 0.0 else it.weight }
+
+                it.forEach {
+                    if (!it.isLnAddress) {
+                        forwardZapTo.addItem(LocalCache.getOrCreateUser(it.lnAddressOrPubKeyHex), (it.weight / totalWeight).toFloat())
+                    }
+                }
+            }
+
+            it.author?.let {
+                if (this.pTags?.contains(it) != true) {
+                    this.pTags = listOf(it) + (this.pTags ?: emptyList())
+                }
+            }
+
+            forkedFromNote = it
+        }
     }
 
     fun sendPost(relayList: List<Relay>? = null) {
@@ -404,9 +437,16 @@ open class NewPostViewModel() : ViewModel() {
 
                 val replyId = originalNote?.idHex
 
+                val replyToSet =
+                    if (forkedFromNote != null) {
+                        (listOfNotNull(forkedFromNote) + (tagger.eTags ?: emptyList())).ifEmpty { null }
+                    } else {
+                        tagger.eTags
+                    }
+
                 account?.sendPost(
                     message = tagger.message,
-                    replyTo = tagger.eTags,
+                    replyTo = replyToSet,
                     mentions = tagger.pTags,
                     tags = null,
                     zapReceiver = zapReceiver,
@@ -415,6 +455,7 @@ open class NewPostViewModel() : ViewModel() {
                     replyingTo = replyId,
                     root = rootId,
                     directMentions = tagger.directMentions,
+                    forkedFrom = forkedFromNote?.event as? Event,
                     relayList = relayList,
                     geohash = geoHash,
                     nip94attachments = usedAttachments,
@@ -504,7 +545,6 @@ open class NewPostViewModel() : ViewModel() {
         urlPreview = null
         isUploadingImage = false
         pTags = null
-        imetaTags.clear()
 
         wantsDirectMessage = false
 

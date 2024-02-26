@@ -127,6 +127,7 @@ import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.placeholderTextColorFilter
 import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
+import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
@@ -499,6 +500,7 @@ private fun BoostWithDialog(
     nav: (String) -> Unit,
 ) {
     var wantsToQuote by remember { mutableStateOf<Note?>(null) }
+    var wantsToFork by remember { mutableStateOf<Note?>(null) }
 
     if (wantsToQuote != null) {
         NewPostView(
@@ -510,7 +512,34 @@ private fun BoostWithDialog(
         )
     }
 
-    BoostReaction(baseNote, grayTint, accountViewModel) { wantsToQuote = baseNote }
+    if (wantsToFork != null) {
+        val replyTo =
+            remember(wantsToFork) {
+                val forkEvent = wantsToFork?.event
+                if (forkEvent is BaseTextNoteEvent) {
+                    val hex = forkEvent.replyingTo()
+                    wantsToFork?.replyTo?.filter { it.event?.id() == hex }?.firstOrNull()
+                } else {
+                    null
+                }
+            }
+
+        NewPostView(
+            onClose = { wantsToFork = null },
+            baseReplyTo = replyTo,
+            fork = wantsToFork,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+
+    BoostReaction(
+        baseNote,
+        grayTint,
+        accountViewModel,
+        onQuotePress = { wantsToQuote = baseNote },
+        onForkPress = { wantsToFork = baseNote },
+    )
 }
 
 @Composable
@@ -650,6 +679,7 @@ fun BoostReaction(
     iconSizeModifier: Modifier = Size20Modifier,
     iconSize: Dp = Size20dp,
     onQuotePress: () -> Unit,
+    onForkPress: () -> Unit,
 ) {
     var wantsToBoost by remember { mutableStateOf(false) }
 
@@ -671,7 +701,13 @@ fun BoostReaction(
                     wantsToBoost = false
                     onQuotePress()
                 },
-                onRepost = { accountViewModel.boost(baseNote) },
+                onRepost = {
+                    accountViewModel.boost(baseNote)
+                },
+                onFork = {
+                    wantsToBoost = false
+                    onForkPress()
+                },
             )
         }
     }
@@ -1149,6 +1185,7 @@ private fun BoostTypeChoicePopup(
     onDismiss: () -> Unit,
     onQuote: () -> Unit,
     onRepost: () -> Unit,
+    onFork: () -> Unit,
 ) {
     val iconSizePx = with(LocalDensity.current) { -iconSize.toPx().toInt() }
 
@@ -1188,6 +1225,18 @@ private fun BoostTypeChoicePopup(
                     ),
             ) {
                 Text(stringResource(R.string.quote), color = Color.White, textAlign = TextAlign.Center)
+            }
+
+            Button(
+                modifier = Modifier.padding(horizontal = 3.dp),
+                onClick = onFork,
+                shape = ButtonBorder,
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                    ),
+            ) {
+                Text(stringResource(R.string.fork), color = Color.White, textAlign = TextAlign.Center)
             }
         }
     }

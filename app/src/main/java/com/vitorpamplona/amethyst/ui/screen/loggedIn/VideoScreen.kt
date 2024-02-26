@@ -476,9 +476,12 @@ fun ReactionsColumn(
             accountViewModel = accountViewModel,
             iconSizeModifier = Size40Modifier,
             iconSize = Size40dp,
-        ) {
-            wantsToQuote = baseNote
-        }
+            onQuotePress = {
+                wantsToQuote = baseNote
+            },
+            onForkPress = {
+            },
+        )
         LikeReaction(
             baseNote = baseNote,
             grayTint = MaterialTheme.colorScheme.onBackground,

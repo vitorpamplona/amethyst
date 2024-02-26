@@ -32,6 +32,15 @@ class SplitItem<T>(val key: T) {
 class Split<T>() {
     var items: List<SplitItem<T>> by mutableStateOf(emptyList())
 
+    fun addItem(
+        key: T,
+        percentage: Float,
+    ) {
+        val newItem = SplitItem(key)
+        newItem.percentage = percentage
+        this.items = items.plus(newItem)
+    }
+
     fun addItem(key: T): Int {
         val wasEqualSplit = isEqualSplit()
         val newItem = SplitItem(key)

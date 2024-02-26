@@ -294,6 +294,7 @@ fun CreateClickableText(
     maxLines: Int = Int.MAX_VALUE,
     overrideColor: Color? = null,
     fontWeight: FontWeight? = null,
+    fontSize: TextUnit = TextUnit.Unspecified,
     route: String,
     nav: (String) -> Unit,
 ) {
@@ -304,12 +305,14 @@ fun CreateClickableText(
         remember(clickablePart, suffix) {
             val clickablePartStyle =
                 SpanStyle(
+                    fontSize = fontSize,
                     color = overrideColor ?: primaryColor,
                     fontWeight = fontWeight,
                 )
 
             val nonClickablePartStyle =
                 SpanStyle(
+                    fontSize = fontSize,
                     color = overrideColor ?: onBackgroundColor,
                     fontWeight = fontWeight,
                 )
@@ -562,6 +565,7 @@ fun CreateClickableTextWithEmoji(
     maxLines: Int = Int.MAX_VALUE,
     overrideColor: Color? = null,
     fontWeight: FontWeight = FontWeight.Normal,
+    fontSize: TextUnit = TextUnit.Unspecified,
     route: String,
     nav: (String) -> Unit,
     tags: ImmutableListOfLists<String>?,
@@ -570,11 +574,12 @@ fun CreateClickableTextWithEmoji(
         text = clickablePart,
         tags = tags,
         onRegularText = {
-            CreateClickableText(it, null, maxLines, overrideColor, fontWeight, route, nav)
+            CreateClickableText(it, null, maxLines, overrideColor, fontWeight, fontSize, route, nav)
         },
         onEmojiText = {
             val clickablePartStyle =
                 SpanStyle(
+                    fontSize = fontSize,
                     color = overrideColor ?: MaterialTheme.colorScheme.primary,
                     fontWeight = fontWeight,
                 )

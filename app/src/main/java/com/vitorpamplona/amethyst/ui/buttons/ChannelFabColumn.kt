@@ -65,7 +65,7 @@ fun ChannelFabColumn(
 
     if (wantsToSendNewMessage) {
         NewPostView(
-            { wantsToSendNewMessage = false },
+            onClose = { wantsToSendNewMessage = false },
             enableMessageInterface = true,
             accountViewModel = accountViewModel,
             nav = nav,

@@ -41,16 +41,6 @@ class WikiNoteEvent(
 
     fun topics() = hashtags()
 
-    fun forkFromAddress() =
-        tags.firstOrNull { it.size > 3 && it[0] == "a" && it[3] == "fork" }?.let {
-            val aTagValue = it[1]
-            val relay = it.getOrNull(2)
-
-            ATag.parse(aTagValue, relay)
-        }
-
-    fun forkFromVersion() = tags.firstOrNull { it.size > 3 && it[0] == "e" && it[3] == "fork" }?.get(1)
-
     fun title() = tags.firstOrNull { it.size > 1 && it[0] == "title" }?.get(1)
 
     fun summary() = tags.firstOrNull { it.size > 1 && it[0] == "summary" }?.get(1)

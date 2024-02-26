@@ -47,6 +47,7 @@
     <string name="boost">Boost</string>
     <string name="boosted">boosted</string>
     <string name="quote">Quote</string>
+    <string name="fork">Fork</string>
     <string name="new_amount_in_sats">New Amount in Sats</string>
     <string name="add">Add</string>
     <string name="replying_to">"replying to "</string>
@@ -777,6 +778,7 @@
     <string name="max_limit">Max Limit</string>
     <string name="restricted_writes">Restricted Writes</string>
     <string name="forked_from">Forked from</string>
+    <string name="forked_tag">FORK</string>
     <string name="git_repository">Git Repository: %1$s</string>
     <string name="git_web_address">Web:</string>
     <string name="git_clone_address">Clone:</string>

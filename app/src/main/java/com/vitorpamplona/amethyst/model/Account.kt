@@ -1325,6 +1325,7 @@ class Account(
         replyingTo: String?,
         root: String?,
         directMentions: Set<HexKey>,
+        forkedFrom: Event?,
         relayList: List<Relay>? = null,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
@@ -1349,6 +1350,7 @@ class Account(
             directMentions = directMentions,
             geohash = geohash,
             nip94attachments = nip94attachments,
+            forkedFrom = forkedFrom,
             signer = signer,
         ) {
             Client.send(it, relayList = relayList)

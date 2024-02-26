@@ -83,7 +83,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.InlineCarrousel
@@ -913,7 +912,7 @@ private fun RenderWikiHeaderForThread(
             forkedAddress?.let {
                 LoadAddressableNote(aTag = it, accountViewModel = accountViewModel) { originalVersion ->
                     if (originalVersion != null) {
-                        ShowForkInformation(originalVersion, Modifier.fillMaxWidth(), accountViewModel, nav)
+                        ForkInformationRow(originalVersion, Modifier.fillMaxWidth(), accountViewModel, nav)
                     }
                 }
             }
@@ -934,8 +933,8 @@ private fun RenderWikiHeaderForThread(
 }
 
 @Composable
-fun ShowForkInformation(
-    originalVersion: AddressableNote,
+fun ForkInformationRow(
+    originalVersion: Note,
     modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,

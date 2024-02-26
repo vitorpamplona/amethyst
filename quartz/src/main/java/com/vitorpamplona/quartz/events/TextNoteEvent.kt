@@ -57,6 +57,7 @@ class TextNoteEvent(
             directMentions: Set<HexKey> = emptySet(),
             geohash: String? = null,
             nip94attachments: List<FileHeaderEvent>? = null,
+            forkedFrom: Event? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (TextNoteEvent) -> Unit,
@@ -69,6 +70,7 @@ class TextNoteEvent(
                         root = root,
                         replyingTo = replyingTo,
                         directMentions = directMentions,
+                        forkedFrom = forkedFrom?.id,
                     ),
                 )
             }
@@ -93,6 +95,7 @@ class TextNoteEvent(
                             root = root,
                             replyingTo = replyingTo,
                             directMentions = directMentions,
+                            forkedFrom = (forkedFrom as? AddressableEvent)?.address()?.toTag(),
                         ),
                     )
                 }
@@ -136,6 +139,7 @@ class TextNoteEvent(
             root: String?,
             replyingTo: String?,
             directMentions: Set<HexKey>,
+            forkedFrom: String?,
         ) = sortedWith { o1, o2 ->
             when {
                 o1 == o2 -> 0
@@ -150,6 +154,7 @@ class TextNoteEvent(
                 when (it) {
                     root -> arrayOf(tagName, it, "", "root")
                     replyingTo -> arrayOf(tagName, it, "", "reply")
+                    forkedFrom -> arrayOf(tagName, it, "", "fork")
                     in directMentions -> arrayOf(tagName, it, "", "mention")
                     else -> arrayOf(tagName, it)
                 }
