@@ -199,11 +199,6 @@ open class NewPostViewModel() : ViewModel() {
                 pTags = null
             }
 
-        quote?.let {
-            message = TextFieldValue(message.text + "\nnostr:${it.toNEvent()}")
-            urlPreview = findUrlInMessage()
-        }
-
         canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
         canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
         canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channelHex() == null
@@ -216,6 +211,25 @@ open class NewPostViewModel() : ViewModel() {
         zapRaiserAmount = null
         forwardZapTo = Split()
         forwardZapToEditting = TextFieldValue("")
+
+        quote?.let {
+            message = TextFieldValue(message.text + "\nnostr:${it.toNEvent()}")
+            urlPreview = findUrlInMessage()
+
+            it.author?.let { quotedUser ->
+                if (quotedUser.pubkeyHex != accountViewModel.userProfile().pubkeyHex) {
+                    if (forwardZapTo.items.none { it.key.pubkeyHex == quotedUser.pubkeyHex }) {
+                        forwardZapTo.addItem(quotedUser)
+                    }
+                    if (forwardZapTo.items.none { it.key.pubkeyHex == accountViewModel.userProfile().pubkeyHex }) {
+                        forwardZapTo.addItem(accountViewModel.userProfile())
+                    }
+
+                    val pos = forwardZapTo.items.indexOfFirst { it.key.pubkeyHex == quotedUser.pubkeyHex }
+                    forwardZapTo.updatePercentage(pos, 0.9f)
+                }
+            }
+        }
 
         fork?.let {
             message = TextFieldValue(it.event?.content() ?: "")
@@ -239,6 +253,19 @@ open class NewPostViewModel() : ViewModel() {
                 }
             }
 
+            // Only adds if it is not already set up.
+            if (forwardZapTo.items.isEmpty()) {
+                it.author?.let { forkedAuthor ->
+                    if (forkedAuthor.pubkeyHex != accountViewModel.userProfile().pubkeyHex) {
+                        if (forwardZapTo.items.none { it.key.pubkeyHex == forkedAuthor.pubkeyHex }) forwardZapTo.addItem(forkedAuthor)
+                        if (forwardZapTo.items.none { it.key.pubkeyHex == accountViewModel.userProfile().pubkeyHex }) forwardZapTo.addItem(accountViewModel.userProfile())
+
+                        val pos = forwardZapTo.items.indexOfFirst { it.key.pubkeyHex == forkedAuthor.pubkeyHex }
+                        forwardZapTo.updatePercentage(pos, 0.8f)
+                    }
+                }
+            }
+
             it.author?.let {
                 if (this.pTags?.contains(it) != true) {
                     this.pTags = listOf(it) + (this.pTags ?: emptyList())
@@ -246,6 +273,10 @@ open class NewPostViewModel() : ViewModel() {
             }
 
             forkedFromNote = it
+        }
+
+        if (!forwardZapTo.items.isEmpty()) {
+            wantsForwardZapTo = true
         }
     }
 
