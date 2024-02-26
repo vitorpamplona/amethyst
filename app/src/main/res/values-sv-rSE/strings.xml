@@ -44,6 +44,7 @@
     <string name="boost">Boosta</string>
     <string name="boosted">boostad</string>
     <string name="quote">Citera</string>
+    <string name="fork">Förgrening</string>
     <string name="new_amount_in_sats">Nytt belopp i Sats</string>
     <string name="add">Lägg till</string>
     <string name="replying_to">"Svarar till "</string>
@@ -655,6 +656,7 @@
     <string name="max_limit">Maximal gräns</string>
     <string name="restricted_writes">Begränsade skrivningar</string>
     <string name="forked_from">Forkad från</string>
+    <string name="forked_tag">FORK</string>
     <string name="git_repository">Git Repository: %1$s</string>
     <string name="git_web_address">Webbplats:</string>
     <string name="git_clone_address">Klona:</string>

@@ -44,6 +44,7 @@
     <string name="boost">Impulsionar</string>
     <string name="boosted">impulsionado</string>
     <string name="quote">Citar</string>
+    <string name="fork">Garfo</string>
     <string name="new_amount_in_sats">Novo Valor em Sats</string>
     <string name="add">Adicionar</string>
     <string name="replying_to">"respondendo para "</string>
@@ -656,6 +657,7 @@
     <string name="max_limit">Limite máximo</string>
     <string name="restricted_writes">Gravações Restritas</string>
     <string name="forked_from">Forkado de</string>
+    <string name="forked_tag">FORK</string>
     <string name="git_repository">Repositório Git: %1$s</string>
     <string name="git_web_address">Site:</string>
     <string name="git_clone_address">Clonar:</string>

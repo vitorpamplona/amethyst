@@ -44,6 +44,7 @@
     <string name="boost">Boost</string>
     <string name="boosted">boosted</string>
     <string name="quote">Zitat</string>
+    <string name="fork">Fork</string>
     <string name="new_amount_in_sats">Neuer Betrag in Sats</string>
     <string name="add">Hinzufügen</string>
     <string name="replying_to">"Antworten auf "</string>
@@ -661,6 +662,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="max_limit">Maximallimit</string>
     <string name="restricted_writes">Eingeschränkte Schriften</string>
     <string name="forked_from">Geforkt von</string>
+    <string name="forked_tag">FORK</string>
     <string name="git_repository">Git Repository: %1$s</string>
     <string name="git_web_address">Internet:</string>
     <string name="git_clone_address">Klonen:</string>
