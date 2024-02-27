@@ -126,5 +126,6 @@ class ReportEvent(
         IMPERSONATION,
         NUDITY,
         PROFANITY,
+        OTHER,
     }
 }

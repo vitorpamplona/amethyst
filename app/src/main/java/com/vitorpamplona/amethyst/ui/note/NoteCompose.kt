@@ -2364,6 +2364,7 @@ private fun RenderReport(
                     ReportEvent.ReportType.SPAM -> stringResource(R.string.spam)
                     ReportEvent.ReportType.IMPERSONATION -> stringResource(R.string.impersonation)
                     ReportEvent.ReportType.ILLEGAL -> stringResource(R.string.illegal_behavior)
+                    ReportEvent.ReportType.OTHER -> stringResource(R.string.other)
                 }
             }
             .toSet()
