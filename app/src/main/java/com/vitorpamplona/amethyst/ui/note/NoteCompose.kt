@@ -241,6 +241,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -2560,15 +2562,27 @@ fun DisplayOts(
     LoadOts(
         note,
         accountViewModel,
-        whenConfirmed = {
+        whenConfirmed = { unixtimestamp ->
             val context = LocalContext.current
-            val timeStr by remember(note) { mutableStateOf(timeAgo(it, context = context)) }
+            val timeStr by remember(unixtimestamp) { mutableStateOf(timeAgoNoDot(unixtimestamp, context = context)) }
 
-            Text(
-                stringResource(id = R.string.existed_since, timeStr),
-                color = MaterialTheme.colorScheme.lessImportantLink,
-                fontSize = Font14SP,
-                fontWeight = FontWeight.Bold,
+            ClickableText(
+                text = buildAnnotatedString { append(stringResource(id = R.string.existed_since, timeStr)) },
+                onClick = {
+                    val fullDateTime =
+                        SimpleDateFormat.getDateTimeInstance().format(Date(unixtimestamp * 1000))
+
+                    accountViewModel.toast(
+                        context.getString(R.string.ots_info_title),
+                        context.getString(R.string.ots_info_description, fullDateTime),
+                    )
+                },
+                style =
+                    LocalTextStyle.current.copy(
+                        color = MaterialTheme.colorScheme.lessImportantLink,
+                        fontSize = Font14SP,
+                        fontWeight = FontWeight.Bold,
+                    ),
                 maxLines = 1,
             )
         },
@@ -2688,11 +2702,12 @@ fun LoadOts(
 
     LaunchedEffect(key1 = noteStatus) {
         accountViewModel.findOtsEventsForNote(noteStatus?.note ?: note) { newOts ->
-            if (newOts == null) {
-                earliestDate = GenericLoadable.Empty()
-            } else {
-                earliestDate = GenericLoadable.Loaded(newOts)
-            }
+            earliestDate =
+                if (newOts == null) {
+                    GenericLoadable.Empty()
+                } else {
+                    GenericLoadable.Loaded(newOts)
+                }
         }
     }
 

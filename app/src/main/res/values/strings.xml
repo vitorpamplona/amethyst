@@ -787,4 +787,7 @@
     <string name="git_web_address">Web:</string>
     <string name="git_clone_address">Clone:</string>
     <string name="existed_since">OTS: %1$s</string>
+
+    <string name="ots_info_title">Timestamp Proof</string>
+    <string name="ots_info_description">There\'s proof this post was signed sometime before %1$s. The proof was stamped in the Bitcoin blockchain at that date and time.</string>
 </resources>

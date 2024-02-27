@@ -741,10 +741,10 @@ object LocalCache {
         // Already processed this event.
         if (version.event?.id() == event.id()) return
 
-        if (version.event == null) {
-            // makes sure the OTS has a valid certificate
-            if (event.cacheVerify() == null) return // no valid OTS
+        // makes sure the OTS has a valid certificate
+        if (event.cacheVerify() == null) return // no valid OTS
 
+        if (version.event == null) {
             version.loadEvent(event, author, emptyList())
 
             version.liveSet?.innerOts?.invalidateData()

@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.CreateImageHeader
 import com.vitorpamplona.amethyst.ui.note.DisplayHighlight
 import com.vitorpamplona.amethyst.ui.note.DisplayLocation
+import com.vitorpamplona.amethyst.ui.note.DisplayOts
 import com.vitorpamplona.amethyst.ui.note.DisplayPeopleList
 import com.vitorpamplona.amethyst.ui.note.DisplayRelaySet
 import com.vitorpamplona.amethyst.ui.note.FileHeaderDisplay
@@ -449,6 +450,8 @@ fun NoteMaster(
                         if (pow > 20) {
                             DisplayPoW(pow)
                         }
+
+                        DisplayOts(note, accountViewModel)
                     }
                 }
             }
