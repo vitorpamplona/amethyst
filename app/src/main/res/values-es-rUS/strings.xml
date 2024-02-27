@@ -16,6 +16,7 @@
     <string name="spam">Spam</string>
     <string name="impersonation">Suplantación de identidad</string>
     <string name="illegal_behavior">Comportamiento ilegal</string>
+    <string name="other">Otro</string>
     <string name="unknown">Desconocido</string>
     <string name="relay_icon">Ícono de relé</string>
     <string name="unknown_author">Autor desconocido</string>
@@ -23,6 +24,9 @@
     <string name="copy_user_pubkey">Copiar ID del autor</string>
     <string name="copy_note_id">Copiar ID de la nota</string>
     <string name="broadcast">Transmisión</string>
+    <string name="timestamp_it">Poner marca de tiempo</string>
+    <string name="timestamp_pending">Marca de tiempo: confirmaciones pendientes</string>
+    <string name="timestamp_pending_short">OTS: pendiente</string>
     <string name="request_deletion">Solicitar eliminación</string>
     <string name="block_report">Bloquear / Reportar</string>
     <string name="block_hide_user"><![CDATA[Bloquear y ocultar usuario]]></string>
@@ -40,10 +44,11 @@
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para poder ocultar una palabra o frase.</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para poder mostrar una palabra o frase.</string>
     <string name="zaps">Zaps</string>
-    <string name="view_count">Ver recuento</string>
+    <string name="view_count">Total vistas</string>
     <string name="boost">Impulsar</string>
     <string name="boosted">Impulsada</string>
     <string name="quote">Cita</string>
+    <string name="fork">Bifurcar</string>
     <string name="new_amount_in_sats">Nueva cantidad en sats</string>
     <string name="add">Agregar</string>
     <string name="replying_to">"respondiendo a "</string>
@@ -355,7 +360,7 @@
     <string name="app_notification_zaps_channel_description">Te notifica cuando alguien te zapea</string>
     <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">De %1$s</string>
-    <string name="app_notification_zaps_channel_message_for">para %1$s</string>
+    <string name="app_notification_zaps_channel_message_for">por %1$s</string>
     <string name="reply_notify">Notificar: </string>
     <string name="channel_list_join_conversation">Unirse a la conversación</string>
     <string name="channel_list_user_or_group_id">ID de usuario o grupo</string>
@@ -648,4 +653,21 @@
     <string name="show_npub_as_a_qr_code">Mostrar npub como código QR</string>
     <string name="invalid_nip19_uri">Dirección inválida</string>
     <string name="invalid_nip19_uri_description">Amethyst recibió un URI para abrir pero era inválido: %1$s</string>
+    <string name="zap_the_devs_title">¡Zapea a los desarrolladores!</string>
+    <string name="zap_the_devs_description">Tu donación nos ayuda a marcar la diferencia. ¡Cada sat cuenta!</string>
+    <string name="donate_now">Donar ahora</string>
+    <string name="brought_to_you_by">fue posible gracias a:</string>
+    <string name="this_version_brought_to_you_by">Esta versión fue posible gracias a:</string>
+    <string name="version_name">Versión %1$s</string>
+    <string name="thank_you">¡Gracias!</string>
+    <string name="max_limit">Límite máximo</string>
+    <string name="restricted_writes">Escrituras restringidas</string>
+    <string name="forked_from">Bifurcación de</string>
+    <string name="forked_tag">BIFURCACIÓN</string>
+    <string name="git_repository">Repositorio Git: %1$s</string>
+    <string name="git_web_address">Web:</string>
+    <string name="git_clone_address">Clon:</string>
+    <string name="existed_since">OTS: %1$s</string>
+    <string name="ots_info_title">Prueba de marca de tiempo</string>
+    <string name="ots_info_description">Hay prueba de que esta publicación se firmó en algún momento antes de %1$s. La prueba se marcó en la cadena de bloques de Bitcoin en esa fecha y hora.</string>
 </resources>
