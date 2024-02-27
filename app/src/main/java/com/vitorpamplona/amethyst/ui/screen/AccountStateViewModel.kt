@@ -85,8 +85,20 @@ class AccountStateViewModel() : ViewModel() {
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
     ) = withContext(Dispatchers.IO) {
-        val parsed = Nip19Bech32.uriToRoute(key)
-        val pubKeyParsed = parsed?.hex?.hexToByteArray()
+        val parsed = Nip19Bech32.uriToRoute(key)?.entity
+        val pubKeyParsed =
+            when (parsed) {
+                is Nip19Bech32.NSec -> null
+                is Nip19Bech32.NPub -> parsed.hex.hexToByteArray()
+                is Nip19Bech32.NProfile -> parsed.hex.hexToByteArray()
+                is Nip19Bech32.Note -> null
+                is Nip19Bech32.NEvent -> null
+                is Nip19Bech32.NEmbed -> null
+                is Nip19Bech32.NRelay -> null
+                is Nip19Bech32.NAddress -> null
+                else -> null
+            }
+
         val proxy = HttpClientManager.initProxy(useProxy, "127.0.0.1", proxyPort)
 
         if (loginWithExternalSigner && pubKeyParsed == null) {

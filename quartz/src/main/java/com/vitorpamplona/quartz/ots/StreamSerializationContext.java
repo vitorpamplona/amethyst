@@ -28,7 +28,7 @@ public class StreamSerializationContext {
     }
 
     public void writeBool(boolean value) {
-        if (value == true) {
+        if (value) {
             this.writeByte((byte) 0xff);
         } else {
             this.writeByte((byte) 0x00);
@@ -58,7 +58,7 @@ public class StreamSerializationContext {
     }
 
     public void writeByte(byte value) {
-        this.buffer.add(new Byte(value));
+        this.buffer.add(Byte.valueOf(value));
     }
 
     public void writeByte(Byte value) {
@@ -66,8 +66,8 @@ public class StreamSerializationContext {
     }
 
     public void writeBytes(byte[] value) {
-        for (int i = 0; i < value.length; i++) {
-            this.writeByte(value[i]);
+        for (byte b : value) {
+            this.writeByte(b);
         }
     }
 

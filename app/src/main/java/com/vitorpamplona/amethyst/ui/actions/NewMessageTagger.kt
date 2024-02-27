@@ -68,17 +68,23 @@ class NewMessageTagger(
             paragraph.split(' ').forEach { word: String ->
                 val results = parseDirtyWordForKey(word)
 
-                if (results?.key?.type == Nip19Bech32.Type.USER) {
-                    addUserToMentions(dao.getOrCreateUser(results.key.hex))
-                } else if (results?.key?.type == Nip19Bech32.Type.NOTE) {
-                    addNoteToReplyTos(dao.getOrCreateNote(results.key.hex))
-                } else if (results?.key?.type == Nip19Bech32.Type.EVENT) {
-                    addNoteToReplyTos(dao.getOrCreateNote(results.key.hex))
-                } else if (results?.key?.type == Nip19Bech32.Type.ADDRESS) {
-                    val note = dao.checkGetOrCreateAddressableNote(results.key.hex)
-                    if (note != null) {
-                        addNoteToReplyTos(note)
+                when (val entity = results?.key?.entity) {
+                    is Nip19Bech32.NPub -> addUserToMentions(dao.getOrCreateUser(entity.hex))
+                    is Nip19Bech32.NProfile -> addUserToMentions(dao.getOrCreateUser(entity.hex))
+
+                    is Nip19Bech32.Note -> addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
+                    is Nip19Bech32.NEvent -> addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
+                    is Nip19Bech32.NEmbed -> addNoteToReplyTos(dao.getOrCreateNote(entity.event.id))
+
+                    is Nip19Bech32.NAddress -> {
+                        val note = dao.checkGetOrCreateAddressableNote(entity.atag)
+                        if (note != null) {
+                            addNoteToReplyTos(note)
+                        }
                     }
+
+                    is Nip19Bech32.NSec -> {}
+                    is Nip19Bech32.NRelay -> {}
                 }
             }
         }
@@ -92,27 +98,45 @@ class NewMessageTagger(
                         .split(' ')
                         .map { word: String ->
                             val results = parseDirtyWordForKey(word)
-                            if (results?.key?.type == Nip19Bech32.Type.USER) {
-                                val user = dao.getOrCreateUser(results.key.hex)
+                            when (val entity = results?.key?.entity) {
+                                is Nip19Bech32.NPub -> {
+                                    getNostrAddress(dao.getOrCreateUser(entity.hex).pubkeyNpub(), results.restOfWord)
+                                }
+                                is Nip19Bech32.NProfile -> {
+                                    getNostrAddress(dao.getOrCreateUser(entity.hex).pubkeyNpub(), results.restOfWord)
+                                }
 
-                                getNostrAddress(user.pubkeyNpub(), results.restOfWord)
-                            } else if (results?.key?.type == Nip19Bech32.Type.NOTE) {
-                                val note = dao.getOrCreateNote(results.key.hex)
+                                is Nip19Bech32.Note -> {
+                                    getNostrAddress(dao.getOrCreateNote(entity.hex).toNEvent(), results.restOfWord)
+                                }
+                                is Nip19Bech32.NEvent -> {
+                                    getNostrAddress(dao.getOrCreateNote(entity.hex).toNEvent(), results.restOfWord)
+                                }
 
-                                getNostrAddress(note.toNEvent(), results.restOfWord)
-                            } else if (results?.key?.type == Nip19Bech32.Type.EVENT) {
-                                val note = dao.getOrCreateNote(results.key.hex)
+                                is Nip19Bech32.NAddress -> {
+                                    val note = dao.checkGetOrCreateAddressableNote(entity.atag)
+                                    if (note != null) {
+                                        getNostrAddress(note.idNote(), results.restOfWord)
+                                    } else {
+                                        word
+                                    }
+                                }
 
-                                getNostrAddress(note.toNEvent(), results.restOfWord)
-                            } else if (results?.key?.type == Nip19Bech32.Type.ADDRESS) {
-                                val note = dao.checkGetOrCreateAddressableNote(results.key.hex)
-                                if (note != null) {
-                                    getNostrAddress(note.idNote(), results.restOfWord)
-                                } else {
+                                is Nip19Bech32.NEmbed -> {
                                     word
                                 }
-                            } else {
-                                word
+
+                                is Nip19Bech32.NSec -> {
+                                    word
+                                }
+
+                                is Nip19Bech32.NRelay -> {
+                                    word
+                                }
+
+                                else -> {
+                                    word
+                                }
                             }
                         }
                         .joinToString(" ")
@@ -135,7 +159,7 @@ class NewMessageTagger(
         }
     }
 
-    @Immutable data class DirtyKeyInfo(val key: Nip19Bech32.Return, val restOfWord: String)
+    @Immutable data class DirtyKeyInfo(val key: Nip19Bech32.ParseReturn, val restOfWord: String)
 
     fun parseDirtyWordForKey(mightBeAKey: String): DirtyKeyInfo? {
         var key = mightBeAKey

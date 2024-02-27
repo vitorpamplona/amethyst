@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
+import com.vitorpamplona.quartz.encoders.decodePrivateKeyAsHexOrNull
 import com.vitorpamplona.quartz.encoders.decodePublicKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.LnZapEvent
@@ -165,14 +166,7 @@ class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
                         addedWSS
                     }
 
-            val unverifiedPrivKey = walletConnectSecret.text.ifBlank { null }
-            val privKeyHex =
-                try {
-                    unverifiedPrivKey?.let { decodePublicKey(it).toHexKey() }
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    null
-                }
+            val privKeyHex = walletConnectSecret.text.ifBlank { null }?.let { decodePrivateKeyAsHexOrNull(it) }
 
             if (pubkeyHex != null) {
                 account?.changeZapPaymentRequest(

@@ -22,9 +22,8 @@ package com.vitorpamplona.quartz
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.Bech32
 import com.vitorpamplona.quartz.encoders.Hex
-import com.vitorpamplona.quartz.encoders.bechToBytes
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FhirResourceEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
@@ -35,17 +34,13 @@ import junit.framework.TestCase.assertTrue
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.ByteArrayOutputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import java.util.zip.GZIPInputStream
-import java.util.zip.GZIPOutputStream
-import kotlin.time.measureTimedValue
 
 @RunWith(AndroidJUnit4::class)
 class NIP19EmbedTests {
     @Test
-    fun testEmbedEvent() {
+    fun testEmbedKind1Event() {
         val signer =
             NostrSignerInternal(
                 KeyPair(Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598")),
@@ -64,12 +59,11 @@ class NIP19EmbedTests {
 
         assertNotNull(textNote)
 
-        val bech32 = Bech32.encodeBytes(hrp = "n", textNote!!.toJson().toByteArray(Charsets.UTF_8), Bech32.Encoding.Bech32)
+        val bech32 = Nip19Bech32.createNEmbed(textNote!!)
 
         println(bech32)
 
-        val decoded = String(bech32.bechToBytes())
-        val decodedNote = Event.fromJson(decoded)
+        val decodedNote = (Nip19Bech32.uriToRoute(bech32)?.entity as Nip19Bech32.NEmbed).event
 
         assertTrue(decodedNote.hasValidSignature())
 
@@ -96,52 +90,19 @@ class NIP19EmbedTests {
 
         assertNotNull(eyeglassesPrescriptionEvent)
 
-        val bech32 = Bech32.encodeBytes(hrp = "nembed", eyeglassesPrescriptionEvent!!.toJson().toByteArray(Charsets.UTF_8), Bech32.Encoding.Bech32)
+        val bech32 = Nip19Bech32.createNEmbed(eyeglassesPrescriptionEvent!!)
 
         println(eyeglassesPrescriptionEvent!!.toJson())
         println(bech32)
 
-        val decoded = String(bech32.bechToBytes())
-        val decodedNote = Event.fromJson(decoded)
+        val decodedNote = (Nip19Bech32.uriToRoute(bech32)?.entity as Nip19Bech32.NEmbed).event
 
         assertTrue(decodedNote.hasValidSignature())
 
         assertEquals(eyeglassesPrescriptionEvent!!.toJson(), decodedNote.toJson())
     }
 
-    @Test
-    fun testVisionPrescriptionEmbedEventCompression() {
-        val signer =
-            NostrSignerInternal(
-                KeyPair(Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598")),
-            )
-
-        var eyeglassesPrescriptionEvent: Event? = null
-
-        val countDownLatch = CountDownLatch(1)
-
-        FhirResourceEvent.create(fhirPayload = visionPrescriptionFhir, signer = signer) {
-            eyeglassesPrescriptionEvent = it
-            countDownLatch.countDown()
-        }
-
-        Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
-
-        assertNotNull(eyeglassesPrescriptionEvent)
-
-        val bech32 = Bech32.encodeBytes(hrp = "nembed", gzip(eyeglassesPrescriptionEvent!!.toJson()), Bech32.Encoding.Bech32)
-
-        println(eyeglassesPrescriptionEvent!!.toJson())
-        println(bech32)
-
-        val decoded = ungzip(bech32.bechToBytes())
-        val decodedNote = Event.fromJson(decoded)
-
-        assertTrue(decodedNote.hasValidSignature())
-
-        assertEquals(eyeglassesPrescriptionEvent!!.toJson(), decodedNote.toJson())
-    }
-
+    /*
     @Test
     fun testCompressionSizes() {
         val signer =
@@ -167,24 +128,15 @@ class NIP19EmbedTests {
         Bech32.encodeBytes(hrp = "nembed", json.toByteArray(), Bech32.Encoding.Bech32)
         Bech32.encodeBytes(hrp = "nembed", gzip(json), Bech32.Encoding.Bech32)
 
-        val (bech32json, elapsedjson) = measureTimedValue { Bech32.encodeBytes(hrp = "nembed", json.toByteArray(), Bech32.Encoding.Bech32) }
-        val (bech32gzip, elapsedgzip) = measureTimedValue { Bech32.encodeBytes(hrp = "nembed", gzip(json), Bech32.Encoding.Bech32) }
+        val (bech32json, elapsedjson) = measureTimedValue { json.toByteArray().toNEmbed() }
+        val (bech32gzip, elapsedgzip) = measureTimedValue { gzip(json).toNEmbed() }
 
         println("Raw JSON ${json.length} chars")
         println("Bech32 JSON ${bech32json.length} chars in $elapsedjson")
         println("Bech32 GZIP ${bech32gzip.length} chars in $elapsedgzip")
 
         assertTrue(true)
-    }
+    }*/
 
     val visionPrescriptionFhir = "{\"resourceType\":\"VisionPrescription\",\"status\":\"active\",\"created\":\"2014-06-15\",\"patient\":{\"reference\":\"Patient/example\"},\"dateWritten\":\"2014-06-15\",\"prescriber\":{\"reference\":\"Practitioner/example\"},\"lensSpecification\":[{\"eye\":\"right\",\"sphere\":-2,\"prism\":[{\"amount\":0.5,\"base\":\"down\"}],\"add\":2},{\"eye\":\"left\",\"sphere\":-1,\"cylinder\":-0.5,\"axis\":180,\"prism\":[{\"amount\":0.5,\"base\":\"up\"}],\"add\":2}]}"
 }
-
-fun gzip(content: String): ByteArray {
-    val bos = ByteArrayOutputStream()
-    GZIPOutputStream(bos).bufferedWriter(Charsets.UTF_8).use { it.write(content) }
-    val array = bos.toByteArray()
-    return array
-}
-
-fun ungzip(content: ByteArray): String = GZIPInputStream(content.inputStream()).bufferedReader(Charsets.UTF_8).use { it.readText() }

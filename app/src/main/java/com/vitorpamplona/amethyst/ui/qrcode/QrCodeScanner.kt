@@ -29,28 +29,14 @@ import com.google.zxing.client.android.Intents
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
+import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.coroutines.CancellationException
 
 @Composable
 fun NIP19QrCodeScanner(onScan: (String?) -> Unit) {
     SimpleQrCodeScanner {
         try {
-            val nip19 = Nip19Bech32.uriToRoute(it)
-            val startingPage =
-                when (nip19?.type) {
-                    Nip19Bech32.Type.USER -> "User/${nip19.hex}"
-                    Nip19Bech32.Type.NOTE -> "Note/${nip19.hex}"
-                    Nip19Bech32.Type.EVENT -> "Event/${nip19.hex}"
-                    Nip19Bech32.Type.ADDRESS -> "Note/${nip19.hex}"
-                    else -> null
-                }
-
-            if (startingPage != null) {
-                onScan(startingPage)
-            } else {
-                onScan(null)
-            }
+            onScan(uriToRoute(it))
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
             Log.e("NIP19 Scanner", "Error parsing $it", e)

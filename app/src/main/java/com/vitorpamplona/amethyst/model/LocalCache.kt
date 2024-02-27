@@ -27,12 +27,10 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import com.vitorpamplona.quartz.encoders.ATag
-import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.HexValidator
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
+import com.vitorpamplona.quartz.encoders.decodeEventIdAsHexOrNull
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
-import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
@@ -1578,13 +1576,7 @@ object LocalCache {
     fun findNotesStartingWith(text: String): List<Note> {
         checkNotInMainThread()
 
-        val key =
-            try {
-                Nip19Bech32.uriToRoute(text)?.hex ?: Hex.decode(text).toHexKey()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                null
-            }
+        val key = decodeEventIdAsHexOrNull(text)
 
         if (key != null) {
             val note = getNoteIfExists(key)
@@ -1631,14 +1623,7 @@ object LocalCache {
     fun findChannelsStartingWith(text: String): List<Channel> {
         checkNotInMainThread()
 
-        val key =
-            try {
-                Nip19Bech32.uriToRoute(text)?.hex ?: Hex.decode(text).toHexKey()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                null
-            }
-
+        val key = decodeEventIdAsHexOrNull(text)
         if (key != null && channels[key] != null) {
             return listOfNotNull(channels[key])
         }

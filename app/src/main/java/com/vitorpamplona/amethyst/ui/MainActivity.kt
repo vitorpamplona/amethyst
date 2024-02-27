@@ -45,6 +45,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.adaptive.calculateDisplayFeatures
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
@@ -311,11 +312,12 @@ fun uriToRoute(uri: String?): String? {
         if (uri?.startsWith("nostr:Hashtag?id=") == true) {
             Route.Hashtag.route.replace("{id}", uri.removePrefix("nostr:Hashtag?id="))
         } else {
-            val nip19 = Nip19Bech32.uriToRoute(uri)
-            when (nip19?.type) {
-                Nip19Bech32.Type.USER -> "User/${nip19.hex}"
-                Nip19Bech32.Type.NOTE -> "Note/${nip19.hex}"
-                Nip19Bech32.Type.EVENT -> {
+            val nip19 = Nip19Bech32.uriToRoute(uri)?.entity
+            when (nip19) {
+                is Nip19Bech32.NPub -> "User/${nip19.hex}"
+                is Nip19Bech32.NProfile -> "User/${nip19.hex}"
+                is Nip19Bech32.Note -> "Note/${nip19.hex}"
+                is Nip19Bech32.NEvent -> {
                     if (nip19.kind == PrivateDmEvent.KIND) {
                         nip19.author?.let { "RoomByAuthor/$it" }
                     } else if (
@@ -328,14 +330,21 @@ fun uriToRoute(uri: String?): String? {
                         "Event/${nip19.hex}"
                     }
                 }
-                Nip19Bech32.Type.ADDRESS ->
+                is Nip19Bech32.NAddress -> {
                     if (nip19.kind == CommunityDefinitionEvent.KIND) {
-                        "Community/${nip19.hex}"
+                        "Community/${nip19.atag}"
                     } else if (nip19.kind == LiveActivitiesEvent.KIND) {
-                        "Channel/${nip19.hex}"
+                        "Channel/${nip19.atag}"
                     } else {
-                        "Event/${nip19.hex}"
+                        "Event/${nip19.atag}"
                     }
+                }
+                is Nip19Bech32.NEmbed -> {
+                    if (LocalCache.getNoteIfExists(nip19.event.id) == null) {
+                        LocalCache.verifyAndConsume(nip19.event, null)
+                    }
+                    "Event/${nip19.event.id}"
+                }
                 else -> null
             }
         }

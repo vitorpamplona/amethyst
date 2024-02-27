@@ -868,6 +868,22 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreateNote(key)) }
     }
 
+    fun checkGetOrCreateNote(
+        event: Event,
+        onResult: (Note?) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            var note = checkGetOrCreateNote(event.id)
+
+            if (note == null) {
+                LocalCache.verifyAndConsume(event, null)
+                note = checkGetOrCreateNote(event.id)
+            }
+
+            onResult(note)
+        }
+    }
+
     fun getNoteIfExists(hex: HexKey): Note? {
         return LocalCache.getNoteIfExists(hex)
     }
@@ -970,7 +986,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     fun returnNIP19References(
         content: String,
         tags: ImmutableListOfLists<String>?,
-        onNewReferences: (List<Nip19Bech32.Return>) -> Unit,
+        onNewReferences: (List<Nip19Bech32.Entity>) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             onNewReferences(MarkdownParser().returnNIP19References(content, tags))
@@ -987,17 +1003,32 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
-    fun parseNIP19(
+    suspend fun parseNIP19(
         str: String,
         onNote: (LoadedBechLink) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             Nip19Bech32.uriToRoute(str)?.let {
                 var returningNote: Note? = null
-                if (
-                    it.type == Nip19Bech32.Type.NOTE || it.type == Nip19Bech32.Type.EVENT || it.type == Nip19Bech32.Type.ADDRESS
-                ) {
-                    LocalCache.checkGetOrCreateNote(it.hex)?.let { note -> returningNote = note }
+
+                when (val parsed = it.entity) {
+                    is Nip19Bech32.NSec -> {}
+                    is Nip19Bech32.NPub -> {}
+                    is Nip19Bech32.NProfile -> {}
+                    is Nip19Bech32.Note -> LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note }
+                    is Nip19Bech32.NEvent -> LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note }
+                    is Nip19Bech32.NEmbed -> {
+                        if (LocalCache.getNoteIfExists(parsed.event.id) == null) {
+                            LocalCache.verifyAndConsume(parsed.event, null)
+                        }
+
+                        LocalCache.checkGetOrCreateNote(parsed.event.id)?.let { note ->
+                            returningNote = note
+                        }
+                    }
+                    is Nip19Bech32.NRelay -> {}
+                    is Nip19Bech32.NAddress -> LocalCache.checkGetOrCreateNote(parsed.atag)?.let { note -> returningNote = note }
+                    else -> {}
                 }
 
                 onNote(LoadedBechLink(returningNote, it))
@@ -1298,7 +1329,7 @@ class HasNotificationDot(bottomNavigationItems: ImmutableList<Route>) {
     }
 }
 
-@Immutable data class LoadedBechLink(val baseNote: Note?, val nip19: Nip19Bech32.Return)
+@Immutable data class LoadedBechLink(val baseNote: Note?, val nip19: Nip19Bech32.ParseReturn)
 
 public fun <T, K> allOrNothingSigningOperations(
     remainingTos: List<T>,

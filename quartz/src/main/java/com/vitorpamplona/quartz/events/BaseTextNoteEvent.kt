@@ -100,16 +100,18 @@ open class BaseTextNoteEvent(
 
         val matcher2 = nip19regex.matcher(content)
         while (matcher2.find()) {
-            val uriScheme = matcher2.group(1) // nostr:
             val type = matcher2.group(2) // npub1
             val key = matcher2.group(3) // bech32
             val additionalChars = matcher2.group(4) // additional chars
 
             try {
-                val parsed = Nip19Bech32.parseComponents(uriScheme, type, key, additionalChars)
+                val parsed = Nip19Bech32.parseComponents(type, key, additionalChars)?.entity
 
                 if (parsed != null) {
-                    if (parsed.type == Nip19Bech32.Type.USER) {
+                    if (parsed is Nip19Bech32.NProfile) {
+                        returningList.add(parsed.hex)
+                    }
+                    if (parsed is Nip19Bech32.NPub) {
                         returningList.add(parsed.hex)
                     }
                 }
@@ -145,16 +147,18 @@ open class BaseTextNoteEvent(
 
         val matcher2 = nip19regex.matcher(content)
         while (matcher2.find()) {
-            val uriScheme = matcher2.group(1) // nostr:
             val type = matcher2.group(2) // npub1
             val key = matcher2.group(3) // bech32
             val additionalChars = matcher2.group(4) // additional chars
 
-            val parsed = Nip19Bech32.parseComponents(uriScheme, type, key, additionalChars)
+            val parsed = Nip19Bech32.parseComponents(type, key, additionalChars)?.entity
 
             if (parsed != null) {
-                if (parsed.type == Nip19Bech32.Type.EVENT || parsed.type == Nip19Bech32.Type.ADDRESS || parsed.type == Nip19Bech32.Type.NOTE) {
-                    citations.add(parsed.hex)
+                when (parsed) {
+                    is Nip19Bech32.NEvent -> citations.add(parsed.hex)
+                    is Nip19Bech32.NAddress -> citations.add(parsed.atag)
+                    is Nip19Bech32.Note -> citations.add(parsed.hex)
+                    is Nip19Bech32.NEmbed -> citations.add(parsed.event.id)
                 }
             }
         }

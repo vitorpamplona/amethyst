@@ -48,17 +48,18 @@ class ContactListEvent(
 
     @delegate:Transient
     val verifiedFollowKeySet: Set<HexKey> by lazy {
-        tags
-            .filter { it.size > 1 && it[0] == "p" }
-            .mapNotNull {
-                try {
+        tags.mapNotNullTo(HashSet()) {
+            try {
+                if (it.size > 1 && it[0] == "p") {
                     decodePublicKey(it[1]).toHexKey()
-                } catch (e: Exception) {
-                    Log.w("ContactListEvent", "Can't parse tags as a follows: ${it[1]}", e)
+                } else {
                     null
                 }
+            } catch (e: Exception) {
+                Log.w("ContactListEvent", "Can't parse tags as a follows: ${it[1]}", e)
+                null
             }
-            .toSet()
+        }
     }
 
     @delegate:Transient
@@ -77,27 +78,29 @@ class ContactListEvent(
     @delegate:Transient
     val verifiedFollowKeySetAndMe: Set<HexKey> by lazy { verifiedFollowKeySet + pubKey }
 
-    fun unverifiedFollowKeySet() = tags.filter { it[0] == "p" }.mapNotNull { it.getOrNull(1) }
+    fun unverifiedFollowKeySet() = tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull { it.getOrNull(1) }
 
-    fun unverifiedFollowTagSet() = tags.filter { it[0] == "t" }.mapNotNull { it.getOrNull(1) }
+    fun unverifiedFollowTagSet() = tags.filter { it.size > 1 && it[0] == "t" }.mapNotNull { it.getOrNull(1) }
 
-    fun unverifiedFollowGeohashSet() = tags.filter { it[0] == "g" }.mapNotNull { it.getOrNull(1) }
+    fun unverifiedFollowGeohashSet() = tags.filter { it.size > 1 && it[0] == "g" }.mapNotNull { it.getOrNull(1) }
 
-    fun unverifiedFollowAddressSet() = tags.filter { it[0] == "a" }.mapNotNull { it.getOrNull(1) }
+    fun unverifiedFollowAddressSet() = tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull { it.getOrNull(1) }
 
     fun follows() =
-        tags
-            .filter { it[0] == "p" }
-            .mapNotNull {
-                try {
+        tags.mapNotNull {
+            try {
+                if (it.size > 1 && it[0] == "p") {
                     Contact(decodePublicKey(it[1]).toHexKey(), it.getOrNull(2))
-                } catch (e: Exception) {
-                    Log.w("ContactListEvent", "Can't parse tags as a follows: ${it[1]}", e)
+                } else {
                     null
                 }
+            } catch (e: Exception) {
+                Log.w("ContactListEvent", "Can't parse tags as a follows: ${it[1]}", e)
+                null
             }
+        }
 
-    fun followsTags() = tags.filter { it[0] == "t" }.mapNotNull { it.getOrNull(2) }
+    fun followsTags() = tags.filter { it.size > 1 && it[0] == "t" }.mapNotNull { it.getOrNull(1) }
 
     fun relays(): Map<String, ReadWrite>? =
         try {

@@ -77,10 +77,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
-import com.vitorpamplona.quartz.encoders.decodePublicKey
-import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -149,12 +147,9 @@ fun DisplayAccount(
 ) {
     var baseUser by remember {
         mutableStateOf<User?>(
-            LocalCache.getUserIfExists(
-                decodePublicKey(
-                    acc.npub,
-                )
-                    .toHexKey(),
-            ),
+            decodePublicKeyAsHexOrNull(acc.npub)?.let {
+                LocalCache.getUserIfExists(it)
+            },
         )
     }
 
@@ -162,13 +157,8 @@ fun DisplayAccount(
         LaunchedEffect(key1 = acc.npub) {
             launch(Dispatchers.IO) {
                 baseUser =
-                    try {
-                        LocalCache.getOrCreateUser(
-                            decodePublicKey(acc.npub).toHexKey(),
-                        )
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        null
+                    decodePublicKeyAsHexOrNull(acc.npub)?.let {
+                        LocalCache.getOrCreateUser(it)
                     }
             }
         }

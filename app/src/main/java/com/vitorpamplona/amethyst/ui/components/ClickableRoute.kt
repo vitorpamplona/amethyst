@@ -61,9 +61,11 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
@@ -72,45 +74,63 @@ import kotlinx.collections.immutable.ImmutableMap
 
 @Composable
 fun ClickableRoute(
-    nip19: Nip19Bech32.Return,
+    word: String,
+    nip19: Nip19Bech32.ParseReturn,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    when (nip19.type) {
-        Nip19Bech32.Type.USER -> {
-            DisplayUser(nip19, accountViewModel, nav)
+    when (val entity = nip19.entity) {
+        is Nip19Bech32.NPub -> DisplayUser(entity.hex, nip19.additionalChars, accountViewModel, nav)
+        is Nip19Bech32.NProfile -> DisplayUser(entity.hex, nip19.additionalChars, accountViewModel, nav)
+        is Nip19Bech32.Note -> DisplayEvent(entity.hex, null, nip19.additionalChars, accountViewModel, nav)
+        is Nip19Bech32.NEvent -> DisplayEvent(entity.hex, entity.kind, nip19.additionalChars, accountViewModel, nav)
+        is Nip19Bech32.NEmbed -> LoadAndDisplayEvent(entity.event, nip19.additionalChars, accountViewModel, nav)
+        is Nip19Bech32.NAddress -> DisplayAddress(entity, nip19.additionalChars, accountViewModel, nav)
+        is Nip19Bech32.NRelay -> {
+            Text(word)
         }
-        Nip19Bech32.Type.ADDRESS -> {
-            DisplayAddress(nip19, accountViewModel, nav)
-        }
-        Nip19Bech32.Type.NOTE -> {
-            DisplayNote(nip19, accountViewModel, nav)
-        }
-        Nip19Bech32.Type.EVENT -> {
-            DisplayEvent(nip19, accountViewModel, nav)
+        is Nip19Bech32.NSec -> {
+            Text(word)
         }
         else -> {
-            Text(
-                remember { "@${nip19.hex}${nip19.additionalChars}" },
-            )
+            Text(word)
         }
     }
 }
 
 @Composable
-private fun DisplayEvent(
-    nip19: Nip19Bech32.Return,
+fun LoadOrCreateNote(
+    event: Event,
+    accountViewModel: AccountViewModel,
+    content: @Composable (Note?) -> Unit,
+) {
+    var note by
+        remember(event.id) { mutableStateOf<Note?>(accountViewModel.getNoteIfExists(event.id)) }
+
+    if (note == null) {
+        LaunchedEffect(key1 = event.id) {
+            accountViewModel.checkGetOrCreateNote(event) { note = it }
+        }
+    }
+
+    content(note)
+}
+
+@Composable
+private fun LoadAndDisplayEvent(
+    event: Event,
+    additionalChars: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    LoadNote(nip19.hex, accountViewModel) {
+    LoadOrCreateNote(event, accountViewModel) {
         if (it != null) {
-            DisplayNoteLink(it, nip19, accountViewModel, nav)
+            DisplayNoteLink(it, event.id, event.kind, additionalChars, accountViewModel, nav)
         } else {
             CreateClickableText(
-                clickablePart = remember(nip19) { "@${nip19.hex.toShortenHex()}" },
-                suffix = nip19.additionalChars,
-                route = remember(nip19) { "Event/${nip19.hex}" },
+                clickablePart = remember(event.id) { "@${event.toNIP19()}" },
+                suffix = additionalChars,
+                route = remember(event.id) { "Event/${event.id}" },
                 nav = nav,
             )
         }
@@ -118,19 +138,21 @@ private fun DisplayEvent(
 }
 
 @Composable
-private fun DisplayNote(
-    nip19: Nip19Bech32.Return,
+private fun DisplayEvent(
+    hex: HexKey,
+    kind: Int?,
+    additionalChars: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    LoadNote(nip19.hex, accountViewModel = accountViewModel) {
+    LoadNote(hex, accountViewModel) {
         if (it != null) {
-            DisplayNoteLink(it, nip19, accountViewModel, nav)
+            DisplayNoteLink(it, hex, kind, additionalChars, accountViewModel, nav)
         } else {
             CreateClickableText(
-                clickablePart = remember(nip19) { "@${nip19.hex.toShortenHex()}" },
-                suffix = nip19.additionalChars,
-                route = remember(nip19) { "Event/${nip19.hex}" },
+                clickablePart = remember(hex) { "@${hex.toShortenHex()}" },
+                suffix = additionalChars,
+                route = remember(hex) { "Event/$hex" },
                 nav = nav,
             )
         }
@@ -140,7 +162,9 @@ private fun DisplayNote(
 @Composable
 private fun DisplayNoteLink(
     it: Note,
-    nip19: Nip19Bech32.Return,
+    hex: HexKey,
+    kind: Int?,
+    addedCharts: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -150,21 +174,20 @@ private fun DisplayNoteLink(
 
     val channelHex = remember(noteState) { note.channelHex() }
     val noteIdDisplayNote = remember(noteState) { "@${note.idDisplayNote()}" }
-    val addedCharts = nip19.additionalChars
 
-    if (note.event is ChannelCreateEvent || nip19.kind == ChannelCreateEvent.KIND) {
+    if (note.event is ChannelCreateEvent || kind == ChannelCreateEvent.KIND) {
         CreateClickableText(
             clickablePart = noteIdDisplayNote,
             suffix = addedCharts,
-            route = remember(noteState) { "Channel/${nip19.hex}" },
+            route = remember(noteState) { "Channel/$hex" },
             nav = nav,
         )
-    } else if (note.event is PrivateDmEvent || nip19.kind == PrivateDmEvent.KIND) {
+    } else if (note.event is PrivateDmEvent || kind == PrivateDmEvent.KIND) {
         CreateClickableText(
             clickablePart = noteIdDisplayNote,
             suffix = addedCharts,
             route =
-                remember(noteState) { (note.author?.pubkeyHex ?: nip19.hex).let { "RoomByAuthor/$it" } },
+                remember(noteState) { (note.author?.pubkeyHex ?: hex).let { "RoomByAuthor/$it" } },
             nav = nav,
         )
     } else if (channelHex != null) {
@@ -186,7 +209,7 @@ private fun DisplayNoteLink(
         CreateClickableText(
             clickablePart = noteIdDisplayNote,
             suffix = addedCharts,
-            route = remember(noteState) { "Event/${nip19.hex}" },
+            route = remember(noteState) { "Event/$hex" },
             nav = nav,
         )
     }
@@ -194,27 +217,28 @@ private fun DisplayNoteLink(
 
 @Composable
 private fun DisplayAddress(
-    nip19: Nip19Bech32.Return,
+    nip19: Nip19Bech32.NAddress,
+    additionalChars: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    var noteBase by remember(nip19) { mutableStateOf(accountViewModel.getNoteIfExists(nip19.hex)) }
+    var noteBase by remember(nip19) { mutableStateOf(accountViewModel.getNoteIfExists(nip19.atag)) }
 
     if (noteBase == null) {
-        LaunchedEffect(key1 = nip19.hex) {
-            accountViewModel.checkGetOrCreateAddressableNote(nip19.hex) { noteBase = it }
+        LaunchedEffect(key1 = nip19.atag) {
+            accountViewModel.checkGetOrCreateAddressableNote(nip19.atag) { noteBase = it }
         }
     }
 
     noteBase?.let {
         val noteState by it.live().metadata.observeAsState()
 
-        val route = remember(noteState) { "Note/${nip19.hex}" }
+        val route = remember(noteState) { "Note/${nip19.atag}" }
         val displayName = remember(noteState) { "@${noteState?.note?.idDisplayNote()}" }
 
         CreateClickableText(
             clickablePart = displayName,
-            suffix = nip19.additionalChars,
+            suffix = additionalChars,
             route = route,
             nav = nav,
         )
@@ -222,35 +246,36 @@ private fun DisplayAddress(
 
     if (noteBase == null) {
         Text(
-            remember { "@${nip19.hex}${nip19.additionalChars}" },
+            remember { "@${nip19.atag}$additionalChars" },
         )
     }
 }
 
 @Composable
 private fun DisplayUser(
-    nip19: Nip19Bech32.Return,
+    userHex: HexKey,
+    additionalChars: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     var userBase by
-        remember(nip19) {
+        remember(userHex) {
             mutableStateOf(
-                accountViewModel.getUserIfExists(nip19.hex),
+                accountViewModel.getUserIfExists(userHex),
             )
         }
 
     if (userBase == null) {
-        LaunchedEffect(key1 = nip19.hex) {
-            accountViewModel.checkGetOrCreateUser(nip19.hex) { userBase = it }
+        LaunchedEffect(key1 = userHex) {
+            accountViewModel.checkGetOrCreateUser(userHex) { userBase = it }
         }
     }
 
-    userBase?.let { RenderUserAsClickableText(it, nip19, nav) }
+    userBase?.let { RenderUserAsClickableText(it, additionalChars, nav) }
 
     if (userBase == null) {
         Text(
-            remember { "@${nip19.hex}${nip19.additionalChars}" },
+            remember { "@${userHex}$additionalChars" },
         )
     }
 }
@@ -258,7 +283,7 @@ private fun DisplayUser(
 @Composable
 private fun RenderUserAsClickableText(
     baseUser: User,
-    nip19: Nip19Bech32.Return,
+    additionalChars: String,
     nav: (String) -> Unit,
 ) {
     val userState by baseUser.live().metadata.observeAsState()
@@ -281,7 +306,7 @@ private fun RenderUserAsClickableText(
             tags = userTags,
         )
 
-        nip19.additionalChars.ifBlank { null }?.let {
+        additionalChars.ifBlank { null }?.let {
             Text(text = it, maxLines = 1)
         }
     }

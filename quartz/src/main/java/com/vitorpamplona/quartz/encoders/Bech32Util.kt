@@ -271,18 +271,6 @@ object Bech32 {
     }
 }
 
-fun ByteArray.toNsec() = Bech32.encodeBytes(hrp = "nsec", this, Bech32.Encoding.Bech32)
-
-fun ByteArray.toNpub() = Bech32.encodeBytes(hrp = "npub", this, Bech32.Encoding.Bech32)
-
-fun ByteArray.toNote() = Bech32.encodeBytes(hrp = "note", this, Bech32.Encoding.Bech32)
-
-fun ByteArray.toNEvent() = Bech32.encodeBytes(hrp = "nevent", this, Bech32.Encoding.Bech32)
-
-fun ByteArray.toNAddress() = Bech32.encodeBytes(hrp = "naddr", this, Bech32.Encoding.Bech32)
-
-fun ByteArray.toLnUrl() = Bech32.encodeBytes(hrp = "lnurl", this, Bech32.Encoding.Bech32)
-
 fun String.bechToBytes(hrp: String? = null): ByteArray {
     val decodedForm = Bech32.decodeBytes(this)
     hrp?.also {

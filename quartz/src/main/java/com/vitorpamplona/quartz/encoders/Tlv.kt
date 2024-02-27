@@ -94,6 +94,8 @@ class Tlv(val data: Map<Byte, List<ByteArray>>) {
 
     fun firstAsString(type: Byte) = data[type]?.firstOrNull()?.toString(Charsets.UTF_8)
 
+    fun asStringList(type: Byte) = data[type]?.map { it.toString(Charsets.UTF_8) }
+
     companion object {
         fun parse(data: ByteArray): Tlv {
             val result = mutableMapOf<Byte, MutableList<ByteArray>>()
