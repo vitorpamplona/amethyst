@@ -112,7 +112,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
             event.pubKey != acc.userProfile().pubkeyHex
         ) { // from the user
 
-            val chatNote = LocalCache.notes[event.id] ?: return
+            val chatNote = LocalCache.getNoteIfExists(event.id) ?: return
             val chatRoom = event.chatroomKey(acc.keyPair.pubKey.toHexKey())
 
             val followingKeySet = acc.followingKeySet()
@@ -145,7 +145,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         event: PrivateDmEvent,
         acc: Account,
     ) {
-        val note = LocalCache.notes[event.id] ?: return
+        val note = LocalCache.getNoteIfExists(event.id) ?: return
 
         // old event being re-broadcast
         if (event.createdAt < TimeUtils.fiveMinutesAgo()) return
@@ -184,7 +184,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         event: LnZapEvent,
         acc: Account,
     ) {
-        val noteZapEvent = LocalCache.notes[event.id] ?: return
+        val noteZapEvent = LocalCache.getNoteIfExists(event.id) ?: return
 
         // old event being re-broadcast
         if (event.createdAt < TimeUtils.fiveMinutesAgo()) return

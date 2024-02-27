@@ -207,6 +207,8 @@ open class Event(
 
     override fun isExpired() = (expiration() ?: Long.MAX_VALUE) < TimeUtils.now()
 
+    override fun isExpirationBefore(time: Long) = (expiration() ?: Long.MAX_VALUE) < time
+
     override fun getTagOfAddressableKind(kind: Int): ATag? {
         val kindStr = kind.toString()
         val aTag =

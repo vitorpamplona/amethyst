@@ -1202,7 +1202,7 @@ class Account(
         Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent, null)
 
-        return LocalCache.notes[signedEvent.id]
+        return LocalCache.getNoteIfExists(signedEvent.id)
     }
 
     fun consumeNip95(
@@ -1212,7 +1212,7 @@ class Account(
         LocalCache.consume(data, null)
         LocalCache.consume(signedEvent, null)
 
-        return LocalCache.notes[signedEvent.id]
+        return LocalCache.getNoteIfExists(signedEvent.id)
     }
 
     fun sendNip95(
@@ -1232,7 +1232,7 @@ class Account(
         Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent, null)
 
-        LocalCache.notes[signedEvent.id]?.let { onReady(it) }
+        LocalCache.getNoteIfExists(signedEvent.id)?.let { onReady(it) }
     }
 
     fun createHeader(

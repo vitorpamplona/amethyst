@@ -66,19 +66,19 @@ class MarkdownParser {
 
     private fun getDisplayNameFromNip19(nip19: Nip19Bech32.Return): Pair<String, String>? {
         if (nip19.type == Nip19Bech32.Type.USER) {
-            LocalCache.users[nip19.hex]?.let {
+            LocalCache.getUserIfExists(nip19.hex)?.let {
                 return Pair(it.toBestDisplayName(), it.pubkeyNpub())
             }
         } else if (nip19.type == Nip19Bech32.Type.NOTE) {
-            LocalCache.notes[nip19.hex]?.let {
+            LocalCache.getNoteIfExists(nip19.hex)?.let {
                 return Pair(it.idDisplayNote(), it.toNEvent())
             }
         } else if (nip19.type == Nip19Bech32.Type.ADDRESS) {
-            LocalCache.addressables[nip19.hex]?.let {
+            LocalCache.getAddressableNoteIfExists(nip19.hex)?.let {
                 return Pair(it.idDisplayNote(), it.toNEvent())
             }
         } else if (nip19.type == Nip19Bech32.Type.EVENT) {
-            LocalCache.notes[nip19.hex]?.let {
+            LocalCache.getNoteIfExists(nip19.hex)?.let {
                 return Pair(it.idDisplayNote(), it.toNEvent())
             }
         }

@@ -139,10 +139,10 @@ class User(val pubkeyHex: String) {
         // Update Followers of the past user list
         // Update Followers of the new contact list
         (oldContactListEvent)?.unverifiedFollowKeySet()?.forEach {
-            LocalCache.users[it]?.liveSet?.innerFollowers?.invalidateData()
+            LocalCache.getUserIfExists(it)?.liveSet?.innerFollowers?.invalidateData()
         }
         (latestContactList)?.unverifiedFollowKeySet()?.forEach {
-            LocalCache.users[it]?.liveSet?.innerFollowers?.invalidateData()
+            LocalCache.getUserIfExists(it)?.liveSet?.innerFollowers?.invalidateData()
         }
 
         liveSet?.innerRelays?.invalidateData()
@@ -363,7 +363,7 @@ class User(val pubkeyHex: String) {
     }
 
     suspend fun transientFollowerCount(): Int {
-        return LocalCache.users.count { it.value.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
+        return LocalCache.userListCache.count { it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
     }
 
     fun cachedFollowingKeySet(): Set<HexKey> {
@@ -387,7 +387,7 @@ class User(val pubkeyHex: String) {
     }
 
     suspend fun cachedFollowerCount(): Int {
-        return LocalCache.users.count { it.value.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
+        return LocalCache.userListCache.count { it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
     }
 
     fun hasSentMessagesTo(key: ChatroomKey?): Boolean {

@@ -33,7 +33,7 @@ class CommunityFeedFilter(val note: AddressableNote, val account: Account) :
     }
 
     override fun feed(): List<Note> {
-        return sort(innerApplyFilter(LocalCache.notes.values))
+        return sort(innerApplyFilter(LocalCache.noteListCache))
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {

@@ -33,11 +33,14 @@ class Lud06 {
             val url = toLnUrlp(str)
 
             val matcher = LNURLP_PATTERN.matcher(url)
-            matcher.find()
-            val domain = matcher.group(2)
-            val username = matcher.group(3)
+            if (matcher.find()) {
+                val domain = matcher.group(2)
+                val username = matcher.group(3)
 
-            "$username@$domain"
+                "$username@$domain"
+            } else {
+                null
+            }
         } catch (t: Throwable) {
             t.printStackTrace()
             Log.w("Lud06ToLud16", "Fail to convert LUD06 to LUD16", t)

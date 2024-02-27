@@ -30,7 +30,7 @@ class UserProfileFollowersFeedFilter(val user: User, val account: Account) : Fee
     }
 
     override fun feed(): List<User> {
-        return LocalCache.users.values.filter { it.isFollowing(user) && !account.isHidden(it) }
+        return LocalCache.userListCache.filter { it.isFollowing(user) && !account.isHidden(it) }
     }
 
     override fun limit() = 400

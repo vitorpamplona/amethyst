@@ -137,5 +137,7 @@ interface EventInterface {
 
     fun isExpired(): Boolean
 
+    fun isExpirationBefore(time: Long): Boolean
+
     fun hasZapSplitSetup(): Boolean
 }

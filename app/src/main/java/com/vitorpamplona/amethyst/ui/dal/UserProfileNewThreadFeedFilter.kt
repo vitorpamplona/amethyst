@@ -41,7 +41,7 @@ class UserProfileNewThreadFeedFilter(val user: User, val account: Account) :
     }
 
     override fun feed(): List<Note> {
-        val notes = innerApplyFilter(LocalCache.notes.values)
+        val notes = innerApplyFilter(LocalCache.noteListCache)
         val longFormNotes = innerApplyFilter(LocalCache.addressables.values)
 
         return sort(notes + longFormNotes)

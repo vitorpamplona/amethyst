@@ -102,6 +102,7 @@ import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
@@ -118,17 +119,30 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.measureTimedValue
 
 object LocalCache {
     val antiSpam = AntiSpamFilter()
 
-    val users = ConcurrentHashMap<HexKey, User>(5000)
-    val notes = ConcurrentHashMap<HexKey, Note>(5000)
+    private val users = ConcurrentHashMap<HexKey, User>(5000)
+    private val notes = ConcurrentHashMap<HexKey, Note>(5000)
     val channels = ConcurrentHashMap<HexKey, Channel>()
     val addressables = ConcurrentHashMap<String, AddressableNote>(100)
 
     val awaitingPaymentRequests =
         ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
+
+    var noteListCache: List<Note> = emptyList()
+    var userListCache: List<User> = emptyList()
+
+    fun updateListCache() {
+        val (value, elapsed) =
+            measureTimedValue {
+                noteListCache = ArrayList(notes.values)
+                userListCache = ArrayList(users.values)
+            }
+        Log.d("LocalCache", "UpdateListCache $elapsed")
+    }
 
     fun checkGetOrCreateUser(key: String): User? {
         // checkNotInMainThread()
@@ -910,7 +924,7 @@ object LocalCache {
 
         event
             .deleteEvents()
-            .mapNotNull { notes[it] }
+            .mapNotNull { getNoteIfExists(it) }
             .forEach { deleteNote ->
                 // must be the same author
                 if (deleteNote.author?.pubkeyHex == event.pubKey) {
@@ -1547,11 +1561,14 @@ object LocalCache {
 
         val key = decodePublicKeyAsHexOrNull(username)
 
-        if (key != null && users[key] != null) {
-            return listOfNotNull(users[key])
+        if (key != null) {
+            val user = getUserIfExists(key)
+            if (user != null) {
+                return listOfNotNull(user)
+            }
         }
 
-        return users.values.filter {
+        return userListCache.filter {
             (it.anyNameStartsWith(username)) ||
                 it.pubkeyHex.startsWith(username, true) ||
                 it.pubkeyNpub().startsWith(username, true)
@@ -1569,11 +1586,14 @@ object LocalCache {
                 null
             }
 
-        if (key != null && (notes[key] ?: addressables[key]) != null) {
-            return listOfNotNull(notes[key] ?: addressables[key])
+        if (key != null) {
+            val note = getNoteIfExists(key)
+            if (note != null) {
+                return listOfNotNull(note)
+            }
         }
 
-        return notes.values.filter {
+        return noteListCache.filter {
             (
                 it.event !is GenericRepostEvent &&
                     it.event !is RepostEvent &&
@@ -1652,28 +1672,29 @@ object LocalCache {
     suspend fun findEarliestOtsForNote(note: Note): Long? {
         checkNotInMainThread()
 
-        val validOts =
-            notes
-                .mapNotNull {
-                    val noteEvent = it.value.event
-                    if ((noteEvent is OtsEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpired())) {
-                        noteEvent.verifiedTime
-                    } else {
-                        null
+        var minTime: Long? = null
+        val time = TimeUtils.now()
+
+        noteListCache.forEach { item ->
+            val noteEvent = item.event
+            if ((noteEvent is OtsEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time))) {
+                noteEvent.verifiedTime?.let { stampedTime ->
+                    if (minTime == null || stampedTime < (minTime ?: Long.MAX_VALUE)) {
+                        minTime = stampedTime
                     }
                 }
+            }
+        }
 
-        if (validOts.isEmpty()) return null
-
-        return validOts.minBy { it }
+        return minTime
     }
 
     fun cleanObservers() {
-        notes.forEach { it.value.clearLive() }
+        noteListCache.forEach { it.clearLive() }
 
         addressables.forEach { it.value.clearLive() }
 
-        users.forEach { it.value.clearLive() }
+        userListCache.forEach { it.clearLive() }
     }
 
     fun pruneOldAndHiddenMessages(account: Account) {
@@ -1699,8 +1720,8 @@ object LocalCache {
             }
         }
 
-        users.forEach { userPair ->
-            userPair.value.privateChatrooms.values.map {
+        userListCache.forEach { userPair ->
+            userPair.privateChatrooms.values.map {
                 val toBeRemoved = it.pruneMessagesToTheLatestOnly()
 
                 val childrenToBeRemoved = mutableListOf<Note>()
@@ -1715,7 +1736,7 @@ object LocalCache {
 
                 if (toBeRemoved.size > 1) {
                     println(
-                        "PRUNE: ${toBeRemoved.size} private messages with ${userPair.value.toBestDisplayName()} removed. ${it.roomMessages.size} kept",
+                        "PRUNE: ${toBeRemoved.size} private messages with ${userPair.toBestDisplayName()} removed. ${it.roomMessages.size} kept",
                     )
                 }
             }
@@ -1724,9 +1745,9 @@ object LocalCache {
 
     fun prunePastVersionsOfReplaceables() {
         val toBeRemoved =
-            notes
+            noteListCache
                 .filter {
-                    val noteEvent = it.value.event
+                    val noteEvent = it.event
                     if (noteEvent is AddressableEvent) {
                         noteEvent.createdAt() <
                             (addressables[noteEvent.address().toTag()]?.event?.createdAt() ?: 0)
@@ -1734,7 +1755,6 @@ object LocalCache {
                         false
                     }
                 }
-                .values
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
@@ -1759,24 +1779,23 @@ object LocalCache {
         checkNotInMainThread()
 
         val toBeRemoved =
-            notes
+            noteListCache
                 .filter {
                     (
-                        (it.value.event is TextNoteEvent && !it.value.isNewThread()) ||
-                            it.value.event is ReactionEvent ||
-                            it.value.event is LnZapEvent ||
-                            it.value.event is LnZapRequestEvent ||
-                            it.value.event is ReportEvent ||
-                            it.value.event is GenericRepostEvent
+                        (it.event is TextNoteEvent && !it.isNewThread()) ||
+                            it.event is ReactionEvent ||
+                            it.event is LnZapEvent ||
+                            it.event is LnZapRequestEvent ||
+                            it.event is ReportEvent ||
+                            it.event is GenericRepostEvent
                     ) &&
-                        it.value.replyTo?.any { it.liveSet?.isInUse() == true } != true &&
-                        it.value.liveSet?.isInUse() != true && // don't delete if observing.
-                        it.value.author?.pubkeyHex !in
+                        it.replyTo?.any { it.liveSet?.isInUse() == true } != true &&
+                        it.liveSet?.isInUse() != true && // don't delete if observing.
+                        it.author?.pubkeyHex !in
                         accounts && // don't delete if it is the logged in account
-                        it.value.event?.isTaggedUsers(accounts) !=
+                        it.event?.isTaggedUsers(accounts) !=
                         true // don't delete if it's a notification to the logged in user
                 }
-                .values
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
@@ -1842,7 +1861,8 @@ object LocalCache {
     fun pruneExpiredEvents() {
         checkNotInMainThread()
 
-        val toBeRemoved = notes.filter { it.value.event?.isExpired() == true }.values
+        val now = TimeUtils.now()
+        val toBeRemoved = noteListCache.filter { it.event?.isExpirationBefore(now) == true }
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
@@ -1868,7 +1888,7 @@ object LocalCache {
                 ?.hiddenUsers
                 ?.map { userHex ->
                     (
-                        notes.values.filter { it.event?.pubKey() == userHex } +
+                        noteListCache.filter { it.event?.pubKey() == userHex } +
                             addressables.values.filter { it.event?.pubKey() == userHex }
                     )
                         .toSet()
@@ -1890,7 +1910,7 @@ object LocalCache {
         checkNotInMainThread()
 
         var removingContactList = 0
-        users.values.forEach {
+        userListCache.forEach {
             if (
                 it.pubkeyHex !in loggedIn &&
                 (it.liveSet == null || it.liveSet?.isInUse() == false) &&
@@ -2044,6 +2064,10 @@ class LocalCacheLiveData {
     private val bundler = BundledInsert<Note>(1000, Dispatchers.IO)
 
     fun invalidateData(newNote: Note) {
-        bundler.invalidateList(newNote) { bundledNewNotes -> _newEventBundles.emit(bundledNewNotes) }
+        bundler.invalidateList(newNote) {
+                bundledNewNotes ->
+            _newEventBundles.emit(bundledNewNotes)
+            LocalCache.updateListCache()
+        }
     }
 }

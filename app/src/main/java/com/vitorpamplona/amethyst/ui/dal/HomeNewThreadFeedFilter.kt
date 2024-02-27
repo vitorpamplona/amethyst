@@ -50,7 +50,7 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
     }
 
     override fun feed(): List<Note> {
-        val notes = innerApplyFilter(LocalCache.notes.values, true)
+        val notes = innerApplyFilter(LocalCache.noteListCache, true)
         val longFormNotes = innerApplyFilter(LocalCache.addressables.values, false)
 
         return sort(notes + longFormNotes)

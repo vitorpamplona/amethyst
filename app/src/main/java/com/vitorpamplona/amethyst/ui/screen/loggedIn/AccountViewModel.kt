@@ -96,6 +96,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 import kotlin.coroutines.resume
@@ -897,18 +898,22 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         return LocalCache.addressables[key]
     }
 
-    fun findStatusesForUser(
+    suspend fun findStatusesForUser(
         myUser: User,
         onResult: (ImmutableList<AddressableNote>) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) { onResult(LocalCache.findStatusesForUser(myUser)) }
+        withContext(Dispatchers.IO) {
+            onResult(LocalCache.findStatusesForUser(myUser))
+        }
     }
 
-    fun findOtsEventsForNote(
+    suspend fun findOtsEventsForNote(
         note: Note,
         onResult: (Long?) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) { onResult(LocalCache.findEarliestOtsForNote(note)) }
+        withContext(Dispatchers.IO) {
+            onResult(LocalCache.findEarliestOtsForNote(note))
+        }
     }
 
     private suspend fun checkGetOrCreateChannel(key: HexKey): Channel? {
