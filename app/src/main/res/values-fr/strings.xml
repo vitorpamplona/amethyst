@@ -16,6 +16,7 @@
     <string name="spam">Spam</string>
     <string name="impersonation">Falsification d\'identité</string>
     <string name="illegal_behavior">Comportement illégal</string>
+    <string name="other">Autre</string>
     <string name="unknown">inconnu</string>
     <string name="relay_icon">Icône de relais</string>
     <string name="unknown_author">Auteur inconnu</string>
@@ -23,6 +24,9 @@
     <string name="copy_user_pubkey">Copier la clé publique de l\'utilisateur</string>
     <string name="copy_note_id">Copier l\'ID de la note</string>
     <string name="broadcast">Diffuser</string>
+    <string name="timestamp_it">Horodater</string>
+    <string name="timestamp_pending">Horodatage : Confirmations en attente</string>
+    <string name="timestamp_pending_short">OTS : En attente</string>
     <string name="request_deletion">Demande de suppression</string>
     <string name="block_report">Bloquer / Signaler</string>
     <string name="block_hide_user"><![CDATA[Bloquer et cacher l\'utilisateur]]></string>
@@ -44,6 +48,7 @@
     <string name="boost">Boost</string>
     <string name="boosted">boosté</string>
     <string name="quote">Citation</string>
+    <string name="fork">Fork</string>
     <string name="new_amount_in_sats">Nouveau montant en Sats</string>
     <string name="add">Ajouter</string>
     <string name="replying_to">"répondre à "</string>
@@ -658,7 +663,9 @@
     <string name="max_limit">Limite maximale</string>
     <string name="restricted_writes">Écritures limitées</string>
     <string name="forked_from">Forké depuis</string>
+    <string name="forked_tag">FORK</string>
     <string name="git_repository">Dépôt Git : %1$s</string>
     <string name="git_web_address">Web :</string>
     <string name="git_clone_address">Clone :</string>
+    <string name="existed_since">OTS: %1$s</string>
 </resources>
