@@ -44,6 +44,7 @@
     <string name="boost">Zvýšení</string>
     <string name="boosted">zvýšeno</string>
     <string name="quote">Citovat</string>
+    <string name="fork">Rozštěpení</string>
     <string name="new_amount_in_sats">Nová částka v sats</string>
     <string name="add">Přidat</string>
     <string name="replying_to">"odpovídá na "</string>
@@ -656,6 +657,7 @@
     <string name="max_limit">Maximální limit</string>
     <string name="restricted_writes">Omezené zápisy</string>
     <string name="forked_from">Rozštěpováno od</string>
+    <string name="forked_tag">FORK</string>
     <string name="git_repository">Git repositář: %1$s</string>
     <string name="git_web_address">Internet:</string>
     <string name="git_clone_address">Klon:</string>
