@@ -102,6 +102,38 @@ class NIP19EmbedTests {
         assertEquals(eyeglassesPrescriptionEvent!!.toJson(), decodedNote.toJson())
     }
 
+    @Test
+    fun testVisionPrescriptionBundleEmbedEvent() {
+        val signer =
+            NostrSignerInternal(
+                KeyPair(Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598")),
+            )
+
+        var eyeglassesPrescriptionEvent: Event? = null
+
+        val countDownLatch = CountDownLatch(1)
+
+        FhirResourceEvent.create(fhirPayload = visionPrescriptionBundle, signer = signer) {
+            eyeglassesPrescriptionEvent = it
+            countDownLatch.countDown()
+        }
+
+        Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+
+        assertNotNull(eyeglassesPrescriptionEvent)
+
+        val bech32 = Nip19Bech32.createNEmbed(eyeglassesPrescriptionEvent!!)
+
+        println(eyeglassesPrescriptionEvent!!.toJson())
+        println(bech32)
+
+        val decodedNote = (Nip19Bech32.uriToRoute(bech32)?.entity as Nip19Bech32.NEmbed).event
+
+        assertTrue(decodedNote.hasValidSignature())
+
+        assertEquals(eyeglassesPrescriptionEvent!!.toJson(), decodedNote.toJson())
+    }
+
     /*
     @Test
     fun testCompressionSizes() {
@@ -138,5 +170,6 @@ class NIP19EmbedTests {
         assertTrue(true)
     }*/
 
-    val visionPrescriptionFhir = "{\"resourceType\":\"VisionPrescription\",\"status\":\"active\",\"created\":\"2014-06-15\",\"patient\":{\"reference\":\"Patient/example\"},\"dateWritten\":\"2014-06-15\",\"prescriber\":{\"reference\":\"Practitioner/example\"},\"lensSpecification\":[{\"eye\":\"right\",\"sphere\":-2,\"prism\":[{\"amount\":0.5,\"base\":\"down\"}],\"add\":2},{\"eye\":\"left\",\"sphere\":-1,\"cylinder\":-0.5,\"axis\":180,\"prism\":[{\"amount\":0.5,\"base\":\"up\"}],\"add\":2}]}"
+    val visionPrescriptionFhir = "{\"resourceType\":\"VisionPrescription\",\"status\":\"active\",\"created\":\"2014-06-15\",\"patient\":{\"reference\":\"Patient/Donald Duck\"},\"dateWritten\":\"2014-06-15\",\"prescriber\":{\"reference\":\"Practitioner/Adam Careful\"},\"lensSpecification\":[{\"eye\":\"right\",\"sphere\":-2,\"prism\":[{\"amount\":0.5,\"base\":\"down\"}],\"add\":2},{\"eye\":\"left\",\"sphere\":-1,\"cylinder\":-0.5,\"axis\":180,\"prism\":[{\"amount\":0.5,\"base\":\"up\"}],\"add\":2}]}"
+    val visionPrescriptionBundle = "{\"resourceType\":\"Bundle\",\"id\":\"bundle-vision-test\",\"type\":\"document\",\"entry\":[{\"resourceType\":\"Practitioner\",\"id\":\"2\",\"active\":true,\"name\":[{\"use\":\"official\",\"family\":\"Careful\",\"given\":[\"Adam\"]}],\"gender\":\"male\"},{\"resourceType\":\"Patient\",\"id\":\"1\",\"active\":true,\"name\":[{\"use\":\"official\",\"family\":\"Duck\",\"given\":[\"Donald\"]}],\"gender\":\"male\"},{\"resourceType\":\"VisionPrescription\",\"status\":\"active\",\"created\":\"2014-06-15\",\"patient\":{\"reference\":\"#1\"},\"dateWritten\":\"2014-06-15\",\"prescriber\":{\"reference\":\"#2\"},\"lensSpecification\":[{\"eye\":\"right\",\"sphere\":-2,\"prism\":[{\"amount\":0.5,\"base\":\"down\"}],\"add\":2},{\"eye\":\"left\",\"sphere\":-1,\"cylinder\":-0.5,\"axis\":180,\"prism\":[{\"amount\":0.5,\"base\":\"up\"}],\"add\":2}]}]}"
 }

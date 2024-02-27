@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,11 +54,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -66,6 +69,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,9 +85,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.capitalize
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
@@ -94,6 +100,8 @@ import androidx.lifecycle.map
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.request.SuccessResult
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fonfon.kgeohash.GeoHash
 import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.R
@@ -125,6 +133,7 @@ import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
+import com.vitorpamplona.amethyst.ui.components.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.elements.AddButton
 import com.vitorpamplona.amethyst.ui.elements.DisplayFollowingCommunityInPost
 import com.vitorpamplona.amethyst.ui.elements.DisplayFollowingHashtagsInPost
@@ -206,6 +215,8 @@ import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.EmojiUrl
 import com.vitorpamplona.quartz.events.EmptyTagList
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.FhirResourceEvent
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
@@ -239,8 +250,11 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.URL
+import java.text.DecimalFormat
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -1175,6 +1189,9 @@ private fun RenderNoteRow(
         }
         is BadgeAwardEvent -> {
             RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
+        }
+        is FhirResourceEvent -> {
+            RenderFhirResource(baseNote, accountViewModel, nav)
         }
         is PeopleListEvent -> {
             DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
@@ -4345,4 +4362,224 @@ fun CreateImageHeader(
             NoteAuthorPicture(baseNote = note, accountViewModel = accountViewModel, size = Size55dp)
         }
     }
+}
+
+@Preview
+@Composable
+fun RenderEyeGlassesPrescriptionPreview() {
+    val accountViewModel = mockAccountViewModel()
+    val nav: (String) -> Unit = {}
+
+    val prescriptionEvent = Event.fromJson("{\"id\":\"0c15d2bc6f7dcc42fa4426d35d30d09840c9afa5b46d100415006e41d6471416\",\"pubkey\":\"bcd4715cc34f98dce7b52fddaf1d826e5ce0263479b7e110a5bd3c3789486ca8\",\"created_at\":1709074097,\"kind\":82,\"tags\":[],\"content\":\"{\\\"resourceType\\\":\\\"Bundle\\\",\\\"id\\\":\\\"bundle-vision-test\\\",\\\"type\\\":\\\"document\\\",\\\"entry\\\":[{\\\"resourceType\\\":\\\"Practitioner\\\",\\\"id\\\":\\\"2\\\",\\\"active\\\":true,\\\"name\\\":[{\\\"use\\\":\\\"official\\\",\\\"family\\\":\\\"Careful\\\",\\\"given\\\":[\\\"Adam\\\"]}],\\\"gender\\\":\\\"male\\\"},{\\\"resourceType\\\":\\\"Patient\\\",\\\"id\\\":\\\"1\\\",\\\"active\\\":true,\\\"name\\\":[{\\\"use\\\":\\\"official\\\",\\\"family\\\":\\\"Duck\\\",\\\"given\\\":[\\\"Donald\\\"]}],\\\"gender\\\":\\\"male\\\"},{\\\"resourceType\\\":\\\"VisionPrescription\\\",\\\"status\\\":\\\"active\\\",\\\"created\\\":\\\"2014-06-15\\\",\\\"patient\\\":{\\\"reference\\\":\\\"#1\\\"},\\\"dateWritten\\\":\\\"2014-06-15\\\",\\\"prescriber\\\":{\\\"reference\\\":\\\"#2\\\"},\\\"lensSpecification\\\":[{\\\"eye\\\":\\\"right\\\",\\\"sphere\\\":-2,\\\"prism\\\":[{\\\"amount\\\":0.5,\\\"base\\\":\\\"down\\\"}],\\\"add\\\":2},{\\\"eye\\\":\\\"left\\\",\\\"sphere\\\":-1,\\\"cylinder\\\":-0.5,\\\"axis\\\":180,\\\"prism\\\":[{\\\"amount\\\":0.5,\\\"base\\\":\\\"up\\\"}],\\\"add\\\":2}]}]}\",\"sig\":\"dc58f6109111ca06920c0c711aeaf8e2ee84975afa60d939828d4e01e2edea738f735fb5b1fcadf6d5496e36ac429abf7020a55fd1e4ed215738afc8d07cb950\"}") as FhirResourceEvent
+
+    RenderFhirResource(prescriptionEvent, accountViewModel, nav)
+}
+
+@Composable
+fun RenderFhirResource(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val event = baseNote.event as? FhirResourceEvent ?: return
+
+    RenderFhirResource(event, accountViewModel, nav)
+}
+
+@Composable
+fun RenderFhirResource(
+    event: FhirResourceEvent,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    var baseResource: Resource? by remember(event) {
+        mutableStateOf(null)
+    }
+
+    LaunchedEffect(key1 = event) {
+        withContext(Dispatchers.IO) {
+            val mapper =
+                jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+
+            try {
+                baseResource = mapper.readValue(event.content, Resource::class.java)
+            } catch (e: Exception) {
+                Log.e("RenderEyeGlassesPrescription", "Parser error", e)
+            }
+        }
+    }
+
+    baseResource?.let { resource ->
+        when (resource) {
+            is Bundle -> {
+                val db = resource.entry.associate { it.id to it }
+                val vision = resource.entry.filterIsInstance(VisionPrescription::class.java)
+
+                vision.firstOrNull()?.let {
+                    RenderEyeGlassesPrescription(it, db, accountViewModel, nav)
+                }
+            }
+            is VisionPrescription -> {
+                val db = mapOf(resource.id to resource)
+                RenderEyeGlassesPrescription(resource, db, accountViewModel, nav)
+            }
+            else -> {
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderEyeGlassesPrescription(
+    visionPrescription: VisionPrescription,
+    db: Map<String, Resource>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(Size10dp),
+    ) {
+        val rightEye = visionPrescription.lensSpecification.firstOrNull { it.eye == "right" }
+        val leftEye = visionPrescription.lensSpecification.firstOrNull { it.eye == "left" }
+
+        Text(
+            "Eyeglasses Prescription",
+            modifier = Modifier.padding(4.dp).fillMaxWidth(),
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(StdVertSpacer)
+
+        visionPrescription.patient?.reference?.let {
+            val patient = findReferenceInDb(it, db) as? Patient
+
+            patient?.name?.firstOrNull()?.assembleName()?.let {
+                Text(
+                    text = "Patient: $it",
+                    modifier = Modifier.padding(4.dp).fillMaxWidth(),
+                )
+            }
+        }
+        visionPrescription.status?.let {
+            Text(
+                text = "Status: ${it.capitalize()}",
+                modifier = Modifier.padding(4.dp).fillMaxWidth(),
+            )
+        }
+
+        Spacer(DoubleVertSpacer)
+
+        RenderEyeGlassesPrescriptionHeaderRow()
+        HorizontalDivider(thickness = DividerThickness)
+
+        rightEye?.let {
+            RenderEyeGlassesPrescriptionRow(data = it)
+            HorizontalDivider(thickness = DividerThickness)
+        }
+
+        leftEye?.let {
+            RenderEyeGlassesPrescriptionRow(data = it)
+            HorizontalDivider(thickness = DividerThickness)
+        }
+
+        Spacer(DoubleVertSpacer)
+
+        visionPrescription.prescriber?.reference?.let {
+            val practitioner = findReferenceInDb(it, db) as? Practitioner
+
+            practitioner?.name?.firstOrNull()?.assembleName()?.let {
+                Text(
+                    text = "Signed by: $it",
+                    modifier = Modifier.padding(4.dp).fillMaxWidth(),
+                    textAlign = TextAlign.Right,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderEyeGlassesPrescriptionHeaderRow() {
+    Row(
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = "Eye",
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        VerticalDivider(thickness = DividerThickness)
+        Text(
+            text = "Sph",
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        Text(
+            text = "Cyl",
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        Text(
+            text = "Axis",
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        VerticalDivider(thickness = DividerThickness)
+        Text(
+            text = "Add",
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+    }
+}
+
+@Composable
+fun RenderEyeGlassesPrescriptionRow(data: LensSpecification) {
+    Row(
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val numberFormat = DecimalFormat("##.00")
+        val integerFormat = DecimalFormat("###")
+
+        Text(
+            text = data.eye?.capitalize() ?: "Unknown",
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        VerticalDivider(thickness = DividerThickness)
+        Text(
+            text = formatOrBlank(data.sphere, numberFormat),
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        Text(
+            text = formatOrBlank(data.cylinder, numberFormat),
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        Text(
+            text = formatOrBlank(data.axis, integerFormat),
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        VerticalDivider(thickness = DividerThickness)
+        Text(
+            text = formatOrBlank(data.add, numberFormat),
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+    }
+}
+
+fun formatOrBlank(
+    amount: Double?,
+    numberFormat: NumberFormat,
+): String {
+    if (amount == null) return ""
+    if (Math.abs(amount) < 0.01) return ""
+    return numberFormat.format(amount)
 }

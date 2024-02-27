@@ -319,8 +319,8 @@ class RichTextParser() {
             Pattern.compile("#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)(.*)", Pattern.CASE_INSENSITIVE)
 
         val acceptedNIP19schemes =
-            listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1") +
-                listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1").map {
+            listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1", "nembed") +
+                listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1", "nembed").map {
                     it.uppercase()
                 }
 

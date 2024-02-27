@@ -87,6 +87,7 @@ class EventFactory {
             FileStorageEvent.KIND -> FileStorageEvent(id, pubKey, createdAt, tags, content, sig)
             FileStorageHeaderEvent.KIND ->
                 FileStorageHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+            FhirResourceEvent.KIND -> FhirResourceEvent(id, pubKey, createdAt, tags, content, sig)
             GenericRepostEvent.KIND -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)
             GiftWrapEvent.KIND -> GiftWrapEvent(id, pubKey, createdAt, tags, content, sig)
             GitIssueEvent.KIND -> GitIssueEvent(id, pubKey, createdAt, tags, content, sig)

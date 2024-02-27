@@ -63,6 +63,7 @@ import com.vitorpamplona.quartz.events.DeletionEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.FhirResourceEvent
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileServersEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
@@ -1364,6 +1365,26 @@ object LocalCache {
     }
 
     fun consume(
+        event: FhirResourceEvent,
+        relay: Relay?,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(
         event: HighlightEvent,
         relay: Relay?,
     ) {
@@ -1981,6 +2002,7 @@ object LocalCache {
                 is EmojiPackEvent -> consume(event, relay)
                 is EmojiPackSelectionEvent -> consume(event, relay)
                 is SealedGossipEvent -> consume(event, relay)
+                is FhirResourceEvent -> consume(event, relay)
                 is FileHeaderEvent -> consume(event, relay)
                 is FileServersEvent -> consume(event, relay)
                 is FileStorageEvent -> consume(event, relay)
