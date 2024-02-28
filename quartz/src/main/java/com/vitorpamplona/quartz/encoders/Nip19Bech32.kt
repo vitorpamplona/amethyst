@@ -111,6 +111,7 @@ object Nip19Bech32 {
             val bytes = (type + key).bechToBytes()
 
             when (type.lowercase()) {
+                "nsec1" -> nsec(bytes)
                 "npub1" -> npub(bytes)
                 "note1" -> note(bytes)
                 "nprofile1" -> nprofile(bytes)
@@ -131,6 +132,11 @@ object Nip19Bech32 {
     private fun nembed(bytes: ByteArray): NEmbed? {
         if (bytes.isEmpty()) return null
         return NEmbed(Event.fromJson(ungzip(bytes)))
+    }
+
+    private fun nsec(bytes: ByteArray): NSec? {
+        if (bytes.isEmpty()) return null
+        return NSec(bytes.toHexKey())
     }
 
     private fun npub(bytes: ByteArray): NPub? {
