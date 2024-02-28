@@ -1003,6 +1003,13 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
+    fun loadNEmbedIfNeeded(nembed: Event) {
+        val baseNote = LocalCache.getNoteIfExists(nembed.id)
+        if (baseNote?.event == null) {
+            LocalCache.verifyAndConsume(nembed, null)
+        }
+    }
+
     suspend fun parseNIP19(
         str: String,
         onNote: (LoadedBechLink) -> Unit,
@@ -1018,9 +1025,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
                     is Nip19Bech32.Note -> LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note }
                     is Nip19Bech32.NEvent -> LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note }
                     is Nip19Bech32.NEmbed -> {
-                        if (LocalCache.getNoteIfExists(parsed.event.id) == null) {
-                            LocalCache.verifyAndConsume(parsed.event, null)
-                        }
+                        loadNEmbedIfNeeded(parsed.event)
 
                         LocalCache.checkGetOrCreateNote(parsed.event.id)?.let { note ->
                             returningNote = note
