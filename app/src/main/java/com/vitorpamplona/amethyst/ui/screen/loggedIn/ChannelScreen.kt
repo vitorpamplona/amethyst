@@ -865,7 +865,7 @@ fun LongChannelHeader(
                 )
                 Spacer(DoubleHorzSpacer)
                 NormalTimeAgo(note, remember { Modifier.weight(1f) })
-                MoreOptionsButton(note, accountViewModel)
+                MoreOptionsButton(note, accountViewModel, nav)
             }
         }
     }

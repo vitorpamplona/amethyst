@@ -932,6 +932,15 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
+    suspend fun findModificationEventsForNote(
+        note: Note,
+        onResult: (List<Note>) -> Unit,
+    ) {
+        withContext(Dispatchers.IO) {
+            onResult(LocalCache.findLatestModificationForNote(note))
+        }
+    }
+
     private suspend fun checkGetOrCreateChannel(key: HexKey): Channel? {
         return LocalCache.checkGetOrCreateChannel(key)
     }

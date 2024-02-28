@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.TextNoteModificationEvent
 
 object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
     private var eventsToWatch = setOf<Note>()
@@ -136,6 +137,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                                     LnZapEvent.KIND,
                                     PollNoteEvent.KIND,
                                     OtsEvent.KIND,
+                                    TextNoteModificationEvent.KIND,
                                 ),
                             tags = mapOf("e" to it.map { it.idHex }),
                             since = findMinimumEOSEs(it),

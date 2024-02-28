@@ -89,6 +89,7 @@ import com.vitorpamplona.quartz.events.Response
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.TextNoteModificationEvent
 import com.vitorpamplona.quartz.events.WrappedEvent
 import com.vitorpamplona.quartz.events.ZapSplitSetup
 import com.vitorpamplona.quartz.signers.NostrSigner
@@ -1402,6 +1403,25 @@ class Account(
                     Client.send(it, relayList = relayList)
                 }
             }
+        }
+    }
+
+    fun sendEdit(
+        message: String,
+        originalNote: Note,
+        relayList: List<Relay>? = null,
+    ) {
+        if (!isWriteable()) return
+
+        val idHex = originalNote.event?.id() ?: return
+
+        TextNoteModificationEvent.create(
+            content = message,
+            eventId = idHex,
+            signer = signer,
+        ) {
+            Client.send(it, relayList = relayList)
+            LocalCache.justConsume(it, null)
         }
     }
 

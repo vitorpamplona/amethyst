@@ -66,6 +66,7 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -455,6 +456,7 @@ fun NoteDropDownMenu(
     note: Note,
     popupExpanded: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
     var reportDialogShowing by remember { mutableStateOf(false) }
 
@@ -472,6 +474,20 @@ fun NoteDropDownMenu(
     }
 
     val onDismiss = remember(popupExpanded) { { popupExpanded.value = false } }
+
+    val wantsToEditPost =
+        remember {
+            mutableStateOf(false)
+        }
+
+    if (wantsToEditPost.value) {
+        EditPostView(
+            onClose = { wantsToEditPost.value = false },
+            edit = note,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
 
     DropdownMenu(
         expanded = popupExpanded.value,
@@ -551,6 +567,14 @@ fun NoteDropDownMenu(
             },
         )
         Divider()
+        if (state.isLoggedUser) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.edit_post)) },
+                onClick = {
+                    wantsToEditPost.value = true
+                },
+            )
+        }
         DropdownMenuItem(
             text = { Text(stringResource(R.string.broadcast)) },
             onClick = {

@@ -166,7 +166,7 @@ fun MultiSetCompose(
                 nav = nav,
             )
 
-            NoteDropDownMenu(baseNote, popupExpanded, accountViewModel)
+            NoteDropDownMenu(baseNote, popupExpanded, accountViewModel, nav)
         }
 
         Divider(

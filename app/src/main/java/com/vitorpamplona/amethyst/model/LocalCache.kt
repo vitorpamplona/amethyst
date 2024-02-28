@@ -98,6 +98,7 @@ import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.TextNoteModificationEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
@@ -1385,6 +1386,26 @@ object LocalCache {
     }
 
     fun consume(
+        event: TextNoteModificationEvent,
+        relay: Relay?,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(
         event: HighlightEvent,
         relay: Relay?,
     ) {
@@ -1693,6 +1714,17 @@ object LocalCache {
         }
 
         return minTime
+    }
+
+    suspend fun findLatestModificationForNote(note: Note): List<Note> {
+        checkNotInMainThread()
+        val time = TimeUtils.now()
+
+        return noteListCache.filter { item ->
+            val noteEvent = item.event
+
+            noteEvent is TextNoteModificationEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time)
+        }
     }
 
     fun cleanObservers() {
@@ -2048,6 +2080,7 @@ object LocalCache {
                 }
                 is StatusEvent -> consume(event, relay)
                 is TextNoteEvent -> consume(event, relay)
+                is TextNoteModificationEvent -> consume(event, relay)
                 is VideoHorizontalEvent -> consume(event, relay)
                 is VideoVerticalEvent -> consume(event, relay)
                 is WikiNoteEvent -> consume(event, relay)

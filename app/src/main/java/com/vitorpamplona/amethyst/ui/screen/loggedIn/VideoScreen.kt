@@ -363,12 +363,12 @@ private fun RenderAuthorInformation(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 NoteUsernameDisplay(note, remember { Modifier.weight(1f) })
-                VideoUserOptionAction(note, accountViewModel)
+                VideoUserOptionAction(note, accountViewModel, nav)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ObserveDisplayNip05Status(
-                    remember { note.author!! },
-                    remember { Modifier.weight(1f) },
+                    note.author!!,
+                    Modifier.weight(1f),
                     accountViewModel,
                     nav = nav,
                 )
@@ -387,6 +387,7 @@ private fun RenderAuthorInformation(
 private fun VideoUserOptionAction(
     note: Note,
     accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
     val popupExpanded = remember { mutableStateOf(false) }
     val enablePopup = remember { { popupExpanded.value = true } }
@@ -406,6 +407,7 @@ private fun VideoUserOptionAction(
             note,
             popupExpanded,
             accountViewModel,
+            nav,
         )
     }
 }

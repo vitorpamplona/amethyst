@@ -58,6 +58,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -102,11 +103,13 @@ import com.vitorpamplona.amethyst.ui.note.AudioTrackHeader
 import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.CreateImageHeader
+import com.vitorpamplona.amethyst.ui.note.DisplayEditStatus
 import com.vitorpamplona.amethyst.ui.note.DisplayHighlight
 import com.vitorpamplona.amethyst.ui.note.DisplayLocation
 import com.vitorpamplona.amethyst.ui.note.DisplayOts
 import com.vitorpamplona.amethyst.ui.note.DisplayPeopleList
 import com.vitorpamplona.amethyst.ui.note.DisplayRelaySet
+import com.vitorpamplona.amethyst.ui.note.EditState
 import com.vitorpamplona.amethyst.ui.note.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
@@ -120,6 +123,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.RenderAppDefinition
 import com.vitorpamplona.amethyst.ui.note.RenderEmojiPack
+import com.vitorpamplona.amethyst.ui.note.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.ui.note.RenderGitRepositoryEvent
 import com.vitorpamplona.amethyst.ui.note.RenderPinListEvent
@@ -156,6 +160,7 @@ import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.FhirResourceEvent
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
@@ -372,6 +377,15 @@ fun NoteMaster(
             onClick = { showHiddenNote = true },
         )
     } else {
+        val editState by
+            produceState(initialValue = EditState(), key1 = baseNote) {
+                accountViewModel.findModificationEventsForNote(baseNote) { newModifications ->
+                    if (value.modificationsInOrder.value != newModifications) {
+                        value.modificationsInOrder.value = newModifications
+                    }
+                }
+            }
+
         Column(
             modifier
                 .fillMaxWidth()
@@ -407,6 +421,10 @@ fun NoteMaster(
                             DisplayFollowingHashtagsInPost(baseNote, accountViewModel, nav)
                         }
 
+                        if (!editState.modificationsInOrder.value.isEmpty()) {
+                            DisplayEditStatus(editState.showOriginal)
+                        }
+
                         Text(
                             timeAgo(note.createdAt(), context = context),
                             color = MaterialTheme.colorScheme.placeholderText,
@@ -424,7 +442,7 @@ fun NoteMaster(
                                 tint = MaterialTheme.colorScheme.placeholderText,
                             )
 
-                            NoteDropDownMenu(baseNote, moreActionsExpanded, accountViewModel)
+                            NoteDropDownMenu(baseNote, moreActionsExpanded, accountViewModel, nav)
                         }
                     }
 
@@ -532,6 +550,8 @@ fun NoteMaster(
                             accountViewModel,
                             nav,
                         )
+                    } else if (noteEvent is FhirResourceEvent) {
+                        RenderFhirResource(baseNote, accountViewModel, nav)
                     } else if (noteEvent is GitRepositoryEvent) {
                         RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
                     } else if (noteEvent is GitPatchEvent) {
@@ -577,6 +597,7 @@ fun NoteMaster(
                             false,
                             canPreview,
                             backgroundColor,
+                            editState,
                             accountViewModel,
                             nav,
                         )
@@ -829,6 +850,11 @@ private fun RenderWikiHeaderForThreadPreview() {
     val accountViewModel = mockAccountViewModel()
     val nav: (String) -> Unit = {}
 
+    val editState by
+        remember {
+            mutableStateOf(EditState())
+        }
+
     runBlocking {
         withContext(Dispatchers.IO) {
             LocalCache.justConsume(event, null)
@@ -851,6 +877,7 @@ private fun RenderWikiHeaderForThreadPreview() {
                         false,
                         true,
                         backgroundColor,
+                        editState,
                         accountViewModel,
                         nav,
                     )
@@ -870,6 +897,7 @@ private fun RenderWikiHeaderForThreadPreview() {
                         false,
                         true,
                         backgroundColor,
+                        editState,
                         accountViewModel,
                         nav,
                     )

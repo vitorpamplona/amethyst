@@ -60,16 +60,16 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -85,7 +85,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.capitalize
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -785,7 +784,7 @@ fun LongCommunityHeader(
         )
         Spacer(DoubleHorzSpacer)
         NormalTimeAgo(baseNote = baseNote, Modifier.weight(1f))
-        MoreOptionsButton(baseNote, accountViewModel)
+        MoreOptionsButton(baseNote, accountViewModel, nav)
     }
 }
 
@@ -1091,6 +1090,12 @@ fun InnerNoteWithReactions(
     }
 }
 
+@Stable
+class EditState(
+    val showOriginal: MutableState<Boolean> = mutableStateOf(false),
+    val modificationsInOrder: MutableState<List<Note>> = mutableStateOf(emptyList()),
+)
+
 @Composable
 private fun NoteBody(
     baseNote: Note,
@@ -1103,9 +1108,19 @@ private fun NoteBody(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    val editState by
+        produceState(initialValue = EditState(), key1 = baseNote) {
+            accountViewModel.findModificationEventsForNote(baseNote) { newModifications ->
+                if (value.modificationsInOrder.value != newModifications) {
+                    value.modificationsInOrder.value = newModifications
+                }
+            }
+        }
+
     FirstUserInfoRow(
         baseNote = baseNote,
         showAuthorPicture = showAuthorPicture,
+        editState = editState,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -1133,12 +1148,13 @@ private fun NoteBody(
     }
 
     RenderNoteRow(
-        baseNote,
-        backgroundColor,
-        makeItShort,
-        canPreview,
-        accountViewModel,
-        nav,
+        baseNote = baseNote,
+        backgroundColor = backgroundColor,
+        makeItShort = makeItShort,
+        canPreview = canPreview,
+        editState = editState,
+        accountViewModel = accountViewModel,
+        nav = nav,
     )
 
     val noteEvent = baseNote.event
@@ -1155,6 +1171,7 @@ private fun RenderNoteRow(
     backgroundColor: MutableState<Color>,
     makeItShort: Boolean,
     canPreview: Boolean,
+    editState: EditState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -1287,6 +1304,7 @@ private fun RenderNoteRow(
                 makeItShort,
                 canPreview,
                 backgroundColor,
+                editState,
                 accountViewModel,
                 nav,
             )
@@ -1343,19 +1361,29 @@ fun RenderTextEvent(
     makeItShort: Boolean,
     canPreview: Boolean,
     backgroundColor: MutableState<Color>,
+    editState: EditState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    LoadDecryptedContent(note, accountViewModel) { body ->
+    LoadDecryptedContent(
+        note,
+        accountViewModel,
+    ) { body ->
         val eventContent by
             remember(note.event) {
                 derivedStateOf {
                     val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
+                    val newBody =
+                        if (editState.showOriginal.value || editState.modificationsInOrder.value.isEmpty()) {
+                            body
+                        } else {
+                            editState.modificationsInOrder.value.firstOrNull()?.event?.content() ?: body
+                        }
 
-                    if (!subject.isNullOrBlank() && !body.split("\n")[0].contains(subject)) {
-                        "### $subject\n$body"
+                    if (!subject.isNullOrBlank() && !newBody.split("\n")[0].contains(subject)) {
+                        "### $subject\n$newBody"
                     } else {
-                        body
+                        newBody
                     }
                 }
             }
@@ -2789,6 +2817,7 @@ fun DisplayLocation(
 fun FirstUserInfoRow(
     baseNote: Note,
     showAuthorPicture: Boolean,
+    editState: EditState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -2823,10 +2852,35 @@ fun FirstUserInfoRow(
             DisplayFollowingHashtagsInPost(baseNote, accountViewModel, nav)
         }
 
+        if (!editState.modificationsInOrder.value.isEmpty()) {
+            DisplayEditStatus(editState.showOriginal)
+        }
+
         TimeAgo(baseNote)
 
-        MoreOptionsButton(baseNote, accountViewModel)
+        MoreOptionsButton(baseNote, accountViewModel, nav)
     }
+}
+
+@Composable
+fun DisplayEditStatus(showOriginal: MutableState<Boolean>) {
+    ClickableText(
+        text =
+            if (showOriginal.value) {
+                buildAnnotatedString { append(stringResource(id = R.string.original)) }
+            } else {
+                buildAnnotatedString { append(stringResource(id = R.string.edited)) }
+            },
+        onClick = { showOriginal.value = !showOriginal.value },
+        style =
+            LocalTextStyle.current.copy(
+                color = MaterialTheme.colorScheme.placeholderText,
+                fontSize = Font14SP,
+                fontWeight = FontWeight.Bold,
+            ),
+        maxLines = 1,
+        modifier = HalfStartPadding,
+    )
 }
 
 @Composable
@@ -2844,6 +2898,7 @@ private fun BoostedMark() {
 fun MoreOptionsButton(
     baseNote: Note,
     accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
     val popupExpanded = remember { mutableStateOf(false) }
     val enablePopup = remember { { popupExpanded.value = true } }
@@ -2858,6 +2913,7 @@ fun MoreOptionsButton(
             baseNote,
             popupExpanded,
             accountViewModel,
+            nav,
         )
     }
 }
