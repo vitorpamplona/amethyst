@@ -4440,7 +4440,7 @@ fun RenderEyeGlassesPrescription(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(Size10dp),
+                .padding(horizontal = Size10dp),
     ) {
         val rightEye = visionPrescription.lensSpecification.firstOrNull { it.eye == "right" }
         val leftEye = visionPrescription.lensSpecification.firstOrNull { it.eye == "left" }
@@ -4485,12 +4485,11 @@ fun RenderEyeGlassesPrescription(
             HorizontalDivider(thickness = DividerThickness)
         }
 
-        Spacer(DoubleVertSpacer)
-
         visionPrescription.prescriber?.reference?.let {
             val practitioner = findReferenceInDb(it, db) as? Practitioner
 
             practitioner?.name?.firstOrNull()?.assembleName()?.let {
+                Spacer(DoubleVertSpacer)
                 Text(
                     text = "Signed by: $it",
                     modifier = Modifier.padding(4.dp).fillMaxWidth(),
