@@ -24,6 +24,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
+import com.vitorpamplona.quartz.encoders.decodePrivateKeyAsHexOrNull
+import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FhirResourceEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
@@ -134,19 +136,18 @@ class NIP19EmbedTests {
         assertEquals(eyeglassesPrescriptionEvent!!.toJson(), decodedNote.toJson())
     }
 
-    /*
     @Test
-    fun testCompressionSizes() {
+    fun testVisionPrescriptionBundle2EmbedEvent() {
         val signer =
             NostrSignerInternal(
-                KeyPair(Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598")),
+                KeyPair(decodePrivateKeyAsHexOrNull("nsec1arn3jlxv20y76n8ek8ydecy9ga06rl7aw8evznjylc3ap00hwkvqx4vvy6")!!.hexToByteArray()),
             )
 
         var eyeglassesPrescriptionEvent: Event? = null
 
         val countDownLatch = CountDownLatch(1)
 
-        FhirResourceEvent.create(fhirPayload = visionPrescriptionFhir, signer = signer) {
+        FhirResourceEvent.create(fhirPayload = visionPrescriptionBundle2, signer = signer) {
             eyeglassesPrescriptionEvent = it
             countDownLatch.countDown()
         }
@@ -155,21 +156,20 @@ class NIP19EmbedTests {
 
         assertNotNull(eyeglassesPrescriptionEvent)
 
-        val json = eyeglassesPrescriptionEvent!!.toJson()
+        val bech32 = Nip19Bech32.createNEmbed(eyeglassesPrescriptionEvent!!)
 
-        Bech32.encodeBytes(hrp = "nembed", json.toByteArray(), Bech32.Encoding.Bech32)
-        Bech32.encodeBytes(hrp = "nembed", gzip(json), Bech32.Encoding.Bech32)
+        println(eyeglassesPrescriptionEvent!!.toJson())
+        println(bech32)
 
-        val (bech32json, elapsedjson) = measureTimedValue { json.toByteArray().toNEmbed() }
-        val (bech32gzip, elapsedgzip) = measureTimedValue { gzip(json).toNEmbed() }
+        val decodedNote = (Nip19Bech32.uriToRoute(bech32)?.entity as Nip19Bech32.NEmbed).event
 
-        println("Raw JSON ${json.length} chars")
-        println("Bech32 JSON ${bech32json.length} chars in $elapsedjson")
-        println("Bech32 GZIP ${bech32gzip.length} chars in $elapsedgzip")
+        assertTrue(decodedNote.hasValidSignature())
 
-        assertTrue(true)
-    }*/
+        assertEquals(eyeglassesPrescriptionEvent!!.toJson(), decodedNote.toJson())
+    }
 
     val visionPrescriptionFhir = "{\"resourceType\":\"VisionPrescription\",\"status\":\"active\",\"created\":\"2014-06-15\",\"patient\":{\"reference\":\"Patient/Donald Duck\"},\"dateWritten\":\"2014-06-15\",\"prescriber\":{\"reference\":\"Practitioner/Adam Careful\"},\"lensSpecification\":[{\"eye\":\"right\",\"sphere\":-2,\"prism\":[{\"amount\":0.5,\"base\":\"down\"}],\"add\":2},{\"eye\":\"left\",\"sphere\":-1,\"cylinder\":-0.5,\"axis\":180,\"prism\":[{\"amount\":0.5,\"base\":\"up\"}],\"add\":2}]}"
     val visionPrescriptionBundle = "{\"resourceType\":\"Bundle\",\"id\":\"bundle-vision-test\",\"type\":\"document\",\"entry\":[{\"resourceType\":\"Practitioner\",\"id\":\"2\",\"active\":true,\"name\":[{\"use\":\"official\",\"family\":\"Careful\",\"given\":[\"Adam\"]}],\"gender\":\"male\"},{\"resourceType\":\"Patient\",\"id\":\"1\",\"active\":true,\"name\":[{\"use\":\"official\",\"family\":\"Duck\",\"given\":[\"Donald\"]}],\"gender\":\"male\"},{\"resourceType\":\"VisionPrescription\",\"status\":\"active\",\"created\":\"2014-06-15\",\"patient\":{\"reference\":\"#1\"},\"dateWritten\":\"2014-06-15\",\"prescriber\":{\"reference\":\"#2\"},\"lensSpecification\":[{\"eye\":\"right\",\"sphere\":-2,\"prism\":[{\"amount\":0.5,\"base\":\"down\"}],\"add\":2},{\"eye\":\"left\",\"sphere\":-1,\"cylinder\":-0.5,\"axis\":180,\"prism\":[{\"amount\":0.5,\"base\":\"up\"}],\"add\":2}]}]}"
+
+    val visionPrescriptionBundle2 = "{\"resourceType\":\"Bundle\",\"id\":\"bundle-vision-test\",\"type\":\"document\",\"entry\":[{\"resourceType\":\"Practitioner\",\"id\":\"2\",\"active\":true,\"name\":[{\"use\":\"official\",\"family\":\"Smith\",\"given\":[\"Dr. Joe\"]}],\"gender\":\"male\"},{\"resourceType\":\"Patient\",\"id\":\"1\",\"active\":true,\"name\":[{\"use\":\"official\",\"family\":\"Doe\",\"given\":[\"Jane\"]}],\"gender\":\"male\"},{\"resourceType\":\"VisionPrescription\",\"status\":\"active\",\"created\":\"2014-06-15\",\"patient\":{\"reference\":\"#1\"},\"dateWritten\":\"2014-06-15\",\"lensSpecification\":[{\"eye\":\"right\",\"sphere\":-2,\"prism\":[{\"amount\":0.5,\"base\":\"down\"}],\"add\":2},{\"eye\":\"left\",\"sphere\":-1,\"cylinder\":-0.5,\"axis\":180,\"prism\":[{\"amount\":0.5,\"base\":\"up\"}],\"add\":2}]}]}"
 }
