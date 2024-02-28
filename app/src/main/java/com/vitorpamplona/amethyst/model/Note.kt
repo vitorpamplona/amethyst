@@ -1002,6 +1002,7 @@ class NoteLiveSet(u: Note) {
             replyCount.hasObservers() ||
             reactionCount.hasObservers() ||
             boostCount.hasObservers()
+            innerOts.hasObservers() ||
     }
 
     fun destroy() {
