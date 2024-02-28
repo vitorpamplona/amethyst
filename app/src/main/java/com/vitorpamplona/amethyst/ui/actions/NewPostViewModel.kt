@@ -843,6 +843,7 @@ open class NewPostViewModel() : ViewModel() {
                     nip94attachments = nip94attachments + event
 
                     message = message.insertUrlAtCursor(imageUrl)
+                    saveDraft(message.text)
                     urlPreview = findUrlInMessage()
                 }
             },
