@@ -3,6 +3,7 @@
     <string name="point_to_the_qr_code">Pointer vers le QR code</string>
     <string name="show_qr">Montrer le QR code</string>
     <string name="profile_image">Image de profil</string>
+    <string name="your_profile_image">Votre Photo de Profil</string>
     <string name="scan_qr">Scanner le QR code</string>
     <string name="show_anyway">Montrer quand même</string>
     <string name="post_was_flagged_as_inappropriate_by">Post signalé inapproprié par</string>
@@ -15,6 +16,7 @@
     <string name="spam">Spam</string>
     <string name="impersonation">Falsification d\'identité</string>
     <string name="illegal_behavior">Comportement illégal</string>
+    <string name="other">Autre</string>
     <string name="unknown">inconnu</string>
     <string name="relay_icon">Icône de relais</string>
     <string name="unknown_author">Auteur inconnu</string>
@@ -22,6 +24,9 @@
     <string name="copy_user_pubkey">Copier la clé publique de l\'utilisateur</string>
     <string name="copy_note_id">Copier l\'ID de la note</string>
     <string name="broadcast">Diffuser</string>
+    <string name="timestamp_it">Horodater</string>
+    <string name="timestamp_pending">Horodatage : Confirmations en attente</string>
+    <string name="timestamp_pending_short">OTS : En attente</string>
     <string name="request_deletion">Demande de suppression</string>
     <string name="block_report">Bloquer / Signaler</string>
     <string name="block_hide_user"><![CDATA[Bloquer et cacher l\'utilisateur]]></string>
@@ -43,6 +48,7 @@
     <string name="boost">Boost</string>
     <string name="boosted">boosté</string>
     <string name="quote">Citation</string>
+    <string name="fork">Fork</string>
     <string name="new_amount_in_sats">Nouveau montant en Sats</string>
     <string name="add">Ajouter</string>
     <string name="replying_to">"répondre à "</string>
@@ -90,6 +96,8 @@
     <string name="add_a_relay">Ajouter un relais</string>
     <string name="display_name">Nom visible du public</string>
     <string name="my_display_name">Mon nom visible du public</string>
+    <string name="my_awesome_name">Ostrich McGénial</string>
+    <string name="welcome">Bienvenue Ostrich!</string>
     <string name="username">Nom d\'utilisateur</string>
     <string name="my_username">Mon nom d\'utilisateur</string>
     <string name="about_me">Biographie</string>
@@ -136,12 +144,15 @@
     <string name="clear">Nettoyer</string>
     <string name="app_logo">Logo de l\'App</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex private key</string>
+    <string name="ncryptsec_password">mot de passe pour ouvrir la clé</string>
     <string name="show_password">Révéler le mot de passe</string>
     <string name="hide_password">Cacher le mot de passe</string>
     <string name="invalid_key">Clé non valide</string>
+    <string name="invalid_key_with_message">Clé invalide : %1$s</string>
     <string name="i_accept_the">"J'accepte les "</string>
     <string name="terms_of_use">conditions d\'utilisation</string>
     <string name="acceptance_of_terms_is_required">L\'acceptation des conditions est requise</string>
+    <string name="password_is_required">Mot de passe requis</string>
     <string name="key_is_required">La clé est requise</string>
     <string name="name_is_required">Un nom est requis</string>
     <string name="login">Connexion</string>
@@ -192,14 +203,19 @@
     <string name="mark_all_new_as_read">Marquer tous les Nouveaux comme lu</string>
     <string name="mark_all_as_read">Tout marquer comme lu</string>
     <string name="backup_keys">Clés de sauvegarde</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Sauvegarde des clés et conseils de sécurité
-        \n\nVotre compte est sécurisé par une clé secrète. La clé est une longue chaîne aléatoire commençant par **nsec1**. Toute personne ayant accès à votre clé secrète peut publier du contenu en utilisant votre identité.
-        \n\n- Ne communiquez **jamais** votre clé secrète à un site Web ou un logiciel auquel vous ne faites pas confiance.
+    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Sauvegarde des Clés et Conseils de Sécurité
+        \n\nVotre compte est sécurisé par une clé secrète. La clé est une longue séquence de caractères commençant par **nsec1**. Toute personne ayant accès à cette clé secrète peut publier et modifier votre identité.
+        \n\n- Ne mettez **pas** votre clé secrète sur un site web ou un logiciel auquel vous ne faites pas confiance.
         \n- Les développeurs d\'Amethyst ne vous demanderont **jamais** votre clé secrète.
-        \n- **Conservez** une sauvegarde sécurisée de votre clé secrète pour la récupération de compte. Nous vous recommandons d\'utiliser un gestionnaire de mots de passe.
+        \n- **Faites** une sauvegarde sécurisée de votre clé secrète pour la récupération de votre compte. Nous vous recommandons d\'utiliser un gestionnaire de mots de passe.
     </string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">        Pour plus de sécurité, vous pouvez chiffrer votre clé avec un mot de passe. Cette clé commence par **ncryptsec1** et ne peut être utilisée sans votre mot de passe.
+        \n\nSi vous perdez votre mot de passe, vous ne pourrez pas récupérer votre clé.
+    </string>
+    <string name="failed_to_encrypt_key">Échec du chiffrement de votre clé privée</string>
     <string name="secret_key_copied_to_clipboard">Clé secrète (nsec) copiée dans le presse-papiers</string>
     <string name="copy_my_secret_key">Copier ma clé secrète</string>
+    <string name="encrypt_and_copy_my_secret_key">Chiffrer et copier ma clé secrète</string>
     <string name="biometric_authentication_failed">Échec de l\'authentification</string>
     <string name="biometric_authentication_failed_explainer">La biométrie n\'a pas pu authentifier le propriétaire de ce téléphone</string>
     <string name="biometric_authentication_failed_explainer_with_error">La biométrie n\'a pas pu authentifier le propriétaire de ce téléphone. Erreur : %1$s</string>
@@ -393,6 +409,8 @@
     <string name="payment">Paiement</string>
     <string name="cashu">Jeton Cashu</string>
     <string name="cashu_redeem">Échanger</string>
+    <string name="cashu_redeem_to_zap">Envoyer vers le portefeuille Zap</string>
+    <string name="cashu_redeem_to_cashu">Ouvrir dans le portefeuille Cashu</string>
     <string name="cashu_copy_token">Copier le Jeton</string>
     <string name="no_lightning_address_set">Adresse Lightning non définie</string>
     <string name="copied_token_to_clipboard">Jeton copié dans le presse-papiers</string>
@@ -449,6 +467,7 @@
     <string name="new_feature_nip24_might_not_be_available_description">Pour activer ce mode, Amethyst doit envoyer un message NIP-24 (GiftWrapped, Sealed Direct et Group Messages). Le protocole NIP-24 est nouveau et la plupart des clients ne l\'ont pas encore mis en oeuvre. Assurez-vous que le destinataire utilise un client compatible.</string>
     <string name="new_feature_nip24_activate">Activer</string>
     <string name="messages_create_public_chat">Public</string>
+    <string name="messages_create_public_private_chat_desription">Nouveau Groupe Public ou Privé</string>
     <string name="messages_new_message">Privé</string>
     <string name="messages_new_message_to">À</string>
     <string name="messages_new_message_subject">Sujet</string>
@@ -465,6 +484,7 @@
     <string name="automatically_show_url_preview_description">Afficher la prévisualisation d\'URL</string>
     <string name="load_image_description">Quand charger les images</string>
     <string name="copy_to_clipboard">Copier dans le presse-papiers</string>
+    <string name="copy_npub_to_clipboard">Copier npub dans le presse-papiers</string>
     <string name="copy_url_to_clipboard">Copier l\'URL dans le presse-papiers</string>
     <string name="copy_the_note_id_to_the_clipboard">Copier l\'ID de la note dans le presse-papiers</string>
     <string name="created_at">Créé le</string>
@@ -513,14 +533,22 @@
     <string name="error_dialog_pay_invoice_error">Impossible de payer la facture</string>
     <string name="error_dialog_pay_withdraw_error">Impossible de retirer</string>
     <string name="error_parsing_nip47_title">Impossible de configurer Wallet Connect</string>
+    <string name="error_parsing_nip47">Erreur lors de l\'analyse de l\'événement de connexion NIP-47. Vérifiez si tout est correct avec le prestataire de votre Portefeuille : %1$s. Erreur : %2$s</string>
+    <string name="error_parsing_nip47_no_error">Erreur lors de l\'analyse de l\'événement de connexion NIP-47. Vérifiez si tout est correct avec le prestataire de votre Portefeuille : %1$s.</string>
+    <string name="cashu_failed_redemption">Impossible d\'utiliser ce Cashu</string>
+    <string name="cashu_failed_redemption_explainer_error_msg">Le Mint a fourni le message d\'erreur suivant : %1$s</string>
+    <string name="cashu_failed_redemption_explainer_already_spent">Les jetons de cashu sont déjà dépensés.</string>
     <string name="cashu_successful_redemption">Cashu reçu</string>
     <string name="cashu_successful_redemption_explainer">%1$s sats ont été envoyés à votre portefeuille. (Frais : %2$s sats)</string>
+    <string name="cashu_no_wallet_found">Aucun portefeuille Cashu compatible trouvé dans le système</string>
     <string name="error_unable_to_fetch_invoice">Impossible de récupérer la facture depuis les serveurs du destinataire</string>
+    <string name="wallet_connect_pay_invoice_error_error">Le fournisseur de connexion de votre portefeuille a retourné l\'erreur suivante : %1$s</string>
     <string name="could_not_connect_to_tor">Impossible de se connecter à Tor</string>
     <string name="unable_to_download_relay_document">Téléchargement du document relais indisponible</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Impossible d\'assembler LNUrl à partir de l\'adresse Lightning \"%1$s\". Vérifiez la configuration de l\'utilisateur</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Le service lightning du récepteur à %1$s n\'est pas disponible. Il a été calculé à partir de l\'adresse lightning \"%2$s\". Erreur: %3$s. Vérifiez si le serveur est en ligne et si l\'adresse lightning est correcte</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Impossible de résoudre %1$s. Vérifiez si vous êtes connecté, si le serveur est en ligne et si l\'adresse lightning %2$s est correcte</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Impossible de résoudre %1$s. Vérifiez si vous êtes connecté, si le serveur est actif et si l\'adresse Lightning %2$s est correcte.\n\nL\'erreur était : %3$s</string>
     <string name="could_not_fetch_invoice_from">Impossible de récupérer la facture depuis %1$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Erreur lors de l\'analyse du JSON à partir de l\'Adresse Lightning. Vérifiez la configuration lightning de l\'utilisateur</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">URL de callback introuvable dans la configuration serveur de l\'adresse lightning de l\'utilisateur</string>
@@ -585,4 +613,61 @@
     <string name="server_did_not_provide_a_url_after_uploading">Le serveur n\'a pas fourni d\'URL après le téléversement</string>
     <string name="could_not_download_from_the_server">Impossible de télécharger le média depuis le serveur</string>
     <string name="could_not_prepare_local_file_to_upload">Impossible de préparer le fichier local à téléverser: %1$s</string>
+    <string name="login_with_qr_code">Se connecter avec un QR Code</string>
+    <string name="route">Route</string>
+    <string name="route_home">Accueil</string>
+    <string name="route_search">Rechercher</string>
+    <string name="route_discover">Découvrir</string>
+    <string name="route_messages">Messages</string>
+    <string name="route_notifications">Notifications</string>
+    <string name="route_global">Général</string>
+    <string name="route_video">Shorts</string>
+    <string name="route_security_filters">Filtres de Sécurité</string>
+    <string name="new_post">Nouveau Message</string>
+    <string name="new_short">Nouveaux Shorts : images ou vidéos</string>
+    <string name="new_community_note">Nouvelle Note Communautaire</string>
+    <string name="open_all_reactions_to_this_post">Ouvrir toutes les réactions à ce message</string>
+    <string name="close_all_reactions_to_this_post">Fermer toutes les réactions à ce message</string>
+    <string name="reply_description">Répondre</string>
+    <string name="boost_or_quote_description">Booster ou Citer</string>
+    <string name="like_description">J\'aime</string>
+    <string name="zap_description">Zap</string>
+    <string name="profile_image_of_user">Photo de Profil de %1$s</string>
+    <string name="relay_info">Relais %1$s</string>
+    <string name="expand_relay_list">Développer la liste des relais</string>
+    <string name="note_options">Options de la note</string>
+    <string name="relay_list_selector">Sélecteur de liste de relais</string>
+    <string name="poll">Sondage</string>
+    <string name="disable_poll">Désactiver le Sondage</string>
+    <string name="add_bitcoin_invoice">Facture Bitcoin</string>
+    <string name="cancel_bitcoin_invoice">Annuler la Facture Bitcoin</string>
+    <string name="cancel_classifieds">Annuler la Vente d\'un Objet</string>
+    <string name="add_zapraiser">Collecte de Zaps</string>
+    <string name="cancel_zapraiser">Annuler la Collecte de Zaps</string>
+    <string name="add_location">Emplacement</string>
+    <string name="remove_location">Retirer l\'Emplacement</string>
+    <string name="add_zap_split">Partage des Zaps</string>
+    <string name="cancel_zap_split">Annuler le partage des Zaps</string>
+    <string name="add_content_warning">Ajouter un avertissement de contenu</string>
+    <string name="remove_content_warning">Retirer l\'avertissement de contenu</string>
+    <string name="show_npub_as_a_qr_code">Afficher npub en tant que QR code</string>
+    <string name="invalid_nip19_uri">Adresse invalide</string>
+    <string name="invalid_nip19_uri_description">Amethyst a reçu une URI à ouvrir mais cette URI était invalide : %1$s</string>
+    <string name="zap_the_devs_title">Zap les Devs !</string>
+    <string name="zap_the_devs_description">Votre don nous aide à faire la différence. Chaque sat compte !</string>
+    <string name="donate_now">Faire un don maintenant</string>
+    <string name="brought_to_you_by">vous a été apporté par :</string>
+    <string name="this_version_brought_to_you_by">Cette version vous a été apportée par :</string>
+    <string name="version_name">Version %1$s</string>
+    <string name="thank_you">Merci !</string>
+    <string name="max_limit">Limite maximale</string>
+    <string name="restricted_writes">Écritures limitées</string>
+    <string name="forked_from">Forké depuis</string>
+    <string name="forked_tag">FORK</string>
+    <string name="git_repository">Dépôt Git : %1$s</string>
+    <string name="git_web_address">Web :</string>
+    <string name="git_clone_address">Clone :</string>
+    <string name="existed_since">OTS: %1$s</string>
+    <string name="ots_info_title">Preuve d\'horodatage</string>
+    <string name="ots_info_description">Il y a une preuve que ce message a été signé avant %1$s. La preuve a été estampillée dans la blockchain Bitcoin à cette date et à cette heure.</string>
 </resources>

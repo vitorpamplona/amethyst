@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -33,6 +33,7 @@ import com.google.mlkit.nl.translate.TranslatorOptions
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import kotlinx.coroutines.CancellationException
 import java.util.concurrent.Executors
 import java.util.regex.Pattern
 
@@ -161,7 +162,8 @@ object LanguageTranslatorService {
                 val short = "A$counter"
                 counter++
                 returningList.put(short, tag)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
             }
         }
         return returningList
@@ -177,7 +179,8 @@ object LanguageTranslatorService {
                 val short = "A$counter"
                 counter++
                 returningList.put(short, lnInvoice)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
             }
         }
         return returningList

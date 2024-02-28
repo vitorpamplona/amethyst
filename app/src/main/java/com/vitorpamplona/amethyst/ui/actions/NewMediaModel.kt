@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -148,6 +149,7 @@ open class NewMediaModel : ViewModel() {
                                         context,
                                     )
                                 } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
                                     isUploadingImage = false
                                     uploadingPercentage.value = 0.00f
                                     uploadingDescription.value = null

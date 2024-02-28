@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -72,7 +73,7 @@ fun NewCommunityNoteButton(
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_compose),
-            null,
+            contentDescription = stringResource(id = R.string.new_community_note),
             modifier = Modifier.size(26.dp),
             tint = Color.White,
         )

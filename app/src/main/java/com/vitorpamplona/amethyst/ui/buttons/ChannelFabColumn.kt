@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -65,7 +65,7 @@ fun ChannelFabColumn(
 
     if (wantsToSendNewMessage) {
         NewPostView(
-            { wantsToSendNewMessage = false },
+            onClose = { wantsToSendNewMessage = false },
             enableMessageInterface = true,
             accountViewModel = accountViewModel,
             nav = nav,
@@ -123,7 +123,7 @@ fun ChannelFabColumn(
         ) {
             Icon(
                 imageVector = Icons.Outlined.Add,
-                contentDescription = stringResource(R.string.messages_create_public_chat),
+                contentDescription = stringResource(R.string.messages_create_public_private_chat_desription),
                 modifier = Modifier.size(26.dp),
                 tint = Color.White,
             )

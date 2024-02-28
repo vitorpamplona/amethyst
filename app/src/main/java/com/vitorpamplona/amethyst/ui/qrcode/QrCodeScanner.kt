@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -29,28 +29,16 @@ import com.google.zxing.client.android.Intents
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.amethyst.ui.uriToRoute
+import kotlinx.coroutines.CancellationException
 
 @Composable
 fun NIP19QrCodeScanner(onScan: (String?) -> Unit) {
     SimpleQrCodeScanner {
         try {
-            val nip19 = Nip19.uriToRoute(it)
-            val startingPage =
-                when (nip19?.type) {
-                    Nip19.Type.USER -> "User/${nip19.hex}"
-                    Nip19.Type.NOTE -> "Note/${nip19.hex}"
-                    Nip19.Type.EVENT -> "Event/${nip19.hex}"
-                    Nip19.Type.ADDRESS -> "Note/${nip19.hex}"
-                    else -> null
-                }
-
-            if (startingPage != null) {
-                onScan(startingPage)
-            } else {
-                onScan(null)
-            }
+            onScan(uriToRoute(it))
         } catch (e: Throwable) {
+            if (e is CancellationException) throw e
             Log.e("NIP19 Scanner", "Error parsing $it", e)
             // QR can be anything, do not throw errors.
             onScan(null)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -40,6 +40,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -93,7 +94,7 @@ fun SignUpPage() {
 
 @Composable
 fun SignUpPage(
-    accountViewModel: AccountStateViewModel,
+    accountStateViewModel: AccountStateViewModel,
     onWantsToLogin: () -> Unit,
 ) {
     val displayName = remember { mutableStateOf(TextFieldValue("")) }
@@ -162,7 +163,7 @@ fun SignUpPage(
                         }
 
                         if (acceptedTerms.value && displayName.value.text.isNotBlank()) {
-                            accountViewModel.login(displayName.value.text, useProxy.value, proxyPort.value.toInt()) {
+                            accountStateViewModel.login(displayName.value.text, useProxy.value, proxyPort.value.toInt()) {
                                 errorMessage = context.getString(R.string.invalid_key)
                             }
                         }
@@ -196,6 +197,7 @@ fun SignUpPage(
                     withStyle(clickableTextStyle) {
                         pushStringAnnotation("openTerms", "")
                         append(stringResource(R.string.terms_of_use))
+                        pop()
                     }
                 }
 
@@ -272,7 +274,7 @@ fun SignUpPage(
                     }
 
                     if (acceptedTerms.value && displayName.value.text.isNotBlank()) {
-                        accountViewModel.newKey(useProxy.value, proxyPort.value.toInt(), displayName.value.text)
+                        accountStateViewModel.newKey(useProxy.value, proxyPort.value.toInt(), displayName.value.text)
                     }
                 },
                 shape = RoundedCornerShape(Size35dp),
@@ -292,7 +294,7 @@ fun SignUpPage(
         Spacer(modifier = Modifier.height(Size20dp))
 
         Box(modifier = Modifier.padding(Size40dp, 0.dp, Size40dp, 0.dp)) {
-            Button(
+            OutlinedButton(
                 onClick = onWantsToLogin,
                 shape = RoundedCornerShape(Size35dp),
                 modifier = Modifier.height(50.dp),

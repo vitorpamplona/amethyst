@@ -3,6 +3,7 @@
     <string name="point_to_the_qr_code">Nasměrujte na QR kód</string>
     <string name="show_qr">Zobrazit QR kód</string>
     <string name="profile_image">Profilový obrázek</string>
+    <string name="your_profile_image">Profilový obrázek</string>
     <string name="scan_qr">Skenovat QR kód</string>
     <string name="show_anyway">Zobrazit přesto</string>
     <string name="post_was_flagged_as_inappropriate_by">Příspěvek byl označen jako nevhodný uživatelem</string>
@@ -43,6 +44,7 @@
     <string name="boost">Zvýšení</string>
     <string name="boosted">zvýšeno</string>
     <string name="quote">Citovat</string>
+    <string name="fork">Rozštěpení</string>
     <string name="new_amount_in_sats">Nová částka v sats</string>
     <string name="add">Přidat</string>
     <string name="replying_to">"odpovídá na "</string>
@@ -138,12 +140,15 @@
     <string name="clear">Vymazat</string>
     <string name="app_logo">Logo aplikace</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex privátní klíč</string>
+    <string name="ncryptsec_password">heslo pro otevření klíče</string>
     <string name="show_password">Zobrazit heslo</string>
     <string name="hide_password">Skrýt heslo</string>
     <string name="invalid_key">Neplatný klíč</string>
+    <string name="invalid_key_with_message">Neplatný klíč: %1$s</string>
     <string name="i_accept_the">"Souhlasím s "</string>
     <string name="terms_of_use">podmínkami použití</string>
     <string name="acceptance_of_terms_is_required">Je vyžadováno přijetí podmínek</string>
+    <string name="password_is_required">Heslo je vyžadováno</string>
     <string name="key_is_required">Klíč je povinný</string>
     <string name="name_is_required">Jméno je povinné</string>
     <string name="login">Přihlásit se</string>
@@ -194,14 +199,17 @@
     <string name="mark_all_new_as_read">Označit všechny nové jako přečtené</string>
     <string name="mark_all_as_read">Označit všechny jako přečtené</string>
     <string name="backup_keys">Zálohovat klíče</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Tipy na zálohování a bezpečnost účtu
-        \n\nVáš účet je zabezpečen tajným klíčem. Klíč je dlouhý náhodný řetězec začínající **nsec1**. Každý, kdo má přístup k vašemu tajnému klíči, může publikovat obsah pod vaší identitou.
-        \n\n- **Nepoužívejte** svůj tajný klíč na webových stránkách nebo v softwaru, kterému nedůvěřujete.
-        \n- Vývojáři aplikace Amethyst vás **nikdy** nebudou žádat o váš tajný klíč.
-        \n- **Uchovávejte** si bezpečnou zálohu svého tajného klíče pro obnovení účtu. Doporučujeme používat správce hesel.
-    </string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">    ## Tipy pro zálohování klíčů a bezpečnost
+    \n\nVaše konto je zabezpečeno tajným klíčem. Klíč je dlouhá posloupnost znaků začínající s **nsec1**. Kdo má přístup k tomuto tajnému klíči, může přispívat a měnit vaši identitu.
+    \n\n- **Nedávejte** svůj tajný klíč na žádnou webovou stránku nebo do žádného softwaru, kterému nedůvěřujete.
+    \n- Vývojáři Amethystu nikdy **nebudou** žádat o váš tajný klíč.
+    \n- **Udržujte** bezpečnou zálohu vašeho tajného klíče pro obnovení účtu. Doporučujeme použití správce hesel.</string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">    Pro další zabezpečení můžete svůj klíč zašifrovat heslem. Tento klíč začíná s **ncryptsec1** a nelze ho použít bez vašeho hesla.
+    \n\nPokud zapomenete heslo, nebudete moci obnovit svůj klíč.</string>
+    <string name="failed_to_encrypt_key">Nepodařilo se zašifrovat váš privátní klíč</string>
     <string name="secret_key_copied_to_clipboard">Tajný klíč (nsec) zkopírován do schránky</string>
     <string name="copy_my_secret_key">Zkopírovat můj tajný klíč</string>
+    <string name="encrypt_and_copy_my_secret_key">Zašifrovat a zkopírovat můj tajný klíč</string>
     <string name="biometric_authentication_failed">Autentizace se nezdařila</string>
     <string name="biometric_authentication_failed_explainer">Biometrické údaje se nepodařilo ověřit vlastníka tohoto telefonu</string>
     <string name="biometric_authentication_failed_explainer_with_error">Biometrické údaje se nepodařilo ověřit vlastníka tohoto telefonu. Chyba: %1$s</string>
@@ -453,6 +461,7 @@
     <string name="new_feature_nip24_might_not_be_available_description">Aktivace tohoto režimu vyžaduje od Amethystu odeslání zprávy NIP-24 (GiftWrapped, Zapečetěné přímé a skupinové zprávy). NIP-24 je nový a většina klientů ho zatím neimplementovala. Ujistěte se, že příjemce používá kompatibilního klienta.</string>
     <string name="new_feature_nip24_activate">Aktivovat</string>
     <string name="messages_create_public_chat">Veřejné</string>
+    <string name="messages_create_public_private_chat_desription">Nová veřejná nebo soukromá skupina</string>
     <string name="messages_new_message">Soukromé</string>
     <string name="messages_new_message_to">Pro</string>
     <string name="messages_new_message_subject">Předmět</string>
@@ -469,6 +478,7 @@
     <string name="automatically_show_url_preview_description">Zobrazit náhledy URL</string>
     <string name="load_image_description">Kdy načíst obrázek</string>
     <string name="copy_to_clipboard">Kopírovat do schránky</string>
+    <string name="copy_npub_to_clipboard">Kopírovat npub do schránky</string>
     <string name="copy_url_to_clipboard">Kopírovat URL do schránky</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopírovat ID poznámky do schránky</string>
     <string name="created_at">Vytvořeno</string>
@@ -532,6 +542,7 @@
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Nepodařilo se sestavit LNUrl z Lightning adresy \"%1$s\". Zkontrolujte nastavení uživatele</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Služba blesku příjemce v %1$s není k dispozici. Byla vypočtena z adresy blesku \"%2$s\". Chyba: %3$s. Zkontrolujte, zda je server aktivní a zda je adresa blesku správná</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Nepodařilo se vyřešit %1$s. Zkontrolujte, zda jste připojeni, zda je server aktivní a zda je adresa %2$s správná</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Nepodařilo se vyřešit %1$s. Zkontrolujte, zda jste připojeni, zda je server aktivní a zda je adresa %2$s správná.\n\nVýjimka byla: %3$s</string>
     <string name="could_not_fetch_invoice_from">Nepodařilo se načíst fakturu z %1$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Chyba při analýze JSON z Lightning adresy. Zkontrolujte uživatelovo bleskové nastavení</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">URL adresa zpětného volání nebyla nalezena v konfiguraci serveru pro bleskovou adresu uživatele</string>
@@ -596,4 +607,58 @@
     <string name="server_did_not_provide_a_url_after_uploading">Server po nahrání neposkytl URL</string>
     <string name="could_not_download_from_the_server">Nepodařilo se stáhnout nahraná média ze serveru</string>
     <string name="could_not_prepare_local_file_to_upload">Nelze připravit místní soubor k nahrání: %1$s</string>
+    <string name="login_with_qr_code">Přihlášení pomocí QR kódu</string>
+    <string name="route">Trasa</string>
+    <string name="route_home">Domů</string>
+    <string name="route_search">Hledat</string>
+    <string name="route_discover">Objevit</string>
+    <string name="route_messages">Zprávy</string>
+    <string name="route_notifications">Upozornění</string>
+    <string name="route_global">Globální</string>
+    <string name="route_video">Krátké</string>
+    <string name="route_security_filters">Bezpečnostní filtry</string>
+    <string name="new_post">Nový příspěvek</string>
+    <string name="new_short">Nové Shorts: obrázky nebo videa</string>
+    <string name="new_community_note">Nová poznámka komunity</string>
+    <string name="open_all_reactions_to_this_post">Otevřít všechny reakce pro tento příspěvek</string>
+    <string name="close_all_reactions_to_this_post">Zavřít všechny reakce na tento příspěvek</string>
+    <string name="reply_description">Odpověď</string>
+    <string name="boost_or_quote_description">Zvýšit nebo citovat</string>
+    <string name="like_description">Olajkovat</string>
+    <string name="zap_description">Zap</string>
+    <string name="profile_image_of_user">Obrázek profilu %1$s</string>
+    <string name="relay_info">Relé %1$s</string>
+    <string name="expand_relay_list">Rozbalit seznam relací</string>
+    <string name="note_options">Volby poznámky</string>
+    <string name="relay_list_selector">Výběr seznamu relé</string>
+    <string name="poll">Anketa</string>
+    <string name="disable_poll">Vypnout anketu</string>
+    <string name="add_bitcoin_invoice">Bitcoinová faktura</string>
+    <string name="cancel_bitcoin_invoice">Zrušit Bitcoinovou fakturu</string>
+    <string name="cancel_classifieds">Zrušit prodej položky</string>
+    <string name="add_zapraiser">Zap-sběr</string>
+    <string name="cancel_zapraiser">Zrušit Zap-zběrku</string>
+    <string name="add_location">Místo</string>
+    <string name="remove_location">Odstranit umístění</string>
+    <string name="add_zap_split">Zap splits</string>
+    <string name="cancel_zap_split">Zrušit rozdělení Zap</string>
+    <string name="add_content_warning">Přidat upozornění na obsah</string>
+    <string name="remove_content_warning">Odstranit upozornění na obsah</string>
+    <string name="show_npub_as_a_qr_code">Zobrazit npub jako QR kód</string>
+    <string name="invalid_nip19_uri">Neplatná adresa</string>
+    <string name="invalid_nip19_uri_description">Amethyst obdržel URI k otevření, ale tento URI byl neplatný: %1$s</string>
+    <string name="zap_the_devs_title">Zapni vývojáře!</string>
+    <string name="zap_the_devs_description">Váš příspěvek nám pomáhá dělat rozdíl. Každý sat se počítá!</string>
+    <string name="donate_now">Přispět nyní</string>
+    <string name="brought_to_you_by">představeno pro vás:</string>
+    <string name="this_version_brought_to_you_by">Tato verze byla představena pro vás:</string>
+    <string name="version_name">Verze %1$s</string>
+    <string name="thank_you">Děkujeme!</string>
+    <string name="max_limit">Maximální limit</string>
+    <string name="restricted_writes">Omezené zápisy</string>
+    <string name="forked_from">Rozštěpováno od</string>
+    <string name="forked_tag">FORK</string>
+    <string name="git_repository">Git repositář: %1$s</string>
+    <string name="git_web_address">Internet:</string>
+    <string name="git_clone_address">Klon:</string>
 </resources>

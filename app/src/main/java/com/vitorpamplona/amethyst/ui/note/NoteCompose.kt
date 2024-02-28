@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,15 +49,18 @@ import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -65,6 +69,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,9 +84,12 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.capitalize
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
@@ -92,9 +100,17 @@ import androidx.lifecycle.map
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.request.SuccessResult
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fonfon.kgeohash.GeoHash
 import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.MediaLocalImage
+import com.vitorpamplona.amethyst.commons.MediaLocalVideo
+import com.vitorpamplona.amethyst.commons.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.RichTextParser
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
@@ -105,6 +121,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
+import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.LoadThumbAndThenVideoView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
@@ -113,17 +130,10 @@ import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.VideoView
-import com.vitorpamplona.amethyst.ui.components.ZoomableContent
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
-import com.vitorpamplona.amethyst.ui.components.ZoomableLocalImage
-import com.vitorpamplona.amethyst.ui.components.ZoomableLocalVideo
-import com.vitorpamplona.amethyst.ui.components.ZoomableUrlImage
-import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
-import com.vitorpamplona.amethyst.ui.components.figureOutMimeType
-import com.vitorpamplona.amethyst.ui.components.imageExtensions
 import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
-import com.vitorpamplona.amethyst.ui.components.removeQueryParamsForExtensionComparison
+import com.vitorpamplona.amethyst.ui.components.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.elements.AddButton
 import com.vitorpamplona.amethyst.ui.elements.DisplayFollowingCommunityInPost
 import com.vitorpamplona.amethyst.ui.elements.DisplayFollowingHashtagsInPost
@@ -177,8 +187,10 @@ import com.vitorpamplona.amethyst.ui.theme.boostedNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.channelNotePictureModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
+import com.vitorpamplona.amethyst.ui.theme.nip05
 import com.vitorpamplona.amethyst.ui.theme.normalNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.normalWithTopMarginNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -203,9 +215,13 @@ import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.EmojiUrl
 import com.vitorpamplona.quartz.events.EmptyTagList
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.FhirResourceEvent
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.GitPatchEvent
+import com.vitorpamplona.quartz.events.GitRepositoryEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
@@ -227,14 +243,20 @@ import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.events.VideoEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
+import com.vitorpamplona.quartz.events.WikiNoteEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.URL
+import java.text.DecimalFormat
+import java.text.NumberFormat
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -1123,7 +1145,7 @@ private fun NoteBody(
     val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
     if (zapSplits && noteEvent != null) {
         Spacer(modifier = HalfDoubleVertSpacer)
-        DisplayZapSplits(noteEvent, accountViewModel, nav)
+        DisplayZapSplits(noteEvent, false, accountViewModel, nav)
     }
 }
 
@@ -1162,8 +1184,14 @@ private fun RenderNoteRow(
         is LongTextNoteEvent -> {
             RenderLongFormContent(baseNote, accountViewModel, nav)
         }
+        is WikiNoteEvent -> {
+            RenderWikiContent(baseNote, accountViewModel, nav)
+        }
         is BadgeAwardEvent -> {
             RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
+        }
+        is FhirResourceEvent -> {
+            RenderFhirResource(baseNote, accountViewModel, nav)
         }
         is PeopleListEvent -> {
             DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
@@ -1179,6 +1207,19 @@ private fun RenderNoteRow(
         }
         is LiveActivitiesEvent -> {
             RenderLiveActivityEvent(baseNote, accountViewModel, nav)
+        }
+        is GitRepositoryEvent -> {
+            RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
+        }
+        is GitPatchEvent -> {
+            RenderGitPatchEvent(
+                baseNote,
+                makeItShort,
+                canPreview,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
         }
         is PrivateDmEvent -> {
             RenderPrivateMessage(
@@ -1447,7 +1488,7 @@ fun RenderAppDefinition(
 
                 if (zoomImageDialogOpen) {
                     ZoomableImageDialog(
-                        imageUrl = figureOutMimeType(it.banner!!),
+                        imageUrl = RichTextParser.parseImageOrVideo(it.banner!!),
                         onDismiss = { zoomImageDialogOpen = false },
                         accountViewModel = accountViewModel,
                     )
@@ -1503,7 +1544,7 @@ fun RenderAppDefinition(
 
                     if (zoomImageDialogOpen) {
                         ZoomableImageDialog(
-                            imageUrl = figureOutMimeType(it.banner!!),
+                            imageUrl = RichTextParser.parseImageOrVideo(it.banner!!),
                             onDismiss = { zoomImageDialogOpen = false },
                             accountViewModel = accountViewModel,
                         )
@@ -2342,6 +2383,7 @@ private fun RenderReport(
                     ReportEvent.ReportType.SPAM -> stringResource(R.string.spam)
                     ReportEvent.ReportType.IMPERSONATION -> stringResource(R.string.impersonation)
                     ReportEvent.ReportType.ILLEGAL -> stringResource(R.string.illegal_behavior)
+                    ReportEvent.ReportType.OTHER -> stringResource(R.string.other)
                 }
             }
             .toSet()
@@ -2494,31 +2536,151 @@ fun SecondUserInfoRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val noteEvent = remember { note.event } ?: return
-    val noteAuthor = remember { note.author } ?: return
+    val noteEvent = note.event ?: return
+    val noteAuthor = note.author ?: return
 
     Row(
         verticalAlignment = CenterVertically,
         modifier = UserNameMaxRowHeight,
     ) {
-        ObserveDisplayNip05Status(noteAuthor, remember { Modifier.weight(1f) }, accountViewModel, nav)
+        if (noteEvent is BaseTextNoteEvent && noteEvent.isAFork()) {
+            ShowForkInformation(noteEvent, remember(noteEvent) { Modifier.weight(1f) }, accountViewModel, nav)
+        } else {
+            ObserveDisplayNip05Status(noteAuthor, remember(noteEvent) { Modifier.weight(1f) }, accountViewModel, nav)
+        }
 
-        val geo = remember { noteEvent.getGeoHash() }
+        val geo = remember(noteEvent) { noteEvent.getGeoHash() }
         if (geo != null) {
             Spacer(StdHorzSpacer)
             DisplayLocation(geo, nav)
         }
 
-        val baseReward = remember { noteEvent.getReward()?.let { Reward(it) } }
+        val baseReward = remember(noteEvent) { noteEvent.getReward()?.let { Reward(it) } }
         if (baseReward != null) {
             Spacer(StdHorzSpacer)
             DisplayReward(baseReward, note, accountViewModel, nav)
         }
 
-        val pow = remember { noteEvent.getPoWRank() }
+        val pow = remember(noteEvent) { noteEvent.getPoWRank() }
         if (pow > 20) {
             Spacer(StdHorzSpacer)
             DisplayPoW(pow)
+        }
+
+        DisplayOts(note, accountViewModel)
+    }
+}
+
+@Composable
+fun DisplayOts(
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
+    LoadOts(
+        note,
+        accountViewModel,
+        whenConfirmed = { unixtimestamp ->
+            val context = LocalContext.current
+            val timeStr by remember(unixtimestamp) { mutableStateOf(timeAgoNoDot(unixtimestamp, context = context)) }
+
+            ClickableText(
+                text = buildAnnotatedString { append(stringResource(id = R.string.existed_since, timeStr)) },
+                onClick = {
+                    val fullDateTime =
+                        SimpleDateFormat.getDateTimeInstance().format(Date(unixtimestamp * 1000))
+
+                    accountViewModel.toast(
+                        context.getString(R.string.ots_info_title),
+                        context.getString(R.string.ots_info_description, fullDateTime),
+                    )
+                },
+                style =
+                    LocalTextStyle.current.copy(
+                        color = MaterialTheme.colorScheme.lessImportantLink,
+                        fontSize = Font14SP,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                maxLines = 1,
+            )
+        },
+        whenPending = {
+            Text(
+                stringResource(id = R.string.timestamp_pending_short),
+                color = MaterialTheme.colorScheme.lessImportantLink,
+                fontSize = Font14SP,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+            )
+        },
+    )
+}
+
+@Composable
+private fun ShowForkInformation(
+    noteEvent: BaseTextNoteEvent,
+    modifier: Modifier,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val forkedAddress = remember(noteEvent) { noteEvent.forkFromAddress() }
+    val forkedEvent = remember(noteEvent) { noteEvent.forkFromVersion() }
+    if (forkedAddress != null) {
+        LoadAddressableNote(aTag = forkedAddress, accountViewModel = accountViewModel) { addressableNote ->
+            if (addressableNote != null) {
+                ForkInformationRowLightColor(addressableNote, modifier, accountViewModel, nav)
+            }
+        }
+    } else if (forkedEvent != null) {
+        LoadNote(forkedEvent, accountViewModel = accountViewModel) { event ->
+            if (event != null) {
+                ForkInformationRowLightColor(event, modifier, accountViewModel, nav)
+            }
+        }
+    }
+}
+
+@Composable
+fun ForkInformationRowLightColor(
+    originalVersion: Note,
+    modifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val noteState by originalVersion.live().metadata.observeAsState()
+    val note = noteState?.note ?: return
+    val author = note.author ?: return
+    val route = remember(note) { routeFor(note, accountViewModel.userProfile()) }
+
+    if (route != null) {
+        Row(modifier) {
+            ClickableText(
+                text =
+                    buildAnnotatedString {
+                        append(stringResource(id = R.string.forked_from))
+                        append(" ")
+                    },
+                onClick = { nav(route) },
+                style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
+                maxLines = 1,
+                overflow = TextOverflow.Visible,
+            )
+
+            val userState by author.live().metadata.observeAsState()
+            val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
+            val userTags =
+                remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
+
+            if (userDisplayName != null) {
+                CreateClickableTextWithEmoji(
+                    clickablePart = userDisplayName,
+                    maxLines = 1,
+                    route = route,
+                    overrideColor = MaterialTheme.colorScheme.nip05,
+                    fontSize = Font14SP,
+                    nav = nav,
+                    tags = userTags,
+                )
+            }
         }
     }
 }
@@ -2542,6 +2704,38 @@ fun LoadStatuses(
     }
 
     content(statuses)
+}
+
+@Composable
+fun LoadOts(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    whenConfirmed: @Composable (Long) -> Unit,
+    whenPending: @Composable () -> Unit,
+) {
+    var earliestDate: GenericLoadable<Long> by remember { mutableStateOf(GenericLoadable.Loading()) }
+
+    val noteStatus by note.live().innerOts.observeAsState()
+
+    LaunchedEffect(key1 = noteStatus) {
+        accountViewModel.findOtsEventsForNote(noteStatus?.note ?: note) { newOts ->
+            earliestDate =
+                if (newOts == null) {
+                    GenericLoadable.Empty()
+                } else {
+                    GenericLoadable.Loaded(newOts)
+                }
+        }
+    }
+
+    (earliestDate as? GenericLoadable.Loaded)?.let {
+        whenConfirmed(it.loaded)
+    } ?: run {
+        val account = accountViewModel.account.saveable.observeAsState()
+        if (account.value?.account?.hasPendingAttestations(note) == true) {
+            whenPending()
+        }
+    }
 }
 
 @Composable
@@ -2658,7 +2852,7 @@ fun MoreOptionsButton(
         modifier = Size24Modifier,
         onClick = enablePopup,
     ) {
-        VerticalDotsIcon()
+        VerticalDotsIcon(R.string.note_options)
 
         NoteDropDownMenu(
             baseNote,
@@ -2918,12 +3112,19 @@ private fun LoadAndDisplayUrl(url: String) {
 }
 
 @Composable
-private fun LoadAndDisplayUser(
+fun LoadAndDisplayUser(
     userBase: User,
     nav: (String) -> Unit,
 ) {
-    val route = remember { "User/${userBase.pubkeyHex}" }
+    LoadAndDisplayUser(userBase, "User/${userBase.pubkeyHex}", nav)
+}
 
+@Composable
+fun LoadAndDisplayUser(
+    userBase: User,
+    route: String,
+    nav: (String) -> Unit,
+) {
     val userState by userBase.live().metadata.observeAsState()
     val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
     val userTags =
@@ -2932,7 +3133,6 @@ private fun LoadAndDisplayUser(
     if (userDisplayName != null) {
         CreateClickableTextWithEmoji(
             clickablePart = userDisplayName,
-            suffix = " ",
             maxLines = 1,
             route = route,
             nav = nav,
@@ -3064,15 +3264,12 @@ fun FileHeaderDisplay(
             val hash = event.hash()
             val dimensions = event.dimensions()
             val description = event.alt() ?: event.content
-            val isImage =
-                imageExtensions.any {
-                    removeQueryParamsForExtensionComparison(fullUrl).lowercase().endsWith(it)
-                }
+            val isImage = RichTextParser.isImageUrl(fullUrl)
             val uri = note.toNostrUri()
 
-            mutableStateOf<ZoomableContent>(
+            mutableStateOf<BaseMediaContent>(
                 if (isImage) {
-                    ZoomableUrlImage(
+                    MediaUrlImage(
                         url = fullUrl,
                         description = description,
                         hash = hash,
@@ -3081,7 +3278,7 @@ fun FileHeaderDisplay(
                         uri = uri,
                     )
                 } else {
-                    ZoomableUrlVideo(
+                    MediaUrlVideo(
                         url = fullUrl,
                         description = description,
                         hash = hash,
@@ -3126,15 +3323,12 @@ fun VideoDisplay(
             val hash = event.hash()
             val dimensions = event.dimensions()
             val description = event.alt() ?: event.content
-            val isImage =
-                imageExtensions.any {
-                    removeQueryParamsForExtensionComparison(fullUrl).lowercase().endsWith(it)
-                }
+            val isImage = RichTextParser.isImageUrl(fullUrl)
             val uri = note.toNostrUri()
 
-            mutableStateOf<ZoomableContent>(
+            mutableStateOf<BaseMediaContent>(
                 if (isImage) {
-                    ZoomableUrlImage(
+                    MediaUrlImage(
                         url = fullUrl,
                         description = description,
                         hash = hash,
@@ -3143,7 +3337,7 @@ fun VideoDisplay(
                         uri = uri,
                     )
                 } else {
-                    ZoomableUrlVideo(
+                    MediaUrlVideo(
                         url = fullUrl,
                         description = description,
                         hash = hash,
@@ -3273,17 +3467,17 @@ private fun ObserverAndRenderNIP95(
 
             val newContent =
                 if (mimeType?.startsWith("image") == true) {
-                    ZoomableLocalImage(
+                    MediaLocalImage(
                         localFile = localDir,
                         mimeType = mimeType,
                         description = description,
-                        blurhash = blurHash,
                         dim = dimensions,
+                        blurhash = blurHash,
                         isVerified = true,
                         uri = uri,
                     )
                 } else {
-                    ZoomableLocalVideo(
+                    MediaLocalVideo(
                         localFile = localDir,
                         mimeType = mimeType,
                         description = description,
@@ -3294,7 +3488,7 @@ private fun ObserverAndRenderNIP95(
                     )
                 }
 
-            mutableStateOf<ZoomableContent?>(newContent)
+            mutableStateOf<BaseMediaContent?>(newContent)
         }
 
     Crossfade(targetState = content) {
@@ -3456,6 +3650,211 @@ fun AudioHeader(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = CenterVertically) {
                     val hashtags = remember(noteEvent) { noteEvent.hashtags().toImmutableList() }
                     DisplayUncitedHashtags(hashtags, content ?: "", nav)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderGitPatchEvent(
+    baseNote: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val event = baseNote.event as? GitPatchEvent ?: return
+
+    RenderGitPatchEvent(event, baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+}
+
+@Composable
+private fun RenderShortRepositoryHeader(
+    baseNote: AddressableNote,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val noteState = baseNote.live().metadata.observeAsState()
+    val note = remember(noteState) { noteState.value?.note } ?: return
+    val noteEvent = note.event as? GitRepositoryEvent ?: return
+
+    Column(
+        modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
+    ) {
+        val title = remember(noteEvent) { noteEvent.name() ?: noteEvent.dTag() }
+        Text(
+            text = stringResource(id = R.string.git_repository, title),
+            style = MaterialTheme.typography.titleLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        noteEvent.description()?.let {
+            Spacer(modifier = DoubleVertSpacer)
+            Text(
+                text = it,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RenderGitPatchEvent(
+    noteEvent: GitPatchEvent,
+    note: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val repository = remember(noteEvent) { noteEvent.repository() }
+
+    if (repository != null) {
+        LoadAddressableNote(aTag = repository, accountViewModel = accountViewModel) {
+            if (it != null) {
+                RenderShortRepositoryHeader(it, accountViewModel, nav)
+                Spacer(modifier = DoubleVertSpacer)
+            }
+        }
+    }
+
+    LoadDecryptedContent(note, accountViewModel) { body ->
+        val eventContent by
+            remember(note.event) {
+                derivedStateOf {
+                    val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
+
+                    if (!subject.isNullOrBlank() && !body.split("\n")[0].contains(subject)) {
+                        "### $subject\n$body"
+                    } else {
+                        body
+                    }
+                }
+            }
+
+        val isAuthorTheLoggedUser = remember(note.event) { accountViewModel.isLoggedUser(note.author) }
+
+        if (makeItShort && isAuthorTheLoggedUser) {
+            Text(
+                text = eventContent,
+                color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        } else {
+            SensitivityWarning(
+                note = note,
+                accountViewModel = accountViewModel,
+            ) {
+                val modifier = remember(note) { Modifier.fillMaxWidth() }
+                val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+
+                TranslatableRichTextViewer(
+                    content = eventContent,
+                    canPreview = canPreview && !makeItShort,
+                    modifier = modifier,
+                    tags = tags,
+                    backgroundColor = backgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+
+            if (note.event?.hasHashtags() == true) {
+                val hashtags =
+                    remember(note.event) { note.event?.hashtags()?.toImmutableList() ?: persistentListOf() }
+                DisplayUncitedHashtags(hashtags, eventContent, nav)
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderGitRepositoryEvent(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val event = baseNote.event as? GitRepositoryEvent ?: return
+
+    RenderGitRepositoryEvent(event, baseNote, accountViewModel, nav)
+}
+
+@Composable
+private fun RenderGitRepositoryEvent(
+    noteEvent: GitRepositoryEvent,
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val title = remember(noteEvent) { noteEvent.name() ?: noteEvent.dTag() }
+    val summary = remember(noteEvent) { noteEvent.description() }
+    val web = remember(noteEvent) { noteEvent.web() }
+    val clone = remember(noteEvent) { noteEvent.clone() }
+
+    Row(
+        modifier =
+            Modifier
+                .clip(shape = QuoteBorder)
+                .border(
+                    1.dp,
+                    MaterialTheme.colorScheme.subtleBorder,
+                    QuoteBorder,
+                ).padding(Size10dp),
+    ) {
+        Column {
+            Text(
+                text = stringResource(id = R.string.git_repository, title),
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            summary?.let {
+                Text(
+                    text = it,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = Size5dp),
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            HorizontalDivider(thickness = DividerThickness)
+
+            web?.let {
+                Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
+                    Text(
+                        text = stringResource(id = R.string.git_web_address),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = StdHorzSpacer)
+                    ClickableUrl(
+                        url = it,
+                        urlText = it.removePrefix("https://").removePrefix("http://"),
+                    )
+                }
+            }
+
+            clone?.let {
+                Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
+                    Text(
+                        text = stringResource(id = R.string.git_clone_address),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = StdHorzSpacer)
+                    ClickableUrl(
+                        url = it,
+                        urlText = it.removePrefix("https://").removePrefix("http://"),
+                    )
                 }
             }
         }
@@ -3669,6 +4068,91 @@ private fun LongFormHeader(
             }
 
             summary?.let {
+                Spacer(modifier = StdVertSpacer)
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                    color = Color.Gray,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RenderWikiContent(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val noteEvent = note.event as? WikiNoteEvent ?: return
+
+    WikiNoteHeader(noteEvent, note, accountViewModel, nav)
+}
+
+@Composable
+private fun WikiNoteHeader(
+    noteEvent: WikiNoteEvent,
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val title = remember(noteEvent) { noteEvent.title() }
+    val summary =
+        remember(noteEvent) {
+            noteEvent.summary()?.ifBlank { null } ?: noteEvent.content.take(200).ifBlank { null }
+        }
+    val image = remember(noteEvent) { noteEvent.image() }
+
+    Row(
+        modifier =
+            Modifier
+                .padding(top = Size5dp)
+                .clip(shape = QuoteBorder)
+                .border(
+                    1.dp,
+                    MaterialTheme.colorScheme.subtleBorder,
+                    QuoteBorder,
+                ),
+    ) {
+        Column {
+            val automaticallyShowUrlPreview = remember { accountViewModel.settings.showUrlPreview.value }
+
+            if (automaticallyShowUrlPreview) {
+                image?.let {
+                    AsyncImage(
+                        model = it,
+                        contentDescription =
+                            stringResource(
+                                R.string.preview_card_image_for,
+                                it,
+                            ),
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                    ?: CreateImageHeader(note, accountViewModel)
+            }
+
+            title?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 10.dp, end = 10.dp, top = 10.dp),
+                )
+            }
+
+            summary?.let {
+                Spacer(modifier = StdVertSpacer)
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodySmall,
@@ -3878,4 +4362,224 @@ fun CreateImageHeader(
             NoteAuthorPicture(baseNote = note, accountViewModel = accountViewModel, size = Size55dp)
         }
     }
+}
+
+@Preview
+@Composable
+fun RenderEyeGlassesPrescriptionPreview() {
+    val accountViewModel = mockAccountViewModel()
+    val nav: (String) -> Unit = {}
+
+    val prescriptionEvent = Event.fromJson("{\"id\":\"0c15d2bc6f7dcc42fa4426d35d30d09840c9afa5b46d100415006e41d6471416\",\"pubkey\":\"bcd4715cc34f98dce7b52fddaf1d826e5ce0263479b7e110a5bd3c3789486ca8\",\"created_at\":1709074097,\"kind\":82,\"tags\":[],\"content\":\"{\\\"resourceType\\\":\\\"Bundle\\\",\\\"id\\\":\\\"bundle-vision-test\\\",\\\"type\\\":\\\"document\\\",\\\"entry\\\":[{\\\"resourceType\\\":\\\"Practitioner\\\",\\\"id\\\":\\\"2\\\",\\\"active\\\":true,\\\"name\\\":[{\\\"use\\\":\\\"official\\\",\\\"family\\\":\\\"Careful\\\",\\\"given\\\":[\\\"Adam\\\"]}],\\\"gender\\\":\\\"male\\\"},{\\\"resourceType\\\":\\\"Patient\\\",\\\"id\\\":\\\"1\\\",\\\"active\\\":true,\\\"name\\\":[{\\\"use\\\":\\\"official\\\",\\\"family\\\":\\\"Duck\\\",\\\"given\\\":[\\\"Donald\\\"]}],\\\"gender\\\":\\\"male\\\"},{\\\"resourceType\\\":\\\"VisionPrescription\\\",\\\"status\\\":\\\"active\\\",\\\"created\\\":\\\"2014-06-15\\\",\\\"patient\\\":{\\\"reference\\\":\\\"#1\\\"},\\\"dateWritten\\\":\\\"2014-06-15\\\",\\\"prescriber\\\":{\\\"reference\\\":\\\"#2\\\"},\\\"lensSpecification\\\":[{\\\"eye\\\":\\\"right\\\",\\\"sphere\\\":-2,\\\"prism\\\":[{\\\"amount\\\":0.5,\\\"base\\\":\\\"down\\\"}],\\\"add\\\":2},{\\\"eye\\\":\\\"left\\\",\\\"sphere\\\":-1,\\\"cylinder\\\":-0.5,\\\"axis\\\":180,\\\"prism\\\":[{\\\"amount\\\":0.5,\\\"base\\\":\\\"up\\\"}],\\\"add\\\":2}]}]}\",\"sig\":\"dc58f6109111ca06920c0c711aeaf8e2ee84975afa60d939828d4e01e2edea738f735fb5b1fcadf6d5496e36ac429abf7020a55fd1e4ed215738afc8d07cb950\"}") as FhirResourceEvent
+
+    RenderFhirResource(prescriptionEvent, accountViewModel, nav)
+}
+
+@Composable
+fun RenderFhirResource(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val event = baseNote.event as? FhirResourceEvent ?: return
+
+    RenderFhirResource(event, accountViewModel, nav)
+}
+
+@Composable
+fun RenderFhirResource(
+    event: FhirResourceEvent,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    var baseResource: Resource? by remember(event) {
+        mutableStateOf(null)
+    }
+
+    LaunchedEffect(key1 = event) {
+        withContext(Dispatchers.IO) {
+            val mapper =
+                jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+
+            try {
+                baseResource = mapper.readValue(event.content, Resource::class.java)
+            } catch (e: Exception) {
+                Log.e("RenderEyeGlassesPrescription", "Parser error", e)
+            }
+        }
+    }
+
+    baseResource?.let { resource ->
+        when (resource) {
+            is Bundle -> {
+                val db = resource.entry.associate { it.id to it }
+                val vision = resource.entry.filterIsInstance(VisionPrescription::class.java)
+
+                vision.firstOrNull()?.let {
+                    RenderEyeGlassesPrescription(it, db, accountViewModel, nav)
+                }
+            }
+            is VisionPrescription -> {
+                val db = mapOf(resource.id to resource)
+                RenderEyeGlassesPrescription(resource, db, accountViewModel, nav)
+            }
+            else -> {
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderEyeGlassesPrescription(
+    visionPrescription: VisionPrescription,
+    db: Map<String, Resource>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(Size10dp),
+    ) {
+        val rightEye = visionPrescription.lensSpecification.firstOrNull { it.eye == "right" }
+        val leftEye = visionPrescription.lensSpecification.firstOrNull { it.eye == "left" }
+
+        Text(
+            "Eyeglasses Prescription",
+            modifier = Modifier.padding(4.dp).fillMaxWidth(),
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(StdVertSpacer)
+
+        visionPrescription.patient?.reference?.let {
+            val patient = findReferenceInDb(it, db) as? Patient
+
+            patient?.name?.firstOrNull()?.assembleName()?.let {
+                Text(
+                    text = "Patient: $it",
+                    modifier = Modifier.padding(4.dp).fillMaxWidth(),
+                )
+            }
+        }
+        visionPrescription.status?.let {
+            Text(
+                text = "Status: ${it.capitalize()}",
+                modifier = Modifier.padding(4.dp).fillMaxWidth(),
+            )
+        }
+
+        Spacer(DoubleVertSpacer)
+
+        RenderEyeGlassesPrescriptionHeaderRow()
+        HorizontalDivider(thickness = DividerThickness)
+
+        rightEye?.let {
+            RenderEyeGlassesPrescriptionRow(data = it)
+            HorizontalDivider(thickness = DividerThickness)
+        }
+
+        leftEye?.let {
+            RenderEyeGlassesPrescriptionRow(data = it)
+            HorizontalDivider(thickness = DividerThickness)
+        }
+
+        Spacer(DoubleVertSpacer)
+
+        visionPrescription.prescriber?.reference?.let {
+            val practitioner = findReferenceInDb(it, db) as? Practitioner
+
+            practitioner?.name?.firstOrNull()?.assembleName()?.let {
+                Text(
+                    text = "Signed by: $it",
+                    modifier = Modifier.padding(4.dp).fillMaxWidth(),
+                    textAlign = TextAlign.Right,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderEyeGlassesPrescriptionHeaderRow() {
+    Row(
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = "Eye",
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        VerticalDivider(thickness = DividerThickness)
+        Text(
+            text = "Sph",
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        Text(
+            text = "Cyl",
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        Text(
+            text = "Axis",
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        VerticalDivider(thickness = DividerThickness)
+        Text(
+            text = "Add",
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+    }
+}
+
+@Composable
+fun RenderEyeGlassesPrescriptionRow(data: LensSpecification) {
+    Row(
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val numberFormat = DecimalFormat("##.00")
+        val integerFormat = DecimalFormat("###")
+
+        Text(
+            text = data.eye?.capitalize() ?: "Unknown",
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        VerticalDivider(thickness = DividerThickness)
+        Text(
+            text = formatOrBlank(data.sphere, numberFormat),
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        Text(
+            text = formatOrBlank(data.cylinder, numberFormat),
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        Text(
+            text = formatOrBlank(data.axis, integerFormat),
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        VerticalDivider(thickness = DividerThickness)
+        Text(
+            text = formatOrBlank(data.add, numberFormat),
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+    }
+}
+
+fun formatOrBlank(
+    amount: Double?,
+    numberFormat: NumberFormat,
+): String {
+    if (amount == null) return ""
+    if (Math.abs(amount) < 0.01) return ""
+    return numberFormat.format(amount)
 }

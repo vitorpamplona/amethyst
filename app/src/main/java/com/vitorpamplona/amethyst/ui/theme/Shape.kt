@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -116,6 +116,7 @@ val Size19Modifier = Modifier.size(19.dp)
 val Size20Modifier = Modifier.size(20.dp)
 val Size22Modifier = Modifier.size(22.dp)
 val Size24Modifier = Modifier.size(24.dp)
+val Size25Modifier = Modifier.size(25.dp)
 val Size26Modifier = Modifier.size(26.dp)
 val Size30Modifier = Modifier.size(30.dp)
 val Size35Modifier = Modifier.size(35.dp)

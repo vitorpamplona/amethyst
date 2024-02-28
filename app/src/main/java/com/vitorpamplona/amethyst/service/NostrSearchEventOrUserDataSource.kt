@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -24,9 +24,12 @@ import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexValidator
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
+import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
@@ -46,6 +49,7 @@ import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import kotlin.coroutines.cancellation.CancellationException
 
 object NostrSearchEventOrUserDataSource : NostrDataSource("SearchEventFeed") {
     private var searchString: String? = null
@@ -65,82 +69,118 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SearchEventFeed") {
                         null
                     }
 
-                Nip19.uriToRoute(mySearchString)?.hex ?: isAStraightHex
+                when (val parsed = Nip19Bech32.uriToRoute(mySearchString)?.entity) {
+                    is Nip19Bech32.NSec -> KeyPair(privKey = parsed.hex.bechToBytes()).pubKey.toHexKey()
+                    is Nip19Bech32.NPub -> parsed.hex
+                    is Nip19Bech32.NProfile -> parsed.hex
+                    is Nip19Bech32.Note -> parsed.hex
+                    is Nip19Bech32.NEvent -> parsed.hex
+                    is Nip19Bech32.NEmbed -> parsed.event.id
+                    is Nip19Bech32.NRelay -> null
+                    is Nip19Bech32.NAddress -> parsed.atag
+                    else -> isAStraightHex
+                }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 null
             }
 
-        // downloads all the reactions to a given event.
-        return listOfNotNull(
+        val directReferenceFilters =
             hexToWatch?.let {
-                TypedFilter(
-                    types = COMMON_FEED_TYPES,
-                    filter =
-                        JsonFilter(
-                            ids = listOfNotNull(hexToWatch),
+                if (it.contains(":")) {
+                    // naddr
+                    listOfNotNull(
+                        ATag.parse(it, null)?.let { aTag ->
+                            TypedFilter(
+                                types = COMMON_FEED_TYPES,
+                                filter =
+                                    JsonFilter(
+                                        kinds = listOf(MetadataEvent.KIND, aTag.kind),
+                                        authors = listOfNotNull(aTag.pubKeyHex),
+                                        // just to be sure
+                                        limit = 5,
+                                    ),
+                            )
+                        },
+                    )
+                } else {
+                    // event ids
+                    listOf(
+                        TypedFilter(
+                            types = COMMON_FEED_TYPES,
+                            filter =
+                                JsonFilter(
+                                    ids = listOfNotNull(hexToWatch),
+                                ),
                         ),
-                )
-            },
-            hexToWatch?.let {
+                        // authors
+                        TypedFilter(
+                            types = COMMON_FEED_TYPES,
+                            filter =
+                                JsonFilter(
+                                    kinds = listOf(MetadataEvent.KIND),
+                                    authors = listOfNotNull(hexToWatch),
+                                    // just to be sure
+                                    limit = 5,
+                                ),
+                        ),
+                    )
+                }
+            } ?: emptyList()
+
+        // downloads all the reactions to a given event.
+        return directReferenceFilters +
+            listOfNotNull(
                 TypedFilter(
-                    types = COMMON_FEED_TYPES,
+                    types = setOf(FeedType.SEARCH),
                     filter =
                         JsonFilter(
                             kinds = listOf(MetadataEvent.KIND),
-                            authors = listOfNotNull(hexToWatch),
+                            search = mySearchString,
+                            limit = 100,
                         ),
-                )
-            },
-            TypedFilter(
-                types = setOf(FeedType.SEARCH),
-                filter =
-                    JsonFilter(
-                        kinds = listOf(MetadataEvent.KIND),
-                        search = mySearchString,
-                        limit = 100,
-                    ),
-            ),
-            TypedFilter(
-                types = setOf(FeedType.SEARCH),
-                filter =
-                    JsonFilter(
-                        kinds =
-                            listOf(
-                                TextNoteEvent.KIND,
-                                LongTextNoteEvent.KIND,
-                                BadgeDefinitionEvent.KIND,
-                                PeopleListEvent.KIND,
-                                BookmarkListEvent.KIND,
-                                AudioHeaderEvent.KIND,
-                                AudioTrackEvent.KIND,
-                                PinListEvent.KIND,
-                                PollNoteEvent.KIND,
-                                ChannelCreateEvent.KIND,
-                            ),
-                        search = mySearchString,
-                        limit = 100,
-                    ),
-            ),
-            TypedFilter(
-                types = setOf(FeedType.SEARCH),
-                filter =
-                    JsonFilter(
-                        kinds =
-                            listOf(
-                                ChannelMetadataEvent.KIND,
-                                ClassifiedsEvent.KIND,
-                                CommunityDefinitionEvent.KIND,
-                                EmojiPackEvent.KIND,
-                                HighlightEvent.KIND,
-                                LiveActivitiesEvent.KIND,
-                                PollNoteEvent.KIND,
-                                NNSEvent.KIND,
-                            ),
-                        search = mySearchString,
-                        limit = 100,
-                    ),
-            ),
-        )
+                ),
+                TypedFilter(
+                    types = setOf(FeedType.SEARCH),
+                    filter =
+                        JsonFilter(
+                            kinds =
+                                listOf(
+                                    TextNoteEvent.KIND,
+                                    LongTextNoteEvent.KIND,
+                                    BadgeDefinitionEvent.KIND,
+                                    PeopleListEvent.KIND,
+                                    BookmarkListEvent.KIND,
+                                    AudioHeaderEvent.KIND,
+                                    AudioTrackEvent.KIND,
+                                    PinListEvent.KIND,
+                                    PollNoteEvent.KIND,
+                                    ChannelCreateEvent.KIND,
+                                ),
+                            search = mySearchString,
+                            limit = 100,
+                        ),
+                ),
+                TypedFilter(
+                    types = setOf(FeedType.SEARCH),
+                    filter =
+                        JsonFilter(
+                            kinds =
+                                listOf(
+                                    ChannelMetadataEvent.KIND,
+                                    ClassifiedsEvent.KIND,
+                                    CommunityDefinitionEvent.KIND,
+                                    EmojiPackEvent.KIND,
+                                    HighlightEvent.KIND,
+                                    LiveActivitiesEvent.KIND,
+                                    PollNoteEvent.KIND,
+                                    NNSEvent.KIND,
+                                ),
+                            search = mySearchString,
+                            limit = 100,
+                        ),
+                ),
+            )
     }
 
     val searchChannel = requestNewChannel()

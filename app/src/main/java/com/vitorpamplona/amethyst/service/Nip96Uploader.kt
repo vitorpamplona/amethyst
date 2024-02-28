@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -128,7 +128,7 @@ class Nip96Uploader(val account: Account?) {
         val extension =
             contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
-        val client = HttpClient.getHttpClient()
+        val client = HttpClientManager.getHttpClient()
         val requestBody: RequestBody
         val requestBuilder = Request.Builder()
 
@@ -194,7 +194,7 @@ class Nip96Uploader(val account: Account?) {
         val extension =
             contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
-        val client = HttpClient.getHttpClient()
+        val client = HttpClientManager.getHttpClient()
 
         val requestBuilder = Request.Builder()
 
@@ -227,7 +227,7 @@ class Nip96Uploader(val account: Account?) {
         server: Nip96Retriever.ServerInfo,
         onProgress: (percentage: Float) -> Unit,
     ): PartialEvent {
-        val client = HttpClient.getHttpClient()
+        val client = HttpClientManager.getHttpClient()
         var currentResult = result
 
         while (!result.processingUrl.isNullOrBlank() && (currentResult.percentage ?: 100) < 100) {

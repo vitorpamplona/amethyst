@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,32 +20,35 @@
  */
 package com.vitorpamplona.amethyst
 
+import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
-object EncryptedStorage {
-    private const val PREFERENCES_NAME = "secret_keeper"
+class EncryptedStorage {
+    companion object {
+        private const val PREFERENCES_NAME = "secret_keeper"
 
-    // returns the preferences for each account or a global file if null.
-    fun prefsFileName(npub: String? = null): String {
-        return if (npub == null) PREFERENCES_NAME else "${PREFERENCES_NAME}_$npub"
-    }
+        // returns the preferences for each account or a global file if null.
+        fun prefsFileName(npub: String? = null): String {
+            return if (npub == null) PREFERENCES_NAME else "${PREFERENCES_NAME}_$npub"
+        }
 
-    fun preferences(npub: String? = null): EncryptedSharedPreferences {
-        val context = Amethyst.instance
-        val masterKey: MasterKey =
-            MasterKey.Builder(context, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
+        fun preferences(
+            applicationContext: Context,
+            npub: String? = null,
+        ): EncryptedSharedPreferences {
+            val masterKey: MasterKey =
+                MasterKey.Builder(applicationContext, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build()
 
-        val preferencesName = prefsFileName(npub)
-
-        return EncryptedSharedPreferences.create(
-            context,
-            preferencesName,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        ) as EncryptedSharedPreferences
+            return EncryptedSharedPreferences.create(
+                applicationContext,
+                prefsFileName(npub),
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+            ) as EncryptedSharedPreferences
+        }
     }
 }

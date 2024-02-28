@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -65,7 +65,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.components.ImageUrlType
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -90,10 +89,10 @@ import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.ui.theme.profile35dpModifier
+import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import com.vitorpamplona.quartz.events.EmptyTagList
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.time.ExperimentalTime
@@ -232,10 +231,7 @@ fun RenderLikeGallery(
                     val url = noStartColon.substringAfter(":")
 
                     val renderable =
-                        listOf(
-                            ImageUrlType(url),
-                        )
-                            .toImmutableList()
+                        persistentListOf(Nip30CustomEmoji.ImageUrlType(url))
 
                     InLineIconRenderer(
                         renderable,
@@ -542,11 +538,6 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
     author: User,
     accountViewModel: AccountViewModel,
 ) {
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
-
     WatchUserMetadata(author) { baseUserPicture ->
         // Crossfade(targetState = baseUserPicture) { userPicture ->
         RobohashFallbackAsyncImage(
@@ -555,7 +546,7 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
             contentDescription = stringResource(id = R.string.profile_image),
             modifier = MaterialTheme.colorScheme.profile35dpModifier,
             contentScale = ContentScale.Crop,
-            loadProfilePicture = automaticallyShowProfilePicture,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
         )
         // }
     }

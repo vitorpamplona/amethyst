@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -30,7 +30,8 @@ import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
+import kotlinx.coroutines.CancellationException
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Request
@@ -55,7 +56,7 @@ object ImageSaver {
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
     ) {
-        val client = HttpClient.getHttpClient()
+        val client = HttpClientManager.getHttpClient()
 
         val request =
             Request.Builder()
@@ -102,6 +103,7 @@ object ImageSaver {
                             }
                             onSuccess()
                         } catch (e: Exception) {
+                            if (e is CancellationException) throw e
                             e.printStackTrace()
                             onError(e)
                         }
@@ -138,6 +140,7 @@ object ImageSaver {
             }
             onSuccess()
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             e.printStackTrace()
             onError(e)
         }
@@ -176,6 +179,7 @@ object ImageSaver {
 
             outputStream.use { contentSource.readAll(it.sink()) }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             contentResolver.delete(uri, null, null)
             throw e
         }

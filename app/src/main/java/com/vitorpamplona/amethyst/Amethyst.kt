@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -26,9 +26,14 @@ import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.os.StrictMode.VmPolicy
 import android.util.Log
+import androidx.security.crypto.EncryptedSharedPreferences
 import coil.ImageLoader
 import coil.disk.DiskCache
+import com.vitorpamplona.amethyst.service.ots.OkHttpBlockstreamExplorer
+import com.vitorpamplona.amethyst.service.ots.OkHttpCalendarBuilder
 import com.vitorpamplona.amethyst.service.playback.VideoCache
+import com.vitorpamplona.quartz.events.OtsEvent
+import com.vitorpamplona.quartz.ots.OpenTimestamps
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -52,7 +57,7 @@ class Amethyst : Application() {
         newCache
     }
 
-    private val imageCache: DiskCache by lazy {
+    val coilCache: DiskCache by lazy {
         DiskCache.Builder()
             .directory(applicationContext.safeCacheDir.resolve("image_cache"))
             .maxSizePercent(0.2)
@@ -63,6 +68,8 @@ class Amethyst : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+
+        OtsEvent.otsInstance = OpenTimestamps(OkHttpBlockstreamExplorer(), OkHttpCalendarBuilder())
 
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(
@@ -84,7 +91,11 @@ class Amethyst : Application() {
     }
 
     fun imageLoaderBuilder(): ImageLoader.Builder {
-        return ImageLoader.Builder(applicationContext).diskCache { imageCache }
+        return ImageLoader.Builder(applicationContext).diskCache { coilCache }
+    }
+
+    fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences {
+        return EncryptedStorage.preferences(instance, npub)
     }
 
     companion object {

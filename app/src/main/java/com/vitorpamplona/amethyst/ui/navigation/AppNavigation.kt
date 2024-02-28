@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -39,6 +39,7 @@ import androidx.core.util.Consumer
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
@@ -74,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.VideoScreen
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.net.URLDecoder
 
 @Composable
 fun AppNavigation(
@@ -288,9 +290,13 @@ fun AppNavigation(
                 route.route,
                 route.arguments,
                 content = {
+                    val decodedMessage =
+                        it.arguments?.getString("message")?.let {
+                            URLDecoder.decode(it, "utf-8")
+                        }
                     ChatroomScreen(
                         roomId = it.arguments?.getString("id"),
-                        draftMessage = it.arguments?.getString("message"),
+                        draftMessage = decodedMessage,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
@@ -354,31 +360,60 @@ fun AppNavigation(
     }
 
     val activity = LocalContext.current.getActivity()
-    var actionableNextPage by remember {
-        mutableStateOf(uriToRoute(activity.intent?.data?.toString()?.ifBlank { null }))
+
+    var currentIntentNextPage by remember {
+        mutableStateOf(activity.intent?.data?.toString()?.ifBlank { null })
     }
-    actionableNextPage?.let {
-        LaunchedEffect(it) {
-            navController.navigate(it) {
-                popUpTo(Route.Home.route)
-                launchSingleTop = true
-            }
+
+    currentIntentNextPage?.let { intentNextPage ->
+        var actionableNextPage by remember {
+            mutableStateOf(uriToRoute(intentNextPage))
         }
-        actionableNextPage = null
+
+        LaunchedEffect(intentNextPage) {
+            if (actionableNextPage != null) {
+                actionableNextPage?.let {
+                    navController.navigate(it) {
+                        popUpTo(Route.Home.route)
+                        launchSingleTop = true
+                    }
+                    actionableNextPage = null
+                }
+            } else {
+                accountViewModel.toast(
+                    R.string.invalid_nip19_uri,
+                    R.string.invalid_nip19_uri_description,
+                    intentNextPage,
+                )
+            }
+
+            currentIntentNextPage = null
+        }
     }
 
     DisposableEffect(activity) {
         val consumer =
             Consumer<Intent> { intent ->
                 val uri = intent?.data?.toString()
-                val newPage = uriToRoute(uri)
+                if (!uri.isNullOrBlank()) {
+                    val newPage = uriToRoute(uri)
 
-                newPage?.let { route ->
-                    val currentRoute = getRouteWithArguments(navController)
-                    if (!isSameRoute(currentRoute, route)) {
-                        navController.navigate(route) {
-                            popUpTo(Route.Home.route)
-                            launchSingleTop = true
+                    if (newPage != null) {
+                        val currentRoute = getRouteWithArguments(navController)
+                        if (!isSameRoute(currentRoute, newPage)) {
+                            navController.navigate(newPage) {
+                                popUpTo(Route.Home.route)
+                                launchSingleTop = true
+                            }
+                        }
+                    } else {
+                        scope.launch {
+                            delay(1000)
+                            accountViewModel.toast(
+                                R.string.invalid_nip19_uri,
+                                R.string.invalid_nip19_uri_description,
+                                uri,
+                            )
                         }
                     }
                 }

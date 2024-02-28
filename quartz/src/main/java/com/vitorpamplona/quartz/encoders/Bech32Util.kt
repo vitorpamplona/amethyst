@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -51,7 +51,7 @@ object Bech32 {
     const val ALPHABET: String = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
     const val ALPHABET_UPPERCASE: String = "QPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L"
 
-    enum class Encoding(public val constant: Int) {
+    enum class Encoding(val constant: Int) {
         Bech32(1),
         Bech32m(0x2bc830a3),
         Beck32WithoutChecksum(0),
@@ -270,18 +270,6 @@ object Bech32 {
         return output.toByteArray()
     }
 }
-
-fun ByteArray.toNsec() = Bech32.encodeBytes(hrp = "nsec", this, Bech32.Encoding.Bech32)
-
-fun ByteArray.toNpub() = Bech32.encodeBytes(hrp = "npub", this, Bech32.Encoding.Bech32)
-
-fun ByteArray.toNote() = Bech32.encodeBytes(hrp = "note", this, Bech32.Encoding.Bech32)
-
-fun ByteArray.toNEvent() = Bech32.encodeBytes(hrp = "nevent", this, Bech32.Encoding.Bech32)
-
-fun ByteArray.toNAddress() = Bech32.encodeBytes(hrp = "naddr", this, Bech32.Encoding.Bech32)
-
-fun ByteArray.toLnUrl() = Bech32.encodeBytes(hrp = "lnurl", this, Bech32.Encoding.Bech32)
 
 fun String.bechToBytes(hrp: String? = null): ByteArray {
     val decodedForm = Bech32.decodeBytes(this)

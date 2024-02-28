@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.SmallishBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -238,6 +239,7 @@ fun CashuPreview(
 
                         startActivity(context, intent, null)
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         toast("Cashu", context.getString(R.string.cashu_no_wallet_found))
                     }
                 },
@@ -354,6 +356,7 @@ fun CashuPreviewNew(
 
                             startActivity(context, intent, null)
                         } catch (e: Exception) {
+                            if (e is CancellationException) throw e
                             toast("Cashu", context.getString(R.string.cashu_no_wallet_found))
                         }
                     },

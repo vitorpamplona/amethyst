@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service.relays
 import android.util.Log
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.Event
@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import com.vitorpamplona.quartz.events.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CancellationException
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
@@ -62,7 +63,7 @@ class Relay(
         const val RECONNECTING_IN_SECONDS = 60 * 3
     }
 
-    private val httpClient = HttpClient.getHttpClientForRelays()
+    private val httpClient = HttpClientManager.getHttpClient()
 
     private var listeners = setOf<Listener>()
     private var socket: WebSocket? = null
@@ -76,7 +77,7 @@ class Relay(
     var errorCounter = 0
     var pingInMs: Long? = null
 
-    var closingTimeInSeconds = 0L
+    var lastConnectTentative: Long = 0L
 
     var afterEOSEPerSubscription = mutableMapOf<String, Boolean>()
 
@@ -106,7 +107,7 @@ class Relay(
     private var connectingBlock = AtomicBoolean()
 
     fun connectAndRun(onConnected: (Relay) -> Unit) {
-        Log.d("Relay", "Relay.connect $url")
+        Log.d("Relay", "Relay.connect $url hasProxy: ${this.httpClient.proxy != null}")
         // BRB is crashing OkHttp Deflater object :(
         if (url.contains("brb.io")) return
 
@@ -119,6 +120,8 @@ class Relay(
 
         if (socket != null) return
 
+        lastConnectTentative = TimeUtils.now()
+
         try {
             val request =
                 Request.Builder()
@@ -128,6 +131,8 @@ class Relay(
 
             socket = httpClient.newWebSocket(request, RelayListener(onConnected))
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
+
             errorCounter++
             markConnectionAsClosed()
             Log.e("Relay", "Relay Invalid $url")
@@ -167,8 +172,9 @@ class Relay(
 
             try {
                 processNewRelayMessage(text)
-            } catch (t: Throwable) {
-                t.printStackTrace()
+            } catch (e: Throwable) {
+                if (e is CancellationException) throw e
+                e.printStackTrace()
                 text.chunked(2000) { chunked ->
                     listeners.forEach { it.onError(this@Relay, "", Error("Problem with $chunked")) }
                 }
@@ -247,7 +253,6 @@ class Relay(
         this.isReady = false
         this.usingCompression = false
         this.resetEOSEStatuses()
-        this.closingTimeInSeconds = TimeUtils.now()
     }
 
     fun processNewRelayMessage(newMessage: String) {
@@ -327,7 +332,7 @@ class Relay(
         Log.d("Relay", "Relay.disconnect $url")
         checkNotInMainThread()
 
-        closingTimeInSeconds = TimeUtils.now()
+        lastConnectTentative = 0L // this is not an error, so prepare to reconnect as soon as requested.
         socket?.cancel()
         socket = null
         isReady = false
@@ -369,7 +374,7 @@ class Relay(
                 }
             } else {
                 // waits 60 seconds to reconnect after disconnected.
-                if (TimeUtils.now() > closingTimeInSeconds + RECONNECTING_IN_SECONDS) {
+                if (TimeUtils.now() > lastConnectTentative + RECONNECTING_IN_SECONDS) {
                     // sends all filters after connection is successful.
                     connect()
                 }
@@ -404,12 +409,12 @@ class Relay(
         return buffer.toString()
     }
 
-    fun sendFilterOnlyIfDisconnected(subscriptionId: String) {
+    fun connectAndSendFiltersIfDisconnected() {
         checkNotInMainThread()
 
         if (socket == null) {
             // waits 60 seconds to reconnect after disconnected.
-            if (TimeUtils.now() > closingTimeInSeconds + RECONNECTING_IN_SECONDS) {
+            if (TimeUtils.now() > lastConnectTentative + RECONNECTING_IN_SECONDS) {
                 // println("sendfilter Only if Disconnected ${url} ")
                 connect()
             }

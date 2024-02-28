@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -28,11 +28,12 @@ import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.Hex
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
@@ -40,6 +41,7 @@ import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -83,9 +85,21 @@ class AccountStateViewModel() : ViewModel() {
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
     ) = withContext(Dispatchers.IO) {
-        val parsed = Nip19.uriToRoute(key)
-        val pubKeyParsed = parsed?.hex?.hexToByteArray()
-        val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
+        val parsed = Nip19Bech32.uriToRoute(key)?.entity
+        val pubKeyParsed =
+            when (parsed) {
+                is Nip19Bech32.NSec -> null
+                is Nip19Bech32.NPub -> parsed.hex.hexToByteArray()
+                is Nip19Bech32.NProfile -> parsed.hex.hexToByteArray()
+                is Nip19Bech32.Note -> null
+                is Nip19Bech32.NEvent -> null
+                is Nip19Bech32.NEmbed -> null
+                is Nip19Bech32.NRelay -> null
+                is Nip19Bech32.NAddress -> null
+                else -> null
+            }
+
+        val proxy = HttpClientManager.initProxy(useProxy, "127.0.0.1", proxyPort)
 
         if (loginWithExternalSigner && pubKeyParsed == null) {
             throw Exception("Invalid key while trying to login with external signer")
@@ -194,6 +208,42 @@ class AccountStateViewModel() : ViewModel() {
 
     fun login(
         key: String,
+        password: String,
+        useProxy: Boolean,
+        proxyPort: Int,
+        loginWithExternalSigner: Boolean = false,
+        packageName: String = "",
+        onError: (String?) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (key.startsWith("ncryptsec")) {
+                val newKey =
+                    try {
+                        CryptoUtils.decryptNIP49(key, password)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        onError(e.message)
+                        return@launch
+                    }
+
+                if (newKey == null) {
+                    onError("Could not decrypt key with provided password")
+                    Log.e("Login", "Could not decrypt ncryptsec")
+                } else {
+                    loginSync(newKey, useProxy, proxyPort, loginWithExternalSigner, packageName) {
+                        onError(null)
+                    }
+                }
+            } else {
+                loginSync(key, useProxy, proxyPort, loginWithExternalSigner, packageName) {
+                    onError(null)
+                }
+            }
+        }
+    }
+
+    fun login(
+        key: String,
         useProxy: Boolean,
         proxyPort: Int,
         loginWithExternalSigner: Boolean = false,
@@ -201,12 +251,24 @@ class AccountStateViewModel() : ViewModel() {
         onError: () -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                loginAndStartUI(key, useProxy, proxyPort, loginWithExternalSigner, packageName)
-            } catch (e: Exception) {
-                Log.e("Login", "Could not sign in", e)
-                onError()
-            }
+            loginSync(key, useProxy, proxyPort, loginWithExternalSigner, packageName, onError)
+        }
+    }
+
+    suspend fun loginSync(
+        key: String,
+        useProxy: Boolean,
+        proxyPort: Int,
+        loginWithExternalSigner: Boolean = false,
+        packageName: String = "",
+        onError: () -> Unit,
+    ) {
+        try {
+            loginAndStartUI(key, useProxy, proxyPort, loginWithExternalSigner, packageName)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e("Login", "Could not sign in", e)
+            onError()
         }
     }
 
@@ -216,7 +278,7 @@ class AccountStateViewModel() : ViewModel() {
         name: String? = null,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
+            val proxy = HttpClientManager.initProxy(useProxy, "127.0.0.1", proxyPort)
             val keyPair = KeyPair()
             val account =
                 Account(

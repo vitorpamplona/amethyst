@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.CancellationException
 
 @Composable
 fun NewPollConsensusThreshold(pollViewModel: NewPostViewModel) {
@@ -58,6 +59,7 @@ fun NewPollConsensusThreshold(pollViewModel: NewPostViewModel) {
                 pollViewModel.consensusThreshold = int
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             pollViewModel.isValidConsensusThreshold.value = false
         }
     }

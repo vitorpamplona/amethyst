@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -31,6 +31,15 @@ class SplitItem<T>(val key: T) {
 
 class Split<T>() {
     var items: List<SplitItem<T>> by mutableStateOf(emptyList())
+
+    fun addItem(
+        key: T,
+        percentage: Float,
+    ) {
+        val newItem = SplitItem(key)
+        newItem.percentage = percentage
+        this.items = items.plus(newItem)
+    }
 
     fun addItem(key: T): Int {
         val wasEqualSplit = isEqualSplit()

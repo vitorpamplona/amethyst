@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -33,17 +33,18 @@ import com.vitorpamplona.amethyst.model.DefaultReactions
 import com.vitorpamplona.amethyst.model.DefaultZapAmounts
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
-import com.vitorpamplona.amethyst.model.Nip47URI
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.Settings
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.model.parseThemeType
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.encoders.toNpub
@@ -53,6 +54,7 @@ import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
@@ -113,6 +115,8 @@ private object PrefKeys {
     const val SIGNER_PACKAGE_NAME = "signer_package_name"
     const val NEW_POST_DRAFT = "draft_new_post"
     const val DRAFT_REPLY_POST = "draft_reply_post"
+    const val HAS_DONATED_IN_VERSION = "has_donated_in_version"
+    const val PENDING_ATTESTATIONS = "pending_attestations"
 
     const val ALL_ACCOUNT_INFO = "all_saved_accounts_info"
     const val SHARED_SETTINGS = "shared_settings"
@@ -234,7 +238,7 @@ object LocalPreferences {
                 if (npub == null) DEBUG_PREFERENCES_NAME else "${DEBUG_PREFERENCES_NAME}_$npub"
             Amethyst.instance.getSharedPreferences(preferenceFile, Context.MODE_PRIVATE)
         } else {
-            return EncryptedStorage.preferences(npub)
+            return Amethyst.instance.encryptedStorage(npub)
         }
     }
 
@@ -332,12 +336,18 @@ object LocalPreferences {
                         PrefKeys.LAST_READ_PER_ROUTE,
                         Event.mapper.writeValueAsString(account.lastReadPerRoute),
                     )
+                    putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, account.hasDonatedInVersion)
 
                     if (account.showSensitiveContent == null) {
                         remove(PrefKeys.SHOW_SENSITIVE_CONTENT)
                     } else {
                         putBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, account.showSensitiveContent!!)
                     }
+
+                    putString(
+                        PrefKeys.PENDING_ATTESTATIONS,
+                        Event.mapper.writeValueAsString(account.pendingAttestations),
+                    )
                 }
                 .apply()
         }
@@ -370,6 +380,7 @@ object LocalPreferences {
             return try {
                 getString(PrefKeys.SHARED_SETTINGS, "{}")?.let { Event.mapper.readValue<Settings>(it) }
             } catch (e: Throwable) {
+                if (e is CancellationException) throw e
                 Log.w(
                     "LocalPreferences",
                     "Unable to decode shared preferences: ${getString(PrefKeys.SHARED_SETTINGS, null)}",
@@ -544,6 +555,7 @@ object LocalPreferences {
                         }
                             ?: Nip96MediaServers.DEFAULT[0]
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         Log.w("LocalPreferences", "Failed to decode saved File Server", e)
                         e.printStackTrace()
                         Nip96MediaServers.DEFAULT[0]
@@ -552,9 +564,10 @@ object LocalPreferences {
                 val zapPaymentRequestServer =
                     try {
                         getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)?.let {
-                            Event.mapper.readValue<Nip47URI?>(it)
+                            Event.mapper.readValue<Nip47WalletConnect.Nip47URI?>(it)
                         }
                     } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
                         Log.w(
                             "LocalPreferences",
                             "Error Decoding Zap Payment Request Server ${getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)}",
@@ -575,6 +588,27 @@ object LocalPreferences {
                             }
                         }
                     } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
+                        Log.w(
+                            "LocalPreferences",
+                            "Error Decoding Contact List ${getString(PrefKeys.LATEST_CONTACT_LIST, null)}",
+                            e,
+                        )
+                        null
+                    }
+
+                val pendingAttestations =
+                    try {
+                        getString(PrefKeys.PENDING_ATTESTATIONS, null)?.let {
+                            println("Decoding Attestation List: " + it)
+                            if (it != null) {
+                                Event.mapper.readValue<Map<HexKey, String>>(it)
+                            } else {
+                                null
+                            }
+                        }
+                    } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
                         Log.w(
                             "LocalPreferences",
                             "Error Decoding Contact List ${getString(PrefKeys.LATEST_CONTACT_LIST, null)}",
@@ -590,6 +624,7 @@ object LocalPreferences {
                         }
                             ?: mapOf()
                     } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
                         Log.w(
                             "LocalPreferences",
                             "Error Decoding Language Preferences ${getString(PrefKeys.LANGUAGE_PREFS, null)}",
@@ -604,7 +639,7 @@ object LocalPreferences {
                 val hideNIP24WarningDialog = getBoolean(PrefKeys.HIDE_NIP_24_WARNING_DIALOG, false)
                 val useProxy = getBoolean(PrefKeys.USE_PROXY, false)
                 val proxyPort = getInt(PrefKeys.PROXY_PORT, 9050)
-                val proxy = HttpClient.initProxy(useProxy, "127.0.0.1", proxyPort)
+                val proxy = HttpClientManager.initProxy(useProxy, "127.0.0.1", proxyPort)
 
                 val showSensitiveContent =
                     if (contains(PrefKeys.SHOW_SENSITIVE_CONTENT)) {
@@ -622,6 +657,7 @@ object LocalPreferences {
                         }
                             ?: mapOf()
                     } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
                         Log.w(
                             "LocalPreferences",
                             "Error Decoding Last Read per route ${getString(PrefKeys.LAST_READ_PER_ROUTE, null)}",
@@ -643,6 +679,8 @@ object LocalPreferences {
                     } else {
                         NostrSignerInternal(keyPair)
                     }
+
+                val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
 
                 val account =
                     Account(
@@ -671,6 +709,8 @@ object LocalPreferences {
                         warnAboutPostsWithReports = warnAboutReports,
                         filterSpamFromStrangers = filterSpam,
                         lastReadPerRoute = lastReadPerRoute,
+                        hasDonatedInVersion = hasDonatedInVersion,
+                        pendingAttestations = pendingAttestations ?: emptyMap(),
                     )
 
                 // Loads from DB

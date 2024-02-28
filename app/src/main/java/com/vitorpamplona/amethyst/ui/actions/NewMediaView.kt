@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -231,6 +232,7 @@ fun ImageVideoPost(
                         try {
                             bitmap = resolver.loadThumbnail(it, Size(1200, 1000), null)
                         } catch (e: Exception) {
+                            if (e is CancellationException) throw e
                             Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
                         }
                     }
@@ -279,6 +281,7 @@ fun ImageVideoPost(
         modifier = Modifier.fillMaxWidth(),
     ) {
         SettingSwitchItem(
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
             checked = postViewModel.sensitiveContent,
             onCheckedChange = { postViewModel.sensitiveContent = it },
             title = R.string.add_sensitive_content_label,

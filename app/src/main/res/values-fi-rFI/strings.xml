@@ -185,12 +185,6 @@
     <string name="mark_all_new_as_read">Merkitse kaikki Uudet luetuiksi</string>
     <string name="mark_all_as_read">Merkitse kaikki luetuiksi</string>
     <string name="backup_keys">Varmuuskopioi Avaimet</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Avaimen varmuuskopiointi ja turvallisuusvinkit
-        \n\nTiliäsi suojaa salainen avain. Avain on pitkä satunnainen merkkijono, joka alkaa **nsec1**. Kaikki, joilla on pääsy salaiseen avaimeesi, voivat julkaista sisältöä käyttäen identiteettiäsi.
-        \n\n- Älä **koskaan** laita salaista avaintasi mihinkään verkkosivustoon tai ohjelmistoon, johon et luota.
-        \n- Amethyst-kehittäjät eivät **koskaan** kysy sinulta salaista avaintasi.
-        \n- **Säilytä** salaisen avaimen varmuuskopio turvallisesti tilin palauttamista varten. Suosittelemme salasanahallintaohjelman käyttämistä.
-    </string>
     <string name="secret_key_copied_to_clipboard">Salainen avain (nsec) kopioitu leikepöydälle</string>
     <string name="copy_my_secret_key">Kopioi salainen avain</string>
     <string name="biometric_authentication_failed">Tunnistautuminen epäonnistui</string>

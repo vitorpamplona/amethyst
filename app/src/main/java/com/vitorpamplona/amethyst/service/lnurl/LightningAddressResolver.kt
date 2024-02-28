@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -24,7 +24,7 @@ import android.content.Context
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
 import com.vitorpamplona.quartz.encoders.Lud06
@@ -33,9 +33,10 @@ import okhttp3.Request
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.net.URLEncoder
+import kotlin.coroutines.cancellation.CancellationException
 
 class LightningAddressResolver() {
-    val client = HttpClient.getHttpClient()
+    val client = HttpClientManager.getHttpClient()
 
     fun assembleUrl(lnaddress: String): String? {
         val parts = lnaddress.split("@")
@@ -96,14 +97,16 @@ class LightningAddressResolver() {
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             e.printStackTrace()
             onError(
                 context.getString(R.string.error_unable_to_fetch_invoice),
                 context.getString(
                     R.string
-                        .could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct,
+                        .could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception,
                     url,
                     lnaddress,
+                    e.suppressedExceptions.getOrNull(0)?.message ?: e.cause?.message ?: e.message,
                 ),
             )
         }
@@ -183,6 +186,7 @@ class LightningAddressResolver() {
                     try {
                         mapper.readTree(lnAddressJson)
                     } catch (t: Throwable) {
+                        if (t is CancellationException) throw t
                         onError(
                             context.getString(R.string.error_unable_to_fetch_invoice),
                             context.getString(
@@ -218,6 +222,7 @@ class LightningAddressResolver() {
                                 try {
                                     mapper.readTree(it)
                                 } catch (t: Throwable) {
+                                    if (t is CancellationException) throw t
                                     onError(
                                         context.getString(R.string.error_unable_to_fetch_invoice),
                                         context.getString(

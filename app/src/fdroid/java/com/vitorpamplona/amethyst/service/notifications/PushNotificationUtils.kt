@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.notifications
 
 import android.util.Log
 import com.vitorpamplona.amethyst.AccountInfo
+import kotlinx.coroutines.CancellationException
 
 object PushNotificationUtils {
     var hasInit: Boolean = false
@@ -36,6 +37,7 @@ object PushNotificationUtils {
                 RegisterAccounts(accounts).go(pushHandler.getSavedEndpoint())
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.d("Amethyst-OSSPushUtils", "Failed to get endpoint.")
         }
     }

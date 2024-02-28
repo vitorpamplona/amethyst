@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -37,6 +37,10 @@ class GiftWrapEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
+
+    fun preCachedGift(signer: NostrSigner): Event? {
+        return cachedInnerEvent[signer.pubKey]
+    }
 
     fun cachedGift(
         signer: NostrSigner,

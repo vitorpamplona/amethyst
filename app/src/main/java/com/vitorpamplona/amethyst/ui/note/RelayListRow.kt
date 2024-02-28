@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -39,6 +39,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -51,7 +52,7 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
-import com.vitorpamplona.amethyst.model.RelayInformation
+import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.actions.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -119,7 +120,7 @@ fun ChatRelayExpandButton(onClick: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.Default.ChevronRight,
-            null,
+            contentDescription = stringResource(id = R.string.expand_relay_list),
             modifier = Size15Modifier,
             tint = MaterialTheme.colorScheme.placeholderText,
         )
@@ -132,11 +133,27 @@ fun RenderRelay(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    var relayInfo: RelayInformation? by remember { mutableStateOf(null) }
+    val relayInfo by
+        produceState(
+            initialValue = Nip11CachedRetriever.getFromCache(relay.url),
+        ) {
+            if (value == null) {
+                accountViewModel.retrieveRelayDocument(
+                    relay.url,
+                    onInfo = {
+                        value = it
+                    },
+                    onError = { url, errorCode, exceptionMessage ->
+                    },
+                )
+            }
+        }
 
-    if (relayInfo != null) {
+    var openRelayDialog by remember { mutableStateOf(false) }
+
+    if (openRelayDialog && relayInfo != null) {
         RelayInformationDialog(
-            onClose = { relayInfo = null },
+            onClose = { openRelayDialog = false },
             relayInfo = relayInfo!!,
             relayBriefInfo = relay,
             accountViewModel = accountViewModel,
@@ -149,14 +166,10 @@ fun RenderRelay(
     val interactionSource = remember { MutableInteractionSource() }
     val ripple = rememberRipple(bounded = false, radius = Size15dp)
 
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
-
     val clickableModifier =
         remember(relay) {
-            Modifier.padding(1.dp)
+            Modifier
+                .padding(1.dp)
                 .size(Size15dp)
                 .clickable(
                     role = Role.Button,
@@ -165,7 +178,9 @@ fun RenderRelay(
                     onClick = {
                         accountViewModel.retrieveRelayDocument(
                             relay.url,
-                            onInfo = { relayInfo = it },
+                            onInfo = {
+                                openRelayDialog = true
+                            },
                             onError = { url, errorCode, exceptionMessage ->
                                 val msg =
                                     when (errorCode) {
@@ -175,18 +190,21 @@ fun RenderRelay(
                                                 url,
                                                 exceptionMessage,
                                             )
+
                                         Nip11Retriever.ErrorCode.FAIL_TO_REACH_SERVER ->
                                             context.getString(
                                                 R.string.relay_information_document_error_assemble_url,
                                                 url,
                                                 exceptionMessage,
                                             )
+
                                         Nip11Retriever.ErrorCode.FAIL_TO_PARSE_RESULT ->
                                             context.getString(
                                                 R.string.relay_information_document_error_assemble_url,
                                                 url,
                                                 exceptionMessage,
                                             )
+
                                         Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS ->
                                             context.getString(
                                                 R.string.relay_information_document_error_assemble_url,
@@ -209,21 +227,25 @@ fun RenderRelay(
         modifier = clickableModifier,
         contentAlignment = Alignment.Center,
     ) {
-        RenderRelayIcon(relay.displayUrl, relay.favIcon, automaticallyShowProfilePicture)
+        RenderRelayIcon(
+            displayUrl = relay.displayUrl,
+            iconUrl = relayInfo?.icon ?: relay.favIcon,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        )
     }
 }
 
 @Composable
 fun RenderRelayIcon(
     displayUrl: String,
-    iconUrl: String,
+    iconUrl: String?,
     loadProfilePicture: Boolean,
     iconModifier: Modifier = MaterialTheme.colorScheme.relayIconModifier,
 ) {
     RobohashFallbackAsyncImage(
         robot = displayUrl,
         model = iconUrl,
-        contentDescription = stringResource(id = R.string.relay_icon),
+        contentDescription = stringResource(id = R.string.relay_info, displayUrl),
         colorFilter = RelayIconFilter,
         modifier = iconModifier,
         loadProfilePicture = loadProfilePicture,

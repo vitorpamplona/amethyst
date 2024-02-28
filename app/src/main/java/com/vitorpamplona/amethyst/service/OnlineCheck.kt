@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,6 +25,7 @@ import android.util.LruCache
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.BuildConfig
 import okhttp3.Request
+import kotlin.coroutines.cancellation.CancellationException
 
 @Immutable data class OnlineCheckResult(val timeInMs: Long, val online: Boolean)
 
@@ -59,13 +60,14 @@ object OnlineChecker {
                     .build()
 
             val result =
-                HttpClient.getHttpClient().newCall(request).execute().use {
+                HttpClientManager.getHttpClient().newCall(request).execute().use {
                     checkNotInMainThread()
                     it.isSuccessful
                 }
             checkOnlineCache.put(url, OnlineCheckResult(System.currentTimeMillis(), result))
             result
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             checkOnlineCache.put(url, OnlineCheckResult(System.currentTimeMillis(), false))
             Log.e("LiveActivities", "Failed to check streaming url $url", e)
             false

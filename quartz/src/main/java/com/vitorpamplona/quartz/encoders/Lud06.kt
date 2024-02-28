@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,19 +23,24 @@ package com.vitorpamplona.quartz.encoders
 import android.util.Log
 import java.util.regex.Pattern
 
-val lnurlpPattern = Pattern.compile("(?i:http|https):\\/\\/((.+)\\/)*\\.well-known\\/lnurlp\\/(.*)")
-
 class Lud06 {
+    companion object {
+        val LNURLP_PATTERN = Pattern.compile("(?i:http|https):\\/\\/((.+)\\/)*\\.well-known\\/lnurlp\\/(.*)")
+    }
+
     fun toLud16(str: String): String? {
         return try {
             val url = toLnUrlp(str)
 
-            val matcher = lnurlpPattern.matcher(url)
-            matcher.find()
-            val domain = matcher.group(2)
-            val username = matcher.group(3)
+            val matcher = LNURLP_PATTERN.matcher(url)
+            if (matcher.find()) {
+                val domain = matcher.group(2)
+                val username = matcher.group(3)
 
-            "$username@$domain"
+                "$username@$domain"
+            } else {
+                null
+            }
         } catch (t: Throwable) {
             t.printStackTrace()
             Log.w("Lud06ToLud16", "Fail to convert LUD06 to LUD16", t)

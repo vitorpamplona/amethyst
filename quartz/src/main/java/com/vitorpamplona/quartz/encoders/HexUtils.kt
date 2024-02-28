@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -34,29 +34,9 @@ fun HexKey.hexToByteArray(): ByteArray {
 object HexValidator {
     private fun isHexChar(c: Char): Boolean {
         return when (c) {
-            '0',
-            '1',
-            '2',
-            '3',
-            '4',
-            '5',
-            '6',
-            '7',
-            '8',
-            '9',
-            'a',
-            'b',
-            'c',
-            'd',
-            'e',
-            'f',
-            'A',
-            'B',
-            'C',
-            'D',
-            'E',
-            'F',
-            -> true
+            in '0'..'9' -> true
+            in 'a'..'f' -> true
+            in 'A'..'F' -> true
             else -> false
         }
     }

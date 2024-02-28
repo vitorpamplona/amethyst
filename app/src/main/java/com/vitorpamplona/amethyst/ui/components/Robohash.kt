@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -30,9 +30,10 @@ import coil.fetch.Fetcher
 import coil.fetch.SourceResult
 import coil.request.ImageRequest
 import coil.request.Options
+import com.vitorpamplona.amethyst.commons.Robohash
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.quartz.utils.Robohash
-import okio.Buffer
+import okio.buffer
+import okio.source
 import java.nio.charset.Charset
 
 @Stable
@@ -43,14 +44,10 @@ class HashImageFetcher(
 ) : Fetcher {
     override suspend fun fetch(): SourceResult {
         checkNotInMainThread()
+
         val source =
             try {
-                val buffer = Buffer()
-                buffer.writeString(
-                    Robohash.assemble(data.toString(), isLightTheme),
-                    Charset.defaultCharset(),
-                )
-                buffer
+                Robohash.assemble(data.toString(), isLightTheme).byteInputStream(Charset.defaultCharset()).source().buffer()
             } finally {
             }
 

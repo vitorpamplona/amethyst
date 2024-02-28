@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.events
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableSet
@@ -80,6 +81,7 @@ class ChatMessageEvent(
             geohash: String? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
+            nip94attachments: List<FileHeaderEvent>? = null,
             onReady: (ChatMessageEvent) -> Unit,
         ) {
             val tags = mutableListOf<Array<String>>()
@@ -95,6 +97,13 @@ class ChatMessageEvent(
             zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
             geohash?.let { tags.addAll(geohashMipMap(it)) }
             subject?.let { tags.add(arrayOf("subject", it)) }
+            nip94attachments?.let {
+                it.forEach {
+                    Nip92MediaAttachments().convertFromFileHeader(it)?.let {
+                        tags.add(it)
+                    }
+                }
+            }
             // tags.add(arrayOf("alt", alt))
 
             signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)

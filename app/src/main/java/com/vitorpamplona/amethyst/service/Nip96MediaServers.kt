@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -24,6 +24,7 @@ import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import kotlinx.coroutines.CancellationException
 import okhttp3.Request
 
 object Nip96MediaServers {
@@ -87,7 +88,7 @@ class Nip96Retriever {
                 .url(baseUrl.removeSuffix("/") + "/.well-known/nostr/nip96.json")
                 .build()
 
-        HttpClient.getHttpClient().newCall(request).execute().use { response ->
+        HttpClientManager.getHttpClient().newCall(request).execute().use { response ->
             checkNotInMainThread()
             response.use {
                 val body = it.body.string()
@@ -100,6 +101,7 @@ class Nip96Retriever {
                         )
                     }
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     Log.e("RelayInfoFail", "Resulting Message from $baseUrl in not parseable: $body", e)
                     throw e
                 }

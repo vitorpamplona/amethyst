@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -270,6 +270,7 @@ fun MainScreen(
                                 videoFeedViewModel.sendToTop()
                             }
                             Route.Discover.base -> {
+                                discoverMarketplaceFeedViewModel.sendToTop()
                                 discoveryLiveFeedViewModel.sendToTop()
                                 discoveryCommunityFeedViewModel.sendToTop()
                                 discoveryChatFeedViewModel.sendToTop()
@@ -472,12 +473,22 @@ private fun DisplayErrorMessages(accountViewModel: AccountViewModel) {
     openDialogMsg.value?.let { obj ->
         when (obj) {
             is ResourceToastMsg ->
-                InformationDialog(
-                    context.getString(obj.titleResId),
-                    context.getString(obj.resourceId),
-                ) {
-                    accountViewModel.clearToasts()
+                if (obj.params != null) {
+                    InformationDialog(
+                        context.getString(obj.titleResId),
+                        context.getString(obj.resourceId, *obj.params),
+                    ) {
+                        accountViewModel.clearToasts()
+                    }
+                } else {
+                    InformationDialog(
+                        context.getString(obj.titleResId),
+                        context.getString(obj.resourceId),
+                    ) {
+                        accountViewModel.clearToasts()
+                    }
                 }
+
             is StringToastMsg ->
                 InformationDialog(
                     obj.title,

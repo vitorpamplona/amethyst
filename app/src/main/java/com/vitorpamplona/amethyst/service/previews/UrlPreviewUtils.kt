@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,7 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.previews
 
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType
@@ -90,7 +91,8 @@ suspend fun getDocument(
 ): UrlInfoItem =
     withContext(Dispatchers.IO) {
         val request: Request = Request.Builder().url(url).get().build()
-        HttpClient.getHttpClient().newCall(request).execute().use {
+        HttpClientManager.getHttpClient().newCall(request).execute().use {
+            checkNotInMainThread()
             if (it.isSuccessful) {
                 val mimeType =
                     it.headers.get("Content-Type")?.toMediaType()

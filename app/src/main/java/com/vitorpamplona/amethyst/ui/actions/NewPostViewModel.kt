@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -36,6 +36,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.RichTextParser
+import com.vitorpamplona.amethyst.commons.insertUrlAtCursor
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -44,11 +46,9 @@ import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.LocationUtil
 import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
-import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.Split
-import com.vitorpamplona.amethyst.ui.components.isValidURL
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.AddressableEvent
@@ -56,6 +56,7 @@ import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
@@ -64,6 +65,7 @@ import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.ZapSplitSetup
 import com.vitorpamplona.quartz.events.findURLs
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
@@ -71,7 +73,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
-import java.net.URLEncoder
 
 enum class UserSuggestionAnchor {
     MAIN_MESSAGE,
@@ -86,6 +87,7 @@ open class NewPostViewModel() : ViewModel() {
     var requiresNIP24: Boolean = false
 
     var originalNote: Note? = null
+    var forkedFromNote: Note? = null
 
     var pTags by mutableStateOf<List<User>?>(null)
     var eTags by mutableStateOf<List<Note>?>(null)
@@ -166,6 +168,7 @@ open class NewPostViewModel() : ViewModel() {
         accountViewModel: AccountViewModel,
         replyingTo: Note?,
         quote: Note?,
+        fork: Note?,
     ) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
@@ -197,11 +200,6 @@ open class NewPostViewModel() : ViewModel() {
                 pTags = null
             }
 
-        quote?.let {
-            message = TextFieldValue(message.text + "\nnostr:${it.toNEvent()}")
-            urlPreview = findUrlInMessage()
-        }
-
         canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
         canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
         canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channelHex() == null
@@ -221,6 +219,72 @@ open class NewPostViewModel() : ViewModel() {
                 message = TextFieldValue(draft)
                 updateMessage(message)
             }
+        }
+        quote?.let {
+            message = TextFieldValue(message.text + "\nnostr:${it.toNEvent()}")
+            urlPreview = findUrlInMessage()
+
+            it.author?.let { quotedUser ->
+                if (quotedUser.pubkeyHex != accountViewModel.userProfile().pubkeyHex) {
+                    if (forwardZapTo.items.none { it.key.pubkeyHex == quotedUser.pubkeyHex }) {
+                        forwardZapTo.addItem(quotedUser)
+                    }
+                    if (forwardZapTo.items.none { it.key.pubkeyHex == accountViewModel.userProfile().pubkeyHex }) {
+                        forwardZapTo.addItem(accountViewModel.userProfile())
+                    }
+
+                    val pos = forwardZapTo.items.indexOfFirst { it.key.pubkeyHex == quotedUser.pubkeyHex }
+                    forwardZapTo.updatePercentage(pos, 0.9f)
+                }
+            }
+        }
+
+        fork?.let {
+            message = TextFieldValue(it.event?.content() ?: "")
+            urlPreview = findUrlInMessage()
+
+            it.event?.isSensitive()?.let {
+                if (it) wantsToMarkAsSensitive = true
+            }
+
+            it.event?.zapraiserAmount()?.let {
+                zapRaiserAmount = it
+            }
+
+            it.event?.zapSplitSetup()?.let {
+                val totalWeight = it.sumOf { if (it.isLnAddress) 0.0 else it.weight }
+
+                it.forEach {
+                    if (!it.isLnAddress) {
+                        forwardZapTo.addItem(LocalCache.getOrCreateUser(it.lnAddressOrPubKeyHex), (it.weight / totalWeight).toFloat())
+                    }
+                }
+            }
+
+            // Only adds if it is not already set up.
+            if (forwardZapTo.items.isEmpty()) {
+                it.author?.let { forkedAuthor ->
+                    if (forkedAuthor.pubkeyHex != accountViewModel.userProfile().pubkeyHex) {
+                        if (forwardZapTo.items.none { it.key.pubkeyHex == forkedAuthor.pubkeyHex }) forwardZapTo.addItem(forkedAuthor)
+                        if (forwardZapTo.items.none { it.key.pubkeyHex == accountViewModel.userProfile().pubkeyHex }) forwardZapTo.addItem(accountViewModel.userProfile())
+
+                        val pos = forwardZapTo.items.indexOfFirst { it.key.pubkeyHex == forkedAuthor.pubkeyHex }
+                        forwardZapTo.updatePercentage(pos, 0.8f)
+                    }
+                }
+            }
+
+            it.author?.let {
+                if (this.pTags?.contains(it) != true) {
+                    this.pTags = listOf(it) + (this.pTags ?: emptyList())
+                }
+            }
+
+            forkedFromNote = it
+        }
+
+        if (!forwardZapTo.items.isEmpty()) {
+            wantsForwardZapTo = true
         }
     }
 
@@ -273,45 +337,47 @@ open class NewPostViewModel() : ViewModel() {
         }
 
         val urls = findURLs(tagger.message)
-        val usedAttachments = nip94attachments.filter { it.urls().intersect(urls).isNotEmpty() }
-        usedAttachments.forEach { account?.sendHeader(it, relayList, {}) }
+        val usedAttachments = nip94attachments.filter { it.urls().intersect(urls.toSet()).isNotEmpty() }
+        // Doesn't send as nip94 yet because we don't know if it makes sense.
+        // usedAttachments.forEach { account?.sendHeader(it, relayList, {}) }
 
         if (originalNote?.channelHex() != null) {
             if (originalNote is AddressableEvent && originalNote?.address() != null) {
                 account?.sendLiveMessage(
-                    tagger.message,
-                    originalNote?.address()!!,
-                    tagger.eTags,
-                    tagger.pTags,
-                    zapReceiver,
-                    wantsToMarkAsSensitive,
-                    localZapRaiserAmount,
-                    geoHash,
+                    message = tagger.message,
+                    toChannel = originalNote?.address()!!,
+                    replyTo = tagger.eTags,
+                    mentions = tagger.pTags,
+                    zapReceiver = zapReceiver,
+                    wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                    zapRaiserAmount = localZapRaiserAmount,
+                    geohash = geoHash,
                     nip94attachments = usedAttachments,
                 )
             } else {
                 account?.sendChannelMessage(
-                    tagger.message,
-                    tagger.channelHex!!,
-                    tagger.eTags,
-                    tagger.pTags,
-                    zapReceiver,
-                    wantsToMarkAsSensitive,
-                    localZapRaiserAmount,
-                    geoHash,
+                    message = tagger.message,
+                    toChannel = tagger.channelHex!!,
+                    replyTo = tagger.eTags,
+                    mentions = tagger.pTags,
+                    zapReceiver = zapReceiver,
+                    wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                    zapRaiserAmount = localZapRaiserAmount,
+                    geohash = geoHash,
                     nip94attachments = usedAttachments,
                 )
             }
         } else if (originalNote?.event is PrivateDmEvent) {
             account?.sendPrivateMessage(
-                tagger.message,
-                originalNote!!.author!!,
-                originalNote!!,
-                tagger.pTags,
-                zapReceiver,
-                wantsToMarkAsSensitive,
-                localZapRaiserAmount,
-                geoHash,
+                message = tagger.message,
+                toUser = originalNote!!.author!!,
+                replyingTo = originalNote!!,
+                mentions = tagger.pTags,
+                zapReceiver = zapReceiver,
+                wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = localZapRaiserAmount,
+                geohash = geoHash,
+                nip94attachments = usedAttachments,
             )
         } else if (originalNote?.event is ChatMessageEvent) {
             val receivers =
@@ -332,6 +398,7 @@ open class NewPostViewModel() : ViewModel() {
                 zapReceiver = zapReceiver,
                 zapRaiserAmount = localZapRaiserAmount,
                 geohash = geoHash,
+                nip94attachments = usedAttachments,
             )
         } else if (!dmUsers.isNullOrEmpty()) {
             if (nip24 || dmUsers.size > 1) {
@@ -345,6 +412,7 @@ open class NewPostViewModel() : ViewModel() {
                     zapReceiver = zapReceiver,
                     zapRaiserAmount = localZapRaiserAmount,
                     geohash = geoHash,
+                    nip94attachments = usedAttachments,
                 )
             } else {
                 account?.sendPrivateMessage(
@@ -356,6 +424,7 @@ open class NewPostViewModel() : ViewModel() {
                     zapReceiver = zapReceiver,
                     zapRaiserAmount = localZapRaiserAmount,
                     geohash = geoHash,
+                    nip94attachments = usedAttachments,
                 )
             }
         } else {
@@ -407,9 +476,16 @@ open class NewPostViewModel() : ViewModel() {
 
                 val replyId = originalNote?.idHex
 
+                val replyToSet =
+                    if (forkedFromNote != null) {
+                        (listOfNotNull(forkedFromNote) + (tagger.eTags ?: emptyList())).ifEmpty { null }
+                    } else {
+                        tagger.eTags
+                    }
+
                 account?.sendPost(
                     message = tagger.message,
-                    replyTo = tagger.eTags,
+                    replyTo = replyToSet,
                     mentions = tagger.pTags,
                     tags = null,
                     zapReceiver = zapReceiver,
@@ -418,6 +494,7 @@ open class NewPostViewModel() : ViewModel() {
                     replyingTo = replyId,
                     root = rootId,
                     directMentions = tagger.directMentions,
+                    forkedFrom = forkedFromNote?.event as? Event,
                     relayList = relayList,
                     geohash = geoHash,
                     nip94attachments = usedAttachments,
@@ -469,22 +546,14 @@ open class NewPostViewModel() : ViewModel() {
                                                 onProgress = {},
                                             )
 
-                                    if (!isPrivate) {
-                                        createNIP94Record(
-                                            uploadingResult = result,
-                                            localContentType = contentType,
-                                            alt = alt,
-                                            sensitiveContent = sensitiveContent,
-                                        )
-                                    } else {
-                                        noNIP94(
-                                            uploadingResult = result,
-                                            localContentType = contentType,
-                                            alt = alt,
-                                            sensitiveContent = sensitiveContent,
-                                        )
-                                    }
+                                    createNIP94Record(
+                                        uploadingResult = result,
+                                        localContentType = contentType,
+                                        alt = alt,
+                                        sensitiveContent = sensitiveContent,
+                                    )
                                 } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
                                     Log.e(
                                         "ImageUploader",
                                         "Failed to upload ${e.message}",
@@ -556,7 +625,7 @@ open class NewPostViewModel() : ViewModel() {
     open fun findUrlInMessage(): String? {
         return message.text.split('\n').firstNotNullOfOrNull { paragraph ->
             paragraph.split(' ').firstOrNull { word: String ->
-                isValidURL(word) || noProtocolUrlValidator.matcher(word).matches()
+                RichTextParser.isValidURL(word) || RichTextParser.isUrlWithoutScheme(word)
             }
         }
     }
@@ -736,21 +805,6 @@ open class NewPostViewModel() : ViewModel() {
             contentToAddUrl == null
     }
 
-    fun includePollHashtagInMessage(
-        include: Boolean,
-        hashtag: String,
-    ) {
-        if (include) {
-            updateMessage(TextFieldValue(message.text + " $hashtag"))
-        } else {
-            updateMessage(
-                TextFieldValue(
-                    message.text.replace(" $hashtag", "").replace(hashtag, ""),
-                ),
-            )
-        }
-    }
-
     suspend fun createNIP94Record(
         uploadingResult: Nip96Uploader.PartialEvent,
         localContentType: String?,
@@ -784,26 +838,11 @@ open class NewPostViewModel() : ViewModel() {
             mimeType = remoteMimeType ?: localContentType,
             dimPrecomputed = dim,
             onReady = { header: FileHeader ->
-                account?.createHeader(imageUrl, magnet, header, alt, sensitiveContent, originalHash) {
-                        event,
-                    ->
+                account?.createHeader(imageUrl, magnet, header, alt, sensitiveContent, originalHash) { event ->
                     isUploadingImage = false
                     nip94attachments = nip94attachments + event
-                    val contentWarning = if (sensitiveContent) "" else null
-                    message =
-                        TextFieldValue(
-                            message.text +
-                                "\n" +
-                                addInlineMetadataAsNIP54(
-                                    imageUrl,
-                                    header.dim,
-                                    header.mimeType,
-                                    alt,
-                                    header.blurHash,
-                                    header.hash,
-                                    contentWarning,
-                                ),
-                        )
+
+                    message = message.insertUrlAtCursor(imageUrl)
                     urlPreview = findUrlInMessage()
                 }
             },
@@ -812,89 +851,6 @@ open class NewPostViewModel() : ViewModel() {
                 viewModelScope.launch { imageUploadingError.emit("Failed to upload the image / video") }
             },
         )
-    }
-
-    suspend fun noNIP94(
-        uploadingResult: Nip96Uploader.PartialEvent,
-        localContentType: String?,
-        alt: String?,
-        sensitiveContent: Boolean,
-    ) {
-        // Images don't seem to be ready immediately after upload
-        val imageUrl = uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "url" }?.get(1)
-        val remoteMimeType =
-            uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "m" }?.get(1)?.ifBlank { null }
-        val dim =
-            uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "dim" }?.get(1)?.ifBlank { null }
-
-        if (imageUrl.isNullOrBlank()) {
-            Log.e("ImageDownload", "Couldn't download image from server")
-            cancel()
-            isUploadingImage = false
-            viewModelScope.launch { imageUploadingError.emit("Server failed to return a url") }
-            return
-        }
-
-        FileHeader.prepare(
-            fileUrl = imageUrl,
-            mimeType = remoteMimeType ?: localContentType,
-            dimPrecomputed = dim,
-            onReady = { header: FileHeader ->
-                isUploadingImage = false
-                val contentWarning = if (sensitiveContent) "" else null
-                message =
-                    TextFieldValue(
-                        message.text +
-                            "\n" +
-                            addInlineMetadataAsNIP54(
-                                imageUrl,
-                                header.dim,
-                                header.mimeType,
-                                alt,
-                                header.blurHash,
-                                header.hash,
-                                contentWarning,
-                            ),
-                    )
-                urlPreview = findUrlInMessage()
-                viewModelScope.launch(Dispatchers.IO) {
-                    saveDraft(message.text)
-                }
-            },
-            onError = {
-                isUploadingImage = false
-                viewModelScope.launch { imageUploadingError.emit("Failed to upload the image / video") }
-            },
-        )
-    }
-
-    fun addInlineMetadataAsNIP54(
-        imageUrl: String,
-        dim: String?,
-        m: String?,
-        alt: String?,
-        blurHash: String?,
-        x: String?,
-        sensitiveContent: String?,
-    ): String {
-        val extension =
-            listOfNotNull(
-                m?.ifBlank { null }?.let { "m=${URLEncoder.encode(it, "utf-8")}" },
-                dim?.ifBlank { null }?.let { "dim=${URLEncoder.encode(it, "utf-8")}" },
-                alt?.ifBlank { null }?.let { "alt=${URLEncoder.encode(it, "utf-8")}" },
-                blurHash?.ifBlank { null }?.let { "blurhash=${URLEncoder.encode(it, "utf-8")}" },
-                x?.ifBlank { null }?.let { "x=${URLEncoder.encode(it, "utf-8")}" },
-                sensitiveContent
-                    ?.ifBlank { null }
-                    ?.let { "content-warning=${URLEncoder.encode(it, "utf-8")}" },
-            )
-                .joinToString("&")
-
-        return if (imageUrl.contains("#")) {
-            "$imageUrl&$extension"
-        } else {
-            "$imageUrl#$extension"
-        }
     }
 
     fun createNIP95Record(
@@ -924,7 +880,7 @@ open class NewPostViewModel() : ViewModel() {
                         isUploadingImage = false
 
                         note?.let {
-                            message = TextFieldValue(message.text + "\nnostr:" + it.toNEvent())
+                            message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
                             saveDraft(message.text)
                         }
 
@@ -985,6 +941,7 @@ open class NewPostViewModel() : ViewModel() {
                     valueMinimum = int
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
             }
         } else {
             valueMinimum = null
@@ -1003,6 +960,7 @@ open class NewPostViewModel() : ViewModel() {
                     valueMaximum = int
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
             }
         } else {
             valueMaximum = null

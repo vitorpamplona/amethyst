@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -476,9 +476,12 @@ fun ReactionsColumn(
             accountViewModel = accountViewModel,
             iconSizeModifier = Size40Modifier,
             iconSize = Size40dp,
-        ) {
-            wantsToQuote = baseNote
-        }
+            onQuotePress = {
+                wantsToQuote = baseNote
+            },
+            onForkPress = {
+            },
+        )
         LikeReaction(
             baseNote = baseNote,
             grayTint = MaterialTheme.colorScheme.onBackground,

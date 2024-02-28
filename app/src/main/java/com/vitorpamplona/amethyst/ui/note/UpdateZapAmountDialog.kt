@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -87,7 +87,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Nip47URI
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
@@ -99,10 +98,13 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
+import com.vitorpamplona.quartz.encoders.decodePrivateKeyAsHexOrNull
 import com.vitorpamplona.quartz.encoders.decodePublicKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.LnZapEvent
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 
 class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
     var nextAmount by mutableStateOf(TextFieldValue(""))
@@ -149,6 +151,7 @@ class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
                 try {
                     decodePublicKey(walletConnectPubkey.text.trim()).toHexKey()
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     null
                 }
 
@@ -163,17 +166,11 @@ class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
                         addedWSS
                     }
 
-            val unverifiedPrivKey = walletConnectSecret.text.ifBlank { null }
-            val privKeyHex =
-                try {
-                    unverifiedPrivKey?.let { decodePublicKey(it).toHexKey() }
-                } catch (e: Exception) {
-                    null
-                }
+            val privKeyHex = walletConnectSecret.text.ifBlank { null }?.let { decodePrivateKeyAsHexOrNull(it) }
 
             if (pubkeyHex != null) {
                 account?.changeZapPaymentRequest(
-                    Nip47URI(
+                    Nip47WalletConnect.Nip47URI(
                         pubkeyHex,
                         relayUrl,
                         privKeyHex,
@@ -204,7 +201,7 @@ class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
     }
 
     fun updateNIP47(uri: String) {
-        val contact = Nip47WalletConnectParser.parse(uri)
+        val contact = Nip47WalletConnect.parse(uri)
         if (contact != null) {
             walletConnectPubkey = TextFieldValue(contact.pubKeyHex)
             walletConnectRelay = TextFieldValue(contact.relayUri ?: "")

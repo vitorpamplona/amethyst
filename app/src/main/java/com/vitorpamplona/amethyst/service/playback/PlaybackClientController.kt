@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -28,6 +28,7 @@ import android.util.LruCache
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
+import kotlinx.coroutines.CancellationException
 
 object PlaybackClientController {
     val cache = LruCache<Int, SessionToken>(1)
@@ -62,12 +63,14 @@ object PlaybackClientController {
                     try {
                         onReady(controllerFuture.get())
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         Log.e("Playback Client", "Failed to load Playback Client for $videoUri", e)
                     }
                 },
                 MoreExecutors.directExecutor(),
             )
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e("Playback Client", "Failed to load Playback Client for $videoUri", e)
         }
     }

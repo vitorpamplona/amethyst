@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.events
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -70,7 +71,7 @@ class LiveActivitiesChatMessageEvent(
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
             geohash: String? = null,
-            nip94attachments: List<Event>? = null,
+            nip94attachments: List<FileHeaderEvent>? = null,
             onReady: (LiveActivitiesChatMessageEvent) -> Unit,
         ) {
             val content = message
@@ -90,7 +91,9 @@ class LiveActivitiesChatMessageEvent(
             geohash?.let { tags.addAll(geohashMipMap(it)) }
             nip94attachments?.let {
                 it.forEach {
-                    // tags.add(arrayOf("nip94", it.toJson()))
+                    Nip92MediaAttachments().convertFromFileHeader(it)?.let {
+                        tags.add(it)
+                    }
                 }
             }
             tags.add(arrayOf("alt", ALT))

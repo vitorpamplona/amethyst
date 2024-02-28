@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -30,7 +30,7 @@ import coil.decode.SvgDecoder
 import coil.size.Precision
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.encoders.toHexKey
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -83,7 +84,7 @@ class ServiceManager {
         val myAccount = account
 
         // Resets Proxy Use
-        HttpClient.start(account?.proxy)
+        HttpClientManager.setDefaultProxy(account?.proxy)
         LocalCache.antiSpam.active = account?.filterSpamFromStrangers ?: true
         Coil.setImageLoader {
             Amethyst.instance
@@ -96,7 +97,7 @@ class ServiceManager {
                     }
                     add(SvgDecoder.Factory())
                 } // .logger(DebugLogger())
-                .okHttpClient { HttpClient.getHttpClient() }
+                .okHttpClient { HttpClientManager.getHttpClient() }
                 .precision(Precision.INEXACT)
                 .respectCacheHeaders(false)
                 .build()
@@ -126,6 +127,7 @@ class ServiceManager {
                     try {
                         it.npub.bechToBytes().toHexKey()
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         null
                     }
                 }

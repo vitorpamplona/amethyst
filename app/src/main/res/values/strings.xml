@@ -3,7 +3,8 @@
     <string name="app_name_debug" translatable="false">Amethyst Debug</string>
     <string name="point_to_the_qr_code">Point to the QR Code</string>
     <string name="show_qr">Show QR</string>
-    <string name="profile_image">Profile Image</string>
+    <string name="profile_image">Profile Picture</string>
+    <string name="your_profile_image">Your Profile Picture</string>
     <string name="scan_qr">Scan QR</string>
     <string name="show_anyway">Show Anyway</string>
     <string name="post_was_flagged_as_inappropriate_by">Post was muted or reported by</string>
@@ -16,6 +17,7 @@
     <string name="spam">Spam</string>
     <string name="impersonation">Impersonation</string>
     <string name="illegal_behavior">Illegal Behavior</string>
+    <string name="other">Other</string>
     <string name="unknown">Unknown</string>
     <string name="relay_icon">Relay Icon</string>
     <string name="unknown_author">Unknown Author</string>
@@ -23,6 +25,9 @@
     <string name="copy_user_pubkey">Copy Author ID</string>
     <string name="copy_note_id">Copy Note ID</string>
     <string name="broadcast">Broadcast</string>
+    <string name="timestamp_it">Timestamp it</string>
+    <string name="timestamp_pending">Timestamp: Pending Confirmations</string>
+    <string name="timestamp_pending_short">OTS: Pending</string>
     <string name="request_deletion">Request Deletion</string>
     <string name="block_report">Block / Report</string>
     <string name="block_hide_user"><![CDATA[Block & Hide User]]></string>
@@ -46,6 +51,7 @@
     <string name="boost">Boost</string>
     <string name="boosted">boosted</string>
     <string name="quote">Quote</string>
+    <string name="fork">Fork</string>
     <string name="new_amount_in_sats">New Amount in Sats</string>
     <string name="add">Add</string>
     <string name="replying_to">"replying to "</string>
@@ -141,12 +147,15 @@
     <string name="clear">Clear</string>
     <string name="app_logo">App Logo</string>
     <string name="nsec_npub_hex_private_key">nsec.. or npub..</string>
+    <string name="ncryptsec_password">password to open the key</string>
     <string name="show_password">Show Password</string>
     <string name="hide_password">Hide Password</string>
     <string name="invalid_key">Invalid key</string>
+    <string name="invalid_key_with_message">Invalid key: %1$s</string>
     <string name="i_accept_the">"I accept the "</string>
     <string name="terms_of_use">terms of use</string>
     <string name="acceptance_of_terms_is_required">Acceptance of terms is required</string>
+    <string name="password_is_required">Password is required</string>
     <string name="key_is_required">Key is required</string>
     <string name="name_is_required">A name is required</string>
     <string name="login">Login</string>
@@ -199,15 +208,22 @@
     <string name="mark_all_new_as_read">Mark all New as read</string>
     <string name="mark_all_as_read">Mark all as read</string>
     <string name="backup_keys">Backup Keys</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">
+    <string name="account_backup_tips2_md" tools:ignore="Typos">
         ## Key Backup and Safety Tips
-        \n\nYour account is secured by a secret key. The key is long random string starting with **nsec1**. Anyone who has access to your secret key can publish content using your identity.
+        \n\nYour account is secured by a secret key. The key is a long sequence of characters starting with **nsec1**. Anyone who has access to this secret key can post and change your identity.
         \n\n- Do **not** put your secret key in any website or software you do not trust.
-        \n- Amethyst developers will **never** ask you for your secret key.
+        \n- Amethyst developers will **never** ask for your secret key.
         \n- **Do** keep a secure backup of your secret key for account recovery. We recommend using a password manager.
     </string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">
+        For additional security, you can encrypt your key with a password. This key starts with **ncryptsec1** and cannot be used without your password.
+        \n\nIf you lose your password, you will not be able to recover your key.
+    </string>
+
+    <string name="failed_to_encrypt_key">Failed to encrypt your private key</string>
     <string name="secret_key_copied_to_clipboard">Secret key (nsec) copied to clipboard</string>
     <string name="copy_my_secret_key">Copy my secret key</string>
+    <string name="encrypt_and_copy_my_secret_key">Encrypt and copy my secret key</string>
     <string name="biometric_authentication_failed">Authentication failed</string>
     <string name="biometric_authentication_failed_explainer">Biometrics failed to authenticate the owner of this phone</string>
     <string name="biometric_authentication_failed_explainer_with_error">Biometrics failed to authenticate the owner of this phone. Error: %1$s</string>
@@ -523,6 +539,7 @@
     <string name="new_feature_nip24_activate">Activate</string>
 
     <string name="messages_create_public_chat">Public</string>
+    <string name="messages_create_public_private_chat_desription">New Public or Private Group</string>
     <string name="messages_new_message">Private</string>
     <string name="messages_new_message_to">To</string>
     <string name="messages_new_message_subject">Subject</string>
@@ -543,6 +560,7 @@
     <string name="load_image_description">When to load images</string>
 
     <string name="copy_to_clipboard">Copy to clipboard</string>
+    <string name="copy_npub_to_clipboard">Copy npub to clipboard</string>
     <string name="copy_url_to_clipboard">Copy URL to clipboard</string>
     <string name="copy_the_note_id_to_the_clipboard">Copy Note ID to clipboard</string>
 
@@ -625,6 +643,7 @@
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Could not assemble LNUrl from Lightning Address \"%1$s\". Check the user\'s setup</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">The receiver\'s lightning service at %1$s is not available. It was calculated from the lightning address \"%2$s\". Error: %3$s. Check if the server is up and if the lightning address is correct</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Could not resolve %1$s. Check if you are connected, if the server is up and if the lightning address %2$s is correct</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Could not resolve %1$s. Check if you are connected, if the server is up and if the lightning address %2$s is correct.\n\nException was: %3$s</string>
     <string name="could_not_fetch_invoice_from">Could not fetch invoice from %1$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Error Parsing JSON from Lightning Address. Check the user\'s lightning setup</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">Callback URL not found in the User\'s lightning address server configuration</string>
@@ -701,5 +720,76 @@
     <string name="server_did_not_provide_a_url_after_uploading">Server did not provide a URL after uploading</string>
     <string name="could_not_download_from_the_server">Could not download uploaded media from the server</string>
     <string name="could_not_prepare_local_file_to_upload">Could not prepare local file to upload: %1$s</string>
+
     <string name="edit_draft">Edit draft</string>
+
+    <string name="login_with_qr_code">Login with QR Code</string>
+    <string name="route">Route</string>
+    <string name="route_home">Home</string>
+    <string name="route_search">Search</string>
+    <string name="route_discover">Discover</string>
+    <string name="route_messages">Messages</string>
+    <string name="route_notifications">Notifications</string>
+    <string name="route_global">Global</string>
+    <string name="route_video">Shorts</string>
+    <string name="route_security_filters">Security Filters</string>
+
+    <string name="new_post">New Post</string>
+    <string name="new_short">New Shorts: images or videos</string>
+    <string name="new_community_note">New Community Note</string>
+
+    <string name="open_all_reactions_to_this_post">Open all reactions to this post</string>
+    <string name="close_all_reactions_to_this_post">Close all reactions to this post</string>
+
+    <string name="reply_description">Reply</string>
+    <string name="boost_or_quote_description">Boost Or Quote</string>
+    <string name="like_description">Like</string>
+    <string name="zap_description">Zap</string>
+
+    <string name="profile_image_of_user">Profile Picture of %1$s</string>
+    <string name="relay_info">Relay %1$s</string>
+    <string name="expand_relay_list">Expand relay list</string>
+    <string name="note_options">Note options</string>
+    <string name="relay_list_selector">Relay list selector</string>
+    <string name="poll">Poll</string>
+    <string name="disable_poll">Disable Poll</string>
+
+    <string name="add_bitcoin_invoice">Bitcoin Invoice</string>
+    <string name="cancel_bitcoin_invoice">Cancel Bitcoin Invoice</string>
+    <string name="cancel_classifieds">Cancel Sell an Item</string>
+
+    <string name="add_zapraiser">Zapraiser</string>
+    <string name="cancel_zapraiser">Cancel Zapraiser</string>
+
+    <string name="add_location">Location</string>
+    <string name="remove_location">Remove Location</string>
+
+    <string name="add_zap_split">Zap splits</string>
+    <string name="cancel_zap_split">Cancel Zap split</string>
+
+    <string name="add_content_warning">Add content warning</string>
+    <string name="remove_content_warning">Remove content warning</string>
+    <string name="show_npub_as_a_qr_code">Show npub as a QR code</string>
+
+    <string name="invalid_nip19_uri">Invalid address</string>
+    <string name="invalid_nip19_uri_description">Amethyst received a URI to open but that uri was invalid: %1$s</string>
+
+    <string name="zap_the_devs_title">Zap the Devs!</string>
+    <string name="zap_the_devs_description">Your donation helps us make a difference. Every sat counts!</string>
+    <string name="donate_now">Donate Now</string>
+    <string name="brought_to_you_by">was brought to you by:</string>
+    <string name="this_version_brought_to_you_by">This version was brought to you by:</string>
+    <string name="version_name">Version %1$s</string>
+    <string name="thank_you">Thank you!</string>
+    <string name="max_limit">Max Limit</string>
+    <string name="restricted_writes">Restricted Writes</string>
+    <string name="forked_from">Forked from</string>
+    <string name="forked_tag">FORK</string>
+    <string name="git_repository">Git Repository: %1$s</string>
+    <string name="git_web_address">Web:</string>
+    <string name="git_clone_address">Clone:</string>
+    <string name="existed_since">OTS: %1$s</string>
+
+    <string name="ots_info_title">Timestamp Proof</string>
+    <string name="ots_info_description">There\'s proof this post was signed sometime before %1$s. The proof was stamped in the Bitcoin blockchain at that date and time.</string>
 </resources>

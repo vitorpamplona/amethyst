@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -32,6 +32,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Base64
+import kotlin.coroutines.cancellation.CancellationException
 
 @Immutable
 data class CashuToken(
@@ -59,6 +60,7 @@ class CashuProcessor {
 
             return GenericLoadable.Loaded(CashuToken(cashuToken, mint, totalAmount, proofs))
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             return GenericLoadable.Error<CashuToken>("Could not parse this cashu token")
         }
     }
@@ -119,7 +121,7 @@ class CashuProcessor {
         checkNotInMainThread()
 
         try {
-            val client = HttpClient.getHttpClient()
+            val client = HttpClientManager.getHttpClient()
             val url = "$mintAddress/checkfees" // Melt cashu tokens at Mint
 
             val factory = Event.mapper.nodeFactory
@@ -154,6 +156,7 @@ class CashuProcessor {
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             onError(
                 context.getString(R.string.cashu_successful_redemption),
                 context.getString(R.string.cashu_failed_redemption_explainer_error_msg, e.message),
@@ -170,7 +173,7 @@ class CashuProcessor {
         context: Context,
     ) {
         try {
-            val client = HttpClient.getHttpClient()
+            val client = HttpClientManager.getHttpClient()
             val url = token.mint + "/melt" // Melt cashu tokens at Mint
 
             val factory = Event.mapper.nodeFactory
@@ -211,6 +214,7 @@ class CashuProcessor {
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             onError(
                 context.getString(R.string.cashu_successful_redemption),
                 context.getString(R.string.cashu_failed_redemption_explainer_error_msg, e.message),

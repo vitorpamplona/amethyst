@@ -3,6 +3,7 @@
     <string name="point_to_the_qr_code">对准二维码</string>
     <string name="show_qr">显示二维码</string>
     <string name="profile_image">头像图片</string>
+    <string name="your_profile_image">头像图片</string>
     <string name="scan_qr">扫描二维码</string>
     <string name="show_anyway">仍然显示</string>
     <string name="post_was_flagged_as_inappropriate_by">帖文被标记为不当</string>
@@ -90,6 +91,8 @@
     <string name="add_a_relay">添加中继器</string>
     <string name="display_name">显示名称</string>
     <string name="my_display_name">我的显示名称</string>
+    <string name="my_awesome_name">Ostrich McAwesome</string>
+    <string name="welcome">欢迎！</string>
     <string name="username">用户名</string>
     <string name="my_username">我的用户名</string>
     <string name="about_me">关于我</string>
@@ -143,7 +146,14 @@
     <string name="terms_of_use">使用条款</string>
     <string name="acceptance_of_terms_is_required">需要接受条款</string>
     <string name="key_is_required">需要密钥</string>
+    <string name="name_is_required">名称必填</string>
     <string name="login">登录</string>
+    <string name="sign_up">注册</string>
+    <string name="create_account">创建帐户</string>
+    <string name="how_should_we_call_you">我们应该如何称呼你？</string>
+    <string name="don_t_have_an_account">还没有 Nostr 帐户？</string>
+    <string name="already_have_an_account">已经有 Nostr 帐户？</string>
+    <string name="create_a_new_account">创建新帐户</string>
     <string name="generate_a_new_key">生成新密钥</string>
     <string name="loading_feed">正在加载</string>
     <string name="loading_account">正在载入帐户</string>
@@ -185,11 +195,6 @@
     <string name="mark_all_new_as_read">将所有新内容标记为已读</string>
     <string name="mark_all_as_read">将所有内容标记为已读</string>
     <string name="backup_keys">备份密匙</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">## 备份与安全提示
-        \n\n您的帐户由一个私人密钥保护。 密钥是以**nsec1**开头的长随机字符串。任何拥有您的私人密钥的人都可以使用您的身份发布内容。
-        \n\n- **不要**将您的私人密钥添加到您不信任的任何网站或软件，亦不要在网上公开。
-        \n- Amethyst 开发人员**永远不会**要求您提供私人密钥。
-        \n- **请**保留您的私人密钥的安全备份，以备帐户恢复。 我们建议使用密码管理器。</string>
     <string name="secret_key_copied_to_clipboard">私人密钥（nsec）已复制到剪贴板</string>
     <string name="copy_my_secret_key">复制我的私人密钥</string>
     <string name="biometric_authentication_failed">身份验证失败</string>
@@ -443,6 +448,7 @@
     <string name="new_feature_nip24_might_not_be_available_description">启用此模式需要 Amethyst 发送一条 NIP-24 消息（包装的、密封的私信和群聊消息）。因为 NIP-24 是新的，大多数客户端尚未执行。请确保接收方正在使用兼容的客户端。</string>
     <string name="new_feature_nip24_activate">启用</string>
     <string name="messages_create_public_chat">公开</string>
+    <string name="messages_create_public_private_chat_desription">新建公开或私人群组</string>
     <string name="messages_new_message">私人</string>
     <string name="messages_new_message_to">至</string>
     <string name="messages_new_message_subject">主题</string>
@@ -459,6 +465,7 @@
     <string name="automatically_show_url_preview_description">显示 URL 预览</string>
     <string name="load_image_description">何时加载图像</string>
     <string name="copy_to_clipboard">复制到剪贴板</string>
+    <string name="copy_npub_to_clipboard">复制 npub 到剪贴板</string>
     <string name="copy_url_to_clipboard">复制链接到剪贴板</string>
     <string name="copy_the_note_id_to_the_clipboard">复制笔记 ID 到剪贴板</string>
     <string name="created_at">创建于</string>
@@ -522,6 +529,7 @@
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">无法从闪电地址集合LNURL\"%1$s\"。请检查用户设置</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s 的接收者闪电服务不可用。它是根据雷电地址\"%2$s\"计算的。 错误: %3$s。请检查服务器是否已经上线，闪电地址是否正确</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">无法解析 %1$s。请检查你是否已连接，服务器是否启动，以及闪电地址 %2$s 是否正确</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">无法解析 %1$s。请检查你是否已连接，服务器是否启动，以及闪电地址 %2$s 是否正确。\n\n异常为：%3$s</string>
     <string name="could_not_fetch_invoice_from">无法从 %1$s 获取发票</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">从闪电地址解析JSON出错。请检查用户的打闪设置</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">在用户闪电地址服务器配置中找不到回调URL</string>
@@ -586,4 +594,44 @@
     <string name="server_did_not_provide_a_url_after_uploading">上传后服务器没有提供 URL</string>
     <string name="could_not_download_from_the_server">无法从服务器下载上传的媒体</string>
     <string name="could_not_prepare_local_file_to_upload">无法准备要上传的本地文件：%1$s</string>
+    <string name="login_with_qr_code">使用二维码登录</string>
+    <string name="route">路径</string>
+    <string name="route_home">主页</string>
+    <string name="route_search">搜索</string>
+    <string name="route_discover">发现</string>
+    <string name="route_messages">消息</string>
+    <string name="route_notifications">通知</string>
+    <string name="route_global">全球</string>
+    <string name="route_video">短篇</string>
+    <string name="route_security_filters">安全滤镜</string>
+    <string name="new_post">新帖子</string>
+    <string name="new_short">新短篇媒体：图像或视频</string>
+    <string name="new_community_note">新社区笔记</string>
+    <string name="open_all_reactions_to_this_post">展开对此帖子的所有回应</string>
+    <string name="close_all_reactions_to_this_post">收起对此帖子的所有回应</string>
+    <string name="reply_description">回复</string>
+    <string name="boost_or_quote_description">提升或引用</string>
+    <string name="like_description">点赞</string>
+    <string name="zap_description">打闪</string>
+    <string name="profile_image_of_user">%1$s 的个人头像</string>
+    <string name="relay_info">中继器 %1$s</string>
+    <string name="expand_relay_list">展开中继列表</string>
+    <string name="note_options">笔记选项</string>
+    <string name="relay_list_selector">中继列表选择器</string>
+    <string name="poll">投票</string>
+    <string name="disable_poll">停用投票</string>
+    <string name="add_bitcoin_invoice">比特币发票</string>
+    <string name="cancel_bitcoin_invoice">取消比特币发票</string>
+    <string name="cancel_classifieds">取消出售物品</string>
+    <string name="add_zapraiser">Zapraiser</string>
+    <string name="cancel_zapraiser">取消 Zapraiser</string>
+    <string name="add_location">地点</string>
+    <string name="remove_location">移除地点</string>
+    <string name="add_zap_split">打闪拆分</string>
+    <string name="cancel_zap_split">取消打闪拆分</string>
+    <string name="add_content_warning">添加内容警告</string>
+    <string name="remove_content_warning">移除内容警告</string>
+    <string name="show_npub_as_a_qr_code">将 npub 显示为二维码</string>
+    <string name="invalid_nip19_uri">地址无效</string>
+    <string name="invalid_nip19_uri_description">Amethyst 收到了要打开的 URI，但该 uri 无效：%1$s</string>
 </resources>

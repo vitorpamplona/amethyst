@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 
 class ZapOptionstViewModel : ViewModel() {
     private var account: Account? = null
@@ -104,11 +105,7 @@ class ZapOptionstViewModel : ViewModel() {
     }
 
     fun value(): Long? {
-        return try {
-            customAmount.text.trim().toLongOrNull()
-        } catch (e: Exception) {
-            null
-        }
+        return customAmount.text.trim().toLongOrNull()
     }
 
     fun cancel() {}
@@ -283,7 +280,7 @@ fun ZapButton(
     onPost: () -> Unit,
 ) {
     Button(
-        onClick = { onPost() },
+        onClick = { if (isActive) onPost() },
         shape = ButtonBorder,
         colors =
             ButtonDefaults.buttonColors(
@@ -446,6 +443,7 @@ fun payViaIntent(
 
         ContextCompat.startActivity(context, intent, null)
     } catch (e: Exception) {
+        if (e is CancellationException) throw e
         if (e.message != null) {
             onError(context.getString(R.string.no_wallet_found_with_error, e.message!!))
         } else {

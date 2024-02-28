@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -169,6 +169,7 @@ private fun TranslationMessage(
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("langSettings", true.toString())
                     append(stringResource(R.string.translations_auto))
+                    pop()
                 }
 
                 append("-${stringResource(R.string.translations_translated_from)} ")
@@ -176,6 +177,7 @@ private fun TranslationMessage(
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("showOriginal", true.toString())
                     append(Locale(source).displayName)
+                    pop()
                 }
 
                 append(" ${stringResource(R.string.translations_to)} ")
@@ -183,6 +185,7 @@ private fun TranslationMessage(
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("showOriginal", false.toString())
                     append(Locale(target).displayName)
+                    pop()
                 }
             }
 

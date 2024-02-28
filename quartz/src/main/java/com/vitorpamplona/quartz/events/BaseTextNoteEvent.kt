@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,9 +22,10 @@ package com.vitorpamplona.quartz.events
 
 import android.util.Log
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip19
-import com.vitorpamplona.quartz.encoders.Nip19.nip19regex
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
+import com.vitorpamplona.quartz.encoders.Nip19Bech32.nip19regex
 import java.util.regex.Pattern
 
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
@@ -42,18 +43,43 @@ open class BaseTextNoteEvent(
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
     fun mentions() = taggedUsers()
 
-    open fun replyTos() = taggedEvents()
+    fun isAFork() = tags.any { it.size > 3 && (it[0] == "a" || it[0] == "e") && it[3] == "fork" }
+
+    fun forkFromAddress() =
+        tags.firstOrNull { it.size > 3 && it[0] == "a" && it[3] == "fork" }?.let {
+            val aTagValue = it[1]
+            val relay = it.getOrNull(2)
+
+            ATag.parse(aTagValue, relay)
+        }
+
+    fun forkFromVersion() = tags.firstOrNull { it.size > 3 && it[0] == "e" && it[3] == "fork" }?.get(1)
+
+    open fun replyTos(): List<HexKey> {
+        val oldStylePositional = tags.filter { it.size > 1 && it.size <= 3 && it[0] == "e" }.map { it[1] }
+        val newStyleReply = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "reply" }?.get(1)
+        val newStyleRoot = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
+
+        val newStyleReplyTos = listOfNotNull(newStyleReply, newStyleRoot)
+
+        return if (newStyleReplyTos.isNotEmpty()) {
+            newStyleReplyTos
+        } else {
+            oldStylePositional
+        }
+    }
 
     fun replyingTo(): HexKey? {
         val oldStylePositional = tags.lastOrNull { it.size > 1 && it[0] == "e" }?.get(1)
-        val newStyle = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "reply" }?.get(1)
+        val newStyleReply = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "reply" }?.get(1)
+        val newStyleRoot = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
 
-        return newStyle ?: oldStylePositional
+        return newStyleReply ?: newStyleRoot ?: oldStylePositional
     }
 
-    @Transient private var citedUsersCache: Set<HexKey>? = null
+    @Transient private var citedUsersCache: Set<String>? = null
 
-    @Transient private var citedNotesCache: Set<HexKey>? = null
+    @Transient private var citedNotesCache: Set<String>? = null
 
     fun citedUsers(): Set<HexKey> {
         citedUsersCache?.let {
@@ -74,19 +100,19 @@ open class BaseTextNoteEvent(
 
         val matcher2 = nip19regex.matcher(content)
         while (matcher2.find()) {
-            val uriScheme = matcher2.group(1) // nostr:
             val type = matcher2.group(2) // npub1
             val key = matcher2.group(3) // bech32
             val additionalChars = matcher2.group(4) // additional chars
 
             try {
-                val parsed = Nip19.parseComponents(uriScheme, type, key, additionalChars)
+                val parsed = Nip19Bech32.parseComponents(type, key, additionalChars)?.entity
 
                 if (parsed != null) {
-                    val tag = tags.firstOrNull { it.size > 1 && it[1] == parsed.hex }
-
-                    if (tag != null && tag[0] == "p") {
-                        returningList.add(tag[1])
+                    if (parsed is Nip19Bech32.NProfile) {
+                        returningList.add(parsed.hex)
+                    }
+                    if (parsed is Nip19Bech32.NPub) {
+                        returningList.add(parsed.hex)
                     }
                 }
             } catch (e: Exception) {
@@ -121,24 +147,18 @@ open class BaseTextNoteEvent(
 
         val matcher2 = nip19regex.matcher(content)
         while (matcher2.find()) {
-            val uriScheme = matcher2.group(1) // nostr:
             val type = matcher2.group(2) // npub1
             val key = matcher2.group(3) // bech32
             val additionalChars = matcher2.group(4) // additional chars
 
-            val parsed = Nip19.parseComponents(uriScheme, type, key, additionalChars)
+            val parsed = Nip19Bech32.parseComponents(type, key, additionalChars)?.entity
 
             if (parsed != null) {
-                try {
-                    val tag = tags.firstOrNull { it.size > 1 && it[1] == parsed.hex }
-
-                    if (tag != null && tag[0] == "e") {
-                        citations.add(tag[1])
-                    }
-                    if (tag != null && tag[0] == "a") {
-                        citations.add(tag[1])
-                    }
-                } catch (e: Exception) {
+                when (parsed) {
+                    is Nip19Bech32.NEvent -> citations.add(parsed.hex)
+                    is Nip19Bech32.NAddress -> citations.add(parsed.atag)
+                    is Nip19Bech32.Note -> citations.add(parsed.hex)
+                    is Nip19Bech32.NEmbed -> citations.add(parsed.event.id)
                 }
             }
         }
@@ -150,7 +170,10 @@ open class BaseTextNoteEvent(
     fun tagsWithoutCitations(): List<String> {
         val repliesTo = replyTos()
         val tagAddresses =
-            taggedAddresses().filter { it.kind != CommunityDefinitionEvent.KIND }.map { it.toTag() }
+            taggedAddresses().filter {
+                it.kind != CommunityDefinitionEvent.KIND &&
+                    it.kind != WikiNoteEvent.KIND
+            }.map { it.toTag() }
         if (repliesTo.isEmpty() && tagAddresses.isEmpty()) return emptyList()
 
         val citations = findCitations()

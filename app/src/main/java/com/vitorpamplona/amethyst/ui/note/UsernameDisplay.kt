@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -213,7 +213,10 @@ fun DrawPlayName(name: String) {
 @Composable
 fun DrawPlayNameIcon(onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = StdButtonSizeModifier) {
-        PlayIcon(modifier = StdButtonSizeModifier, tint = MaterialTheme.colorScheme.placeholderText)
+        PlayIcon(
+            modifier = StdButtonSizeModifier,
+            tint = MaterialTheme.colorScheme.placeholderText,
+        )
     }
 }
 

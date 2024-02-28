@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -38,10 +38,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.EditNote
@@ -99,6 +101,7 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
@@ -112,12 +115,12 @@ import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.ServerOption
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
+import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
-import com.vitorpamplona.amethyst.ui.components.ZoomableUrlVideo
 import com.vitorpamplona.amethyst.ui.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
@@ -156,6 +159,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
 import com.vitorpamplona.quartz.events.Participant
+import com.vitorpamplona.quartz.events.findURLs
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -268,7 +272,13 @@ fun ChannelScreen(
         val replyTo = remember { mutableStateOf<Note?>(null) }
 
         Column(
-            modifier = remember { Modifier.fillMaxHeight().padding(vertical = 0.dp).weight(1f, true) },
+            modifier =
+                remember {
+                    Modifier
+                        .fillMaxHeight()
+                        .padding(vertical = 0.dp)
+                        .weight(1f, true)
+                },
         ) {
             if (channel is LiveActivitiesChannel) {
                 ShowVideoStreaming(channel, accountViewModel)
@@ -300,6 +310,10 @@ fun ChannelScreen(
                         dao = accountViewModel,
                     )
                 tagger.run()
+
+                val urls = findURLs(tagger.message)
+                val usedAttachments = newPostModel.nip94attachments.filter { it.urls().intersect(urls.toSet()).isNotEmpty() }
+
                 if (channel is PublicChatChannel) {
                     accountViewModel.account.sendChannelMessage(
                         message = tagger.message,
@@ -307,6 +321,7 @@ fun ChannelScreen(
                         replyTo = tagger.eTags,
                         mentions = tagger.pTags,
                         wantsToMarkAsSensitive = false,
+                        nip94attachments = usedAttachments,
                     )
                 } else if (channel is LiveActivitiesChannel) {
                     accountViewModel.account.sendLiveMessage(
@@ -315,6 +330,7 @@ fun ChannelScreen(
                         replyTo = tagger.eTags,
                         mentions = tagger.pTags,
                         wantsToMarkAsSensitive = false,
+                        nip94attachments = usedAttachments,
                     )
                 }
                 newPostModel.message = TextFieldValue("")
@@ -333,7 +349,11 @@ fun DisplayReplyingToNote(
     onCancel: () -> Unit,
 ) {
     Row(
-        Modifier.padding(horizontal = 10.dp).animateContentSize(),
+        Modifier
+            .padding(horizontal = 10.dp)
+            .heightIn(max = 100.dp)
+            .verticalScroll(rememberScrollState())
+            .animateContentSize(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (replyingNote != null) {
@@ -356,7 +376,10 @@ fun DisplayReplyingToNote(
                     Icon(
                         imageVector = Icons.Default.Cancel,
                         null,
-                        modifier = Modifier.padding(end = 5.dp).size(30.dp),
+                        modifier =
+                            Modifier
+                                .padding(end = 5.dp)
+                                .size(30.dp),
                         tint = MaterialTheme.colorScheme.placeholderText,
                     )
                 }
@@ -372,12 +395,12 @@ fun EditFieldRow(
     accountViewModel: AccountViewModel,
     onSendNewMessage: () -> Unit,
 ) {
-    Row(
+    Column(
         modifier = EditFieldModifier,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
     ) {
         val context = LocalContext.current
+
+        ShowUserSuggestionList(channelScreenModel, accountViewModel)
 
         MyTextField(
             value = channelScreenModel.message,
@@ -387,7 +410,7 @@ fun EditFieldRow(
                     capitalization = KeyboardCapitalization.Sentences,
                 ),
             shape = EditFieldBorder,
-            modifier = Modifier.weight(1f, true),
+            modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
                     text = stringResource(R.string.reply_here),
@@ -424,6 +447,7 @@ fun EditFieldRow(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                 ),
+            visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
         )
     }
 }
@@ -657,7 +681,7 @@ fun ShowVideoStreaming(
                         ) {
                             val zoomableUrlVideo =
                                 remember(it) {
-                                    ZoomableUrlVideo(
+                                    MediaUrlVideo(
                                         url = url,
                                         description = title,
                                         artworkUri = artworkUri,
@@ -718,7 +742,11 @@ fun ShortChannelHeader(
         }
 
         Column(
-            modifier = Modifier.padding(start = 10.dp).height(35.dp).weight(1f),
+            modifier =
+                Modifier
+                    .padding(start = 10.dp)
+                    .height(35.dp)
+                    .weight(1f),
             verticalArrangement = Arrangement.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -731,7 +759,10 @@ fun ShortChannelHeader(
         }
 
         Row(
-            modifier = Modifier.height(Size35dp).padding(start = 5.dp),
+            modifier =
+                Modifier
+                    .height(Size35dp)
+                    .padding(start = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (channel is PublicChatChannel) {
@@ -1021,7 +1052,12 @@ fun LiveFlag() {
         fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
         modifier =
-            remember { Modifier.clip(SmallBorder).background(Color.Red).padding(horizontal = 5.dp) },
+            remember {
+                Modifier
+                    .clip(SmallBorder)
+                    .background(Color.Red)
+                    .padding(horizontal = 5.dp)
+            },
     )
 }
 
@@ -1032,7 +1068,12 @@ fun EndedFlag() {
         color = Color.White,
         fontWeight = FontWeight.Bold,
         modifier =
-            remember { Modifier.clip(SmallBorder).background(Color.Black).padding(horizontal = 5.dp) },
+            remember {
+                Modifier
+                    .clip(SmallBorder)
+                    .background(Color.Black)
+                    .padding(horizontal = 5.dp)
+            },
     )
 }
 
@@ -1043,7 +1084,12 @@ fun OfflineFlag() {
         color = Color.White,
         fontWeight = FontWeight.Bold,
         modifier =
-            remember { Modifier.clip(SmallBorder).background(Color.Black).padding(horizontal = 5.dp) },
+            remember {
+                Modifier
+                    .clip(SmallBorder)
+                    .background(Color.Black)
+                    .padding(horizontal = 5.dp)
+            },
     )
 }
 
@@ -1057,7 +1103,12 @@ fun ScheduledFlag(starts: Long?) {
         color = Color.White,
         fontWeight = FontWeight.Bold,
         modifier =
-            remember { Modifier.clip(SmallBorder).background(Color.Black).padding(horizontal = 5.dp) },
+            remember {
+                Modifier
+                    .clip(SmallBorder)
+                    .background(Color.Black)
+                    .padding(horizontal = 5.dp)
+            },
     )
 }
 
@@ -1066,7 +1117,10 @@ private fun NoteCopyButton(note: Channel) {
     var popupExpanded by remember { mutableStateOf(false) }
 
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
+        modifier =
+            Modifier
+                .padding(horizontal = 3.dp)
+                .width(50.dp),
         onClick = { popupExpanded = true },
         shape = ButtonBorder,
         colors =
@@ -1109,7 +1163,10 @@ private fun EditButton(
     }
 
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
+        modifier =
+            Modifier
+                .padding(horizontal = 3.dp)
+                .width(50.dp),
         onClick = { wantsToPost = true },
         contentPadding = ZeroPadding,
     ) {

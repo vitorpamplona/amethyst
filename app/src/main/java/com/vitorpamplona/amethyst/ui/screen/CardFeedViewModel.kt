@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -179,7 +179,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
                     val event = (zapEvent.event as LnZapEvent)
                     val author =
                         event.zappedAuthor().firstNotNullOfOrNull {
-                            LocalCache.users[it] // don't create user if it doesn't exist
+                            LocalCache.getUserIfExists(it) // don't create user if it doesn't exist
                         }
                     if (author != null) {
                         val zapRequest = author.zaps.filter { it.value == zapEvent }.keys.firstOrNull()

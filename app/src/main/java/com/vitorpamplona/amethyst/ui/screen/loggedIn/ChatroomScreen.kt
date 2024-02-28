@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,11 +25,13 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -92,6 +94,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.ServerOption
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
+import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.DisplayRoomSubject
@@ -115,6 +118,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.events.findURLs
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.Dispatchers
@@ -324,6 +328,9 @@ fun ChatroomScreen(
         // LAST ROW
         PrivateMessageEditFieldRow(newPostModel, isPrivate = true, accountViewModel) {
             scope.launch(Dispatchers.IO) {
+                val urls = findURLs(newPostModel.message.text)
+                val usedAttachments = newPostModel.nip94attachments.filter { it.urls().intersect(urls.toSet()).isNotEmpty() }
+
                 if (newPostModel.nip24 || room.users.size > 1 || replyTo.value?.event is ChatMessageEvent) {
                     accountViewModel.account.sendNIP24PrivateMessage(
                         message = newPostModel.message.text,
@@ -331,6 +338,7 @@ fun ChatroomScreen(
                         replyingTo = replyTo.value,
                         mentions = null,
                         wantsToMarkAsSensitive = false,
+                        nip94attachments = usedAttachments,
                     )
                 } else {
                     accountViewModel.account.sendPrivateMessage(
@@ -339,6 +347,7 @@ fun ChatroomScreen(
                         replyingTo = replyTo.value,
                         mentions = null,
                         wantsToMarkAsSensitive = false,
+                        nip94attachments = usedAttachments,
                     )
                 }
 
@@ -357,12 +366,12 @@ fun PrivateMessageEditFieldRow(
     accountViewModel: AccountViewModel,
     onSendNewMessage: () -> Unit,
 ) {
-    Row(
+    Column(
         modifier = EditFieldModifier,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
     ) {
         val context = LocalContext.current
+
+        ShowUserSuggestionList(channelScreenModel, accountViewModel)
 
         MyTextField(
             value = channelScreenModel.message,
@@ -372,7 +381,7 @@ fun PrivateMessageEditFieldRow(
                     capitalization = KeyboardCapitalization.Sentences,
                 ),
             shape = EditFieldBorder,
-            modifier = Modifier.weight(1f, true),
+            modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
                     text = stringResource(R.string.reply_here),
@@ -455,7 +464,33 @@ fun PrivateMessageEditFieldRow(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                 ),
+            visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
         )
+    }
+}
+
+@Composable
+fun ShowUserSuggestionList(
+    channelScreenModel: NewPostViewModel,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier.heightIn(0.dp, 200.dp),
+) {
+    val userSuggestions = channelScreenModel.userSuggestions
+    if (userSuggestions.isNotEmpty()) {
+        LazyColumn(
+            contentPadding =
+                PaddingValues(
+                    top = 10.dp,
+                ),
+            modifier = modifier,
+        ) {
+            itemsIndexed(
+                userSuggestions,
+                key = { _, item -> item.pubkeyHex },
+            ) { _, item ->
+                UserLine(item, accountViewModel) { channelScreenModel.autocompleteWithUser(item) }
+            }
+        }
     }
 }
 

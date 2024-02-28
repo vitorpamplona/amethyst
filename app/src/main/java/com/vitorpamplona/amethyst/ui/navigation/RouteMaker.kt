@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -75,7 +75,8 @@ fun routeToMessage(
     val withKey = ChatroomKey(persistentSetOf(user))
     accountViewModel.account.userProfile().createChatroom(withKey)
     return if (draftMessage != null) {
-        "Room/${withKey.hashCode()}?message=$draftMessage"
+        val encodedMessage = URLEncoder.encode(draftMessage, "utf-8")
+        "Room/${withKey.hashCode()}?message=$encodedMessage"
     } else {
         "Room/${withKey.hashCode()}"
     }

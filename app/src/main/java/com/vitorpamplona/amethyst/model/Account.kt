@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -31,6 +31,7 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.switchMap
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
@@ -43,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.BookmarkListEvent
@@ -74,6 +76,7 @@ import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.NIP24Factory
+import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.Price
@@ -96,6 +99,7 @@ import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.collections.immutable.toPersistentSet
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -170,7 +174,7 @@ class Account(
     var defaultStoriesFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
     var defaultNotificationFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
     var defaultDiscoveryFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
-    var zapPaymentRequest: Nip47URI? = null,
+    var zapPaymentRequest: Nip47WalletConnect.Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
     var hideNIP24WarningDialog: Boolean = false,
@@ -181,10 +185,10 @@ class Account(
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: Boolean = true,
     var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>(),
+    var hasDonatedInVersion: Set<String> = setOf<String>(),
+    var pendingAttestations: Map<HexKey, String> = mapOf<HexKey, String>(),
+    val scope: CoroutineScope = Amethyst.instance.applicationIOScope,
 ) {
-    // Uses a single scope for the entire application.
-    val scope = Amethyst.instance.applicationIOScope
-
     var transientHiddenUsers: ImmutableSet<String> = persistentSetOf()
 
     data class PaymentRequest(
@@ -727,7 +731,7 @@ class Account(
         zapResponseEvent.response(signer, onReady)
     }
 
-    fun calculateIfNoteWasZappedByAccount(
+    suspend fun calculateIfNoteWasZappedByAccount(
         zappedNote: Note?,
         onWasZapped: () -> Unit,
     ) {
@@ -889,6 +893,38 @@ class Account(
                 Client.send(it)
             }
         }
+    }
+
+    suspend fun updateAttestations() {
+        Log.d("Pending Attestations", "Updating ${pendingAttestations.size} pending attestations")
+
+        pendingAttestations.toMap().forEach { pair ->
+            val newAttestation = OtsEvent.upgrade(pair.value, pair.key)
+
+            if (pair.value != newAttestation) {
+                OtsEvent.create(pair.key, newAttestation, signer) {
+                    LocalCache.justConsume(it, null)
+                    Client.send(it)
+
+                    pendingAttestations = pendingAttestations - pair.key
+                }
+            }
+        }
+    }
+
+    fun hasPendingAttestations(note: Note): Boolean {
+        val id = note.event?.id() ?: note.idHex
+        return pendingAttestations.get(id) != null
+    }
+
+    fun timestamp(note: Note) {
+        if (!isWriteable()) return
+
+        val id = note.event?.id() ?: note.idHex
+
+        pendingAttestations = pendingAttestations + Pair(id, OtsEvent.stamp(id))
+
+        saveable.invalidateData()
     }
 
     fun follow(user: User) {
@@ -1166,7 +1202,7 @@ class Account(
         Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent, null)
 
-        return LocalCache.notes[signedEvent.id]
+        return LocalCache.getNoteIfExists(signedEvent.id)
     }
 
     fun consumeNip95(
@@ -1176,7 +1212,7 @@ class Account(
         LocalCache.consume(data, null)
         LocalCache.consume(signedEvent, null)
 
-        return LocalCache.notes[signedEvent.id]
+        return LocalCache.getNoteIfExists(signedEvent.id)
     }
 
     fun sendNip95(
@@ -1196,7 +1232,7 @@ class Account(
         Client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent, null)
 
-        LocalCache.notes[signedEvent.id]?.let { onReady(it) }
+        LocalCache.getNoteIfExists(signedEvent.id)?.let { onReady(it) }
     }
 
     fun createHeader(
@@ -1323,9 +1359,10 @@ class Account(
         replyingTo: String?,
         root: String?,
         directMentions: Set<HexKey>,
+        forkedFrom: Event?,
         relayList: List<Relay>? = null,
         geohash: String? = null,
-        nip94attachments: List<Event>? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
     ) {
         if (!isWriteable()) return
 
@@ -1347,6 +1384,7 @@ class Account(
             directMentions = directMentions,
             geohash = geohash,
             nip94attachments = nip94attachments,
+            forkedFrom = forkedFrom,
             signer = signer,
         ) {
             Client.send(it, relayList = relayList)
@@ -1381,7 +1419,7 @@ class Account(
         zapRaiserAmount: Long? = null,
         relayList: List<Relay>? = null,
         geohash: String? = null,
-        nip94attachments: List<Event>? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
     ) {
         if (!isWriteable()) return
 
@@ -1428,7 +1466,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        nip94attachments: List<Event>? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
     ) {
         if (!isWriteable()) return
 
@@ -1461,7 +1499,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        nip94attachments: List<Event>? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
     ) {
         if (!isWriteable()) return
 
@@ -1495,6 +1533,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
     ) {
         sendPrivateMessage(
             message,
@@ -1505,6 +1544,7 @@ class Account(
             wantsToMarkAsSensitive,
             zapRaiserAmount,
             geohash,
+            nip94attachments,
         )
     }
 
@@ -1517,6 +1557,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
     ) {
         if (!isWriteable()) return
 
@@ -1533,6 +1574,7 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
+            nip94attachments = nip94attachments,
             signer = signer,
             advertiseNip18 = false,
         ) {
@@ -1551,6 +1593,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
     ) {
         if (!isWriteable()) return
 
@@ -1567,6 +1610,7 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
+            nip94attachments = nip94attachments,
             signer = signer,
         ) {
             broadcastPrivately(it)
@@ -2031,7 +2075,7 @@ class Account(
         saveable.invalidateData()
     }
 
-    fun changeZapPaymentRequest(newServer: Nip47URI?) {
+    fun changeZapPaymentRequest(newServer: Nip47WalletConnect.Nip47URI?) {
         zapPaymentRequest = newServer
         live.invalidateData()
         saveable.invalidateData()
@@ -2346,6 +2390,16 @@ class Account(
 
     fun loadLastRead(route: String): Long {
         return lastReadPerRoute[route] ?: 0
+    }
+
+    fun hasDonatedInThisVersion(): Boolean {
+        return hasDonatedInVersion.contains(BuildConfig.VERSION_NAME)
+    }
+
+    fun markDonatedInThisVersion() {
+        hasDonatedInVersion = hasDonatedInVersion + BuildConfig.VERSION_NAME
+        saveable.invalidateData()
+        live.invalidateData()
     }
 
     suspend fun registerObservers() =

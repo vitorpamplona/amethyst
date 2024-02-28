@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -30,6 +30,7 @@ import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,8 +50,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -98,7 +97,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -133,23 +131,18 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.commons.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
-import com.vitorpamplona.amethyst.service.noProtocolUrlValidator
-import com.vitorpamplona.amethyst.service.startsWithNIP19Scheme
 import com.vitorpamplona.amethyst.ui.components.BechLink
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZapRaiserRequest
-import com.vitorpamplona.amethyst.ui.components.imageExtensions
-import com.vitorpamplona.amethyst.ui.components.isValidURL
-import com.vitorpamplona.amethyst.ui.components.removeQueryParamsForExtensionComparison
-import com.vitorpamplona.amethyst.ui.components.videoExtensions
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.CancelIcon
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
@@ -159,9 +152,9 @@ import com.vitorpamplona.amethyst.ui.note.RegularPostIcon
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.MyTextField
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -181,6 +174,7 @@ import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -194,6 +188,7 @@ fun NewPostView(
     onClose: () -> Unit,
     baseReplyTo: Note? = null,
     quote: Note? = null,
+    fork: Note? = null,
     enableMessageInterface: Boolean = false,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -212,13 +207,13 @@ fun NewPostView(
         launch(Dispatchers.IO) {
             val replyDraft = LocalPreferences.loadReplyDraft(accountViewModel.account)
             if (replyDraft.isNullOrBlank()) {
-                postViewModel.load(accountViewModel, baseReplyTo, quote)
+                postViewModel.load(accountViewModel, baseReplyTo, quote, fork)
             } else {
                 val note = LocalCache.checkGetOrCreateNote(replyDraft)
                 if (note == null) {
-                    postViewModel.load(accountViewModel, baseReplyTo, quote)
+                    postViewModel.load(accountViewModel, baseReplyTo, quote, fork)
                 } else {
-                    postViewModel.load(accountViewModel, note, quote)
+                    postViewModel.load(accountViewModel, note, quote, fork)
                 }
             }
 
@@ -274,7 +269,7 @@ fun NewPostView(
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.relays),
-                                        contentDescription = null,
+                                        contentDescription = stringResource(id = R.string.relay_list_selector),
                                         modifier = Modifier.height(25.dp),
                                         tint = MaterialTheme.colorScheme.onBackground,
                                     )
@@ -315,25 +310,38 @@ fun NewPostView(
         ) { pad ->
             Surface(
                 modifier =
-                    Modifier.padding(
-                        start = Size10dp,
-                        top = pad.calculateTopPadding(),
-                        end = Size10dp,
-                        bottom = pad.calculateBottomPadding(),
-                    )
+                    Modifier
+                        .padding(
+                            start = Size10dp,
+                            top = pad.calculateTopPadding(),
+                            end = Size10dp,
+                            bottom = pad.calculateBottomPadding(),
+                        )
                         .fillMaxSize(),
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(),
                 ) {
                     Column(
-                        modifier = Modifier.imePadding().weight(1f),
+                        modifier =
+                            Modifier
+                                .imePadding()
+                                .weight(1f),
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().weight(1f),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f),
                         ) {
                             Column(
-                                modifier = Modifier.fillMaxWidth().verticalScroll(scrollState),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .verticalScroll(scrollState),
                             ) {
                                 postViewModel.originalNote?.let {
                                     Row(Modifier.heightIn(max = 200.dp)) {
@@ -382,6 +390,52 @@ fun NewPostView(
                                         modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
                                     ) {
                                         PollField(postViewModel)
+                                    }
+                                }
+
+                                val myUrlPreview = postViewModel.urlPreview
+                                if (myUrlPreview != null) {
+                                    Row(modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)) {
+                                        if (RichTextParser.isValidURL(myUrlPreview)) {
+                                            if (RichTextParser.isImageUrl(myUrlPreview)) {
+                                                AsyncImage(
+                                                    model = myUrlPreview,
+                                                    contentDescription = myUrlPreview,
+                                                    contentScale = ContentScale.FillWidth,
+                                                    modifier =
+                                                        Modifier
+                                                            .padding(top = 4.dp)
+                                                            .fillMaxWidth()
+                                                            .clip(shape = QuoteBorder)
+                                                            .border(
+                                                                1.dp,
+                                                                MaterialTheme.colorScheme.subtleBorder,
+                                                                QuoteBorder,
+                                                            ),
+                                                )
+                                            } else if (RichTextParser.isVideoUrl(myUrlPreview)) {
+                                                VideoView(
+                                                    myUrlPreview,
+                                                    roundedCorner = true,
+                                                    accountViewModel = accountViewModel,
+                                                )
+                                            } else {
+                                                LoadUrlPreview(myUrlPreview, myUrlPreview, accountViewModel)
+                                            }
+                                        } else if (RichTextParser.startsWithNIP19Scheme(myUrlPreview)) {
+                                            val bgColor = MaterialTheme.colorScheme.background
+                                            val backgroundColor = remember { mutableStateOf(bgColor) }
+
+                                            BechLink(
+                                                myUrlPreview,
+                                                true,
+                                                backgroundColor,
+                                                accountViewModel,
+                                                nav,
+                                            )
+                                        } else if (RichTextParser.isUrlWithoutScheme(myUrlPreview)) {
+                                            LoadUrlPreview("https://$myUrlPreview", myUrlPreview, accountViewModel)
+                                        }
                                     }
                                 }
 
@@ -472,132 +526,84 @@ fun NewPostView(
                                         )
                                     }
                                 }
-
-                                val myUrlPreview = postViewModel.urlPreview
-                                if (myUrlPreview != null) {
-                                    Row(modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp)) {
-                                        if (isValidURL(myUrlPreview)) {
-                                            val removedParamsFromUrl =
-                                                removeQueryParamsForExtensionComparison(myUrlPreview)
-                                            if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                                                AsyncImage(
-                                                    model = myUrlPreview,
-                                                    contentDescription = myUrlPreview,
-                                                    contentScale = ContentScale.FillWidth,
-                                                    modifier =
-                                                        Modifier.padding(top = 4.dp)
-                                                            .fillMaxWidth()
-                                                            .clip(shape = QuoteBorder)
-                                                            .border(
-                                                                1.dp,
-                                                                MaterialTheme.colorScheme.subtleBorder,
-                                                                QuoteBorder,
-                                                            ),
-                                                )
-                                            } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                                                VideoView(
-                                                    myUrlPreview,
-                                                    roundedCorner = true,
-                                                    accountViewModel = accountViewModel,
-                                                )
-                                            } else {
-                                                LoadUrlPreview(myUrlPreview, myUrlPreview, accountViewModel)
-                                            }
-                                        } else if (startsWithNIP19Scheme(myUrlPreview)) {
-                                            val bgColor = MaterialTheme.colorScheme.background
-                                            val backgroundColor = remember { mutableStateOf(bgColor) }
-
-                                            BechLink(
-                                                myUrlPreview,
-                                                true,
-                                                backgroundColor,
-                                                accountViewModel,
-                                                nav,
-                                            )
-                                        } else if (noProtocolUrlValidator.matcher(myUrlPreview).matches()) {
-                                            LoadUrlPreview("https://$myUrlPreview", myUrlPreview, accountViewModel)
-                                        }
-                                    }
-                                }
                             }
                         }
 
-                        val userSuggestions = postViewModel.userSuggestions
-                        if (userSuggestions.isNotEmpty()) {
-                            LazyColumn(
-                                contentPadding =
-                                    PaddingValues(
-                                        top = 10.dp,
-                                    ),
-                                modifier = Modifier.heightIn(0.dp, 300.dp),
-                            ) {
-                                itemsIndexed(
-                                    userSuggestions,
-                                    key = { _, item -> item.pubkeyHex },
-                                ) { _, item ->
-                                    UserLine(item, accountViewModel) { postViewModel.autocompleteWithUser(item) }
-                                }
-                            }
-                        }
+                        ShowUserSuggestionList(
+                            postViewModel,
+                            accountViewModel,
+                            modifier = Modifier.heightIn(0.dp, 300.dp),
+                        )
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth().height(50.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            UploadFromGallery(
-                                isUploading = postViewModel.isUploadingImage,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier,
-                            ) {
-                                postViewModel.selectImage(it)
-                            }
-
-                            if (postViewModel.canUsePoll) {
-                                // These should be hashtag recommendations the user selects in the future.
-                                // val hashtag = stringResource(R.string.poll_hashtag)
-                                // postViewModel.includePollHashtagInMessage(postViewModel.wantsPoll, hashtag)
-                                AddPollButton(postViewModel.wantsPoll) {
-                                    postViewModel.wantsPoll = !postViewModel.wantsPoll
-                                    if (postViewModel.wantsPoll) {
-                                        postViewModel.wantsProduct = false
-                                    }
-                                }
-                            }
-
-                            AddClassifiedsButton(postViewModel) {
-                                postViewModel.wantsProduct = !postViewModel.wantsProduct
-                                if (postViewModel.wantsProduct) {
-                                    postViewModel.wantsPoll = false
-                                }
-                            }
-
-                            if (postViewModel.canAddInvoice) {
-                                AddLnInvoiceButton(postViewModel.wantsInvoice) {
-                                    postViewModel.wantsInvoice = !postViewModel.wantsInvoice
-                                }
-                            }
-
-                            if (postViewModel.canAddZapRaiser) {
-                                AddZapraiserButton(postViewModel.wantsZapraiser) {
-                                    postViewModel.wantsZapraiser = !postViewModel.wantsZapraiser
-                                }
-                            }
-
-                            MarkAsSensitive(postViewModel) {
-                                postViewModel.wantsToMarkAsSensitive = !postViewModel.wantsToMarkAsSensitive
-                            }
-
-                            AddGeoHash(postViewModel) {
-                                postViewModel.wantsToAddGeoHash = !postViewModel.wantsToAddGeoHash
-                            }
-
-                            ForwardZapTo(postViewModel) {
-                                postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
-                            }
-                        }
+                        BottomRowActions(postViewModel)
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun BottomRowActions(postViewModel: NewPostViewModel) {
+    val scrollState = rememberScrollState()
+
+    Row(
+        modifier =
+            Modifier
+                .horizontalScroll(scrollState)
+                .fillMaxWidth()
+                .height(50.dp),
+        verticalAlignment = CenterVertically,
+    ) {
+        UploadFromGallery(
+            isUploading = postViewModel.isUploadingImage,
+            tint = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier,
+        ) {
+            postViewModel.selectImage(it)
+        }
+
+        if (postViewModel.canUsePoll) {
+            // These should be hashtag recommendations the user selects in the future.
+            // val hashtag = stringResource(R.string.poll_hashtag)
+            // postViewModel.includePollHashtagInMessage(postViewModel.wantsPoll, hashtag)
+            AddPollButton(postViewModel.wantsPoll) {
+                postViewModel.wantsPoll = !postViewModel.wantsPoll
+                if (postViewModel.wantsPoll) {
+                    postViewModel.wantsProduct = false
+                }
+            }
+        }
+
+        AddClassifiedsButton(postViewModel) {
+            postViewModel.wantsProduct = !postViewModel.wantsProduct
+            if (postViewModel.wantsProduct) {
+                postViewModel.wantsPoll = false
+            }
+        }
+
+        if (postViewModel.canAddInvoice) {
+            AddLnInvoiceButton(postViewModel.wantsInvoice) {
+                postViewModel.wantsInvoice = !postViewModel.wantsInvoice
+            }
+        }
+
+        if (postViewModel.canAddZapRaiser) {
+            AddZapraiserButton(postViewModel.wantsZapraiser) {
+                postViewModel.wantsZapraiser = !postViewModel.wantsZapraiser
+            }
+        }
+
+        MarkAsSensitive(postViewModel) {
+            postViewModel.wantsToMarkAsSensitive = !postViewModel.wantsToMarkAsSensitive
+        }
+
+        AddGeoHash(postViewModel) {
+            postViewModel.wantsToAddGeoHash = !postViewModel.wantsToAddGeoHash
+        }
+
+        ForwardZapTo(postViewModel) {
+            postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
         }
     }
 }
@@ -634,7 +640,6 @@ private fun PollField(postViewModel: NewPostViewModel) {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun MessageField(postViewModel: NewPostViewModel) {
     val focusRequester = remember { FocusRequester() }
@@ -655,7 +660,8 @@ private fun MessageField(postViewModel: NewPostViewModel) {
                 capitalization = KeyboardCapitalization.Sentences,
             ),
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .border(
                     width = 1.dp,
                     color = MaterialTheme.colorScheme.surface,
@@ -695,21 +701,32 @@ fun ContentSensitivityExplainer(postViewModel: NewPostViewModel) {
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp),
         ) {
             Box(
-                Modifier.height(20.dp).width(25.dp),
+                Modifier
+                    .height(20.dp)
+                    .width(25.dp),
             ) {
                 Icon(
                     imageVector = Icons.Default.VisibilityOff,
                     contentDescription = stringResource(id = R.string.content_warning),
-                    modifier = Modifier.size(18.dp).align(Alignment.BottomStart),
+                    modifier =
+                        Modifier
+                            .size(18.dp)
+                            .align(Alignment.BottomStart),
                     tint = Color.Red,
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
                     contentDescription = stringResource(id = R.string.content_warning),
-                    modifier = Modifier.size(10.dp).align(Alignment.TopEnd),
+                    modifier =
+                        Modifier
+                            .size(10.dp)
+                            .align(Alignment.TopEnd),
                     tint = Color.Yellow,
                 )
             }
@@ -932,7 +949,10 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                 placeholder = conditionTypes.filter { it.first == postViewModel.condition }.first().second,
                 options = conditionOptions,
                 onSelect = { postViewModel.condition = conditionTypes[it].first },
-                modifier = Modifier.weight(1f).padding(end = 5.dp, bottom = 1.dp),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .padding(end = 5.dp, bottom = 1.dp),
             ) { currentOption, modifier ->
                 MyTextField(
                     value = TextFieldValue(currentOption),
@@ -993,7 +1013,10 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                         ?: "",
                 options = categoryOptions,
                 onSelect = { postViewModel.category = TextFieldValue(categoryTypes[it].second) },
-                modifier = Modifier.weight(1f).padding(end = 5.dp, bottom = 1.dp),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .padding(end = 5.dp, bottom = 1.dp),
             ) { currentOption, modifier ->
                 MyTextField(
                     value = TextFieldValue(currentOption),
@@ -1058,21 +1081,32 @@ fun FowardZapTo(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp),
         ) {
             Box(
-                Modifier.height(20.dp).width(25.dp),
+                Modifier
+                    .height(20.dp)
+                    .width(25.dp),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Bolt,
                     contentDescription = stringResource(id = R.string.zaps),
-                    modifier = Modifier.size(20.dp).align(Alignment.CenterStart),
+                    modifier =
+                        Modifier
+                            .size(20.dp)
+                            .align(Alignment.CenterStart),
                     tint = BitcoinOrange,
                 )
                 Icon(
                     imageVector = Icons.Outlined.ArrowForwardIos,
                     contentDescription = stringResource(id = R.string.zaps),
-                    modifier = Modifier.size(13.dp).align(Alignment.CenterEnd),
+                    modifier =
+                        Modifier
+                            .size(13.dp)
+                            .align(Alignment.CenterEnd),
                     tint = BitcoinOrange,
                 )
             }
@@ -1172,10 +1206,15 @@ fun LocationAsHash(postViewModel: NewPostViewModel) {
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp),
             ) {
                 Box(
-                    Modifier.height(20.dp).width(20.dp),
+                    Modifier
+                        .height(20.dp)
+                        .width(20.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Default.LocationOn,
@@ -1316,32 +1355,46 @@ private fun AddZapraiserButton(
         onClick = { onClick() },
     ) {
         Box(
-            Modifier.height(20.dp).width(25.dp),
+            Modifier
+                .height(20.dp)
+                .width(25.dp),
         ) {
             if (!isLnInvoiceActive) {
                 Icon(
                     imageVector = Icons.Default.ShowChart,
                     null,
-                    modifier = Modifier.size(20.dp).align(Alignment.TopStart),
+                    modifier =
+                        Modifier
+                            .size(20.dp)
+                            .align(Alignment.TopStart),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
                 Icon(
                     imageVector = Icons.Default.Bolt,
-                    contentDescription = stringResource(R.string.zaps),
-                    modifier = Modifier.size(13.dp).align(Alignment.BottomEnd),
+                    contentDescription = stringResource(R.string.add_zapraiser),
+                    modifier =
+                        Modifier
+                            .size(13.dp)
+                            .align(Alignment.BottomEnd),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
             } else {
                 Icon(
                     imageVector = Icons.Default.ShowChart,
                     null,
-                    modifier = Modifier.size(20.dp).align(Alignment.TopStart),
+                    modifier =
+                        Modifier
+                            .size(20.dp)
+                            .align(Alignment.TopStart),
                     tint = BitcoinOrange,
                 )
                 Icon(
                     imageVector = Icons.Default.Bolt,
-                    contentDescription = stringResource(R.string.zaps),
-                    modifier = Modifier.size(13.dp).align(Alignment.BottomEnd),
+                    contentDescription = stringResource(R.string.cancel_zapraiser),
+                    modifier =
+                        Modifier
+                            .size(13.dp)
+                            .align(Alignment.BottomEnd),
                     tint = BitcoinOrange,
                 )
             }
@@ -1360,14 +1413,14 @@ fun AddGeoHash(
         if (!postViewModel.wantsToAddGeoHash) {
             Icon(
                 imageVector = Icons.Default.LocationOff,
-                null,
+                contentDescription = stringResource(id = R.string.add_location),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 imageVector = Icons.Default.LocationOn,
-                null,
+                contentDescription = stringResource(id = R.string.remove_location),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
@@ -1386,14 +1439,14 @@ private fun AddLnInvoiceButton(
         if (!isLnInvoiceActive) {
             Icon(
                 imageVector = Icons.Default.CurrencyBitcoin,
-                null,
+                contentDescription = stringResource(id = R.string.add_bitcoin_invoice),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 imageVector = Icons.Default.CurrencyBitcoin,
-                null,
+                contentDescription = stringResource(id = R.string.cancel_bitcoin_invoice),
                 modifier = Modifier.size(20.dp),
                 tint = BitcoinOrange,
             )
@@ -1410,32 +1463,46 @@ private fun ForwardZapTo(
         onClick = { onClick() },
     ) {
         Box(
-            Modifier.height(20.dp).width(25.dp),
+            Modifier
+                .height(20.dp)
+                .width(25.dp),
         ) {
             if (!postViewModel.wantsForwardZapTo) {
                 Icon(
                     imageVector = Icons.Default.Bolt,
-                    contentDescription = stringResource(R.string.zaps),
-                    modifier = Modifier.size(20.dp).align(Alignment.CenterStart),
+                    contentDescription = stringResource(R.string.add_zap_split),
+                    modifier =
+                        Modifier
+                            .size(20.dp)
+                            .align(Alignment.CenterStart),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
                 Icon(
                     imageVector = Icons.Default.ArrowForwardIos,
-                    contentDescription = stringResource(R.string.zaps),
-                    modifier = Modifier.size(13.dp).align(Alignment.CenterEnd),
+                    contentDescription = null,
+                    modifier =
+                        Modifier
+                            .size(13.dp)
+                            .align(Alignment.CenterEnd),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
             } else {
                 Icon(
                     imageVector = Icons.Outlined.Bolt,
-                    contentDescription = stringResource(id = R.string.zaps),
-                    modifier = Modifier.size(20.dp).align(Alignment.CenterStart),
+                    contentDescription = stringResource(id = R.string.cancel_zap_split),
+                    modifier =
+                        Modifier
+                            .size(20.dp)
+                            .align(Alignment.CenterStart),
                     tint = BitcoinOrange,
                 )
                 Icon(
                     imageVector = Icons.Outlined.ArrowForwardIos,
-                    contentDescription = stringResource(id = R.string.zaps),
-                    modifier = Modifier.size(13.dp).align(Alignment.CenterEnd),
+                    contentDescription = null,
+                    modifier =
+                        Modifier
+                            .size(13.dp)
+                            .align(Alignment.CenterEnd),
                     tint = BitcoinOrange,
                 )
             }
@@ -1461,7 +1528,7 @@ private fun AddClassifiedsButton(
         } else {
             Icon(
                 imageVector = Icons.Default.Sell,
-                contentDescription = stringResource(id = R.string.classifieds),
+                contentDescription = stringResource(id = R.string.cancel_classifieds),
                 modifier = Modifier.size(20.dp),
                 tint = BitcoinOrange,
             )
@@ -1478,32 +1545,46 @@ private fun MarkAsSensitive(
         onClick = { onClick() },
     ) {
         Box(
-            Modifier.height(20.dp).width(23.dp),
+            Modifier
+                .height(20.dp)
+                .width(23.dp),
         ) {
             if (!postViewModel.wantsToMarkAsSensitive) {
                 Icon(
                     imageVector = Icons.Default.Visibility,
-                    contentDescription = stringResource(R.string.content_warning),
-                    modifier = Modifier.size(18.dp).align(Alignment.BottomStart),
+                    contentDescription = stringResource(R.string.add_content_warning),
+                    modifier =
+                        Modifier
+                            .size(18.dp)
+                            .align(Alignment.BottomStart),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
-                    contentDescription = stringResource(R.string.content_warning),
-                    modifier = Modifier.size(10.dp).align(Alignment.TopEnd),
+                    contentDescription = null,
+                    modifier =
+                        Modifier
+                            .size(10.dp)
+                            .align(Alignment.TopEnd),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
             } else {
                 Icon(
                     imageVector = Icons.Default.VisibilityOff,
-                    contentDescription = stringResource(id = R.string.content_warning),
-                    modifier = Modifier.size(18.dp).align(Alignment.BottomStart),
+                    contentDescription = stringResource(id = R.string.remove_content_warning),
+                    modifier =
+                        Modifier
+                            .size(18.dp)
+                            .align(Alignment.BottomStart),
                     tint = Color.Red,
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
-                    contentDescription = stringResource(id = R.string.content_warning),
-                    modifier = Modifier.size(10.dp).align(Alignment.TopEnd),
+                    contentDescription = null,
+                    modifier =
+                        Modifier
+                            .size(10.dp)
+                            .align(Alignment.TopEnd),
                     tint = Color.Yellow,
                 )
             }
@@ -1612,7 +1693,8 @@ fun ImageVideoDescription(
 
     Column(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .padding(start = 30.dp, end = 30.dp)
                 .clip(shape = QuoteBorder)
                 .border(
@@ -1622,11 +1704,17 @@ fun ImageVideoDescription(
                 ),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(30.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(30.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp),
             ) {
                 Text(
                     text =
@@ -1644,13 +1732,17 @@ fun ImageVideoDescription(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.W500,
                     modifier =
-                        Modifier.padding(start = 10.dp)
+                        Modifier
+                            .padding(start = 10.dp)
                             .weight(1.0f)
                             .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
                 )
 
                 IconButton(
-                    modifier = Modifier.size(30.dp).padding(end = 5.dp),
+                    modifier =
+                        Modifier
+                            .size(30.dp)
+                            .padding(end = 5.dp),
                     onClick = onCancel,
                 ) {
                     CancelIcon()
@@ -1662,7 +1754,8 @@ fun ImageVideoDescription(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .padding(bottom = 10.dp)
                         .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
             ) {
@@ -1672,7 +1765,8 @@ fun ImageVideoDescription(
                         contentDescription = uri.toString(),
                         contentScale = ContentScale.FillWidth,
                         modifier =
-                            Modifier.padding(top = 4.dp)
+                            Modifier
+                                .padding(top = 4.dp)
                                 .fillMaxWidth()
                                 .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
                     )
@@ -1686,6 +1780,7 @@ fun ImageVideoDescription(
                             try {
                                 bitmap = resolver.loadThumbnail(uri, Size(1200, 1000), null)
                             } catch (e: Exception) {
+                                if (e is CancellationException) throw e
                                 onError("Unable to load thumbnail")
                                 Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
                             }
@@ -1697,7 +1792,10 @@ fun ImageVideoDescription(
                             bitmap = it.asImageBitmap(),
                             contentDescription = "some useful description",
                             contentScale = ContentScale.FillWidth,
-                            modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
+                            modifier =
+                                Modifier
+                                    .padding(top = 4.dp)
+                                    .fillMaxWidth(),
                         )
                     }
                 } else {
@@ -1719,7 +1817,10 @@ fun ImageVideoDescription(
                             ?: fileServers[0].server.name,
                     options = fileServerOptions,
                     onSelect = { selectedServer = fileServers[it] },
-                    modifier = Modifier.windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)).weight(1f),
+                    modifier =
+                        Modifier
+                            .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                            .weight(1f),
                 )
             }
 
@@ -1728,6 +1829,10 @@ fun ImageVideoDescription(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 SettingSwitchItem(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
                     checked = sensitiveContent,
                     onCheckedChange = { sensitiveContent = it },
                     title = R.string.add_sensitive_content_label,
@@ -1738,12 +1843,16 @@ fun ImageVideoDescription(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier =
-                    Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
+                    Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
             ) {
                 OutlinedTextField(
                     label = { Text(text = stringResource(R.string.content_description)) },
                     modifier =
-                        Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
+                        Modifier
+                            .fillMaxWidth()
+                            .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
                     value = message,
                     onValueChange = { message = it },
                     placeholder = {
@@ -1760,7 +1869,10 @@ fun ImageVideoDescription(
             }
 
             Button(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 10.dp),
                 onClick = { onAdd(message, selectedServer, sensitiveContent) },
                 shape = QuoteBorder,
                 colors =
@@ -1776,7 +1888,10 @@ fun ImageVideoDescription(
 
 @Composable
 fun SettingSwitchItem(
-    modifier: Modifier = Modifier,
+    modifier: Modifier =
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     title: Int,
@@ -1786,8 +1901,6 @@ fun SettingSwitchItem(
     Row(
         modifier =
             modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
                 .toggleable(
                     value = checked,
                     enabled = enabled,
@@ -1798,7 +1911,7 @@ fun SettingSwitchItem(
     ) {
         Column(
             modifier = Modifier.weight(1.0f),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
+            verticalArrangement = Arrangement.spacedBy(Size5dp),
         ) {
             Text(
                 text = stringResource(id = title),

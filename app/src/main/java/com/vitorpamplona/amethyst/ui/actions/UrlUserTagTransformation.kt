@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.encoders.decodePublicKey
 import com.vitorpamplona.quartz.encoders.toHexKey
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.roundToInt
 
 data class RangesChanges(val original: TextRange, val modified: TextRange)
@@ -55,11 +56,9 @@ fun buildAnnotatedStringWithUrlHighlighting(
             val builderAfter = StringBuilder() // important to correctly measure Tag start and end
             append(
                 text
-                    .split('\n')
-                    .map { paragraph: String ->
+                    .split('\n').joinToString("\n") { paragraph: String ->
                         paragraph
-                            .split(' ')
-                            .map { word: String ->
+                            .split(' ').joinToString(" ") { word: String ->
                                 try {
                                     if (word.startsWith("@npub") && word.length >= 64) {
                                         val keyB32 = word.substring(0, 64)
@@ -113,15 +112,14 @@ fun buildAnnotatedStringWithUrlHighlighting(
                                         word
                                     }
                                 } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
                                     // if it can't parse the key, don't try to change.
                                     builderBefore.append("$word ")
                                     builderAfter.append("$word ")
                                     word
                                 }
                             }
-                            .joinToString(" ")
-                    }
-                    .joinToString("\n"),
+                    },
             )
 
             substitutions.forEach {
@@ -141,9 +139,7 @@ fun buildAnnotatedStringWithUrlHighlighting(
         object : OffsetMapping {
             override fun originalToTransformed(offset: Int): Int {
                 val inInsideRange =
-                    substitutions
-                        .filter { offset > it.original.start && offset < it.original.end }
-                        .firstOrNull()
+                    substitutions.firstOrNull { offset > it.original.start && offset < it.original.end }
 
                 if (inInsideRange != null) {
                     val percentInRange =
@@ -163,9 +159,7 @@ fun buildAnnotatedStringWithUrlHighlighting(
 
             override fun transformedToOriginal(offset: Int): Int {
                 val inInsideRange =
-                    substitutions
-                        .filter { offset > it.modified.start && offset < it.modified.end }
-                        .firstOrNull()
+                    substitutions.firstOrNull { offset > it.modified.start && offset < it.modified.end }
 
                 if (inInsideRange != null) {
                     val percentInRange =

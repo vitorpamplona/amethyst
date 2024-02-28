@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,12 +27,10 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import com.vitorpamplona.quartz.encoders.ATag
-import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.HexValidator
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.decodeEventIdAsHexOrNull
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
-import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
@@ -50,6 +48,7 @@ import com.vitorpamplona.quartz.events.CalendarRSVPEvent
 import com.vitorpamplona.quartz.events.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelHideMessageEvent
+import com.vitorpamplona.quartz.events.ChannelListEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChannelMuteUserEvent
@@ -57,18 +56,24 @@ import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.events.CommunityListEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.FhirResourceEvent
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileServersEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
+import com.vitorpamplona.quartz.events.GitIssueEvent
+import com.vitorpamplona.quartz.events.GitPatchEvent
+import com.vitorpamplona.quartz.events.GitReplyEvent
+import com.vitorpamplona.quartz.events.GitRepositoryEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
@@ -80,6 +85,7 @@ import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.NNSEvent
+import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
@@ -94,10 +100,13 @@ import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
+import com.vitorpamplona.quartz.events.WikiNoteEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -109,17 +118,30 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.measureTimedValue
 
 object LocalCache {
     val antiSpam = AntiSpamFilter()
 
-    val users = ConcurrentHashMap<HexKey, User>(5000)
-    val notes = ConcurrentHashMap<HexKey, Note>(5000)
+    private val users = ConcurrentHashMap<HexKey, User>(5000)
+    private val notes = ConcurrentHashMap<HexKey, Note>(5000)
     val channels = ConcurrentHashMap<HexKey, Channel>()
     val addressables = ConcurrentHashMap<String, AddressableNote>(100)
 
     val awaitingPaymentRequests =
         ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
+
+    var noteListCache: List<Note> = emptyList()
+    var userListCache: List<User> = emptyList()
+
+    fun updateListCache() {
+        val (value, elapsed) =
+            measureTimedValue {
+                noteListCache = ArrayList(notes.values)
+                userListCache = ArrayList(users.values)
+            }
+        Log.d("LocalCache", "UpdateListCache $elapsed")
+    }
 
     fun checkGetOrCreateUser(key: String): User? {
         // checkNotInMainThread()
@@ -358,7 +380,123 @@ object LocalCache {
     }
 
     fun consume(
+        event: GitPatchEvent,
+        relay: Relay? = null,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        if (antiSpam.isSpam(event, relay)) {
+            relay?.let { it.spamCounter++ }
+            return
+        }
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(
+        event: GitIssueEvent,
+        relay: Relay? = null,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        if (antiSpam.isSpam(event, relay)) {
+            relay?.let { it.spamCounter++ }
+            return
+        }
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(
+        event: GitReplyEvent,
+        relay: Relay? = null,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        if (antiSpam.isSpam(event, relay)) {
+            relay?.let { it.spamCounter++ }
+            return
+        }
+
+        val replyTo =
+            event
+                .tagsWithoutCitations()
+                .filter { it != event.repository()?.toTag() }
+                .mapNotNull { checkGetOrCreateNote(it) }
+
+        note.loadEvent(event, author, replyTo)
+
+        refreshObservers(note)
+    }
+
+    fun consume(
         event: LongTextNoteEvent,
+        relay: Relay?,
+    ) {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+            version.moveAllReferencesTo(note)
+        }
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event?.id() == event.id()) return
+
+        if (antiSpam.isSpam(event, relay)) {
+            relay?.let { it.spamCounter++ }
+            return
+        }
+
+        val replyTo = event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+
+        if (event.createdAt > (note.createdAt() ?: 0)) {
+            note.loadEvent(event, author, replyTo)
+
+            refreshObservers(note)
+        }
+    }
+
+    fun consume(
+        event: WikiNoteEvent,
         relay: Relay?,
     ) {
         val version = getOrCreateNote(event.id)
@@ -457,6 +595,27 @@ object LocalCache {
 
     fun consume(
         event: MuteListEvent,
+        relay: Relay?,
+    ) {
+        consumeBaseReplaceable(event, relay)
+    }
+
+    fun consume(
+        event: CommunityListEvent,
+        relay: Relay?,
+    ) {
+        consumeBaseReplaceable(event, relay)
+    }
+
+    fun consume(
+        event: GitRepositoryEvent,
+        relay: Relay?,
+    ) {
+        consumeBaseReplaceable(event, relay)
+    }
+
+    fun consume(
+        event: ChannelListEvent,
         relay: Relay?,
     ) {
         consumeBaseReplaceable(event, relay)
@@ -569,6 +728,28 @@ object LocalCache {
 
             refreshObservers(note)
         }
+    }
+
+    fun consume(
+        event: OtsEvent,
+        relay: Relay?,
+    ) {
+        val version = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        // Already processed this event.
+        if (version.event?.id() == event.id()) return
+
+        // makes sure the OTS has a valid certificate
+        if (event.cacheVerify() == null) return // no valid OTS
+
+        if (version.event == null) {
+            version.loadEvent(event, author, emptyList())
+
+            version.liveSet?.innerOts?.invalidateData()
+        }
+
+        refreshObservers(version)
     }
 
     fun consume(
@@ -742,7 +923,7 @@ object LocalCache {
 
         event
             .deleteEvents()
-            .mapNotNull { notes[it] }
+            .mapNotNull { getNoteIfExists(it) }
             .forEach { deleteNote ->
                 // must be the same author
                 if (deleteNote.author?.pubkeyHex == event.pubKey) {
@@ -1184,6 +1365,26 @@ object LocalCache {
     }
 
     fun consume(
+        event: FhirResourceEvent,
+        relay: Relay?,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(
         event: HighlightEvent,
         relay: Relay?,
     ) {
@@ -1379,11 +1580,14 @@ object LocalCache {
 
         val key = decodePublicKeyAsHexOrNull(username)
 
-        if (key != null && users[key] != null) {
-            return listOfNotNull(users[key])
+        if (key != null) {
+            val user = getUserIfExists(key)
+            if (user != null) {
+                return listOfNotNull(user)
+            }
         }
 
-        return users.values.filter {
+        return userListCache.filter {
             (it.anyNameStartsWith(username)) ||
                 it.pubkeyHex.startsWith(username, true) ||
                 it.pubkeyNpub().startsWith(username, true)
@@ -1393,18 +1597,16 @@ object LocalCache {
     fun findNotesStartingWith(text: String): List<Note> {
         checkNotInMainThread()
 
-        val key =
-            try {
-                Nip19.uriToRoute(text)?.hex ?: Hex.decode(text).toHexKey()
-            } catch (e: Exception) {
-                null
-            }
+        val key = decodeEventIdAsHexOrNull(text)
 
-        if (key != null && (notes[key] ?: addressables[key]) != null) {
-            return listOfNotNull(notes[key] ?: addressables[key])
+        if (key != null) {
+            val note = getNoteIfExists(key)
+            if (note != null) {
+                return listOfNotNull(note)
+            }
         }
 
-        return notes.values.filter {
+        return noteListCache.filter {
             (
                 it.event !is GenericRepostEvent &&
                     it.event !is RepostEvent &&
@@ -1442,13 +1644,7 @@ object LocalCache {
     fun findChannelsStartingWith(text: String): List<Channel> {
         checkNotInMainThread()
 
-        val key =
-            try {
-                Nip19.uriToRoute(text)?.hex ?: Hex.decode(text).toHexKey()
-            } catch (e: Exception) {
-                null
-            }
-
+        val key = decodeEventIdAsHexOrNull(text)
         if (key != null && channels[key] != null) {
             return listOfNotNull(channels[key])
         }
@@ -1479,12 +1675,32 @@ object LocalCache {
             .toImmutableList()
     }
 
+    suspend fun findEarliestOtsForNote(note: Note): Long? {
+        checkNotInMainThread()
+
+        var minTime: Long? = null
+        val time = TimeUtils.now()
+
+        noteListCache.forEach { item ->
+            val noteEvent = item.event
+            if ((noteEvent is OtsEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time))) {
+                noteEvent.verifiedTime?.let { stampedTime ->
+                    if (minTime == null || stampedTime < (minTime ?: Long.MAX_VALUE)) {
+                        minTime = stampedTime
+                    }
+                }
+            }
+        }
+
+        return minTime
+    }
+
     fun cleanObservers() {
-        notes.forEach { it.value.clearLive() }
+        noteListCache.forEach { it.clearLive() }
 
         addressables.forEach { it.value.clearLive() }
 
-        users.forEach { it.value.clearLive() }
+        userListCache.forEach { it.clearLive() }
     }
 
     fun pruneOldAndHiddenMessages(account: Account) {
@@ -1510,8 +1726,8 @@ object LocalCache {
             }
         }
 
-        users.forEach { userPair ->
-            userPair.value.privateChatrooms.values.map {
+        userListCache.forEach { userPair ->
+            userPair.privateChatrooms.values.map {
                 val toBeRemoved = it.pruneMessagesToTheLatestOnly()
 
                 val childrenToBeRemoved = mutableListOf<Note>()
@@ -1526,7 +1742,7 @@ object LocalCache {
 
                 if (toBeRemoved.size > 1) {
                     println(
-                        "PRUNE: ${toBeRemoved.size} private messages with ${userPair.value.toBestDisplayName()} removed. ${it.roomMessages.size} kept",
+                        "PRUNE: ${toBeRemoved.size} private messages with ${userPair.toBestDisplayName()} removed. ${it.roomMessages.size} kept",
                     )
                 }
             }
@@ -1535,9 +1751,9 @@ object LocalCache {
 
     fun prunePastVersionsOfReplaceables() {
         val toBeRemoved =
-            notes
+            noteListCache
                 .filter {
-                    val noteEvent = it.value.event
+                    val noteEvent = it.event
                     if (noteEvent is AddressableEvent) {
                         noteEvent.createdAt() <
                             (addressables[noteEvent.address().toTag()]?.event?.createdAt() ?: 0)
@@ -1545,7 +1761,6 @@ object LocalCache {
                         false
                     }
                 }
-                .values
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
@@ -1570,24 +1785,23 @@ object LocalCache {
         checkNotInMainThread()
 
         val toBeRemoved =
-            notes
+            noteListCache
                 .filter {
                     (
-                        (it.value.event is TextNoteEvent && !it.value.isNewThread()) ||
-                            it.value.event is ReactionEvent ||
-                            it.value.event is LnZapEvent ||
-                            it.value.event is LnZapRequestEvent ||
-                            it.value.event is ReportEvent ||
-                            it.value.event is GenericRepostEvent
+                        (it.event is TextNoteEvent && !it.isNewThread()) ||
+                            it.event is ReactionEvent ||
+                            it.event is LnZapEvent ||
+                            it.event is LnZapRequestEvent ||
+                            it.event is ReportEvent ||
+                            it.event is GenericRepostEvent
                     ) &&
-                        it.value.replyTo?.any { it.liveSet?.isInUse() == true } != true &&
-                        it.value.liveSet?.isInUse() != true && // don't delete if observing.
-                        it.value.author?.pubkeyHex !in
+                        it.replyTo?.any { it.liveSet?.isInUse() == true } != true &&
+                        it.liveSet?.isInUse() != true && // don't delete if observing.
+                        it.author?.pubkeyHex !in
                         accounts && // don't delete if it is the logged in account
-                        it.value.event?.isTaggedUsers(accounts) !=
+                        it.event?.isTaggedUsers(accounts) !=
                         true // don't delete if it's a notification to the logged in user
                 }
-                .values
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
@@ -1653,7 +1867,8 @@ object LocalCache {
     fun pruneExpiredEvents() {
         checkNotInMainThread()
 
-        val toBeRemoved = notes.filter { it.value.event?.isExpired() == true }.values
+        val now = TimeUtils.now()
+        val toBeRemoved = noteListCache.filter { it.event?.isExpirationBefore(now) == true }
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
@@ -1679,7 +1894,7 @@ object LocalCache {
                 ?.hiddenUsers
                 ?.map { userHex ->
                     (
-                        notes.values.filter { it.event?.pubKey() == userHex } +
+                        noteListCache.filter { it.event?.pubKey() == userHex } +
                             addressables.values.filter { it.event?.pubKey() == userHex }
                     )
                         .toSet()
@@ -1701,7 +1916,7 @@ object LocalCache {
         checkNotInMainThread()
 
         var removingContactList = 0
-        users.values.forEach {
+        userListCache.forEach {
             if (
                 it.pubkeyHex !in loggedIn &&
                 (it.liveSet == null || it.liveSet?.isInUse() == false) &&
@@ -1738,6 +1953,7 @@ object LocalCache {
             try {
                 event.checkSignature()
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.w("Event failed retest ${event.kind}", (e.message ?: "") + event.toJson())
             }
             false
@@ -1768,6 +1984,7 @@ object LocalCache {
                 is CalendarTimeSlotEvent -> consume(event, relay)
                 is CalendarRSVPEvent -> consume(event, relay)
                 is ChannelCreateEvent -> consume(event)
+                is ChannelListEvent -> consume(event, relay)
                 is ChannelHideMessageEvent -> consume(event)
                 is ChannelMessageEvent -> consume(event, relay)
                 is ChannelMetadataEvent -> consume(event)
@@ -1775,6 +1992,7 @@ object LocalCache {
                 is ChatMessageEvent -> consume(event, relay)
                 is ClassifiedsEvent -> consume(event, relay)
                 is CommunityDefinitionEvent -> consume(event, relay)
+                is CommunityListEvent -> consume(event, relay)
                 is CommunityPostApprovalEvent -> {
                     event.containedPost()?.let { verifyAndConsume(it, relay) }
                     consume(event)
@@ -1784,11 +2002,16 @@ object LocalCache {
                 is EmojiPackEvent -> consume(event, relay)
                 is EmojiPackSelectionEvent -> consume(event, relay)
                 is SealedGossipEvent -> consume(event, relay)
+                is FhirResourceEvent -> consume(event, relay)
                 is FileHeaderEvent -> consume(event, relay)
                 is FileServersEvent -> consume(event, relay)
                 is FileStorageEvent -> consume(event, relay)
                 is FileStorageHeaderEvent -> consume(event, relay)
                 is GiftWrapEvent -> consume(event, relay)
+                is GitIssueEvent -> consume(event, relay)
+                is GitReplyEvent -> consume(event, relay)
+                is GitPatchEvent -> consume(event, relay)
+                is GitRepositoryEvent -> consume(event, relay)
                 is HighlightEvent -> consume(event, relay)
                 is LiveActivitiesEvent -> consume(event, relay)
                 is LiveActivitiesChatMessageEvent -> consume(event, relay)
@@ -1806,6 +2029,7 @@ object LocalCache {
                 is MetadataEvent -> consume(event)
                 is MuteListEvent -> consume(event, relay)
                 is NNSEvent -> comsume(event, relay)
+                is OtsEvent -> consume(event, relay)
                 is PrivateDmEvent -> consume(event, relay)
                 is PinListEvent -> consume(event, relay)
                 is PeopleListEvent -> consume(event, relay)
@@ -1826,11 +2050,13 @@ object LocalCache {
                 is TextNoteEvent -> consume(event, relay)
                 is VideoHorizontalEvent -> consume(event, relay)
                 is VideoVerticalEvent -> consume(event, relay)
+                is WikiNoteEvent -> consume(event, relay)
                 else -> {
                     Log.w("Event Not Supported", event.toJson())
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             e.printStackTrace()
         }
     }
@@ -1845,6 +2071,10 @@ class LocalCacheLiveData {
     private val bundler = BundledInsert<Note>(1000, Dispatchers.IO)
 
     fun invalidateData(newNote: Note) {
-        bundler.invalidateList(newNote) { bundledNewNotes -> _newEventBundles.emit(bundledNewNotes) }
+        bundler.invalidateList(newNote) {
+                bundledNewNotes ->
+            _newEventBundles.emit(bundledNewNotes)
+            LocalCache.updateListCache()
+        }
     }
 }

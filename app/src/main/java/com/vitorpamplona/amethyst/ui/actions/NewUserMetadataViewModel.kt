@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 class NewUserMetadataViewModel : ViewModel() {
     private lateinit var account: Account
@@ -197,6 +198,7 @@ class NewUserMetadataViewModel : ViewModel() {
                                 }
                             }
                         } catch (e: Exception) {
+                            if (e is CancellationException) throw e
                             onUploading(false)
                             viewModelScope.launch {
                                 imageUploadingError.emit("Failed to upload the image / video")

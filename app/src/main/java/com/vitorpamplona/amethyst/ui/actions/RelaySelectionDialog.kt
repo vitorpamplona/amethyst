@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -47,11 +47,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
-import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
@@ -63,7 +63,7 @@ data class RelayList(
 
 data class RelayInfoDialog(
     val relayBriefInfo: RelayBriefInfoCache.RelayBriefInfo,
-    val relayInfo: RelayInformation,
+    val relayInfo: Nip11RelayInformation,
 )
 
 @Composable

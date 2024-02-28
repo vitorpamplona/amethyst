@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -225,6 +225,7 @@ fun ChatroomListScreenOnlyList(
         val observer =
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
+                    NostrChatroomListDataSource.account = accountViewModel.account
                     NostrChatroomListDataSource.start()
                 }
             }
@@ -303,6 +304,7 @@ fun WatchAccountForListScreen(
 ) {
     LaunchedEffect(accountViewModel) {
         launch(Dispatchers.IO) {
+            NostrChatroomListDataSource.account = accountViewModel.account
             NostrChatroomListDataSource.start()
             knownFeedViewModel.invalidateData(true)
             newFeedViewModel.invalidateData(true)

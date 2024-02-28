@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -53,14 +53,14 @@ class EventFactory {
             ChannelCreateEvent.KIND -> ChannelCreateEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelHideMessageEvent.KIND ->
                 ChannelHideMessageEvent(id, pubKey, createdAt, tags, content, sig)
+            ChannelListEvent.KIND -> ChannelListEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMessageEvent.KIND -> ChannelMessageEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMetadataEvent.KIND -> ChannelMetadataEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMuteUserEvent.KIND -> ChannelMuteUserEvent(id, pubKey, createdAt, tags, content, sig)
             ChatMessageEvent.KIND -> {
                 if (id.isBlank()) {
-                    val newId = Event.generateId(pubKey, createdAt, kind, tags, content).toHexKey()
                     ChatMessageEvent(
-                        newId,
+                        Event.generateId(pubKey, createdAt, kind, tags, content).toHexKey(),
                         pubKey,
                         createdAt,
                         tags,
@@ -74,6 +74,7 @@ class EventFactory {
             ClassifiedsEvent.KIND -> ClassifiedsEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityDefinitionEvent.KIND ->
                 CommunityDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
+            CommunityListEvent.KIND -> CommunityListEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityPostApprovalEvent.KIND ->
                 CommunityPostApprovalEvent(id, pubKey, createdAt, tags, content, sig)
             ContactListEvent.KIND -> ContactListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -86,8 +87,13 @@ class EventFactory {
             FileStorageEvent.KIND -> FileStorageEvent(id, pubKey, createdAt, tags, content, sig)
             FileStorageHeaderEvent.KIND ->
                 FileStorageHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+            FhirResourceEvent.KIND -> FhirResourceEvent(id, pubKey, createdAt, tags, content, sig)
             GenericRepostEvent.KIND -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)
             GiftWrapEvent.KIND -> GiftWrapEvent(id, pubKey, createdAt, tags, content, sig)
+            GitIssueEvent.KIND -> GitIssueEvent(id, pubKey, createdAt, tags, content, sig)
+            GitReplyEvent.KIND -> GitReplyEvent(id, pubKey, createdAt, tags, content, sig)
+            GitPatchEvent.KIND -> GitPatchEvent(id, pubKey, createdAt, tags, content, sig)
+            GitRepositoryEvent.KIND -> GitRepositoryEvent(id, pubKey, createdAt, tags, content, sig)
             GoalEvent.KIND -> GoalEvent(id, pubKey, createdAt, tags, content, sig)
             HighlightEvent.KIND -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
             HTTPAuthorizationEvent.KIND ->
@@ -106,6 +112,7 @@ class EventFactory {
             MetadataEvent.KIND -> MetadataEvent(id, pubKey, createdAt, tags, content, sig)
             MuteListEvent.KIND -> MuteListEvent(id, pubKey, createdAt, tags, content, sig)
             NNSEvent.KIND -> NNSEvent(id, pubKey, createdAt, tags, content, sig)
+            OtsEvent.KIND -> OtsEvent(id, pubKey, createdAt, tags, content, sig)
             PeopleListEvent.KIND -> PeopleListEvent(id, pubKey, createdAt, tags, content, sig)
             PinListEvent.KIND -> PinListEvent(id, pubKey, createdAt, tags, content, sig)
             PollNoteEvent.KIND -> PollNoteEvent(id, pubKey, createdAt, tags, content, sig)
@@ -122,6 +129,7 @@ class EventFactory {
             VideoHorizontalEvent.KIND -> VideoHorizontalEvent(id, pubKey, createdAt, tags, content, sig)
             VideoVerticalEvent.KIND -> VideoVerticalEvent(id, pubKey, createdAt, tags, content, sig)
             VideoViewEvent.KIND -> VideoViewEvent(id, pubKey, createdAt, tags, content, sig)
+            WikiNoteEvent.KIND -> WikiNoteEvent(id, pubKey, createdAt, tags, content, sig)
             else -> Event(id, pubKey, createdAt, kind, tags, content, sig)
         }
     }

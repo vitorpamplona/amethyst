@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,6 +25,7 @@ import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -44,18 +45,19 @@ class TextNoteEvent(
 
         fun create(
             msg: String,
-            replyTos: List<String>?,
-            mentions: List<String>?,
-            addresses: List<ATag>?,
-            extraTags: List<String>?,
+            replyTos: List<String>? = null,
+            mentions: List<String>? = null,
+            addresses: List<ATag>? = null,
+            extraTags: List<String>? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
-            markAsSensitive: Boolean,
-            zapRaiserAmount: Long?,
-            replyingTo: String?,
-            root: String?,
-            directMentions: Set<HexKey>,
+            markAsSensitive: Boolean = false,
+            zapRaiserAmount: Long? = null,
+            replyingTo: String? = null,
+            root: String? = null,
+            directMentions: Set<HexKey> = emptySet(),
             geohash: String? = null,
-            nip94attachments: List<Event>? = null,
+            nip94attachments: List<FileHeaderEvent>? = null,
+            forkedFrom: Event? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (TextNoteEvent) -> Unit,
@@ -68,6 +70,7 @@ class TextNoteEvent(
                         root = root,
                         replyingTo = replyingTo,
                         directMentions = directMentions,
+                        forkedFrom = forkedFrom?.id,
                     ),
                 )
             }
@@ -76,6 +79,11 @@ class TextNoteEvent(
                     tags.add(arrayOf("p", it, "", "mention"))
                 } else {
                     tags.add(arrayOf("p", it))
+                }
+            }
+            replyTos?.forEach {
+                if (it in directMentions) {
+                    tags.add(arrayOf("q", it))
                 }
             }
             addresses
@@ -87,6 +95,7 @@ class TextNoteEvent(
                             root = root,
                             replyingTo = replyingTo,
                             directMentions = directMentions,
+                            forkedFrom = (forkedFrom as? AddressableEvent)?.address()?.toTag(),
                         ),
                     )
                 }
@@ -106,7 +115,9 @@ class TextNoteEvent(
             geohash?.let { tags.addAll(geohashMipMap(it)) }
             nip94attachments?.let {
                 it.forEach {
-                    // tags.add(arrayOf("nip94", it.toJson()))
+                    Nip92MediaAttachments().convertFromFileHeader(it)?.let {
+                        tags.add(it)
+                    }
                 }
             }
 
@@ -128,6 +139,7 @@ class TextNoteEvent(
             root: String?,
             replyingTo: String?,
             directMentions: Set<HexKey>,
+            forkedFrom: String?,
         ) = sortedWith { o1, o2 ->
             when {
                 o1 == o2 -> 0
@@ -142,6 +154,7 @@ class TextNoteEvent(
                 when (it) {
                     root -> arrayOf(tagName, it, "", "root")
                     replyingTo -> arrayOf(tagName, it, "", "reply")
+                    forkedFrom -> arrayOf(tagName, it, "", "fork")
                     in directMentions -> arrayOf(tagName, it, "", "mention")
                     else -> arrayOf(tagName, it)
                 }

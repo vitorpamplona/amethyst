@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.ReportEvent
@@ -120,27 +121,51 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         }
 
         return groupByEOSEPresence(eventsToWatch).map {
-            TypedFilter(
-                types = COMMON_FEED_TYPES,
-                filter =
-                    JsonFilter(
-                        kinds =
-                            listOf(
-                                TextNoteEvent.KIND,
-                                ReactionEvent.KIND,
-                                RepostEvent.KIND,
-                                GenericRepostEvent.KIND,
-                                ReportEvent.KIND,
-                                LnZapEvent.KIND,
-                                PollNoteEvent.KIND,
-                            ),
-                        tags = mapOf("e" to it.map { it.idHex }),
-                        since = findMinimumEOSEs(it),
-                        // Max amount of "replies" to download on a specific event.
-                        limit = 1000,
-                    ),
+            listOf(
+                TypedFilter(
+                    types = COMMON_FEED_TYPES,
+                    filter =
+                        JsonFilter(
+                            kinds =
+                                listOf(
+                                    TextNoteEvent.KIND,
+                                    ReactionEvent.KIND,
+                                    RepostEvent.KIND,
+                                    GenericRepostEvent.KIND,
+                                    ReportEvent.KIND,
+                                    LnZapEvent.KIND,
+                                    PollNoteEvent.KIND,
+                                    OtsEvent.KIND,
+                                ),
+                            tags = mapOf("e" to it.map { it.idHex }),
+                            since = findMinimumEOSEs(it),
+                            // Max amount of "replies" to download on a specific event.
+                            limit = 1000,
+                        ),
+                ),
             )
+        }.flatten()
+    }
+
+    private fun createQuotesFilter(): List<TypedFilter>? {
+        if (eventsToWatch.isEmpty()) {
+            return null
         }
+
+        return groupByEOSEPresence(eventsToWatch).map {
+            listOf(
+                TypedFilter(
+                    types = COMMON_FEED_TYPES,
+                    filter =
+                        JsonFilter(
+                            tags = mapOf("q" to it.map { it.idHex }),
+                            since = findMinimumEOSEs(it),
+                            // Max amount of "replies" to download on a specific event.
+                            limit = 1000,
+                        ),
+                ),
+            )
+        }.flatten()
     }
 
     fun createLoadEventsIfNotLoadedFilter(): List<TypedFilter>? {
@@ -205,9 +230,10 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         val missing = createLoadEventsIfNotLoadedFilter()
         val addresses = createAddressFilter()
         val addressReactions = createReactionsToWatchInAddressFilter()
+        val quotes = createQuotesFilter()
 
         singleEventChannel.typedFilters =
-            listOfNotNull(missing, addresses, reactions, addressReactions).flatten().ifEmpty { null }
+            listOfNotNull(missing, addresses, reactions, addressReactions, quotes).flatten().ifEmpty { null }
     }
 
     fun add(eventId: Note) {

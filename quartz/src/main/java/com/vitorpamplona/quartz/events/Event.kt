@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -207,6 +207,8 @@ open class Event(
 
     override fun isExpired() = (expiration() ?: Long.MAX_VALUE) < TimeUtils.now()
 
+    override fun isExpirationBefore(time: Long) = (expiration() ?: Long.MAX_VALUE) < time
+
     override fun getTagOfAddressableKind(kind: Int): ATag? {
         val kindStr = kind.toString()
         val aTag =
@@ -253,7 +255,7 @@ open class Event(
         return if (this is AddressableEvent) {
             ATag(kind, pubKey, dTag(), null).toNAddr()
         } else {
-            Nip19.createNEvent(id, pubKey, kind, null)
+            Nip19Bech32.createNEvent(id, pubKey, kind, null)
         }
     }
 

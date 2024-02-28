@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -45,25 +45,27 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.adaptive.calculateDisplayFeatures
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.ui.components.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.ui.components.keepPlayingMutex
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.debugState
-import com.vitorpamplona.amethyst.ui.note.Nip47WalletConnectParser
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
+import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -112,7 +114,9 @@ class MainActivity : AppCompatActivity() {
                     val accountStateViewModel: AccountStateViewModel = viewModel()
                     accountStateViewModel.serviceManager = serviceManager
 
-                    LaunchedEffect(key1 = Unit) { accountStateViewModel.tryLoginExistingAccountAsync() }
+                    LaunchedEffect(key1 = Unit) {
+                        accountStateViewModel.tryLoginExistingAccountAsync()
+                    }
 
                     AccountScreen(accountStateViewModel, sharedPreferencesViewModel)
                 }
@@ -157,7 +161,9 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         Log.d("Lifetime Event", "MainActivity.onPause")
 
-        LanguageTranslatorService.clear()
+        GlobalScope.launch(Dispatchers.IO) {
+            LanguageTranslatorService.clear()
+        }
         serviceManager.cleanObservers()
 
         // if (BuildConfig.DEBUG) {
@@ -236,9 +242,9 @@ class MainActivity : AppCompatActivity() {
 
         if (changedNetwork) {
             if (isOnMobileData) {
-                HttpClient.changeTimeouts(HttpClient.DEFAULT_TIMEOUT_ON_MOBILE)
+                HttpClientManager.setDefaultTimeout(HttpClientManager.DEFAULT_TIMEOUT_ON_MOBILE)
             } else {
-                HttpClient.changeTimeouts(HttpClient.DEFAULT_TIMEOUT_ON_WIFI)
+                HttpClientManager.setDefaultTimeout(HttpClientManager.DEFAULT_TIMEOUT_ON_WIFI)
             }
         }
 
@@ -306,11 +312,12 @@ fun uriToRoute(uri: String?): String? {
         if (uri?.startsWith("nostr:Hashtag?id=") == true) {
             Route.Hashtag.route.replace("{id}", uri.removePrefix("nostr:Hashtag?id="))
         } else {
-            val nip19 = Nip19.uriToRoute(uri)
-            when (nip19?.type) {
-                Nip19.Type.USER -> "User/${nip19.hex}"
-                Nip19.Type.NOTE -> "Note/${nip19.hex}"
-                Nip19.Type.EVENT -> {
+            val nip19 = Nip19Bech32.uriToRoute(uri)?.entity
+            when (nip19) {
+                is Nip19Bech32.NPub -> "User/${nip19.hex}"
+                is Nip19Bech32.NProfile -> "User/${nip19.hex}"
+                is Nip19Bech32.Note -> "Note/${nip19.hex}"
+                is Nip19Bech32.NEvent -> {
                     if (nip19.kind == PrivateDmEvent.KIND) {
                         nip19.author?.let { "RoomByAuthor/$it" }
                     } else if (
@@ -323,24 +330,32 @@ fun uriToRoute(uri: String?): String? {
                         "Event/${nip19.hex}"
                     }
                 }
-                Nip19.Type.ADDRESS ->
+                is Nip19Bech32.NAddress -> {
                     if (nip19.kind == CommunityDefinitionEvent.KIND) {
-                        "Community/${nip19.hex}"
+                        "Community/${nip19.atag}"
                     } else if (nip19.kind == LiveActivitiesEvent.KIND) {
-                        "Channel/${nip19.hex}"
+                        "Channel/${nip19.atag}"
                     } else {
-                        "Event/${nip19.hex}"
+                        "Event/${nip19.atag}"
                     }
+                }
+                is Nip19Bech32.NEmbed -> {
+                    if (LocalCache.getNoteIfExists(nip19.event.id) == null) {
+                        LocalCache.verifyAndConsume(nip19.event, null)
+                    }
+                    "Event/${nip19.event.id}"
+                }
                 else -> null
             }
         }
             ?: try {
                 uri?.let {
-                    Nip47WalletConnectParser.parse(it)
+                    Nip47WalletConnect.parse(it)
                     val encodedUri = URLEncoder.encode(it, StandardCharsets.UTF_8.toString())
                     Route.Home.base + "?nip47=" + encodedUri
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 null
             }
     }

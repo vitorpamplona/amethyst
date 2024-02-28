@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -68,11 +68,11 @@ import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RepostEvent
-import com.vitorpamplona.quartz.events.TextNoteEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -232,7 +232,7 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
         val replies = mutableMapOf<String, Int>()
         val takenIntoAccount = mutableSetOf<HexKey>()
 
-        LocalCache.notes.values.forEach {
+        LocalCache.noteListCache.forEach {
             val noteEvent = it.event
             if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id())) {
                 if (noteEvent is ReactionEvent) {
@@ -256,10 +256,19 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
                             (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
                         takenIntoAccount.add(noteEvent.id())
                     }
-                } else if (noteEvent is TextNoteEvent) {
+                } else if (noteEvent is BaseTextNoteEvent) {
                     if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                        val isCitation =
+                            noteEvent.findCitations().any {
+                                LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == currentUser
+                            }
+
                         val netDate = formatDate(noteEvent.createdAt)
-                        replies[netDate] = (replies[netDate] ?: 0) + 1
+                        if (isCitation) {
+                            boosts[netDate] = (boosts[netDate] ?: 0) + 1
+                        } else {
+                            replies[netDate] = (replies[netDate] ?: 0) + 1
+                        }
                         takenIntoAccount.add(noteEvent.id())
                     }
                 }
@@ -275,7 +284,7 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
         refreshChartModel()
     }
 
-    suspend fun addToStatsSuspend(newNotes: Set<Note>) {
+    suspend fun addToStatsSuspend(newBlockNotes: Set<Set<Note>>) {
         checkNotInMainThread()
 
         val currentUser = user.pubkeyHex
@@ -287,39 +296,50 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
         val takenIntoAccount = this.takenIntoAccount.toMutableSet()
         var hasNewElements = false
 
-        newNotes.forEach {
-            val noteEvent = it.event
-            if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id())) {
-                if (noteEvent is ReactionEvent) {
-                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-                        val netDate = formatDate(noteEvent.createdAt)
-                        reactions[netDate] = (reactions[netDate] ?: 0) + 1
-                        takenIntoAccount.add(noteEvent.id())
-                        hasNewElements = true
-                    }
-                } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
-                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey() != currentUser) {
-                        val netDate = formatDate(noteEvent.createdAt())
-                        boosts[netDate] = (boosts[netDate] ?: 0) + 1
-                        takenIntoAccount.add(noteEvent.id())
-                        hasNewElements = true
-                    }
-                } else if (noteEvent is LnZapEvent) {
-                    if (
-                        noteEvent.isTaggedUser(currentUser)
-                    ) { //  && noteEvent.pubKey != currentUser User might be sending his own receipts
-                        val netDate = formatDate(noteEvent.createdAt)
-                        zaps[netDate] =
-                            (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
-                        takenIntoAccount.add(noteEvent.id())
-                        hasNewElements = true
-                    }
-                } else if (noteEvent is TextNoteEvent) {
-                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
-                        val netDate = formatDate(noteEvent.createdAt)
-                        replies[netDate] = (replies[netDate] ?: 0) + 1
-                        takenIntoAccount.add(noteEvent.id())
-                        hasNewElements = true
+        newBlockNotes.forEach { newNotes ->
+            newNotes.forEach {
+                val noteEvent = it.event
+                if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id())) {
+                    if (noteEvent is ReactionEvent) {
+                        if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                            val netDate = formatDate(noteEvent.createdAt)
+                            reactions[netDate] = (reactions[netDate] ?: 0) + 1
+                            takenIntoAccount.add(noteEvent.id())
+                            hasNewElements = true
+                        }
+                    } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
+                        if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey() != currentUser) {
+                            val netDate = formatDate(noteEvent.createdAt())
+                            boosts[netDate] = (boosts[netDate] ?: 0) + 1
+                            takenIntoAccount.add(noteEvent.id())
+                            hasNewElements = true
+                        }
+                    } else if (noteEvent is LnZapEvent) {
+                        if (
+                            noteEvent.isTaggedUser(currentUser)
+                        ) { //  && noteEvent.pubKey != currentUser User might be sending his own receipts
+                            val netDate = formatDate(noteEvent.createdAt)
+                            zaps[netDate] =
+                                (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
+                            takenIntoAccount.add(noteEvent.id())
+                            hasNewElements = true
+                        }
+                    } else if (noteEvent is BaseTextNoteEvent) {
+                        if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                            val isCitation =
+                                noteEvent.findCitations().any {
+                                    LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == currentUser
+                                }
+
+                            val netDate = formatDate(noteEvent.createdAt)
+                            if (isCitation) {
+                                boosts[netDate] = (boosts[netDate] ?: 0) + 1
+                            } else {
+                                replies[netDate] = (replies[netDate] ?: 0) + 1
+                            }
+                            takenIntoAccount.add(noteEvent.id())
+                            hasNewElements = true
+                        }
                     }
                 }
             }
@@ -422,7 +442,7 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
     private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.IO)
 
     fun invalidateInsertData(newItems: Set<Note>) {
-        bundlerInsert.invalidateList(newItems) { addToStatsSuspend(it.flatten().toSet()) }
+        bundlerInsert.invalidateList(newItems) { addToStatsSuspend(it) }
     }
 
     override fun onCleared() {

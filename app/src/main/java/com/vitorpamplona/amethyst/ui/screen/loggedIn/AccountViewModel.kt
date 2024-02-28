@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -43,13 +43,12 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.service.CashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
-import com.vitorpamplona.amethyst.service.HttpClient
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
@@ -69,10 +68,12 @@ import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.SettingsState
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
 import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.LnZapEvent
@@ -87,6 +88,7 @@ import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
@@ -94,6 +96,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 import kotlin.coroutines.resume
@@ -103,7 +106,11 @@ import kotlin.time.measureTimedValue
 
 @Immutable class StringToastMsg(val title: String, val msg: String) : ToastMsg()
 
-@Immutable class ResourceToastMsg(val titleResId: Int, val resourceId: Int) : ToastMsg()
+@Immutable class ResourceToastMsg(
+    val titleResId: Int,
+    val resourceId: Int,
+    val params: Array<out String>? = null,
+) : ToastMsg()
 
 @Stable
 class AccountViewModel(val account: Account, val settings: SettingsState) : ViewModel(), Dao {
@@ -137,6 +144,14 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         resourceId: Int,
     ) {
         viewModelScope.launch { toasts.emit(ResourceToastMsg(titleResId, resourceId)) }
+    }
+
+    fun toast(
+        titleResId: Int,
+        resourceId: Int,
+        vararg params: String,
+    ) {
+        viewModelScope.launch { toasts.emit(ResourceToastMsg(titleResId, resourceId, params)) }
     }
 
     fun isWriteable(): Boolean {
@@ -514,7 +529,22 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     }
 
     fun broadcast(note: Note) {
-        account.broadcast(note)
+        viewModelScope.launch(Dispatchers.IO) { account.broadcast(note) }
+    }
+
+    fun timestamp(note: Note) {
+        viewModelScope.launch(Dispatchers.IO) { account.timestamp(note) }
+    }
+
+    var lastTimeItTriedToUpdateAttestations: Long = 0
+
+    fun upgradeAttestations() {
+        // only tries to upgrade every hour
+        val now = TimeUtils.now()
+        if (now - lastTimeItTriedToUpdateAttestations > TimeUtils.ONE_HOUR) {
+            lastTimeItTriedToUpdateAttestations = now
+            viewModelScope.launch(Dispatchers.IO) { account.updateAttestations() }
+        }
     }
 
     fun delete(note: Note) {
@@ -631,6 +661,12 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
 
     fun seeContentWarnings() {
         account.updateShowSensitiveContent(null)
+    }
+
+    fun markDonatedInThisVersion() {
+        viewModelScope.launch {
+            account.markDonatedInThisVersion()
+        }
     }
 
     fun defaultZapType(): LnZapEvent.ZapType {
@@ -786,7 +822,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
 
     fun retrieveRelayDocument(
         dirtyUrl: String,
-        onInfo: (RelayInformation) -> Unit,
+        onInfo: (Nip11RelayInformation) -> Unit,
         onError: (String, Nip11Retriever.ErrorCode, String?) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -832,6 +868,22 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreateNote(key)) }
     }
 
+    fun checkGetOrCreateNote(
+        event: Event,
+        onResult: (Note?) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            var note = checkGetOrCreateNote(event.id)
+
+            if (note == null) {
+                LocalCache.verifyAndConsume(event, null)
+                note = checkGetOrCreateNote(event.id)
+            }
+
+            onResult(note)
+        }
+    }
+
     fun getNoteIfExists(hex: HexKey): Note? {
         return LocalCache.getNoteIfExists(hex)
     }
@@ -862,11 +914,22 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         return LocalCache.addressables[key]
     }
 
-    fun findStatusesForUser(
+    suspend fun findStatusesForUser(
         myUser: User,
         onResult: (ImmutableList<AddressableNote>) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) { onResult(LocalCache.findStatusesForUser(myUser)) }
+        withContext(Dispatchers.IO) {
+            onResult(LocalCache.findStatusesForUser(myUser))
+        }
+    }
+
+    suspend fun findOtsEventsForNote(
+        note: Note,
+        onResult: (Long?) -> Unit,
+    ) {
+        withContext(Dispatchers.IO) {
+            onResult(LocalCache.findEarliestOtsForNote(note))
+        }
     }
 
     private suspend fun checkGetOrCreateChannel(key: HexKey): Channel? {
@@ -923,7 +986,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     fun returnNIP19References(
         content: String,
         tags: ImmutableListOfLists<String>?,
-        onNewReferences: (List<Nip19.Return>) -> Unit,
+        onNewReferences: (List<Nip19Bech32.Entity>) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             onNewReferences(MarkdownParser().returnNIP19References(content, tags))
@@ -940,17 +1003,32 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
-    fun parseNIP19(
+    suspend fun parseNIP19(
         str: String,
         onNote: (LoadedBechLink) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            Nip19.uriToRoute(str)?.let {
+        withContext(Dispatchers.IO) {
+            Nip19Bech32.uriToRoute(str)?.let {
                 var returningNote: Note? = null
-                if (
-                    it.type == Nip19.Type.NOTE || it.type == Nip19.Type.EVENT || it.type == Nip19.Type.ADDRESS
-                ) {
-                    LocalCache.checkGetOrCreateNote(it.hex)?.let { note -> returningNote = note }
+
+                when (val parsed = it.entity) {
+                    is Nip19Bech32.NSec -> {}
+                    is Nip19Bech32.NPub -> {}
+                    is Nip19Bech32.NProfile -> {}
+                    is Nip19Bech32.Note -> LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note }
+                    is Nip19Bech32.NEvent -> LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note }
+                    is Nip19Bech32.NEmbed -> {
+                        if (LocalCache.getNoteIfExists(parsed.event.id) == null) {
+                            LocalCache.verifyAndConsume(parsed.event, null)
+                        }
+
+                        LocalCache.checkGetOrCreateNote(parsed.event.id)?.let { note ->
+                            returningNote = note
+                        }
+                    }
+                    is Nip19Bech32.NRelay -> {}
+                    is Nip19Bech32.NAddress -> LocalCache.checkGetOrCreateNote(parsed.atag)?.let { note -> returningNote = note }
+                    else -> {}
                 }
 
                 onNote(LoadedBechLink(returningNote, it))
@@ -1042,7 +1120,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             account.proxyPort = portNumber.value.toInt()
-            account.proxy = HttpClient.initProxy(checked, "127.0.0.1", account.proxyPort)
+            account.proxy = HttpClientManager.initProxy(checked, "127.0.0.1", account.proxyPort)
             account.saveable.invalidateData()
             serviceManager?.forceRestart()
         }
@@ -1080,6 +1158,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
                         "Notification Dots Calculation refresh ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()}",
                     )
                     invalidateInsertData(newNotes)
+                    upgradeAttestations()
                 }
             }
     }
@@ -1102,6 +1181,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
                 val myCover = context.imageLoader.execute(request).drawable
                 onReady(myCover)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e("VideoView", "Fail to load cover $thumbUri", e)
                 onError(e.message)
             }
@@ -1173,6 +1253,55 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
             )
         }
     }
+
+    fun unwrapIfNeeded(
+        event: EventInterface?,
+        onReady: (Note) -> Unit,
+    ) {
+        when (event) {
+            is GiftWrapEvent -> {
+                event.cachedGift(account.signer) {
+                    val existingNote = LocalCache.getNoteIfExists(it.id)
+                    if (existingNote != null) {
+                        unwrapIfNeeded(existingNote.event, onReady)
+                    } else {
+                        LocalCache.verifyAndConsume(it, null)
+                        unwrapIfNeeded(it, onReady)
+                    }
+                }
+            }
+            is SealedGossipEvent -> {
+                event.cachedGossip(account.signer) {
+                    val existingNote = LocalCache.getNoteIfExists(it.id)
+                    if (existingNote != null) {
+                        unwrapIfNeeded(existingNote.event, onReady)
+                    } else {
+                        // this is not verifiable
+                        LocalCache.justConsume(it, null)
+                        unwrapIfNeeded(it, onReady)
+                    }
+                }
+            }
+            else -> {
+                event?.id()?.let {
+                    LocalCache.getNoteIfExists(it)?.let {
+                        onReady(it)
+                    }
+                }
+            }
+        }
+    }
+
+    fun unwrapIfNeeded(
+        note: Note?,
+        onReady: (Note) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            unwrapIfNeeded(note?.event) {
+                onReady(it)
+            }
+        }
+    }
 }
 
 class HasNotificationDot(bottomNavigationItems: ImmutableList<Route>) {
@@ -1200,7 +1329,7 @@ class HasNotificationDot(bottomNavigationItems: ImmutableList<Route>) {
     }
 }
 
-@Immutable data class LoadedBechLink(val baseNote: Note?, val nip19: Nip19.Return)
+@Immutable data class LoadedBechLink(val baseNote: Note?, val nip19: Nip19Bech32.ParseReturn)
 
 public fun <T, K> allOrNothingSigningOperations(
     remainingTos: List<T>,

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,23 +22,26 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.util.Log
 import android.util.Patterns
+import com.vitorpamplona.amethyst.commons.RichTextParser
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.startsWithNIP19Scheme
-import com.vitorpamplona.quartz.encoders.Nip19
+import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import kotlinx.coroutines.CancellationException
 
 class MarkdownParser {
     private fun getDisplayNameAndNIP19FromTag(
         tag: String,
         tags: ImmutableListOfLists<String>,
     ): Pair<String, String>? {
-        val matcher = tagIndex.matcher(tag)
+        val matcher = RichTextParser.tagIndex.matcher(tag)
         val (index, suffix) =
             try {
                 matcher.find()
                 Pair(matcher.group(1)?.toInt(), matcher.group(2) ?: "")
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.w("Tag Parser", "Couldn't link tag $tag", e)
                 Pair(null, null)
             }
@@ -62,67 +65,88 @@ class MarkdownParser {
         return null
     }
 
-    private fun getDisplayNameFromNip19(nip19: Nip19.Return): Pair<String, String>? {
-        if (nip19.type == Nip19.Type.USER) {
-            LocalCache.users[nip19.hex]?.let {
-                return Pair(it.toBestDisplayName(), it.pubkeyNpub())
+    private suspend fun getDisplayNameFromNip19(nip19: Nip19Bech32.Entity): Pair<String, String>? {
+        return when (nip19) {
+            is Nip19Bech32.NSec -> null
+            is Nip19Bech32.NPub -> {
+                LocalCache.getUserIfExists(nip19.hex)?.let {
+                    return Pair(it.toBestDisplayName(), it.pubkeyNpub())
+                }
             }
-        } else if (nip19.type == Nip19.Type.NOTE) {
-            LocalCache.notes[nip19.hex]?.let {
-                return Pair(it.idDisplayNote(), it.toNEvent())
+            is Nip19Bech32.NProfile -> {
+                LocalCache.getUserIfExists(nip19.hex)?.let {
+                    return Pair(it.toBestDisplayName(), it.pubkeyNpub())
+                }
             }
-        } else if (nip19.type == Nip19.Type.ADDRESS) {
-            LocalCache.addressables[nip19.hex]?.let {
-                return Pair(it.idDisplayNote(), it.toNEvent())
+            is Nip19Bech32.Note -> {
+                LocalCache.getNoteIfExists(nip19.hex)?.let {
+                    return Pair(it.idDisplayNote(), it.toNEvent())
+                }
             }
-        } else if (nip19.type == Nip19.Type.EVENT) {
-            LocalCache.notes[nip19.hex]?.let {
-                return Pair(it.idDisplayNote(), it.toNEvent())
+            is Nip19Bech32.NEvent -> {
+                LocalCache.getNoteIfExists(nip19.hex)?.let {
+                    return Pair(it.idDisplayNote(), it.toNEvent())
+                }
             }
-        }
+            is Nip19Bech32.NEmbed -> {
+                if (LocalCache.getNoteIfExists(nip19.event.id) == null) {
+                    LocalCache.verifyAndConsume(nip19.event, null)
+                }
 
-        return null
+                LocalCache.getNoteIfExists(nip19.event.id)?.let {
+                    return Pair(it.idDisplayNote(), it.toNEvent())
+                }
+            }
+            is Nip19Bech32.NRelay -> null
+            is Nip19Bech32.NAddress -> {
+                LocalCache.getAddressableNoteIfExists(nip19.atag)?.let {
+                    return Pair(it.idDisplayNote(), it.toNEvent())
+                }
+            }
+            else -> null
+        }
     }
 
     fun returnNIP19References(
         content: String,
         tags: ImmutableListOfLists<String>?,
-    ): List<Nip19.Return> {
+    ): List<Nip19Bech32.Entity> {
         checkNotInMainThread()
 
-        val listOfReferences = mutableListOf<Nip19.Return>()
+        val listOfReferences = mutableListOf<Nip19Bech32.Entity>()
         content.split('\n').forEach { paragraph ->
             paragraph.split(' ').forEach { word: String ->
-                if (startsWithNIP19Scheme(word)) {
-                    val parsedNip19 = Nip19.uriToRoute(word)
-                    parsedNip19?.let { listOfReferences.add(it) }
+                if (RichTextParser.startsWithNIP19Scheme(word)) {
+                    val parsedNip19 = Nip19Bech32.uriToRoute(word)
+                    parsedNip19?.let { listOfReferences.add(it.entity) }
                 }
             }
         }
 
         tags?.lists?.forEach {
             if (it[0] == "p" && it.size > 1) {
-                listOfReferences.add(Nip19.Return(Nip19.Type.USER, it[1], null, null, null, ""))
+                listOfReferences.add(Nip19Bech32.NProfile(it[1], listOfNotNull(it.getOrNull(2))))
             } else if (it[0] == "e" && it.size > 1) {
-                listOfReferences.add(Nip19.Return(Nip19.Type.NOTE, it[1], null, null, null, ""))
+                listOfReferences.add(Nip19Bech32.NEvent(it[1], listOfNotNull(it.getOrNull(2)), null, null))
             } else if (it[0] == "a" && it.size > 1) {
-                listOfReferences.add(Nip19.Return(Nip19.Type.ADDRESS, it[1], null, null, null, ""))
+                ATag.parseAtag(it[1], it.getOrNull(2))?.let { atag ->
+                    listOfReferences.add(Nip19Bech32.NAddress(it[1], listOfNotNull(atag.relay), atag.pubKeyHex, atag.kind))
+                }
             }
         }
 
         return listOfReferences
     }
 
-    fun returnMarkdownWithSpecialContent(
+    suspend fun returnMarkdownWithSpecialContent(
         content: String,
         tags: ImmutableListOfLists<String>?,
     ): String {
         var returnContent = ""
         content.split('\n').forEach { paragraph ->
             paragraph.split(' ').forEach { word: String ->
-                if (isValidURL(word)) {
-                    val removedParamsFromUrl = removeQueryParamsForExtensionComparison(word)
-                    if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
+                if (RichTextParser.isValidURL(word)) {
+                    if (RichTextParser.isImageUrl(word)) {
                         returnContent += "![]($word) "
                     } else {
                         returnContent += "[$word]($word) "
@@ -131,11 +155,11 @@ class MarkdownParser {
                     returnContent += "[$word](mailto:$word) "
                 } else if (Patterns.PHONE.matcher(word).matches() && word.length > 6) {
                     returnContent += "[$word](tel:$word) "
-                } else if (startsWithNIP19Scheme(word)) {
-                    val parsedNip19 = Nip19.uriToRoute(word)
+                } else if (RichTextParser.startsWithNIP19Scheme(word)) {
+                    val parsedNip19 = Nip19Bech32.uriToRoute(word)
                     returnContent +=
-                        if (parsedNip19 !== null) {
-                            val pair = getDisplayNameFromNip19(parsedNip19)
+                        if (parsedNip19?.entity !== null) {
+                            val pair = getDisplayNameFromNip19(parsedNip19.entity)
                             if (pair != null) {
                                 val (displayName, nip19) = pair
                                 "[$displayName](nostr:$nip19) "
@@ -146,21 +170,22 @@ class MarkdownParser {
                             "$word "
                         }
                 } else if (word.startsWith("#")) {
-                    if (tagIndex.matcher(word).matches() && tags != null) {
+                    if (RichTextParser.tagIndex.matcher(word).matches() && tags != null) {
                         val pair = getDisplayNameAndNIP19FromTag(word, tags)
                         if (pair != null) {
                             returnContent += "[${pair.first}](nostr:${pair.second}) "
                         } else {
                             returnContent += "$word "
                         }
-                    } else if (hashTagsPattern.matcher(word).matches()) {
-                        val hashtagMatcher = hashTagsPattern.matcher(word)
+                    } else if (RichTextParser.hashTagsPattern.matcher(word).matches()) {
+                        val hashtagMatcher = RichTextParser.hashTagsPattern.matcher(word)
 
                         val (myTag, mySuffix) =
                             try {
                                 hashtagMatcher.find()
                                 Pair(hashtagMatcher.group(1), hashtagMatcher.group(2))
                             } catch (e: Exception) {
+                                if (e is CancellationException) throw e
                                 Log.e("Hashtag Parser", "Couldn't link hashtag $word", e)
                                 Pair(null, null)
                             }

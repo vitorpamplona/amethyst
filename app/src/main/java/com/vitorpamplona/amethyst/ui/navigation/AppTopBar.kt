@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -542,23 +542,17 @@ private fun LoggedInUserPictureDrawer(
 ) {
     val profilePicture by
         accountViewModel.account.userProfile().live().profilePictureChanges.observeAsState()
-    val pubkeyHex = remember { accountViewModel.userProfile().pubkeyHex }
-
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
 
     IconButton(
         onClick = onClick,
     ) {
         RobohashFallbackAsyncImage(
-            robot = pubkeyHex,
+            robot = accountViewModel.userProfile().pubkeyHex,
             model = profilePicture,
-            contentDescription = stringResource(id = R.string.profile_image),
+            contentDescription = stringResource(id = R.string.your_profile_image),
             modifier = HeaderPictureModifier,
             contentScale = ContentScale.Crop,
-            loadProfilePicture = automaticallyShowProfilePicture,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
         )
     }
 }
@@ -985,11 +979,11 @@ fun debugState(context: Context) {
     Log.d(
         "STATE DUMP",
         "Notes: " +
-            LocalCache.notes.filter { it.value.liveSet != null }.size +
+            LocalCache.noteListCache.filter { it.liveSet != null }.size +
             " / " +
-            LocalCache.notes.filter { it.value.event != null }.size +
+            LocalCache.noteListCache.filter { it.event != null }.size +
             " / " +
-            LocalCache.notes.size,
+            LocalCache.noteListCache.size,
     )
     Log.d(
         "STATE DUMP",
@@ -1003,21 +997,21 @@ fun debugState(context: Context) {
     Log.d(
         "STATE DUMP",
         "Users: " +
-            LocalCache.users.filter { it.value.liveSet != null }.size +
+            LocalCache.userListCache.filter { it.liveSet != null }.size +
             " / " +
-            LocalCache.users.filter { it.value.info?.latestMetadata != null }.size +
+            LocalCache.userListCache.filter { it.info?.latestMetadata != null }.size +
             " / " +
-            LocalCache.users.size,
+            LocalCache.userListCache.size,
     )
 
     Log.d(
         "STATE DUMP",
         "Memory used by Events: " +
-            LocalCache.notes.values.sumOf { it.event?.countMemory() ?: 0 } / (1024 * 1024) +
+            LocalCache.noteListCache.sumOf { it.event?.countMemory() ?: 0 } / (1024 * 1024) +
             " MB",
     )
 
-    LocalCache.notes.values
+    LocalCache.noteListCache
         .groupBy { it.event?.kind() }
         .forEach { Log.d("STATE DUMP", "Kind ${it.key}: \t${it.value.size} elements ") }
     LocalCache.addressables.values

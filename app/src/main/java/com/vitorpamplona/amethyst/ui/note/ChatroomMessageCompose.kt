@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -46,6 +46,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -78,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.theme.ChatPaddingInnerQuoteModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatPaddingModifier
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
+import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
@@ -491,8 +493,14 @@ private fun RenderReply(
     onWantsToReply: (Note) -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        val replyTo by remember { derivedStateOf { note.replyTo?.lastOrNull() } }
-        replyTo?.let { note ->
+        val replyTo =
+            produceState(initialValue = note.replyTo?.lastOrNull()) {
+                accountViewModel.unwrapIfNeeded(value) {
+                    value = it
+                }
+            }
+
+        replyTo.value?.let { note ->
             ChatroomMessageCompose(
                 note,
                 null,
@@ -619,19 +627,18 @@ private fun RenderRegularTextNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val tags = remember(note.event) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
-    val modifier = remember { Modifier.padding(top = 5.dp) }
-
     LoadDecryptedContentOrNull(note = note, accountViewModel = accountViewModel) { eventContent ->
         if (eventContent != null) {
             SensitivityWarning(
                 note = note,
                 accountViewModel = accountViewModel,
             ) {
+                val tags = remember(note.event) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+
                 TranslatableRichTextViewer(
-                    content = eventContent!!,
+                    content = eventContent,
                     canPreview = canPreview,
-                    modifier = modifier,
+                    modifier = HalfTopPadding,
                     tags = tags,
                     backgroundColor = backgroundBubbleColor,
                     accountViewModel = accountViewModel,
@@ -642,8 +649,8 @@ private fun RenderRegularTextNote(
             TranslatableRichTextViewer(
                 content = stringResource(id = R.string.could_not_decrypt_the_message),
                 canPreview = true,
-                modifier = modifier,
-                tags = tags,
+                modifier = HalfTopPadding,
+                tags = EmptyTagList,
                 backgroundColor = backgroundBubbleColor,
                 accountViewModel = accountViewModel,
                 nav = nav,
@@ -780,7 +787,6 @@ private fun DisplayMessageUsername(
     Spacer(modifier = StdHorzSpacer)
     CreateClickableTextWithEmoji(
         clickablePart = userDisplayName,
-        suffix = "",
         maxLines = 1,
         tags = userTags,
         fontWeight = FontWeight.Bold,

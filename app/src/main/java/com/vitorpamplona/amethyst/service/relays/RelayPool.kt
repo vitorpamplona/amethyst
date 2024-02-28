@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -81,8 +81,8 @@ object RelayPool : Relay.Listener {
         relays.forEach { it.sendFilter(subscriptionId) }
     }
 
-    fun sendFilterOnlyIfDisconnected(subscriptionId: String) {
-        relays.forEach { it.sendFilterOnlyIfDisconnected(subscriptionId) }
+    fun connectAndSendFiltersIfDisconnected() {
+        relays.forEach { it.connectAndSendFiltersIfDisconnected() }
     }
 
     fun sendToSelectedRelays(

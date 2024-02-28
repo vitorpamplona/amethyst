@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -79,6 +79,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
+import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.Constants.defaultRelays
@@ -193,8 +194,10 @@ fun NewRelayListView(
                                 onToggleSearch = { postViewModel.toggleSearch(it) },
                                 onDelete = { postViewModel.deleteRelay(it) },
                                 accountViewModel = accountViewModel,
-                                nav = nav,
-                            )
+                            ) {
+                                onClose()
+                                nav(it)
+                            }
                         }
                     }
                 }
@@ -410,9 +413,14 @@ fun ServerConfigClickableLine(
             modifier = Modifier.padding(vertical = 5.dp),
         ) {
             Column(Modifier.clickable(onClick = onClick)) {
+                val iconUrlFromRelayInfoDoc =
+                    remember(item) {
+                        Nip11CachedRetriever.getFromCache(item.url)?.icon
+                    }
+
                 RenderRelayIcon(
                     item.briefInfo.displayUrl,
-                    item.briefInfo.favIcon,
+                    iconUrlFromRelayInfoDoc ?: item.briefInfo.favIcon,
                     loadProfilePicture,
                     MaterialTheme.colorScheme.largeRelayIconModifier,
                 )

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -99,9 +99,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
-import com.vitorpamplona.amethyst.ui.components.ImageUrlType
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
-import com.vitorpamplona.amethyst.ui.components.TextType
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -128,6 +126,8 @@ import com.vitorpamplona.amethyst.ui.theme.TinyBorders
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.placeholderTextColorFilter
+import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
+import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
@@ -379,9 +379,9 @@ private fun RenderShowIndividualReactionsButton(wantsToSeeReactions: MutableStat
             label = "RenderShowIndividualReactionsButton",
         ) {
             if (it) {
-                ExpandLessIcon(modifier = Size22Modifier)
+                ExpandLessIcon(modifier = Size22Modifier, R.string.close_all_reactions_to_this_post)
             } else {
-                ExpandMoreIcon(modifier = Size22Modifier)
+                ExpandMoreIcon(modifier = Size22Modifier, R.string.open_all_reactions_to_this_post)
             }
         }
     }
@@ -500,6 +500,7 @@ private fun BoostWithDialog(
     nav: (String) -> Unit,
 ) {
     var wantsToQuote by remember { mutableStateOf<Note?>(null) }
+    var wantsToFork by remember { mutableStateOf<Note?>(null) }
 
     if (wantsToQuote != null) {
         NewPostView(
@@ -511,7 +512,34 @@ private fun BoostWithDialog(
         )
     }
 
-    BoostReaction(baseNote, grayTint, accountViewModel) { wantsToQuote = baseNote }
+    if (wantsToFork != null) {
+        val replyTo =
+            remember(wantsToFork) {
+                val forkEvent = wantsToFork?.event
+                if (forkEvent is BaseTextNoteEvent) {
+                    val hex = forkEvent.replyingTo()
+                    wantsToFork?.replyTo?.filter { it.event?.id() == hex }?.firstOrNull()
+                } else {
+                    null
+                }
+            }
+
+        NewPostView(
+            onClose = { wantsToFork = null },
+            baseReplyTo = replyTo,
+            fork = wantsToFork,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+
+    BoostReaction(
+        baseNote,
+        grayTint,
+        accountViewModel,
+        onQuotePress = { wantsToQuote = baseNote },
+        onForkPress = { wantsToFork = baseNote },
+    )
 }
 
 @Composable
@@ -625,7 +653,7 @@ fun TextCount(
 }
 
 @Composable
-private fun SlidingAnimationAmount(
+fun SlidingAnimationAmount(
     amount: MutableState<String>,
     textColor: Color,
 ) {
@@ -651,6 +679,7 @@ fun BoostReaction(
     iconSizeModifier: Modifier = Size20Modifier,
     iconSize: Dp = Size20dp,
     onQuotePress: () -> Unit,
+    onForkPress: () -> Unit,
 ) {
     var wantsToBoost by remember { mutableStateOf(false) }
 
@@ -672,7 +701,13 @@ fun BoostReaction(
                     wantsToBoost = false
                     onQuotePress()
                 },
-                onRepost = { accountViewModel.boost(baseNote) },
+                onRepost = {
+                    accountViewModel.boost(baseNote)
+                },
+                onFork = {
+                    wantsToBoost = false
+                    onForkPress()
+                },
             )
         }
     }
@@ -808,10 +843,9 @@ private fun RenderReactionType(
     if (reactionType.isNotEmpty() && reactionType[0] == ':') {
         val renderable =
             remember(reactionType) {
-                listOf(
-                    ImageUrlType(reactionType.removePrefix(":").substringAfter(":")),
+                persistentListOf(
+                    Nip30CustomEmoji.ImageUrlType(reactionType.removePrefix(":").substringAfter(":")),
                 )
-                    .toImmutableList()
             }
 
         InLineIconRenderer(
@@ -1028,7 +1062,7 @@ fun ZapReaction(
     }
 }
 
-private fun zapClick(
+fun zapClick(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     context: Context,
@@ -1065,7 +1099,7 @@ private fun zapClick(
 }
 
 @Composable
-private fun ObserveZapIcon(
+fun ObserveZapIcon(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     inner: @Composable (MutableState<Boolean>) -> Unit,
@@ -1088,7 +1122,7 @@ private fun ObserveZapIcon(
 }
 
 @Composable
-private fun ObserveZapAmountText(
+fun ObserveZapAmountText(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     inner: @Composable (MutableState<String>) -> Unit,
@@ -1151,6 +1185,7 @@ private fun BoostTypeChoicePopup(
     onDismiss: () -> Unit,
     onQuote: () -> Unit,
     onRepost: () -> Unit,
+    onFork: () -> Unit,
 ) {
     val iconSizePx = with(LocalDensity.current) { -iconSize.toPx().toInt() }
 
@@ -1190,6 +1225,18 @@ private fun BoostTypeChoicePopup(
                     ),
             ) {
                 Text(stringResource(R.string.quote), color = Color.White, textAlign = TextAlign.Center)
+            }
+
+            Button(
+                modifier = Modifier.padding(horizontal = 3.dp),
+                onClick = onFork,
+                shape = ButtonBorder,
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                    ),
+            ) {
+                Text(stringResource(R.string.fork), color = Color.White, textAlign = TextAlign.Center)
             }
         }
     }
@@ -1284,11 +1331,10 @@ private fun ActionableReactionButton(
             val url = noStartColon.substringAfter(":")
 
             val renderable =
-                listOf(
-                    ImageUrlType(url),
-                    TextType(removeSymbol),
+                persistentListOf(
+                    Nip30CustomEmoji.ImageUrlType(url),
+                    Nip30CustomEmoji.TextType(removeSymbol),
                 )
-                    .toImmutableList()
 
             InLineIconRenderer(
                 renderable,

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -77,8 +77,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
-import com.vitorpamplona.quartz.encoders.decodePublicKey
-import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -148,12 +147,9 @@ fun DisplayAccount(
 ) {
     var baseUser by remember {
         mutableStateOf<User?>(
-            LocalCache.getUserIfExists(
-                decodePublicKey(
-                    acc.npub,
-                )
-                    .toHexKey(),
-            ),
+            decodePublicKeyAsHexOrNull(acc.npub)?.let {
+                LocalCache.getUserIfExists(it)
+            },
         )
     }
 
@@ -161,12 +157,8 @@ fun DisplayAccount(
         LaunchedEffect(key1 = acc.npub) {
             launch(Dispatchers.IO) {
                 baseUser =
-                    try {
-                        LocalCache.getOrCreateUser(
-                            decodePublicKey(acc.npub).toHexKey(),
-                        )
-                    } catch (e: Exception) {
-                        null
+                    decodePublicKeyAsHexOrNull(acc.npub)?.let {
+                        LocalCache.getOrCreateUser(it)
                     }
             }
         }

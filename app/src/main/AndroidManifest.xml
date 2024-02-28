@@ -3,8 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools">
     <queries>
         <package android:name="org.torproject.android"/>
-        <package android:name="com.greenart7c3.nostrsigner"/>
-        <package android:name="com.greenart7c3.nostrsigner.debug"/>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="nostrsigner" />
+        </intent>
     </queries>
 
     <!-- Doesn't require a camera -->

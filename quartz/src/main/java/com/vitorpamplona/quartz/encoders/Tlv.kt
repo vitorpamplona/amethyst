@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -93,6 +93,8 @@ class Tlv(val data: Map<Byte, List<ByteArray>>) {
     fun firstAsHex(type: Byte) = data[type]?.firstOrNull()?.toHexKey()?.intern()
 
     fun firstAsString(type: Byte) = data[type]?.firstOrNull()?.toString(Charsets.UTF_8)
+
+    fun asStringList(type: Byte) = data[type]?.map { it.toString(Charsets.UTF_8) }
 
     companion object {
         fun parse(data: ByteArray): Tlv {

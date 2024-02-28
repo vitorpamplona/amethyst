@@ -33,6 +33,11 @@
 # JNA For Libsodium
 -keep class com.goterl.lazysodium.** { *; }
 
+# libscrypt
+-keep class com.lambdaworks.codec.** { *; }
+-keep class com.lambdaworks.crypto.** { *; }
+-keep class com.lambdaworks.jni.** { *; }
+
 # JNA also requires AWT, which Android does not have. So the classes are broken down to filter AWT out
 -keep class com.sun.jna.ToNativeConverter { *; }
 -keep class com.sun.jna.NativeMapped { *; }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -45,7 +45,7 @@ class HomeConversationsFeedFilter(val account: Account) : AdditiveFeedFilter<Not
     }
 
     override fun feed(): List<Note> {
-        return sort(innerApplyFilter(LocalCache.notes.values))
+        return sort(innerApplyFilter(LocalCache.noteListCache))
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {

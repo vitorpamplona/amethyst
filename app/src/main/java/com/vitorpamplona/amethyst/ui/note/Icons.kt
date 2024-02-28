@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -152,7 +152,7 @@ fun LikeIcon(
 ) {
     Icon(
         painter = painterResource(R.drawable.ic_like),
-        null,
+        contentDescription = stringResource(id = R.string.like_description),
         modifier = iconSizeModifier,
         tint = grayTint,
     )
@@ -165,7 +165,7 @@ fun RepostedIcon(
 ) {
     Icon(
         painter = painterResource(R.drawable.ic_retweeted),
-        null,
+        contentDescription = stringResource(id = R.string.boost_or_quote_description),
         modifier = modifier,
         tint = tint,
     )
@@ -198,10 +198,11 @@ fun ZappedIcon(modifier: Modifier) {
 fun ZapIcon(
     modifier: Modifier,
     tint: Color = Color.Unspecified,
+    contentDescriptor: Int = R.string.zap_description,
 ) {
     Icon(
         imageVector = Icons.Default.Bolt,
-        contentDescription = stringResource(R.string.zaps),
+        contentDescription = stringResource(contentDescriptor),
         tint = tint,
         modifier = modifier,
     )
@@ -244,20 +245,26 @@ fun OpenInNewIcon(
 }
 
 @Composable
-fun ExpandLessIcon(modifier: Modifier) {
+fun ExpandLessIcon(
+    modifier: Modifier,
+    contentDescriptor: Int,
+) {
     Icon(
         imageVector = Icons.Default.ExpandLess,
-        null,
+        contentDescription = stringResource(id = contentDescriptor),
         modifier = modifier,
         tint = MaterialTheme.colorScheme.subtleButton,
     )
 }
 
 @Composable
-fun ExpandMoreIcon(modifier: Modifier) {
+fun ExpandMoreIcon(
+    modifier: Modifier,
+    contentDescriptor: Int,
+) {
     Icon(
         imageVector = Icons.Default.ExpandMore,
-        null,
+        contentDescription = stringResource(id = contentDescriptor),
         modifier = modifier,
         tint = MaterialTheme.colorScheme.subtleButton,
     )
@@ -270,7 +277,7 @@ fun CommentIcon(
 ) {
     Icon(
         painter = painterResource(R.drawable.ic_comment),
-        contentDescription = null,
+        contentDescription = stringResource(id = R.string.reply_description),
         modifier = iconSizeModifier,
         tint = tint,
     )
@@ -293,7 +300,7 @@ fun ViewCountIcon(
 fun PollIcon() {
     Icon(
         painter = painterResource(R.drawable.ic_poll),
-        null,
+        contentDescription = stringResource(id = R.string.poll),
         modifier = Size20Modifier,
         tint = MaterialTheme.colorScheme.onBackground,
     )
@@ -303,7 +310,7 @@ fun PollIcon() {
 fun RegularPostIcon() {
     Icon(
         painter = painterResource(R.drawable.ic_lists),
-        null,
+        contentDescription = stringResource(id = R.string.disable_poll),
         modifier = Size20Modifier,
         tint = MaterialTheme.colorScheme.onBackground,
     )
@@ -435,10 +442,10 @@ fun LinkIcon(
 }
 
 @Composable
-fun VerticalDotsIcon() {
+fun VerticalDotsIcon(contentDescriptor: Int? = null) {
     Icon(
         imageVector = Icons.Default.MoreVert,
-        null,
+        contentDescription = contentDescriptor?.let { stringResource(id = it) },
         modifier = Size18Modifier,
         tint = MaterialTheme.colorScheme.placeholderText,
     )

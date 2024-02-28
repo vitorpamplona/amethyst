@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -38,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -45,10 +46,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
 import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.ZapTheDevsCard
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -176,6 +180,10 @@ private fun FeedLoaded(
         contentPadding = FeedPadding,
         state = listState,
     ) {
+        item {
+            ShowDonationCard(accountViewModel, nav)
+        }
+
         itemsIndexed(state.feed.value, key = { _, item -> item.id() }) { _, item ->
             val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
 
@@ -184,6 +192,28 @@ private fun FeedLoaded(
                     item,
                     routeForLastRead,
                     showHidden = state.showHidden.value,
+                    accountViewModel,
+                    nav,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShowDonationCard(
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val account by accountViewModel.account.live.observeAsState()
+    if (account?.account?.hasDonatedInThisVersion() == false) {
+        LoadNote(
+            BuildConfig.RELEASE_NOTES_ID,
+            accountViewModel,
+        ) { loadedNoteId ->
+            if (loadedNoteId != null) {
+                ZapTheDevsCard(
+                    loadedNoteId,
                     accountViewModel,
                     nav,
                 )

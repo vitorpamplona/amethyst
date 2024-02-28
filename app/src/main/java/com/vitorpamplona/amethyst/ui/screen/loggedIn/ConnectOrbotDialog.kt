@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.RichTextDefaults
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.CancellationException
 
 @Composable
 fun ConnectOrbotDialog(
@@ -83,7 +84,8 @@ fun ConnectOrbotDialog(
                         onPost = {
                             try {
                                 Integer.parseInt(portNumber.value)
-                            } catch (_: Exception) {
+                            } catch (e: Exception) {
+                                if (e is CancellationException) throw e
                                 onError(toastMessage)
                                 return@UseOrbotButton
                             }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -49,15 +49,32 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.quartz.events.EventInterface
+import com.vitorpamplona.quartz.events.ZapSplitSetup
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DisplayZapSplits(
     noteEvent: EventInterface,
+    useAuthorIfEmpty: Boolean = false,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val list = remember(noteEvent) { noteEvent.zapSplitSetup() }
+    val list =
+        remember(noteEvent) {
+            val list = noteEvent.zapSplitSetup()
+            if (list.isEmpty() && useAuthorIfEmpty) {
+                listOf<ZapSplitSetup>(
+                    ZapSplitSetup(
+                        lnAddressOrPubKeyHex = noteEvent.pubKey(),
+                        relay = null,
+                        weight = 1.0,
+                        isLnAddress = false,
+                    ),
+                )
+            } else {
+                list
+            }
+        }
     if (list.isEmpty()) return
 
     Row(verticalAlignment = Alignment.CenterVertically) {

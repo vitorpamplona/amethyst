@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -150,15 +150,12 @@ class NostrSignerExternal(
         event: LnZapRequestEvent,
         onReady: (LnZapPrivateEvent) -> Unit,
     ) {
-        return launcher.decryptZapEvent(event) {
-            val event =
-                try {
-                    Event.fromJson(it)
-                } catch (e: Exception) {
-                    Log.e("NostrExternalSigner", "Unable to parse returned decrypted Zap: $it")
-                    null
-                }
-            (event as? LnZapPrivateEvent)?.let { onReady(event) }
+        return launcher.decryptZapEvent(event) { jsonEvent ->
+            try {
+                (Event.fromJson(jsonEvent) as? LnZapPrivateEvent)?.let { onReady(it) }
+            } catch (e: Exception) {
+                Log.e("NostrExternalSigner", "Unable to parse returned decrypted Zap: $jsonEvent")
+            }
         }
     }
 }

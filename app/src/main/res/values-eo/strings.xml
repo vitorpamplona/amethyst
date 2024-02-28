@@ -182,12 +182,6 @@
     <string name="mark_all_new_as_read">Marki ĉiujn Novajn legitaj</string>
     <string name="mark_all_as_read">Marki ĉiujn legitajn</string>
     <string name="backup_keys">Sekurkopii Ŝlosilojn</string>
-    <string name="account_backup_tips_md" tools:ignore="Typos">        ## Sekurkopio de Ŝlosiloj kaj Rekomendoj de Sekureco
-        \n\nVia konto estas sekurigita per sekreta ŝlosilo. La ŝlosilo estas longa hazarda literĉeno komencata kun **nsec1**. Ĉiu, kiu havas aliron al via sekreta ŝlosilo, povas publikigi enhavon per via identeco.
-         \n\n- **Ne** metu vian sekretan ŝlosilon en ajna retejo aŭ programaro, kiun vi ne fidas.
-         \n- La programistoj de Amethyst **neniam** petos de vi vian sekretan ŝlosilon.
-         \n- **Ja** konservu sekurkopion de via sekreta ŝlosilo por reakiro de konto. Ni rekomendas uzi pasvortmanaĝilon.
-    </string>
     <string name="secret_key_copied_to_clipboard">Sekreta ŝlosilo (nsec) kopiita al tondujo</string>
     <string name="copy_my_secret_key">Kopii mian sekretan ŝlosilon</string>
     <string name="biometric_authentication_failed">Aŭtentikigo malsukcesis</string>

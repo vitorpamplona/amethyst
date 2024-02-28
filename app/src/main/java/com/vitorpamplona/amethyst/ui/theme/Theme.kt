@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -217,6 +217,18 @@ val DarkLargeRelayIconModifier =
         .clip(shape = CircleShape)
         .background(DarkColorPalette.background)
 
+val LightBottomIconModifier =
+    Modifier
+        .size(Size10dp)
+        .clip(shape = CircleShape)
+        .background(LightColorPalette.primary)
+
+val DarkBottomIconModifier =
+    Modifier
+        .size(Size10dp)
+        .clip(shape = CircleShape)
+        .background(DarkColorPalette.primary)
+
 val RichTextDefaults = RichTextStyle().resolveDefaults()
 
 val MarkDownStyleOnDark =
@@ -380,6 +392,9 @@ val ColorScheme.relayIconModifier: Modifier
 
 val ColorScheme.largeRelayIconModifier: Modifier
     get() = if (isLight) LightLargeRelayIconModifier else DarkLargeRelayIconModifier
+
+val ColorScheme.bottomIconModifier: Modifier
+    get() = if (isLight) LightBottomIconModifier else DarkBottomIconModifier
 
 val ColorScheme.chartStyle: ChartStyle
     get() {

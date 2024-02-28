@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -48,7 +48,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
-import com.vitorpamplona.amethyst.model.RelayInformation
 import com.vitorpamplona.amethyst.ui.components.ClickableEmail
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.note.LoadUser
@@ -59,13 +58,14 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.largeRelayIconModifier
+import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RelayInformationDialog(
     onClose: () -> Unit,
     relayBriefInfo: RelayBriefInfoCache.RelayBriefInfo,
-    relayInfo: RelayInformation,
+    relayInfo: Nip11RelayInformation,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -104,7 +104,7 @@ fun RelayInformationDialog(
                     Column {
                         RenderRelayIcon(
                             relayBriefInfo.displayUrl,
-                            relayBriefInfo.favIcon,
+                            relayInfo.icon ?: relayBriefInfo.favIcon,
                             automaticallyShowProfilePicture,
                             MaterialTheme.colorScheme.largeRelayIconModifier,
                         )
@@ -121,7 +121,12 @@ fun RelayInformationDialog(
 
                 Section(stringResource(R.string.owner))
 
-                relayInfo.pubkey?.let { DisplayOwnerInformation(it, accountViewModel, nav) }
+                relayInfo.pubkey?.let {
+                    DisplayOwnerInformation(it, accountViewModel) {
+                        onClose()
+                        nav(it)
+                    }
+                }
 
                 Section(stringResource(R.string.software))
 
@@ -170,12 +175,14 @@ fun RelayInformationDialog(
 
                 relayInfo.limitation?.let {
                     Section(stringResource(R.string.limitations))
-                    val authRequired = it.auth_required ?: false
                     val authRequiredText =
-                        if (authRequired) stringResource(R.string.yes) else stringResource(R.string.no)
-                    val paymentRequired = it.payment_required ?: false
+                        if (it.auth_required ?: false) stringResource(R.string.yes) else stringResource(R.string.no)
+
                     val paymentRequiredText =
-                        if (paymentRequired) stringResource(R.string.yes) else stringResource(R.string.no)
+                        if (it.payment_required ?: false) stringResource(R.string.yes) else stringResource(R.string.no)
+
+                    val restrictedWritesText =
+                        if (it.restricted_writes ?: false) stringResource(R.string.yes) else stringResource(R.string.no)
 
                     Column {
                         SectionContent(
@@ -184,7 +191,7 @@ fun RelayInformationDialog(
                         SectionContent(
                             "${stringResource(R.string.subscriptions)}: ${it.max_subscriptions ?: 0}",
                         )
-                        SectionContent("${stringResource(R.string.filters)}: ${it.max_subscriptions ?: 0}")
+                        SectionContent("${stringResource(R.string.filters)}: ${it.max_filters ?: 0}")
                         SectionContent(
                             "${stringResource(R.string.subscription_id_length)}: ${it.max_subid_length ?: 0}",
                         )
@@ -195,9 +202,13 @@ fun RelayInformationDialog(
                         SectionContent(
                             "${stringResource(R.string.content_length)}: ${it.max_content_length ?: 0}",
                         )
+                        SectionContent(
+                            "${stringResource(R.string.max_limit)}: ${it.max_limit ?: 0}",
+                        )
                         SectionContent("${stringResource(R.string.minimum_pow)}: ${it.min_pow_difficulty ?: 0}")
                         SectionContent("${stringResource(R.string.auth)}: $authRequiredText")
                         SectionContent("${stringResource(R.string.payment)}: $paymentRequiredText")
+                        SectionContent("${stringResource(R.string.restricted_writes)}: $restrictedWritesText")
                     }
                 }
 
@@ -236,7 +247,7 @@ fun RelayInformationDialog(
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
-private fun DisplaySupportedNips(relayInfo: RelayInformation) {
+private fun DisplaySupportedNips(relayInfo: Nip11RelayInformation) {
     FlowRow {
         relayInfo.supported_nips?.forEach { item ->
             val text = item.toString().padStart(2, '0')
@@ -261,7 +272,7 @@ private fun DisplaySupportedNips(relayInfo: RelayInformation) {
 }
 
 @Composable
-private fun DisplaySoftwareInformation(relayInfo: RelayInformation) {
+private fun DisplaySoftwareInformation(relayInfo: Nip11RelayInformation) {
     val url = (relayInfo.software ?: "").replace("git+", "")
     Box(modifier = Modifier.padding(start = 10.dp)) {
         ClickableUrl(

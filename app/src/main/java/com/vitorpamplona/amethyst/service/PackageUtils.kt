@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.service
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 
 object PackageUtils {
     private fun isPackageInstalled(
@@ -36,7 +38,13 @@ object PackageUtils {
         return isPackageInstalled(context, "org.torproject.android")
     }
 
-    fun isAmberInstalled(context: Context): Boolean {
-        return isPackageInstalled(context, "com.greenart7c3.nostrsigner")
+    fun isExternalSignerInstalled(context: Context): Boolean {
+        val intent =
+            Intent().apply {
+                action = Intent.ACTION_VIEW
+                data = Uri.parse("nostrsigner:")
+            }
+        val infos = context.packageManager.queryIntentActivities(intent, 0)
+        return infos.size > 0
     }
 }

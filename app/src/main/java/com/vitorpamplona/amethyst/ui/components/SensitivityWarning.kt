@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -74,8 +74,17 @@ fun SensitivityWarning(
     accountViewModel: AccountViewModel,
     content: @Composable () -> Unit,
 ) {
-    val hasSensitiveContent = remember(event) { event.isSensitive() ?: false }
+    val hasSensitiveContent = remember(event) { event.isSensitive() }
 
+    SensitivityWarning(hasSensitiveContent, accountViewModel, content)
+}
+
+@Composable
+fun SensitivityWarning(
+    hasSensitiveContent: Boolean,
+    accountViewModel: AccountViewModel,
+    content: @Composable () -> Unit,
+) {
     if (hasSensitiveContent) {
         SensitivityWarning(accountViewModel, content)
     } else {

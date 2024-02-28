@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -52,7 +52,7 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
     }
 
     override fun feed(): List<Note> {
-        return sort(innerApplyFilter(LocalCache.notes.values))
+        return sort(innerApplyFilter(LocalCache.noteListCache))
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
@@ -69,7 +69,7 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
         val loggedInUserHex = loggedInUser.pubkeyHex
 
         return collection
-            .filter {
+            .filterTo(HashSet()) {
                 it.event !is ChannelCreateEvent &&
                     it.event !is ChannelMetadataEvent &&
                     it.event !is LnZapRequestEvent &&
@@ -82,7 +82,6 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
                     (isHiddenList || it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&
                     tagsAnEventByUser(it, loggedInUserHex)
             }
-            .toSet()
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
@@ -96,17 +95,12 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
         val event = note.event
 
         if (event is BaseTextNoteEvent) {
-            val isAuthoredPostCited =
-                event.findCitations().any {
-                    LocalCache.notes[it]?.author?.pubkeyHex == authorHex ||
-                        LocalCache.addressables[it]?.author?.pubkeyHex == authorHex
-                }
+            if (note.replyTo?.any { it.author?.pubkeyHex == authorHex } == true) return true
 
-            return isAuthoredPostCited ||
-                (
-                    event.citedUsers().contains(authorHex) ||
-                        note.replyTo?.any { it.author?.pubkeyHex == authorHex } == true
-                )
+            val isAuthoredPostCited = event.findCitations().any { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == authorHex }
+            val isAuthorDirectlyCited = event.citedUsers().contains(authorHex)
+
+            return isAuthoredPostCited || isAuthorDirectlyCited
         }
 
         if (event is ReactionEvent) {

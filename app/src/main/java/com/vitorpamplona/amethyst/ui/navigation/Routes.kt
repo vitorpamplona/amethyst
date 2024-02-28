@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -60,6 +60,7 @@ sealed class Route(
     val icon: Int,
     val notifSize: Modifier = Modifier.size(Size23dp),
     val iconSize: Modifier = Modifier.size(Size20dp),
+    val contentDescriptor: Int = R.string.route,
     val hasNewItems: (Account, Set<com.vitorpamplona.amethyst.model.Note>) -> Boolean = { _, _ ->
         false
     },
@@ -80,6 +81,7 @@ sealed class Route(
                     },
                 )
                     .toImmutableList(),
+            contentDescriptor = R.string.route_home,
             hasNewItems = { accountViewModel, newNotes ->
                 HomeLatestItem.hasNewItems(accountViewModel, newNotes)
             },
@@ -89,27 +91,31 @@ sealed class Route(
         Route(
             route = "Global",
             icon = R.drawable.ic_globe,
+            contentDescriptor = R.string.route_global,
         )
 
     object Search :
         Route(
             route = "Search",
             icon = R.drawable.ic_search,
+            contentDescriptor = R.string.route_search,
         )
 
     object Video :
         Route(
             route = "Video",
             icon = R.drawable.ic_video,
+            contentDescriptor = R.string.route_video,
         )
 
     object Discover :
         Route(
             route = "Discover",
             icon = R.drawable.ic_sensors,
-            hasNewItems = { accountViewModel, newNotes ->
-                DiscoverLatestItem.hasNewItems(accountViewModel, newNotes)
-            },
+            // hasNewItems = { accountViewModel, newNotes ->
+            //    DiscoverLatestItem.hasNewItems(accountViewModel, newNotes)
+            // },
+            contentDescriptor = R.string.route_discover,
         )
 
     object Notification :
@@ -119,6 +125,7 @@ sealed class Route(
             hasNewItems = { accountViewModel, newNotes ->
                 NotificationLatestItem.hasNewItems(accountViewModel, newNotes)
             },
+            contentDescriptor = R.string.route_notifications,
         )
 
     object Message :
@@ -128,18 +135,21 @@ sealed class Route(
             hasNewItems = { accountViewModel, newNotes ->
                 MessagesLatestItem.hasNewItems(accountViewModel, newNotes)
             },
+            contentDescriptor = R.string.route_messages,
         )
 
     object BlockedUsers :
         Route(
             route = "BlockedUsers",
             icon = R.drawable.ic_security,
+            contentDescriptor = R.string.route_security_filters,
         )
 
     object Bookmarks :
         Route(
             route = "Bookmarks",
             icon = R.drawable.ic_bookmarks,
+            contentDescriptor = R.string.route_home,
         )
 
     object Profile :
