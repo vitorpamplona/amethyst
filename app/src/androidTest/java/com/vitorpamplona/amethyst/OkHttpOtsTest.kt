@@ -77,7 +77,9 @@ class OkHttpOtsTest {
 
         val countDownLatch = CountDownLatch(1)
 
-        OtsEvent.create(otsEvent2Digest, signer) {
+        val otsFile = OtsEvent.stamp(otsEvent2Digest)
+
+        OtsEvent.create(otsEvent2Digest, otsFile, signer) {
             ots = it
             countDownLatch.countDown()
         }
@@ -87,7 +89,7 @@ class OkHttpOtsTest {
         println(ots!!.toJson())
         println(ots!!.info())
 
-        // Should not be valid
+        // Should not be valid because we need to wait for confirmations
         assertEquals(null, ots!!.verify())
     }
 }
