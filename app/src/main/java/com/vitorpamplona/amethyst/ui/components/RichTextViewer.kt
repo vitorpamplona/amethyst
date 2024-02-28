@@ -647,7 +647,7 @@ fun BechLink(
                 accountViewModel,
                 backgroundColor,
                 nav,
-                loadedLink!!,
+                loadedLink?.nip19?.additionalChars?.ifBlank { null },
             )
         }
     } else if (loadedLink?.nip19 != null) {
@@ -672,7 +672,7 @@ private fun DisplayFullNote(
     accountViewModel: AccountViewModel,
     backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
-    loadedLink: LoadedBechLink,
+    extraChars: String?,
 ) {
     NoteCompose(
         baseNote = it,
@@ -682,8 +682,6 @@ private fun DisplayFullNote(
         isQuotedNote = true,
         nav = nav,
     )
-
-    val extraChars = remember(loadedLink) { loadedLink.nip19.additionalChars.ifBlank { null } }
 
     extraChars?.let {
         Text(
