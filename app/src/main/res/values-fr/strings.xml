@@ -47,6 +47,8 @@
     <string name="view_count">Nombre de vues</string>
     <string name="boost">Boost</string>
     <string name="boosted">boosté</string>
+    <string name="edited">modifié</string>
+    <string name="original">original</string>
     <string name="quote">Citation</string>
     <string name="fork">Fork</string>
     <string name="new_amount_in_sats">Nouveau montant en Sats</string>
@@ -670,4 +672,5 @@
     <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Preuve d\'horodatage</string>
     <string name="ots_info_description">Il y a une preuve que ce message a été signé avant %1$s. La preuve a été estampillée dans la blockchain Bitcoin à cette date et à cette heure.</string>
+    <string name="edit_post">Modifier le Message</string>
 </resources>
