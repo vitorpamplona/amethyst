@@ -99,8 +99,6 @@ import androidx.lifecycle.map
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.request.SuccessResult
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.BaseMediaContent
@@ -131,7 +129,6 @@ import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
-import com.vitorpamplona.amethyst.ui.components.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.elements.AddButton
 import com.vitorpamplona.amethyst.ui.elements.DisplayFollowingCommunityInPost
 import com.vitorpamplona.amethyst.ui.elements.DisplayFollowingHashtagsInPost
@@ -244,6 +241,7 @@ import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -4430,12 +4428,9 @@ fun CreateImageHeader(
 @Preview
 @Composable
 fun RenderEyeGlassesPrescriptionPreview() {
-    val accountViewModel = mockAccountViewModel()
-    val nav: (String) -> Unit = {}
-
     val prescriptionEvent = Event.fromJson("{\"id\":\"0c15d2bc6f7dcc42fa4426d35d30d09840c9afa5b46d100415006e41d6471416\",\"pubkey\":\"bcd4715cc34f98dce7b52fddaf1d826e5ce0263479b7e110a5bd3c3789486ca8\",\"created_at\":1709074097,\"kind\":82,\"tags\":[],\"content\":\"{\\\"resourceType\\\":\\\"Bundle\\\",\\\"id\\\":\\\"bundle-vision-test\\\",\\\"type\\\":\\\"document\\\",\\\"entry\\\":[{\\\"resourceType\\\":\\\"Practitioner\\\",\\\"id\\\":\\\"2\\\",\\\"active\\\":true,\\\"name\\\":[{\\\"use\\\":\\\"official\\\",\\\"family\\\":\\\"Careful\\\",\\\"given\\\":[\\\"Adam\\\"]}],\\\"gender\\\":\\\"male\\\"},{\\\"resourceType\\\":\\\"Patient\\\",\\\"id\\\":\\\"1\\\",\\\"active\\\":true,\\\"name\\\":[{\\\"use\\\":\\\"official\\\",\\\"family\\\":\\\"Duck\\\",\\\"given\\\":[\\\"Donald\\\"]}],\\\"gender\\\":\\\"male\\\"},{\\\"resourceType\\\":\\\"VisionPrescription\\\",\\\"status\\\":\\\"active\\\",\\\"created\\\":\\\"2014-06-15\\\",\\\"patient\\\":{\\\"reference\\\":\\\"#1\\\"},\\\"dateWritten\\\":\\\"2014-06-15\\\",\\\"prescriber\\\":{\\\"reference\\\":\\\"#2\\\"},\\\"lensSpecification\\\":[{\\\"eye\\\":\\\"right\\\",\\\"sphere\\\":-2,\\\"prism\\\":[{\\\"amount\\\":0.5,\\\"base\\\":\\\"down\\\"}],\\\"add\\\":2},{\\\"eye\\\":\\\"left\\\",\\\"sphere\\\":-1,\\\"cylinder\\\":-0.5,\\\"axis\\\":180,\\\"prism\\\":[{\\\"amount\\\":0.5,\\\"base\\\":\\\"up\\\"}],\\\"add\\\":2}]}]}\",\"sig\":\"dc58f6109111ca06920c0c711aeaf8e2ee84975afa60d939828d4e01e2edea738f735fb5b1fcadf6d5496e36ac429abf7020a55fd1e4ed215738afc8d07cb950\"}") as FhirResourceEvent
 
-    RenderFhirResource(prescriptionEvent, accountViewModel, nav)
+    RenderFhirResource(prescriptionEvent)
 }
 
 @Composable
@@ -4446,45 +4441,30 @@ fun RenderFhirResource(
 ) {
     val event = baseNote.event as? FhirResourceEvent ?: return
 
-    RenderFhirResource(event, accountViewModel, nav)
+    RenderFhirResource(event)
 }
 
 @Composable
-fun RenderFhirResource(
-    event: FhirResourceEvent,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    var baseResource: Resource? by remember(event) {
-        mutableStateOf(null)
-    }
-
-    LaunchedEffect(key1 = event) {
-        withContext(Dispatchers.IO) {
-            val mapper =
-                jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-
-            try {
-                baseResource = mapper.readValue(event.content, Resource::class.java)
-            } catch (e: Exception) {
-                Log.e("RenderEyeGlassesPrescription", "Parser error", e)
+fun RenderFhirResource(event: FhirResourceEvent) {
+    val state by produceState(initialValue = FhirElementDatabase(), key1 = event) {
+        withContext(Dispatchers.Default) {
+            parseResourceBundleOrNull(event.content)?.let {
+                value = it
             }
         }
     }
 
-    baseResource?.let { resource ->
+    state.baseResource?.let { resource ->
         when (resource) {
             is Bundle -> {
-                val db = resource.entry.associate { it.id to it }
                 val vision = resource.entry.filterIsInstance(VisionPrescription::class.java)
 
                 vision.firstOrNull()?.let {
-                    RenderEyeGlassesPrescription(it, db, accountViewModel, nav)
+                    RenderEyeGlassesPrescription(it, state.localDb)
                 }
             }
             is VisionPrescription -> {
-                val db = mapOf(resource.id to resource)
-                RenderEyeGlassesPrescription(resource, db, accountViewModel, nav)
+                RenderEyeGlassesPrescription(resource, state.localDb)
             }
             else -> {
             }
@@ -4495,9 +4475,7 @@ fun RenderFhirResource(
 @Composable
 fun RenderEyeGlassesPrescription(
     visionPrescription: VisionPrescription,
-    db: Map<String, Resource>,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    db: ImmutableMap<String, Resource>,
 ) {
     Column(
         modifier =
