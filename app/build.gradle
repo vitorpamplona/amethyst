@@ -249,7 +249,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
 
     // Local model for language identification
-    playImplementation 'com.google.mlkit:language-id:17.0.4'
+    playImplementation 'com.google.mlkit:language-id:17.0.5'
 
     // Google services model the translate text
     playImplementation 'com.google.mlkit:translate:17.0.2'

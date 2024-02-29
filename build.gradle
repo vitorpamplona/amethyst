@@ -4,7 +4,7 @@ buildscript {
     ext {
         fragment_version = "1.6.2"
         lifecycle_version = '2.7.0'
-        compose_ui_version = '1.6.1'
+        compose_ui_version = '1.6.2'
         nav_version = '2.7.7'
         room_version = "2.4.3"
         accompanist_version = '0.34.0'
