@@ -163,6 +163,18 @@ open class NewPostViewModel() : ViewModel() {
     // NIP24 Wrapped DMs / Group messages
     var nip24 by mutableStateOf(false)
 
+    fun lnAddress(): String? {
+        return account?.userProfile()?.info?.lnAddress()
+    }
+
+    fun hasLnAddress(): Boolean {
+        return account?.userProfile()?.info?.lnAddress() != null
+    }
+
+    fun user(): User? {
+        return account?.userProfile()
+    }
+
     open fun load(
         accountViewModel: AccountViewModel,
         replyingTo: Note?,
@@ -817,6 +829,10 @@ open class NewPostViewModel() : ViewModel() {
                 viewModelScope.launch { imageUploadingError.emit("Failed to upload the image / video") }
             },
         )
+    }
+
+    fun insertAtCursor(newElement: String) {
+        message = message.insertUrlAtCursor(newElement)
     }
 
     fun createNIP95Record(

@@ -475,34 +475,32 @@ fun NewPostView(
                                     }
                                 }
 
-                                val user = postViewModel.account?.userProfile()
-                                val lud16 = user?.info?.lnAddress()
-
-                                if (lud16 != null && postViewModel.wantsInvoice) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
-                                    ) {
-                                        Column(Modifier.fillMaxWidth()) {
-                                            InvoiceRequest(
-                                                lud16,
-                                                user.pubkeyHex,
-                                                accountViewModel.account,
-                                                stringResource(id = R.string.lightning_invoice),
-                                                stringResource(id = R.string.lightning_create_and_add_invoice),
-                                                onSuccess = {
-                                                    postViewModel.message =
-                                                        TextFieldValue(postViewModel.message.text + "\n\n" + it)
-                                                    postViewModel.wantsInvoice = false
-                                                },
-                                                onClose = { postViewModel.wantsInvoice = false },
-                                                onError = { title, message -> accountViewModel.toast(title, message) },
-                                            )
+                                if (postViewModel.wantsInvoice) {
+                                    postViewModel.lnAddress()?.let { lud16 ->
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                                        ) {
+                                            Column(Modifier.fillMaxWidth()) {
+                                                InvoiceRequest(
+                                                    lud16,
+                                                    accountViewModel.account.userProfile().pubkeyHex,
+                                                    accountViewModel.account,
+                                                    stringResource(id = R.string.lightning_invoice),
+                                                    stringResource(id = R.string.lightning_create_and_add_invoice),
+                                                    onSuccess = {
+                                                        postViewModel.insertAtCursor(it)
+                                                        postViewModel.wantsInvoice = false
+                                                    },
+                                                    onClose = { postViewModel.wantsInvoice = false },
+                                                    onError = { title, message -> accountViewModel.toast(title, message) },
+                                                )
+                                            }
                                         }
                                     }
                                 }
 
-                                if (lud16 != null && postViewModel.wantsZapraiser) {
+                                if (postViewModel.wantsZapraiser && postViewModel.hasLnAddress()) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
@@ -569,7 +567,7 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
             }
         }
 
-        if (postViewModel.canAddInvoice) {
+        if (postViewModel.canAddInvoice && postViewModel.hasLnAddress()) {
             AddLnInvoiceButton(postViewModel.wantsInvoice) {
                 postViewModel.wantsInvoice = !postViewModel.wantsInvoice
             }
