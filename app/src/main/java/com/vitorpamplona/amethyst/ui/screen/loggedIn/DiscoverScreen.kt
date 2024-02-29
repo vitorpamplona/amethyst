@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -232,7 +231,7 @@ private fun RenderDiscoverFeed(
     viewModel: FeedViewModel,
     routeForLastRead: String?,
     forceEventKind: Int?,
-    listState: ScrollableState,
+    listState: LazyGridState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -251,25 +250,54 @@ private fun RenderDiscoverFeed(
                 FeedError(state.errorMessage) { viewModel.invalidateData() }
             }
             is FeedState.Loaded -> {
-                if (listState is LazyGridState) {
-                    DiscoverFeedColumnsLoaded(
-                        state,
-                        routeForLastRead,
-                        listState,
-                        forceEventKind,
-                        accountViewModel,
-                        nav,
-                    )
-                } else if (listState is LazyListState) {
-                    DiscoverFeedLoaded(
-                        state,
-                        routeForLastRead,
-                        listState,
-                        forceEventKind,
-                        accountViewModel,
-                        nav,
-                    )
-                }
+                DiscoverFeedColumnsLoaded(
+                    state,
+                    routeForLastRead,
+                    listState,
+                    forceEventKind,
+                    accountViewModel,
+                    nav,
+                )
+            }
+            is FeedState.Loading -> {
+                LoadingFeed()
+            }
+        }
+    }
+}
+
+@Composable
+private fun RenderDiscoverFeed(
+    viewModel: FeedViewModel,
+    routeForLastRead: String?,
+    forceEventKind: Int?,
+    listState: LazyListState,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+
+    Crossfade(
+        targetState = feedState,
+        animationSpec = tween(durationMillis = 100),
+        label = "RenderDiscoverFeed",
+    ) { state ->
+        when (state) {
+            is FeedState.Empty -> {
+                FeedEmpty { viewModel.invalidateData() }
+            }
+            is FeedState.FeedError -> {
+                FeedError(state.errorMessage) { viewModel.invalidateData() }
+            }
+            is FeedState.Loaded -> {
+                DiscoverFeedLoaded(
+                    state,
+                    routeForLastRead,
+                    listState,
+                    forceEventKind,
+                    accountViewModel,
+                    nav,
+                )
             }
             is FeedState.Loading -> {
                 LoadingFeed()

@@ -24,9 +24,8 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.MediaUrlImage
@@ -46,18 +45,15 @@ fun LoadUrlPreview(
     if (!automaticallyShowUrlPreview) {
         ClickableUrl(urlText, url)
     } else {
-        var urlPreviewState by
-            remember(url) {
-                mutableStateOf(
-                    UrlCachedPreviewer.cache.get(url) ?: UrlPreviewState.Loading,
-                )
+        val urlPreviewState by
+            produceState(
+                initialValue = UrlCachedPreviewer.cache.get(url) ?: UrlPreviewState.Loading,
+                key1 = url,
+            ) {
+                if (value == UrlPreviewState.Loading) {
+                    accountViewModel.urlPreview(url) { value = it }
+                }
             }
-
-        // Doesn't use a viewModel because of viewModel reusing issues (too many UrlPreview are
-        // created).
-        if (urlPreviewState == UrlPreviewState.Loading) {
-            LaunchedEffect(url) { accountViewModel.urlPreview(url) { urlPreviewState = it } }
-        }
 
         Crossfade(
             targetState = urlPreviewState,

@@ -20,11 +20,19 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Icon
@@ -37,14 +45,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonBoxModifer
-import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonIconButtonModifier
-import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonIconModifier
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -58,21 +69,79 @@ fun RelayBadges(
 
     val relayList by baseNote.live().relayInfo.observeAsState(baseNote.relays)
 
-    Spacer(DoubleVertSpacer)
+    Spacer(StdVertSpacer)
 
     // FlowRow Seems to be a lot faster than LazyVerticalGrid
-    FlowRow {
-        if (expanded) {
-            relayList?.forEach { RenderRelay(it, accountViewModel, nav) }
-        } else {
-            relayList?.getOrNull(0)?.let { RenderRelay(it, accountViewModel, nav) }
-            relayList?.getOrNull(1)?.let { RenderRelay(it, accountViewModel, nav) }
-            relayList?.getOrNull(2)?.let { RenderRelay(it, accountViewModel, nav) }
+    Box(modifier = Modifier.fillMaxWidth().padding(start = 2.dp, end = 1.dp)) {
+        FlowRow(modifier = Modifier.fillMaxWidth()) {
+            if (expanded) {
+                relayList?.forEach { RenderRelay(it, accountViewModel, nav) }
+            } else {
+                relayList?.getOrNull(0)?.let { RenderRelay(it, accountViewModel, nav) }
+                relayList?.getOrNull(1)?.let { RenderRelay(it, accountViewModel, nav) }
+                relayList?.getOrNull(2)?.let { RenderRelay(it, accountViewModel, nav) }
+            }
         }
     }
 
     if (relayList.size > 3 && !expanded) {
         ShowMoreRelaysButton { expanded = true }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Preview
+@Composable
+fun RelayIconLayoutPreview() {
+    Column(modifier = Modifier.width(55.dp)) {
+        Spacer(StdVertSpacer)
+
+        // FlowRow Seems to be a lot faster than LazyVerticalGrid
+        Box(modifier = Modifier.fillMaxWidth().padding(start = 2.dp, end = 1.dp)) {
+            FlowRow {
+                Box(
+                    modifier = Modifier.size(17.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        Modifier.size(13.dp).clip(shape = CircleShape).background(Color.Black),
+                    )
+                }
+                Box(
+                    modifier = Modifier.size(17.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(Modifier.size(13.dp).clip(shape = CircleShape).background(Color.Black))
+                }
+                Box(
+                    modifier = Modifier.size(17.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(Modifier.size(13.dp).clip(shape = CircleShape).background(Color.Black))
+                }
+
+                Box(
+                    modifier = Modifier.size(17.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(Modifier.size(13.dp).clip(shape = CircleShape).background(Color.Black))
+                }
+                Box(
+                    modifier = Modifier.size(17.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(Modifier.size(13.dp).clip(shape = CircleShape).background(Color.Black))
+                }
+                Box(
+                    modifier = Modifier.size(17.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(Modifier.size(13.dp).clip(shape = CircleShape).background(Color.Black))
+                }
+            }
+        }
+
+        ShowMoreRelaysButton { }
     }
 }
 
@@ -84,13 +153,11 @@ private fun ShowMoreRelaysButton(onClick: () -> Unit) {
         verticalAlignment = Alignment.Top,
     ) {
         IconButton(
-            modifier = ShowMoreRelaysButtonIconButtonModifier,
             onClick = onClick,
         ) {
             Icon(
                 imageVector = Icons.Default.ExpandMore,
                 contentDescription = stringResource(id = R.string.expand_relay_list),
-                modifier = ShowMoreRelaysButtonIconModifier,
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
         }

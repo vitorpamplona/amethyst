@@ -146,9 +146,9 @@ val Height4dpModifier = Modifier.height(4.dp)
 val AccountPictureModifier = Modifier.size(55.dp).clip(shape = CircleShape)
 val HeaderPictureModifier = Modifier.size(34.dp).clip(shape = CircleShape)
 
-val ShowMoreRelaysButtonIconButtonModifier = Modifier.size(24.dp)
-val ShowMoreRelaysButtonIconModifier = Modifier.size(15.dp)
-val ShowMoreRelaysButtonBoxModifer = Modifier.fillMaxWidth().height(25.dp)
+val ShowMoreRelaysButtonIconButtonModifier = Modifier.size(15.dp)
+val ShowMoreRelaysButtonIconModifier = Modifier.size(20.dp)
+val ShowMoreRelaysButtonBoxModifer = Modifier.fillMaxWidth().height(17.dp)
 
 val ChatBubbleMaxSizeModifier = Modifier.fillMaxWidth(0.85f)
 

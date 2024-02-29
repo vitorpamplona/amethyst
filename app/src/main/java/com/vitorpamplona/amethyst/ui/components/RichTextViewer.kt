@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
@@ -102,6 +103,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadedBechLink
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.MarkdownTextStyle
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.markdownStyle
 import com.vitorpamplona.amethyst.ui.uriToRoute
@@ -343,6 +345,16 @@ private fun RenderRegular(
                     }
                 }
             }
+        }
+
+        // UrlPreviews and Images have a 5dp spacing down. This also adds the space to Text.
+        val lastElement = state.paragraphs.lastOrNull()?.words?.lastOrNull()
+        if (lastElement !is ImageSegment &&
+            lastElement !is LinkSegment &&
+            lastElement !is InvoiceSegment &&
+            lastElement !is CashuSegment
+        ) {
+            Spacer(modifier = StdVertSpacer)
         }
     }
 }
