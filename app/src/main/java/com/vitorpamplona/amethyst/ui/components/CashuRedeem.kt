@@ -42,9 +42,9 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -66,7 +66,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fasterxml.jackson.databind.node.TextNode
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.ThemeType
-import com.vitorpamplona.amethyst.service.CashuProcessor
+import com.vitorpamplona.amethyst.service.CachedCashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.note.CashuIcon
@@ -85,25 +85,26 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun CashuPreview(
     cashutoken: String,
     accountViewModel: AccountViewModel,
 ) {
-    var cachuData by remember {
-        mutableStateOf<GenericLoadable<CashuToken>>(GenericLoadable.Loading())
-    }
-
-    LaunchedEffect(key1 = cashutoken) {
-        launch(Dispatchers.IO) {
-            val newCachuData = CashuProcessor().parse(cashutoken)
-            launch(Dispatchers.Main) { cachuData = newCachuData }
+    val cashuData by produceState(
+        initialValue = CachedCashuProcessor.cached(cashutoken),
+        key1 = cashutoken,
+    ) {
+        withContext(Dispatchers.IO) {
+            val newToken = CachedCashuProcessor.parse(cashutoken)
+            if (value != newToken) {
+                value = newToken
+            }
         }
     }
 
-    Crossfade(targetState = cachuData, label = "CashuPreview(") {
+    Crossfade(targetState = cashuData, label = "CashuPreview") {
         when (it) {
             is GenericLoadable.Loaded<CashuToken> -> CashuPreview(it.loaded, accountViewModel)
             is GenericLoadable.Error<CashuToken> ->
@@ -160,17 +161,24 @@ fun CashuPreview(
 
     Column(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp)
                 .clip(shape = QuoteBorder)
                 .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(20.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp),
             ) {
                 Icon(
                     painter = painterResource(R.drawable.cashu),
@@ -193,11 +201,17 @@ fun CashuPreview(
                 text = "${token.totalAmount} ${stringResource(id = R.string.sats)}",
                 fontSize = 25.sp,
                 fontWeight = FontWeight.W500,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 10.dp),
             )
 
             Row(
-                modifier = Modifier.padding(top = 5.dp).fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .padding(top = 5.dp)
+                        .fillMaxWidth(),
             ) {
                 var isRedeeming by remember { mutableStateOf(false) }
 
@@ -289,13 +303,17 @@ fun CashuPreviewNew(
 
     Card(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 10.dp)
                 .clip(shape = QuoteBorder),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth().padding(10.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -317,6 +335,7 @@ fun CashuPreviewNew(
             Text(
                 text = "${token.totalAmount} ${stringResource(id = R.string.sats)}",
                 fontSize = 20.sp,
+                modifier = Modifier.padding(top = 5.dp),
             )
 
             Row(modifier = Modifier.padding(top = 5.dp)) {

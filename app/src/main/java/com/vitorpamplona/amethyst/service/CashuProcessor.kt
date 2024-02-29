@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service
 
 import android.content.Context
+import android.util.LruCache
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -41,6 +42,24 @@ data class CashuToken(
     val totalAmount: Long,
     val proofs: JsonNode,
 )
+
+object CachedCashuProcessor {
+    val cashuCache = LruCache<String, GenericLoadable<CashuToken>>(20)
+
+    fun cached(token: String): GenericLoadable<CashuToken> {
+        return cashuCache[token] ?: GenericLoadable.Loading()
+    }
+
+    fun parse(token: String): GenericLoadable<CashuToken> {
+        if (cashuCache[token] !is GenericLoadable.Loaded) {
+            val newCachuData = CashuProcessor().parse(token)
+
+            cashuCache.put(token, newCachuData)
+        }
+
+        return cashuCache[token]
+    }
+}
 
 class CashuProcessor {
     fun parse(cashuToken: String): GenericLoadable<CashuToken> {
