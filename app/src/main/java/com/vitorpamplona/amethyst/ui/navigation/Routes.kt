@@ -240,16 +240,6 @@ sealed class Route(
     }
 }
 
-// **
-// *  Functions below only exist because we have not broken the datasource classes into backend and
-// frontend.
-// **
-@Composable
-fun currentRoute(navController: NavHostController): String? {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    return navBackStackEntry?.destination?.route
-}
-
 open class LatestItem {
     var newestItemPerAccount: Map<String, Note?> = mapOf()
 
