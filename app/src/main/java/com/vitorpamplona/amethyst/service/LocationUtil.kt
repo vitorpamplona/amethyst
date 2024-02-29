@@ -27,6 +27,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.HandlerThread
+import android.util.LruCache
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import kotlinx.coroutines.CancellationException
@@ -92,7 +93,33 @@ class LocationUtil(context: Context) {
         }
 }
 
-class ReverseGeoLocationUtil {
+object CachedGeoLocations {
+    val locationNames = LruCache<String, String>(20)
+
+    fun cached(geoHashStr: String): String? {
+        return locationNames[geoHashStr]
+    }
+
+    suspend fun geoLocate(
+        geoHashStr: String,
+        location: Location,
+        context: Context,
+    ): String? {
+        locationNames[geoHashStr]?.let {
+            return it
+        }
+
+        val name = ReverseGeoLocationUtil().execute(location, context)?.ifBlank { null }
+
+        if (name != null) {
+            locationNames.put(geoHashStr, name)
+        }
+
+        return name
+    }
+}
+
+private class ReverseGeoLocationUtil {
     suspend fun execute(
         location: Location,
         context: Context,

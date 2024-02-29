@@ -101,7 +101,6 @@ import coil.compose.AsyncImagePainter
 import coil.request.SuccessResult
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fonfon.kgeohash.GeoHash
 import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.BaseMediaContent
@@ -115,7 +114,7 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
+import com.vitorpamplona.amethyst.service.CachedGeoLocations
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
@@ -2768,23 +2767,34 @@ fun LoadOts(
 
 @Composable
 fun LoadCityName(
-    geohash: GeoHash,
+    geohashStr: String,
+    onLoading: (@Composable () -> Unit)? = null,
     content: @Composable (String) -> Unit,
 ) {
-    val context = LocalContext.current
-    var cityName by remember(geohash) { mutableStateOf<String>(geohash.toString()) }
+    var cityName by remember(geohashStr) { mutableStateOf(CachedGeoLocations.cached(geohashStr)) }
 
-    LaunchedEffect(key1 = geohash) {
-        launch(Dispatchers.IO) {
-            val newCityName =
-                ReverseGeoLocationUtil().execute(geohash.toLocation(), context)?.ifBlank { null }
-            if (newCityName != null && newCityName != cityName) {
-                cityName = newCityName
+    if (cityName == null) {
+        if (onLoading != null) {
+            onLoading()
+        }
+
+        val context = LocalContext.current
+
+        LaunchedEffect(key1 = geohashStr, context) {
+            launch(Dispatchers.IO) {
+                val geoHash = runCatching { geohashStr.toGeoHash() }.getOrNull()
+                if (geoHash != null) {
+                    val newCityName =
+                        CachedGeoLocations.geoLocate(geohashStr, geoHash.toLocation(), context)?.ifBlank { null }
+                    if (newCityName != null && newCityName != cityName) {
+                        cityName = newCityName
+                    }
+                }
             }
         }
+    } else {
+        cityName?.let { content(it) }
     }
-
-    content(cityName)
 }
 
 @Composable
@@ -2792,24 +2802,21 @@ fun DisplayLocation(
     geohashStr: String,
     nav: (String) -> Unit,
 ) {
-    val geoHash = runCatching { geohashStr.toGeoHash() }.getOrNull()
-    if (geoHash != null) {
-        LoadCityName(geoHash) { cityName ->
-            ClickableText(
-                text = AnnotatedString(cityName),
-                onClick = { nav("Geohash/$geoHash") },
-                style =
-                    LocalTextStyle.current.copy(
-                        color =
-                            MaterialTheme.colorScheme.primary.copy(
-                                alpha = 0.52f,
-                            ),
-                        fontSize = Font14SP,
-                        fontWeight = FontWeight.Bold,
-                    ),
-                maxLines = 1,
-            )
-        }
+    LoadCityName(geohashStr) { cityName ->
+        ClickableText(
+            text = AnnotatedString(cityName),
+            onClick = { nav("Geohash/$geohashStr") },
+            style =
+                LocalTextStyle.current.copy(
+                    color =
+                        MaterialTheme.colorScheme.primary.copy(
+                            alpha = 0.52f,
+                        ),
+                    fontSize = Font14SP,
+                    fontWeight = FontWeight.Bold,
+                ),
+            maxLines = 1,
+        )
     }
 }
 

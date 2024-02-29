@@ -124,7 +124,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.fonfon.kgeohash.toGeoHash
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -134,7 +133,6 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
-import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
 import com.vitorpamplona.amethyst.ui.components.BechLink
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
@@ -144,6 +142,7 @@ import com.vitorpamplona.amethyst.ui.components.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.CancelIcon
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
+import com.vitorpamplona.amethyst.ui.note.LoadCityName
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.PollIcon
 import com.vitorpamplona.amethyst.ui.note.RegularPostIcon
@@ -1172,23 +1171,12 @@ fun FowardZapTo(
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun LocationAsHash(postViewModel: NewPostViewModel) {
-    val context = LocalContext.current
-
     val locationPermissionState =
         rememberPermissionState(
             Manifest.permission.ACCESS_COARSE_LOCATION,
         )
 
     if (locationPermissionState.status.isGranted) {
-        var locationDescriptionFlow by remember(postViewModel) { mutableStateOf<Flow<String>?>(null) }
-
-        DisposableEffect(key1 = Unit) {
-            postViewModel.startLocation(context = context)
-            locationDescriptionFlow = postViewModel.location
-
-            onDispose { postViewModel.stopLocation() }
-        }
-
         Column(
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -1219,7 +1207,7 @@ fun LocationAsHash(postViewModel: NewPostViewModel) {
                     modifier = Modifier.padding(start = 10.dp),
                 )
 
-                locationDescriptionFlow?.let { geoLocation -> DisplayLocationObserver(geoLocation) }
+                DisplayLocationObserver(postViewModel)
             }
 
             Divider()
@@ -1236,41 +1224,39 @@ fun LocationAsHash(postViewModel: NewPostViewModel) {
 }
 
 @Composable
-fun DisplayLocationObserver(geoLocation: Flow<String>) {
-    val location by geoLocation.collectAsStateWithLifecycle(null)
+fun DisplayLocationObserver(postViewModel: NewPostViewModel) {
+    val context = LocalContext.current
+    var locationDescriptionFlow by remember(postViewModel) { mutableStateOf<Flow<String>?>(null) }
 
-    location?.let { DisplayLocationInTitle(geohash = it) }
+    DisposableEffect(key1 = context) {
+        postViewModel.startLocation(context = context)
+        locationDescriptionFlow = postViewModel.location
+
+        onDispose { postViewModel.stopLocation() }
+    }
+
+    locationDescriptionFlow?.let {
+        val location by it.collectAsStateWithLifecycle(null)
+
+        location?.let { DisplayLocationInTitle(geohash = it) }
+    }
 }
 
 @Composable
 fun DisplayLocationInTitle(geohash: String) {
-    val context = LocalContext.current
-
-    var cityName by remember(geohash) { mutableStateOf<String>(geohash) }
-
-    LaunchedEffect(key1 = geohash) {
-        launch(Dispatchers.IO) {
-            val newCityName =
-                ReverseGeoLocationUtil().execute(geohash.toGeoHash().toLocation(), context)?.ifBlank {
-                    null
-                }
-
-            if (newCityName != null && newCityName != cityName) {
-                cityName = newCityName
-            }
-        }
-    }
-
-    if (geohash != "s0000") {
+    LoadCityName(
+        geohashStr = geohash,
+        onLoading = {
+            Spacer(modifier = StdHorzSpacer)
+            LoadingAnimation()
+        },
+    ) { cityName ->
         Text(
             text = cityName,
             fontSize = 20.sp,
             fontWeight = FontWeight.W500,
             modifier = Modifier.padding(start = Size5dp),
         )
-    } else {
-        Spacer(modifier = StdHorzSpacer)
-        LoadingAnimation()
     }
 }
 
