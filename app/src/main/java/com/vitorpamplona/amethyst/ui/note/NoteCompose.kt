@@ -1432,7 +1432,7 @@ fun RenderPoll(
     nav: (String) -> Unit,
 ) {
     val noteEvent = note.event as? PollNoteEvent ?: return
-    val eventContent = remember(note) { noteEvent.content() }
+    val eventContent = noteEvent.content()
 
     if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
         Text(

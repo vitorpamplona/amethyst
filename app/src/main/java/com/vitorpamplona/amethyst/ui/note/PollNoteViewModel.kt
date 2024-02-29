@@ -20,8 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
@@ -36,20 +37,18 @@ import com.vitorpamplona.quartz.events.VALUE_MAXIMUM
 import com.vitorpamplona.quartz.events.VALUE_MINIMUM
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
 
-@Immutable
+@Stable
 data class PollOption(
     val option: Int,
     val descriptor: String,
-    val zappedValue: BigDecimal,
-    val tally: BigDecimal,
-    val consensusThreadhold: Boolean,
-    val zappedByLoggedIn: Boolean,
+    var zappedValue: MutableState<BigDecimal> = mutableStateOf(BigDecimal.ZERO),
+    var tally: MutableState<BigDecimal> = mutableStateOf(BigDecimal.ZERO),
+    var consensusThreadhold: MutableState<Boolean> = mutableStateOf(false),
+    var zappedByLoggedIn: MutableState<Boolean> = mutableStateOf(false),
 )
 
 @Stable
@@ -70,8 +69,8 @@ class PollNoteViewModel : ViewModel() {
     private var totalZapped: BigDecimal = BigDecimal.ZERO
     private var wasZappedByLoggedInAccount: Boolean = false
 
-    private val _tallies = MutableStateFlow<List<PollOption>>(emptyList())
-    val tallies = _tallies.asStateFlow()
+    var canZap = mutableStateOf(false)
+    var tallies: List<PollOption> = emptyList()
 
     fun load(
         acc: Account,
@@ -88,47 +87,44 @@ class PollNoteViewModel : ViewModel() {
         consensusThreshold =
             pollEvent?.getTagLong(CONSENSUS_THRESHOLD)?.toFloat()?.div(100)?.toBigDecimal()
         closedAt = pollEvent?.getTagLong(CLOSED_AT)
+
+        totalZapped = BigDecimal.ZERO
+        wasZappedByLoggedInAccount = false
+
+        canZap.value = checkIfCanZap()
+
+        tallies = pollOptions?.keys?.map { option ->
+            PollOption(
+                option,
+                pollOptions?.get(option) ?: "",
+            )
+        } ?: emptyList()
     }
 
     fun refreshTallies() {
         viewModelScope.launch(Dispatchers.Default) {
             totalZapped = totalZapped()
             wasZappedByLoggedInAccount = false
-            account?.calculateIfNoteWasZappedByAccount(pollNote) { wasZappedByLoggedInAccount = true }
+            account?.calculateIfNoteWasZappedByAccount(pollNote) {
+                wasZappedByLoggedInAccount = true
+                canZap.value = checkIfCanZap()
+            }
 
-            val newOptions =
-                pollOptions?.keys?.map { option ->
-                    val zappedInOption = zappedPollOptionAmount(option)
-
-                    val myTally =
-                        if (totalZapped.compareTo(BigDecimal.ZERO) > 0) {
-                            zappedInOption.divide(totalZapped, 2, RoundingMode.HALF_UP)
-                        } else {
-                            BigDecimal.ZERO
-                        }
-
-                    val cachedZappedByLoggedIn =
-                        account?.userProfile()?.let { it1 -> cachedIsPollOptionZappedBy(option, it1) } ?: false
-
-                    val consensus = consensusThreshold != null && myTally >= consensusThreshold!!
-
-                    PollOption(
-                        option,
-                        pollOptions?.get(option) ?: "",
-                        zappedInOption,
-                        myTally,
-                        consensus,
-                        cachedZappedByLoggedIn,
-                    )
-                }
-
-            _tallies.emit(
-                newOptions ?: emptyList(),
-            )
+            tallies.forEach {
+                it.zappedValue.value = zappedPollOptionAmount(it.option)
+                it.tally.value =
+                    if (totalZapped.compareTo(BigDecimal.ZERO) > 0) {
+                        it.zappedValue.value.divide(totalZapped, 2, RoundingMode.HALF_UP)
+                    } else {
+                        BigDecimal.ZERO
+                    }
+                it.consensusThreadhold.value = consensusThreshold != null && it.tally.value >= consensusThreshold!!
+                it.zappedByLoggedIn.value = account?.userProfile()?.let { it1 -> cachedIsPollOptionZappedBy(it.option, it1) } ?: false
+            }
         }
     }
 
-    fun canZap(): Boolean {
+    fun checkIfCanZap(): Boolean {
         val account = account ?: return false
         val note = pollNote ?: return false
         return account.userProfile() != note.author && !wasZappedByLoggedInAccount

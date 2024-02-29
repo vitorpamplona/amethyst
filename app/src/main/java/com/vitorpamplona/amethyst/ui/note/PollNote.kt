@@ -68,7 +68,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -101,7 +100,7 @@ fun PollNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val pollViewModel: PollNoteViewModel = viewModel(key = "PollNoteViewModel")
+    val pollViewModel: PollNoteViewModel = viewModel(key = "PollNoteViewModel${baseNote.idHex}")
 
     pollViewModel.load(accountViewModel.account, baseNote)
 
@@ -126,11 +125,9 @@ fun PollNote(
 ) {
     WatchZapsAndUpdateTallies(baseNote, pollViewModel)
 
-    val tallies by pollViewModel.tallies.collectAsStateWithLifecycle()
-
-    tallies.forEach { poll_op ->
+    pollViewModel.tallies.forEach { option ->
         OptionNote(
-            poll_op,
+            option,
             pollViewModel,
             baseNote,
             accountViewModel,
@@ -167,9 +164,9 @@ private fun OptionNote(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(vertical = 3.dp),
     ) {
-        if (!pollViewModel.canZap()) {
+        if (!pollViewModel.canZap.value) {
             val color =
-                if (poolOption.consensusThreadhold) {
+                if (poolOption.consensusThreadhold.value) {
                     Color.Green.copy(alpha = 0.32f)
                 } else {
                     MaterialTheme.colorScheme.mediumImportanceLink
@@ -181,8 +178,7 @@ private fun OptionNote(
                 pollViewModel = pollViewModel,
                 nonClickablePrepend = {
                     RenderOptionAfterVote(
-                        poolOption.descriptor,
-                        poolOption.tally.toFloat(),
+                        poolOption,
                         color,
                         canPreview,
                         tags,
@@ -220,8 +216,7 @@ private fun OptionNote(
 
 @Composable
 private fun RenderOptionAfterVote(
-    description: String,
-    totalRatio: Float,
+    poolOption: PollOption,
     color: Color,
     canPreview: Boolean,
     tags: ImmutableListOfLists<String>,
@@ -229,10 +224,9 @@ private fun RenderOptionAfterVote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val totalPercentage = remember(totalRatio) { "${(totalRatio * 100).roundToInt()}%" }
-
     Box(
-        Modifier.fillMaxWidth(0.75f)
+        Modifier
+            .fillMaxWidth(0.75f)
             .clip(shape = QuoteBorder)
             .border(
                 2.dp,
@@ -243,7 +237,9 @@ private fun RenderOptionAfterVote(
         LinearProgressIndicator(
             modifier = Modifier.matchParentSize(),
             color = color,
-            progress = totalRatio,
+            progress = {
+                poolOption.tally.value.toFloat()
+            },
         )
 
         Row(
@@ -251,21 +247,31 @@ private fun RenderOptionAfterVote(
         ) {
             Column(
                 horizontalAlignment = Alignment.End,
-                modifier = remember { Modifier.padding(horizontal = 10.dp).width(40.dp) },
+                modifier =
+                    remember {
+                        Modifier
+                            .padding(horizontal = 10.dp)
+                            .width(45.dp)
+                    },
             ) {
                 Text(
-                    text = totalPercentage,
+                    text = "${(poolOption.tally.value.toFloat() * 100).roundToInt()}%",
                     fontWeight = FontWeight.Bold,
                 )
             }
 
             Column(
-                modifier = remember { Modifier.fillMaxWidth().padding(15.dp) },
+                modifier =
+                    remember {
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 15.dp, horizontal = 10.dp)
+                    },
             ) {
                 TranslatableRichTextViewer(
-                    description,
+                    poolOption.descriptor,
                     canPreview,
-                    remember { Modifier },
+                    Modifier,
                     tags,
                     backgroundColor,
                     accountViewModel,
@@ -286,7 +292,8 @@ private fun RenderOptionBeforeVote(
     nav: (String) -> Unit,
 ) {
     Box(
-        Modifier.fillMaxWidth(0.75f)
+        Modifier
+            .fillMaxWidth(0.75f)
             .clip(shape = QuoteBorder)
             .border(
                 2.dp,
@@ -358,7 +365,7 @@ fun ZapVote(
                             R.string.poll_unable_to_vote,
                             R.string.poll_author_no_vote,
                         )
-                    } else if (pollViewModel.isVoteAmountAtomic() && poolOption.zappedByLoggedIn) {
+                    } else if (pollViewModel.isVoteAmountAtomic() && poolOption.zappedByLoggedIn.value) {
                         // only allow one vote per option when min==max, i.e. atomic vote amount specified
                         accountViewModel.toast(
                             R.string.poll_unable_to_vote,
@@ -443,7 +450,7 @@ fun ZapVote(
 
         clickablePrepend()
 
-        if (poolOption.zappedByLoggedIn) {
+        if (poolOption.zappedByLoggedIn.value) {
             zappingProgress = 1f
             Icon(
                 imageVector = Icons.Default.Bolt,
@@ -471,8 +478,8 @@ fun ZapVote(
     }
 
     // only show tallies after a user has zapped note
-    if (!pollViewModel.canZap()) {
-        val amountStr = remember(poolOption.zappedValue) { showAmount(poolOption.zappedValue) }
+    if (!pollViewModel.canZap.value) {
+        val amountStr = remember(poolOption.zappedValue.value) { showAmount(poolOption.zappedValue.value) }
         Text(
             text = amountStr,
             fontSize = Font14SP,
