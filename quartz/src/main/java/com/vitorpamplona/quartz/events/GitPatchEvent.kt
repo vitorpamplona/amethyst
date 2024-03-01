@@ -60,7 +60,7 @@ class GitPatchEvent(
     fun commitPGPSig() = tags.firstOrNull { it.size > 1 && it[0] == "commit-pgp-sig" }?.get(1)
 
     fun committer() =
-        tags.filter { it.size > 1 && it[0] == "committer" }?.mapNotNull {
+        tags.filter { it.size > 1 && it[0] == "committer" }.mapNotNull {
             Committer(it.getOrNull(1), it.getOrNull(2), it.getOrNull(3), it.getOrNull(4))
         }
 

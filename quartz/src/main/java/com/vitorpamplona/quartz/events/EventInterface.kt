@@ -63,7 +63,7 @@ interface EventInterface {
 
     fun isTaggedUser(idHex: String): Boolean
 
-    fun isTaggedUsers(idHex: Set<String>): Boolean
+    fun isTaggedUsers(idHexes: Set<String>): Boolean
 
     fun isTaggedEvent(idHex: String): Boolean
 
