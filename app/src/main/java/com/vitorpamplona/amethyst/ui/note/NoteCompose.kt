@@ -61,6 +61,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -1088,10 +1089,58 @@ fun InnerNoteWithReactions(
 }
 
 @Stable
-class EditState(
-    val showOriginal: MutableState<Boolean> = mutableStateOf(false),
-    val modificationsInOrder: MutableState<List<Note>> = mutableStateOf(emptyList()),
-)
+class EditState() {
+    private var modificationsList: List<Note> = persistentListOf()
+    private var modificationToShowIndex: Int = -1
+
+    val modificationToShow: MutableState<Note?> = mutableStateOf(null)
+    val showingVersion: MutableState<Int> = mutableStateOf(0)
+
+    fun hasModificationsToShow(): Boolean = modificationsList.isNotEmpty()
+
+    fun isOriginal(): Boolean = modificationToShowIndex < 0
+
+    fun isLatest(): Boolean = modificationToShowIndex == modificationsList.lastIndex
+
+    fun originalVersionId() = 0
+
+    fun lastVersionId() = modificationsList.size
+
+    fun versionId() = modificationToShowIndex + 1
+
+    fun nextModification() {
+        if (modificationToShowIndex < 0) {
+            modificationToShowIndex = 0
+            modificationToShow.value = modificationsList.getOrNull(0)
+        } else {
+            modificationToShowIndex++
+            if (modificationToShowIndex >= modificationsList.size) {
+                modificationToShowIndex = -1
+                modificationToShow.value = null
+            } else {
+                modificationToShow.value = modificationsList.getOrNull(modificationToShowIndex)
+            }
+        }
+
+        showingVersion.value = versionId()
+    }
+
+    fun updateModifications(newModifications: List<Note>) {
+        if (modificationsList != newModifications) {
+            modificationsList = newModifications
+
+            if (newModifications.isEmpty()) {
+                modificationToShow.value = null
+                modificationToShowIndex = -1
+            } else {
+                modificationToShowIndex = newModifications.lastIndex
+                modificationToShow.value = newModifications.last()
+            }
+        }
+
+        showingVersion.value = versionId()
+    }
+}
 
 @Composable
 private fun NoteBody(
@@ -1105,14 +1154,7 @@ private fun NoteBody(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val editState by
-        produceState(initialValue = EditState(), key1 = baseNote) {
-            accountViewModel.findModificationEventsForNote(baseNote) { newModifications ->
-                if (value.modificationsInOrder.value != newModifications) {
-                    value.modificationsInOrder.value = newModifications
-                }
-            }
-        }
+    val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
 
     FirstUserInfoRow(
         baseNote = baseNote,
@@ -1168,7 +1210,7 @@ private fun RenderNoteRow(
     backgroundColor: MutableState<Color>,
     makeItShort: Boolean,
     canPreview: Boolean,
-    editState: EditState,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -1358,7 +1400,7 @@ fun RenderTextEvent(
     makeItShort: Boolean,
     canPreview: Boolean,
     backgroundColor: MutableState<Color>,
-    editState: EditState,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -1371,10 +1413,10 @@ fun RenderTextEvent(
                 derivedStateOf {
                     val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
                     val newBody =
-                        if (editState.showOriginal.value || editState.modificationsInOrder.value.isEmpty()) {
-                            body
+                        if (editState.value is GenericLoadable.Loaded) {
+                            (editState.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value?.event?.content() ?: body
                         } else {
-                            editState.modificationsInOrder.value.firstOrNull()?.event?.content() ?: body
+                            body
                         }
 
                     if (!subject.isNullOrBlank() && !newBody.split("\n")[0].contains(subject)) {
@@ -2822,7 +2864,7 @@ fun DisplayLocation(
 fun FirstUserInfoRow(
     baseNote: Note,
     showAuthorPicture: Boolean,
-    editState: EditState,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -2857,8 +2899,10 @@ fun FirstUserInfoRow(
             DisplayFollowingHashtagsInPost(baseNote, accountViewModel, nav)
         }
 
-        if (!editState.modificationsInOrder.value.isEmpty()) {
-            DisplayEditStatus(editState.showOriginal)
+        if (editState.value is GenericLoadable.Loaded) {
+            (editState.value as? GenericLoadable.Loaded<EditState>)?.loaded?.let {
+                DisplayEditStatus(it)
+            }
         }
 
         TimeAgo(baseNote)
@@ -2868,15 +2912,69 @@ fun FirstUserInfoRow(
 }
 
 @Composable
-fun DisplayEditStatus(showOriginal: MutableState<Boolean>) {
+fun observeEdits(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+): State<GenericLoadable<EditState>> {
+    val editState =
+        remember(baseNote.idHex) {
+            val cached = accountViewModel.cachedModificationEventsForNote(baseNote)
+            mutableStateOf(
+                if (cached != null) {
+                    if (cached.isEmpty()) {
+                        GenericLoadable.Empty<EditState>()
+                    } else {
+                        val state = EditState()
+                        state.updateModifications(cached)
+                        GenericLoadable.Loaded<EditState>(state)
+                    }
+                } else {
+                    GenericLoadable.Loading<EditState>()
+                },
+            )
+        }
+
+    val updatedNote = baseNote.live().innerModifications.observeAsState()
+
+    LaunchedEffect(key1 = updatedNote) {
+        updatedNote.value?.note?.let {
+            accountViewModel.findModificationEventsForNote(it) { newModifications ->
+                if (newModifications.isEmpty()) {
+                    if (editState.value !is GenericLoadable.Empty) {
+                        editState.value = GenericLoadable.Empty<EditState>()
+                    }
+                } else {
+                    if (editState.value is GenericLoadable.Loaded) {
+                        (editState.value as? GenericLoadable.Loaded<EditState>)?.loaded?.updateModifications(newModifications)
+                    } else {
+                        val state = EditState()
+                        state.updateModifications(newModifications)
+                        editState.value = GenericLoadable.Loaded(state)
+                    }
+                }
+            }
+        }
+    }
+
+    return editState
+}
+
+@Composable
+fun DisplayEditStatus(editState: EditState) {
     ClickableText(
         text =
-            if (showOriginal.value) {
-                buildAnnotatedString { append(stringResource(id = R.string.original)) }
-            } else {
-                buildAnnotatedString { append(stringResource(id = R.string.edited)) }
+            buildAnnotatedString {
+                if (editState.showingVersion.value == editState.originalVersionId()) {
+                    append(stringResource(id = R.string.original))
+                } else if (editState.showingVersion.value == editState.lastVersionId()) {
+                    append(stringResource(id = R.string.edited))
+                } else {
+                    append(stringResource(id = R.string.edited_number, editState.versionId()))
+                }
             },
-        onClick = { showOriginal.value = !showOriginal.value },
+        onClick = {
+            editState.nextModification()
+        },
         style =
             LocalTextStyle.current.copy(
                 color = MaterialTheme.colorScheme.placeholderText,

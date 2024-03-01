@@ -36,8 +36,8 @@ class TypedFilter(
         val factory = Event.mapper.nodeFactory
 
         return factory.objectNode().apply {
-            put("types", typesToJson(types))
-            put("filter", filterToJson(filter))
+            replace("types", typesToJson(types))
+            replace("filter", filterToJson(filter))
         }
     }
 
@@ -50,26 +50,26 @@ class TypedFilter(
         val factory = Event.mapper.nodeFactory
         return factory.objectNode().apply {
             filter.ids?.run {
-                put(
+                replace(
                     "ids",
                     factory.arrayNode(filter.ids.size).apply { filter.ids.forEach { add(it) } },
                 )
             }
             filter.authors?.run {
-                put(
+                replace(
                     "authors",
                     factory.arrayNode(filter.authors.size).apply { filter.authors.forEach { add(it) } },
                 )
             }
             filter.kinds?.run {
-                put(
+                replace(
                     "kinds",
                     factory.arrayNode(filter.kinds.size).apply { filter.kinds.forEach { add(it) } },
                 )
             }
             filter.tags?.run {
                 entries.forEach { kv ->
-                    put(
+                    replace(
                         "#${kv.key}",
                         factory.arrayNode(kv.value.size).apply { kv.value.forEach { add(it) } },
                     )

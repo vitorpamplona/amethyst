@@ -58,7 +58,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -86,6 +85,7 @@ import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InlineCarrousel
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
@@ -132,6 +132,7 @@ import com.vitorpamplona.amethyst.ui.note.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.RenderRepost
 import com.vitorpamplona.amethyst.ui.note.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.VideoDisplay
+import com.vitorpamplona.amethyst.ui.note.observeEdits
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -377,20 +378,13 @@ fun NoteMaster(
             onClick = { showHiddenNote = true },
         )
     } else {
-        val editState by
-            produceState(initialValue = EditState(), key1 = baseNote) {
-                accountViewModel.findModificationEventsForNote(baseNote) { newModifications ->
-                    if (value.modificationsInOrder.value != newModifications) {
-                        value.modificationsInOrder.value = newModifications
-                    }
-                }
-            }
-
         Column(
             modifier
                 .fillMaxWidth()
                 .padding(top = 10.dp),
         ) {
+            val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
+
             Row(
                 modifier =
                     Modifier
@@ -421,8 +415,10 @@ fun NoteMaster(
                             DisplayFollowingHashtagsInPost(baseNote, accountViewModel, nav)
                         }
 
-                        if (!editState.modificationsInOrder.value.isEmpty()) {
-                            DisplayEditStatus(editState.showOriginal)
+                        if (editState.value is GenericLoadable.Loaded) {
+                            (editState.value as? GenericLoadable.Loaded<EditState>)?.loaded?.let {
+                                DisplayEditStatus(it)
+                            }
                         }
 
                         Text(
@@ -850,9 +846,9 @@ private fun RenderWikiHeaderForThreadPreview() {
     val accountViewModel = mockAccountViewModel()
     val nav: (String) -> Unit = {}
 
-    val editState by
+    val editState =
         remember {
-            mutableStateOf(EditState())
+            mutableStateOf(GenericLoadable.Empty<EditState>())
         }
 
     runBlocking {

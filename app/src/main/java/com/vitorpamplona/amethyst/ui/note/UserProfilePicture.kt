@@ -483,7 +483,10 @@ fun NoteDropDownMenu(
 
     if (wantsToEditPost.value) {
         EditPostView(
-            onClose = { wantsToEditPost.value = false },
+            onClose = {
+                popupExpanded.value = false
+                wantsToEditPost.value = false
+            },
             edit = note,
             accountViewModel = accountViewModel,
             nav = nav,

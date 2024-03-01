@@ -94,7 +94,9 @@ object Nip19Bech32 {
             val key = matcher.group(3) // bech32
             val additionalChars = matcher.group(4) // additional chars
 
-            return parseComponents(type!!, key, additionalChars)
+            if (type == null) return null
+
+            return parseComponents(type, key, additionalChars)
         } catch (e: Throwable) {
             Log.e("NIP19 Parser", "Issue trying to Decode NIP19 $uri: ${e.message}", e)
         }

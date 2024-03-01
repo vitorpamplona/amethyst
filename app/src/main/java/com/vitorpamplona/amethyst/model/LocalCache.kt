@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model
 
 import android.util.Log
+import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -1402,6 +1403,13 @@ object LocalCache {
 
         note.loadEvent(event, author, emptyList())
 
+        event.editedNote()?.let {
+            getNoteIfExists(it)?.let { editedNote ->
+                modificationCache.remove(editedNote.idHex)
+                editedNote.liveSet?.innerModifications?.invalidateData()
+            }
+        }
+
         refreshObservers(note)
     }
 
@@ -1716,15 +1724,31 @@ object LocalCache {
         return minTime
     }
 
+    val modificationCache = LruCache<HexKey, List<Note>>(20)
+
+    fun cachedModificationEventsForNote(note: Note): List<Note>? {
+        return modificationCache[note.idHex]
+    }
+
     suspend fun findLatestModificationForNote(note: Note): List<Note> {
         checkNotInMainThread()
+
+        modificationCache[note.idHex]?.let {
+            return it
+        }
+
         val time = TimeUtils.now()
 
-        return noteListCache.filter { item ->
-            val noteEvent = item.event
+        val newNotes =
+            noteListCache.filter { item ->
+                val noteEvent = item.event
 
-            noteEvent is TextNoteModificationEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time)
-        }
+                noteEvent is TextNoteModificationEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time)
+            }.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
+
+        modificationCache.put(note.idHex, newNotes)
+
+        return newNotes
     }
 
     fun cleanObservers() {

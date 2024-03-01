@@ -932,6 +932,8 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
+    fun cachedModificationEventsForNote(note: Note) = LocalCache.cachedModificationEventsForNote(note)
+
     suspend fun findModificationEventsForNote(
         note: Note,
         onResult: (List<Note>) -> Unit,

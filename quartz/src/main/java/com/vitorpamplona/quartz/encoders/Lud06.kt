@@ -30,7 +30,7 @@ class Lud06 {
 
     fun toLud16(str: String): String? {
         return try {
-            val url = toLnUrlp(str)
+            val url = toLnUrlp(str) ?: return null
 
             val matcher = LNURLP_PATTERN.matcher(url)
             if (matcher.find()) {
