@@ -16,6 +16,7 @@
     <string name="spam">Spam</string>
     <string name="impersonation">Representação</string>
     <string name="illegal_behavior">Comportamento ilegal</string>
+    <string name="other">Outro</string>
     <string name="unknown">Desconhecido</string>
     <string name="relay_icon">Ícone do relay</string>
     <string name="unknown_author">Autor desconhecido</string>
@@ -23,6 +24,9 @@
     <string name="copy_user_pubkey">Copiar PubKey do usuário</string>
     <string name="copy_note_id">Copiar ID da Nota</string>
     <string name="broadcast">Transmitir</string>
+    <string name="timestamp_it">Carimbá-lo com data/hora</string>
+    <string name="timestamp_pending">Carimbo de data/hora: Confirmações pendentes</string>
+    <string name="timestamp_pending_short">OTS: Pendente</string>
     <string name="request_deletion">Pedir para excluir</string>
     <string name="block_report">Bloquear / Denunciar</string>
     <string name="block_hide_user"><![CDATA[Bloquear e ocultar usuário]]></string>
@@ -43,6 +47,7 @@
     <string name="view_count">Contagem de visualizações</string>
     <string name="boost">Impulsionar</string>
     <string name="boosted">impulsionado</string>
+    <string name="edited">editado</string>
     <string name="quote">Citar</string>
     <string name="fork">Garfo</string>
     <string name="new_amount_in_sats">Novo Valor em Sats</string>
@@ -661,14 +666,7 @@
     <string name="git_repository">Repositório Git: %1$s</string>
     <string name="git_web_address">Site:</string>
     <string name="git_clone_address">Clonar:</string>
-    <string name="timestamp_it">Carimbá-lo com data/hora</string>
-    <string name="timestamp_pending">Carimbo de data/hora: Confirmações pendentes</string>
-    <string name="timestamp_pending_short">OTS: Pendente</string>
-    <string name="edited">editado</string>
-    <string name="original">original</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Prova de Carimbo de data/hora</string>
     <string name="ots_info_description">Há prova de que esta postagem foi assinada antes de %1$s. A prova foi carimbada no blockchain do Bitcoin naquela data e hora.</string>
     <string name="edit_post">Editar postagem</string>
-    <string name="other">Outro</string>
 </resources>
