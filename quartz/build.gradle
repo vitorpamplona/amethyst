@@ -33,11 +33,12 @@ android {
         jvmTarget = '17'
         freeCompilerArgs += "-Xstring-concat=inline"
     }
-
     packagingOptions {
-        // delete native scrypt lib because we cannot use dylibs in android
-        exclude '**/libscrypt.dylib'
+        resources {
+            excludes += ['**/libscrypt.dylib']
+        }
     }
+
 }
 
 dependencies {

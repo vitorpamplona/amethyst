@@ -145,13 +145,12 @@ android {
         // Should match compose version : https://developer.android.com/jetpack/androidx/releases/compose-kotlin
         kotlinCompilerExtensionVersion "1.5.8"
     }
-
     packagingOptions {
         resources {
-            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+            excludes += ['/META-INF/{AL2.0,LGPL2.1}', '**/libscrypt.dylib']
         }
-        exclude '**/libscrypt.dylib'
     }
+
 
     lint {
         disable 'MissingTranslation'
