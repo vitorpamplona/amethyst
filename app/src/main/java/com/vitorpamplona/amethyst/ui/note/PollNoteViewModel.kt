@@ -111,14 +111,17 @@ class PollNoteViewModel : ViewModel() {
             }
 
             tallies.forEach {
-                it.zappedValue.value = zappedPollOptionAmount(it.option)
-                it.tally.value =
-                    if (totalZapped.compareTo(BigDecimal.ZERO) > 0) {
-                        it.zappedValue.value.divide(totalZapped, 2, RoundingMode.HALF_UP)
+                val zappedValue = zappedPollOptionAmount(it.option)
+                val tallyValue =
+                    if (totalZapped > BigDecimal.ZERO) {
+                        zappedValue.divide(totalZapped, 2, RoundingMode.HALF_UP)
                     } else {
                         BigDecimal.ZERO
                     }
-                it.consensusThreadhold.value = consensusThreshold != null && it.tally.value >= consensusThreshold!!
+
+                it.zappedValue.value = zappedValue
+                it.tally.value = tallyValue
+                it.consensusThreadhold.value = consensusThreshold != null && tallyValue >= consensusThreshold!!
                 it.zappedByLoggedIn.value = account?.userProfile()?.let { it1 -> cachedIsPollOptionZappedBy(it.option, it1) } ?: false
             }
         }
