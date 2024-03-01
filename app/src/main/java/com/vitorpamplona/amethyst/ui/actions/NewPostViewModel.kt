@@ -280,7 +280,9 @@ open class NewPostViewModel() : ViewModel() {
             }
 
             it.author?.let {
-                if (this.pTags?.contains(it) != true) {
+                if (this.pTags == null) {
+                    this.pTags = listOf(it)
+                } else if (this.pTags?.contains(it) != true) {
                     this.pTags = listOf(it) + (this.pTags ?: emptyList())
                 }
             }

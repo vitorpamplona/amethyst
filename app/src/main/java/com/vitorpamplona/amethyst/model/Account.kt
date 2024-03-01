@@ -1420,8 +1420,8 @@ class Account(
             eventId = idHex,
             signer = signer,
         ) {
-            Client.send(it, relayList = relayList)
             LocalCache.justConsume(it, null)
+            Client.send(it, relayList = relayList)
         }
     }
 
