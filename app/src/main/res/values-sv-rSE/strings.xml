@@ -660,4 +660,14 @@
     <string name="git_repository">Git Repository: %1$s</string>
     <string name="git_web_address">Webbplats:</string>
     <string name="git_clone_address">Klona:</string>
+    <string name="timestamp_it">Tidsstämpla det</string>
+    <string name="timestamp_pending">Tidsstämpel: Väntar på bekräftelser</string>
+    <string name="timestamp_pending_short">OTS: Väntar</string>
+    <string name="edited">redigerat</string>
+    <string name="original">original</string>
+    <string name="existed_since">OTS: %1$s</string>
+    <string name="ots_info_title">Tidsstämpel Bevis</string>
+    <string name="ots_info_description">Det finns bevis på att detta inlägg signerades någon gång före %1$s. Beviset stämplades i Bitcoin-blockchainen vid det datumet och den tiden.</string>
+    <string name="edit_post">Redigera inlägg</string>
+    <string name="other">Annat</string>
 </resources>
