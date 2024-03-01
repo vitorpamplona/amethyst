@@ -608,7 +608,7 @@ fun NoteMaster(
                 DisplayZapSplits(noteEvent, false, accountViewModel, nav)
             }
 
-            ReactionsRow(note, true, accountViewModel, nav)
+            ReactionsRow(note, true, editState, accountViewModel, nav)
 
             Divider(
                 thickness = DividerThickness,

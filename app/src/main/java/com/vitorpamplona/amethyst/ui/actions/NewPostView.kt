@@ -186,6 +186,7 @@ fun NewPostView(
     baseReplyTo: Note? = null,
     quote: Note? = null,
     fork: Note? = null,
+    version: Note? = null,
     enableMessageInterface: Boolean = false,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -201,7 +202,7 @@ fun NewPostView(
     var relayList = remember { accountViewModel.account.activeWriteRelays().toImmutableList() }
 
     LaunchedEffect(Unit) {
-        postViewModel.load(accountViewModel, baseReplyTo, quote, fork)
+        postViewModel.load(accountViewModel, baseReplyTo, quote, fork, version)
 
         launch(Dispatchers.IO) {
             postViewModel.imageUploadingError.collect { error ->

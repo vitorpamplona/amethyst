@@ -180,6 +180,7 @@ open class NewPostViewModel() : ViewModel() {
         replyingTo: Note?,
         quote: Note?,
         fork: Note?,
+        version: Note?,
     ) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
@@ -244,7 +245,7 @@ open class NewPostViewModel() : ViewModel() {
         }
 
         fork?.let {
-            message = TextFieldValue(it.event?.content() ?: "")
+            message = TextFieldValue(version?.event?.content() ?: it.event?.content() ?: "")
             urlPreview = findUrlInMessage()
 
             it.event?.isSensitive()?.let {

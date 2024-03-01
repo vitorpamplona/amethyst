@@ -1025,6 +1025,7 @@ fun InnerNoteWithReactions(
     nav: (String) -> Unit,
 ) {
     val notBoostedNorQuote = !isBoostedNote && !isQuotedNote
+    val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
 
     Row(
         modifier =
@@ -1057,6 +1058,7 @@ fun InnerNoteWithReactions(
                 canPreview = canPreview,
                 showSecondRow = showSecondRow,
                 backgroundColor = backgroundColor,
+                editState = editState,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -1075,6 +1077,7 @@ fun InnerNoteWithReactions(
             ReactionsRow(
                 baseNote = baseNote,
                 showReactionDetail = notBoostedNorQuote,
+                editState = editState,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -1151,11 +1154,10 @@ private fun NoteBody(
     canPreview: Boolean = true,
     showSecondRow: Boolean,
     backgroundColor: MutableState<Color>,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
-
     FirstUserInfoRow(
         baseNote = baseNote,
         showAuthorPicture = showAuthorPicture,
