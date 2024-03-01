@@ -47,7 +47,7 @@ class TextNoteModificationEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (TextNoteModificationEvent) -> Unit,
         ) {
-            val tags = arrayOf(arrayOf("e", eventId), arrayOf("alt", CalendarDateSlotEvent.ALT))
+            val tags = arrayOf(arrayOf("e", eventId), arrayOf("alt", ALT))
             signer.sign(createdAt, KIND, tags, content, onReady)
         }
     }
