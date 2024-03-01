@@ -57,7 +57,7 @@ class GitReplyEvent(
 
     companion object {
         const val KIND = 1622
-        const val ALT = "A Git Issue"
+        const val ALT = "A Git Reply"
 
         fun create(
             patch: String,
