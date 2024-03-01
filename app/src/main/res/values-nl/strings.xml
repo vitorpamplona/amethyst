@@ -16,6 +16,7 @@
     <string name="spam">Spam</string>
     <string name="impersonation">Imitatie</string>
     <string name="illegal_behavior">Illegaal gedrag</string>
+    <string name="other">Overige</string>
     <string name="unknown">Onbekend</string>
     <string name="relay_icon">Relay icoon</string>
     <string name="unknown_author">Onbekende auteur</string>
@@ -23,6 +24,9 @@
     <string name="copy_user_pubkey">Kopieer auteur ID</string>
     <string name="copy_note_id">Kopieer note ID</string>
     <string name="broadcast">Verzenden</string>
+    <string name="timestamp_it">Tijdstempel</string>
+    <string name="timestamp_pending">Tijdstempel: in behandeling zijnde bevestigingen</string>
+    <string name="timestamp_pending_short">OTS: In behandeling</string>
     <string name="request_deletion">Verwijdering aanvragen</string>
     <string name="block_report">Blokkeren / Rapporteren</string>
     <string name="block_hide_user"><![CDATA[Blokkeer en verberg gebruiker]]></string>
@@ -43,7 +47,10 @@
     <string name="view_count">Aantal keer bekeken</string>
     <string name="boost">Boost</string>
     <string name="boosted">boosted</string>
+    <string name="edited">gewijzigd</string>
+    <string name="original">origineel</string>
     <string name="quote">Citaat</string>
+    <string name="fork">Fork</string>
     <string name="new_amount_in_sats">Nieuw bedrag in sats</string>
     <string name="add">Toevoegen</string>
     <string name="replying_to">"reageert op "</string>
@@ -139,12 +146,15 @@
     <string name="clear">Wissen</string>
     <string name="app_logo">App logo</string>
     <string name="nsec_npub_hex_private_key">nsec.. of npub..</string>
+    <string name="ncryptsec_password">wachtwoord om de sleutel te openen</string>
     <string name="show_password">Toon wachtwoord</string>
     <string name="hide_password">Verberg wachtwoord</string>
     <string name="invalid_key">Ongeldige sleutel</string>
+    <string name="invalid_key_with_message">Ongeldige sleutel: %1$s</string>
     <string name="i_accept_the">"Ik accepteer de "</string>
     <string name="terms_of_use">gebruiksvoorwaarden</string>
     <string name="acceptance_of_terms_is_required">Accepteren van de voorwaarden is vereist</string>
+    <string name="password_is_required">Wachtwoord is vereist</string>
     <string name="key_is_required">Sleutel is vereist</string>
     <string name="name_is_required">Een naam is verplicht</string>
     <string name="login">Inloggen</string>
@@ -195,8 +205,19 @@
     <string name="mark_all_new_as_read">Nieuwe markeren als gelezen</string>
     <string name="mark_all_as_read">Alles markeren als gelezen</string>
     <string name="backup_keys">Back-up sleutels</string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Sleutel back-up en veiligheidstips
+        \n\nUw account is beveiligd met een privésleutel. De sleutel is een lange, willekeurige reeks die begint met **nsec1**. Iedereen die toegang heeft tot uw privésleutel kan inhoud publiceren met uw identiteit.
+        \n\n- Voer uw privésleutel **nooit** in een website of software die u niet vertrouwt.
+        \n- Amethyst ontwikkelaars zullen u **nooit** om uw privésleutel vragen.
+        \n- **Bewaar** een veilige back-up van uw privésleutel voor accountherstel. Wij raden u aan een wachtwoordmanager te gebruiken.
+    </string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">        Voor meer veiligheid kan je je sleutel versleutelen met een wachtwoord. Deze sleutel begint met **ncryptsec1** en kan niet worden gebruikt zonder uw wachtwoord.
+        \n\nAls je je wachtwoord verliest, je kan je sleutel niet herstellen.
+    </string>
+    <string name="failed_to_encrypt_key">Versleutelen van uw privésleutel is mislukt</string>
     <string name="secret_key_copied_to_clipboard">Privésleutel (nsec) gekopieerd naar klembord</string>
     <string name="copy_my_secret_key">Kopieer mijn privésleutel</string>
+    <string name="encrypt_and_copy_my_secret_key">Versleutel en kopieer mijn geheime sleutel</string>
     <string name="biometric_authentication_failed">Authenticatie mislukt</string>
     <string name="biometric_authentication_failed_explainer">Biometrie kon de eigenaar van deze telefoon niet verifiëren</string>
     <string name="biometric_authentication_failed_explainer_with_error">Biometrie kon de eigenaar van deze telefoon niet verifiëren. Fout: %1$s</string>
@@ -634,4 +655,21 @@
     <string name="show_npub_as_a_qr_code">Toon npub als een QR-code</string>
     <string name="invalid_nip19_uri">Ongeldig adres</string>
     <string name="invalid_nip19_uri_description">Amethist ontving een URI om te openen, maar die uri was ongeldig: %1$s</string>
+    <string name="zap_the_devs_title">Zap de devs!</string>
+    <string name="zap_the_devs_description">Jouw donatie helpt ons om een verschil te maken. Elke sat telt!</string>
+    <string name="donate_now">Nu doneren</string>
+    <string name="brought_to_you_by">werd je aangeboden door:</string>
+    <string name="this_version_brought_to_you_by">Deze versie werd je aangeboden door:</string>
+    <string name="version_name">Versie %1$s</string>
+    <string name="thank_you">Bedankt!</string>
+    <string name="max_limit">Max. limiet</string>
+    <string name="restricted_writes">Beperkte schrijfrechten</string>
+    <string name="forked_tag">FORK</string>
+    <string name="git_repository">Git Repository: %1$s</string>
+    <string name="git_web_address">Web:</string>
+    <string name="git_clone_address">Kopiëren:</string>
+    <string name="existed_since">OTS: %1$s</string>
+    <string name="ots_info_title">Bewijs van tijdstempel</string>
+    <string name="ots_info_description">Er is bewijs dat dit bericht enige tijd voor %1$sis getekend. Het bewijs is op dat tijdstip en op dat moment getypeerd in de Bitcoin-blockchain.</string>
+    <string name="edit_post">Bericht wijzigen</string>
 </resources>
