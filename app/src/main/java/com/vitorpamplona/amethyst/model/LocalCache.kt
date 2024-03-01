@@ -1733,6 +1733,8 @@ object LocalCache {
     suspend fun findLatestModificationForNote(note: Note): List<Note> {
         checkNotInMainThread()
 
+        val originalAuthor = note.author?.pubkeyHex ?: return emptyList()
+
         modificationCache[note.idHex]?.let {
             return it
         }
@@ -1743,7 +1745,7 @@ object LocalCache {
             noteListCache.filter { item ->
                 val noteEvent = item.event
 
-                noteEvent is TextNoteModificationEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time)
+                noteEvent is TextNoteModificationEvent && noteEvent.pubKey == originalAuthor && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time)
             }.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
 
         modificationCache.put(note.idHex, newNotes)
