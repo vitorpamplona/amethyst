@@ -34,6 +34,8 @@ class TextNoteModificationEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun editedNote() = firstTaggedEvent()
+
     companion object {
         const val KIND = 1010
         const val ALT = "Content Change Event"

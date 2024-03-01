@@ -51,6 +51,7 @@
     <string name="boost">Boost</string>
     <string name="boosted">boosted</string>
     <string name="edited">edited</string>
+    <string name="edited_number">edit #%1$s</string>
     <string name="original">original</string>
     <string name="quote">Quote</string>
     <string name="fork">Fork</string>
