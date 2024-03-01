@@ -1406,6 +1406,10 @@ object LocalCache {
         event.editedNote()?.let {
             checkGetOrCreateNote(it)?.let { editedNote ->
                 modificationCache.remove(editedNote.idHex)
+                // if it is a new post from the user, must update list of Notes to quickly update the user.
+                if (relay == null) {
+                    updateListCache()
+                }
                 editedNote.liveSet?.innerModifications?.invalidateData()
             }
         }
@@ -2132,8 +2136,8 @@ class LocalCacheLiveData {
     fun invalidateData(newNote: Note) {
         bundler.invalidateList(newNote) {
                 bundledNewNotes ->
-            _newEventBundles.emit(bundledNewNotes)
             LocalCache.updateListCache()
+            _newEventBundles.emit(bundledNewNotes)
         }
     }
 }
