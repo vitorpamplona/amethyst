@@ -16,6 +16,7 @@
     <string name="spam">Spam</string>
     <string name="impersonation">Imitation</string>
     <string name="illegal_behavior">Olagligt beteende</string>
+    <string name="other">Annat</string>
     <string name="unknown">Okänd</string>
     <string name="relay_icon">Relä ikon</string>
     <string name="unknown_author">Okänd användare</string>
@@ -23,6 +24,9 @@
     <string name="copy_user_pubkey">Kopiera användarens ID</string>
     <string name="copy_note_id">Kopiera anteckningens ID</string>
     <string name="broadcast">Sänd ut</string>
+    <string name="timestamp_it">Tidsstämpla det</string>
+    <string name="timestamp_pending">Tidsstämpel: Väntar på bekräftelser</string>
+    <string name="timestamp_pending_short">OTS: Väntar</string>
     <string name="request_deletion">Begär radering</string>
     <string name="block_report">Blockera / Rapportera</string>
     <string name="block_hide_user"><![CDATA[Blockera och göm användare]]></string>
@@ -43,6 +47,7 @@
     <string name="view_count">Antal visningar</string>
     <string name="boost">Boosta</string>
     <string name="boosted">boostad</string>
+    <string name="edited">redigerat</string>
     <string name="quote">Citera</string>
     <string name="fork">Förgrening</string>
     <string name="new_amount_in_sats">Nytt belopp i Sats</string>
@@ -660,14 +665,7 @@
     <string name="git_repository">Git Repository: %1$s</string>
     <string name="git_web_address">Webbplats:</string>
     <string name="git_clone_address">Klona:</string>
-    <string name="timestamp_it">Tidsstämpla det</string>
-    <string name="timestamp_pending">Tidsstämpel: Väntar på bekräftelser</string>
-    <string name="timestamp_pending_short">OTS: Väntar</string>
-    <string name="edited">redigerat</string>
-    <string name="original">original</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Tidsstämpel Bevis</string>
     <string name="ots_info_description">Det finns bevis på att detta inlägg signerades någon gång före %1$s. Beviset stämplades i Bitcoin-blockchainen vid det datumet och den tiden.</string>
     <string name="edit_post">Redigera inlägg</string>
-    <string name="other">Annat</string>
 </resources>

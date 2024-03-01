@@ -16,6 +16,7 @@
     <string name="spam">Spam</string>
     <string name="impersonation">Vortäuschung</string>
     <string name="illegal_behavior">Illegales Verhalten</string>
+    <string name="other">Andere</string>
     <string name="unknown">Unbekannt</string>
     <string name="relay_icon">Relay-Symbol</string>
     <string name="unknown_author">Unbekannter Autor</string>
@@ -23,6 +24,9 @@
     <string name="copy_user_pubkey">Autor-ID kopieren</string>
     <string name="copy_note_id">Notiz-ID kopieren</string>
     <string name="broadcast">Übertragungen</string>
+    <string name="timestamp_it">Zeitstempel es</string>
+    <string name="timestamp_pending">Zeitstempel: Ausstehende Bestätigungen</string>
+    <string name="timestamp_pending_short">OTS: Ausstehend</string>
     <string name="request_deletion">Löschung beantragen</string>
     <string name="block_report">Blockieren / Melden</string>
     <string name="block_hide_user"><![CDATA[Benutzer blockieren und ausblenden]]></string>
@@ -43,6 +47,8 @@
     <string name="view_count">Aufrufe</string>
     <string name="boost">Boost</string>
     <string name="boosted">boosted</string>
+    <string name="edited">bearbeitet</string>
+    <string name="original">Original</string>
     <string name="quote">Zitat</string>
     <string name="fork">Fork</string>
     <string name="new_amount_in_sats">Neuer Betrag in Sats</string>
@@ -666,14 +672,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="git_repository">Git Repository: %1$s</string>
     <string name="git_web_address">Internet:</string>
     <string name="git_clone_address">Klonen:</string>
-    <string name="timestamp_it">Zeitstempel es</string>
-    <string name="timestamp_pending">Zeitstempel: Ausstehende Bestätigungen</string>
-    <string name="timestamp_pending_short">OTS: Ausstehend</string>
-    <string name="edited">bearbeitet</string>
-    <string name="original">Original</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Zeitstempel Beweis</string>
     <string name="ots_info_description">Es gibt einen Beweis, dass dieser Beitrag irgendwann vor %1$s signiert wurde. Der Beweis wurde zu diesem Datum und Uhrzeit in der Bitcoin-Blockchain gestempelt.</string>
     <string name="edit_post">Beitrag bearbeiten</string>
-    <string name="other">Andere</string>
 </resources>
