@@ -76,29 +76,31 @@ class PollNoteViewModel : ViewModel() {
         acc: Account,
         note: Note?,
     ) {
-        account = acc
-        pollNote = note
-        pollEvent = pollNote?.event as PollNoteEvent
-        pollOptions = pollEvent?.pollOptions()
-        valueMaximum = pollEvent?.getTagLong(VALUE_MAXIMUM)
-        valueMinimum = pollEvent?.getTagLong(VALUE_MINIMUM)
-        valueMinimumBD = valueMinimum?.let { BigDecimal(it) }
-        valueMaximumBD = valueMaximum?.let { BigDecimal(it) }
-        consensusThreshold =
-            pollEvent?.getTagLong(CONSENSUS_THRESHOLD)?.toFloat()?.div(100)?.toBigDecimal()
-        closedAt = pollEvent?.getTagLong(CLOSED_AT)
+        if (acc != account || pollNote != note) {
+            account = acc
+            pollNote = note
+            pollEvent = pollNote?.event as PollNoteEvent
+            pollOptions = pollEvent?.pollOptions()
+            valueMaximum = pollEvent?.getTagLong(VALUE_MAXIMUM)
+            valueMinimum = pollEvent?.getTagLong(VALUE_MINIMUM)
+            valueMinimumBD = valueMinimum?.let { BigDecimal(it) }
+            valueMaximumBD = valueMaximum?.let { BigDecimal(it) }
+            consensusThreshold =
+                pollEvent?.getTagLong(CONSENSUS_THRESHOLD)?.toFloat()?.div(100)?.toBigDecimal()
+            closedAt = pollEvent?.getTagLong(CLOSED_AT)
 
-        totalZapped = BigDecimal.ZERO
-        wasZappedByLoggedInAccount = false
+            totalZapped = BigDecimal.ZERO
+            wasZappedByLoggedInAccount = false
 
-        canZap.value = checkIfCanZap()
+            canZap.value = checkIfCanZap()
 
-        tallies = pollOptions?.keys?.map { option ->
-            PollOption(
-                option,
-                pollOptions?.get(option) ?: "",
-            )
-        } ?: emptyList()
+            tallies = pollOptions?.keys?.map { option ->
+                PollOption(
+                    option,
+                    pollOptions?.get(option) ?: "",
+                )
+            } ?: emptyList()
+        }
     }
 
     fun refreshTallies() {
