@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.events.TextNoteEvent
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -567,7 +568,7 @@ fun NoteDropDownMenu(
             },
         )
         Divider()
-        if (state.isLoggedUser) {
+        if (state.isLoggedUser && note.event is TextNoteEvent) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.edit_post)) },
                 onClick = {
