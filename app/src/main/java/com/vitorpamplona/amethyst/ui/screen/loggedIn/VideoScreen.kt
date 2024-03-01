@@ -406,6 +406,7 @@ private fun VideoUserOptionAction(
         NoteDropDownMenu(
             note,
             popupExpanded,
+            null,
             accountViewModel,
             nav,
         )

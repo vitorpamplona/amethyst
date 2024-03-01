@@ -167,7 +167,7 @@ fun BadgeCompose(
                                 tint = MaterialTheme.colorScheme.placeholderText,
                             )
 
-                            NoteDropDownMenu(note, popupExpanded, accountViewModel, nav)
+                            NoteDropDownMenu(note, popupExpanded, null, accountViewModel, nav)
                         }
                     }
 

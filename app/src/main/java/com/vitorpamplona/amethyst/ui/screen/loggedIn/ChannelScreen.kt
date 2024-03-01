@@ -710,8 +710,8 @@ fun ShortChannelHeader(
     nav: (String) -> Unit,
     showFlag: Boolean,
 ) {
-    val channelState = baseChannel.live.observeAsState()
-    val channel = remember(channelState) { channelState.value?.channel } ?: return
+    val channelState by baseChannel.live.observeAsState()
+    val channel = channelState?.channel ?: return
 
     val automaticallyShowProfilePicture =
         remember {
@@ -782,8 +782,8 @@ fun LongChannelHeader(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val channelState = baseChannel.live.observeAsState()
-    val channel = remember(channelState) { channelState.value?.channel } ?: return
+    val channelState by baseChannel.live.observeAsState()
+    val channel = channelState?.channel ?: return
 
     Row(
         lineModifier,
@@ -865,7 +865,7 @@ fun LongChannelHeader(
                 )
                 Spacer(DoubleHorzSpacer)
                 NormalTimeAgo(note, remember { Modifier.weight(1f) })
-                MoreOptionsButton(note, accountViewModel, nav)
+                MoreOptionsButton(note, null, accountViewModel, nav)
             }
         }
     }

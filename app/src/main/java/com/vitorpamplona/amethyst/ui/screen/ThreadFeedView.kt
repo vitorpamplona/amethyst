@@ -438,7 +438,7 @@ fun NoteMaster(
                                 tint = MaterialTheme.colorScheme.placeholderText,
                             )
 
-                            NoteDropDownMenu(baseNote, moreActionsExpanded, accountViewModel, nav)
+                            NoteDropDownMenu(baseNote, moreActionsExpanded, editState, accountViewModel, nav)
                         }
                     }
 

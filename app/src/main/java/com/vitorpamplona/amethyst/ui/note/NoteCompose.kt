@@ -782,7 +782,7 @@ fun LongCommunityHeader(
         )
         Spacer(DoubleHorzSpacer)
         NormalTimeAgo(baseNote = baseNote, Modifier.weight(1f))
-        MoreOptionsButton(baseNote, accountViewModel, nav)
+        MoreOptionsButton(baseNote, null, accountViewModel, nav)
     }
 }
 
@@ -2907,7 +2907,7 @@ fun FirstUserInfoRow(
 
         TimeAgo(baseNote)
 
-        MoreOptionsButton(baseNote, accountViewModel, nav)
+        MoreOptionsButton(baseNote, editState, accountViewModel, nav)
     }
 }
 
@@ -2916,6 +2916,10 @@ fun observeEdits(
     baseNote: Note,
     accountViewModel: AccountViewModel,
 ): State<GenericLoadable<EditState>> {
+    if (baseNote.event !is TextNoteEvent) {
+        return remember { mutableStateOf(GenericLoadable.Empty<EditState>()) }
+    }
+
     val editState =
         remember(baseNote.idHex) {
             val cached = accountViewModel.cachedModificationEventsForNote(baseNote)
@@ -2934,10 +2938,10 @@ fun observeEdits(
             )
         }
 
-    val updatedNote = baseNote.live().innerModifications.observeAsState()
+    val updatedNote by baseNote.live().innerModifications.observeAsState()
 
     LaunchedEffect(key1 = updatedNote) {
-        updatedNote.value?.note?.let {
+        updatedNote?.note?.let {
             accountViewModel.findModificationEventsForNote(it) { newModifications ->
                 if (newModifications.isEmpty()) {
                     if (editState.value !is GenericLoadable.Empty) {
@@ -2999,6 +3003,7 @@ private fun BoostedMark() {
 @Composable
 fun MoreOptionsButton(
     baseNote: Note,
+    editState: State<GenericLoadable<EditState>>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -3014,6 +3019,7 @@ fun MoreOptionsButton(
         NoteDropDownMenu(
             baseNote,
             popupExpanded,
+            editState,
             accountViewModel,
             nav,
         )
@@ -3834,9 +3840,8 @@ private fun RenderShortRepositoryHeader(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val noteState = baseNote.live().metadata.observeAsState()
-    val note = remember(noteState) { noteState.value?.note } ?: return
-    val noteEvent = note.event as? GitRepositoryEvent ?: return
+    val noteState by baseNote.live().metadata.observeAsState()
+    val noteEvent = noteState?.note?.event as? GitRepositoryEvent ?: return
 
     Column(
         modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),

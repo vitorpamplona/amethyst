@@ -129,7 +129,7 @@ fun MessageSetCompose(
                     nav = nav,
                 )
 
-                NoteDropDownMenu(baseNote, popupExpanded, accountViewModel, nav)
+                NoteDropDownMenu(baseNote, popupExpanded, null, accountViewModel, nav)
             }
         }
 

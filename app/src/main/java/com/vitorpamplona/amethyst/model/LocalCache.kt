@@ -1404,7 +1404,7 @@ object LocalCache {
         note.loadEvent(event, author, emptyList())
 
         event.editedNote()?.let {
-            getNoteIfExists(it)?.let { editedNote ->
+            checkGetOrCreateNote(it)?.let { editedNote ->
                 modificationCache.remove(editedNote.idHex)
                 editedNote.liveSet?.innerModifications?.invalidateData()
             }

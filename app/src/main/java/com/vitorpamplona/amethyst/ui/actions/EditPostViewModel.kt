@@ -82,6 +82,7 @@ open class EditPostViewModel() : ViewModel() {
 
     open fun load(
         edit: Note,
+        versionLookingAt: Note?,
         accountViewModel: AccountViewModel,
     ) {
         this.accountViewModel = accountViewModel
@@ -90,7 +91,7 @@ open class EditPostViewModel() : ViewModel() {
         canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
         contentToAddUrl = null
 
-        message = TextFieldValue(edit.event?.content() ?: "")
+        message = TextFieldValue(versionLookingAt?.event?.content() ?: edit.event?.content() ?: "")
         urlPreview = findUrlInMessage()
 
         editedFromNote = edit

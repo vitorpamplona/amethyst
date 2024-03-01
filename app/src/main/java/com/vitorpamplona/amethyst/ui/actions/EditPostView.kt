@@ -37,7 +37,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
@@ -115,6 +114,7 @@ import kotlinx.coroutines.withContext
 fun EditPostView(
     onClose: () -> Unit,
     edit: Note,
+    versionLookingAt: Note?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -128,7 +128,7 @@ fun EditPostView(
     var relayList = remember { accountViewModel.account.activeWriteRelays().toImmutableList() }
 
     LaunchedEffect(Unit) {
-        postViewModel.load(edit, accountViewModel)
+        postViewModel.load(edit, versionLookingAt, accountViewModel)
 
         launch(Dispatchers.IO) {
             postViewModel.imageUploadingError.collect { error ->

@@ -43,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -67,6 +68,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
+import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -456,6 +458,7 @@ data class DropDownParams(
 fun NoteDropDownMenu(
     note: Note,
     popupExpanded: MutableState<Boolean>,
+    editState: State<GenericLoadable<EditState>>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -482,12 +485,19 @@ fun NoteDropDownMenu(
         }
 
     if (wantsToEditPost.value) {
+        // avoids changing while drafting a note and a new event shows up.
+        val versionLookingAt =
+            remember {
+                (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value
+            }
+
         EditPostView(
             onClose = {
                 popupExpanded.value = false
                 wantsToEditPost.value = false
             },
             edit = note,
+            versionLookingAt = versionLookingAt,
             accountViewModel = accountViewModel,
             nav = nav,
         )
