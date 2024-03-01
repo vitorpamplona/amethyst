@@ -1,8 +1,14 @@
 pluginManagement {
     repositories {
-        gradlePluginPortal()
-        google()
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
         mavenCentral()
+        gradlePluginPortal()
         maven {
             url "https://jitpack.io"
             content {
@@ -11,6 +17,7 @@ pluginManagement {
         }
     }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
@@ -19,6 +26,7 @@ dependencyResolutionManagement {
         maven { url "https://jitpack.io" }
     }
 }
+
 rootProject.name = "Amethyst"
 include ':app'
 include ':benchmark'
