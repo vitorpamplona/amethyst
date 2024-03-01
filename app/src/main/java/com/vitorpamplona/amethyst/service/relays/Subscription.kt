@@ -47,7 +47,7 @@ data class Subscription(
         return factory.objectNode().apply {
             put("id", id)
             typedFilters?.also { filters ->
-                put(
+                replace(
                     "typedFilters",
                     factory.arrayNode(filters.size).apply {
                         filters.forEach { filter -> add(filter.toJsonObject()) }

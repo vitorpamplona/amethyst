@@ -37,26 +37,26 @@ class JsonFilter(
         val filter =
             factory.objectNode().apply {
                 ids?.run {
-                    put(
+                    replace(
                         "ids",
                         factory.arrayNode(ids.size).apply { ids.forEach { add(it) } },
                     )
                 }
                 authors?.run {
-                    put(
+                    replace(
                         "authors",
                         factory.arrayNode(authors.size).apply { authors.forEach { add(it) } },
                     )
                 }
                 kinds?.run {
-                    put(
+                    replace(
                         "kinds",
                         factory.arrayNode(kinds.size).apply { kinds.forEach { add(it) } },
                     )
                 }
                 tags?.run {
                     entries.forEach { kv ->
-                        put(
+                        replace(
                             "#${kv.key}",
                             factory.arrayNode(kv.value.size).apply { kv.value.forEach { add(it) } },
                         )
