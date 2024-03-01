@@ -99,8 +99,10 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
 
             val isAuthoredPostCited = event.findCitations().any { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == authorHex }
             val isAuthorDirectlyCited = event.citedUsers().contains(authorHex)
+            val isAuthorOfAFork =
+                event.isForkFromAddressWithPubkey(authorHex) || (event.forkFromVersion()?.let { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == authorHex } == true)
 
-            return isAuthoredPostCited || isAuthorDirectlyCited
+            return isAuthoredPostCited || isAuthorDirectlyCited || isAuthorOfAFork
         }
 
         if (event is ReactionEvent) {

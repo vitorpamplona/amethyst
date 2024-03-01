@@ -747,7 +747,9 @@ object LocalCache {
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
-
+            if (version.liveSet != null) {
+                updateListCache()
+            }
             version.liveSet?.innerOts?.invalidateData()
         }
 
@@ -1406,8 +1408,8 @@ object LocalCache {
         event.editedNote()?.let {
             checkGetOrCreateNote(it)?.let { editedNote ->
                 modificationCache.remove(editedNote.idHex)
-                // if it is a new post from the user, must update list of Notes to quickly update the user.
-                if (relay == null) {
+                // must update list of Notes to quickly update the user.
+                if (editedNote.liveSet != null) {
                     updateListCache()
                 }
                 editedNote.liveSet?.innerModifications?.invalidateData()
