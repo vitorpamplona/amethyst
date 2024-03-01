@@ -1416,7 +1416,8 @@ fun RenderTextEvent(
                     val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
                     val newBody =
                         if (editState.value is GenericLoadable.Loaded) {
-                            (editState.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value?.event?.content() ?: body
+                            val state = (editState.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow
+                            state?.value?.event?.content() ?: body
                         } else {
                             body
                         }
