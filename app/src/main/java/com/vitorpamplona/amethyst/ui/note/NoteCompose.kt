@@ -2978,7 +2978,6 @@ fun DisplayEditStatus(editState: EditState) {
         style =
             LocalTextStyle.current.copy(
                 color = MaterialTheme.colorScheme.placeholderText,
-                fontSize = Font14SP,
                 fontWeight = FontWeight.Bold,
             ),
         maxLines = 1,

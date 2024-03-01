@@ -56,7 +56,7 @@ val EditFieldBorder = RoundedCornerShape(25.dp)
 val ChatBubbleShapeMe = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
 val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
 
-val StdButtonSizeModifier = Modifier.size(20.dp)
+val StdButtonSizeModifier = Modifier.size(19.dp)
 
 val HalfVertSpacer = Modifier.height(2.dp)
 
