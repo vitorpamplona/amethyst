@@ -123,45 +123,45 @@ class TextNoteEvent(
 
             signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
         }
-
-        /**
-         * Returns a list of NIP-10 marked tags that are also ordered at best effort to support the
-         * deprecated method of positional tags to maximize backwards compatibility with clients that
-         * support replies but have not been updated to understand tag markers.
-         *
-         * https://github.com/nostr-protocol/nips/blob/master/10.md
-         *
-         * The tag to the root of the reply chain goes first. The tag to the reply event being responded
-         * to goes last. The order for any other tag does not matter, so keep the relative order.
-         */
-        private fun List<String>.positionalMarkedTags(
-            tagName: String,
-            root: String?,
-            replyingTo: String?,
-            directMentions: Set<HexKey>,
-            forkedFrom: String?,
-        ) = sortedWith { o1, o2 ->
-            when {
-                o1 == o2 -> 0
-                o1 == root -> -1 // root goes first
-                o2 == root -> 1 // root goes first
-                o1 == replyingTo -> 1 // reply event being responded to goes last
-                o2 == replyingTo -> -1 // reply event being responded to goes last
-                else -> 0 // keep the relative order for any other tag
-            }
-        }
-            .map {
-                when (it) {
-                    root -> arrayOf(tagName, it, "", "root")
-                    replyingTo -> arrayOf(tagName, it, "", "reply")
-                    forkedFrom -> arrayOf(tagName, it, "", "fork")
-                    in directMentions -> arrayOf(tagName, it, "", "mention")
-                    else -> arrayOf(tagName, it)
-                }
-            }
     }
 }
 
 fun findURLs(text: String): List<String> {
     return UrlDetector(text, UrlDetectorOptions.Default).detect().map { it.originalUrl }
 }
+
+/**
+ * Returns a list of NIP-10 marked tags that are also ordered at best effort to support the
+ * deprecated method of positional tags to maximize backwards compatibility with clients that
+ * support replies but have not been updated to understand tag markers.
+ *
+ * https://github.com/nostr-protocol/nips/blob/master/10.md
+ *
+ * The tag to the root of the reply chain goes first. The tag to the reply event being responded
+ * to goes last. The order for any other tag does not matter, so keep the relative order.
+ */
+fun List<String>.positionalMarkedTags(
+    tagName: String,
+    root: String?,
+    replyingTo: String?,
+    directMentions: Set<HexKey>,
+    forkedFrom: String?,
+) = sortedWith { o1, o2 ->
+    when {
+        o1 == o2 -> 0
+        o1 == root -> -1 // root goes first
+        o2 == root -> 1 // root goes first
+        o1 == replyingTo -> 1 // reply event being responded to goes last
+        o2 == replyingTo -> -1 // reply event being responded to goes last
+        else -> 0 // keep the relative order for any other tag
+    }
+}
+    .map {
+        when (it) {
+            root -> arrayOf(tagName, it, "", "root")
+            replyingTo -> arrayOf(tagName, it, "", "reply")
+            forkedFrom -> arrayOf(tagName, it, "", "fork")
+            in directMentions -> arrayOf(tagName, it, "", "mention")
+            else -> arrayOf(tagName, it)
+        }
+    }

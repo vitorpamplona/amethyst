@@ -41,7 +41,7 @@ class GitIssueEvent(
 
     private fun repositoryHex() = innerRepository()?.getOrNull(1)
 
-    fun rootIssueOrPath() = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
+    fun rootIssueOrPatch() = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
 
     fun repository() =
         innerRepository()?.let {

@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.events
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -74,6 +75,88 @@ class GitReplyEvent(
             tags.add(arrayOf("alt", ALT))
 
             signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+        }
+
+        fun create(
+            msg: String,
+            replyTos: List<String>? = null,
+            mentions: List<String>? = null,
+            addresses: List<ATag>? = null,
+            extraTags: List<String>? = null,
+            zapReceiver: List<ZapSplitSetup>? = null,
+            markAsSensitive: Boolean = false,
+            zapRaiserAmount: Long? = null,
+            replyingTo: String? = null,
+            root: String? = null,
+            directMentions: Set<HexKey> = emptySet(),
+            geohash: String? = null,
+            nip94attachments: List<FileHeaderEvent>? = null,
+            forkedFrom: Event? = null,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (GitReplyEvent) -> Unit,
+        ) {
+            val tags = mutableListOf<Array<String>>()
+            replyTos?.let {
+                tags.addAll(
+                    it.positionalMarkedTags(
+                        tagName = "e",
+                        root = root,
+                        replyingTo = replyingTo,
+                        directMentions = directMentions,
+                        forkedFrom = forkedFrom?.id,
+                    ),
+                )
+            }
+            mentions?.forEach {
+                if (it in directMentions) {
+                    tags.add(arrayOf("p", it, "", "mention"))
+                } else {
+                    tags.add(arrayOf("p", it))
+                }
+            }
+            replyTos?.forEach {
+                if (it in directMentions) {
+                    tags.add(arrayOf("q", it))
+                }
+            }
+            addresses
+                ?.map { it.toTag() }
+                ?.let {
+                    tags.addAll(
+                        it.positionalMarkedTags(
+                            tagName = "a",
+                            root = root,
+                            replyingTo = replyingTo,
+                            directMentions = directMentions,
+                            forkedFrom = (forkedFrom as? AddressableEvent)?.address()?.toTag(),
+                        ),
+                    )
+                }
+            findHashtags(msg).forEach {
+                tags.add(arrayOf("t", it))
+                tags.add(arrayOf("t", it.lowercase()))
+            }
+            extraTags?.forEach { tags.add(arrayOf("t", it)) }
+            zapReceiver?.forEach {
+                tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
+            }
+            findURLs(msg).forEach { tags.add(arrayOf("r", it)) }
+            if (markAsSensitive) {
+                tags.add(arrayOf("content-warning", ""))
+            }
+            zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
+            geohash?.let { tags.addAll(geohashMipMap(it)) }
+            nip94attachments?.let {
+                it.forEach {
+                    Nip92MediaAttachments().convertFromFileHeader(it)?.let {
+                        tags.add(it)
+                    }
+                }
+            }
+            tags.add(arrayOf("alt", "a git issue reply"))
+
+            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
         }
     }
 }

@@ -67,6 +67,7 @@ import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GeneralListEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
+import com.vitorpamplona.quartz.events.GitReplyEvent
 import com.vitorpamplona.quartz.events.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
@@ -1340,6 +1341,63 @@ class Account(
             Client.send(it, relayList = relayList)
             LocalCache.justConsume(it, null)
 
+            replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
+            addresses?.forEach {
+                LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
+                    Client.send(it, relayList = relayList)
+                }
+            }
+        }
+    }
+
+    fun sendGitReply(
+        message: String,
+        replyTo: List<Note>?,
+        mentions: List<User>?,
+        repository: ATag?,
+        zapReceiver: List<ZapSplitSetup>? = null,
+        wantsToMarkAsSensitive: Boolean,
+        zapRaiserAmount: Long? = null,
+        replyingTo: String?,
+        root: String?,
+        directMentions: Set<HexKey>,
+        forkedFrom: Event?,
+        relayList: List<Relay>? = null,
+        geohash: String? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
+    ) {
+        if (!isWriteable()) return
+
+        val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
+        val mentionsHex = mentions?.map { it.pubkeyHex }
+        val addresses = listOfNotNull(repository) + (replyTo?.mapNotNull { it.address() } ?: emptyList())
+
+        GitReplyEvent.create(
+            msg = message,
+            replyTos = repliesToHex,
+            mentions = mentionsHex,
+            addresses = addresses,
+            extraTags = null,
+            zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
+            zapRaiserAmount = zapRaiserAmount,
+            replyingTo = replyingTo,
+            root = root,
+            directMentions = directMentions,
+            geohash = geohash,
+            nip94attachments = nip94attachments,
+            forkedFrom = forkedFrom,
+            signer = signer,
+        ) {
+            Client.send(it, relayList = relayList)
+            LocalCache.justConsume(it, null)
+
+            // broadcast replied notes
+            replyingTo?.let {
+                LocalCache.getNoteIfExists(replyingTo)?.event?.let {
+                    Client.send(it, relayList = relayList)
+                }
+            }
             replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
             addresses?.forEach {
                 LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {

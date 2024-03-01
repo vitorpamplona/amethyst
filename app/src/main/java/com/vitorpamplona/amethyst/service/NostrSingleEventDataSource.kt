@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.GitReplyEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.OtsEvent
@@ -138,6 +139,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                                     PollNoteEvent.KIND,
                                     OtsEvent.KIND,
                                     TextNoteModificationEvent.KIND,
+                                    GitReplyEvent.KIND,
                                 ),
                             tags = mapOf("e" to it.map { it.idHex }),
                             since = findMinimumEOSEs(it),

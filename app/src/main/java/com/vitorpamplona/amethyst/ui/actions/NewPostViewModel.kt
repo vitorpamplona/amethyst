@@ -59,6 +59,7 @@ import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.events.GitIssueEvent
 import com.vitorpamplona.quartz.events.Price
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
@@ -434,6 +435,45 @@ open class NewPostViewModel() : ViewModel() {
                     nip94attachments = usedAttachments,
                 )
             }
+        } else if (originalNote?.event is GitIssueEvent) {
+            val originalNoteEvent = originalNote?.event as GitIssueEvent
+            // adds markers
+            val rootId =
+                originalNoteEvent.rootIssueOrPatch() // if it has a marker as root
+                    ?: originalNote
+                        ?.replyTo
+                        ?.firstOrNull { it.event != null && it.replyTo?.isEmpty() == true }
+                        ?.idHex // if it has loaded events with zero replies in the reply list
+                    ?: originalNote?.replyTo?.firstOrNull()?.idHex // old rules, first item is root.
+                    ?: originalNote?.idHex
+
+            val replyId = originalNote?.idHex
+
+            val replyToSet =
+                if (forkedFromNote != null) {
+                    (listOfNotNull(forkedFromNote) + (tagger.eTags ?: emptyList())).ifEmpty { null }
+                } else {
+                    tagger.eTags
+                }
+
+            val repositoryAddress = originalNoteEvent.repository()
+
+            account?.sendGitReply(
+                message = tagger.message,
+                replyTo = replyToSet,
+                mentions = tagger.pTags,
+                repository = repositoryAddress,
+                zapReceiver = zapReceiver,
+                wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = localZapRaiserAmount,
+                replyingTo = replyId,
+                root = rootId,
+                directMentions = tagger.directMentions,
+                forkedFrom = forkedFromNote?.event as? Event,
+                relayList = relayList,
+                geohash = geoHash,
+                nip94attachments = usedAttachments,
+            )
         } else {
             if (wantsPoll) {
                 account?.sendPoll(

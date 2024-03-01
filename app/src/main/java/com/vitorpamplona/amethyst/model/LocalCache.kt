@@ -451,13 +451,20 @@ object LocalCache {
             return
         }
 
+        val repository = event.repository()?.toTag()
+
         val replyTo =
             event
                 .tagsWithoutCitations()
-                .filter { it != event.repository()?.toTag() }
+                .filter { it != repository }
                 .mapNotNull { checkGetOrCreateNote(it) }
 
+        // println("New GitReply ${event.id} for ${replyTo.firstOrNull()?.event?.id()} ${event.tagsWithoutCitations().filter { it != event.repository()?.toTag() }.firstOrNull()}")
+
         note.loadEvent(event, author, replyTo)
+
+        // Counts the replies
+        replyTo.forEach { it.addReply(note) }
 
         refreshObservers(note)
     }
