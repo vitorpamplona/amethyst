@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Clear
@@ -81,7 +81,7 @@ fun FollowingIcon(iconSize: Dp) {
 @Composable
 fun ArrowBackIcon() {
     Icon(
-        imageVector = Icons.Default.ArrowBack,
+        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
         contentDescription = stringResource(R.string.back),
         tint = MaterialTheme.colorScheme.grayText,
     )
@@ -104,7 +104,7 @@ fun DownloadForOfflineIcon(
 ) {
     Icon(
         imageVector = Icons.Default.DownloadForOffline,
-        null,
+        contentDescription = stringResource(id = R.string.accessibility_download_for_offline),
         modifier = remember(iconSize) { Modifier.size(iconSize) },
         tint = tint,
     )
@@ -320,7 +320,7 @@ fun RegularPostIcon() {
 fun CancelIcon() {
     Icon(
         imageVector = Icons.Default.Cancel,
-        null,
+        contentDescription = stringResource(id = R.string.cancel),
         modifier = Size30Modifier,
         tint = MaterialTheme.colorScheme.placeholderText,
     )
@@ -375,7 +375,7 @@ fun PlayIcon(
 ) {
     Icon(
         imageVector = Icons.Outlined.PlayCircle,
-        contentDescription = null,
+        contentDescription = "Play",
         modifier = modifier,
         tint = tint,
     )
@@ -401,7 +401,7 @@ fun LyricsIcon(
 ) {
     Icon(
         painter = painterResource(id = R.drawable.lyrics_on),
-        contentDescription = null,
+        contentDescription = stringResource(id = R.string.accessibility_lyrics_on),
         modifier = modifier,
         tint = tint,
     )
@@ -414,7 +414,7 @@ fun LyricsOffIcon(
 ) {
     Icon(
         painter = painterResource(id = R.drawable.lyrics_off),
-        contentDescription = null,
+        contentDescription = stringResource(id = R.string.accessibility_lyrics_off),
         modifier = modifier,
         tint = tint,
     )
