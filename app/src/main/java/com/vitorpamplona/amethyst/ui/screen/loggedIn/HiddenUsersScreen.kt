@@ -71,7 +71,7 @@ import com.vitorpamplona.amethyst.ui.elements.AddButton
 import com.vitorpamplona.amethyst.ui.screen.NostrHiddenAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHiddenWordsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrSpammerAccountsFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefresheableView
+import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.StringFeedView
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
@@ -216,7 +216,7 @@ private fun HiddenWordsFeed(
     hiddenWordsViewModel: NostrHiddenWordsFeedViewModel,
     accountViewModel: AccountViewModel,
 ) {
-    RefresheableView(hiddenWordsViewModel, false) {
+    RefresheableBox(hiddenWordsViewModel, false) {
         StringFeedView(
             hiddenWordsViewModel,
             post = { AddMuteWordTextField(accountViewModel) },

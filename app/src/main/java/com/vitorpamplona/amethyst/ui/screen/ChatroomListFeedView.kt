@@ -45,7 +45,7 @@ fun ChatroomListFeedView(
     nav: (String) -> Unit,
     markAsRead: MutableState<Boolean>,
 ) {
-    RefresheableView(viewModel, true) { CrossFadeState(viewModel, accountViewModel, nav, markAsRead) }
+    RefresheableBox(viewModel, true) { CrossFadeState(viewModel, accountViewModel, nav, markAsRead) }
 }
 
 @Composable

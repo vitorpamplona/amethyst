@@ -69,7 +69,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverCommunityFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverLiveFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverMarketplaceFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.PagerStateKeys
-import com.vitorpamplona.amethyst.ui.screen.RefresheableView
+import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableGridFeedState
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
@@ -196,7 +196,7 @@ private fun DiscoverPages(
     }
 
     HorizontalPager(state = pagerState) { page ->
-        RefresheableView(tabs[page].viewModel, true) {
+        RefresheableBox(tabs[page].viewModel, true) {
             if (tabs[page].viewModel is NostrDiscoverMarketplaceFeedViewModel) {
                 SaveableGridFeedState(tabs[page].viewModel, scrollStateKey = tabs[page].scrollStateKey) {
                         listState ->

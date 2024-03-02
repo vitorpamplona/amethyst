@@ -45,7 +45,7 @@ fun RefreshingFeedStringFeedView(
     enablePullRefresh: Boolean = true,
     inner: @Composable (String) -> Unit,
 ) {
-    RefresheableView(viewModel, enablePullRefresh) { StringFeedView(viewModel, inner = inner) }
+    RefresheableBox(viewModel, enablePullRefresh) { StringFeedView(viewModel, inner = inner) }
 }
 
 @Composable

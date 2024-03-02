@@ -54,7 +54,7 @@ fun RefreshingChatroomFeedView(
     scrollStateKey: String? = null,
     enablePullRefresh: Boolean = true,
 ) {
-    RefresheableView(viewModel, enablePullRefresh) {
+    RefresheableBox(viewModel, enablePullRefresh) {
         SaveableFeedState(viewModel, scrollStateKey) { listState ->
             RenderChatroomFeedView(
                 viewModel,
