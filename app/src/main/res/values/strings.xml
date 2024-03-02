@@ -7,6 +7,7 @@
     <string name="your_profile_image">Your Profile Picture</string>
     <string name="scan_qr">Scan QR</string>
     <string name="show_anyway">Show Anyway</string>
+    <string name="post_was_hidden">This post was hidden because it mentions your hidden users or words</string>
     <string name="post_was_flagged_as_inappropriate_by">Post was muted or reported by</string>
     <string name="post_not_found">Event is loading or can\'t be found in your relay list</string>
     <string name="channel_image">Channel Image</string>

@@ -359,8 +359,13 @@ fun CheckHiddenNoteCompose(
             }
                 .observeAsState(accountViewModel.isNoteHidden(note))
 
+        val showAnyway =
+            remember {
+                mutableStateOf(false)
+            }
+
         Crossfade(targetState = isHidden, label = "CheckHiddenNoteCompose") {
-            if (!it) {
+            if (!it || showAnyway.value) {
                 LoadedNoteCompose(
                     note = note,
                     routeForLastRead = routeForLastRead,
@@ -373,6 +378,11 @@ fun CheckHiddenNoteCompose(
                     parentBackgroundColor = parentBackgroundColor,
                     accountViewModel = accountViewModel,
                     nav = nav,
+                )
+            } else if (isQuotedNote || isBoostedNote) {
+                HiddenNoteByMe(
+                    isQuote = true,
+                    onClick = { showAnyway.value = true },
                 )
             }
         }
@@ -441,8 +451,7 @@ fun RenderReportState(
 ) {
     var showReportedNote by remember(note) { mutableStateOf(false) }
 
-    Crossfade(targetState = !state.isAcceptable && !showReportedNote, label = "RenderReportState") {
-            showHiddenNote ->
+    Crossfade(targetState = !state.isAcceptable && !showReportedNote, label = "RenderReportState") { showHiddenNote ->
         if (showHiddenNote) {
             HiddenNote(
                 state.relevantReports,
