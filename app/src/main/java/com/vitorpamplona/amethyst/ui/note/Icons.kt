@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -49,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
@@ -478,5 +480,31 @@ fun NIP05FailedVerification(modifier: Modifier) {
         contentDescription = stringResource(id = R.string.nip05_failed),
         modifier = modifier,
         tint = Color.Red,
+    )
+}
+
+@Composable
+fun IncognitoIconOn() {
+    Icon(
+        painter = painterResource(id = R.drawable.incognito),
+        contentDescription = stringResource(id = R.string.accessibility_turn_off_sealed_message),
+        modifier =
+            Modifier
+                .padding(top = 2.dp)
+                .size(18.dp),
+        tint = MaterialTheme.colorScheme.primary,
+    )
+}
+
+@Composable
+fun IncognitoIconOff() {
+    Icon(
+        painter = painterResource(id = R.drawable.incognito_off),
+        contentDescription = stringResource(id = R.string.accessibility_turn_on_sealed_message),
+        modifier =
+            Modifier
+                .padding(top = 2.dp)
+                .size(18.dp),
+        tint = MaterialTheme.colorScheme.placeholderText,
     )
 }

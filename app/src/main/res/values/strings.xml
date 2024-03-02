@@ -806,4 +806,6 @@
     <string name="accessibility_download_for_offline">Download</string>
     <string name="accessibility_lyrics_on">Lyrics on</string>
     <string name="accessibility_lyrics_off">Lyrics off</string>
+    <string name="accessibility_turn_on_sealed_message">Sealed message off. Click to turn on sealed message</string>
+    <string name="accessibility_turn_off_sealed_message">Sealed message on. Click to turn off sealed message</string>
 </resources>
