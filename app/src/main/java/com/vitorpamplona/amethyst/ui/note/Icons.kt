@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Clear
@@ -37,8 +38,6 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Report
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material3.Icon
@@ -50,7 +49,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
@@ -340,7 +338,7 @@ fun CloseIcon() {
 @Composable
 fun MutedIcon() {
     Icon(
-        imageVector = Icons.Default.VolumeOff,
+        imageVector = Icons.AutoMirrored.Filled.VolumeOff,
         contentDescription = stringResource(id = R.string.muted_button),
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Size30Modifier,
@@ -350,7 +348,7 @@ fun MutedIcon() {
 @Composable
 fun MuteIcon() {
     Icon(
-        imageVector = Icons.Default.VolumeUp,
+        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
         contentDescription = stringResource(id = R.string.mute_button),
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Size30Modifier,
@@ -484,27 +482,27 @@ fun NIP05FailedVerification(modifier: Modifier) {
 }
 
 @Composable
-fun IncognitoIconOn() {
+fun IncognitoIconOn(
+    modifier: Modifier,
+    tint: Color,
+) {
     Icon(
         painter = painterResource(id = R.drawable.incognito),
         contentDescription = stringResource(id = R.string.accessibility_turn_off_sealed_message),
-        modifier =
-            Modifier
-                .padding(top = 2.dp)
-                .size(18.dp),
-        tint = MaterialTheme.colorScheme.primary,
+        modifier = modifier,
+        tint = tint,
     )
 }
 
 @Composable
-fun IncognitoIconOff() {
+fun IncognitoIconOff(
+    modifier: Modifier,
+    tint: Color,
+) {
     Icon(
         painter = painterResource(id = R.drawable.incognito_off),
         contentDescription = stringResource(id = R.string.accessibility_turn_on_sealed_message),
-        modifier =
-            Modifier
-                .padding(top = 2.dp)
-                .size(18.dp),
-        tint = MaterialTheme.colorScheme.placeholderText,
+        modifier = modifier,
+        tint = tint,
     )
 }

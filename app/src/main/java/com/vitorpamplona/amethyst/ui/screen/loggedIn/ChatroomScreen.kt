@@ -442,9 +442,21 @@ fun PrivateMessageEditFieldRow(
                         },
                     ) {
                         if (channelScreenModel.nip24) {
-                            IncognitoIconOn()
+                            IncognitoIconOn(
+                                modifier =
+                                    Modifier
+                                        .padding(top = 2.dp)
+                                        .size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
                         } else {
-                            IncognitoIconOff()
+                            IncognitoIconOff(
+                                modifier =
+                                    Modifier
+                                        .padding(top = 2.dp)
+                                        .size(18.dp),
+                                tint = MaterialTheme.colorScheme.placeholderText,
+                            )
                         }
                     }
                 }
