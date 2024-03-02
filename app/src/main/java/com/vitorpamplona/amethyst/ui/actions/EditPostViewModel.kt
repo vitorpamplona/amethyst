@@ -59,6 +59,8 @@ open class EditPostViewModel() : ViewModel() {
 
     var editedFromNote: Note? = null
 
+    var subject by mutableStateOf(TextFieldValue(""))
+
     var nip94attachments by mutableStateOf<List<FileHeaderEvent>>(emptyList())
     var nip95attachments by
         mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
@@ -79,6 +81,16 @@ open class EditPostViewModel() : ViewModel() {
     // Invoices
     var canAddInvoice by mutableStateOf(false)
     var wantsInvoice by mutableStateOf(false)
+
+    open fun prepare(
+        edit: Note,
+        versionLookingAt: Note?,
+        accountViewModel: AccountViewModel,
+    ) {
+        this.accountViewModel = accountViewModel
+        this.account = accountViewModel.account
+        this.editedFromNote = edit
+    }
 
     open fun load(
         edit: Note,
@@ -111,13 +123,27 @@ open class EditPostViewModel() : ViewModel() {
             account?.sendNip95(it.first, it.second, relayList)
         }
 
+        val notify =
+            if (editedFromNote?.author?.pubkeyHex == account?.userProfile()?.pubkeyHex) {
+                null
+            } else {
+                // notifies if it is not the logged in user
+                editedFromNote?.author?.pubkeyHex
+            }
+
         account?.sendEdit(
             message = message.text,
             originalNote = editedFromNote!!,
+            notify = notify,
+            summary = subject.text.ifBlank { null },
             relayList = relayList,
         )
 
         cancel()
+    }
+
+    open fun updateSubject(it: TextFieldValue) {
+        subject = it
     }
 
     fun upload(
@@ -192,6 +218,7 @@ open class EditPostViewModel() : ViewModel() {
 
     open fun cancel() {
         message = TextFieldValue("")
+        subject = TextFieldValue("")
 
         editedFromNote = null
 

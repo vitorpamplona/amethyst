@@ -1467,6 +1467,8 @@ class Account(
     fun sendEdit(
         message: String,
         originalNote: Note,
+        notify: HexKey?,
+        summary: String? = null,
         relayList: List<Relay>? = null,
     ) {
         if (!isWriteable()) return
@@ -1476,6 +1478,8 @@ class Account(
         TextNoteModificationEvent.create(
             content = message,
             eventId = idHex,
+            notify = notify,
+            summary = summary,
             signer = signer,
         ) {
             LocalCache.justConsume(it, null)

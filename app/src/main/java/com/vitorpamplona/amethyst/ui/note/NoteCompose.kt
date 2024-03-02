@@ -48,6 +48,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -85,6 +87,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -114,6 +117,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.CachedGeoLocations
+import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
@@ -183,6 +187,7 @@ import com.vitorpamplona.amethyst.ui.theme.boostedNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.channelNotePictureModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
@@ -235,6 +240,7 @@ import com.vitorpamplona.quartz.events.RelaySetEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.TextNoteModificationEvent
 import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.events.VideoEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
@@ -291,8 +297,7 @@ fun NoteCompose(
                 nav = nav,
             )
         } else {
-            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup,
-                ->
+            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
                 BlankNote(
                     remember {
                         modifier.combinedClickable(
@@ -1111,6 +1116,8 @@ class EditState() {
 
     fun versionId() = modificationToShowIndex + 1
 
+    fun latest() = modificationsList.lastOrNull()
+
     fun nextModification() {
         if (modificationToShowIndex < 0) {
             modificationToShowIndex = 0
@@ -1339,6 +1346,17 @@ private fun RenderNoteRow(
                 nav,
             )
         }
+        is TextNoteModificationEvent -> {
+            RenderTextModificationEvent(
+                baseNote,
+                makeItShort,
+                canPreview,
+                backgroundColor,
+                editState,
+                accountViewModel,
+                nav,
+            )
+        }
         else -> {
             RenderTextEvent(
                 baseNote,
@@ -1462,6 +1480,124 @@ fun RenderTextEvent(
                 val hashtags =
                     remember(note.event) { note.event?.hashtags()?.toImmutableList() ?: persistentListOf() }
                 DisplayUncitedHashtags(hashtags, eventContent, nav)
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderTextModificationEvent(
+    note: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    backgroundColor: MutableState<Color>,
+    editStateByAuthor: State<GenericLoadable<EditState>>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val noteEvent = note.event as? TextNoteModificationEvent ?: return
+    val noteAuthor = note.author ?: return
+
+    val isAuthorTheLoggedUser = remember(note.event) { accountViewModel.isLoggedUser(note.author) }
+
+    val editState =
+        remember {
+            derivedStateOf {
+                val loadable = editStateByAuthor.value as? GenericLoadable.Loaded<EditState>
+
+                val state = EditState()
+
+                val latestChangeByAuthor =
+                    if (loadable != null && loadable.loaded.hasModificationsToShow()) {
+                        loadable.loaded.latest()
+                    } else {
+                        null
+                    }
+
+                state.updateModifications(listOfNotNull(latestChangeByAuthor, note))
+
+                GenericLoadable.Loaded(state)
+            }
+        }
+
+    val wantsToEditPost =
+        remember {
+            mutableStateOf(false)
+        }
+
+    Card(
+        modifier = MaterialTheme.colorScheme.imageModifier,
+    ) {
+        Column(Modifier.fillMaxWidth().padding(Size10dp)) {
+            Text(
+                text = stringResource(id = R.string.proposal_to_edit),
+                style =
+                    TextStyle(
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+            )
+
+            Spacer(modifier = StdVertSpacer)
+
+            noteEvent.summary()?.let {
+                TranslatableRichTextViewer(
+                    content = it,
+                    canPreview = canPreview && !makeItShort,
+                    modifier = Modifier.fillMaxWidth(),
+                    tags = EmptyTagList,
+                    backgroundColor = backgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+                Spacer(modifier = StdVertSpacer)
+            }
+
+            noteEvent.editedNote()?.let {
+                LoadNote(baseNoteHex = it, accountViewModel = accountViewModel) { baseNote ->
+                    baseNote?.let {
+                        Column(
+                            modifier =
+                                MaterialTheme.colorScheme.innerPostModifier.padding(Size10dp).clickable {
+                                    routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) }
+                                },
+                        ) {
+                            NoteBody(
+                                baseNote = baseNote,
+                                showAuthorPicture = true,
+                                unPackReply = false,
+                                makeItShort = false,
+                                canPreview = true,
+                                showSecondRow = false,
+                                backgroundColor = backgroundColor,
+                                editState = editState,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            )
+
+                            if (wantsToEditPost.value) {
+                                EditPostView(
+                                    onClose = {
+                                        wantsToEditPost.value = false
+                                    },
+                                    edit = baseNote,
+                                    versionLookingAt = note,
+                                    accountViewModel = accountViewModel,
+                                    nav = nav,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = StdVertSpacer)
+
+            Button(
+                onClick = { wantsToEditPost.value = true },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = stringResource(id = R.string.accept_the_suggestion))
             }
         }
     }

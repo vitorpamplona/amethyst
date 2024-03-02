@@ -94,6 +94,7 @@ import com.vitorpamplona.amethyst.ui.components.BechLink
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.VideoView
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -101,7 +102,9 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -119,6 +122,7 @@ fun EditPostView(
     nav: (String) -> Unit,
 ) {
     val postViewModel: EditPostViewModel = viewModel()
+    postViewModel.prepare(edit, versionLookingAt, accountViewModel)
 
     val context = LocalContext.current
 
@@ -257,6 +261,21 @@ fun EditPostView(
                                         .fillMaxWidth()
                                         .verticalScroll(scrollState),
                             ) {
+                                postViewModel.editedFromNote?.let {
+                                    Row(Modifier.heightIn(max = 200.dp)) {
+                                        NoteCompose(
+                                            baseNote = it,
+                                            makeItShort = true,
+                                            unPackReply = false,
+                                            isQuotedNote = true,
+                                            modifier = MaterialTheme.colorScheme.replyModifier,
+                                            accountViewModel = accountViewModel,
+                                            nav = nav,
+                                        )
+                                        Spacer(modifier = StdVertSpacer)
+                                    }
+                                }
+
                                 MessageField(postViewModel)
 
                                 val myUrlPreview = postViewModel.urlPreview
@@ -353,6 +372,43 @@ fun EditPostView(
                                         }
                                     }
                                 }
+
+                                /*
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = Size5dp, horizontal = Size10dp),
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = stringResource(R.string.message_to_author),
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.W500,
+                                        )
+
+                                        Divider()
+
+                                        MyTextField(
+                                            value = postViewModel.subject,
+                                            onValueChange = { postViewModel.updateSubject(it) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            placeholder = {
+                                                Text(
+                                                    text = stringResource(R.string.message_to_author_placeholder),
+                                                    color = MaterialTheme.colorScheme.placeholderText,
+                                                )
+                                            },
+                                            visualTransformation =
+                                                UrlUserTagTransformation(
+                                                    MaterialTheme.colorScheme.primary,
+                                                ),
+                                            colors =
+                                                OutlinedTextFieldDefaults.colors(
+                                                    unfocusedBorderColor = Color.Transparent,
+                                                    focusedBorderColor = Color.Transparent,
+                                                ),
+                                        )
+                                    }
+                                }*/
                             }
                         }
 

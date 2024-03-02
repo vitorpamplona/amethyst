@@ -581,13 +581,22 @@ fun NoteDropDownMenu(
             },
         )
         Divider()
-        if (state.isLoggedUser && note.event is TextNoteEvent) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.edit_post)) },
-                onClick = {
-                    wantsToEditPost.value = true
-                },
-            )
+        if (note.event is TextNoteEvent) {
+            if (state.isLoggedUser) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.edit_post)) },
+                    onClick = {
+                        wantsToEditPost.value = true
+                    },
+                )
+            } else {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.propose_an_edit)) },
+                    onClick = {
+                        wantsToEditPost.value = true
+                    },
+                )
+            }
         }
         DropdownMenuItem(
             text = { Text(stringResource(R.string.broadcast)) },

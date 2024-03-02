@@ -36,6 +36,8 @@ class TextNoteModificationEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun editedNote() = firstTaggedEvent()
 
+    fun summary() = tags.firstOrNull { it.size > 1 && it[0] == "summary" }?.get(1)
+
     companion object {
         const val KIND = 1010
         const val ALT = "Content Change Event"
@@ -43,12 +45,25 @@ class TextNoteModificationEvent(
         fun create(
             content: String,
             eventId: HexKey,
+            notify: HexKey?,
+            summary: String?,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (TextNoteModificationEvent) -> Unit,
         ) {
-            val tags = arrayOf(arrayOf("e", eventId), arrayOf("alt", ALT))
-            signer.sign(createdAt, KIND, tags, content, onReady)
+            val tags = mutableListOf(arrayOf("e", eventId))
+
+            notify?.let {
+                tags.add(arrayOf("p", it))
+            }
+
+            summary?.let {
+                tags.add(arrayOf("summary", it))
+            }
+
+            tags.add(arrayOf("alt", ALT))
+
+            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
         }
     }
 }

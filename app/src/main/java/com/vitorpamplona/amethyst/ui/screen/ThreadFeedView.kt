@@ -131,6 +131,7 @@ import com.vitorpamplona.amethyst.ui.note.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.RenderRepost
 import com.vitorpamplona.amethyst.ui.note.RenderTextEvent
+import com.vitorpamplona.amethyst.ui.note.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.VideoDisplay
 import com.vitorpamplona.amethyst.ui.note.observeEdits
 import com.vitorpamplona.amethyst.ui.note.showAmount
@@ -174,6 +175,7 @@ import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.RelaySetEvent
 import com.vitorpamplona.quartz.events.RepostEvent
+import com.vitorpamplona.quartz.events.TextNoteModificationEvent
 import com.vitorpamplona.quartz.events.VideoEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 import kotlinx.collections.immutable.toImmutableList
@@ -568,6 +570,16 @@ fun NoteMaster(
                         )
                     } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
                         RenderRepost(baseNote, backgroundColor, accountViewModel, nav)
+                    } else if (noteEvent is TextNoteModificationEvent) {
+                        RenderTextModificationEvent(
+                            note = baseNote,
+                            makeItShort = false,
+                            canPreview = true,
+                            backgroundColor,
+                            editState,
+                            accountViewModel,
+                            nav,
+                        )
                     } else if (noteEvent is PollNoteEvent) {
                         val canPreview =
                             note.author == account.userProfile() ||
