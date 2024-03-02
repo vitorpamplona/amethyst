@@ -525,7 +525,7 @@ fun ThinSendButton(
     ) {
         Icon(
             imageVector = Icons.Default.Send,
-            null,
+            contentDescription = stringResource(id = R.string.accessibility_send),
             modifier = Size20Modifier,
         )
     }
