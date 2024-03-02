@@ -445,7 +445,7 @@ fun UpdateZapAmountDialog(
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.alby),
-                                    null,
+                                    contentDescription = stringResource(id = R.string.accessibility_navigate_to_alby),
                                     modifier = Modifier.size(24.dp),
                                     tint = Color.Unspecified,
                                 )
@@ -454,7 +454,7 @@ fun UpdateZapAmountDialog(
                             IconButton(onClick = { qrScanning = true }) {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_qrcode),
-                                    null,
+                                    contentDescription = stringResource(id = R.string.accessibility_scan_qr_code),
                                     modifier = Modifier.size(24.dp),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
