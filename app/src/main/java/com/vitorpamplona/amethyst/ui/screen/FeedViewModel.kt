@@ -328,7 +328,9 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) :
                 _feedContent.update { FeedState.Empty }
             } else if (currentState is FeedState.Loaded) {
                 // updates the current list
-                currentState.showHidden.value = localFilter.showHiddenKey()
+                if (currentState.showHidden.value != localFilter.showHiddenKey()) {
+                    currentState.showHidden.value = localFilter.showHiddenKey()
+                }
                 currentState.feed.value = notes
             } else {
                 _feedContent.update {
