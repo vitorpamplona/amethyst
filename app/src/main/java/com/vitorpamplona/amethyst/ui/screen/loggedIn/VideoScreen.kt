@@ -57,11 +57,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
@@ -398,7 +400,7 @@ private fun VideoUserOptionAction(
     ) {
         Icon(
             imageVector = Icons.Default.MoreVert,
-            null,
+            contentDescription = stringResource(id = R.string.more_options),
             modifier = remember { Modifier.size(20.dp) },
             tint = MaterialTheme.colorScheme.placeholderText,
         )

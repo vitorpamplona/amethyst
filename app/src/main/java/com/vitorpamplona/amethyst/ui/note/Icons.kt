@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.note
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Clear
@@ -33,7 +34,6 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.VolumeOff
@@ -237,7 +237,7 @@ fun OpenInNewIcon(
     tint: Color = Color.Unspecified,
 ) {
     Icon(
-        imageVector = Icons.Default.OpenInNew,
+        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
         stringResource(id = R.string.copy_to_clipboard),
         tint = tint,
         modifier = modifier,
