@@ -3575,7 +3575,7 @@ fun FileHeaderDisplay(
             val blurHash = event.blurhash()
             val hash = event.hash()
             val dimensions = event.dimensions()
-            val description = event.alt() ?: event.content
+            val description = event.content.ifEmpty { null } ?: event.alt()
             val isImage = RichTextParser.isImageUrl(fullUrl)
             val uri = note.toNostrUri()
 
@@ -3634,7 +3634,7 @@ fun VideoDisplay(
             val blurHash = event.blurhash()
             val hash = event.hash()
             val dimensions = event.dimensions()
-            val description = event.alt() ?: event.content
+            val description = event.content.ifBlank { null } ?: event.alt()
             val isImage = RichTextParser.isImageUrl(fullUrl)
             val uri = note.toNostrUri()
 

@@ -497,7 +497,11 @@ private fun RenderContentAsMarkdown(
                         ZoomableContentView(
                             content =
                                 remember(destination, tags) {
-                                    RichTextParser().parseMediaUrl(destination, tags ?: EmptyTagList) ?: MediaUrlImage(url = destination)
+                                    RichTextParser().parseMediaUrl(
+                                        destination,
+                                        tags ?: EmptyTagList,
+                                        title.ifEmpty { null } ?: content,
+                                    ) ?: MediaUrlImage(url = destination, description = title.ifEmpty { null } ?: content)
                                 },
                             roundedCorner = true,
                             accountViewModel = accountViewModel,
