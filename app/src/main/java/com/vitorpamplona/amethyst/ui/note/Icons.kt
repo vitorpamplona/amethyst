@@ -377,7 +377,7 @@ fun PlayIcon(
 ) {
     Icon(
         imageVector = Icons.Outlined.PlayCircle,
-        contentDescription = "Play",
+        contentDescription = stringResource(id = R.string.accessibility_play_username),
         modifier = modifier,
         tint = tint,
     )
