@@ -48,9 +48,11 @@
     <string name="boost">Boost</string>
     <string name="boosted">boosté</string>
     <string name="edited">modifié</string>
+    <string name="edited_number">éditer #%1$s</string>
     <string name="original">original</string>
     <string name="quote">Citation</string>
     <string name="fork">Fork</string>
+    <string name="propose_an_edit">Proposer une Modification</string>
     <string name="new_amount_in_sats">Nouveau montant en Sats</string>
     <string name="add">Ajouter</string>
     <string name="replying_to">"répondre à "</string>
@@ -673,4 +675,8 @@
     <string name="ots_info_title">Preuve d\'horodatage</string>
     <string name="ots_info_description">Il y a une preuve que ce message a été signé avant %1$s. La preuve a été estampillée dans la blockchain Bitcoin à cette date et à cette heure.</string>
     <string name="edit_post">Modifier le Message</string>
+    <string name="proposal_to_edit">Proposition pour améliorer votre publication</string>
+    <string name="message_to_author">Récapitulatif des modifications</string>
+    <string name="message_to_author_placeholder">Corrections rapides ...</string>
+    <string name="accept_the_suggestion">Accepter la Suggestion</string>
 </resources>
