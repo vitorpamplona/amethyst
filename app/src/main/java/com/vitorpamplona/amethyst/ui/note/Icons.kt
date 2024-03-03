@@ -62,7 +62,7 @@ import com.vitorpamplona.amethyst.ui.theme.subtleButton
 fun AmethystIcon(iconSize: Dp) {
     Icon(
         painter = painterResource(R.drawable.amethyst),
-        null,
+        contentDescription = stringResource(id = R.string.app_logo),
         modifier = Modifier.size(iconSize),
         tint = Color.Unspecified,
     )
