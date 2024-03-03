@@ -6,6 +6,7 @@
     <string name="your_profile_image">Sua Foto de Perfil</string>
     <string name="scan_qr">Ler QR</string>
     <string name="show_anyway">Mostrar de qualquer maneira</string>
+    <string name="post_was_hidden">Esta postagem foi ocultada porque menciona seus usuários ou palavras ocultas</string>
     <string name="post_was_flagged_as_inappropriate_by">A postagem foi sinalizada como imprópria por</string>
     <string name="post_not_found">postagem não encontrada</string>
     <string name="channel_image">Imagem do Canal</string>
@@ -48,8 +49,10 @@
     <string name="boost">Impulsionar</string>
     <string name="boosted">impulsionado</string>
     <string name="edited">editado</string>
+    <string name="edited_number">edição #%1$s</string>
     <string name="quote">Citar</string>
     <string name="fork">Garfo</string>
+    <string name="propose_an_edit">Propor uma Edição</string>
     <string name="new_amount_in_sats">Novo Valor em Sats</string>
     <string name="add">Adicionar</string>
     <string name="replying_to">"respondendo para "</string>
@@ -673,7 +676,4 @@
     <string name="message_to_author">Resumo das alterações</string>
     <string name="message_to_author_placeholder">Correções rápidas…</string>
     <string name="accept_the_suggestion">Aceitar a Sugestão</string>
-    <string name="propose_an_edit">Propor uma Edição</string>
-    <string name="post_was_hidden">Esta postagem foi ocultada porque menciona seus usuários ou palavras ocultas</string>
-    <string name="edited_number">edição #%1$s</string>
 </resources>
