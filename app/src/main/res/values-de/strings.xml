@@ -6,6 +6,7 @@
     <string name="your_profile_image">Dein Profilbild</string>
     <string name="scan_qr">QR Code scannen</string>
     <string name="show_anyway">Trotzdem anzeigen</string>
+    <string name="post_was_hidden">Dieser Beitrag wurde ausgeblendet, weil er Ihre ausgeblendeten Benutzer oder Wörter erwähnt</string>
     <string name="post_was_flagged_as_inappropriate_by">Der Beitrag wurde als unangemessen gekennzeichnet von</string>
     <string name="post_not_found">Ereignis wird geladen oder kann nicht in deiner Relay-Liste gefunden werden</string>
     <string name="channel_image">Kanalbild</string>
@@ -48,9 +49,11 @@
     <string name="boost">Boost</string>
     <string name="boosted">boosted</string>
     <string name="edited">bearbeitet</string>
+    <string name="edited_number">Bearbeitung #%1$s</string>
     <string name="original">Original</string>
     <string name="quote">Zitat</string>
     <string name="fork">Fork</string>
+    <string name="propose_an_edit">Eine Bearbeitung vorschlagen</string>
     <string name="new_amount_in_sats">Neuer Betrag in Sats</string>
     <string name="add">Hinzufügen</string>
     <string name="replying_to">"Antworten auf "</string>
@@ -679,7 +682,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="message_to_author">Zusammenfassung der Änderungen</string>
     <string name="message_to_author_placeholder">Schnelle Korrekturen…</string>
     <string name="accept_the_suggestion">Den Vorschlag annehmen</string>
-    <string name="propose_an_edit">Eine Bearbeitung vorschlagen</string>
-    <string name="post_was_hidden">Dieser Beitrag wurde ausgeblendet, weil er Ihre ausgeblendeten Benutzer oder Wörter erwähnt</string>
-    <string name="edited_number">Bearbeitung #%1$s</string>
 </resources>

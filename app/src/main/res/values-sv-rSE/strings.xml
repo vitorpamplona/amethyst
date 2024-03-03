@@ -6,6 +6,7 @@
     <string name="your_profile_image">Din profilbild</string>
     <string name="scan_qr">Scanna QR</string>
     <string name="show_anyway">Visa ändå</string>
+    <string name="post_was_hidden">Detta inlägg doldes eftersom det nämner dina dolda användare eller ord</string>
     <string name="post_was_flagged_as_inappropriate_by">Inlägget flaggades som olämpligt av</string>
     <string name="post_not_found">Inlägg hittades inte</string>
     <string name="channel_image">Kanal bild</string>
@@ -48,8 +49,10 @@
     <string name="boost">Boosta</string>
     <string name="boosted">boostad</string>
     <string name="edited">redigerat</string>
+    <string name="edited_number">redigering #%1$s</string>
     <string name="quote">Citera</string>
     <string name="fork">Förgrening</string>
+    <string name="propose_an_edit">Föreslå en redigering</string>
     <string name="new_amount_in_sats">Nytt belopp i Sats</string>
     <string name="add">Lägg till</string>
     <string name="replying_to">"Svarar till "</string>
@@ -672,7 +675,4 @@
     <string name="message_to_author">Sammanfattning av ändringar</string>
     <string name="message_to_author_placeholder">Snabba fixar…</string>
     <string name="accept_the_suggestion">Acceptera förslaget</string>
-    <string name="propose_an_edit">Föreslå en redigering</string>
-    <string name="post_was_hidden">Detta inlägg doldes eftersom det nämner dina dolda användare eller ord</string>
-    <string name="edited_number">redigering #%1$s</string>
 </resources>
