@@ -799,7 +799,7 @@
     <string name="edit_post">Edit Post</string>
     <string name="proposal_to_edit">Proposal to improve your post</string>
     <string name="message_to_author">Summary of changes</string>
-    <string name="message_to_author_placeholder">Quick fixes...</string>
+    <string name="message_to_author_placeholder">Quick fixes…</string>
 
     <string name="accept_the_suggestion">Accept the Suggestion</string>
 </resources>
