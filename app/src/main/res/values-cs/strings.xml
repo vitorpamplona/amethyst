@@ -670,4 +670,11 @@
     <string name="ots_info_title">Důkaz časového razítka</string>
     <string name="ots_info_description">Existuje důkaz, že tento příspěvek byl podepsán někdy před %1$s. Důkaz byl označen v Bitcoin blockchainu v tomto datu a čase.</string>
     <string name="edit_post">Upravit příspěvek</string>
+    <string name="proposal_to_edit">Návrh na vylepšení vašeho příspěvku</string>
+    <string name="message_to_author">Souhrn změn</string>
+    <string name="message_to_author_placeholder">Rychlé opravy…</string>
+    <string name="accept_the_suggestion">Přijmout návrhy</string>
+    <string name="propose_an_edit">Navrhnout úpravu</string>
+    <string name="post_was_hidden">Tento příspěvek byl skryt, protože zmiňuje vaše skryté uživatele nebo slova</string>
+    <string name="edited_number">úprava #%1$s</string>
 </resources>

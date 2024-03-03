@@ -675,4 +675,11 @@ anz der Bedingungen ist erforderlich</string>
     <string name="ots_info_title">Zeitstempel Beweis</string>
     <string name="ots_info_description">Es gibt einen Beweis, dass dieser Beitrag irgendwann vor %1$s signiert wurde. Der Beweis wurde zu diesem Datum und Uhrzeit in der Bitcoin-Blockchain gestempelt.</string>
     <string name="edit_post">Beitrag bearbeiten</string>
+    <string name="proposal_to_edit">Vorschlag zur Verbesserung Ihres Beitrags</string>
+    <string name="message_to_author">Zusammenfassung der Änderungen</string>
+    <string name="message_to_author_placeholder">Schnelle Korrekturen…</string>
+    <string name="accept_the_suggestion">Den Vorschlag annehmen</string>
+    <string name="propose_an_edit">Eine Bearbeitung vorschlagen</string>
+    <string name="post_was_hidden">Dieser Beitrag wurde ausgeblendet, weil er Ihre ausgeblendeten Benutzer oder Wörter erwähnt</string>
+    <string name="edited_number">Bearbeitung #%1$s</string>
 </resources>

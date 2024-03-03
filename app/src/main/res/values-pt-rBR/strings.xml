@@ -669,4 +669,11 @@
     <string name="ots_info_title">Prova de Carimbo de data/hora</string>
     <string name="ots_info_description">Há prova de que esta postagem foi assinada antes de %1$s. A prova foi carimbada no blockchain do Bitcoin naquela data e hora.</string>
     <string name="edit_post">Editar postagem</string>
+    <string name="proposal_to_edit">Proposta para melhorar sua postagem</string>
+    <string name="message_to_author">Resumo das alterações</string>
+    <string name="message_to_author_placeholder">Correções rápidas…</string>
+    <string name="accept_the_suggestion">Aceitar a Sugestão</string>
+    <string name="propose_an_edit">Propor uma Edição</string>
+    <string name="post_was_hidden">Esta postagem foi ocultada porque menciona seus usuários ou palavras ocultas</string>
+    <string name="edited_number">edição #%1$s</string>
 </resources>
