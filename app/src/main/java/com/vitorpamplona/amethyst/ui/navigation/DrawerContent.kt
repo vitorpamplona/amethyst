@@ -72,10 +72,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -86,6 +89,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.service.relays.RelayPoolStatus
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
+import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
@@ -736,29 +740,24 @@ fun BottomContent(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
+            ClickableText(
+                text =
+                    buildAnnotatedString {
+                        withStyle(
+                            SpanStyle(
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                        ) {
+                            append("v" + BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase())
+                        }
+                    },
+                onClick = {
+                    nav("Note/${BuildConfig.RELEASE_NOTES_ID}")
+                    coroutineScope.launch { drawerState.close() }
+                },
                 modifier = Modifier.padding(start = 16.dp),
-                text = "v" + BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase(),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
             )
-      /*
-      IconButton(
-          onClick = {
-              when (AppCompatDelegate.getDefaultNightMode()) {
-                  AppCompatDelegate.MODE_NIGHT_NO -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-                  AppCompatDelegate.MODE_NIGHT_YES -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-                  else -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-              }
-          }
-      ) {
-          Icon(
-              painter = painterResource(R.drawable.ic_theme),
-              null,
-              modifier = Modifier.size(24.dp),
-              tint = MaterialTheme.colorScheme.primary
-          )
-      }*/
             Box(modifier = Modifier.weight(1F))
             IconButton(
                 onClick = {
