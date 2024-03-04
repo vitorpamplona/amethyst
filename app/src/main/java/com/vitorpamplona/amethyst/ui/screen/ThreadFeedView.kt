@@ -576,7 +576,6 @@ fun NoteMaster(
                             makeItShort = false,
                             canPreview = true,
                             backgroundColor,
-                            editState,
                             accountViewModel,
                             nav,
                         )

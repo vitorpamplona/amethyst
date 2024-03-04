@@ -1136,6 +1136,11 @@ class EditState() {
 
     fun latest() = modificationsList.lastOrNull()
 
+    fun latestBefore(createdAt: Long?): Note? {
+        if (createdAt == null) return latest()
+        return modificationsList.lastOrNull { (it.createdAt() ?: Long.MAX_VALUE) < createdAt }
+    }
+
     fun nextModification() {
         if (modificationToShowIndex < 0) {
             modificationToShowIndex = 0
@@ -1370,7 +1375,6 @@ private fun RenderNoteRow(
                 makeItShort,
                 canPreview,
                 backgroundColor,
-                editState,
                 accountViewModel,
                 nav,
             )
@@ -1509,34 +1513,11 @@ fun RenderTextModificationEvent(
     makeItShort: Boolean,
     canPreview: Boolean,
     backgroundColor: MutableState<Color>,
-    editStateByAuthor: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     val noteEvent = note.event as? TextNoteModificationEvent ?: return
     val noteAuthor = note.author ?: return
-
-    // val isAuthorTheLoggedUser = remember(note.event) { accountViewModel.isLoggedUser(note.author) }
-
-    val editState =
-        remember {
-            derivedStateOf {
-                val loadable = editStateByAuthor.value as? GenericLoadable.Loaded<EditState>
-
-                val state = EditState()
-
-                val latestChangeByAuthor =
-                    if (loadable != null && loadable.loaded.hasModificationsToShow()) {
-                        loadable.loaded.latest()
-                    } else {
-                        null
-                    }
-
-                state.updateModifications(listOfNotNull(latestChangeByAuthor, note))
-
-                GenericLoadable.Loaded(state)
-            }
-        }
 
     val wantsToEditPost =
         remember {
@@ -1549,6 +1530,13 @@ fun RenderTextModificationEvent(
 
             mutableStateOf(accountViewModel.isLoggedUser(authorOfTheOriginalNote))
         }
+
+    noteEvent.editedNote()?.let {
+        LoadNote(baseNoteHex = it, accountViewModel = accountViewModel) { baseOriginalNote ->
+            baseOriginalNote?.let {
+            }
+        }
+    }
 
     Card(
         modifier = MaterialTheme.colorScheme.imageModifier,
@@ -1582,6 +1570,28 @@ fun RenderTextModificationEvent(
                 LoadNote(baseNoteHex = it, accountViewModel = accountViewModel) { baseNote ->
                     baseNote?.let {
                         val noteState by baseNote.live().metadata.observeAsState()
+
+                        val editStateOriginalNote = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
+
+                        val editState =
+                            remember(note) {
+                                derivedStateOf {
+                                    val loadable = editStateOriginalNote.value as? GenericLoadable.Loaded<EditState>
+
+                                    val state = EditState()
+
+                                    val latestChangeByAuthor =
+                                        if (loadable != null && loadable.loaded.hasModificationsToShow()) {
+                                            loadable.loaded.latestBefore(note.createdAt())
+                                        } else {
+                                            null
+                                        }
+
+                                    state.updateModifications(listOfNotNull(latestChangeByAuthor, note))
+
+                                    GenericLoadable.Loaded(state)
+                                }
+                            }
 
                         LaunchedEffect(key1 = noteState) {
                             val newAuthor = accountViewModel.isLoggedUser(noteState?.note?.author)
