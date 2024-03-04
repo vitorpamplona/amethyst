@@ -230,6 +230,7 @@ import com.vitorpamplona.quartz.events.FhirResourceEvent
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.GitIssueEvent
 import com.vitorpamplona.quartz.events.GitPatchEvent
 import com.vitorpamplona.quartz.events.GitRepositoryEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
@@ -1301,6 +1302,16 @@ private fun RenderNoteRow(
         }
         is GitPatchEvent -> {
             RenderGitPatchEvent(
+                baseNote,
+                makeItShort,
+                canPreview,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+        is GitIssueEvent -> {
+            RenderGitIssueEvent(
                 baseNote,
                 makeItShort,
                 canPreview,
@@ -4055,6 +4066,92 @@ private fun RenderShortRepositoryHeader(
 @Composable
 private fun RenderGitPatchEvent(
     noteEvent: GitPatchEvent,
+    note: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val repository = remember(noteEvent) { noteEvent.repository() }
+
+    if (repository != null) {
+        LoadAddressableNote(aTag = repository, accountViewModel = accountViewModel) {
+            if (it != null) {
+                RenderShortRepositoryHeader(it, accountViewModel, nav)
+                Spacer(modifier = DoubleVertSpacer)
+            }
+        }
+    }
+
+    LoadDecryptedContent(note, accountViewModel) { body ->
+        val eventContent by
+            remember(note.event) {
+                derivedStateOf {
+                    val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
+
+                    if (!subject.isNullOrBlank() && !body.split("\n")[0].contains(subject)) {
+                        "### $subject\n$body"
+                    } else {
+                        body
+                    }
+                }
+            }
+
+        val isAuthorTheLoggedUser = remember(note.event) { accountViewModel.isLoggedUser(note.author) }
+
+        if (makeItShort && isAuthorTheLoggedUser) {
+            Text(
+                text = eventContent,
+                color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        } else {
+            SensitivityWarning(
+                note = note,
+                accountViewModel = accountViewModel,
+            ) {
+                val modifier = remember(note) { Modifier.fillMaxWidth() }
+                val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+
+                TranslatableRichTextViewer(
+                    content = eventContent,
+                    canPreview = canPreview && !makeItShort,
+                    modifier = modifier,
+                    tags = tags,
+                    backgroundColor = backgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+
+            if (note.event?.hasHashtags() == true) {
+                val hashtags =
+                    remember(note.event) { note.event?.hashtags()?.toImmutableList() ?: persistentListOf() }
+                DisplayUncitedHashtags(hashtags, eventContent, nav)
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderGitIssueEvent(
+    baseNote: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val event = baseNote.event as? GitIssueEvent ?: return
+
+    RenderGitIssueEvent(event, baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+}
+
+@Composable
+private fun RenderGitIssueEvent(
+    noteEvent: GitIssueEvent,
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,

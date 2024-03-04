@@ -35,6 +35,9 @@ import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
 import com.vitorpamplona.quartz.events.BookmarkListEvent
+import com.vitorpamplona.quartz.events.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.events.CalendarRSVPEvent
+import com.vitorpamplona.quartz.events.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
@@ -42,6 +45,10 @@ import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
+import com.vitorpamplona.quartz.events.GitIssueEvent
+import com.vitorpamplona.quartz.events.GitPatchEvent
+import com.vitorpamplona.quartz.events.GitReplyEvent
+import com.vitorpamplona.quartz.events.HighlightEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
@@ -120,24 +127,12 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         )
     }
 
-    fun createAccountAcceptedAwardsFilter(): TypedFilter {
+    fun createAccountSettingsFilter(): TypedFilter {
         return TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
                 JsonFilter(
-                    kinds = listOf(BadgeProfilesEvent.KIND, EmojiPackSelectionEvent.KIND),
-                    authors = listOf(account.userProfile().pubkeyHex),
-                    limit = 10,
-                ),
-        )
-    }
-
-    fun createAccountBookmarkListFilter(): TypedFilter {
-        return TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter =
-                JsonFilter(
-                    kinds = listOf(BookmarkListEvent.KIND, PeopleListEvent.KIND, MuteListEvent.KIND),
+                    kinds = listOf(BookmarkListEvent.KIND, PeopleListEvent.KIND, MuteListEvent.KIND, BadgeProfilesEvent.KIND, EmojiPackSelectionEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     limit = 100,
                 ),
@@ -199,6 +194,36 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                         ),
                     tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
                     limit = 4000,
+                    since = since,
+                ),
+        )
+    }
+
+    fun createNotificationFilter2(): TypedFilter {
+        val since =
+            latestEOSEs.users[account.userProfile()]
+                ?.followList
+                ?.get(account.defaultNotificationFollowList.value)
+                ?.relayList
+                ?: account.activeRelays()?.associate { it.url to EOSETime(TimeUtils.oneWeekAgo()) }
+                ?: account.convertLocalRelays().associate { it.url to EOSETime(TimeUtils.oneWeekAgo()) }
+
+        return TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                JsonFilter(
+                    kinds =
+                        listOf(
+                            GitReplyEvent.KIND,
+                            GitIssueEvent.KIND,
+                            GitPatchEvent.KIND,
+                            HighlightEvent.KIND,
+                            CalendarDateSlotEvent.KIND,
+                            CalendarTimeSlotEvent.KIND,
+                            CalendarRSVPEvent.KIND,
+                        ),
+                    tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
+                    limit = 400,
                     since = since,
                 ),
         )
@@ -297,10 +322,10 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     createAccountContactListFilter(),
                     createAccountRelayListFilter(),
                     createNotificationFilter(),
+                    createNotificationFilter2(),
                     createGiftWrapsToMeFilter(),
                     createAccountReportsFilter(),
-                    createAccountAcceptedAwardsFilter(),
-                    createAccountBookmarkListFilter(),
+                    createAccountSettingsFilter(),
                     createAccountLastPostsListFilter(),
                     createOtherAccountsBaseFilter(),
                 )
@@ -312,7 +337,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     createAccountMetadataFilter(),
                     createAccountContactListFilter(),
                     createAccountRelayListFilter(),
-                    createAccountBookmarkListFilter(),
+                    createAccountSettingsFilter(),
                 )
                     .ifEmpty { null }
         }

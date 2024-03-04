@@ -124,6 +124,7 @@ import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.RenderAppDefinition
 import com.vitorpamplona.amethyst.ui.note.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.note.RenderFhirResource
+import com.vitorpamplona.amethyst.ui.note.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.ui.note.RenderGitRepositoryEvent
 import com.vitorpamplona.amethyst.ui.note.RenderPinListEvent
@@ -166,6 +167,7 @@ import com.vitorpamplona.quartz.events.FhirResourceEvent
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.GitIssueEvent
 import com.vitorpamplona.quartz.events.GitPatchEvent
 import com.vitorpamplona.quartz.events.GitRepositoryEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
@@ -554,6 +556,8 @@ fun NoteMaster(
                         RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
                     } else if (noteEvent is GitPatchEvent) {
                         RenderGitPatchEvent(baseNote, false, true, backgroundColor, accountViewModel, nav)
+                    } else if (noteEvent is GitIssueEvent) {
+                        RenderGitIssueEvent(baseNote, false, true, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is AppDefinitionEvent) {
                         RenderAppDefinition(baseNote, accountViewModel, nav)
                     } else if (noteEvent is HighlightEvent) {
