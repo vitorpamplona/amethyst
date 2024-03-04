@@ -32,6 +32,9 @@ import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
+import com.vitorpamplona.quartz.events.GitIssueEvent
+import com.vitorpamplona.quartz.events.GitPatchEvent
+import com.vitorpamplona.quartz.events.HighlightEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
@@ -93,6 +96,14 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
         authorHex: HexKey,
     ): Boolean {
         val event = note.event
+
+        if (event is GitIssueEvent || event is GitPatchEvent) {
+            return true
+        }
+
+        if (event is HighlightEvent) {
+            return true
+        }
 
         if (event is BaseTextNoteEvent) {
             if (note.replyTo?.any { it.author?.pubkeyHex == authorHex } == true) return true
