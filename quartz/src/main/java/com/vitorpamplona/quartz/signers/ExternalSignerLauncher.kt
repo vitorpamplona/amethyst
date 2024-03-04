@@ -33,8 +33,8 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 
@@ -90,9 +90,7 @@ class Result(
          * Parses the json with a string of events to an Array of Event objects.
          */
         fun fromJsonArray(json: String): Array<Result> {
-            return Event.mapper.readTree(json).map {
-                fromJson(it.asText())
-            }.toTypedArray()
+            return mapper.readValue(json)
         }
     }
 }
