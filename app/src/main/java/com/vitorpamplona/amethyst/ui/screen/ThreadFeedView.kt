@@ -435,7 +435,7 @@ fun NoteMaster(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
-                                null,
+                                contentDescription = stringResource(id = R.string.more_options),
                                 modifier = Size15Modifier,
                                 tint = MaterialTheme.colorScheme.placeholderText,
                             )

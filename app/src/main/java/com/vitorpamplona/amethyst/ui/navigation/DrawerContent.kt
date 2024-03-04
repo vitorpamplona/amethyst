@@ -768,7 +768,7 @@ fun BottomContent(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_qrcode),
-                    null,
+                    contentDescription = stringResource(id = R.string.show_npub_as_a_qr_code),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )

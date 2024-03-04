@@ -78,7 +78,7 @@ import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showCount
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefresheableCardView
+import com.vitorpamplona.amethyst.ui.screen.RefreshableCardView
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -121,7 +121,7 @@ fun NotificationScreen(
             model = userReactionsStatsModel,
         )
 
-        RefresheableCardView(
+        RefreshableCardView(
             viewModel = notifFeedViewModel,
             accountViewModel = accountViewModel,
             nav = nav,

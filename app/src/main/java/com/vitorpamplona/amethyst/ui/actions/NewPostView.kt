@@ -56,7 +56,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material.icons.filled.LocationOff
@@ -65,7 +66,6 @@ import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
@@ -1087,7 +1087,7 @@ fun FowardZapTo(
                     tint = BitcoinOrange,
                 )
                 Icon(
-                    imageVector = Icons.Outlined.ArrowForwardIos,
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
                     contentDescription = stringResource(id = R.string.zaps),
                     modifier =
                         Modifier
@@ -1451,7 +1451,7 @@ private fun ForwardZapTo(
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
                 Icon(
-                    imageVector = Icons.Default.ArrowForwardIos,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                     contentDescription = null,
                     modifier =
                         Modifier
@@ -1470,7 +1470,7 @@ private fun ForwardZapTo(
                     tint = BitcoinOrange,
                 )
                 Icon(
-                    imageVector = Icons.Outlined.ArrowForwardIos,
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
                     contentDescription = null,
                     modifier =
                         Modifier
@@ -1534,7 +1534,7 @@ private fun MarkAsSensitive(
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.add_content_warning),
                     modifier =
                         Modifier
                             .size(10.dp)
@@ -1553,7 +1553,7 @@ private fun MarkAsSensitive(
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
-                    contentDescription = null,
+                    contentDescription = stringResource(id = R.string.remove_content_warning),
                     modifier =
                         Modifier
                             .size(10.dp)

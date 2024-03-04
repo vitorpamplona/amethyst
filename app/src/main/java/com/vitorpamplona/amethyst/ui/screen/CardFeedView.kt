@@ -58,7 +58,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
-fun RefresheableCardView(
+fun RefreshableCardView(
     viewModel: CardFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,

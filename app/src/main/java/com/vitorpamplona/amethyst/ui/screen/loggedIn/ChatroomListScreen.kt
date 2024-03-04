@@ -269,7 +269,7 @@ fun ChatroomListScreenOnlyList(
             ) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = null,
+                    contentDescription = stringResource(id = R.string.more_options),
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
 

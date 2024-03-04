@@ -22,7 +22,10 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Clear
@@ -33,11 +36,8 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Report
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material3.Icon
@@ -62,7 +62,7 @@ import com.vitorpamplona.amethyst.ui.theme.subtleButton
 fun AmethystIcon(iconSize: Dp) {
     Icon(
         painter = painterResource(R.drawable.amethyst),
-        null,
+        contentDescription = stringResource(id = R.string.app_logo),
         modifier = Modifier.size(iconSize),
         tint = Color.Unspecified,
     )
@@ -81,7 +81,7 @@ fun FollowingIcon(iconSize: Dp) {
 @Composable
 fun ArrowBackIcon() {
     Icon(
-        imageVector = Icons.Default.ArrowBack,
+        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
         contentDescription = stringResource(R.string.back),
         tint = MaterialTheme.colorScheme.grayText,
     )
@@ -104,7 +104,7 @@ fun DownloadForOfflineIcon(
 ) {
     Icon(
         imageVector = Icons.Default.DownloadForOffline,
-        null,
+        contentDescription = stringResource(id = R.string.accessibility_download_for_offline),
         modifier = remember(iconSize) { Modifier.size(iconSize) },
         tint = tint,
     )
@@ -237,7 +237,7 @@ fun OpenInNewIcon(
     tint: Color = Color.Unspecified,
 ) {
     Icon(
-        imageVector = Icons.Default.OpenInNew,
+        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
         stringResource(id = R.string.copy_to_clipboard),
         tint = tint,
         modifier = modifier,
@@ -320,7 +320,7 @@ fun RegularPostIcon() {
 fun CancelIcon() {
     Icon(
         imageVector = Icons.Default.Cancel,
-        null,
+        contentDescription = stringResource(id = R.string.cancel),
         modifier = Size30Modifier,
         tint = MaterialTheme.colorScheme.placeholderText,
     )
@@ -338,7 +338,7 @@ fun CloseIcon() {
 @Composable
 fun MutedIcon() {
     Icon(
-        imageVector = Icons.Default.VolumeOff,
+        imageVector = Icons.AutoMirrored.Filled.VolumeOff,
         contentDescription = stringResource(id = R.string.muted_button),
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Size30Modifier,
@@ -348,7 +348,7 @@ fun MutedIcon() {
 @Composable
 fun MuteIcon() {
     Icon(
-        imageVector = Icons.Default.VolumeUp,
+        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
         contentDescription = stringResource(id = R.string.mute_button),
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Size30Modifier,
@@ -375,7 +375,7 @@ fun PlayIcon(
 ) {
     Icon(
         imageVector = Icons.Outlined.PlayCircle,
-        contentDescription = null,
+        contentDescription = stringResource(id = R.string.accessibility_play_username),
         modifier = modifier,
         tint = tint,
     )
@@ -401,7 +401,7 @@ fun LyricsIcon(
 ) {
     Icon(
         painter = painterResource(id = R.drawable.lyrics_on),
-        contentDescription = null,
+        contentDescription = stringResource(id = R.string.accessibility_lyrics_on),
         modifier = modifier,
         tint = tint,
     )
@@ -414,7 +414,7 @@ fun LyricsOffIcon(
 ) {
     Icon(
         painter = painterResource(id = R.drawable.lyrics_off),
-        contentDescription = null,
+        contentDescription = stringResource(id = R.string.accessibility_lyrics_off),
         modifier = modifier,
         tint = tint,
     )
@@ -478,5 +478,31 @@ fun NIP05FailedVerification(modifier: Modifier) {
         contentDescription = stringResource(id = R.string.nip05_failed),
         modifier = modifier,
         tint = Color.Red,
+    )
+}
+
+@Composable
+fun IncognitoIconOn(
+    modifier: Modifier,
+    tint: Color,
+) {
+    Icon(
+        painter = painterResource(id = R.drawable.incognito),
+        contentDescription = stringResource(id = R.string.accessibility_turn_off_sealed_message),
+        modifier = modifier,
+        tint = tint,
+    )
+}
+
+@Composable
+fun IncognitoIconOff(
+    modifier: Modifier,
+    tint: Color,
+) {
+    Icon(
+        painter = painterResource(id = R.drawable.incognito_off),
+        contentDescription = stringResource(id = R.string.accessibility_turn_on_sealed_message),
+        modifier = modifier,
+        tint = tint,
     )
 }
