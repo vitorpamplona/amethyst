@@ -241,12 +241,14 @@ dependencyResolutionManagement {
 Add the dependency
 
 ```gradle
-implementation('com.github.vitorpamplona.amethyst:quartz:v0.84.3')
+implementation('com.github.vitorpamplona.amethyst:quartz:v0.85.1')
 ```
 
 ## Contributing
 
-[Issues](https://github.com/vitorpamplona/amethyst/issues) and [pull requests](https://github.com/vitorpamplona/amethyst/pulls) here are very welcome. Translations can be provided via [Crowdin](https://crowdin.com/project/amethyst-social)
+Issues can be logged on: [https://gitworkshop.dev/repo/amethyst](https://gitworkshop.dev/repo/amethyst)
+
+[GitHub issues](https://github.com/vitorpamplona/amethyst/issues) and [pull requests](https://github.com/vitorpamplona/amethyst/pulls) here are also welcome. Translations can be provided via [Crowdin](https://crowdin.com/project/amethyst-social)
 
 You can also send patches through Nostr using [GitStr](https://github.com/fiatjaf/gitstr) to [this nostr address](https://patch34.pages.dev/naddr1qqyxzmt9w358jum5qyg8v6t5daezumn0wd68yvfwvdhk6qg7waehxw309ahx7um5wgkhqatz9emk2mrvdaexgetj9ehx2ap0qy2hwumn8ghj7un9d3shjtnwdaehgu3wvfnj7q3qgcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqxpqqqpmej720gac)
 
