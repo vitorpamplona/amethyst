@@ -1516,7 +1516,7 @@ fun RenderTextModificationEvent(
     val noteEvent = note.event as? TextNoteModificationEvent ?: return
     val noteAuthor = note.author ?: return
 
-    val isAuthorTheLoggedUser = remember(note.event) { accountViewModel.isLoggedUser(note.author) }
+    // val isAuthorTheLoggedUser = remember(note.event) { accountViewModel.isLoggedUser(note.author) }
 
     val editState =
         remember {
@@ -1541,6 +1541,13 @@ fun RenderTextModificationEvent(
     val wantsToEditPost =
         remember {
             mutableStateOf(false)
+        }
+
+    val isAuthorTheLoggedUser =
+        remember {
+            val authorOfTheOriginalNote = noteEvent.editedNote()?.let { accountViewModel.getNoteIfExists(it)?.author }
+
+            mutableStateOf(accountViewModel.isLoggedUser(authorOfTheOriginalNote))
         }
 
     Card(
@@ -1574,6 +1581,16 @@ fun RenderTextModificationEvent(
             noteEvent.editedNote()?.let {
                 LoadNote(baseNoteHex = it, accountViewModel = accountViewModel) { baseNote ->
                     baseNote?.let {
+                        val noteState by baseNote.live().metadata.observeAsState()
+
+                        LaunchedEffect(key1 = noteState) {
+                            val newAuthor = accountViewModel.isLoggedUser(noteState?.note?.author)
+
+                            if (isAuthorTheLoggedUser.value != newAuthor) {
+                                isAuthorTheLoggedUser.value = newAuthor
+                            }
+                        }
+
                         Column(
                             modifier =
                                 MaterialTheme.colorScheme.innerPostModifier.padding(Size10dp).clickable {
@@ -1609,13 +1626,15 @@ fun RenderTextModificationEvent(
                 }
             }
 
-            Spacer(modifier = StdVertSpacer)
+            if (isAuthorTheLoggedUser.value) {
+                Spacer(modifier = StdVertSpacer)
 
-            Button(
-                onClick = { wantsToEditPost.value = true },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(text = stringResource(id = R.string.accept_the_suggestion))
+                Button(
+                    onClick = { wantsToEditPost.value = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(text = stringResource(id = R.string.accept_the_suggestion))
+                }
             }
         }
     }

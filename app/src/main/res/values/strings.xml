@@ -797,7 +797,7 @@
     <string name="ots_info_description">There\'s proof this post was signed sometime before %1$s. The proof was stamped in the Bitcoin blockchain at that date and time.</string>
 
     <string name="edit_post">Edit Post</string>
-    <string name="proposal_to_edit">Proposal to improve your post</string>
+    <string name="proposal_to_edit">Proposal to improve a post</string>
     <string name="message_to_author">Summary of changes</string>
     <string name="message_to_author_placeholder">Quick fixes…</string>
 
