@@ -675,6 +675,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="git_repository">Git Repository: %1$s</string>
     <string name="git_web_address">Internet:</string>
     <string name="git_clone_address">Klonen:</string>
+    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Zeitstempel Beweis</string>
     <string name="ots_info_description">Es gibt einen Beweis, dass dieser Beitrag irgendwann vor %1$s signiert wurde. Der Beweis wurde zu diesem Datum und Uhrzeit in der Bitcoin-Blockchain gestempelt.</string>
     <string name="edit_post">Beitrag bearbeiten</string>
@@ -682,4 +683,13 @@ anz der Bedingungen ist erforderlich</string>
     <string name="message_to_author">Zusammenfassung der Änderungen</string>
     <string name="message_to_author_placeholder">Schnelle Korrekturen…</string>
     <string name="accept_the_suggestion">Den Vorschlag annehmen</string>
+    <string name="accessibility_download_for_offline">Herunterladen</string>
+    <string name="accessibility_lyrics_on">Liedtext an</string>
+    <string name="accessibility_lyrics_off">Liedtext aus</string>
+    <string name="accessibility_turn_on_sealed_message">Versiegelte Nachricht aus. Klicken Sie, um die versiegelte Nachricht einzuschalten</string>
+    <string name="accessibility_turn_off_sealed_message">Versiegelte Nachricht an. Klicken Sie, um die versiegelte Nachricht auszuschalten</string>
+    <string name="accessibility_send">Senden</string>
+    <string name="accessibility_play_username">Benutzernamen als Audio abspielen</string>
+    <string name="accessibility_scan_qr_code">QR-Code scannen</string>
+    <string name="accessibility_navigate_to_alby">Navigieren Sie zum Drittanbieter-Wallet-Anbieter Alby</string>
 </resources>

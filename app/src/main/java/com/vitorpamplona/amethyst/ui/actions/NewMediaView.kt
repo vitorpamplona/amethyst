@@ -88,7 +88,7 @@ fun NewMediaView(
     val resolver = LocalContext.current.contentResolver
     val context = LocalContext.current
 
-    val scroolState = rememberScrollState()
+    val scrollState = rememberScrollState()
 
     LaunchedEffect(uri) {
         val mediaType = resolver.getType(uri) ?: ""
@@ -173,7 +173,7 @@ fun NewMediaView(
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 ) {
                     Column(
-                        modifier = Modifier.fillMaxWidth().verticalScroll(scroolState),
+                        modifier = Modifier.fillMaxWidth().verticalScroll(scrollState),
                     ) {
                         ImageVideoPost(postViewModel, accountViewModel)
                     }

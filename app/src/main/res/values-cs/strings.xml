@@ -670,6 +670,7 @@
     <string name="git_repository">Git repositář: %1$s</string>
     <string name="git_web_address">Internet:</string>
     <string name="git_clone_address">Klon:</string>
+    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Důkaz časového razítka</string>
     <string name="ots_info_description">Existuje důkaz, že tento příspěvek byl podepsán někdy před %1$s. Důkaz byl označen v Bitcoin blockchainu v tomto datu a čase.</string>
     <string name="edit_post">Upravit příspěvek</string>
@@ -677,4 +678,13 @@
     <string name="message_to_author">Souhrn změn</string>
     <string name="message_to_author_placeholder">Rychlé opravy…</string>
     <string name="accept_the_suggestion">Přijmout návrhy</string>
+    <string name="accessibility_download_for_offline">Stáhnout</string>
+    <string name="accessibility_lyrics_on">Text písně zapnuto</string>
+    <string name="accessibility_lyrics_off">Text písně vypnuto</string>
+    <string name="accessibility_turn_on_sealed_message">Zapečetěná zpráva vypnuta. Klikněte pro zapnutí zapečetěné zprávy</string>
+    <string name="accessibility_turn_off_sealed_message">Zapečetěná zpráva zapnuta. Klikněte pro vypnutí zapečetěné zprávy</string>
+    <string name="accessibility_send">Odeslat</string>
+    <string name="accessibility_play_username">Přehrát uživatelské jméno jako audio</string>
+    <string name="accessibility_scan_qr_code">Skenovat QR kód</string>
+    <string name="accessibility_navigate_to_alby">Přejít na poskytovatele peněženky třetí strany Alby</string>
 </resources>

@@ -45,8 +45,8 @@ import androidx.compose.material.icons.filled.SyncProblem
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -272,9 +272,7 @@ fun ServerConfigHeader() {
             }
         }
 
-        Divider(
-            thickness = DividerThickness,
-        )
+        HorizontalDivider(thickness = DividerThickness)
     }
 }
 
@@ -459,9 +457,7 @@ fun ServerConfigClickableLine(
             }
         }
 
-        Divider(
-            thickness = DividerThickness,
-        )
+        HorizontalDivider(thickness = DividerThickness)
     }
 }
 
@@ -839,7 +835,7 @@ private fun FirstLine(
         ) {
             Icon(
                 imageVector = Icons.Default.Cancel,
-                null,
+                contentDescription = stringResource(id = R.string.remove),
                 modifier = Modifier.padding(start = 10.dp).size(15.dp),
                 tint = WarningColor,
             )
@@ -875,7 +871,7 @@ fun EditableServerConfig(
         IconButton(onClick = { read = !read }) {
             Icon(
                 imageVector = Icons.Default.Download,
-                null,
+                contentDescription = stringResource(id = R.string.read_from_relay),
                 modifier = Modifier.size(Size35dp).padding(horizontal = 5.dp),
                 tint =
                     if (read) {
@@ -889,7 +885,7 @@ fun EditableServerConfig(
         IconButton(onClick = { write = !write }) {
             Icon(
                 imageVector = Icons.Default.Upload,
-                null,
+                contentDescription = stringResource(id = R.string.write_to_relay),
                 modifier = Modifier.size(Size35dp).padding(horizontal = 5.dp),
                 tint =
                     if (write) {

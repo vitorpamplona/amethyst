@@ -50,6 +50,7 @@
     <string name="boosted">boostad</string>
     <string name="edited">redigerat</string>
     <string name="edited_number">redigering #%1$s</string>
+    <string name="original">original</string>
     <string name="quote">Citera</string>
     <string name="fork">Förgrening</string>
     <string name="propose_an_edit">Föreslå en redigering</string>
@@ -668,6 +669,7 @@
     <string name="git_repository">Git Repository: %1$s</string>
     <string name="git_web_address">Webbplats:</string>
     <string name="git_clone_address">Klona:</string>
+    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Tidsstämpel Bevis</string>
     <string name="ots_info_description">Det finns bevis på att detta inlägg signerades någon gång före %1$s. Beviset stämplades i Bitcoin-blockchainen vid det datumet och den tiden.</string>
     <string name="edit_post">Redigera inlägg</string>
@@ -675,4 +677,13 @@
     <string name="message_to_author">Sammanfattning av ändringar</string>
     <string name="message_to_author_placeholder">Snabba fixar…</string>
     <string name="accept_the_suggestion">Acceptera förslaget</string>
+    <string name="accessibility_download_for_offline">Ladda ner</string>
+    <string name="accessibility_lyrics_on">Undertexter på</string>
+    <string name="accessibility_lyrics_off">Undertexter av</string>
+    <string name="accessibility_turn_on_sealed_message">Förseglat meddelande av. Klicka för att slå på förseglat meddelande</string>
+    <string name="accessibility_turn_off_sealed_message">Förseglat meddelande på. Klicka för att stänga av förseglat meddelande</string>
+    <string name="accessibility_send">Skicka</string>
+    <string name="accessibility_play_username">Spela upp användarnamn som ljud</string>
+    <string name="accessibility_scan_qr_code">Skanna QR-kod</string>
+    <string name="accessibility_navigate_to_alby">Navigera till tredjeparts plånboksleverantören Alby</string>
 </resources>
