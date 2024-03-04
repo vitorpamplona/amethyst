@@ -678,4 +678,13 @@
     <string name="message_to_author">Resumo das alterações</string>
     <string name="message_to_author_placeholder">Correções rápidas…</string>
     <string name="accept_the_suggestion">Aceitar a Sugestão</string>
+    <string name="accessibility_download_for_offline">Baixar</string>
+    <string name="accessibility_lyrics_on">Letras ligadas</string>
+    <string name="accessibility_lyrics_off">Letras desligadas</string>
+    <string name="accessibility_turn_on_sealed_message">Mensagem selada desligada. Clique para ligar a mensagem selada</string>
+    <string name="accessibility_turn_off_sealed_message">Mensagem selada ligada. Clique para desligar a mensagem selada</string>
+    <string name="accessibility_send">Enviar</string>
+    <string name="accessibility_play_username">Reproduzir nome de usuário como áudio</string>
+    <string name="accessibility_scan_qr_code">Escanear código QR</string>
+    <string name="accessibility_navigate_to_alby">Navegar para o provedor de carteira de terceiros Alby</string>
 </resources>
