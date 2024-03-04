@@ -629,6 +629,8 @@ open class NewPostViewModel() : ViewModel() {
         toUsers = TextFieldValue("")
         subject = TextFieldValue("")
 
+        forkedFromNote = null
+
         contentToAddUrl = null
         urlPreview = null
         isUploadingImage = false
