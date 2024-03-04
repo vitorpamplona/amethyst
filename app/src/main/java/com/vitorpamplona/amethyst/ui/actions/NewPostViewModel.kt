@@ -289,6 +289,8 @@ open class NewPostViewModel() : ViewModel() {
             }
 
             forkedFromNote = it
+        } ?: run {
+            forkedFromNote = null
         }
 
         if (!forwardZapTo.items.isEmpty()) {
