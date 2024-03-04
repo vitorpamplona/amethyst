@@ -6,6 +6,7 @@
     <string name="your_profile_image">Tu imagen de perfil</string>
     <string name="scan_qr">Escanear código QR</string>
     <string name="show_anyway">Mostrar de todos modos</string>
+    <string name="post_was_hidden">Esta publicación se ocultó porque menciona tus usuarios o palabras ocultas</string>
     <string name="post_was_flagged_as_inappropriate_by">La publicación fue reportada por</string>
     <string name="post_not_found">El evento se está cargando o no se puede encontrar en la lista de relés</string>
     <string name="channel_image">Imagen del canal</string>
@@ -47,8 +48,12 @@
     <string name="view_count">Total vistas</string>
     <string name="boost">Impulsar</string>
     <string name="boosted">Impulsada</string>
+    <string name="edited">editada</string>
+    <string name="edited_number">edición #%1$s</string>
+    <string name="original">original</string>
     <string name="quote">Cita</string>
     <string name="fork">Bifurcar</string>
+    <string name="propose_an_edit">Proponer una edición</string>
     <string name="new_amount_in_sats">Nueva cantidad en sats</string>
     <string name="add">Agregar</string>
     <string name="replying_to">"respondiendo a "</string>
@@ -670,4 +675,18 @@
     <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Prueba de marca de tiempo</string>
     <string name="ots_info_description">Hay prueba de que esta publicación se firmó en algún momento antes de %1$s. La prueba se marcó en la cadena de bloques de Bitcoin en esa fecha y hora.</string>
+    <string name="edit_post">Editar publicación</string>
+    <string name="proposal_to_edit">Propuesta para mejorar una publicación</string>
+    <string name="message_to_author">Resumen de cambios</string>
+    <string name="message_to_author_placeholder">Correcciones rápidas…</string>
+    <string name="accept_the_suggestion">Aceptar la sugerencia</string>
+    <string name="accessibility_download_for_offline">Descargar</string>
+    <string name="accessibility_lyrics_on">Letra activada</string>
+    <string name="accessibility_lyrics_off">Letra desactivada</string>
+    <string name="accessibility_turn_on_sealed_message">Mensaje sellado desactivado. Haz clic para activar el mensaje sellado.</string>
+    <string name="accessibility_turn_off_sealed_message">Mensaje sellado activado. Haz clic para desactivar el mensaje sellado.</string>
+    <string name="accessibility_send">Enviar</string>
+    <string name="accessibility_play_username">Reproducir nombre de usuario como audio</string>
+    <string name="accessibility_scan_qr_code">Escanear código QR</string>
+    <string name="accessibility_navigate_to_alby">Ir al proveedor externo de billeteras Alby</string>
 </resources>
