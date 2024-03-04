@@ -6,6 +6,7 @@
     <string name="your_profile_image">Votre Photo de Profil</string>
     <string name="scan_qr">Scanner le QR code</string>
     <string name="show_anyway">Montrer quand même</string>
+    <string name="post_was_hidden">Ce message a été masqué car il mentionne vos utilisateurs ou mots cachés</string>
     <string name="post_was_flagged_as_inappropriate_by">Post signalé inapproprié par</string>
     <string name="post_not_found">Post non trouvé</string>
     <string name="channel_image">Image du canal</string>
@@ -422,8 +423,8 @@
     <string name="live_stream_offline_tag">DÉCONNECTÉ</string>
     <string name="live_stream_ended_tag">TERMINÉ</string>
     <string name="live_stream_planned_tag">PLANIFIÉ</string>
-    <string name="live_stream_is_offline">Livestream est déconnecté</string>
-    <string name="live_stream_has_ended">Livestream terminé</string>
+    <string name="live_stream_is_offline">La diffusion en direct est déconnectée</string>
+    <string name="live_stream_has_ended">La diffusion en direct est terminée</string>
     <string name="are_you_sure_you_want_to_log_out">Se déconnecter supprime toutes vos informations locales. Assurez-vous d\'avoir vos clés privées sauvegardées pour éviter de perdre votre compte. Voulez-vous continuer ?</string>
     <string name="followed_tags">Tags suivis</string>
     <string name="relay_setup">Relais</string>

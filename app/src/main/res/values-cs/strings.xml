@@ -6,6 +6,7 @@
     <string name="your_profile_image">Profilový obrázek</string>
     <string name="scan_qr">Skenovat QR kód</string>
     <string name="show_anyway">Zobrazit přesto</string>
+    <string name="post_was_hidden">Tento příspěvek byl skryt, protože zmiňuje vaše skryté uživatele nebo slova</string>
     <string name="post_was_flagged_as_inappropriate_by">Příspěvek byl označen jako nevhodný uživatelem</string>
     <string name="post_not_found">Příspěvek nenalezen</string>
     <string name="channel_image">Obrázek kanálu</string>
@@ -48,9 +49,11 @@
     <string name="boost">Zvýšení</string>
     <string name="boosted">zvýšeno</string>
     <string name="edited">upraveno</string>
+    <string name="edited_number">úprava #%1$s</string>
     <string name="original">originál</string>
     <string name="quote">Citovat</string>
     <string name="fork">Rozštěpení</string>
+    <string name="propose_an_edit">Navrhnout úpravu</string>
     <string name="new_amount_in_sats">Nová částka v sats</string>
     <string name="add">Přidat</string>
     <string name="replying_to">"odpovídá na "</string>
@@ -670,4 +673,8 @@
     <string name="ots_info_title">Důkaz časového razítka</string>
     <string name="ots_info_description">Existuje důkaz, že tento příspěvek byl podepsán někdy před %1$s. Důkaz byl označen v Bitcoin blockchainu v tomto datu a čase.</string>
     <string name="edit_post">Upravit příspěvek</string>
+    <string name="proposal_to_edit">Návrh na vylepšení vašeho příspěvku</string>
+    <string name="message_to_author">Souhrn změn</string>
+    <string name="message_to_author_placeholder">Rychlé opravy…</string>
+    <string name="accept_the_suggestion">Přijmout návrhy</string>
 </resources>
