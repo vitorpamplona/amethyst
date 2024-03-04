@@ -670,6 +670,7 @@
     <string name="git_repository">Git repositář: %1$s</string>
     <string name="git_web_address">Internet:</string>
     <string name="git_clone_address">Klon:</string>
+    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Důkaz časového razítka</string>
     <string name="ots_info_description">Existuje důkaz, že tento příspěvek byl podepsán někdy před %1$s. Důkaz byl označen v Bitcoin blockchainu v tomto datu a čase.</string>
     <string name="edit_post">Upravit příspěvek</string>

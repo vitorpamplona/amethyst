@@ -675,6 +675,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="git_repository">Git Repository: %1$s</string>
     <string name="git_web_address">Internet:</string>
     <string name="git_clone_address">Klonen:</string>
+    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Zeitstempel Beweis</string>
     <string name="ots_info_description">Es gibt einen Beweis, dass dieser Beitrag irgendwann vor %1$s signiert wurde. Der Beweis wurde zu diesem Datum und Uhrzeit in der Bitcoin-Blockchain gestempelt.</string>
     <string name="edit_post">Beitrag bearbeiten</string>
