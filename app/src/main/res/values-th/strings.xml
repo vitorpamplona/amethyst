@@ -3,8 +3,10 @@
     <string name="point_to_the_qr_code">สแกน Qr Code</string>
     <string name="show_qr">โชว์ QR</string>
     <string name="profile_image">รูปโปรไฟล์</string>
+    <string name="your_profile_image">รูปโปรไฟล์</string>
     <string name="scan_qr">แสกน QR</string>
     <string name="show_anyway">แสดง</string>
+    <string name="post_was_hidden">โน๊ตนี้ถูกซ่อนเนื่องจากมีเนื้อหา หรือผู้ใช้ ที่ท่านไม่อยากเห็น</string>
     <string name="post_was_flagged_as_inappropriate_by">โพสต์ถูกรายงานว่าไม่เหมาะสมโดย</string>
     <string name="post_not_found">ไม่พบโพสต์นี้</string>
     <string name="channel_image">รูปของ channel</string>
@@ -15,6 +17,7 @@
     <string name="spam">สแปม</string>
     <string name="impersonation">เลียนแบบ</string>
     <string name="illegal_behavior">พฤติกรรมที่ผิดกฎหมาย</string>
+    <string name="other">อื่นๆ</string>
     <string name="unknown">ไม่ทราบ</string>
     <string name="relay_icon">รีเลย์ไอคอน</string>
     <string name="unknown_author">ไม่ทราบผู้เขียน</string>
@@ -22,6 +25,8 @@
     <string name="copy_user_pubkey">คัดลอก ID ผู้เขียน</string>
     <string name="copy_note_id">คัดลอก ID โน้ต</string>
     <string name="broadcast">เพยแพร่</string>
+    <string name="timestamp_it">ประทับเวลา</string>
+    <string name="timestamp_pending">กำลังรอยืนยันการประทับเวลา</string>
     <string name="request_deletion">ส่งคำขอให้ลบ</string>
     <string name="block_report">บล๊อก / รายงาน</string>
     <string name="block_hide_user"><![CDATA[บล๊อก & ซ่อนผู้ใช้นี้]]></string>
