@@ -45,7 +45,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -603,7 +603,7 @@ fun ChatroomHeader(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             thickness = DividerThickness,
         )
     }
@@ -643,7 +643,7 @@ fun GroupChatroomHeader(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             thickness = DividerThickness,
         )
     }

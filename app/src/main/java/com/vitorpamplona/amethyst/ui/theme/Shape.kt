@@ -193,6 +193,10 @@ val IconRowModifier = Modifier.fillMaxWidth().padding(vertical = 15.dp, horizont
 
 val emptyLineItemModifier = Modifier.height(Size75dp).fillMaxWidth()
 
+val imageHeaderBannerSize = Modifier.fillMaxWidth().height(150.dp)
+
+val authorNotePictureForImageHeader = Modifier.size(75.dp).padding(10.dp)
+
 val normalNoteModifier =
     Modifier.fillMaxWidth()
         .padding(

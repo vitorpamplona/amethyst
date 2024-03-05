@@ -103,6 +103,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
+import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DarkerGreen
@@ -306,7 +307,7 @@ fun RenderZapRaiser(
     LinearProgressIndicator(
         modifier = remember(details) { Modifier.fillMaxWidth().height(if (details) 24.dp else 4.dp) },
         color = color,
-        progress = zapraiserStatus.progress,
+        progress = { zapraiserStatus.progress },
     )
 
     if (details) {

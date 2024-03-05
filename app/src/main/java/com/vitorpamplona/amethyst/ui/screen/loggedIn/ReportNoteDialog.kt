@@ -33,8 +33,8 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,6 +61,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
 import com.vitorpamplona.quartz.events.ReportEvent
 import kotlinx.collections.immutable.toImmutableList
@@ -126,7 +127,7 @@ fun ReportNoteDialog(
                 )
                 SpacerH16()
 
-                Divider(color = MaterialTheme.colorScheme.onSurface, thickness = 0.25.dp)
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface, thickness = DividerThickness)
 
                 SpacerH16()
                 SectionHeader(text = stringResource(R.string.report_dialog_report_btn))

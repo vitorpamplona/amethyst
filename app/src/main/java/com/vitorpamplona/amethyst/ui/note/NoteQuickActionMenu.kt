@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -52,11 +51,12 @@ import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -127,13 +127,6 @@ val externalLinkForNote = { note: Note ->
         }
     }
 }
-
-@Composable
-private fun VerticalDivider(color: Color) =
-    Divider(
-        color = color,
-        modifier = Modifier.fillMaxHeight().width(1.dp),
-    )
 
 @Composable
 fun LongPressToQuickAction(
@@ -263,7 +256,7 @@ private fun RenderMainPopup(
 
                         onDismiss()
                     }
-                    VerticalDivider(primaryLight)
+                    VerticalDivider(color = primaryLight)
                     NoteQuickActionItem(
                         Icons.Default.AlternateEmail,
                         stringResource(R.string.quick_action_copy_user_id),
@@ -274,7 +267,7 @@ private fun RenderMainPopup(
                             onDismiss()
                         }
                     }
-                    VerticalDivider(primaryLight)
+                    VerticalDivider(color = primaryLight)
                     NoteQuickActionItem(
                         Icons.Default.FormatQuote,
                         stringResource(R.string.quick_action_copy_note_id),
@@ -287,7 +280,7 @@ private fun RenderMainPopup(
                     }
 
                     if (!isOwnNote) {
-                        VerticalDivider(primaryLight)
+                        VerticalDivider(color = primaryLight)
 
                         NoteQuickActionItem(
                             Icons.Default.Block,
@@ -302,9 +295,8 @@ private fun RenderMainPopup(
                         }
                     }
                 }
-                Divider(
+                HorizontalDivider(
                     color = primaryLight,
-                    modifier = Modifier.fillMaxWidth().width(1.dp),
                 )
                 Row(modifier = Modifier.height(IntrinsicSize.Min)) {
                     if (isOwnNote) {
@@ -337,7 +329,7 @@ private fun RenderMainPopup(
                         }
                     }
 
-                    VerticalDivider(primaryLight)
+                    VerticalDivider(color = primaryLight)
                     NoteQuickActionItem(
                         icon = ImageVector.vectorResource(id = R.drawable.relays),
                         label = stringResource(R.string.broadcast),
@@ -346,7 +338,7 @@ private fun RenderMainPopup(
                         // showSelectTextDialog = true
                         onDismiss()
                     }
-                    VerticalDivider(primaryLight)
+                    VerticalDivider(color = primaryLight)
                     NoteQuickActionItem(
                         icon = Icons.Default.Share,
                         label = stringResource(R.string.quick_action_share),
@@ -375,7 +367,7 @@ private fun RenderMainPopup(
                     }
 
                     if (!isOwnNote) {
-                        VerticalDivider(primaryLight)
+                        VerticalDivider(color = primaryLight)
 
                         NoteQuickActionItem(
                             Icons.Default.Report,

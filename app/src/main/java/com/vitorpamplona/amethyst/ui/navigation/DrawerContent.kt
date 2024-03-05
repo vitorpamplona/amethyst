@@ -45,8 +45,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerState
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -153,7 +153,7 @@ fun DrawerContent(
 
             FollowingAndFollowerCounts(accountViewModel.account.userProfile(), onClickUser)
 
-            Divider(
+            HorizontalDivider(
                 thickness = DividerThickness,
                 modifier = Modifier.padding(top = 20.dp),
             )
@@ -732,7 +732,7 @@ fun BottomContent(
     var dialogOpen by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier) {
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.padding(top = 15.dp),
             thickness = DividerThickness,
         )

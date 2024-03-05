@@ -34,7 +34,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ScrollableTabRow
@@ -67,7 +67,7 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.elements.AddButton
+import com.vitorpamplona.amethyst.ui.note.elements.AddButton
 import com.vitorpamplona.amethyst.ui.screen.NostrHiddenAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHiddenWordsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrSpammerAccountsFeedViewModel
@@ -177,7 +177,7 @@ fun HiddenUsersScreen(
             edgePadding = 8.dp,
             selectedTabIndex = pagerState.currentPage,
             modifier = TabRowHeight,
-            divider = { Divider(thickness = DividerThickness) },
+            divider = { HorizontalDivider(thickness = DividerThickness) },
         ) {
             Tab(
                 selected = pagerState.currentPage == 0,
@@ -313,7 +313,7 @@ fun MutedWordHeader(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             thickness = DividerThickness,
         )
     }

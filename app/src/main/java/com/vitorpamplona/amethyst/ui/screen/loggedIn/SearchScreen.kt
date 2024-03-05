@@ -36,8 +36,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -446,7 +446,7 @@ fun HashtagLine(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.padding(top = 10.dp),
             thickness = DividerThickness,
         )
@@ -481,7 +481,7 @@ fun UserLine(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.padding(top = 10.dp),
             thickness = DividerThickness,
         )

@@ -40,7 +40,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -90,53 +90,52 @@ import com.vitorpamplona.amethyst.ui.components.InlineCarrousel
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.elements.DisplayFollowingCommunityInPost
-import com.vitorpamplona.amethyst.ui.elements.DisplayFollowingHashtagsInPost
-import com.vitorpamplona.amethyst.ui.elements.DisplayPoW
-import com.vitorpamplona.amethyst.ui.elements.DisplayReward
-import com.vitorpamplona.amethyst.ui.elements.DisplayZapSplits
-import com.vitorpamplona.amethyst.ui.elements.Reward
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
-import com.vitorpamplona.amethyst.ui.note.AudioHeader
-import com.vitorpamplona.amethyst.ui.note.AudioTrackHeader
-import com.vitorpamplona.amethyst.ui.note.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.BlankNote
-import com.vitorpamplona.amethyst.ui.note.CreateImageHeader
-import com.vitorpamplona.amethyst.ui.note.DisplayEditStatus
-import com.vitorpamplona.amethyst.ui.note.DisplayHighlight
-import com.vitorpamplona.amethyst.ui.note.DisplayLocation
-import com.vitorpamplona.amethyst.ui.note.DisplayOts
-import com.vitorpamplona.amethyst.ui.note.DisplayPeopleList
-import com.vitorpamplona.amethyst.ui.note.DisplayRelaySet
-import com.vitorpamplona.amethyst.ui.note.EditState
-import com.vitorpamplona.amethyst.ui.note.FileHeaderDisplay
-import com.vitorpamplona.amethyst.ui.note.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
-import com.vitorpamplona.amethyst.ui.note.LoadAndDisplayUser
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.NoteQuickActionMenu
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
-import com.vitorpamplona.amethyst.ui.note.RenderAppDefinition
-import com.vitorpamplona.amethyst.ui.note.RenderEmojiPack
-import com.vitorpamplona.amethyst.ui.note.RenderFhirResource
-import com.vitorpamplona.amethyst.ui.note.RenderGitIssueEvent
-import com.vitorpamplona.amethyst.ui.note.RenderGitPatchEvent
-import com.vitorpamplona.amethyst.ui.note.RenderGitRepositoryEvent
-import com.vitorpamplona.amethyst.ui.note.RenderPinListEvent
-import com.vitorpamplona.amethyst.ui.note.RenderPoll
-import com.vitorpamplona.amethyst.ui.note.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.RenderRepost
-import com.vitorpamplona.amethyst.ui.note.RenderTextEvent
-import com.vitorpamplona.amethyst.ui.note.RenderTextModificationEvent
-import com.vitorpamplona.amethyst.ui.note.VideoDisplay
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
+import com.vitorpamplona.amethyst.ui.note.elements.DisplayEditStatus
+import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingCommunityInPost
+import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingHashtagsInPost
+import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
+import com.vitorpamplona.amethyst.ui.note.elements.DisplayOts
+import com.vitorpamplona.amethyst.ui.note.elements.DisplayPoW
+import com.vitorpamplona.amethyst.ui.note.elements.DisplayReward
+import com.vitorpamplona.amethyst.ui.note.elements.DisplayZapSplits
+import com.vitorpamplona.amethyst.ui.note.elements.ForkInformationRow
+import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
+import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.observeEdits
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.timeAgo
+import com.vitorpamplona.amethyst.ui.note.types.AudioHeader
+import com.vitorpamplona.amethyst.ui.note.types.AudioTrackHeader
+import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
+import com.vitorpamplona.amethyst.ui.note.types.DisplayHighlight
+import com.vitorpamplona.amethyst.ui.note.types.DisplayPeopleList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayRelaySet
+import com.vitorpamplona.amethyst.ui.note.types.EditState
+import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
+import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
+import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
+import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
+import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
+import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
+import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
+import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
+import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ThinSendButton
@@ -625,7 +624,7 @@ fun NoteMaster(
 
             ReactionsRow(note, true, editState, accountViewModel, nav)
 
-            Divider(
+            HorizontalDivider(
                 thickness = DividerThickness,
             )
         }
@@ -665,7 +664,7 @@ private fun RenderClassifiedsReaderForThread(
                     )
                 }
             } else {
-                CreateImageHeader(note, accountViewModel)
+                DefaultImageHeader(note, accountViewModel)
             }
 
             Row(
@@ -970,27 +969,6 @@ private fun RenderWikiHeaderForThread(
                         color = Color.Gray,
                     )
                 }
-        }
-    }
-}
-
-@Composable
-fun ForkInformationRow(
-    originalVersion: Note,
-    modifier: Modifier = Modifier,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    val noteState by originalVersion.live().metadata.observeAsState()
-    val note = noteState?.note ?: return
-    val author = note.author ?: return
-    val route = remember(note) { routeFor(note, accountViewModel.userProfile()) }
-
-    if (route != null) {
-        Row(modifier) {
-            Text(stringResource(id = R.string.forked_from))
-            Spacer(modifier = StdHorzSpacer)
-            LoadAndDisplayUser(author, route, nav)
         }
     }
 }

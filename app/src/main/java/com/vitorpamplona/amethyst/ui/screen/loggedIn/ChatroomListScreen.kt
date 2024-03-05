@@ -33,9 +33,9 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -170,7 +170,7 @@ fun ChatroomListTwoPane(
                 Box(Modifier.padding(Size20dp), contentAlignment = Alignment.Center) {
                     ChannelFabColumn(accountViewModel, nav)
                 }
-                Divider(
+                HorizontalDivider(
                     modifier =
                         Modifier.fillMaxHeight() // fill the max height
                             .width(DividerThickness),

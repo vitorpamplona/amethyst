@@ -27,7 +27,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -230,7 +230,7 @@ fun SummaryBar(model: UserReactionsViewModel) {
         }
     }
 
-    Divider(
+    HorizontalDivider(
         thickness = DividerThickness,
     )
 }

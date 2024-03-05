@@ -385,7 +385,7 @@ fun EditPostView(
                                             fontWeight = FontWeight.W500,
                                         )
 
-                                        Divider()
+                                        HorizontalDivider(thickness = DividerThickness)
 
                                         MyTextField(
                                             value = postViewModel.subject,

@@ -70,8 +70,8 @@ import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -154,6 +154,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
@@ -725,7 +726,7 @@ fun ContentSensitivityExplainer(postViewModel: NewPostViewModel) {
             )
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
 
         Text(
             text = stringResource(R.string.add_sensitive_content_explainer),
@@ -772,7 +773,7 @@ fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
             )
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -806,7 +807,7 @@ fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
             )
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
     }
 }
 
@@ -847,7 +848,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             )
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -890,7 +891,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             )
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -955,7 +956,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             }
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -1019,7 +1020,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             }
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -1053,7 +1054,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             )
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
     }
 }
 
@@ -1105,7 +1106,7 @@ fun FowardZapTo(
             )
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
 
         Text(
             text = stringResource(R.string.zap_split_explainer),
@@ -1209,7 +1210,7 @@ fun LocationAsHash(postViewModel: NewPostViewModel) {
                 DisplayLocationObserver(postViewModel)
             }
 
-            Divider()
+            HorizontalDivider(thickness = DividerThickness)
 
             Text(
                 text = stringResource(R.string.geohash_explainer),
@@ -1722,7 +1723,7 @@ fun ImageVideoDescription(
                 }
             }
 
-            Divider()
+            HorizontalDivider(thickness = DividerThickness)
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,

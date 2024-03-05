@@ -30,7 +30,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
 
 @Composable
@@ -75,7 +76,7 @@ fun SelectTextDialog(
                     }
                     Text(text = stringResource(R.string.select_text_dialog_top))
                 }
-                Divider()
+                HorizontalDivider(thickness = DividerThickness)
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                 ) {

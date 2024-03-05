@@ -18,36 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.elements
+package com.vitorpamplona.amethyst.ui.note.elements
 
+import androidx.compose.foundation.text.ClickableText
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import com.vitorpamplona.amethyst.ui.note.LoadCityName
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 
 @Composable
-@Preview
-fun DisplayPoWPreview() {
-    ThemeComparisonColumn(
-        onDark = { DisplayPoW(pow = 24) },
-        onLight = { DisplayPoW(pow = 24) },
-    )
-}
-
-@Composable
-fun DisplayPoW(pow: Int) {
-    val powStr = remember(pow) { "PoW-$pow" }
-
-    Text(
-        powStr,
-        color = MaterialTheme.colorScheme.lessImportantLink,
-        fontSize = Font14SP,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-    )
+fun DisplayLocation(
+    geohashStr: String,
+    nav: (String) -> Unit,
+) {
+    LoadCityName(geohashStr) { cityName ->
+        ClickableText(
+            text = AnnotatedString(cityName),
+            onClick = { nav("Geohash/$geohashStr") },
+            style =
+                LocalTextStyle.current.copy(
+                    color =
+                        MaterialTheme.colorScheme.primary.copy(
+                            alpha = 0.52f,
+                        ),
+                    fontSize = Font14SP,
+                    fontWeight = FontWeight.Bold,
+                ),
+            maxLines = 1,
+        )
+    }
 }

@@ -25,7 +25,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -91,7 +91,7 @@ fun ZapNoteCompose(
         ) {
             baseAuthor?.let { RenderZapNote(it, baseReqResponse.zapEvent, nav, accountViewModel) }
 
-            Divider(
+            HorizontalDivider(
                 modifier = Modifier.padding(top = 10.dp),
                 thickness = DividerThickness,
             )
