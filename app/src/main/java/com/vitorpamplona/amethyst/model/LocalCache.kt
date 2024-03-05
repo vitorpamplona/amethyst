@@ -1655,6 +1655,8 @@ object LocalCache {
                     it.event !is CommunityPostApprovalEvent &&
                     it.event !is ReactionEvent &&
                     it.event !is GiftWrapEvent &&
+                    it.event !is SealedGossipEvent &&
+                    it.event !is OtsEvent &&
                     it.event !is LnZapEvent &&
                     it.event !is LnZapRequestEvent
             ) &&

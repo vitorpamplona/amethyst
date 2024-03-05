@@ -282,7 +282,7 @@ fun VideoView(
 }
 
 @Composable
-@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@OptIn(androidx.media3.common.util.UnstableApi::class)
 fun VideoViewInner(
     videoUri: String,
     defaultToStart: Boolean = false,
