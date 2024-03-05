@@ -221,7 +221,7 @@ abstract class NostrDataSource(val debugName: String) {
         // saves the channels that are currently active
         val activeSubscriptions = subscriptions.values.filter { it.typedFilters != null }
         // saves the current content to only update if it changes
-        val currentFilters = activeSubscriptions.associate { it.id to it.toJson() }
+        val currentFilters = activeSubscriptions.associate { it.id to it.typedFilters }
 
         changingFilters.getAndSet(true)
 
@@ -245,7 +245,7 @@ abstract class NostrDataSource(val debugName: String) {
                         Client.close(updatedSubscription.id)
                     } else {
                         // was active and is still active, check if it has changed.
-                        if (updatedSubscription.toJson() != currentFilters[updatedSubscription.id]) {
+                        if (updatedSubscription.hasChangedFiltersFrom(currentFilters[updatedSubscription.id])) {
                             Client.close(updatedSubscription.id)
                             if (active) {
                                 Client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
@@ -265,7 +265,7 @@ abstract class NostrDataSource(val debugName: String) {
                         // was not active and is still not active, does nothing
                     } else {
                         // was not active and becomes active, sends the filter.
-                        if (updatedSubscription.toJson() != currentFilters[updatedSubscription.id]) {
+                        if (updatedSubscription.hasChangedFiltersFrom(currentFilters[updatedSubscription.id])) {
                             if (active) {
                                 Log.d(
                                     this@NostrDataSource.javaClass.simpleName,

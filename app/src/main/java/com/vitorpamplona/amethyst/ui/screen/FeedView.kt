@@ -58,7 +58,6 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import kotlin.time.ExperimentalTime
 
 @Composable
 fun RefresheableFeedView(
@@ -205,7 +204,7 @@ private fun WatchScrollToTop(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FeedLoaded(
     state: FeedState.Loaded,
