@@ -84,7 +84,7 @@ fun BadgeCompose(
     val scope = rememberCoroutineScope()
 
     if (note == null) {
-        BlankNote(Modifier, isInnerNote)
+        BlankNote(Modifier, !isInnerNote)
     } else {
         val defaultBackgroundColor = MaterialTheme.colorScheme.background
         val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }

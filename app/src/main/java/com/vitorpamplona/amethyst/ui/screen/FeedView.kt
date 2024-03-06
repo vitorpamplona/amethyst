@@ -231,6 +231,20 @@ private fun FeedLoaded(
                     nav = nav,
                 )
             }
+
+            /*var see by
+                remember {
+                    mutableStateOf(false)
+                }
+
+            if (see) {
+            } else {
+                Row(defaultModifier) {
+                    Button(onClick = { see = true }) {
+                        Text("Show")
+                    }
+                }
+            }*/
         }
     }
 }

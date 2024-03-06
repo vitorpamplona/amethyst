@@ -217,7 +217,7 @@ fun NoteCompose(
                             onLongClick = showPopup,
                         )
                     },
-                    isBoostedNote || isQuotedNote,
+                    !isBoostedNote && !isQuotedNote,
                 )
             }
         }

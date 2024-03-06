@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -62,7 +63,7 @@ fun BlankNotePreview() {
 @Composable
 fun BlankNote(
     modifier: Modifier = Modifier,
-    showDivider: Boolean = false,
+    showDivider: Boolean = true,
     idHex: String? = null,
 ) {
     Column(modifier = modifier) {
@@ -74,7 +75,7 @@ fun BlankNote(
                             start = 20.dp,
                             end = 20.dp,
                             bottom = 8.dp,
-                            top = 15.dp,
+                            top = 8.dp,
                         ),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
@@ -83,10 +84,11 @@ fun BlankNote(
                         text = stringResource(R.string.post_not_found) + if (idHex != null) ": $idHex" else "",
                         modifier = Modifier.padding(30.dp),
                         color = Color.Gray,
+                        textAlign = TextAlign.Center,
                     )
                 }
 
-                if (!showDivider) {
+                if (showDivider) {
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 10.dp),
                         thickness = DividerThickness,
