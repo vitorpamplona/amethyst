@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
+import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.CommunityHeader
 import com.vitorpamplona.amethyst.ui.note.types.DisplayPeopleList
@@ -1121,11 +1122,8 @@ fun FirstUserInfoRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    Row(verticalAlignment = CenterVertically, modifier = remember { UserNameRowHeight }) {
-        val isRepost by
-            remember(baseNote) {
-                derivedStateOf { baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent }
-            }
+    Row(verticalAlignment = CenterVertically, modifier = UserNameRowHeight) {
+        val isRepost = baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
 
         val isCommunityPost by
             remember(baseNote) {
@@ -1139,9 +1137,9 @@ fun FirstUserInfoRow(
         if (showAuthorPicture) {
             NoteAuthorPicture(baseNote, nav, accountViewModel, Size25dp)
             Spacer(HalfPadding)
-            NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) }, textColor = textColor)
+            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor)
         } else {
-            NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) }, textColor = textColor)
+            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor)
         }
 
         if (isRepost) {
@@ -1158,7 +1156,7 @@ fun FirstUserInfoRow(
             }
         }
 
-        com.vitorpamplona.amethyst.ui.note.elements.TimeAgo(baseNote)
+        TimeAgo(baseNote)
 
         MoreOptionsButton(baseNote, editState, accountViewModel, nav)
     }

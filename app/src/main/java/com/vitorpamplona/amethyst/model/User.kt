@@ -310,6 +310,7 @@ class User(val pubkeyHex: String) {
         info?.latestMetadata = latestMetadata
         info?.updatedMetadataAt = latestMetadata.createdAt
         info?.tags = latestMetadata.tags.toImmutableListOfLists()
+        info?.cleanBlankNames()
 
         if (newUserInfo.lud16.isNullOrBlank()) {
             info?.lud06?.let {
