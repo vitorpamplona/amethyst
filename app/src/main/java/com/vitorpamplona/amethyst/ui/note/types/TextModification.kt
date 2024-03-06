@@ -116,6 +116,7 @@ fun RenderTextModificationEvent(
                     modifier = Modifier.fillMaxWidth(),
                     tags = EmptyTagList,
                     backgroundColor = backgroundColor,
+                    id = note.idHex,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

@@ -182,6 +182,7 @@ fun LongCommunityHeader(
                     canPreview = false,
                     tags = EmptyTagList,
                     backgroundColor = background,
+                    id = baseNote.idHex,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -189,9 +190,9 @@ fun LongCommunityHeader(
 
             if (summary != null && noteEvent.hasHashtags()) {
                 DisplayUncitedHashtags(
-                    remember(noteEvent) { noteEvent.hashtags().toImmutableList() },
-                    summary ?: "",
-                    nav,
+                    hashtags = remember(key1 = noteEvent) { noteEvent.hashtags().toImmutableList() },
+                    eventContent = summary,
+                    nav = nav,
                 )
             }
         }

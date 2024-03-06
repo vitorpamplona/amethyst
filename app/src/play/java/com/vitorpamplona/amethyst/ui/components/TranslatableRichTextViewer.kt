@@ -74,6 +74,7 @@ fun TranslatableRichTextViewer(
     modifier: Modifier = Modifier,
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
+    id: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -98,6 +99,7 @@ fun TranslatableRichTextViewer(
             modifier,
             tags,
             backgroundColor,
+            id,
             accountViewModel,
             nav,
         )
@@ -112,6 +114,7 @@ private fun RenderText(
     modifier: Modifier,
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
+    id: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -130,6 +133,7 @@ private fun RenderText(
             modifier,
             tags,
             backgroundColor,
+            id,
             accountViewModel,
             nav,
         )

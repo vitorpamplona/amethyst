@@ -811,6 +811,7 @@ fun LongChannelHeader(
                     canPreview = false,
                     tags = tags,
                     backgroundColor = background,
+                    id = baseChannel.idHex,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

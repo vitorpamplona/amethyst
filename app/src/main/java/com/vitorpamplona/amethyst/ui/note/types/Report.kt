@@ -80,6 +80,7 @@ fun RenderReport(
         modifier = Modifier,
         tags = EmptyTagList,
         backgroundColor = backgroundColor,
+        id = note.idHex,
         accountViewModel = accountViewModel,
         nav = nav,
     )

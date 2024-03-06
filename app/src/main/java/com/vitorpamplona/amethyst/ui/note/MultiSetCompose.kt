@@ -474,6 +474,7 @@ fun CrossfadeToDisplayComment(
         tags = EmptyTagList,
         modifier = textBoxModifier,
         backgroundColor = backgroundColor,
+        id = comment,
         accountViewModel = accountViewModel,
         nav = nav,
     )

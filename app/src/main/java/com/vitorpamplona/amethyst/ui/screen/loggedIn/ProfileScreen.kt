@@ -1103,6 +1103,7 @@ private fun DrawAdditionalInfo(
                 canPreview = false,
                 tags = EmptyTagList,
                 backgroundColor = background,
+                id = it,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

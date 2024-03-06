@@ -218,6 +218,7 @@ fun AudioHeader(
                         canPreview = true,
                         tags = tags,
                         backgroundColor = background,
+                        id = note.idHex,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )

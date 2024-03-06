@@ -274,6 +274,7 @@ private fun RenderOptionAfterVote(
                     Modifier,
                     tags,
                     backgroundColor,
+                    poolOption.descriptor,
                     accountViewModel,
                     nav,
                 )
@@ -307,6 +308,7 @@ private fun RenderOptionBeforeVote(
             remember { Modifier.padding(15.dp) },
             tags,
             backgroundColor,
+            id = description,
             accountViewModel,
             nav,
         )

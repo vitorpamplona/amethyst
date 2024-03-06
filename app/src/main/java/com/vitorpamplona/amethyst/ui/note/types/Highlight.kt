@@ -107,6 +107,7 @@ fun DisplayHighlight(
         remember { Modifier.fillMaxWidth() },
         EmptyTagList,
         backgroundColor,
+        id = quote,
         accountViewModel,
         nav,
     )

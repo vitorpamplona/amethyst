@@ -641,6 +641,7 @@ private fun RenderRegularTextNote(
                     modifier = HalfTopPadding,
                     tags = tags,
                     backgroundColor = backgroundBubbleColor,
+                    id = note.idHex,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -652,6 +653,7 @@ private fun RenderRegularTextNote(
                 modifier = HalfTopPadding,
                 tags = EmptyTagList,
                 backgroundColor = backgroundBubbleColor,
+                id = note.idHex,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

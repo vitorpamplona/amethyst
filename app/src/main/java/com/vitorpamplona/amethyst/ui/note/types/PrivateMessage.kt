@@ -84,6 +84,7 @@ fun RenderPrivateMessage(
                         modifier = modifier,
                         tags = tags,
                         backgroundColor = backgroundColor,
+                        id = note.idHex,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
@@ -111,6 +112,7 @@ fun RenderPrivateMessage(
             Modifier.fillMaxWidth(),
             EmptyTagList,
             backgroundColor,
+            id = note.idHex,
             accountViewModel,
             nav,
         )

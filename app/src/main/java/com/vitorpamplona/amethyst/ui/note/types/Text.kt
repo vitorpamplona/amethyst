@@ -106,6 +106,7 @@ fun RenderTextEvent(
                     modifier = modifier,
                     tags = tags,
                     backgroundColor = backgroundColor,
+                    id = note.idHex,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

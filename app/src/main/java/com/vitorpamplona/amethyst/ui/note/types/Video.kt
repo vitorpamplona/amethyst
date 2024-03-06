@@ -166,6 +166,7 @@ fun VideoDisplay(
                     modifier = Modifier.fillMaxWidth(),
                     tags = tags,
                     backgroundColor = backgroundColor,
+                    id = note.idHex,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

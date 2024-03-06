@@ -107,6 +107,7 @@ fun RenderPinListEvent(
                         canPreview = true,
                         tags = EmptyTagList,
                         backgroundColor = backgroundColor,
+                        id = baseNote.idHex,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )

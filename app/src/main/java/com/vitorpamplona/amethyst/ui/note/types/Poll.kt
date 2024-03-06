@@ -73,6 +73,7 @@ fun RenderPoll(
                 modifier = remember { Modifier.fillMaxWidth() },
                 tags = tags,
                 backgroundColor = backgroundColor,
+                id = note.idHex,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
