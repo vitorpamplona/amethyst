@@ -27,7 +27,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,7 +54,7 @@ fun RefreshingChatroomFeedView(
     scrollStateKey: String? = null,
     enablePullRefresh: Boolean = true,
 ) {
-    RefresheableView(viewModel, enablePullRefresh) {
+    RefresheableBox(viewModel, enablePullRefresh) {
         SaveableFeedState(viewModel, scrollStateKey) { listState ->
             RenderChatroomFeedView(
                 viewModel,
@@ -150,7 +150,7 @@ fun NewSubject(note: Note) {
 @Composable
 fun NewSubject(newSubject: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.weight(1f),
         )
         Text(
@@ -159,7 +159,7 @@ fun NewSubject(newSubject: String) {
             fontSize = Font14SP,
             modifier = HalfPadding,
         )
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.weight(1f),
         )
     }

@@ -32,7 +32,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.BadgeCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -83,7 +84,7 @@ fun BadgeCompose(
     val scope = rememberCoroutineScope()
 
     if (note == null) {
-        BlankNote(Modifier, isInnerNote)
+        BlankNote(Modifier, !isInnerNote)
     } else {
         val defaultBackgroundColor = MaterialTheme.colorScheme.background
         val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
@@ -162,12 +163,12 @@ fun BadgeCompose(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
-                                null,
+                                contentDescription = stringResource(id = R.string.more_options),
                                 modifier = Size15Modifier,
                                 tint = MaterialTheme.colorScheme.placeholderText,
                             )
 
-                            NoteDropDownMenu(note, popupExpanded, accountViewModel)
+                            NoteDropDownMenu(note, popupExpanded, null, accountViewModel, nav)
                         }
                     }
 
@@ -183,7 +184,7 @@ fun BadgeCompose(
                         )
                     }
 
-                    Divider(
+                    HorizontalDivider(
                         modifier = Modifier.padding(top = 10.dp),
                         thickness = DividerThickness,
                     )

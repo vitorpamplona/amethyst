@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText

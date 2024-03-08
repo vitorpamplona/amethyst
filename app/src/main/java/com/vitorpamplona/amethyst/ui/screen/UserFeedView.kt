@@ -39,7 +39,7 @@ fun RefreshingFeedUserFeedView(
     nav: (String) -> Unit,
     enablePullRefresh: Boolean = true,
 ) {
-    RefresheableView(viewModel, enablePullRefresh) { UserFeedView(viewModel, accountViewModel, nav) }
+    RefresheableBox(viewModel, enablePullRefresh) { UserFeedView(viewModel, accountViewModel, nav) }
 }
 
 @Composable

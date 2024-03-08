@@ -41,6 +41,8 @@
     <string name="view_count">مشاهدة العد</string>
     <string name="boost">تعزيز</string>
     <string name="boosted">معزز</string>
+    <string name="edited">تم تعديلها</string>
+    <string name="original">الأصلية</string>
     <string name="quote">إقتباس</string>
     <string name="new_amount_in_sats">مبلغ جديد في Sats</string>
     <string name="add">إضافة</string>
@@ -143,6 +145,7 @@
     <string name="i_accept_the">"اقبل شروط الاستخدام "</string>
     <string name="terms_of_use">شروط الاستخدام</string>
     <string name="acceptance_of_terms_is_required">يجب قبول شروط الإستخدام</string>
+    <string name="password_is_required">كلمة السر مطلوبة</string>
     <string name="key_is_required">المفتاح مطلوب</string>
     <string name="name_is_required">يجب ادخال اسم</string>
     <string name="login">تسجيل دخول</string>
@@ -193,8 +196,19 @@
     <string name="mark_all_new_as_read">ضع علامة على جميع الرسائل/الاشعارات الجديدة كمقروء</string>
     <string name="mark_all_as_read">ضع علامة على جميع الرسائل/الاشعارات كمقروء</string>
     <string name="backup_keys">قم بعمل نسخة احتياطية للمفاتيح</string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## النصائح الرئيسية للنسخ الاحتياطي والسلامة
+        \n\n- يتم تأمين حسابك بمفتاح سري. المفتاح السري هو سلسلة عشوائية طويلة تبدأ بـ **nsec1**. أي شخص لديه مفتاحك السري يمكنه نشر المحتوى باستخدام هويتك.
+        \n\n- لا تقم بوضع مفتاحك السري في أي موقع أو برنامج لا تثق به.
+        \n- مطوري Amethyst لن يطلبوا منك **أبدا** المفتاح السري الخاص بك.
+        \n- حافظ على نسخة احتياطية آمنة لمفتاحك السري لاسترداد الحساب. نوصي باستخدام برنامج لادارة كلمات المرور.
+    </string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">        للحصول على أمان إضافي، يمكنك تشفير مفتاحك الخاص بكلمة مرور. يبدأ هذا المفتاح المشفر بـ **ncryptsec1** ولا يمكن استخدامه دون كلمة المرور الخاصة بك.
+        \n\nإذا فقدت كلمة المرور، لن تتمكن من استرداد مفتاحك الخاص.
+    </string>
+    <string name="failed_to_encrypt_key">فشل في تشفير مفتاحك الخاص</string>
     <string name="secret_key_copied_to_clipboard">مفتاحك السري (nsec) قد تم نسخه في الحافظة</string>
     <string name="copy_my_secret_key">إنسخ مفتاحي السري</string>
+    <string name="encrypt_and_copy_my_secret_key">تشفير و نسخ المفتاح الخاص</string>
     <string name="biometric_authentication_failed">فشلت المصادقة</string>
     <string name="biometric_error">خطأ</string>
     <string name="badge_created_by">"تم إنشاؤه بواسطة %1$s"</string>

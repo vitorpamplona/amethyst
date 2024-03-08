@@ -68,6 +68,7 @@ fun NotifyRequestDialog(
                 Modifier.fillMaxWidth(),
                 EmptyTagList,
                 background,
+                textContent,
                 accountViewModel,
                 nav,
             )

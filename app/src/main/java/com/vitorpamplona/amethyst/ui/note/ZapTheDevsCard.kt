@@ -69,9 +69,9 @@ import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.LoadNote
-import com.vitorpamplona.amethyst.ui.elements.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
+import com.vitorpamplona.amethyst.ui.note.elements.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp

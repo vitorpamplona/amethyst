@@ -45,6 +45,7 @@ class RichTextParser() {
     fun parseMediaUrl(
         fullUrl: String,
         eventTags: ImmutableListOfLists<String>,
+        description: String?,
     ): MediaUrlContent? {
         val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
         return if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
@@ -53,7 +54,7 @@ class RichTextParser() {
 
             MediaUrlImage(
                 url = fullUrl,
-                description = frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
+                description = description ?: frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
                 hash = frags[FileHeaderEvent.HASH] ?: tags[FileHeaderEvent.HASH],
                 blurhash = frags[FileHeaderEvent.BLUR_HASH] ?: tags[FileHeaderEvent.BLUR_HASH],
                 dim = frags[FileHeaderEvent.DIMENSION] ?: tags[FileHeaderEvent.DIMENSION],
@@ -64,7 +65,7 @@ class RichTextParser() {
             val tags = Nip92MediaAttachments().parse(fullUrl, eventTags.lists)
             MediaUrlVideo(
                 url = fullUrl,
-                description = frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
+                description = description ?: frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
                 hash = frags[FileHeaderEvent.HASH] ?: tags[FileHeaderEvent.HASH],
                 blurhash = frags[FileHeaderEvent.BLUR_HASH] ?: tags[FileHeaderEvent.BLUR_HASH],
                 dim = frags[FileHeaderEvent.DIMENSION] ?: tags[FileHeaderEvent.DIMENSION],
@@ -106,7 +107,7 @@ class RichTextParser() {
         val urlSet = parseValidUrls(content)
 
         val imagesForPager =
-            urlSet.mapNotNull { fullUrl -> parseMediaUrl(fullUrl, tags) }.associateBy { it.url }
+            urlSet.mapNotNull { fullUrl -> parseMediaUrl(fullUrl, tags, content) }.associateBy { it.url }
         val imageList = imagesForPager.values.toList()
 
         val emojiMap = Nip30CustomEmoji.createEmojiMap(tags)

@@ -57,9 +57,9 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -476,7 +476,7 @@ private fun RenderScreen(
             selectedTabIndex = pagerState.currentPage,
             edgePadding = 8.dp,
             modifier = tabRowModifier,
-            divider = { Divider(thickness = DividerThickness) },
+            divider = { HorizontalDivider(thickness = DividerThickness) },
         ) {
             CreateAndRenderTabs(baseUser, pagerState)
         }
@@ -819,7 +819,7 @@ private fun ProfileHeader(
 
             DrawAdditionalInfo(baseUser, appRecommendations, accountViewModel, nav)
 
-            Divider(modifier = Modifier.padding(top = 6.dp))
+            HorizontalDivider(modifier = Modifier.padding(top = 6.dp))
         }
     }
 
@@ -1103,6 +1103,7 @@ private fun DrawAdditionalInfo(
                 canPreview = false,
                 tags = EmptyTagList,
                 backgroundColor = background,
+                id = it,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -1870,7 +1871,7 @@ fun UserProfileDropDownMenu(
         )
 
         if (accountViewModel.userProfile() != user) {
-            Divider()
+            HorizontalDivider(thickness = DividerThickness)
             if (accountViewModel.account.isHidden(user)) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.unblock_user)) },
@@ -1888,7 +1889,7 @@ fun UserProfileDropDownMenu(
                     },
                 )
             }
-            Divider()
+            HorizontalDivider(thickness = DividerThickness)
             DropdownMenuItem(
                 text = { Text(stringResource(id = R.string.report_spam_scam)) },
                 onClick = {

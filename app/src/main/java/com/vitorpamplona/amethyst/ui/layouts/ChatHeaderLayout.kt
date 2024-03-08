@@ -28,7 +28,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,7 +41,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NewItemsBubble
-import com.vitorpamplona.amethyst.ui.note.TimeAgo
+import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.theme.ChatHeadlineBorders
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -73,7 +73,7 @@ fun ChannelNamePreview() {
             onClick = {},
         )
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
 
         ListItem(
             headlineContent = {
@@ -135,7 +135,7 @@ fun ChatHeaderLayout(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             modifier = StdTopPadding,
             thickness = DividerThickness,
         )

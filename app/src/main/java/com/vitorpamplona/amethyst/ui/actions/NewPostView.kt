@@ -56,7 +56,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material.icons.filled.LocationOff
@@ -65,13 +66,12 @@ import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -124,7 +124,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.fonfon.kgeohash.toGeoHash
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -136,7 +135,6 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
-import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
 import com.vitorpamplona.amethyst.ui.components.BechLink
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
@@ -146,6 +144,7 @@ import com.vitorpamplona.amethyst.ui.components.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.CancelIcon
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
+import com.vitorpamplona.amethyst.ui.note.LoadCityName
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.PollIcon
 import com.vitorpamplona.amethyst.ui.note.RegularPostIcon
@@ -157,6 +156,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
@@ -189,6 +189,7 @@ fun NewPostView(
     baseReplyTo: Note? = null,
     quote: Note? = null,
     fork: Note? = null,
+    version: Note? = null,
     enableMessageInterface: Boolean = false,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -207,13 +208,13 @@ fun NewPostView(
         launch(Dispatchers.IO) {
             val replyDraft = LocalPreferences.loadReplyDraft(accountViewModel.account)
             if (replyDraft.isNullOrBlank()) {
-                postViewModel.load(accountViewModel, baseReplyTo, quote, fork)
+                postViewModel.load(accountViewModel, baseReplyTo, quote, fork, version)
             } else {
                 val note = LocalCache.checkGetOrCreateNote(replyDraft)
                 if (note == null) {
-                    postViewModel.load(accountViewModel, baseReplyTo, quote, fork)
+                    postViewModel.load(accountViewModel, baseReplyTo, quote, fork, version)
                 } else {
-                    postViewModel.load(accountViewModel, note, quote, fork)
+                    postViewModel.load(accountViewModel, note, quote, fork, version)
                 }
             }
 
@@ -488,34 +489,32 @@ fun NewPostView(
                                     }
                                 }
 
-                                val user = postViewModel.account?.userProfile()
-                                val lud16 = user?.info?.lnAddress()
-
-                                if (lud16 != null && postViewModel.wantsInvoice) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
-                                    ) {
-                                        Column(Modifier.fillMaxWidth()) {
-                                            InvoiceRequest(
-                                                lud16,
-                                                user.pubkeyHex,
-                                                accountViewModel.account,
-                                                stringResource(id = R.string.lightning_invoice),
-                                                stringResource(id = R.string.lightning_create_and_add_invoice),
-                                                onSuccess = {
-                                                    postViewModel.message =
-                                                        TextFieldValue(postViewModel.message.text + "\n\n" + it)
-                                                    postViewModel.wantsInvoice = false
-                                                },
-                                                onClose = { postViewModel.wantsInvoice = false },
-                                                onError = { title, message -> accountViewModel.toast(title, message) },
-                                            )
+                                if (postViewModel.wantsInvoice) {
+                                    postViewModel.lnAddress()?.let { lud16 ->
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                                        ) {
+                                            Column(Modifier.fillMaxWidth()) {
+                                                InvoiceRequest(
+                                                    lud16,
+                                                    accountViewModel.account.userProfile().pubkeyHex,
+                                                    accountViewModel.account,
+                                                    stringResource(id = R.string.lightning_invoice),
+                                                    stringResource(id = R.string.lightning_create_and_add_invoice),
+                                                    onSuccess = {
+                                                        postViewModel.insertAtCursor(it)
+                                                        postViewModel.wantsInvoice = false
+                                                    },
+                                                    onClose = { postViewModel.wantsInvoice = false },
+                                                    onError = { title, message -> accountViewModel.toast(title, message) },
+                                                )
+                                            }
                                         }
                                     }
                                 }
 
-                                if (lud16 != null && postViewModel.wantsZapraiser) {
+                                if (postViewModel.wantsZapraiser && postViewModel.hasLnAddress()) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
@@ -582,7 +581,7 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
             }
         }
 
-        if (postViewModel.canAddInvoice) {
+        if (postViewModel.canAddInvoice && postViewModel.hasLnAddress()) {
             AddLnInvoiceButton(postViewModel.wantsInvoice) {
                 postViewModel.wantsInvoice = !postViewModel.wantsInvoice
             }
@@ -739,7 +738,7 @@ fun ContentSensitivityExplainer(postViewModel: NewPostViewModel) {
             )
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
 
         Text(
             text = stringResource(R.string.add_sensitive_content_explainer),
@@ -786,7 +785,7 @@ fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
             )
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -820,7 +819,7 @@ fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
             )
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
     }
 }
 
@@ -861,7 +860,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             )
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -904,7 +903,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             )
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -969,7 +968,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             }
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -1033,7 +1032,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             }
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -1067,7 +1066,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             )
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
     }
 }
 
@@ -1101,7 +1100,7 @@ fun FowardZapTo(
                     tint = BitcoinOrange,
                 )
                 Icon(
-                    imageVector = Icons.Outlined.ArrowForwardIos,
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
                     contentDescription = stringResource(id = R.string.zaps),
                     modifier =
                         Modifier
@@ -1119,7 +1118,7 @@ fun FowardZapTo(
             )
         }
 
-        Divider()
+        HorizontalDivider(thickness = DividerThickness)
 
         Text(
             text = stringResource(R.string.zap_split_explainer),
@@ -1184,23 +1183,12 @@ fun FowardZapTo(
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun LocationAsHash(postViewModel: NewPostViewModel) {
-    val context = LocalContext.current
-
     val locationPermissionState =
         rememberPermissionState(
             Manifest.permission.ACCESS_COARSE_LOCATION,
         )
 
     if (locationPermissionState.status.isGranted) {
-        var locationDescriptionFlow by remember(postViewModel) { mutableStateOf<Flow<String>?>(null) }
-
-        DisposableEffect(key1 = Unit) {
-            postViewModel.startLocation(context = context)
-            locationDescriptionFlow = postViewModel.location
-
-            onDispose { postViewModel.stopLocation() }
-        }
-
         Column(
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -1231,10 +1219,10 @@ fun LocationAsHash(postViewModel: NewPostViewModel) {
                     modifier = Modifier.padding(start = 10.dp),
                 )
 
-                locationDescriptionFlow?.let { geoLocation -> DisplayLocationObserver(geoLocation) }
+                DisplayLocationObserver(postViewModel)
             }
 
-            Divider()
+            HorizontalDivider(thickness = DividerThickness)
 
             Text(
                 text = stringResource(R.string.geohash_explainer),
@@ -1248,41 +1236,39 @@ fun LocationAsHash(postViewModel: NewPostViewModel) {
 }
 
 @Composable
-fun DisplayLocationObserver(geoLocation: Flow<String>) {
-    val location by geoLocation.collectAsStateWithLifecycle(null)
+fun DisplayLocationObserver(postViewModel: NewPostViewModel) {
+    val context = LocalContext.current
+    var locationDescriptionFlow by remember(postViewModel) { mutableStateOf<Flow<String>?>(null) }
 
-    location?.let { DisplayLocationInTitle(geohash = it) }
+    DisposableEffect(key1 = context) {
+        postViewModel.startLocation(context = context)
+        locationDescriptionFlow = postViewModel.location
+
+        onDispose { postViewModel.stopLocation() }
+    }
+
+    locationDescriptionFlow?.let {
+        val location by it.collectAsStateWithLifecycle(null)
+
+        location?.let { DisplayLocationInTitle(geohash = it) }
+    }
 }
 
 @Composable
 fun DisplayLocationInTitle(geohash: String) {
-    val context = LocalContext.current
-
-    var cityName by remember(geohash) { mutableStateOf<String>(geohash) }
-
-    LaunchedEffect(key1 = geohash) {
-        launch(Dispatchers.IO) {
-            val newCityName =
-                ReverseGeoLocationUtil().execute(geohash.toGeoHash().toLocation(), context)?.ifBlank {
-                    null
-                }
-
-            if (newCityName != null && newCityName != cityName) {
-                cityName = newCityName
-            }
-        }
-    }
-
-    if (geohash != "s0000") {
+    LoadCityName(
+        geohashStr = geohash,
+        onLoading = {
+            Spacer(modifier = StdHorzSpacer)
+            LoadingAnimation()
+        },
+    ) { cityName ->
         Text(
             text = cityName,
             fontSize = 20.sp,
             fontWeight = FontWeight.W500,
             modifier = Modifier.padding(start = Size5dp),
         )
-    } else {
-        Spacer(modifier = StdHorzSpacer)
-        LoadingAnimation()
     }
 }
 
@@ -1478,7 +1464,7 @@ private fun ForwardZapTo(
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
                 Icon(
-                    imageVector = Icons.Default.ArrowForwardIos,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                     contentDescription = null,
                     modifier =
                         Modifier
@@ -1497,7 +1483,7 @@ private fun ForwardZapTo(
                     tint = BitcoinOrange,
                 )
                 Icon(
-                    imageVector = Icons.Outlined.ArrowForwardIos,
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
                     contentDescription = null,
                     modifier =
                         Modifier
@@ -1561,7 +1547,7 @@ private fun MarkAsSensitive(
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.add_content_warning),
                     modifier =
                         Modifier
                             .size(10.dp)
@@ -1580,7 +1566,7 @@ private fun MarkAsSensitive(
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
-                    contentDescription = null,
+                    contentDescription = stringResource(id = R.string.remove_content_warning),
                     modifier =
                         Modifier
                             .size(10.dp)
@@ -1749,7 +1735,7 @@ fun ImageVideoDescription(
                 }
             }
 
-            Divider()
+            HorizontalDivider(thickness = DividerThickness)
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,

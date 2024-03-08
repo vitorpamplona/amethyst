@@ -45,8 +45,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -69,7 +68,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -99,6 +97,8 @@ import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.DisplayRoomSubject
 import com.vitorpamplona.amethyst.ui.note.DisplayUserSetAsSubject
+import com.vitorpamplona.amethyst.ui.note.IncognitoIconOff
+import com.vitorpamplona.amethyst.ui.note.IncognitoIconOn
 import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
@@ -106,7 +106,6 @@ import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
-import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
@@ -115,6 +114,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
@@ -442,17 +442,19 @@ fun PrivateMessageEditFieldRow(
                         },
                     ) {
                         if (channelScreenModel.nip24) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.incognito),
-                                null,
-                                modifier = Modifier.padding(top = 2.dp).size(18.dp),
+                            IncognitoIconOn(
+                                modifier =
+                                    Modifier
+                                        .padding(top = 2.dp)
+                                        .size(18.dp),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                         } else {
-                            Icon(
-                                painter = painterResource(id = R.drawable.incognito_off),
-                                null,
-                                modifier = Modifier.padding(top = 2.dp).size(18.dp),
+                            IncognitoIconOff(
+                                modifier =
+                                    Modifier
+                                        .padding(top = 2.dp)
+                                        .size(18.dp),
                                 tint = MaterialTheme.colorScheme.placeholderText,
                             )
                         }
@@ -535,7 +537,7 @@ fun ThinSendButton(
     ) {
         Icon(
             imageVector = Icons.Default.Send,
-            null,
+            contentDescription = stringResource(id = R.string.accessibility_send),
             modifier = Size20Modifier,
         )
     }
@@ -601,7 +603,7 @@ fun ChatroomHeader(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             thickness = DividerThickness,
         )
     }
@@ -641,7 +643,7 @@ fun GroupChatroomHeader(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             thickness = DividerThickness,
         )
     }
@@ -661,11 +663,7 @@ private fun EditRoomSubjectButton(
     Button(
         modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
         onClick = { wantsToPost = true },
-        shape = ButtonBorder,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-            ),
+        contentPadding = ZeroPadding,
     ) {
         Icon(
             tint = Color.White,

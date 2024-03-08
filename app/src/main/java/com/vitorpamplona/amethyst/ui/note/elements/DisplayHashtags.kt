@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.elements
+package com.vitorpamplona.amethyst.ui.note.elements
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -37,8 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun DisplayFollowingHashtagsInPost(
@@ -50,13 +48,11 @@ fun DisplayFollowingHashtagsInPost(
     var firstTag by remember(baseNote) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = userFollowState) {
-        launch(Dispatchers.Default) {
-            val followingTags = userFollowState?.user?.cachedFollowingTagSet() ?: emptySet()
-            val newFirstTag = baseNote.event?.firstIsTaggedHashes(followingTags)
+        val followingTags = userFollowState?.user?.cachedFollowingTagSet() ?: emptySet()
+        val newFirstTag = baseNote.event?.firstIsTaggedHashes(followingTags)
 
-            if (firstTag != newFirstTag) {
-                launch(Dispatchers.Main) { firstTag = newFirstTag }
-            }
+        if (firstTag != newFirstTag) {
+            firstTag = newFirstTag
         }
     }
 

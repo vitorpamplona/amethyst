@@ -228,8 +228,3 @@ jobs:
           asset_path: app/build/outputs/bundle/fdroidRelease/app-fdroid-release.aab
           asset_name: amethyst-fdroid-${{ github.ref_name }}.aab
           asset_content_type: application/zip
-
-      - name: Drafts a description for the release
-        uses: release-drafter/release-drafter@v5
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

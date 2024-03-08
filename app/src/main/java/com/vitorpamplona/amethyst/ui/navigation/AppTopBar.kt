@@ -39,9 +39,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -74,7 +74,6 @@ import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavBackStackEntry
 import coil.Coil
-import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -108,12 +107,12 @@ import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.LoadCityName
 import com.vitorpamplona.amethyst.ui.note.LoadUser
-import com.vitorpamplona.amethyst.ui.note.LongCommunityHeader
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
-import com.vitorpamplona.amethyst.ui.note.ShortCommunityHeader
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.types.LongCommunityHeader
+import com.vitorpamplona.amethyst.ui.note.types.ShortCommunityHeader
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DislayGeoTagHeader
@@ -395,8 +394,6 @@ private fun ChannelTopBar(
     }
 }
 
-@Composable fun NoTopBar() {}
-
 @Composable
 fun StoriesTopBar(
     followLists: FollowListViewModel,
@@ -404,7 +401,7 @@ fun StoriesTopBar(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
+    GenericMainTopBar(drawerState, accountViewModel, nav) {
         val list by accountViewModel.account.defaultStoriesFollowList.collectAsStateWithLifecycle()
 
         FollowListWithRoutes(
@@ -423,7 +420,7 @@ fun HomeTopBar(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
+    GenericMainTopBar(drawerState, accountViewModel, nav) {
         val list by accountViewModel.account.defaultHomeFollowList.collectAsStateWithLifecycle()
 
         FollowListWithRoutes(
@@ -446,7 +443,7 @@ fun NotificationTopBar(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
+    GenericMainTopBar(drawerState, accountViewModel, nav) {
         val list by accountViewModel.account.defaultNotificationFollowList.collectAsStateWithLifecycle()
 
         FollowListWithoutRoutes(
@@ -465,7 +462,7 @@ fun DiscoveryTopBar(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    GenericMainTopBar(drawerState, accountViewModel, nav) { accountViewModel ->
+    GenericMainTopBar(drawerState, accountViewModel, nav) {
         val list by accountViewModel.account.defaultDiscoveryFollowList.collectAsStateWithLifecycle()
 
         FollowListWithoutRoutes(
@@ -492,7 +489,7 @@ fun GenericMainTopBar(
     drawerState: DrawerState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
-    content: @Composable (AccountViewModel) -> Unit,
+    content: @Composable () -> Unit,
 ) {
     Column(modifier = BottomTopHeight) {
         TopAppBar(
@@ -511,7 +508,7 @@ fun GenericMainTopBar(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
-                            content(accountViewModel)
+                            content()
                         }
                     }
                 }
@@ -522,7 +519,7 @@ fun GenericMainTopBar(
             },
             actions = { SearchButton { nav(Route.Search.route) } },
         )
-        Divider(thickness = DividerThickness)
+        HorizontalDivider(thickness = DividerThickness)
     }
 }
 
@@ -817,15 +814,12 @@ fun SimpleTextSpinner(
 fun RenderOption(option: Name) {
     when (option) {
         is GeoHashName -> {
-            val geohash = runCatching { option.geoHashTag.toGeoHash() }.getOrNull()
-            if (geohash != null) {
-                LoadCityName(geohash) {
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(text = "/g/$it", color = MaterialTheme.colorScheme.onSurface)
-                    }
+            LoadCityName(option.geoHashTag) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(text = "/g/$it", color = MaterialTheme.colorScheme.onSurface)
                 }
             }
         }
@@ -893,7 +887,7 @@ fun TopBarWithBackButton(
             },
             actions = {},
         )
-        Divider(thickness = DividerThickness)
+        HorizontalDivider(thickness = DividerThickness)
     }
 }
 
@@ -911,7 +905,7 @@ fun FlexibleTopBarWithBackButton(
             actions = {},
         )
         Spacer(modifier = HalfVertSpacer)
-        Divider(thickness = DividerThickness)
+        HorizontalDivider(thickness = DividerThickness)
     }
 }
 
@@ -1067,8 +1061,6 @@ fun MyExtensibleTopAppBar(
         }
     }
 }
-
-private val AppBarHeight = 50.dp
 
 // TODO: this should probably be part of the touch target of the start and end icons, clarify this
 private val AppBarHorizontalPadding = 4.dp

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model
 
 import android.util.Log
+import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -98,6 +99,7 @@ import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.TextNoteModificationEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
@@ -449,13 +451,20 @@ object LocalCache {
             return
         }
 
+        val repository = event.repository()?.toTag()
+
         val replyTo =
             event
                 .tagsWithoutCitations()
-                .filter { it != event.repository()?.toTag() }
+                .filter { it != repository }
                 .mapNotNull { checkGetOrCreateNote(it) }
 
+        // println("New GitReply ${event.id} for ${replyTo.firstOrNull()?.event?.id()} ${event.tagsWithoutCitations().filter { it != event.repository()?.toTag() }.firstOrNull()}")
+
         note.loadEvent(event, author, replyTo)
+
+        // Counts the replies
+        replyTo.forEach { it.addReply(note) }
 
         refreshObservers(note)
     }
@@ -745,7 +754,9 @@ object LocalCache {
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
-
+            if (version.liveSet != null) {
+                updateListCache()
+            }
             version.liveSet?.innerOts?.invalidateData()
         }
 
@@ -1385,6 +1396,37 @@ object LocalCache {
     }
 
     fun consume(
+        event: TextNoteModificationEvent,
+        relay: Relay?,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        event.editedNote()?.let {
+            checkGetOrCreateNote(it)?.let { editedNote ->
+                modificationCache.remove(editedNote.idHex)
+                // must update list of Notes to quickly update the user.
+                if (editedNote.liveSet != null) {
+                    updateListCache()
+                }
+                editedNote.liveSet?.innerModifications?.invalidateData()
+            }
+        }
+
+        refreshObservers(note)
+    }
+
+    fun consume(
         event: HighlightEvent,
         relay: Relay?,
     ) {
@@ -1613,6 +1655,8 @@ object LocalCache {
                     it.event !is CommunityPostApprovalEvent &&
                     it.event !is ReactionEvent &&
                     it.event !is GiftWrapEvent &&
+                    it.event !is SealedGossipEvent &&
+                    it.event !is OtsEvent &&
                     it.event !is LnZapEvent &&
                     it.event !is LnZapRequestEvent
             ) &&
@@ -1693,6 +1737,35 @@ object LocalCache {
         }
 
         return minTime
+    }
+
+    val modificationCache = LruCache<HexKey, List<Note>>(20)
+
+    fun cachedModificationEventsForNote(note: Note): List<Note>? {
+        return modificationCache[note.idHex]
+    }
+
+    suspend fun findLatestModificationForNote(note: Note): List<Note> {
+        checkNotInMainThread()
+
+        val originalAuthor = note.author?.pubkeyHex ?: return emptyList()
+
+        modificationCache[note.idHex]?.let {
+            return it
+        }
+
+        val time = TimeUtils.now()
+
+        val newNotes =
+            noteListCache.filter { item ->
+                val noteEvent = item.event
+
+                noteEvent is TextNoteModificationEvent && noteEvent.pubKey == originalAuthor && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time)
+            }.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
+
+        modificationCache.put(note.idHex, newNotes)
+
+        return newNotes
     }
 
     fun cleanObservers() {
@@ -2048,6 +2121,7 @@ object LocalCache {
                 }
                 is StatusEvent -> consume(event, relay)
                 is TextNoteEvent -> consume(event, relay)
+                is TextNoteModificationEvent -> consume(event, relay)
                 is VideoHorizontalEvent -> consume(event, relay)
                 is VideoVerticalEvent -> consume(event, relay)
                 is WikiNoteEvent -> consume(event, relay)
@@ -2073,8 +2147,8 @@ class LocalCacheLiveData {
     fun invalidateData(newNote: Note) {
         bundler.invalidateList(newNote) {
                 bundledNewNotes ->
-            _newEventBundles.emit(bundledNewNotes)
             LocalCache.updateListCache()
+            _newEventBundles.emit(bundledNewNotes)
         }
     }
 }

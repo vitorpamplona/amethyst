@@ -27,8 +27,10 @@ import kotlinx.collections.immutable.ImmutableList
 sealed class FeedState {
     object Loading : FeedState()
 
-    class Loaded(val feed: MutableState<ImmutableList<Note>>, val showHidden: MutableState<Boolean>) :
-        FeedState()
+    class Loaded(
+        val feed: MutableState<ImmutableList<Note>>,
+        val showHidden: MutableState<Boolean>,
+    ) : FeedState()
 
     object Empty : FeedState()
 

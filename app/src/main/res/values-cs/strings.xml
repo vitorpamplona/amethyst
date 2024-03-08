@@ -6,6 +6,7 @@
     <string name="your_profile_image">Profilový obrázek</string>
     <string name="scan_qr">Skenovat QR kód</string>
     <string name="show_anyway">Zobrazit přesto</string>
+    <string name="post_was_hidden">Tento příspěvek byl skryt, protože zmiňuje vaše skryté uživatele nebo slova</string>
     <string name="post_was_flagged_as_inappropriate_by">Příspěvek byl označen jako nevhodný uživatelem</string>
     <string name="post_not_found">Příspěvek nenalezen</string>
     <string name="channel_image">Obrázek kanálu</string>
@@ -16,6 +17,7 @@
     <string name="spam">Spam</string>
     <string name="impersonation">Zneužívání identity</string>
     <string name="illegal_behavior">Nezákonné jednání</string>
+    <string name="other">Jiný</string>
     <string name="unknown">Neznámý</string>
     <string name="relay_icon">Ikona předávání</string>
     <string name="unknown_author">Neznámý autor</string>
@@ -23,6 +25,9 @@
     <string name="copy_user_pubkey">Kopírovat ID autora</string>
     <string name="copy_note_id">Kopírovat ID poznámky</string>
     <string name="broadcast">Vysílání</string>
+    <string name="timestamp_it">Časové razítko</string>
+    <string name="timestamp_pending">Časové razítko: Čeká na potvrzení</string>
+    <string name="timestamp_pending_short">OTS: Čeká</string>
     <string name="request_deletion">Požadovat smazání</string>
     <string name="block_report">Blockovat / Nahlásit</string>
     <string name="block_hide_user"><![CDATA[Blokovat a skrýt uživatele]]></string>
@@ -43,8 +48,12 @@
     <string name="view_count">Počet zobrazení</string>
     <string name="boost">Zvýšení</string>
     <string name="boosted">zvýšeno</string>
+    <string name="edited">upraveno</string>
+    <string name="edited_number">úprava #%1$s</string>
+    <string name="original">originál</string>
     <string name="quote">Citovat</string>
     <string name="fork">Rozštěpení</string>
+    <string name="propose_an_edit">Navrhnout úpravu</string>
     <string name="new_amount_in_sats">Nová částka v sats</string>
     <string name="add">Přidat</string>
     <string name="replying_to">"odpovídá na "</string>
@@ -661,4 +670,21 @@
     <string name="git_repository">Git repositář: %1$s</string>
     <string name="git_web_address">Internet:</string>
     <string name="git_clone_address">Klon:</string>
+    <string name="existed_since">OTS: %1$s</string>
+    <string name="ots_info_title">Důkaz časového razítka</string>
+    <string name="ots_info_description">Existuje důkaz, že tento příspěvek byl podepsán někdy před %1$s. Důkaz byl označen v Bitcoin blockchainu v tomto datu a čase.</string>
+    <string name="edit_post">Upravit příspěvek</string>
+    <string name="proposal_to_edit">Návrh na vylepšení vašeho příspěvku</string>
+    <string name="message_to_author">Souhrn změn</string>
+    <string name="message_to_author_placeholder">Rychlé opravy…</string>
+    <string name="accept_the_suggestion">Přijmout návrhy</string>
+    <string name="accessibility_download_for_offline">Stáhnout</string>
+    <string name="accessibility_lyrics_on">Text písně zapnuto</string>
+    <string name="accessibility_lyrics_off">Text písně vypnuto</string>
+    <string name="accessibility_turn_on_sealed_message">Zapečetěná zpráva vypnuta. Klikněte pro zapnutí zapečetěné zprávy</string>
+    <string name="accessibility_turn_off_sealed_message">Zapečetěná zpráva zapnuta. Klikněte pro vypnutí zapečetěné zprávy</string>
+    <string name="accessibility_send">Odeslat</string>
+    <string name="accessibility_play_username">Přehrát uživatelské jméno jako audio</string>
+    <string name="accessibility_scan_qr_code">Skenovat QR kód</string>
+    <string name="accessibility_navigate_to_alby">Přejít na poskytovatele peněženky třetí strany Alby</string>
 </resources>

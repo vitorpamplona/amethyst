@@ -18,10 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note
+package com.vitorpamplona.amethyst.model
 
+import android.util.Log
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.toImmutableMap
 
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
@@ -110,6 +116,11 @@ class Reference(
     var reference: String? = null,
 )
 
+data class FhirElementDatabase(
+    var baseResource: Resource? = null,
+    var localDb: ImmutableMap<String, Resource> = persistentMapOf(),
+)
+
 fun findReferenceInDb(
     it: String,
     db: Map<String, Resource>,
@@ -119,5 +130,32 @@ fun findReferenceInDb(
         db.get(parts[1].removePrefix("#"))
     } else {
         db.get(it.removePrefix("#"))
+    }
+}
+
+fun parseResourceBundleOrNull(json: String): FhirElementDatabase? {
+    val mapper =
+        jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+
+    return try {
+        val resource = mapper.readValue(json, Resource::class.java)
+
+        val db =
+            when (resource) {
+                is Bundle -> {
+                    resource.entry.associateBy { it.id }.toImmutableMap()
+                }
+                else -> {
+                    persistentMapOf(resource.id to resource)
+                }
+            }
+
+        FhirElementDatabase(
+            localDb = db,
+            baseResource = resource,
+        )
+    } catch (e: Exception) {
+        Log.e("RenderEyeGlassesPrescription", "Parser error", e)
+        null
     }
 }

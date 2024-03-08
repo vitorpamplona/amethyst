@@ -429,24 +429,49 @@ class UserMetadata {
     }
 
     fun lnAddress(): String? {
-        return (lud16?.trim() ?: lud06?.trim())?.ifBlank { null }
+        return lud16 ?: lud06
     }
 
     fun bestUsername(): String? {
-        return name?.ifBlank { null } ?: username?.ifBlank { null }
+        return name ?: username
     }
 
     fun bestDisplayName(): String? {
-        return displayName?.ifBlank { null }
+        return displayName
     }
 
     fun nip05(): String? {
-        return nip05?.ifBlank { null }
+        return nip05
     }
 
     fun profilePicture(): String? {
-        if (picture.isNullOrBlank()) picture = null
         return picture
+    }
+
+    fun cleanBlankNames() {
+        if (picture?.isNotEmpty() == true) picture = picture?.trim()
+        if (nip05?.isNotEmpty() == true) nip05 = nip05?.trim()
+        if (displayName?.isNotEmpty() == true) displayName = displayName?.trim()
+        if (name?.isNotEmpty() == true) name = name?.trim()
+        if (username?.isNotEmpty() == true) username = username?.trim()
+        if (lud06?.isNotEmpty() == true) lud06 = lud06?.trim()
+        if (lud16?.isNotEmpty() == true) lud16 = lud16?.trim()
+
+        if (banner?.isNotEmpty() == true) banner = banner?.trim()
+        if (website?.isNotEmpty() == true) website = website?.trim()
+        if (domain?.isNotEmpty() == true) domain = domain?.trim()
+
+        if (picture?.isBlank() == true) picture = null
+        if (nip05?.isBlank() == true) nip05 = null
+        if (displayName?.isBlank() == true) displayName = null
+        if (name?.isBlank() == true) name = null
+        if (username?.isBlank() == true) username = null
+        if (lud06?.isBlank() == true) lud06 = null
+        if (lud16?.isBlank() == true) lud16 = null
+
+        if (banner?.isBlank() == true) banner = null
+        if (website?.isBlank() == true) website = null
+        if (domain?.isBlank() == true) domain = null
     }
 }
 

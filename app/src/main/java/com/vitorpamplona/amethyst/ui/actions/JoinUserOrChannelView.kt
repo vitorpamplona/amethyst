@@ -37,7 +37,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -142,7 +142,10 @@ fun JoinUserOrChannelView(
     ) {
         Surface {
             Column(
-                modifier = Modifier.padding(10.dp).heightIn(min = 500.dp),
+                modifier =
+                    Modifier
+                        .padding(10.dp)
+                        .heightIn(min = 500.dp),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -267,7 +270,10 @@ private fun SearchEditTextForJoin(
     }
 
     Row(
-        modifier = Modifier.padding(horizontal = 10.dp).fillMaxWidth(),
+        modifier =
+            Modifier
+                .padding(horizontal = 10.dp)
+                .fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -280,7 +286,8 @@ private fun SearchEditTextForJoin(
             },
             leadingIcon = { SearchIcon(modifier = Size20Modifier, Color.Unspecified) },
             modifier =
-                Modifier.weight(1f, true)
+                Modifier
+                    .weight(1f, true)
                     .defaultMinSize(minHeight = 20.dp)
                     .focusRequester(focusRequester)
                     .onFocusChanged {
@@ -330,7 +337,11 @@ private fun RenderSearchResults(
             }
 
         Row(
-            modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(vertical = 10.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight()
+                    .padding(vertical = 10.dp),
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxHeight(),
@@ -411,7 +422,10 @@ fun UserComposeForChat(
             ClickableUserPicture(baseUser, Size55dp, accountViewModel)
 
             Column(
-                modifier = Modifier.padding(start = 10.dp).weight(1f),
+                modifier =
+                    Modifier
+                        .padding(start = 10.dp)
+                        .weight(1f),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser) }
 
@@ -419,7 +433,7 @@ fun UserComposeForChat(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.padding(top = 10.dp),
             thickness = DividerThickness,
         )

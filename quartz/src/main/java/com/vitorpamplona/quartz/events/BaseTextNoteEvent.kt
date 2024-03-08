@@ -55,6 +55,8 @@ open class BaseTextNoteEvent(
 
     fun forkFromVersion() = tags.firstOrNull { it.size > 3 && it[0] == "e" && it[3] == "fork" }?.get(1)
 
+    fun isForkFromAddressWithPubkey(authorHex: HexKey) = tags.any { it.size > 3 && it[0] == "a" && it[3] == "fork" && it[1].contains(authorHex) }
+
     open fun replyTos(): List<HexKey> {
         val oldStylePositional = tags.filter { it.size > 1 && it.size <= 3 && it[0] == "e" }.map { it[1] }
         val newStyleReply = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "reply" }?.get(1)
@@ -105,14 +107,16 @@ open class BaseTextNoteEvent(
             val additionalChars = matcher2.group(4) // additional chars
 
             try {
-                val parsed = Nip19Bech32.parseComponents(type, key, additionalChars)?.entity
+                if (type != null) {
+                    val parsed = Nip19Bech32.parseComponents(type, key, additionalChars)?.entity
 
-                if (parsed != null) {
-                    if (parsed is Nip19Bech32.NProfile) {
-                        returningList.add(parsed.hex)
-                    }
-                    if (parsed is Nip19Bech32.NPub) {
-                        returningList.add(parsed.hex)
+                    if (parsed != null) {
+                        if (parsed is Nip19Bech32.NProfile) {
+                            returningList.add(parsed.hex)
+                        }
+                        if (parsed is Nip19Bech32.NPub) {
+                            returningList.add(parsed.hex)
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -151,14 +155,16 @@ open class BaseTextNoteEvent(
             val key = matcher2.group(3) // bech32
             val additionalChars = matcher2.group(4) // additional chars
 
-            val parsed = Nip19Bech32.parseComponents(type, key, additionalChars)?.entity
+            if (type != null) {
+                val parsed = Nip19Bech32.parseComponents(type, key, additionalChars)?.entity
 
-            if (parsed != null) {
-                when (parsed) {
-                    is Nip19Bech32.NEvent -> citations.add(parsed.hex)
-                    is Nip19Bech32.NAddress -> citations.add(parsed.atag)
-                    is Nip19Bech32.Note -> citations.add(parsed.hex)
-                    is Nip19Bech32.NEmbed -> citations.add(parsed.event.id)
+                if (parsed != null) {
+                    when (parsed) {
+                        is Nip19Bech32.NEvent -> citations.add(parsed.hex)
+                        is Nip19Bech32.NAddress -> citations.add(parsed.atag)
+                        is Nip19Bech32.Note -> citations.add(parsed.hex)
+                        is Nip19Bech32.NEmbed -> citations.add(parsed.event.id)
+                    }
                 }
             }
         }

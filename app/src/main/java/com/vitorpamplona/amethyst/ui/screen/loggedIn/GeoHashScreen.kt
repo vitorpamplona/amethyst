@@ -27,36 +27,30 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrGeohashDataSource
-import com.vitorpamplona.amethyst.service.ReverseGeoLocationUtil
+import com.vitorpamplona.amethyst.ui.note.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.NostrGeoHashFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun GeoHashScreen(
@@ -163,7 +157,7 @@ fun GeoHashHeader(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             thickness = DividerThickness,
         )
     }
@@ -174,27 +168,13 @@ fun DislayGeoTagHeader(
     geohash: String,
     modifier: Modifier,
 ) {
-    val context = LocalContext.current
-
-    var cityName by remember(geohash) { mutableStateOf<String>(geohash) }
-
-    LaunchedEffect(key1 = geohash) {
-        launch(Dispatchers.IO) {
-            val newCityName =
-                ReverseGeoLocationUtil().execute(geohash.toGeoHash().toLocation(), context)?.ifBlank {
-                    null
-                }
-            if (newCityName != null && newCityName != cityName) {
-                cityName = "$newCityName ($geohash)"
-            }
-        }
+    LoadCityName(geohashStr = geohash) { cityName ->
+        Text(
+            cityName,
+            fontWeight = FontWeight.Bold,
+            modifier = modifier,
+        )
     }
-
-    Text(
-        cityName,
-        fontWeight = FontWeight.Bold,
-        modifier = modifier,
-    )
 }
 
 @Composable

@@ -57,36 +57,38 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.BoostReaction
-import com.vitorpamplona.amethyst.ui.note.FileHeaderDisplay
-import com.vitorpamplona.amethyst.ui.note.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
-import com.vitorpamplona.amethyst.ui.note.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.RenderRelay
 import com.vitorpamplona.amethyst.ui.note.ReplyReaction
 import com.vitorpamplona.amethyst.ui.note.ViewCountReaction
 import com.vitorpamplona.amethyst.ui.note.WatchForReports
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
+import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
+import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
+import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
 import com.vitorpamplona.amethyst.ui.screen.FeedError
 import com.vitorpamplona.amethyst.ui.screen.FeedState
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.LoadingFeed
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefresheableView
+import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
@@ -214,7 +216,7 @@ private fun LoadedState(
 
     WatchScrollToTop(videoFeedView, pagerState)
 
-    RefresheableView(viewModel = videoFeedView) {
+    RefresheableBox(viewModel = videoFeedView) {
         SlidingCarousel(
             state.feed,
             pagerState,
@@ -363,12 +365,12 @@ private fun RenderAuthorInformation(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 NoteUsernameDisplay(note, remember { Modifier.weight(1f) })
-                VideoUserOptionAction(note, accountViewModel)
+                VideoUserOptionAction(note, accountViewModel, nav)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ObserveDisplayNip05Status(
-                    remember { note.author!! },
-                    remember { Modifier.weight(1f) },
+                    note.author!!,
+                    Modifier.weight(1f),
                     accountViewModel,
                     nav = nav,
                 )
@@ -387,6 +389,7 @@ private fun RenderAuthorInformation(
 private fun VideoUserOptionAction(
     note: Note,
     accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
     val popupExpanded = remember { mutableStateOf(false) }
     val enablePopup = remember { { popupExpanded.value = true } }
@@ -397,7 +400,7 @@ private fun VideoUserOptionAction(
     ) {
         Icon(
             imageVector = Icons.Default.MoreVert,
-            null,
+            contentDescription = stringResource(id = R.string.more_options),
             modifier = remember { Modifier.size(20.dp) },
             tint = MaterialTheme.colorScheme.placeholderText,
         )
@@ -405,7 +408,9 @@ private fun VideoUserOptionAction(
         NoteDropDownMenu(
             note,
             popupExpanded,
+            null,
             accountViewModel,
+            nav,
         )
     }
 }

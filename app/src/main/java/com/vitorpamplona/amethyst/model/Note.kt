@@ -948,6 +948,7 @@ class NoteLiveSet(u: Note) {
     val innerRelays = NoteBundledRefresherLiveData(u)
     val innerZaps = NoteBundledRefresherLiveData(u)
     val innerOts = NoteBundledRefresherLiveData(u)
+    val innerModifications = NoteBundledRefresherLiveData(u)
 
     val metadata = innerMetadata.map { it }
     val reactions = innerReactions.map { it }
@@ -1001,7 +1002,9 @@ class NoteLiveSet(u: Note) {
             hasReactions.hasObservers() ||
             replyCount.hasObservers() ||
             reactionCount.hasObservers() ||
-            boostCount.hasObservers()
+            boostCount.hasObservers() ||
+            innerOts.hasObservers() ||
+            innerModifications.hasObservers()
     }
 
     fun destroy() {
@@ -1013,6 +1016,7 @@ class NoteLiveSet(u: Note) {
         innerRelays.destroy()
         innerZaps.destroy()
         innerOts.destroy()
+        innerModifications.destroy()
     }
 }
 

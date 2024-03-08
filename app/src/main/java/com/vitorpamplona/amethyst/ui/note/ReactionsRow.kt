@@ -61,6 +61,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -99,8 +100,10 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
+import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
+import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DarkerGreen
@@ -145,6 +148,7 @@ import kotlin.math.roundToInt
 fun ReactionsRow(
     baseNote: Note,
     showReactionDetail: Boolean,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -152,7 +156,7 @@ fun ReactionsRow(
 
     Spacer(modifier = HalfDoubleVertSpacer)
 
-    InnerReactionRow(baseNote, showReactionDetail, wantsToSeeReactions, accountViewModel, nav)
+    InnerReactionRow(baseNote, showReactionDetail, wantsToSeeReactions, editState, accountViewModel, nav)
 
     Spacer(modifier = HalfDoubleVertSpacer)
 
@@ -169,6 +173,7 @@ private fun InnerReactionRow(
     baseNote: Note,
     showReactionDetail: Boolean,
     wantsToSeeReactions: MutableState<Boolean>,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -190,6 +195,7 @@ private fun InnerReactionRow(
         three = {
             BoostWithDialog(
                 baseNote,
+                editState,
                 MaterialTheme.colorScheme.placeholderText,
                 accountViewModel,
                 nav,
@@ -301,7 +307,7 @@ fun RenderZapRaiser(
     LinearProgressIndicator(
         modifier = remember(details) { Modifier.fillMaxWidth().height(if (details) 24.dp else 4.dp) },
         color = color,
-        progress = zapraiserStatus.progress,
+        progress = { zapraiserStatus.progress },
     )
 
     if (details) {
@@ -495,6 +501,7 @@ private fun WatchZapAndRenderGallery(
 @Composable
 private fun BoostWithDialog(
     baseNote: Note,
+    editState: State<GenericLoadable<EditState>>,
     grayTint: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -507,6 +514,7 @@ private fun BoostWithDialog(
             onClose = { wantsToQuote = null },
             baseReplyTo = null,
             quote = wantsToQuote,
+            version = (editState.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -528,6 +536,7 @@ private fun BoostWithDialog(
             onClose = { wantsToFork = null },
             baseReplyTo = replyTo,
             fork = wantsToFork,
+            version = (editState.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value,
             accountViewModel = accountViewModel,
             nav = nav,
         )

@@ -36,7 +36,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -70,10 +70,12 @@ import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.authorRouteFor
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifierSmaller
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -158,7 +160,7 @@ fun MultiSetCompose(
             NoteCompose(
                 baseNote = baseNote,
                 routeForLastRead = null,
-                modifier = remember { Modifier.padding(top = 5.dp) },
+                modifier = HalfTopPadding,
                 isBoostedNote = true,
                 showHidden = showHidden,
                 parentBackgroundColor = backgroundColor,
@@ -166,10 +168,10 @@ fun MultiSetCompose(
                 nav = nav,
             )
 
-            NoteDropDownMenu(baseNote, popupExpanded, accountViewModel)
+            NoteDropDownMenu(baseNote, popupExpanded, null, accountViewModel, nav)
         }
 
-        Divider(
+        HorizontalDivider(
             thickness = DividerThickness,
         )
     }
@@ -472,6 +474,7 @@ fun CrossfadeToDisplayComment(
         tags = EmptyTagList,
         modifier = textBoxModifier,
         backgroundColor = backgroundColor,
+        id = comment,
         accountViewModel = accountViewModel,
         nav = nav,
     )

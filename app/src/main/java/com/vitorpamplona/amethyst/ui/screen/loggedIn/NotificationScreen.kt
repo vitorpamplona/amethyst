@@ -27,7 +27,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -78,7 +78,7 @@ import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showCount
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefresheableCardView
+import com.vitorpamplona.amethyst.ui.screen.RefreshableCardView
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -121,7 +121,7 @@ fun NotificationScreen(
             model = userReactionsStatsModel,
         )
 
-        RefresheableCardView(
+        RefreshableCardView(
             viewModel = notifFeedViewModel,
             accountViewModel = accountViewModel,
             nav = nav,
@@ -230,7 +230,7 @@ fun SummaryBar(model: UserReactionsViewModel) {
         }
     }
 
-    Divider(
+    HorizontalDivider(
         thickness = DividerThickness,
     )
 }

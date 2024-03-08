@@ -48,8 +48,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerState
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -78,12 +78,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -100,6 +103,7 @@ import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.actions.PostButton
+import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
@@ -163,7 +167,7 @@ fun DrawerContent(
 
             FollowingAndFollowerCounts(accountViewModel.account.userProfile(), onClickUser)
 
-            Divider(
+            HorizontalDivider(
                 thickness = DividerThickness,
                 modifier = Modifier.padding(top = 20.dp),
             )
@@ -872,7 +876,7 @@ fun BottomContent(
     var dialogOpen by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier) {
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.padding(top = 15.dp),
             thickness = DividerThickness,
         )
@@ -883,29 +887,24 @@ fun BottomContent(
                     .padding(horizontal = 15.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
+            ClickableText(
+                text =
+                    buildAnnotatedString {
+                        withStyle(
+                            SpanStyle(
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                        ) {
+                            append("v" + BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase())
+                        }
+                    },
+                onClick = {
+                    nav("Note/${BuildConfig.RELEASE_NOTES_ID}")
+                    coroutineScope.launch { drawerState.close() }
+                },
                 modifier = Modifier.padding(start = 16.dp),
-                text = "v" + BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase(),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
             )
-      /*
-      IconButton(
-          onClick = {
-              when (AppCompatDelegate.getDefaultNightMode()) {
-                  AppCompatDelegate.MODE_NIGHT_NO -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-                  AppCompatDelegate.MODE_NIGHT_YES -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-                  else -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-              }
-          }
-      ) {
-          Icon(
-              painter = painterResource(R.drawable.ic_theme),
-              null,
-              modifier = Modifier.size(24.dp),
-              tint = MaterialTheme.colorScheme.primary
-          )
-      }*/
             Box(modifier = Modifier.weight(1F))
             IconButton(
                 onClick = {
@@ -915,7 +914,7 @@ fun BottomContent(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_qrcode),
-                    null,
+                    contentDescription = stringResource(id = R.string.show_npub_as_a_qr_code),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )

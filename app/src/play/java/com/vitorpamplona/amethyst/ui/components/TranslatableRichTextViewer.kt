@@ -31,9 +31,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -60,6 +60,7 @@ import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
@@ -73,6 +74,7 @@ fun TranslatableRichTextViewer(
     modifier: Modifier = Modifier,
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
+    id: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -97,6 +99,7 @@ fun TranslatableRichTextViewer(
             modifier,
             tags,
             backgroundColor,
+            id,
             accountViewModel,
             nav,
         )
@@ -111,6 +114,7 @@ private fun RenderText(
     modifier: Modifier,
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
+    id: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -129,6 +133,7 @@ private fun RenderText(
             modifier,
             tags,
             backgroundColor,
+            id,
             accountViewModel,
             nav,
         )
@@ -243,7 +248,7 @@ private fun TranslationMessage(
                     }
                 },
             )
-            Divider()
+            HorizontalDivider(thickness = DividerThickness)
             DropdownMenuItem(
                 text = {
                     if (accountViewModel.account.preferenceBetween(source, target) == source) {
@@ -300,7 +305,7 @@ private fun TranslationMessage(
                     }
                 },
             )
-            Divider()
+            HorizontalDivider(thickness = DividerThickness)
 
             val languageList = ConfigurationCompat.getLocales(Resources.getSystem().configuration)
             for (i in 0 until languageList.size()) {

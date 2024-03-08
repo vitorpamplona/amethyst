@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.navigation
 
 import android.os.Bundle
 import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -32,7 +31,6 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -238,16 +236,6 @@ sealed class Route(
                 RoomByAuthor.route,
             )
     }
-}
-
-// **
-// *  Functions below only exist because we have not broken the datasource classes into backend and
-// frontend.
-// **
-@Composable
-fun currentRoute(navController: NavHostController): String? {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    return navBackStackEntry?.destination?.route
 }
 
 open class LatestItem {

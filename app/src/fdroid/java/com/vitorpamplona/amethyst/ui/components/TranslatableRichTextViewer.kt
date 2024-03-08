@@ -34,6 +34,7 @@ fun TranslatableRichTextViewer(
     modifier: Modifier = Modifier,
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
+    id: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) = ExpandableRichTextViewer(
@@ -42,6 +43,7 @@ fun TranslatableRichTextViewer(
     modifier,
     tags,
     backgroundColor,
+    id,
     accountViewModel,
     nav,
 )

@@ -28,16 +28,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -52,43 +51,31 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.lnurl.CachedLnInvoiceParser
+import com.vitorpamplona.amethyst.service.lnurl.InvoiceAmount
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import java.text.NumberFormat
-
-@Stable data class InvoiceAmount(val invoice: String, val amount: String?)
+import kotlinx.coroutines.withContext
 
 @Composable
 fun LoadValueFromInvoice(
     lnbcWord: String,
     inner: @Composable (invoiceAmount: InvoiceAmount?) -> Unit,
 ) {
-    var lnInvoice by remember { mutableStateOf<InvoiceAmount?>(null) }
-
-    LaunchedEffect(key1 = lnbcWord) {
-        launch(Dispatchers.IO) {
-            val myInvoice = LnInvoiceUtil.findInvoice(lnbcWord)
-            if (myInvoice != null) {
-                val myInvoiceAmount =
-                    try {
-                        NumberFormat.getInstance().format(LnInvoiceUtil.getAmountInSats(myInvoice))
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        e.printStackTrace()
-                        null
-                    }
-
-                lnInvoice = InvoiceAmount(myInvoice, myInvoiceAmount)
+    val lnInvoice by
+        produceState(initialValue = CachedLnInvoiceParser.cached(lnbcWord), key1 = lnbcWord) {
+            withContext(Dispatchers.IO) {
+                val newLnInvoice = CachedLnInvoiceParser.parse(lnbcWord)
+                if (value != newLnInvoice) {
+                    value = newLnInvoice
+                }
             }
         }
-    }
 
     inner(lnInvoice)
 }
@@ -128,17 +115,24 @@ fun InvoicePreview(
 
     Column(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp)
                 .clip(shape = QuoteBorder)
                 .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(20.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp),
             ) {
                 Icon(
                     painter = painterResource(R.drawable.lightning),
@@ -155,19 +149,25 @@ fun InvoicePreview(
                 )
             }
 
-            Divider()
+            HorizontalDivider(thickness = DividerThickness)
 
             amount?.let {
                 Text(
                     text = "$it ${stringResource(id = R.string.sats)}",
                     fontSize = 25.sp,
                     fontWeight = FontWeight.W500,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 10.dp),
                 )
             }
 
             Button(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 10.dp),
                 onClick = { payViaIntent(lnInvoice, context) { showErrorMessageDialog = it } },
                 shape = QuoteBorder,
                 colors =

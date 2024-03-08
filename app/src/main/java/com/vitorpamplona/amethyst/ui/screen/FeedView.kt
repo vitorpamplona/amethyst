@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -56,7 +57,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import kotlin.time.ExperimentalTime
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
 fun RefresheableFeedView(
@@ -67,13 +68,15 @@ fun RefresheableFeedView(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    RefresheableView(viewModel, enablePullRefresh) {
-        SaveableFeedState(viewModel, routeForLastRead, scrollStateKey, accountViewModel, nav)
+    RefresheableBox(viewModel, enablePullRefresh) {
+        SaveableFeedState(viewModel, scrollStateKey) { listState ->
+            RenderFeedState(viewModel, accountViewModel, listState, nav, routeForLastRead)
+        }
     }
 }
 
 @Composable
-fun RefresheableView(
+fun RefresheableBox(
     viewModel: InvalidatableViewModel,
     enablePullRefresh: Boolean = true,
     content: @Composable () -> Unit,
@@ -105,19 +108,6 @@ fun RefresheableView(
                 modifier = remember { Modifier.align(Alignment.TopCenter) },
             )
         }
-    }
-}
-
-@Composable
-private fun SaveableFeedState(
-    viewModel: FeedViewModel,
-    routeForLastRead: String?,
-    scrollStateKey: String? = null,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    SaveableFeedState(viewModel, scrollStateKey) { listState ->
-        RenderFeed(viewModel, accountViewModel, listState, nav, routeForLastRead)
     }
 }
 
@@ -158,12 +148,16 @@ fun SaveableGridFeedState(
 }
 
 @Composable
-private fun RenderFeed(
+fun RenderFeedState(
     viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
     listState: LazyListState,
     nav: (String) -> Unit,
     routeForLastRead: String?,
+    onLoaded: @Composable (FeedState.Loaded) -> Unit = { FeedLoaded(it, listState, routeForLastRead, accountViewModel, nav) },
+    onEmpty: @Composable () -> Unit = { FeedEmpty { viewModel.invalidateData() } },
+    onError: @Composable (String) -> Unit = { FeedError(it) { viewModel.invalidateData() } },
+    onLoading: @Composable () -> Unit = { LoadingFeed() },
 ) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
@@ -172,24 +166,10 @@ private fun RenderFeed(
         animationSpec = tween(durationMillis = 100),
     ) { state ->
         when (state) {
-            is FeedState.Empty -> {
-                FeedEmpty { viewModel.invalidateData() }
-            }
-            is FeedState.FeedError -> {
-                FeedError(state.errorMessage) { viewModel.invalidateData() }
-            }
-            is FeedState.Loaded -> {
-                FeedLoaded(
-                    state = state,
-                    listState = listState,
-                    routeForLastRead = routeForLastRead,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-            is FeedState.Loading -> {
-                LoadingFeed()
-            }
+            is FeedState.Empty -> onEmpty()
+            is FeedState.FeedError -> onError(state.errorMessage)
+            is FeedState.Loaded -> onLoaded(state)
+            is FeedState.Loading -> onLoading()
         }
     }
 }
@@ -224,7 +204,7 @@ private fun WatchScrollToTop(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FeedLoaded(
     state: FeedState.Loaded,
@@ -251,6 +231,20 @@ private fun FeedLoaded(
                     nav = nav,
                 )
             }
+
+            /*var see by
+                remember {
+                    mutableStateOf(false)
+                }
+
+            if (see) {
+            } else {
+                Row(defaultModifier) {
+                    Button(onClick = { see = true }) {
+                        Text("Show")
+                    }
+                }
+            }*/
         }
     }
 }
@@ -277,6 +271,7 @@ fun FeedError(
         verticalArrangement = Arrangement.Center,
     ) {
         Text("${stringResource(R.string.error_loading_replies)} $errorMessage")
+        Spacer(modifier = StdVertSpacer)
         Button(
             modifier = Modifier.align(Alignment.CenterHorizontally),
             onClick = onRefresh,
@@ -294,6 +289,7 @@ fun FeedEmpty(onRefresh: () -> Unit) {
         verticalArrangement = Arrangement.Center,
     ) {
         Text(stringResource(R.string.feed_is_empty))
+        Spacer(modifier = StdVertSpacer)
         OutlinedButton(onClick = onRefresh) { Text(text = stringResource(R.string.refresh)) }
     }
 }

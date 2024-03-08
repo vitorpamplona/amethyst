@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import android.util.LruCache
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,6 +52,10 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 
+object ShowFullTextCache {
+    val cache = LruCache<String, Boolean>(20)
+}
+
 @Composable
 fun ExpandableRichTextViewer(
     content: String,
@@ -58,10 +63,19 @@ fun ExpandableRichTextViewer(
     modifier: Modifier,
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
+    id: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    var showFullText by remember { mutableStateOf(false) }
+    var showFullText by remember {
+        val cached = ShowFullTextCache.cache[id]
+        if (cached == null) {
+            ShowFullTextCache.cache.put(id, false)
+            mutableStateOf(false)
+        } else {
+            mutableStateOf(cached)
+        }
+    }
 
     val whereToCut = remember(content) { ExpandableTextCutOffCalculator.indexToCutOff(content) }
 
@@ -96,7 +110,10 @@ fun ExpandableRichTextViewer(
                         .fillMaxWidth()
                         .background(getGradient(backgroundColor)),
             ) {
-                ShowMoreButton { showFullText = !showFullText }
+                ShowMoreButton {
+                    showFullText = !showFullText
+                    ShowFullTextCache.cache.put(id, showFullText)
+                }
             }
         }
     }

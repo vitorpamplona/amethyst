@@ -51,7 +51,7 @@ import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -408,7 +408,7 @@ fun UpdateZapAmountDialog(
                             )
                         }
 
-                        Divider(
+                        HorizontalDivider(
                             modifier = Modifier.padding(vertical = 10.dp),
                             thickness = DividerThickness,
                         )
@@ -445,7 +445,7 @@ fun UpdateZapAmountDialog(
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.alby),
-                                    null,
+                                    contentDescription = stringResource(id = R.string.accessibility_navigate_to_alby),
                                     modifier = Modifier.size(24.dp),
                                     tint = Color.Unspecified,
                                 )
@@ -454,7 +454,7 @@ fun UpdateZapAmountDialog(
                             IconButton(onClick = { qrScanning = true }) {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_qrcode),
-                                    null,
+                                    contentDescription = stringResource(id = R.string.accessibility_scan_qr_code),
                                     modifier = Modifier.size(24.dp),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )

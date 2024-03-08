@@ -1,5 +1,5 @@
 <div align="center">
-     
+
 <a href="https://amethyst.social">
     <img src="./docs/design/3rd%20Logo%20-%20Zitron/amethyst.svg" alt="Amethyst Logo" title="Amethyst logo" width="80"/>
 </a>
@@ -40,7 +40,7 @@ height="70">](https://github.com/vitorpamplona/amethyst/releases)
 
 - [x] Events / Relay Subscriptions (NIP-01)
 - [x] Follow List (NIP-02)
-- [ ] OpenTimestamps Attestations (NIP-03)
+- [x] OpenTimestamps Attestations (NIP-03)
 - [x] Private Messages (NIP-04)
 - [x] DNS Address (NIP-05)
 - [ ] Mnemonic seed phrase (NIP-06)
@@ -70,7 +70,9 @@ height="70">](https://github.com/vitorpamplona/amethyst/releases)
 - [x] Event kind summaries (NIP-31)
 - [ ] Labeling (NIP-32)
 - [x] Parameterized Replaceable Events (NIP-33)
+- [x] Git Stuff (NIP-34/Draft)
 - [x] Sensitive Content (NIP-36)
+- [x] Note Edits (NIP-37/Draft)
 - [x] User Status Event (NIP-38)
 - [x] External Identities (NIP-39)
 - [x] Expiration Support (NIP-40)
@@ -109,7 +111,7 @@ height="70">](https://github.com/vitorpamplona/amethyst/releases)
 - [x] Classifieds (NIP-99)
 - [x] Private Messages and Small Groups (NIP-24/Draft)
 - [x] Versioned Encrypted Payloads (NIP-44/Draft)
-- [x] Audio Tracks (zapstr.live) (Kind:31337)
+- [x] Audio Tracks (zapstr.live) (kind:31337)
 - [x] Push Notifications (Google and Unified Push)
 - [x] In-Device Automatic Translations
 - [x] Hashtag Following and Custom Hashtags
@@ -118,6 +120,9 @@ height="70">](https://github.com/vitorpamplona/amethyst/releases)
 - [x] De-googled F-Droid flavor
 - [x] Multiple Accounts
 - [x] Markdown Support
+- [x] FHIR Payloads (kind:82)
+- [ ] Decentralized Wiki (kind:30818)
+- [ ] Embed events
 - [ ] Image/Video Capture in the app
 - [ ] Local Database
 - [ ] Workspaces
@@ -135,16 +140,16 @@ Information shared on Nostr can be re-broadcasted to other servers and should be
 
 # Development Overview
 
-This repository is split between Amethyst and Quartz: 
+This repository is split between Amethyst and Quartz:
 - Amethyst is a native Android app made with Kotlin and Jetpack Compose.
-- Quartz is our own Nostr-commons library to host classes that are of interest to other Nostr Clients. 
+- Quartz is our own Nostr-commons library to host classes that are of interest to other Nostr Clients.
 
 The app architecture consists of the UI, which uses the usual State/ViewModel/Composition, the service layer that connects with Nostr relays,
 and the model/repository layer, which keeps all Nostr objects in memory, in a full OO graph.
 
 The repository layer stores Nostr Events as Notes and Users separately. Those classes use LiveData and Flow objects to
 allow the UI and other parts of the app to subscribe to each Note/User and receive updates when they happen.
-They are also responsible for updating viewModels when needed. As the user scrolls through Events, the Datasource classes 
+They are also responsible for updating viewModels when needed. As the user scrolls through Events, the Datasource classes
 are updated to receive more information about those particular Events.
 
 Most of the UI is reactive to changes in the repository classes. The service layer assembles Nostr filters for each need of the app,
@@ -236,12 +241,14 @@ dependencyResolutionManagement {
 Add the dependency
 
 ```gradle
-implementation('com.github.vitorpamplona.amethyst:quartz:v0.84.3')
+implementation('com.github.vitorpamplona.amethyst:quartz:v0.85.1')
 ```
 
 ## Contributing
 
-[Issues](https://github.com/vitorpamplona/amethyst/issues) and [pull requests](https://github.com/vitorpamplona/amethyst/pulls) here are very welcome. Translations can be provided via [Crowdin](https://crowdin.com/project/amethyst-social)
+Issues can be logged on: [https://gitworkshop.dev/repo/amethyst](https://gitworkshop.dev/repo/amethyst)
+
+[GitHub issues](https://github.com/vitorpamplona/amethyst/issues) and [pull requests](https://github.com/vitorpamplona/amethyst/pulls) here are also welcome. Translations can be provided via [Crowdin](https://crowdin.com/project/amethyst-social)
 
 You can also send patches through Nostr using [GitStr](https://github.com/fiatjaf/gitstr) to [this nostr address](https://patch34.pages.dev/naddr1qqyxzmt9w358jum5qyg8v6t5daezumn0wd68yvfwvdhk6qg7waehxw309ahx7um5wgkhqatz9emk2mrvdaexgetj9ehx2ap0qy2hwumn8ghj7un9d3shjtnwdaehgu3wvfnj7q3qgcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqxpqqqpmej720gac)
 

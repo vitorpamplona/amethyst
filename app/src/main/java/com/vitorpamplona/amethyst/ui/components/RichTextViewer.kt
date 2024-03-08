@@ -344,6 +344,17 @@ private fun RenderRegular(
                 }
             }
         }
+
+        /*
+        // UrlPreviews and Images have a 5dp spacing down. This also adds the space to Text.
+        val lastElement = state.paragraphs.lastOrNull()?.words?.lastOrNull()
+        if (lastElement !is ImageSegment &&
+            lastElement !is LinkSegment &&
+            lastElement !is InvoiceSegment &&
+            lastElement !is CashuSegment
+        ) {
+            Spacer(modifier = StdVertSpacer)
+        }*/
     }
 }
 
@@ -486,7 +497,11 @@ private fun RenderContentAsMarkdown(
                         ZoomableContentView(
                             content =
                                 remember(destination, tags) {
-                                    RichTextParser().parseMediaUrl(destination, tags ?: EmptyTagList) ?: MediaUrlImage(url = destination)
+                                    RichTextParser().parseMediaUrl(
+                                        destination,
+                                        tags ?: EmptyTagList,
+                                        title.ifEmpty { null } ?: content,
+                                    ) ?: MediaUrlImage(url = destination, description = title.ifEmpty { null } ?: content)
                                 },
                             roundedCorner = true,
                             accountViewModel = accountViewModel,
@@ -647,7 +662,7 @@ fun BechLink(
                 accountViewModel,
                 backgroundColor,
                 nav,
-                loadedLink!!,
+                loadedLink?.nip19?.additionalChars?.ifBlank { null },
             )
         }
     } else if (loadedLink?.nip19 != null) {
@@ -672,7 +687,7 @@ private fun DisplayFullNote(
     accountViewModel: AccountViewModel,
     backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
-    loadedLink: LoadedBechLink,
+    extraChars: String?,
 ) {
     NoteCompose(
         baseNote = it,
@@ -682,8 +697,6 @@ private fun DisplayFullNote(
         isQuotedNote = true,
         nav = nav,
     )
-
-    val extraChars = remember(loadedLink) { loadedLink.nip19.additionalChars.ifBlank { null } }
 
     extraChars?.let {
         Text(

@@ -86,7 +86,7 @@ class RelayInformationLimitation(
 )
 
 class RelayInformationRetentionData(
-    val kinds: ArrayList<Int>,
+    val kinds: ArrayList<Int>?,
     val tiem: Int?,
     val count: Int?,
 )

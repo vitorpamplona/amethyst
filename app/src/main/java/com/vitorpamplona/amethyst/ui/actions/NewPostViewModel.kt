@@ -60,6 +60,7 @@ import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.events.GitIssueEvent
 import com.vitorpamplona.quartz.events.Price
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
@@ -164,11 +165,24 @@ open class NewPostViewModel() : ViewModel() {
     // NIP24 Wrapped DMs / Group messages
     var nip24 by mutableStateOf(false)
 
+    fun lnAddress(): String? {
+        return account?.userProfile()?.info?.lnAddress()
+    }
+
+    fun hasLnAddress(): Boolean {
+        return account?.userProfile()?.info?.lnAddress() != null
+    }
+
+    fun user(): User? {
+        return account?.userProfile()
+    }
+
     open fun load(
         accountViewModel: AccountViewModel,
         replyingTo: Note?,
         quote: Note?,
         fork: Note?,
+        version: Note?,
     ) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
@@ -240,7 +254,7 @@ open class NewPostViewModel() : ViewModel() {
         }
 
         fork?.let {
-            message = TextFieldValue(it.event?.content() ?: "")
+            message = TextFieldValue(version?.event?.content() ?: it.event?.content() ?: "")
             urlPreview = findUrlInMessage()
 
             it.event?.isSensitive()?.let {
@@ -275,12 +289,16 @@ open class NewPostViewModel() : ViewModel() {
             }
 
             it.author?.let {
-                if (this.pTags?.contains(it) != true) {
+                if (this.pTags == null) {
+                    this.pTags = listOf(it)
+                } else if (this.pTags?.contains(it) != true) {
                     this.pTags = listOf(it) + (this.pTags ?: emptyList())
                 }
             }
 
             forkedFromNote = it
+        } ?: run {
+            forkedFromNote = null
         }
 
         if (!forwardZapTo.items.isEmpty()) {
@@ -427,6 +445,45 @@ open class NewPostViewModel() : ViewModel() {
                     nip94attachments = usedAttachments,
                 )
             }
+        } else if (originalNote?.event is GitIssueEvent) {
+            val originalNoteEvent = originalNote?.event as GitIssueEvent
+            // adds markers
+            val rootId =
+                originalNoteEvent.rootIssueOrPatch() // if it has a marker as root
+                    ?: originalNote
+                        ?.replyTo
+                        ?.firstOrNull { it.event != null && it.replyTo?.isEmpty() == true }
+                        ?.idHex // if it has loaded events with zero replies in the reply list
+                    ?: originalNote?.replyTo?.firstOrNull()?.idHex // old rules, first item is root.
+                    ?: originalNote?.idHex
+
+            val replyId = originalNote?.idHex
+
+            val replyToSet =
+                if (forkedFromNote != null) {
+                    (listOfNotNull(forkedFromNote) + (tagger.eTags ?: emptyList())).ifEmpty { null }
+                } else {
+                    tagger.eTags
+                }
+
+            val repositoryAddress = originalNoteEvent.repository()
+
+            account?.sendGitReply(
+                message = tagger.message,
+                replyTo = replyToSet,
+                mentions = tagger.pTags,
+                repository = repositoryAddress,
+                zapReceiver = zapReceiver,
+                wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = localZapRaiserAmount,
+                replyingTo = replyId,
+                root = rootId,
+                directMentions = tagger.directMentions,
+                forkedFrom = forkedFromNote?.event as? Event,
+                relayList = relayList,
+                geohash = geoHash,
+                nip94attachments = usedAttachments,
+            )
         } else {
             if (wantsPoll) {
                 account?.sendPoll(
@@ -579,6 +636,8 @@ open class NewPostViewModel() : ViewModel() {
         message = TextFieldValue("")
         toUsers = TextFieldValue("")
         subject = TextFieldValue("")
+
+        forkedFromNote = null
 
         contentToAddUrl = null
         urlPreview = null
@@ -852,6 +911,10 @@ open class NewPostViewModel() : ViewModel() {
                 viewModelScope.launch { imageUploadingError.emit("Failed to upload the image / video") }
             },
         )
+    }
+
+    fun insertAtCursor(newElement: String) {
+        message = message.insertUrlAtCursor(newElement)
     }
 
     fun createNIP95Record(

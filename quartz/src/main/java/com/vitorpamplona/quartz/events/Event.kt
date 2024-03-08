@@ -386,7 +386,7 @@ open class Event(
             put("pubkey", pubKey)
             put("created_at", createdAt)
             put("kind", kind)
-            put(
+            replace(
                 "tags",
                 factory.arrayNode(tags.size).apply {
                     tags.forEach { tag ->

@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
@@ -47,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -59,7 +57,7 @@ import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size15dp
+import com.vitorpamplona.amethyst.ui.theme.Size17dp
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.relayIconModifier
@@ -164,13 +162,12 @@ fun RenderRelay(
     val context = LocalContext.current
 
     val interactionSource = remember { MutableInteractionSource() }
-    val ripple = rememberRipple(bounded = false, radius = Size15dp)
+    val ripple = rememberRipple(bounded = false, radius = Size17dp)
 
     val clickableModifier =
         remember(relay) {
             Modifier
-                .padding(1.dp)
-                .size(Size15dp)
+                .size(Size17dp)
                 .clickable(
                     role = Role.Button,
                     interactionSource = interactionSource,

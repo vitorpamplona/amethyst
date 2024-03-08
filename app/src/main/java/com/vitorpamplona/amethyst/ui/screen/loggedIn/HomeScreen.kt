@@ -22,11 +22,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -39,9 +43,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -54,10 +60,14 @@ import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.PagerStateKeys
-import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
+import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
+import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
+import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
@@ -181,13 +191,58 @@ private fun HomePages(
     }
 
     HorizontalPager(state = pagerState, userScrollEnabled = false) { page ->
-        RefresheableFeedView(
+        HomeFeeds(
             viewModel = tabs[page].viewModel,
             routeForLastRead = tabs[page].routeForLastRead,
             scrollStateKey = tabs[page].scrollStateKey,
             accountViewModel = accountViewModel,
             nav = nav,
         )
+    }
+}
+
+@Composable
+fun HomeFeeds(
+    viewModel: FeedViewModel,
+    routeForLastRead: String?,
+    enablePullRefresh: Boolean = true,
+    scrollStateKey: String? = null,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    RefresheableBox(viewModel, enablePullRefresh) {
+        SaveableFeedState(viewModel, scrollStateKey) { listState ->
+            RenderFeedState(
+                viewModel = viewModel,
+                accountViewModel = accountViewModel,
+                listState = listState,
+                nav = nav,
+                routeForLastRead = routeForLastRead,
+                onEmpty = { HomeFeedEmpty { viewModel.invalidateData() } },
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+fun HomeFeedEmptyPreview() {
+    ThemeComparisonRow(
+        onDark = { HomeFeedEmpty {} },
+        onLight = { HomeFeedEmpty {} },
+    )
+}
+
+@Composable
+fun HomeFeedEmpty(onRefresh: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(stringResource(R.string.feed_is_empty))
+        Spacer(modifier = StdVertSpacer)
+        OutlinedButton(onClick = onRefresh) { Text(text = stringResource(R.string.refresh)) }
     }
 }
 

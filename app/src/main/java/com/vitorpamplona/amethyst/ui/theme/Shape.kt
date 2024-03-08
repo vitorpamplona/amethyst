@@ -56,7 +56,7 @@ val EditFieldBorder = RoundedCornerShape(25.dp)
 val ChatBubbleShapeMe = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
 val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
 
-val StdButtonSizeModifier = Modifier.size(20.dp)
+val StdButtonSizeModifier = Modifier.size(19.dp)
 
 val HalfVertSpacer = Modifier.height(2.dp)
 
@@ -146,9 +146,9 @@ val Height4dpModifier = Modifier.height(4.dp)
 val AccountPictureModifier = Modifier.size(55.dp).clip(shape = CircleShape)
 val HeaderPictureModifier = Modifier.size(34.dp).clip(shape = CircleShape)
 
-val ShowMoreRelaysButtonIconButtonModifier = Modifier.size(24.dp)
-val ShowMoreRelaysButtonIconModifier = Modifier.size(15.dp)
-val ShowMoreRelaysButtonBoxModifer = Modifier.fillMaxWidth().height(25.dp)
+val ShowMoreRelaysButtonIconButtonModifier = Modifier.size(15.dp)
+val ShowMoreRelaysButtonIconModifier = Modifier.size(20.dp)
+val ShowMoreRelaysButtonBoxModifer = Modifier.fillMaxWidth().height(17.dp)
 
 val ChatBubbleMaxSizeModifier = Modifier.fillMaxWidth(0.85f)
 
@@ -192,6 +192,10 @@ val IconRowTextModifier = Modifier.padding(start = 16.dp)
 val IconRowModifier = Modifier.fillMaxWidth().padding(vertical = 15.dp, horizontal = 25.dp)
 
 val emptyLineItemModifier = Modifier.height(Size75dp).fillMaxWidth()
+
+val imageHeaderBannerSize = Modifier.fillMaxWidth().height(150.dp)
+
+val authorNotePictureForImageHeader = Modifier.size(75.dp).padding(10.dp)
 
 val normalNoteModifier =
     Modifier.fillMaxWidth()

@@ -7,6 +7,7 @@
     <string name="your_profile_image">Your Profile Picture</string>
     <string name="scan_qr">Scan QR</string>
     <string name="show_anyway">Show Anyway</string>
+    <string name="post_was_hidden">This post was hidden because it mentions your hidden users or words</string>
     <string name="post_was_flagged_as_inappropriate_by">Post was muted or reported by</string>
     <string name="post_not_found">Event is loading or can\'t be found in your relay list</string>
     <string name="channel_image">Channel Image</string>
@@ -50,8 +51,12 @@
     <string name="view_count">View count</string>
     <string name="boost">Boost</string>
     <string name="boosted">boosted</string>
+    <string name="edited">edited</string>
+    <string name="edited_number">edit #%1$s</string>
+    <string name="original">original</string>
     <string name="quote">Quote</string>
     <string name="fork">Fork</string>
+    <string name="propose_an_edit">Propose an Edit</string>
     <string name="new_amount_in_sats">New Amount in Sats</string>
     <string name="add">Add</string>
     <string name="replying_to">"replying to "</string>
@@ -792,4 +797,21 @@
 
     <string name="ots_info_title">Timestamp Proof</string>
     <string name="ots_info_description">There\'s proof this post was signed sometime before %1$s. The proof was stamped in the Bitcoin blockchain at that date and time.</string>
+
+    <string name="edit_post">Edit Post</string>
+    <string name="proposal_to_edit">Proposal to improve a post</string>
+    <string name="message_to_author">Summary of changes</string>
+    <string name="message_to_author_placeholder">Quick fixes…</string>
+
+    <string name="accept_the_suggestion">Accept the Suggestion</string>
+
+    <string name="accessibility_download_for_offline">Download</string>
+    <string name="accessibility_lyrics_on">Lyrics on</string>
+    <string name="accessibility_lyrics_off">Lyrics off</string>
+    <string name="accessibility_turn_on_sealed_message">Sealed message off. Click to turn on sealed message</string>
+    <string name="accessibility_turn_off_sealed_message">Sealed message on. Click to turn off sealed message</string>
+    <string name="accessibility_send">Send</string>
+    <string name="accessibility_play_username">Play username as audio</string>
+    <string name="accessibility_scan_qr_code">Scan QR code</string>
+    <string name="accessibility_navigate_to_alby">Navigate to the third-party wallet provider Alby</string>
 </resources>

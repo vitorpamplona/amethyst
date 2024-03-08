@@ -94,7 +94,9 @@ object Nip19Bech32 {
             val key = matcher.group(3) // bech32
             val additionalChars = matcher.group(4) // additional chars
 
-            return parseComponents(type!!, key, additionalChars)
+            if (type == null) return null
+
+            return parseComponents(type, key, additionalChars)
         } catch (e: Throwable) {
             Log.e("NIP19 Parser", "Issue trying to Decode NIP19 $uri: ${e.message}", e)
         }
@@ -111,6 +113,7 @@ object Nip19Bech32 {
             val bytes = (type + key).bechToBytes()
 
             when (type.lowercase()) {
+                "nsec1" -> nsec(bytes)
                 "npub1" -> npub(bytes)
                 "note1" -> note(bytes)
                 "nprofile1" -> nprofile(bytes)
@@ -131,6 +134,11 @@ object Nip19Bech32 {
     private fun nembed(bytes: ByteArray): NEmbed? {
         if (bytes.isEmpty()) return null
         return NEmbed(Event.fromJson(ungzip(bytes)))
+    }
+
+    private fun nsec(bytes: ByteArray): NSec? {
+        if (bytes.isEmpty()) return null
+        return NSec(bytes.toHexKey())
     }
 
     private fun npub(bytes: ByteArray): NPub? {

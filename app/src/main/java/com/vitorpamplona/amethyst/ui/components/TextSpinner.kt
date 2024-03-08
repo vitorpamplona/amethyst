@@ -34,7 +34,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -182,7 +182,7 @@ fun <T> SpinnerSelectionDialog(
                                 fontWeight = FontWeight.Bold,
                             )
                         }
-                        Divider(color = Color.LightGray, thickness = DividerThickness)
+                        HorizontalDivider(color = Color.LightGray, thickness = DividerThickness)
                     }
                 }
                 itemsIndexed(options) { index, item ->
@@ -192,7 +192,7 @@ fun <T> SpinnerSelectionDialog(
                         Column { onRenderItem(item) }
                     }
                     if (index < options.lastIndex) {
-                        Divider(color = Color.LightGray, thickness = DividerThickness)
+                        HorizontalDivider(color = Color.LightGray, thickness = DividerThickness)
                     }
                 }
             }
