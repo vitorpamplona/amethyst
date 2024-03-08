@@ -73,6 +73,7 @@ class HashImageFetcher(
     }
 }
 
+@Deprecated("Use the RobohashAssembler instead")
 object RobohashImageRequest {
     fun build(
         context: Context,
