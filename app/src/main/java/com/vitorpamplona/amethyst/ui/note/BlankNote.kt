@@ -206,6 +206,7 @@ fun HiddenNoteByMe(
                 Text(
                     text = stringResource(R.string.post_was_hidden),
                     color = Color.Gray,
+                    textAlign = TextAlign.Center,
                 )
 
                 Button(
