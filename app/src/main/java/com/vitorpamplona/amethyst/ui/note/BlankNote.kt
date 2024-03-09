@@ -54,10 +54,7 @@ import kotlinx.collections.immutable.persistentSetOf
 @Composable
 @Preview
 fun BlankNotePreview() {
-    ThemeComparisonColumn(
-        onDark = { BlankNote() },
-        onLight = { BlankNote() },
-    )
+    ThemeComparisonColumn { BlankNote() }
 }
 
 @Composable
@@ -106,15 +103,7 @@ fun HiddenNotePreview() {
     val nav: (String) -> Unit = {}
 
     ThemeComparisonColumn(
-        onDark = {
-            HiddenNote(
-                reports = persistentSetOf<Note>(),
-                isHiddenAuthor = true,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            ) {}
-        },
-        onLight = {
+        toPreview = {
             HiddenNote(
                 reports = persistentSetOf<Note>(),
                 isHiddenAuthor = true,
@@ -194,8 +183,7 @@ fun HiddenNote(
 @Composable
 fun HiddenNoteByMePreview() {
     ThemeComparisonColumn(
-        onDark = { HiddenNoteByMe {} },
-        onLight = { HiddenNoteByMe {} },
+        toPreview = { HiddenNoteByMe {} },
     )
 }
 

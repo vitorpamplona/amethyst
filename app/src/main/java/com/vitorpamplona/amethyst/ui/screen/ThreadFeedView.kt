@@ -872,48 +872,26 @@ private fun RenderWikiHeaderForThreadPreview() {
     }
 
     LoadNote(baseNoteHex = "277f982a4cd3f67cc47ad9282176acabee1713848f547d6021e0c155572078e1", accountViewModel = accountViewModel) { baseNote ->
-        ThemeComparisonColumn(
-            onDark = {
-                val bg = MaterialTheme.colorScheme.background
-                val backgroundColor =
-                    remember {
-                        mutableStateOf(bg)
-                    }
-
-                Column {
-                    RenderWikiHeaderForThread(noteEvent = event, accountViewModel = accountViewModel, nav)
-                    RenderTextEvent(
-                        baseNote!!,
-                        false,
-                        true,
-                        backgroundColor,
-                        editState,
-                        accountViewModel,
-                        nav,
-                    )
+        ThemeComparisonColumn {
+            val bg = MaterialTheme.colorScheme.background
+            val backgroundColor =
+                remember {
+                    mutableStateOf(bg)
                 }
-            },
-            onLight = {
-                val bg = MaterialTheme.colorScheme.background
-                val backgroundColor =
-                    remember {
-                        mutableStateOf(bg)
-                    }
 
-                Column {
-                    RenderWikiHeaderForThread(noteEvent = event, accountViewModel = accountViewModel, nav)
-                    RenderTextEvent(
-                        baseNote!!,
-                        false,
-                        true,
-                        backgroundColor,
-                        editState,
-                        accountViewModel,
-                        nav,
-                    )
-                }
-            },
-        )
+            Column {
+                RenderWikiHeaderForThread(noteEvent = event, accountViewModel = accountViewModel, nav)
+                RenderTextEvent(
+                    baseNote!!,
+                    false,
+                    true,
+                    backgroundColor,
+                    editState,
+                    accountViewModel,
+                    nav,
+                )
+            }
+        }
     }
 }
 

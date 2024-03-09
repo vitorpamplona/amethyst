@@ -228,8 +228,7 @@ fun HomeFeeds(
 @Composable
 fun HomeFeedEmptyPreview() {
     ThemeComparisonRow(
-        onDark = { HomeFeedEmpty {} },
-        onLight = { HomeFeedEmpty {} },
+        toPreview = { HomeFeedEmpty {} },
     )
 }
 

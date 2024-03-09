@@ -83,10 +83,7 @@ fun SignUpPage() {
     val accountViewModel: AccountStateViewModel = viewModel()
 
     ThemeComparisonRow(
-        onDark = {
-            SignUpPage(accountViewModel) {}
-        },
-        onLight = {
+        toPreview = {
             SignUpPage(accountViewModel) {}
         },
     )

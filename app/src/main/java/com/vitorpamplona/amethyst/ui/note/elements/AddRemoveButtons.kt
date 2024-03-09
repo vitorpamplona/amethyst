@@ -40,34 +40,19 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 @Composable
 @Preview
 fun AddButtonPreview() {
-    ThemeComparisonColumn(
-        onDark = {
-            Row {
-                Column {
-                    AddButton(isActive = true) {}
-                    AddButton(isActive = false) {}
-                }
-
-                Column {
-                    RemoveButton(isActive = true) {}
-                    RemoveButton(isActive = false) {}
-                }
+    ThemeComparisonColumn {
+        Row {
+            Column {
+                AddButton(isActive = true) {}
+                AddButton(isActive = false) {}
             }
-        },
-        onLight = {
-            Row {
-                Column {
-                    AddButton(isActive = true) {}
-                    AddButton(isActive = false) {}
-                }
 
-                Column {
-                    RemoveButton(isActive = true) {}
-                    RemoveButton(isActive = false) {}
-                }
+            Column {
+                RemoveButton(isActive = true) {}
+                RemoveButton(isActive = false) {}
             }
-        },
-    )
+        }
+    }
 }
 
 @Composable
