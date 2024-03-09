@@ -300,15 +300,12 @@ private fun RenderUserAsClickableText(
     userDisplayName?.let {
         CreateClickableTextWithEmoji(
             clickablePart = it,
+            suffix = additionalChars.ifBlank { null },
             maxLines = 1,
             route = route,
             nav = nav,
             tags = userTags,
         )
-
-        additionalChars.ifBlank { null }?.let {
-            Text(text = it, maxLines = 1)
-        }
     }
 }
 
@@ -587,6 +584,7 @@ fun CreateClickableTextWithEmoji(
 @Composable
 fun CreateClickableTextWithEmoji(
     clickablePart: String,
+    suffix: String? = null,
     maxLines: Int = Int.MAX_VALUE,
     overrideColor: Color? = null,
     fontWeight: FontWeight = FontWeight.Normal,
@@ -599,9 +597,16 @@ fun CreateClickableTextWithEmoji(
         text = clickablePart,
         tags = tags,
         onRegularText = {
-            CreateClickableText(it, null, maxLines, overrideColor, fontWeight, fontSize, route, nav)
+            CreateClickableText(it, suffix, maxLines, overrideColor, fontWeight, fontSize, route, nav)
         },
         onEmojiText = {
+            val nonClickablePartStyle =
+                SpanStyle(
+                    fontSize = fontSize,
+                    color = overrideColor ?: MaterialTheme.colorScheme.onBackground,
+                    fontWeight = fontWeight,
+                )
+
             val clickablePartStyle =
                 SpanStyle(
                     fontSize = fontSize,
@@ -613,6 +618,8 @@ fun CreateClickableTextWithEmoji(
                 it,
                 maxLines,
                 clickablePartStyle,
+                suffix,
+                nonClickablePartStyle,
             ) {
                 nav(route)
             }
@@ -625,6 +632,8 @@ fun ClickableInLineIconRenderer(
     wordsInOrder: ImmutableList<Nip30CustomEmoji.Renderable>,
     maxLines: Int = Int.MAX_VALUE,
     style: SpanStyle,
+    suffix: String? = null,
+    nonClickableStype: SpanStyle? = null,
     onClick: (Int) -> Unit,
 ) {
     val placeholderSize =
@@ -673,6 +682,12 @@ fun ClickableInLineIconRenderer(
                     } else if (value is Nip30CustomEmoji.ImageUrlType) {
                         appendInlineContent("inlineContent$idx", "[icon]")
                     }
+                }
+            }
+
+            if (suffix != null && nonClickableStype != null) {
+                withStyle(nonClickableStype) {
+                    append(suffix)
                 }
             }
         }
