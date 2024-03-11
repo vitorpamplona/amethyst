@@ -712,8 +712,7 @@ fun HashTag(
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val background = MaterialTheme.colorScheme.onBackground
-    val hashtagIcon: HashtagIcon? =
-        remember(segment.segmentText) { checkForHashtagWithIcon(segment.hashtag) }
+    val hashtagIcon: HashtagIcon? = checkForHashtagWithIcon(segment.hashtag)
 
     val annotatedTermsString =
         remember(segment.segmentText) {
