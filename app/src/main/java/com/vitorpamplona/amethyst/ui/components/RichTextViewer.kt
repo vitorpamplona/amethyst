@@ -304,7 +304,7 @@ private fun RenderRegular(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun RenderRegular(
+fun RenderRegular(
     content: String,
     tags: ImmutableListOfLists<String>,
     wordRenderer: @Composable (Segment, RichTextViewerState) -> Unit,
@@ -713,45 +713,38 @@ fun HashTag(
     val primary = MaterialTheme.colorScheme.primary
     val background = MaterialTheme.colorScheme.onBackground
     val hashtagIcon: HashtagIcon? =
-        remember(segment.segmentText) { checkForHashtagWithIcon(segment.hashtag, primary) }
-
-    val regularText = remember { SpanStyle(color = background) }
-    val clickableTextStyle = remember { SpanStyle(color = primary) }
+        remember(segment.segmentText) { checkForHashtagWithIcon(segment.hashtag) }
 
     val annotatedTermsString =
         remember(segment.segmentText) {
             buildAnnotatedString {
-                withStyle(clickableTextStyle) {
+                withStyle(SpanStyle(color = primary)) {
                     pushStringAnnotation("routeToHashtag", "")
                     append("#${segment.hashtag}")
                     pop()
                 }
 
                 if (hashtagIcon != null) {
-                    withStyle(clickableTextStyle) {
+                    withStyle(SpanStyle(color = primary)) {
                         pushStringAnnotation("routeToHashtag", "")
                         appendInlineContent("inlineContent", "[icon]")
                         pop()
                     }
                 }
 
-                segment.extras?.let { withStyle(regularText) { append(it) } }
+                segment.extras?.let { withStyle(SpanStyle(color = background)) { append(it) } }
             }
         }
 
-    val inlineContent =
-        if (hashtagIcon != null) {
-            mapOf("inlineContent" to InlineIcon(hashtagIcon))
-        } else {
-            emptyMap()
-        }
-
-    val pressIndicator = remember { Modifier.clickable { nav("Hashtag/${segment.hashtag}") } }
-
     Text(
         text = annotatedTermsString,
-        modifier = pressIndicator,
-        inlineContent = inlineContent,
+        modifier = remember { Modifier.clickable { nav("Hashtag/${segment.hashtag}") } },
+        inlineContent =
+            if (hashtagIcon != null) {
+                mapOf("inlineContent" to InlineIcon(hashtagIcon))
+            } else {
+                emptyMap()
+            },
     )
 }
 
@@ -767,7 +760,7 @@ private fun InlineIcon(hashtagIcon: HashtagIcon) =
         Icon(
             painter = painterResource(hashtagIcon.icon),
             contentDescription = hashtagIcon.description,
-            tint = hashtagIcon.color,
+            tint = Color.Unspecified,
             modifier = hashtagIcon.modifier,
         )
     }
