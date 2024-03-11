@@ -49,7 +49,7 @@
     <string name="boost">Boost</string>
     <string name="boosted">boosté</string>
     <string name="edited">modifié</string>
-    <string name="edited_number">éditer #%1$s</string>
+    <string name="edited_number">modification #%1$s</string>
     <string name="original">original</string>
     <string name="quote">Citation</string>
     <string name="fork">Fork</string>
@@ -499,7 +499,7 @@
     <string name="lightning_wallets_not_found">Erreur d\'analyse du message d\'erreur</string>
     <string name="poll_zap_value_min_max_explainer">Les votes sont pondérés par le montant du zap. Vous pouvez définir un montant minimum pour éviter les spammeurs et un montant maximum pour éviter qu\'un grand nombre de zappeurs ne prenne le contrôle du sondage. Utilisez le même montant dans les deux champs pour vous assurer que chaque vote a la même valeur. Laissez le champ vide pour accepter n\'importe quel montant.</string>
     <string name="error_dialog_zap_error">Impossible d\'envoyer un zap</string>
-    <string name="error_dialog_talk_to_user">Contacter l\'Utilisateur</string>
+    <string name="error_dialog_talk_to_user">Contacter l\'utilisateur</string>
     <string name="error_dialog_button_ok">Ok</string>
     <string name="relay_information_document_error_assemble_url">Impossible d\'atteindre %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">Impossible d\'atteindre %1$s: %2$s</string>
@@ -680,4 +680,13 @@
     <string name="message_to_author">Récapitulatif des modifications</string>
     <string name="message_to_author_placeholder">Corrections rapides ...</string>
     <string name="accept_the_suggestion">Accepter la Suggestion</string>
+    <string name="accessibility_download_for_offline">Télécharger</string>
+    <string name="accessibility_lyrics_on">Paroles activées</string>
+    <string name="accessibility_lyrics_off">Paroles désactivées</string>
+    <string name="accessibility_turn_on_sealed_message">Message scellé désactivé. Cliquer pour activer le message scellé</string>
+    <string name="accessibility_turn_off_sealed_message">Message scellé activé. Cliquer pour désactiver le message scellé</string>
+    <string name="accessibility_send">Envoyer</string>
+    <string name="accessibility_play_username">Écouter le nom d\'utilisateur</string>
+    <string name="accessibility_scan_qr_code">Scanner le QR code</string>
+    <string name="accessibility_navigate_to_alby">Accéder au fournisseur de portefeuille tiers Alby</string>
 </resources>
