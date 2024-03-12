@@ -133,7 +133,7 @@ fun ShowQRDialog(
                                 modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
                             ) {
                                 CreateTextWithEmoji(
-                                    text = user.bestDisplayName() ?: user.bestUsername() ?: "",
+                                    text = user.info?.bestName() ?: "",
                                     tags = user.info?.tags,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 18.sp,

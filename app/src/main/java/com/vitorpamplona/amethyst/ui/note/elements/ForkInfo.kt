@@ -132,18 +132,20 @@ fun ForkInformationRow(
 ) {
     val noteState by originalVersion.live().metadata.observeAsState()
     val note = noteState?.note ?: return
-    val author = note.author ?: return
     val route = remember(note) { routeFor(note, accountViewModel.userProfile()) }
 
     if (route != null) {
         Row(modifier) {
+            val author = note.author ?: return
+            val meta by author.live().userMetadataInfo.observeAsState(author.info)
+
             Text(stringResource(id = R.string.forked_from))
             Spacer(modifier = StdHorzSpacer)
 
             val userMetadata by author.live().userMetadataInfo.observeAsState()
 
             CreateClickableTextWithEmoji(
-                clickablePart = userMetadata?.bestDisplayName() ?: userMetadata?.bestUsername() ?: author.pubkeyDisplayHex(),
+                clickablePart = remember(meta) { meta?.bestName() ?: author.pubkeyDisplayHex() },
                 maxLines = 1,
                 route = route,
                 nav = nav,

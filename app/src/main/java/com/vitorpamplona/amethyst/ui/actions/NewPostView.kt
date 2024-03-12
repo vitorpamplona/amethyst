@@ -168,7 +168,6 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
@@ -1256,8 +1255,7 @@ fun Notifying(
             mentions.forEachIndexed { idx, user ->
                 val innerUserState by user.live().metadata.observeAsState()
                 innerUserState?.user?.let { myUser ->
-                    val tags =
-                        remember(innerUserState) { myUser.info?.latestMetadata?.tags?.toImmutableListOfLists() }
+                    val tags = myUser.info?.tags
 
                     Button(
                         shape = ButtonBorder,

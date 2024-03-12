@@ -61,7 +61,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
@@ -78,7 +77,6 @@ import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -95,7 +93,10 @@ fun AccountSwitchBottomSheet(
 
     Column(modifier = Modifier.verticalScroll(scrollState)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(Size10dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(Size10dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -103,7 +104,10 @@ fun AccountSwitchBottomSheet(
         }
         accounts.forEach { acc -> DisplayAccount(acc, accountViewModel, accountStateViewModel) }
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = Size10dp, bottom = Size55dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = Size10dp, bottom = Size55dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -167,7 +171,8 @@ fun DisplayAccount(
     baseUser?.let {
         Row(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .clickable { accountStateViewModel.switchUser(acc) }
                     .padding(16.dp, 16.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -181,7 +186,10 @@ fun DisplayAccount(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
-                        modifier = Modifier.width(55.dp).padding(0.dp),
+                        modifier =
+                            Modifier
+                                .width(55.dp)
+                                .padding(0.dp),
                     ) {
                         val automaticallyShowProfilePicture =
                             remember {
@@ -241,22 +249,17 @@ private fun AccountName(
     acc: AccountInfo,
     user: User,
 ) {
-    val displayName by user.live().metadata.map { user.bestDisplayName() }.observeAsState()
+    val info by user.live().userMetadataInfo.observeAsState()
 
-    val tags by
-        user
-            .live()
-            .metadata
-            .map { user.info?.latestMetadata?.tags?.toImmutableListOfLists() }
-            .observeAsState()
-
-    displayName?.let {
-        CreateTextWithEmoji(
-            text = it,
-            tags = tags,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+    info?.let {
+        it.bestName()?.let { name ->
+            CreateTextWithEmoji(
+                text = name,
+                tags = it.tags,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 
     Text(

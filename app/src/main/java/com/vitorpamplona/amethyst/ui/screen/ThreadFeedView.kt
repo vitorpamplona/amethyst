@@ -757,7 +757,7 @@ private fun RenderClassifiedsReaderForThread(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val sellerName = note.author?.bestDisplayName() ?: note.author?.bestUsername()
+                val sellerName = note.author?.info?.bestName()
 
                 val msg =
                     if (sellerName != null) {

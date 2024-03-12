@@ -858,18 +858,14 @@ private fun DisplayUserFromTag(
     baseUser: User,
     nav: (String) -> Unit,
 ) {
-    val route = remember { "User/${baseUser.pubkeyHex}" }
-    val hex = remember { baseUser.pubkeyDisplayHex() }
-
     val meta by baseUser.live().userMetadataInfo.observeAsState(baseUser.info)
 
     Crossfade(targetState = meta, label = "DisplayUserFromTag") {
         Row {
-            val displayName = remember(it) { it?.bestDisplayName() ?: it?.bestUsername() ?: hex }
             CreateClickableTextWithEmoji(
-                clickablePart = displayName,
+                clickablePart = remember(meta) { it?.bestName() ?: baseUser.pubkeyDisplayHex() },
                 maxLines = 1,
-                route = route,
+                route = "User/${baseUser.pubkeyHex}",
                 nav = nav,
                 tags = it?.tags,
             )

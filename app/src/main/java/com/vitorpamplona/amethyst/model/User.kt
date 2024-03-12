@@ -81,7 +81,7 @@ class User(val pubkeyHex: String) {
     override fun toString(): String = pubkeyHex
 
     fun toBestShortFirstName(): String {
-        val fullName = bestDisplayName() ?: bestUsername() ?: return pubkeyDisplayHex()
+        val fullName = toBestDisplayName()
 
         val names = fullName.split(' ')
 
@@ -97,23 +97,14 @@ class User(val pubkeyHex: String) {
     }
 
     fun toBestDisplayName(): String {
-        return bestDisplayName() ?: bestUsername() ?: pubkeyDisplayHex()
-    }
-
-    fun bestUsername(): String? {
-        return info?.name?.ifBlank { null } ?: info?.username?.ifBlank { null }
-    }
-
-    fun bestDisplayName(): String? {
-        return info?.displayName?.ifBlank { null }
+        return info?.bestName() ?: pubkeyDisplayHex()
     }
 
     fun nip05(): String? {
-        return info?.nip05?.ifBlank { null }
+        return info?.nip05
     }
 
     fun profilePicture(): String? {
-        if (info?.picture.isNullOrBlank()) info?.picture = null
         return info?.picture
     }
 

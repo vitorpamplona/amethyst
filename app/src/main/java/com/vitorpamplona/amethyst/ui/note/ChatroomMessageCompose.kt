@@ -374,11 +374,13 @@ private fun RenderBubble(
 
     val bubbleModifier =
         remember {
-            Modifier.padding(start = 10.dp, end = 5.dp, bottom = 5.dp).onSizeChanged {
-                if (bubbleSize.intValue != it.width) {
-                    bubbleSize.intValue = it.width
+            Modifier
+                .padding(start = 10.dp, end = 5.dp, bottom = 5.dp)
+                .onSizeChanged {
+                    if (bubbleSize.intValue != it.width) {
+                        bubbleSize.intValue = it.width
+                    }
                 }
-            }
         }
 
     Column(modifier = bubbleModifier) {
@@ -555,7 +557,8 @@ private fun ConstrainedStatusRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier =
             with(LocalDensity.current) {
-                Modifier.padding(top = Size5dp)
+                Modifier
+                    .padding(top = Size5dp)
                     .height(Size20dp)
                     .widthIn(
                         bubbleSize.value.toDp(),
@@ -589,7 +592,10 @@ fun IncognitoBadge(baseNote: Note) {
         Icon(
             painter = painterResource(id = R.drawable.incognito),
             null,
-            modifier = Modifier.padding(top = 1.dp).size(14.dp),
+            modifier =
+                Modifier
+                    .padding(top = 1.dp)
+                    .size(14.dp),
             tint = MaterialTheme.colorScheme.placeholderText,
         )
         Spacer(modifier = StdHorzSpacer)
@@ -597,7 +603,10 @@ fun IncognitoBadge(baseNote: Note) {
         Icon(
             painter = painterResource(id = R.drawable.incognito_off),
             null,
-            modifier = Modifier.padding(top = 1.dp).size(14.dp),
+            modifier =
+                Modifier
+                    .padding(top = 1.dp)
+                    .size(14.dp),
             tint = MaterialTheme.colorScheme.placeholderText,
         )
         Spacer(modifier = StdHorzSpacer)
@@ -678,7 +687,7 @@ private fun RenderChangeChannelMetadataNote(note: Note) {
 
     CreateTextWithEmoji(
         text = text,
-        tags = remember { note.author?.info?.latestMetadata?.tags?.toImmutableListOfLists() },
+        tags = note.author?.info?.tags,
     )
 }
 
@@ -699,7 +708,7 @@ private fun RenderCreateChannelNote(note: Note) {
 
     CreateTextWithEmoji(
         text = text,
-        tags = remember { note.author?.info?.latestMetadata?.tags?.toImmutableListOfLists() },
+        tags = note.author?.info?.tags,
     )
 }
 
@@ -735,25 +744,17 @@ private fun WatchAndDisplayUser(
     loadProfilePicture: Boolean,
     nav: (String) -> Unit,
 ) {
-    val pubkeyHex = remember { author.pubkeyHex }
-    val route = remember { "User/${author.pubkeyHex}" }
+    val route = "User/${author.pubkeyHex}"
 
-    val userState by author.live().metadata.observeAsState()
+    val userState by author.live().userMetadataInfo.observeAsState()
 
-    val userDisplayName by
-        remember(userState) { derivedStateOf { userState?.user?.toBestDisplayName() } }
+    UserIcon(author.pubkeyHex, userState?.picture, loadProfilePicture, nav, route)
 
-    val userProfilePicture by
-        remember(userState) { derivedStateOf { userState?.user?.profilePicture() } }
-
-    val userTags by
-        remember(userState) {
-            derivedStateOf { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
+    userState?.let {
+        it.bestName()?.let { name ->
+            DisplayMessageUsername(name, it.tags, route, nav)
         }
-
-    UserIcon(pubkeyHex, userProfilePicture, loadProfilePicture, nav, route)
-
-    userDisplayName?.let { DisplayMessageUsername(it, userTags, route, nav) }
+    }
 }
 
 @Composable
@@ -771,7 +772,8 @@ private fun UserIcon(
         loadProfilePicture = loadProfilePicture,
         modifier =
             remember {
-                Modifier.width(Size25dp)
+                Modifier
+                    .width(Size25dp)
                     .height(Size25dp)
                     .clip(shape = CircleShape)
                     .clickable(onClick = { nav(route) })

@@ -336,7 +336,7 @@ fun LoadUserProfilePicture(
 ) {
     val userProfile by baseUser.live().userMetadataInfo.observeAsState(baseUser.info)
 
-    innerContent(userProfile?.profilePicture(), userProfile?.bestDisplayName() ?: userProfile?.bestDisplayName())
+    innerContent(userProfile?.profilePicture(), userProfile?.bestName())
 }
 
 @Composable

@@ -70,9 +70,9 @@ fun UsernameDisplay(
     val userMetadata by baseUser.live().userMetadataInfo.observeAsState(baseUser.info)
 
     Crossfade(targetState = userMetadata, modifier = weight, label = "UsernameDisplay") {
-        val name = it?.bestDisplayName() ?: it?.bestUsername()
+        val name = it?.bestName()
         if (name != null) {
-            UserDisplay(name, it?.tags, weight, showPlayButton, fontWeight, textColor)
+            UserDisplay(name, it.tags, weight, showPlayButton, fontWeight, textColor)
         } else {
             NPubDisplay(baseUser, weight, fontWeight, textColor)
         }

@@ -65,10 +65,10 @@ import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.PrivateDmEvent
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 
@@ -286,25 +286,16 @@ private fun RenderUserAsClickableText(
     additionalChars: String,
     nav: (String) -> Unit,
 ) {
-    val userState by baseUser.live().metadata.observeAsState()
-    val route = remember { "User/${baseUser.pubkeyHex}" }
+    val userState by baseUser.live().userMetadataInfo.observeAsState()
 
-    val userDisplayName by
-        remember(userState) { derivedStateOf { userState?.user?.toBestDisplayName() } }
-
-    val userTags by
-        remember(userState) {
-            derivedStateOf { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
-        }
-
-    userDisplayName?.let {
+    userState?.bestName()?.let {
         CreateClickableTextWithEmoji(
             clickablePart = it,
             suffix = additionalChars.ifBlank { null },
             maxLines = 1,
-            route = route,
+            route = "User/${baseUser.pubkeyHex}",
             nav = nav,
-            tags = userTags,
+            tags = userState?.tags ?: EmptyTagList,
         )
     }
 }
@@ -661,7 +652,10 @@ fun ClickableInLineIconRenderer(
                             AsyncImage(
                                 model = value.url,
                                 contentDescription = null,
-                                modifier = Modifier.fillMaxSize().padding(1.dp),
+                                modifier =
+                                    Modifier
+                                        .fillMaxSize()
+                                        .padding(1.dp),
                             )
                         },
                     )
@@ -743,7 +737,10 @@ fun InLineIconRenderer(
                             AsyncImage(
                                 model = value.url,
                                 contentDescription = null,
-                                modifier = Modifier.fillMaxSize().padding(horizontal = 0.dp),
+                                modifier =
+                                    Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 0.dp),
                             )
                         },
                     )
