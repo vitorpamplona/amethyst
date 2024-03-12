@@ -27,18 +27,12 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.BooleanType
-import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.DefaultReactions
 import com.vitorpamplona.amethyst.model.DefaultZapAmounts
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.Settings
-import com.vitorpamplona.amethyst.model.ThemeType
-import com.vitorpamplona.amethyst.model.parseBooleanType
-import com.vitorpamplona.amethyst.model.parseConnectivityType
-import com.vitorpamplona.amethyst.model.parseThemeType
 import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -354,15 +348,6 @@ object LocalPreferences {
         return currentAccount()?.let { loadCurrentAccountFromEncryptedStorage(it) }
     }
 
-    suspend fun migrateOldSharedSettings(): Settings? {
-        val prefs = encryptedPreferences()
-        loadOldSharedSettings(prefs)?.let {
-            saveSharedSettings(it, prefs)
-            return it
-        }
-        return null
-    }
-
     suspend fun saveSharedSettings(
         sharedSettings: Settings,
         prefs: SharedPreferences = encryptedPreferences(),
@@ -387,67 +372,6 @@ object LocalPreferences {
                 e.printStackTrace()
                 null
             }
-        }
-    }
-
-    @Deprecated("Turned into a single JSON object")
-    suspend fun loadOldSharedSettings(prefs: SharedPreferences = encryptedPreferences()): Settings? {
-        with(prefs) {
-            if (!contains(PrefKeys.AUTOMATICALLY_START_PLAYBACK)) {
-                return null
-            }
-
-            val automaticallyShowImages =
-                if (contains(PrefKeys.AUTOMATICALLY_SHOW_IMAGES)) {
-                    parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_SHOW_IMAGES, false))
-                } else {
-                    ConnectivityType.ALWAYS
-                }
-
-            val automaticallyStartPlayback =
-                if (contains(PrefKeys.AUTOMATICALLY_START_PLAYBACK)) {
-                    parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_START_PLAYBACK, false))
-                } else {
-                    ConnectivityType.ALWAYS
-                }
-            val automaticallyShowUrlPreview =
-                if (contains(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW)) {
-                    parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_LOAD_URL_PREVIEW, false))
-                } else {
-                    ConnectivityType.ALWAYS
-                }
-            val automaticallyHideNavigationBars =
-                if (contains(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS)) {
-                    parseBooleanType(getBoolean(PrefKeys.AUTOMATICALLY_HIDE_NAV_BARS, false))
-                } else {
-                    BooleanType.ALWAYS
-                }
-
-            val automaticallyShowProfilePictures =
-                if (contains(PrefKeys.AUTOMATICALLY_SHOW_PROFILE_PICTURE)) {
-                    parseConnectivityType(getBoolean(PrefKeys.AUTOMATICALLY_SHOW_PROFILE_PICTURE, false))
-                } else {
-                    ConnectivityType.ALWAYS
-                }
-
-            val themeType =
-                if (contains(PrefKeys.THEME)) {
-                    parseThemeType(getInt(PrefKeys.THEME, ThemeType.SYSTEM.screenCode))
-                } else {
-                    ThemeType.SYSTEM
-                }
-
-            return Settings(
-                themeType,
-                getString(PrefKeys.PREFERRED_LANGUAGE, null)?.ifBlank { null },
-                automaticallyShowImages,
-                automaticallyStartPlayback,
-                automaticallyShowUrlPreview,
-                automaticallyHideNavigationBars,
-                automaticallyShowProfilePictures,
-                false,
-                false,
-            )
         }
     }
 
