@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Stable
 class Chatroom() {
+    var authors: Set<User> = setOf()
     var roomMessages: Set<Note> = setOf()
     var subject: String? = null
     var subjectCreatedAt: Long? = null
@@ -37,6 +38,12 @@ class Chatroom() {
 
         if (msg !in roomMessages) {
             roomMessages = roomMessages + msg
+
+            msg.author?.let { author ->
+                if (author !in authors) {
+                    authors += author
+                }
+            }
 
             val newSubject = msg.event?.subject()
 
@@ -51,8 +58,8 @@ class Chatroom() {
     fun removeMessageSync(msg: Note) {
         checkNotInMainThread()
 
-        if (msg !in roomMessages) {
-            roomMessages = roomMessages + msg
+        if (msg in roomMessages) {
+            roomMessages = roomMessages - msg
 
             roomMessages
                 .filter { it.event?.subject() != null }
@@ -66,7 +73,7 @@ class Chatroom() {
     }
 
     fun senderIntersects(keySet: Set<HexKey>): Boolean {
-        return roomMessages.any { it.author?.pubkeyHex in keySet }
+        return authors.any { it.pubkeyHex in keySet }
     }
 
     fun pruneMessagesToTheLatestOnly(): Set<Note> {

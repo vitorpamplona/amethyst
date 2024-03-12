@@ -394,7 +394,7 @@ class User(val pubkeyHex: String) {
     fun hasSentMessagesTo(key: ChatroomKey?): Boolean {
         val messagesToUser = privateChatrooms[key] ?: return false
 
-        return messagesToUser.roomMessages.any { this.pubkeyHex == it.author?.pubkeyHex }
+        return messagesToUser.authors.any { this == it }
     }
 
     fun hasReport(
