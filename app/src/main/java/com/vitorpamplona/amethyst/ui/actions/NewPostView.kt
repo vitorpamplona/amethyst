@@ -56,8 +56,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
-import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material.icons.filled.LocationOff
@@ -147,6 +145,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.PollIcon
 import com.vitorpamplona.amethyst.ui.note.RegularPostIcon
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.ZapSplitIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.MyTextField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowUserSuggestionList
@@ -1073,30 +1072,7 @@ fun FowardZapTo(
                     .fillMaxWidth()
                     .padding(bottom = 10.dp),
         ) {
-            Box(
-                Modifier
-                    .height(20.dp)
-                    .width(25.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Bolt,
-                    contentDescription = stringResource(id = R.string.zaps),
-                    modifier =
-                        Modifier
-                            .size(20.dp)
-                            .align(Alignment.CenterStart),
-                    tint = BitcoinOrange,
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                    contentDescription = stringResource(id = R.string.zaps),
-                    modifier =
-                        Modifier
-                            .size(13.dp)
-                            .align(Alignment.CenterEnd),
-                    tint = BitcoinOrange,
-                )
-            }
+            ZapSplitIcon()
 
             Text(
                 text = stringResource(R.string.zap_split_title),
@@ -1436,50 +1412,10 @@ private fun ForwardZapTo(
     IconButton(
         onClick = { onClick() },
     ) {
-        Box(
-            Modifier
-                .height(20.dp)
-                .width(25.dp),
-        ) {
-            if (!postViewModel.wantsForwardZapTo) {
-                Icon(
-                    imageVector = Icons.Default.Bolt,
-                    contentDescription = stringResource(R.string.add_zap_split),
-                    modifier =
-                        Modifier
-                            .size(20.dp)
-                            .align(Alignment.CenterStart),
-                    tint = MaterialTheme.colorScheme.onBackground,
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
-                    contentDescription = null,
-                    modifier =
-                        Modifier
-                            .size(13.dp)
-                            .align(Alignment.CenterEnd),
-                    tint = MaterialTheme.colorScheme.onBackground,
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Outlined.Bolt,
-                    contentDescription = stringResource(id = R.string.cancel_zap_split),
-                    modifier =
-                        Modifier
-                            .size(20.dp)
-                            .align(Alignment.CenterStart),
-                    tint = BitcoinOrange,
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                    contentDescription = null,
-                    modifier =
-                        Modifier
-                            .size(13.dp)
-                            .align(Alignment.CenterEnd),
-                    tint = BitcoinOrange,
-                )
-            }
+        if (!postViewModel.wantsForwardZapTo) {
+            ZapSplitIcon(tint = MaterialTheme.colorScheme.onBackground)
+        } else {
+            ZapSplitIcon(tint = BitcoinOrange)
         }
     }
 }

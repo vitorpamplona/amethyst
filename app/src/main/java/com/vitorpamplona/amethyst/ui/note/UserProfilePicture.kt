@@ -28,11 +28,9 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -162,9 +160,6 @@ fun ClickableUserPicture(
     onClick: ((User) -> Unit)? = null,
     onLongClick: ((User) -> Unit)? = null,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val ripple = rememberRipple(bounded = false, radius = size)
-
     // BaseUser is the same reference as accountState.user
     val myModifier =
         remember {
@@ -174,16 +169,12 @@ fun ClickableUserPicture(
                         onClick = { onClick(baseUser) },
                         onLongClick = { onLongClick(baseUser) },
                         role = Role.Button,
-                        interactionSource = interactionSource,
-                        indication = ripple,
                     )
             } else if (onClick != null) {
                 Modifier.size(size)
                     .clickable(
                         onClick = { onClick(baseUser) },
                         role = Role.Button,
-                        interactionSource = interactionSource,
-                        indication = ripple,
                     )
             } else {
                 Modifier.size(size)
