@@ -6,6 +6,7 @@
     <string name="your_profile_image">Jouw profielfoto</string>
     <string name="scan_qr">Scan QR</string>
     <string name="show_anyway">Laat toch zien</string>
+    <string name="post_was_hidden">Dit bericht is verborgen omdat het je verborgen gebruikers of woorden noemt</string>
     <string name="post_was_flagged_as_inappropriate_by">Bericht gemarkeerd als ongepast door</string>
     <string name="post_not_found">Bericht niet gevonden</string>
     <string name="channel_image">Kanaalafbeelding</string>
@@ -48,9 +49,11 @@
     <string name="boost">Boost</string>
     <string name="boosted">boosted</string>
     <string name="edited">gewijzigd</string>
+    <string name="edited_number">bewerk #%1$s</string>
     <string name="original">origineel</string>
     <string name="quote">Citaat</string>
     <string name="fork">Fork</string>
+    <string name="propose_an_edit">Stel een bewerking voor</string>
     <string name="new_amount_in_sats">Nieuw bedrag in sats</string>
     <string name="add">Toevoegen</string>
     <string name="replying_to">"reageert op "</string>
@@ -664,6 +667,7 @@
     <string name="thank_you">Bedankt!</string>
     <string name="max_limit">Max. limiet</string>
     <string name="restricted_writes">Beperkte schrijfrechten</string>
+    <string name="forked_from">Geforked van</string>
     <string name="forked_tag">FORK</string>
     <string name="git_repository">Git Repository: %1$s</string>
     <string name="git_web_address">Web:</string>
@@ -672,4 +676,17 @@
     <string name="ots_info_title">Bewijs van tijdstempel</string>
     <string name="ots_info_description">Er is bewijs dat dit bericht enige tijd voor %1$sis getekend. Het bewijs is op dat tijdstip en op dat moment getypeerd in de Bitcoin-blockchain.</string>
     <string name="edit_post">Bericht wijzigen</string>
+    <string name="proposal_to_edit">Voorstel om een bericht te verbeteren</string>
+    <string name="message_to_author">Samenvatting van wijzigingen</string>
+    <string name="message_to_author_placeholder">Snelle oplossingen...</string>
+    <string name="accept_the_suggestion">Accepteer de suggestie</string>
+    <string name="accessibility_download_for_offline">Downloaden</string>
+    <string name="accessibility_lyrics_on">Songteksten aan</string>
+    <string name="accessibility_lyrics_off">Songteksten uit</string>
+    <string name="accessibility_turn_on_sealed_message">Verzegeld bericht uit. Klik om Verzegeld bericht aan te zetten</string>
+    <string name="accessibility_turn_off_sealed_message">Verzegeld bericht aan. Klik om Verzegeld bericht uit te zetten</string>
+    <string name="accessibility_send">Verzenden</string>
+    <string name="accessibility_play_username">Speel gebruikersnaam af als audio</string>
+    <string name="accessibility_scan_qr_code">Scan de QR-code</string>
+    <string name="accessibility_navigate_to_alby">Navigeer naar de externe wallet provider Alby</string>
 </resources>
