@@ -176,7 +176,6 @@ import com.vitorpamplona.quartz.events.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.TelegramIdentity
 import com.vitorpamplona.quartz.events.TwitterIdentity
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -961,8 +960,7 @@ private fun DrawAdditionalInfo(
 ) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = remember(userState) { userState?.user } ?: return
-    val tags =
-        remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
+    val tags = userState?.user?.info?.tags
 
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
@@ -1071,7 +1069,7 @@ private fun DrawAdditionalInfo(
     val pubkeyHex = remember { baseUser.pubkeyHex }
     DisplayLNAddress(lud16, pubkeyHex, accountViewModel, nav)
 
-    val identities = user.info?.latestMetadata?.identityClaims()
+    val identities = user.latestMetadata?.identityClaims()
     if (!identities.isNullOrEmpty()) {
         identities.forEach { identity: IdentityClaim ->
             Row(verticalAlignment = Alignment.CenterVertically) {

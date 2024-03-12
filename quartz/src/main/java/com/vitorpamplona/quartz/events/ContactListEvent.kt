@@ -415,12 +415,6 @@ class UserMetadata {
     var twitter: String? = null
 
     @Transient
-    var updatedMetadataAt: Long = 0
-
-    @Transient
-    var latestMetadata: MetadataEvent? = null
-
-    @Transient
     var tags: ImmutableListOfLists<String>? = null
 
     fun anyName(): String? {

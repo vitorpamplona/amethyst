@@ -154,10 +154,7 @@ class MetadataEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun contactMetaData() =
         try {
-            mapper.readValue(
-                ByteArrayInputStream(content.toByteArray(Charsets.UTF_8)),
-                UserMetadata::class.java,
-            )
+            mapper.readValue(content, UserMetadata::class.java)
         } catch (e: Exception) {
             // e.printStackTrace()
             Log.w("MT", "Content Parse Error: ${e.localizedMessage} $content")

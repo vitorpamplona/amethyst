@@ -52,6 +52,7 @@ import java.math.BigDecimal
 class User(val pubkeyHex: String) {
     var info: UserMetadata? = null
 
+    var latestMetadata: MetadataEvent? = null
     var latestContactList: ContactListEvent? = null
     var latestBookmarkList: BookmarkListEvent? = null
 
@@ -307,8 +308,6 @@ class User(val pubkeyHex: String) {
         latestMetadata: MetadataEvent,
     ) {
         info = newUserInfo
-        info?.latestMetadata = latestMetadata
-        info?.updatedMetadataAt = latestMetadata.createdAt
         info?.tags = latestMetadata.tags.toImmutableListOfLists()
         info?.cleanBlankNames()
 

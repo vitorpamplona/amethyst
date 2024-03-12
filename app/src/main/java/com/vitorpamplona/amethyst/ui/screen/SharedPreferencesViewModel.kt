@@ -104,8 +104,7 @@ class SharedPreferencesViewModel : ViewModel() {
     fun init() {
         viewModelScope.launch(Dispatchers.IO) {
             val savedSettings =
-                LocalPreferences.loadSharedSettings()
-                    ?: LocalPreferences.migrateOldSharedSettings() ?: Settings()
+                LocalPreferences.loadSharedSettings() ?: Settings()
 
             sharedPrefs.theme = savedSettings.theme
             sharedPrefs.language = savedSettings.preferredLanguage
