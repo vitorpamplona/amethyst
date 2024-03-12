@@ -796,7 +796,4 @@ private fun DisplayMessageUsername(
         route = route,
         nav = nav,
     )
-
-    Spacer(modifier = StdHorzSpacer)
-    DrawPlayName(userDisplayName)
 }

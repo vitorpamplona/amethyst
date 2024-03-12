@@ -23,8 +23,6 @@ package com.vitorpamplona.amethyst.ui.note
 import android.content.Context
 import android.util.Log
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -45,7 +42,6 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.tts.TextToSpeechHelper
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.theme.StdButtonSizeModifier
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 
@@ -109,22 +105,15 @@ private fun UserDisplay(
     fontWeight: FontWeight = FontWeight.Bold,
     textColor: Color = Color.Unspecified,
 ) {
-    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        CreateTextWithEmoji(
-            text = bestDisplayName,
-            tags = tags,
-            fontWeight = fontWeight,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = modifier,
-            color = textColor,
-        )
-
-        if (showPlayButton) {
-            Spacer(StdHorzSpacer)
-            DrawPlayName(bestDisplayName)
-        }
-    }
+    CreateTextWithEmoji(
+        text = bestDisplayName,
+        tags = tags,
+        fontWeight = fontWeight,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier,
+        color = textColor,
+    )
 }
 
 @Composable
