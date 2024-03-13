@@ -439,6 +439,8 @@
     <string name="connectivity_type_always">Sempre</string>
     <string name="connectivity_type_wifi_only">Somente wifi</string>
     <string name="connectivity_type_never">Nunca</string>
+    <string name="ui_feature_set_type_complete">Concluído</string>
+    <string name="ui_feature_set_type_simplified">Simplificado</string>
     <string name="system">Sistema</string>
     <string name="light">Claro</string>
     <string name="dark">Escuro</string>
@@ -450,6 +452,8 @@
     <string name="automatically_show_url_preview">Mostrar automaticamente a visualização da URL</string>
     <string name="automatically_hide_nav_bars">Rolagem Imersiva</string>
     <string name="automatically_hide_nav_bars_description">Ocultar as barras de navegação ao rolar</string>
+    <string name="ui_style">Modo de interface</string>
+    <string name="ui_style_description">Escolha o estilo da publicação</string>
     <string name="load_image">Carregar imagem</string>
     <string name="spamming_users">Spammers</string>
     <string name="muted_button">Silenciado. Clique para ativar o som</string>

@@ -444,6 +444,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="connectivity_type_always">Immer</string>
     <string name="connectivity_type_wifi_only">Nur WLAN</string>
     <string name="connectivity_type_never">Nie</string>
+    <string name="ui_feature_set_type_complete">Fertig</string>
+    <string name="ui_feature_set_type_simplified">Vereinfacht</string>
     <string name="system">System</string>
     <string name="light">Hell</string>
     <string name="dark">Dunkel</string>
@@ -455,6 +457,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="automatically_show_url_preview">URL-Vorschau automatisch anzeigen</string>
     <string name="automatically_hide_nav_bars">Immersives Scrollen</string>
     <string name="automatically_hide_nav_bars_description">Navigationsleisten beim Scrollen ausblenden</string>
+    <string name="ui_style">UI-Modus</string>
+    <string name="ui_style_description">Wählen Sie den Beitragsstil</string>
     <string name="load_image">Bild laden</string>
     <string name="spamming_users">Spammer</string>
     <string name="muted_button">Stummgeschaltet. Drücken, um Ton einzuschalten</string>
