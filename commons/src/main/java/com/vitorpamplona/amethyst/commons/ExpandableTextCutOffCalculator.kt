@@ -24,6 +24,7 @@ class ExpandableTextCutOffCalculator {
     companion object {
         private const val SHORT_TEXT_LENGTH = 350
         private const val SHORTEN_AFTER_LINES = 10
+        private const val TOO_FAR_SEACH_THE_OTHER_WAY = 450
 
         fun indexToCutOff(content: String): Int {
             // Cuts the text in the first space or new line after SHORT_TEXT_LENGTH characters
@@ -34,7 +35,19 @@ class ExpandableTextCutOffCalculator {
             val firstLineAfterLineLimits =
                 content.nthIndexOf('\n', SHORTEN_AFTER_LINES).let { if (it < 0) content.length else it }
 
-            return minOf(firstSpaceAfterCut, firstNewLineAfterCut, firstLineAfterLineLimits)
+            val min = minOf(firstSpaceAfterCut, firstNewLineAfterCut, firstLineAfterLineLimits)
+
+            if (min > TOO_FAR_SEACH_THE_OTHER_WAY) {
+                val newString = content.take(SHORT_TEXT_LENGTH)
+                val firstSpaceBeforeCut =
+                    newString.lastIndexOf(' ').let { if (it < 0) content.length else it }
+                val firstNewLineBeforeCut =
+                    newString.lastIndexOf('\n').let { if (it < 0) content.length else it }
+
+                return maxOf(firstSpaceBeforeCut, firstNewLineBeforeCut)
+            } else {
+                return min
+            }
         }
     }
 }
