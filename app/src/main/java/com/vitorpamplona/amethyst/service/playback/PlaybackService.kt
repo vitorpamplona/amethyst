@@ -23,62 +23,73 @@ package com.vitorpamplona.amethyst.service.playback
 import android.content.Intent
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
-import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
-import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.HttpClientManager
+import okhttp3.OkHttpClient
+
+class WssOrHttpFactory(httpClient: OkHttpClient) : MediaSource.Factory {
+    @UnstableApi
+    val http = DefaultMediaSourceFactory(OkHttpDataSource.Factory(httpClient))
+
+    @UnstableApi
+    val wss = DefaultMediaSourceFactory(WssStreamDataSource.Factory(httpClient))
+
+    @OptIn(UnstableApi::class)
+    override fun setDrmSessionManagerProvider(drmSessionManagerProvider: DrmSessionManagerProvider): MediaSource.Factory {
+        http.setDrmSessionManagerProvider(drmSessionManagerProvider)
+        wss.setDrmSessionManagerProvider(drmSessionManagerProvider)
+        return this
+    }
+
+    @OptIn(UnstableApi::class)
+    override fun setLoadErrorHandlingPolicy(loadErrorHandlingPolicy: LoadErrorHandlingPolicy): MediaSource.Factory {
+        http.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+        wss.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+        return this
+    }
+
+    @OptIn(UnstableApi::class)
+    override fun getSupportedTypes(): IntArray {
+        return http.supportedTypes
+    }
+
+    @OptIn(UnstableApi::class)
+    override fun createMediaSource(mediaItem: MediaItem): MediaSource {
+        return if (mediaItem.mediaId.startsWith("wss")) {
+            wss.createMediaSource(mediaItem)
+        } else {
+            http.createMediaSource(mediaItem)
+        }
+    }
+}
 
 @UnstableApi // Extend MediaSessionService
 class PlaybackService : MediaSessionService() {
     private var videoViewedPositionCache = VideoViewedPositionCache()
 
-    private var managerHls: MultiPlayerPlaybackManager? = null
-    private var managerProgressive: MultiPlayerPlaybackManager? = null
-    private var managerLocal: MultiPlayerPlaybackManager? = null
+    private var managerAllInOne: MultiPlayerPlaybackManager? = null
 
-    fun newHslDataSource(): MediaSource.Factory {
-        return HlsMediaSource.Factory(OkHttpDataSource.Factory(HttpClientManager.getHttpClient()))
+    fun newAllInOneDataSource(): MediaSource.Factory {
+        // This might be needed for live kit.
+        // return WssOrHttpFactory(HttpClientManager.getHttpClient())
+        return DefaultMediaSourceFactory(OkHttpDataSource.Factory(HttpClientManager.getHttpClient()))
     }
 
-    fun newProgressiveDataSource(): MediaSource.Factory {
-        return ProgressiveMediaSource.Factory(
-            (applicationContext as Amethyst).videoCache.get(HttpClientManager.getHttpClient()),
-        )
-    }
-
-    fun lazyHlsDS(): MultiPlayerPlaybackManager {
-        managerHls?.let {
+    fun lazyDS(): MultiPlayerPlaybackManager {
+        managerAllInOne?.let {
             return it
         }
 
-        val newInstance = MultiPlayerPlaybackManager(newHslDataSource(), videoViewedPositionCache)
-        managerHls = newInstance
-        return newInstance
-    }
-
-    fun lazyProgressiveDS(): MultiPlayerPlaybackManager {
-        managerProgressive?.let {
-            return it
-        }
-
-        val newInstance =
-            MultiPlayerPlaybackManager(newProgressiveDataSource(), videoViewedPositionCache)
-        managerProgressive = newInstance
-        return newInstance
-    }
-
-    fun lazyLocalDS(): MultiPlayerPlaybackManager {
-        managerLocal?.let {
-            return it
-        }
-
-        val newInstance = MultiPlayerPlaybackManager(cachedPositions = videoViewedPositionCache)
-        managerLocal = newInstance
+        val newInstance = MultiPlayerPlaybackManager(newAllInOneDataSource(), videoViewedPositionCache)
+        managerAllInOne = newInstance
         return newInstance
     }
 
@@ -94,15 +105,11 @@ class PlaybackService : MediaSessionService() {
     }
 
     private fun onProxyUpdated() {
-        val toDestroyHls = managerHls
-        val toDestroyProgressive = managerProgressive
+        val toDestroyAllInOne = managerAllInOne
 
-        managerHls = MultiPlayerPlaybackManager(newHslDataSource(), videoViewedPositionCache)
-        managerProgressive =
-            MultiPlayerPlaybackManager(newProgressiveDataSource(), videoViewedPositionCache)
+        managerAllInOne = MultiPlayerPlaybackManager(newAllInOneDataSource(), videoViewedPositionCache)
 
-        toDestroyHls?.releaseAppPlayers()
-        toDestroyProgressive?.releaseAppPlayers()
+        toDestroyAllInOne?.releaseAppPlayers()
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -116,21 +123,9 @@ class PlaybackService : MediaSessionService() {
 
         HttpClientManager.proxyChangeListeners.remove(this@PlaybackService::onProxyUpdated)
 
-        managerHls?.releaseAppPlayers()
-        managerLocal?.releaseAppPlayers()
-        managerProgressive?.releaseAppPlayers()
+        managerAllInOne?.releaseAppPlayers()
 
         super.onDestroy()
-    }
-
-    fun getAppropriateMediaSessionManager(fileName: String): MultiPlayerPlaybackManager? {
-        return if (fileName.startsWith("file")) {
-            lazyLocalDS()
-        } else if (fileName.endsWith("m3u8")) {
-            lazyHlsDS()
-        } else {
-            lazyProgressiveDS()
-        }
     }
 
     override fun onUpdateNotification(
@@ -141,36 +136,16 @@ class PlaybackService : MediaSessionService() {
         super.onUpdateNotification(session, startInForegroundRequired)
 
         // Overrides the notification with any player actually playing
-        managerHls?.playingContent()?.forEach {
+        managerAllInOne?.playingContent()?.forEach {
             if (it.player.isPlaying) {
                 super.onUpdateNotification(it, startInForegroundRequired)
-            }
-        }
-        managerLocal?.playingContent()?.forEach {
-            if (it.player.isPlaying) {
-                super.onUpdateNotification(session, startInForegroundRequired)
-            }
-        }
-        managerProgressive?.playingContent()?.forEach {
-            if (it.player.isPlaying) {
-                super.onUpdateNotification(session, startInForegroundRequired)
             }
         }
 
         // Overrides again with playing with audio
-        managerHls?.playingContent()?.forEach {
+        managerAllInOne?.playingContent()?.forEach {
             if (it.player.isPlaying && it.player.volume > 0) {
                 super.onUpdateNotification(it, startInForegroundRequired)
-            }
-        }
-        managerLocal?.playingContent()?.forEach {
-            if (it.player.isPlaying && it.player.volume > 0) {
-                super.onUpdateNotification(session, startInForegroundRequired)
-            }
-        }
-        managerProgressive?.playingContent()?.forEach {
-            if (it.player.isPlaying && it.player.volume > 0) {
-                super.onUpdateNotification(session, startInForegroundRequired)
             }
         }
     }
@@ -182,9 +157,9 @@ class PlaybackService : MediaSessionService() {
         val uri = controllerInfo.connectionHints.getString("uri") ?: return null
         val callbackUri = controllerInfo.connectionHints.getString("callbackUri")
 
-        val manager = getAppropriateMediaSessionManager(uri)
+        val manager = lazyDS()
 
-        return manager?.getMediaSession(
+        return manager.getMediaSession(
             id,
             uri,
             callbackUri,
