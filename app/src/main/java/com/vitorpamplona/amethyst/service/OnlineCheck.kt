@@ -24,7 +24,11 @@ import android.util.Log
 import android.util.LruCache
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.quartz.crypto.CryptoUtils
+import okhttp3.EventListener
+import okhttp3.Protocol
 import okhttp3.Request
+import okio.ByteString.Companion.toByteString
 import kotlin.coroutines.cancellation.CancellationException
 
 @Immutable data class OnlineCheckResult(val timeInMs: Long, val online: Boolean)
@@ -49,21 +53,44 @@ object OnlineChecker {
             return checkOnlineCache.get(url).online
         }
 
-        Log.d("OnlineChecker", "isOnline $url")
-
         return try {
-            val request =
-                Request.Builder()
-                    .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
-                    .url(url)
-                    .get()
-                    .build()
-
             val result =
-                HttpClientManager.getHttpClient().newCall(request).execute().use {
-                    checkNotInMainThread()
-                    it.isSuccessful
+                if (url.startsWith("wss")) {
+                    val request =
+                        Request.Builder()
+                            .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+                            .url(url.replace("wss+livekit://", "wss://"))
+                            .header("Upgrade", "websocket")
+                            .header("Connection", "Upgrade")
+                            .header("Sec-WebSocket-Key", CryptoUtils.random(16).toByteString().base64())
+                            .header("Sec-WebSocket-Version", "13")
+                            .header("Sec-WebSocket-Extensions", "permessage-deflate")
+                            .build()
+
+                    val client =
+                        HttpClientManager.getHttpClient().newBuilder()
+                            .eventListener(EventListener.NONE)
+                            .protocols(listOf(Protocol.HTTP_1_1))
+                            .build()
+
+                    client.newCall(request).execute().use {
+                        checkNotInMainThread()
+                        it.isSuccessful
+                    }
+                } else {
+                    val request =
+                        Request.Builder()
+                            .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+                            .url(url)
+                            .get()
+                            .build()
+
+                    HttpClientManager.getHttpClient().newCall(request).execute().use {
+                        checkNotInMainThread()
+                        it.isSuccessful
+                    }
                 }
+
             checkOnlineCache.put(url, OnlineCheckResult(System.currentTimeMillis(), result))
             result
         } catch (e: Exception) {
