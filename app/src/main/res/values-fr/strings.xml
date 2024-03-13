@@ -441,6 +441,8 @@
     <string name="connectivity_type_always">Toujours</string>
     <string name="connectivity_type_wifi_only">Wifi uniquement</string>
     <string name="connectivity_type_never">Jamais</string>
+    <string name="ui_feature_set_type_complete">Complet</string>
+    <string name="ui_feature_set_type_simplified">Simplifié</string>
     <string name="system">Système</string>
     <string name="light">Clair</string>
     <string name="dark">Sombre</string>
@@ -452,6 +454,8 @@
     <string name="automatically_show_url_preview">Prévisualisation des URLs</string>
     <string name="automatically_hide_nav_bars">Défilement immersif</string>
     <string name="automatically_hide_nav_bars_description">Masquer les barres de navigation lors du défilement</string>
+    <string name="ui_style">Mode UI</string>
+    <string name="ui_style_description">Choisir le style du message</string>
     <string name="load_image">Charger l\'image</string>
     <string name="spamming_users">Spammeurs</string>
     <string name="muted_button">Silencieux. Cliquer pour réactiver le son</string>

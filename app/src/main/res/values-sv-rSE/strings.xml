@@ -438,6 +438,8 @@
     <string name="connectivity_type_always">Alltid</string>
     <string name="connectivity_type_wifi_only">Endast Wi-Fi</string>
     <string name="connectivity_type_never">Aldrig</string>
+    <string name="ui_feature_set_type_complete">Slutförd</string>
+    <string name="ui_feature_set_type_simplified">Förenklad</string>
     <string name="system">System</string>
     <string name="light">Ljus</string>
     <string name="dark">Mörk</string>
@@ -449,6 +451,8 @@
     <string name="automatically_show_url_preview">Visa automatiskt förhandsgranskning av URL</string>
     <string name="automatically_hide_nav_bars">Omslutande bläddring</string>
     <string name="automatically_hide_nav_bars_description">Dölj navigeringsfält vid bläddring</string>
+    <string name="ui_style">UI läge</string>
+    <string name="ui_style_description">Välj stilen för inlägg</string>
     <string name="load_image">Ladda bild</string>
     <string name="spamming_users">Spammare</string>
     <string name="muted_button">Ljud avstängt. Klicka för att ta bort ljudlöst</string>
