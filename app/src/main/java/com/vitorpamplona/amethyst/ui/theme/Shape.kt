@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.theme
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,6 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 val Shapes =
@@ -220,3 +222,9 @@ val boostedNoteModifier =
             end = 0.dp,
             top = 0.dp,
         )
+
+val liveStreamTag =
+    Modifier
+        .clip(SmallBorder)
+        .background(Color.Black)
+        .padding(horizontal = Size5dp)
