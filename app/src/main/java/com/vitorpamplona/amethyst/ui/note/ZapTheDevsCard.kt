@@ -186,22 +186,13 @@ fun ZapTheDevsCardPreview() {
         accountViewModel,
     ) { releaseNote ->
         if (releaseNote != null) {
-            ThemeComparisonColumn(
-                onDark = {
-                    ZapTheDevsCard(
-                        releaseNote,
-                        accountViewModel,
-                        nav = {},
-                    )
-                },
-                onLight = {
-                    ZapTheDevsCard(
-                        releaseNote,
-                        accountViewModel,
-                        nav = {},
-                    )
-                },
-            )
+            ThemeComparisonColumn {
+                ZapTheDevsCard(
+                    releaseNote,
+                    accountViewModel,
+                    nav = {},
+                )
+            }
         }
     }
 }

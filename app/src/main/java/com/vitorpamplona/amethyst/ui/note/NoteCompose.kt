@@ -58,6 +58,7 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
@@ -665,10 +666,8 @@ fun InnerNoteWithReactions(
 
         Column(Modifier.fillMaxWidth()) {
             val showSecondRow =
-                baseNote.event !is RepostEvent &&
-                    baseNote.event !is GenericRepostEvent &&
-                    !isBoostedNote &&
-                    !isQuotedNote
+                baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent &&
+                    !isBoostedNote && !isQuotedNote && accountViewModel.settings.featureSet != FeatureSetType.SIMPLIFIED
             NoteBody(
                 baseNote = baseNote,
                 showAuthorPicture = isQuotedNote,
@@ -1234,10 +1233,12 @@ private fun BadgeBox(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
-        baseNote.replyTo?.lastOrNull()?.let { RelayBadges(it, accountViewModel, nav) }
-    } else {
-        RelayBadges(baseNote, accountViewModel, nav)
+    if (accountViewModel.settings.featureSet != FeatureSetType.SIMPLIFIED) {
+        if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
+            baseNote.replyTo?.lastOrNull()?.let { RelayBadges(it, accountViewModel, nav) }
+        } else {
+            RelayBadges(baseNote, accountViewModel, nav)
+        }
     }
 }
 

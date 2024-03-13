@@ -74,7 +74,6 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
         val followingCommunities = account.liveHomeFollowLists.value?.communities ?: emptySet()
 
         val oneMinuteInTheFuture = TimeUtils.now() + (1 * 60) // one minute in the future.
-        val oneHr = 60 * 60
 
         return collection
             .asSequence()
@@ -104,25 +103,18 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
                     // acceptable
                     (isHiddenList || it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true) &&
                     ((it.event?.createdAt() ?: 0) < oneMinuteInTheFuture) &&
-                    it.isNewThread() &&
-                    (
-                        (noteEvent !is RepostEvent && noteEvent !is GenericRepostEvent) || // not a repost
-                            (
-                                it.replyTo?.lastOrNull()?.author?.pubkeyHex !in followingKeySet ||
-                                    (
-                                        noteEvent.createdAt() >
-                                            (
-                                                it.replyTo?.lastOrNull()?.createdAt()
-                                                    ?: 0
-                                            ) + oneHr
-                                    )
-                            ) // or a repost of by a non-follower's post (likely not seen yet)
-                    )
+                    it.isNewThread()
             }
             .toSet()
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+        return collection.distinctBy {
+            if (it.event is RepostEvent || it.event is GenericRepostEvent) {
+                it.replyTo?.lastOrNull()?.idHex ?: it.idHex // only the most recent repost per feed.
+            } else {
+                it.idHex
+            }
+        }.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
     }
 }

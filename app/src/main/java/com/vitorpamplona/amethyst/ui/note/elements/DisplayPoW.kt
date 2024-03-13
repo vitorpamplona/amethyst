@@ -34,8 +34,7 @@ import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 @Preview
 fun DisplayPoWPreview() {
     ThemeComparisonColumn(
-        onDark = { DisplayPoW(pow = 24) },
-        onLight = { DisplayPoW(pow = 24) },
+        toPreview = { DisplayPoW(pow = 24) },
     )
 }
 

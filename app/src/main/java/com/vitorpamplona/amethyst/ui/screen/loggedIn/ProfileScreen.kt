@@ -131,6 +131,7 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.DrawPlayName
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.LightningAddressIcon
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -159,6 +160,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.encoders.ATag
@@ -174,7 +176,6 @@ import com.vitorpamplona.quartz.events.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.TelegramIdentity
 import com.vitorpamplona.quartz.events.TwitterIdentity
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -959,8 +960,7 @@ private fun DrawAdditionalInfo(
 ) {
     val userState by baseUser.live().metadata.observeAsState()
     val user = remember(userState) { userState?.user } ?: return
-    val tags =
-        remember(userState) { userState?.user?.info?.latestMetadata?.tags?.toImmutableListOfLists() }
+    val tags = userState?.user?.info?.tags
 
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
@@ -971,13 +971,15 @@ private fun DrawAdditionalInfo(
         }
 
     user.toBestDisplayName().let {
-        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 7.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 7.dp)) {
             CreateTextWithEmoji(
                 text = it,
                 tags = tags,
                 fontWeight = FontWeight.Bold,
                 fontSize = 25.sp,
             )
+            Spacer(StdHorzSpacer)
+            DrawPlayName(it)
         }
     }
 
@@ -1067,7 +1069,7 @@ private fun DrawAdditionalInfo(
     val pubkeyHex = remember { baseUser.pubkeyHex }
     DisplayLNAddress(lud16, pubkeyHex, accountViewModel, nav)
 
-    val identities = user.info?.latestMetadata?.identityClaims()
+    val identities = user.latestMetadata?.identityClaims()
     if (!identities.isNullOrEmpty()) {
         identities.forEach { identity: IdentityClaim ->
             Row(verticalAlignment = Alignment.CenterVertically) {

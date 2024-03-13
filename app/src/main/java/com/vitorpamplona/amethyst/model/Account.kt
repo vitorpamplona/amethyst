@@ -572,7 +572,7 @@ class Account(
         if (!isWriteable()) return
 
         MetadataEvent.updateFromPast(
-            latest = userProfile().info?.latestMetadata,
+            latest = userProfile().latestMetadata,
             name = name,
             picture = picture,
             banner = banner,

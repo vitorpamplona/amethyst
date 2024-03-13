@@ -451,16 +451,13 @@ fun AmethystTheme(
 }
 
 @Composable
-fun ThemeComparisonColumn(
-    onDark: @Composable () -> Unit,
-    onLight: @Composable () -> Unit,
-) {
+fun ThemeComparisonColumn(toPreview: @Composable () -> Unit) {
     Column {
         Box {
             val darkTheme: SharedPreferencesViewModel = viewModel()
             darkTheme.updateTheme(ThemeType.DARK)
             AmethystTheme(darkTheme) {
-                Surface(color = MaterialTheme.colorScheme.background) { onDark() }
+                Surface(color = MaterialTheme.colorScheme.background) { toPreview() }
             }
         }
 
@@ -468,23 +465,20 @@ fun ThemeComparisonColumn(
             val lightTheme: SharedPreferencesViewModel = viewModel()
             lightTheme.updateTheme(ThemeType.LIGHT)
             AmethystTheme(lightTheme) {
-                Surface(color = MaterialTheme.colorScheme.background) { onLight() }
+                Surface(color = MaterialTheme.colorScheme.background) { toPreview() }
             }
         }
     }
 }
 
 @Composable
-fun ThemeComparisonRow(
-    onDark: @Composable () -> Unit,
-    onLight: @Composable () -> Unit,
-) {
+fun ThemeComparisonRow(toPreview: @Composable () -> Unit) {
     Row {
         Box(modifier = Modifier.weight(1f)) {
             val darkTheme: SharedPreferencesViewModel = viewModel()
             darkTheme.updateTheme(ThemeType.DARK)
             AmethystTheme(darkTheme) {
-                Surface(color = MaterialTheme.colorScheme.background) { onDark() }
+                Surface(color = MaterialTheme.colorScheme.background) { toPreview() }
             }
         }
 
@@ -492,7 +486,7 @@ fun ThemeComparisonRow(
             val lightTheme: SharedPreferencesViewModel = viewModel()
             lightTheme.updateTheme(ThemeType.LIGHT)
             AmethystTheme(lightTheme) {
-                Surface(color = MaterialTheme.colorScheme.background) { onLight() }
+                Surface(color = MaterialTheme.colorScheme.background) { toPreview() }
             }
         }
     }

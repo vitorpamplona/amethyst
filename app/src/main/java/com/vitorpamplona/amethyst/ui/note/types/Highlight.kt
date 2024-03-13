@@ -144,7 +144,7 @@ private fun DisplayQuoteAuthor(
             val userMetadata by userBase.live().userMetadataInfo.observeAsState()
 
             CreateClickableTextWithEmoji(
-                clickablePart = userMetadata?.bestDisplayName() ?: userMetadata?.bestUsername() ?: userBase.pubkeyDisplayHex(),
+                clickablePart = userMetadata?.bestName() ?: userBase.pubkeyDisplayHex(),
                 maxLines = 1,
                 route = "User/${userBase.pubkeyHex}",
                 nav = nav,

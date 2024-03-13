@@ -21,162 +21,74 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.HashTagSegment
+import com.vitorpamplona.amethyst.commons.RegularTextSegment
+import com.vitorpamplona.amethyst.ui.components.HashTag
+import com.vitorpamplona.amethyst.ui.components.RenderRegular
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.quartz.events.EmptyTagList
 
-fun checkForHashtagWithIcon(
-    tag: String,
-    primary: Color,
-): HashtagIcon? {
+@Preview
+@Composable
+fun RenderHashTagIcons() {
+    val nav: (String) -> Unit = {}
+
+    ThemeComparisonColumn {
+        RenderRegular(
+            "Testing rendering of hashtags: #Bitcoin, #nostr, #lightning, #zap, #amethyst, #cashu, #plebs, #coffee, #skullofsatoshi, #grownostr, #footstr, #tunestr, #weed",
+            EmptyTagList,
+        ) { word, state ->
+            when (word) {
+                is HashTagSegment -> HashTag(word, nav)
+                is RegularTextSegment -> Text(word.segmentText)
+            }
+        }
+    }
+}
+
+fun checkForHashtagWithIcon(tag: String): HashtagIcon? {
     return when (tag.lowercase()) {
-        "₿itcoin",
-        "bitcoin",
-        "btc",
-        "timechain",
-        "bitcoiner",
-        "bitcoiners",
-        ->
-            HashtagIcon(
-                R.drawable.ht_btc,
-                "Bitcoin",
-                Color.Unspecified,
-                Modifier.padding(2.dp, 2.dp, 0.dp, 0.dp),
-            )
-        "nostr",
-        "nostrich",
-        "nostriches",
-        "thenostr",
-        ->
-            HashtagIcon(
-                R.drawable.ht_nostr,
-                "Nostr",
-                Color.Unspecified,
-                Modifier.padding(1.dp, 2.dp, 0.dp, 0.dp),
-            )
-        "lightning",
-        "lightningnetwork",
-        ->
-            HashtagIcon(
-                R.drawable.ht_lightning,
-                "Lightning",
-                Color.Unspecified,
-                Modifier.padding(1.dp, 3.dp, 0.dp, 0.dp),
-            )
-        "zap",
-        "zaps",
-        "zapper",
-        "zappers",
-        "zapping",
-        "zapped",
-        "zapathon",
-        "zapraiser",
-        "zaplife",
-        "zapchain",
-        ->
-            HashtagIcon(
-                R.drawable.zap,
-                "Zap",
-                Color.Unspecified,
-                Modifier.padding(1.dp, 3.dp, 0.dp, 0.dp),
-            )
-        "amethyst" ->
-            HashtagIcon(
-                R.drawable.amethyst,
-                "Amethyst",
-                Color.Unspecified,
-                Modifier.padding(3.dp, 2.dp, 0.dp, 0.dp),
-            )
-        "onyx" ->
-            HashtagIcon(
-                R.drawable.black_heart,
-                "Onyx",
-                Color.Unspecified,
-                Modifier.padding(1.dp, 3.dp, 0.dp, 0.dp),
-            )
-        "cashu",
-        "ecash",
-        "nut",
-        "nuts",
-        "deeznuts",
-        ->
-            HashtagIcon(
-                R.drawable.cashu,
-                "Cashu",
-                Color.Unspecified,
-                Modifier.padding(1.dp, 3.dp, 0.dp, 0.dp),
-            )
-        "plebs",
-        "pleb",
-        "plebchain",
-        ->
-            HashtagIcon(
-                R.drawable.plebs,
-                "Pleb",
-                Color.Unspecified,
-                Modifier.padding(2.dp, 2.dp, 0.dp, 1.dp),
-            )
-        "coffee",
-        "coffeechain",
-        "cafe",
-        ->
-            HashtagIcon(
-                R.drawable.coffee,
-                "Coffee",
-                Color.Unspecified,
-                Modifier.padding(2.dp, 2.dp, 0.dp, 0.dp),
-            )
-        "skullofsatoshi" ->
-            HashtagIcon(
-                R.drawable.skull,
-                "SkullofSatoshi",
-                Color.Unspecified,
-                Modifier.padding(2.dp, 1.dp, 0.dp, 0.dp),
-            )
-        "grownostr",
-        "gardening",
-        "garden",
-        ->
-            HashtagIcon(
-                R.drawable.grownostr,
-                "GrowNostr",
-                Color.Unspecified,
-                Modifier.padding(0.dp, 1.dp, 0.dp, 1.dp),
-            )
-        "footstr" ->
-            HashtagIcon(
-                R.drawable.footstr,
-                "Footstr",
-                Color.Unspecified,
-                Modifier.padding(1.dp, 1.dp, 0.dp, 0.dp),
-            )
-        "tunestr",
-        "music",
-        "nowplaying",
-        ->
-            HashtagIcon(R.drawable.tunestr, "Tunestr", primary, Modifier.padding(0.dp, 3.dp, 0.dp, 1.dp))
-        "weed",
-        "weedstr",
-        "420",
-        "cannabis",
-        "marijuana",
-        ->
-            HashtagIcon(
-                R.drawable.weed,
-                "Weed",
-                Color.Unspecified,
-                Modifier.padding(0.dp, 0.dp, 0.dp, 0.dp),
-            )
+        "₿itcoin", "bitcoin", "btc", "timechain", "bitcoiner", "bitcoiners" -> bitcoin
+        "nostr", "nostrich", "nostriches", "thenostr" -> nostr
+        "lightning", "lightningnetwork" -> lightning
+        "zap", "zaps", "zapper", "zappers", "zapping", "zapped", "zapathon", "zapraiser", "zaplife", "zapchain" -> zap
+        "amethyst" -> amethyst
+        "cashu", "ecash", "nut", "nuts", "deeznuts" -> cashu
+        "plebs", "pleb", "plebchain" -> plebs
+        "coffee", "coffeechain", "cafe" -> coffee
+        "skullofsatoshi" -> skull
+        "grownostr", "gardening", "garden" -> growstr
+        "footstr" -> footstr
+        "tunestr", "music", "nowplaying" -> tunestr
+        "weed", "weedstr", "420", "cannabis", "marijuana" -> weed
         else -> null
     }
 }
+
+val bitcoin = HashtagIcon(R.drawable.ht_btc, "Bitcoin", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
+val nostr = HashtagIcon(R.drawable.ht_nostr, "Nostr", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
+val lightning = HashtagIcon(R.drawable.lightning, "Lightning", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
+val zap = HashtagIcon(R.drawable.zap, "Zap", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
+val amethyst = HashtagIcon(R.drawable.amethyst, "Amethyst", Modifier.padding(start = 2.dp, bottom = 1.dp, top = 1.dp))
+val cashu = HashtagIcon(R.drawable.cashu, "Cashu", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
+val plebs = HashtagIcon(R.drawable.plebs, "Pleb", Modifier.padding(start = 2.dp, bottom = 1.dp, top = 1.dp))
+val coffee = HashtagIcon(R.drawable.coffee, "Coffee", Modifier.padding(start = 3.dp, bottom = 1.dp, top = 1.dp))
+val skull = HashtagIcon(R.drawable.skull, "SkullofSatoshi", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
+val growstr = HashtagIcon(R.drawable.grownostr, "GrowNostr", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
+val footstr = HashtagIcon(R.drawable.footstr, "Footstr", Modifier.padding(start = 2.dp, bottom = 1.dp, top = 1.dp))
+val tunestr = HashtagIcon(R.drawable.tunestr, "Tunestr", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
+val weed = HashtagIcon(R.drawable.weed, "Weed", Modifier.padding(start = 1.dp, bottom = 0.dp, top = 0.dp))
 
 @Immutable
 class HashtagIcon(
     val icon: Int,
     val description: String,
-    val color: Color,
-    val modifier: Modifier,
+    val modifier: Modifier = Modifier,
 )

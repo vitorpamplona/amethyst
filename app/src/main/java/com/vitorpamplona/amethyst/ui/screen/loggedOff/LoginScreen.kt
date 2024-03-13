@@ -115,10 +115,7 @@ fun LoginPage() {
     val accountViewModel: AccountStateViewModel = viewModel()
 
     ThemeComparisonRow(
-        onDark = {
-            LoginPage(accountViewModel, true) {}
-        },
-        onLight = {
+        toPreview = {
             LoginPage(accountViewModel, true) {}
         },
     )

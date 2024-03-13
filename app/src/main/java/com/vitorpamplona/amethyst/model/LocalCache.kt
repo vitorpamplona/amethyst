@@ -304,15 +304,22 @@ object LocalCache {
         return note
     }
 
-    fun consume(event: MetadataEvent) {
+    fun consume(
+        event: MetadataEvent,
+        relay: Relay?,
+    ) {
         // new event
         val oldUser = getOrCreateUser(event.pubKey)
-        if (oldUser.info == null || event.createdAt > oldUser.info!!.updatedMetadataAt) {
+        val currentMetadata = oldUser.latestMetadata
+
+        if (currentMetadata == null || event.createdAt > currentMetadata.createdAt) {
+            oldUser.latestMetadata = event
+
             val newUserMetadata = event.contactMetaData()
             if (newUserMetadata != null) {
                 oldUser.updateUserInfo(newUserMetadata, event)
             }
-            // Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex} ${oldUser.toBestDisplayName()}")
+            // Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex()} ${oldUser.toBestDisplayName()} from ${relay?.url}")
         } else {
             // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()}
             // ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
@@ -2099,7 +2106,7 @@ object LocalCache {
                 is LnZapPaymentRequestEvent -> consume(event)
                 is LnZapPaymentResponseEvent -> consume(event)
                 is LongTextNoteEvent -> consume(event, relay)
-                is MetadataEvent -> consume(event)
+                is MetadataEvent -> consume(event, relay)
                 is MuteListEvent -> consume(event, relay)
                 is NNSEvent -> comsume(event, relay)
                 is OtsEvent -> consume(event, relay)

@@ -35,6 +35,7 @@ import androidx.window.layout.DisplayFeature
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Settings
 import com.vitorpamplona.amethyst.model.ThemeType
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +53,7 @@ class SettingsState() {
     var automaticallyShowProfilePictures by mutableStateOf(ConnectivityType.ALWAYS)
     var dontShowPushNotificationSelector by mutableStateOf<Boolean>(false)
     var dontAskForNotificationPermissions by mutableStateOf<Boolean>(false)
+    var featureSet by mutableStateOf(FeatureSetType.COMPLETE)
 
     var isOnMobileData: State<Boolean> = mutableStateOf(false)
 
@@ -102,8 +104,7 @@ class SharedPreferencesViewModel : ViewModel() {
     fun init() {
         viewModelScope.launch(Dispatchers.IO) {
             val savedSettings =
-                LocalPreferences.loadSharedSettings()
-                    ?: LocalPreferences.migrateOldSharedSettings() ?: Settings()
+                LocalPreferences.loadSharedSettings() ?: Settings()
 
             sharedPrefs.theme = savedSettings.theme
             sharedPrefs.language = savedSettings.preferredLanguage
@@ -113,8 +114,8 @@ class SharedPreferencesViewModel : ViewModel() {
             sharedPrefs.automaticallyHideNavigationBars = savedSettings.automaticallyHideNavigationBars
             sharedPrefs.automaticallyShowProfilePictures = savedSettings.automaticallyShowProfilePictures
             sharedPrefs.dontShowPushNotificationSelector = savedSettings.dontShowPushNotificationSelector
-            sharedPrefs.dontAskForNotificationPermissions =
-                savedSettings.dontAskForNotificationPermissions
+            sharedPrefs.dontAskForNotificationPermissions = savedSettings.dontAskForNotificationPermissions
+            sharedPrefs.featureSet = savedSettings.featureSet
 
             updateLanguageInTheUI()
         }
@@ -181,6 +182,13 @@ class SharedPreferencesViewModel : ViewModel() {
         }
     }
 
+    fun updateFeatureSetType(newFeatureSetType: FeatureSetType) {
+        if (sharedPrefs.featureSet != newFeatureSetType) {
+            sharedPrefs.featureSet = newFeatureSetType
+            saveSharedSettings()
+        }
+    }
+
     fun dontShowPushNotificationSelector() {
         if (sharedPrefs.dontShowPushNotificationSelector == false) {
             sharedPrefs.dontShowPushNotificationSelector = true
@@ -226,6 +234,7 @@ class SharedPreferencesViewModel : ViewModel() {
                     sharedPrefs.automaticallyShowProfilePictures,
                     sharedPrefs.dontShowPushNotificationSelector,
                     sharedPrefs.dontAskForNotificationPermissions,
+                    sharedPrefs.featureSet,
                 ),
             )
         }

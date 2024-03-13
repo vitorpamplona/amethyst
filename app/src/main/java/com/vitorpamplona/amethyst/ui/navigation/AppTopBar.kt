@@ -993,7 +993,7 @@ fun debugState(context: Context) {
         "Users: " +
             LocalCache.userListCache.filter { it.liveSet != null }.size +
             " / " +
-            LocalCache.userListCache.filter { it.info?.latestMetadata != null }.size +
+            LocalCache.userListCache.filter { it.latestMetadata != null }.size +
             " / " +
             LocalCache.userListCache.size,
     )

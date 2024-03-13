@@ -35,144 +35,29 @@ object Constants {
 
     val defaultRelays =
         arrayOf(
-            // Free relays for only DMs and Follows due to the amount of spam
+            // Free relays for only DMs, Chats and Follows due to the amount of spam
+            RelaySetupInfo("wss://nostr.bitcoiner.social", read = true, write = true, feedTypes = activeTypesChats),
+            RelaySetupInfo("wss://relay.nostr.bg", read = true, write = true, feedTypes = activeTypesChats),
+            RelaySetupInfo("wss://nostr.oxtr.dev", read = true, write = true, feedTypes = activeTypesChats),
+            RelaySetupInfo("wss://nostr.orangepill.dev", read = true, write = true, feedTypes = activeTypes),
+            RelaySetupInfo("wss://nostr.fmt.wiz.biz", read = true, write = false, feedTypes = activeTypesChats),
             RelaySetupInfo("wss://relay.damus.io", read = true, write = true, feedTypes = activeTypes),
-            // Chats
-            RelaySetupInfo(
-                "wss://nostr.bitcoiner.social",
-                read = true,
-                write = true,
-                feedTypes = activeTypesChats,
-            ),
-            RelaySetupInfo(
-                "wss://relay.nostr.bg",
-                read = true,
-                write = true,
-                feedTypes = activeTypesChats,
-            ),
-            RelaySetupInfo(
-                "wss://nostr.oxtr.dev",
-                read = true,
-                write = true,
-                feedTypes = activeTypesChats,
-            ),
-            RelaySetupInfo(
-                "wss://nostr-pub.wellorder.net",
-                read = true,
-                write = true,
-                feedTypes = activeTypesChats,
-            ),
+            // Global
             RelaySetupInfo("wss://nostr.mom", read = true, write = true, feedTypes = activeTypesGlobalChats),
             RelaySetupInfo("wss://nos.lol", read = true, write = true, feedTypes = activeTypesGlobalChats),
-            // Less Reliable
-            // NewRelayListViewModel.Relay("wss://nostr.orangepill.dev", read = true, write = true,
-            // feedTypes = activeTypes),
-            // NewRelayListViewModel.Relay("wss://nostr.onsats.org", read = true, write = true, feedTypes
-            // = activeTypes),
-            // NewRelayListViewModel.Relay("wss://nostr.sandwich.farm", read = true, write = true,
-            // feedTypes = activeTypes),
-            // NewRelayListViewModel.Relay("wss://relay.nostr.ch", read = true, write = true, feedTypes =
-            // activeTypes),
-            // NewRelayListViewModel.Relay("wss://nostr.zebedee.cloud", read = true, write = true,
-            // feedTypes = activeTypes),
-            // NewRelayListViewModel.Relay("wss://nostr.rocks", read = true, write = true, feedTypes =
-            // activeTypes),
-            // NewRelayListViewModel.Relay("wss://nostr.fmt.wiz.biz", read = true, write = true, feedTypes
-            // = activeTypes),
-            // NewRelayListViewModel.Relay("wss://brb.io", read = true, write = true, feedTypes =
-            // activeTypes),
             // Paid relays
-            RelaySetupInfo(
-                "wss://relay.snort.social",
-                read = true,
-                write = false,
-                feedTypes = activeTypesGlobalChats,
-            ),
-            RelaySetupInfo(
-                "wss://relay.nostr.com.au",
-                read = true,
-                write = false,
-                feedTypes = activeTypesGlobalChats,
-            ),
-            RelaySetupInfo(
-                "wss://eden.nostr.land",
-                read = true,
-                write = false,
-                feedTypes = activeTypesGlobalChats,
-            ),
-            RelaySetupInfo(
-                "wss://nostr.milou.lol",
-                read = true,
-                write = false,
-                feedTypes = activeTypesGlobalChats,
-            ),
-            RelaySetupInfo(
-                "wss://puravida.nostr.land",
-                read = true,
-                write = false,
-                feedTypes = activeTypesGlobalChats,
-            ),
-            RelaySetupInfo(
-                "wss://nostr.wine",
-                read = true,
-                write = false,
-                feedTypes = activeTypesGlobalChats,
-            ),
-            RelaySetupInfo(
-                "wss://nostr.inosta.cc",
-                read = true,
-                write = false,
-                feedTypes = activeTypesGlobalChats,
-            ),
-            RelaySetupInfo(
-                "wss://atlas.nostr.land",
-                read = true,
-                write = false,
-                feedTypes = activeTypesGlobalChats,
-            ),
-            RelaySetupInfo(
-                "wss://relay.orangepill.dev",
-                read = true,
-                write = false,
-                feedTypes = activeTypesGlobalChats,
-            ),
-            RelaySetupInfo(
-                "wss://relay.nostrati.com",
-                read = true,
-                write = false,
-                feedTypes = activeTypesGlobalChats,
-            ),
+            RelaySetupInfo("wss://nostr.wine", read = true, write = false, feedTypes = activeTypesGlobalChats),
             // Supporting NIP-50
-            RelaySetupInfo(
-                "wss://relay.nostr.band",
-                read = true,
-                write = false,
-                feedTypes = activeTypesSearch,
-            ),
+            RelaySetupInfo("wss://relay.nostr.band", read = true, write = false, feedTypes = activeTypesSearch),
             RelaySetupInfo("wss://nostr.wine", read = true, write = false, feedTypes = activeTypesSearch),
-            RelaySetupInfo(
-                "wss://relay.noswhere.com",
-                read = true,
-                write = false,
-                feedTypes = activeTypesSearch,
-            ),
+            RelaySetupInfo("wss://relay.noswhere.com", read = true, write = false, feedTypes = activeTypesSearch),
         )
 
     val forcedRelayForSearch =
         arrayOf(
-            RelaySetupInfo(
-                "wss://relay.nostr.band",
-                read = true,
-                write = false,
-                feedTypes = activeTypesSearch,
-            ),
+            RelaySetupInfo("wss://relay.nostr.band", read = true, write = false, feedTypes = activeTypesSearch),
             RelaySetupInfo("wss://nostr.wine", read = true, write = false, feedTypes = activeTypesSearch),
-            RelaySetupInfo(
-                "wss://relay.noswhere.com",
-                read = true,
-                write = false,
-                feedTypes = activeTypesSearch,
-            ),
+            RelaySetupInfo("wss://relay.noswhere.com", read = true, write = false, feedTypes = activeTypesSearch),
         )
     val forcedRelaysForSearchSet = forcedRelayForSearch.map { it.url }
 }

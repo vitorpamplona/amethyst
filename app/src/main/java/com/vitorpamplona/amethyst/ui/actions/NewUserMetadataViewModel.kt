@@ -68,7 +68,7 @@ class NewUserMetadataViewModel : ViewModel() {
 
         account.userProfile().let {
             // userName.value = it.bestUsername() ?: ""
-            displayName.value = it.bestDisplayName() ?: ""
+            displayName.value = it.info?.bestName() ?: ""
             about.value = it.info?.about ?: ""
             picture.value = it.info?.picture ?: ""
             banner.value = it.info?.banner ?: ""
@@ -82,7 +82,7 @@ class NewUserMetadataViewModel : ViewModel() {
             mastodon.value = ""
 
             // TODO: Validate Telegram input, somehow.
-            it.info?.latestMetadata?.identityClaims()?.forEach {
+            it.latestMetadata?.identityClaims()?.forEach {
                 when (it) {
                     is TwitterIdentity -> twitter.value = it.toProofUrl()
                     is GitHubIdentity -> github.value = it.toProofUrl()

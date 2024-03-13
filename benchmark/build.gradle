@@ -56,6 +56,8 @@ dependencies {
     androidTestImplementation project(path: ':quartz')
     androidTestImplementation project(path: ':commons')
 
+    androidTestImplementation libs.androidx.compose.foundation
+
     // Add your dependencies here. Note that you cannot benchmark code
     // in an app module this way - you will need to move any code you
     // want to benchmark to a library module:

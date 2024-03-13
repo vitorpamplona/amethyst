@@ -35,7 +35,7 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
     fun createUserMetadataFilter(): List<TypedFilter>? {
         if (usersToWatch.isEmpty()) return null
 
-        val firstTimers = usersToWatch.filter { it.info?.latestMetadata == null }.map { it.pubkeyHex }
+        val firstTimers = usersToWatch.filter { it.latestMetadata == null }.map { it.pubkeyHex }
 
         if (firstTimers.isEmpty()) return null
 
@@ -54,7 +54,7 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
     fun createUserMetadataStatusReportFilter(): List<TypedFilter>? {
         if (usersToWatch.isEmpty()) return null
 
-        val secondTimers = usersToWatch.filter { it.info?.latestMetadata != null }
+        val secondTimers = usersToWatch.filter { it.latestMetadata != null }
 
         if (secondTimers.isEmpty()) return null
 
@@ -91,7 +91,7 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
             checkNotInMainThread()
 
             usersToWatch.forEach {
-                if (it.info?.latestMetadata != null) {
+                if (it.latestMetadata != null) {
                     val eose = it.latestEOSEs[relayUrl]
                     if (eose == null) {
                         it.latestEOSEs = it.latestEOSEs + Pair(relayUrl, EOSETime(time))

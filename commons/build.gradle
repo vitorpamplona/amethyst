@@ -32,6 +32,14 @@ android {
         jvmTarget = '17'
         freeCompilerArgs += "-Xstring-concat=inline"
     }
+
+    buildFeatures {
+        compose true
+    }
+    composeOptions {
+        // Should match compose version : https://developer.android.com/jetpack/androidx/releases/compose-kotlin
+        kotlinCompilerExtensionVersion "1.5.8"
+    }
 }
 
 dependencies {
@@ -40,6 +48,10 @@ dependencies {
     // Import @Immutable and @Stable
     implementation platform(libs.androidx.compose.bom)
     implementation libs.androidx.ui
+    implementation libs.androidx.compose.foundation
+
+    debugImplementation libs.androidx.ui.tooling
+    implementation libs.androidx.ui.tooling.preview
 
     // immutable collections to avoid recomposition
     api libs.kotlinx.collections.immutable

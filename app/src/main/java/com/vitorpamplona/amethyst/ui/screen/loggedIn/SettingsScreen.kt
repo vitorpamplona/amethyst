@@ -47,9 +47,11 @@ import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.ConnectivityType
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
+import com.vitorpamplona.amethyst.model.parseFeatureSetType
 import com.vitorpamplona.amethyst.model.parseThemeType
 import com.vitorpamplona.amethyst.ui.components.PushNotificationSettingsRow
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
@@ -141,6 +143,12 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
             TitleExplainer(stringResource(ConnectivityType.NEVER.resourceId)),
         )
 
+    val featureItems =
+        persistentListOf(
+            TitleExplainer(stringResource(FeatureSetType.COMPLETE.resourceId)),
+            TitleExplainer(stringResource(FeatureSetType.SIMPLIFIED.resourceId)),
+        )
+
     val showImagesIndex = sharedPreferencesViewModel.sharedPrefs.automaticallyShowImages.screenCode
     val videoIndex = sharedPreferencesViewModel.sharedPrefs.automaticallyStartPlayback.screenCode
     val linkIndex = sharedPreferencesViewModel.sharedPrefs.automaticallyShowUrlPreview.screenCode
@@ -155,6 +163,9 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
     val languageEntries = remember { context.getLangPreferenceDropdownEntries() }
     val languageList = remember { languageEntries.keys.map { TitleExplainer(it) }.toImmutableList() }
     val languageIndex = getLanguageIndex(languageEntries, sharedPreferencesViewModel)
+
+    val featureSetIndex =
+        sharedPreferencesViewModel.sharedPrefs.featureSet.screenCode
 
     Column(
         Modifier.fillMaxSize()
@@ -233,6 +244,17 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
             hideNavBarsIndex,
         ) {
             sharedPreferencesViewModel.updateAutomaticallyHideNavBars(parseBooleanType(it))
+        }
+
+        Spacer(modifier = HalfVertSpacer)
+
+        SettingsRow(
+            R.string.ui_style,
+            R.string.ui_style_description,
+            featureItems,
+            featureSetIndex,
+        ) {
+            sharedPreferencesViewModel.updateFeatureSetType(parseFeatureSetType(it))
         }
 
         Spacer(modifier = HalfVertSpacer)

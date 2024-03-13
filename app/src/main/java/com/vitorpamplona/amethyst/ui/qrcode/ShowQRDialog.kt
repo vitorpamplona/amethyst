@@ -59,7 +59,6 @@ import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.events.UserMetadata
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
 
 @Preview
 @Composable
@@ -134,8 +133,8 @@ fun ShowQRDialog(
                                 modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
                             ) {
                                 CreateTextWithEmoji(
-                                    text = user.bestDisplayName() ?: user.bestUsername() ?: "",
-                                    tags = user.info?.latestMetadata?.tags?.toImmutableListOfLists(),
+                                    text = user.info?.bestName() ?: "",
+                                    tags = user.info?.tags,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 18.sp,
                                 )

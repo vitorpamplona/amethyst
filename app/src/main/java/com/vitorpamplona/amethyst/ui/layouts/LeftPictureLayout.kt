@@ -57,10 +57,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 @Composable
 @Preview
 fun LeftPictureLayoutPreview() {
-    ThemeComparisonColumn(
-        onDark = { LeftPictureLayoutPreviewCard() },
-        onLight = { LeftPictureLayoutPreviewCard() },
-    )
+    ThemeComparisonColumn { LeftPictureLayoutPreviewCard() }
 }
 
 @Composable

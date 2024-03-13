@@ -34,6 +34,7 @@ data class Settings(
     val automaticallyShowProfilePictures: ConnectivityType = ConnectivityType.ALWAYS,
     val dontShowPushNotificationSelector: Boolean = false,
     val dontAskForNotificationPermissions: Boolean = false,
+    val featureSet: FeatureSetType = FeatureSetType.COMPLETE,
 )
 
 enum class ThemeType(val screenCode: Int, val resourceId: Int) {
@@ -59,6 +60,11 @@ enum class ConnectivityType(val prefCode: Boolean?, val screenCode: Int, val res
     NEVER(false, 2, R.string.connectivity_type_never),
 }
 
+enum class FeatureSetType(val screenCode: Int, val resourceId: Int) {
+    COMPLETE(0, R.string.ui_feature_set_type_complete),
+    SIMPLIFIED(1, R.string.ui_feature_set_type_simplified),
+}
+
 fun parseConnectivityType(code: Boolean?): ConnectivityType {
     return when (code) {
         ConnectivityType.ALWAYS.prefCode -> ConnectivityType.ALWAYS
@@ -77,6 +83,16 @@ fun parseConnectivityType(screenCode: Int): ConnectivityType {
         ConnectivityType.NEVER.screenCode -> ConnectivityType.NEVER
         else -> {
             ConnectivityType.ALWAYS
+        }
+    }
+}
+
+fun parseFeatureSetType(screenCode: Int): FeatureSetType {
+    return when (screenCode) {
+        FeatureSetType.COMPLETE.screenCode -> FeatureSetType.COMPLETE
+        FeatureSetType.SIMPLIFIED.screenCode -> FeatureSetType.SIMPLIFIED
+        else -> {
+            FeatureSetType.COMPLETE
         }
     }
 }

@@ -206,7 +206,7 @@ fun ProfileContent(
         profilePubHex = baseAccountUser.pubkeyHex,
         profileBanner = userInfo?.banner,
         profilePicture = userInfo?.profilePicture(),
-        bestDisplayName = userInfo?.bestDisplayName(),
+        bestDisplayName = userInfo?.bestName(),
         tags = userInfo?.tags,
         modifier = modifier,
         accountViewModel = accountViewModel,
