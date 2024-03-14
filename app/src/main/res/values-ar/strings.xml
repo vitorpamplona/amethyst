@@ -495,4 +495,14 @@
     <string name="classifieds_category_other">أخرى</string>
     <string name="failed_to_upload_media_no_details">فشل في تحميل الوسائط</string>
     <string name="failed_to_upload_media">خطأ في التحميل: %1$s</string>
+    <string name="login_with_qr_code">تسجيل الدخول بواسطة رمز الQR</string>
+    <string name="route_home">الصفحة الرئيسية</string>
+    <string name="route_search">البحث</string>
+    <string name="route_messages">الرسائل</string>
+    <string name="route_security_filters">مرشحات الأمان</string>
+    <string name="new_community_note">منشور جديد للمجتمع</string>
+    <string name="open_all_reactions_to_this_post">فتح جميع ردود الفعل على هذا المنشور</string>
+    <string name="close_all_reactions_to_this_post">إغلاق جميع ردود الفعل على هذا المنشور</string>
+    <string name="reply_description">الرد</string>
+    <string name="accessibility_scan_qr_code">مسح رمز ال QR</string>
 </resources>
