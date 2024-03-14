@@ -175,7 +175,7 @@ val ZeroPadding = PaddingValues(0.dp)
 val FeedPadding = PaddingValues(top = 10.dp, bottom = 10.dp)
 val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
 
-val ChatPaddingInnerQuoteModifier = Modifier.padding(top = 10.dp, end = 5.dp)
+val ChatPaddingInnerQuoteModifier = Modifier.padding(top = 10.dp)
 val ChatPaddingModifier =
     Modifier.fillMaxWidth(1f)
         .padding(
@@ -228,3 +228,6 @@ val liveStreamTag =
         .clip(SmallBorder)
         .background(Color.Black)
         .padding(horizontal = Size5dp)
+
+val chatAuthorImage = Modifier.size(20.dp).clip(shape = CircleShape)
+val AuthorInfoVideoFeed = Modifier.width(75.dp)

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -33,7 +34,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -41,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -51,7 +52,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
@@ -66,7 +66,6 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -84,10 +83,9 @@ import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.chatAuthorImage
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
@@ -306,12 +304,16 @@ fun NormalChatNote(
 
             val modif2 = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier
 
+            val showDetails = remember { mutableStateOf(false) }
+
             val clickableModifier =
                 remember {
                     Modifier.combinedClickable(
                         onClick = {
                             if (note.event is ChannelCreateEvent) {
                                 nav("Channel/${note.idHex}")
+                            } else {
+                                showDetails.value = !showDetails.value
                             }
                         },
                         onLongClick = { popupExpanded = true },
@@ -341,6 +343,7 @@ fun NormalChatNote(
                         onWantsToReply,
                         canPreview,
                         availableBubbleSize,
+                        showDetails,
                         accountViewModel,
                         nav,
                     )
@@ -367,6 +370,7 @@ private fun RenderBubble(
     onWantsToReply: (Note) -> Unit,
     canPreview: Boolean,
     availableBubbleSize: MutableState<Int>,
+    showDetails: State<Boolean>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -375,12 +379,13 @@ private fun RenderBubble(
     val bubbleModifier =
         remember {
             Modifier
-                .padding(start = 10.dp, end = 5.dp, bottom = 5.dp)
+                .padding(start = 10.dp, end = 10.dp, bottom = 5.dp)
                 .onSizeChanged {
                     if (bubbleSize.intValue != it.width) {
                         bubbleSize.intValue = it.width
                     }
                 }
+                .animateContentSize()
         }
 
     Column(modifier = bubbleModifier) {
@@ -388,14 +393,15 @@ private fun RenderBubble(
             drawAuthorInfo,
             baseNote,
             alignment,
-            nav,
+            availableBubbleSize,
             innerQuote,
             backgroundBubbleColor,
-            accountViewModel,
+            bubbleSize,
             onWantsToReply,
             canPreview,
-            bubbleSize,
-            availableBubbleSize,
+            showDetails,
+            accountViewModel,
+            nav,
         )
     }
 }
@@ -405,14 +411,15 @@ private fun MessageBubbleLines(
     drawAuthorInfo: Boolean,
     baseNote: Note,
     alignment: Arrangement.Horizontal,
-    nav: (String) -> Unit,
+    availableBubbleSize: MutableState<Int>,
     innerQuote: Boolean,
     backgroundBubbleColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
+    bubbleSize: MutableState<Int>,
     onWantsToReply: (Note) -> Unit,
     canPreview: Boolean,
-    bubbleSize: MutableState<Int>,
-    availableBubbleSize: MutableState<Int>,
+    showDetails: State<Boolean>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
     if (drawAuthorInfo) {
         DrawAuthorInfo(
@@ -421,8 +428,6 @@ private fun MessageBubbleLines(
             accountViewModel.settings.showProfilePictures.value,
             nav,
         )
-    } else {
-        Spacer(modifier = StdVertSpacer)
     }
 
     RenderReplyRow(
@@ -442,32 +447,34 @@ private fun MessageBubbleLines(
         nav = nav,
     )
 
-    ConstrainedStatusRow(
-        bubbleSize = bubbleSize,
-        availableBubbleSize = availableBubbleSize,
-        firstColumn = {
-            IncognitoBadge(baseNote)
-            ChatTimeAgo(baseNote)
-            RelayBadgesHorizontal(baseNote, accountViewModel, nav = nav)
-            Spacer(modifier = DoubleHorzSpacer)
-        },
-        secondColumn = {
-            LikeReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
-            Spacer(modifier = StdHorzSpacer)
-            ZapReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
-            Spacer(modifier = DoubleHorzSpacer)
-            ReplyReaction(
-                baseNote = baseNote,
-                grayTint = MaterialTheme.colorScheme.placeholderText,
-                accountViewModel = accountViewModel,
-                showCounter = false,
-                iconSizeModifier = Size15Modifier,
-            ) {
-                onWantsToReply(baseNote)
-            }
-            Spacer(modifier = StdHorzSpacer)
-        },
-    )
+    if (showDetails.value || baseNote.zaps.isNotEmpty() || baseNote.zapPayments.isNotEmpty() || baseNote.reactions.isNotEmpty()) {
+        ConstrainedStatusRow(
+            bubbleSize = bubbleSize,
+            availableBubbleSize = availableBubbleSize,
+            firstColumn = {
+                IncognitoBadge(baseNote)
+                ChatTimeAgo(baseNote)
+                RelayBadgesHorizontal(baseNote, accountViewModel, nav = nav)
+                Spacer(modifier = DoubleHorzSpacer)
+            },
+            secondColumn = {
+                LikeReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
+                Spacer(modifier = StdHorzSpacer)
+                ZapReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
+                Spacer(modifier = DoubleHorzSpacer)
+                ReplyReaction(
+                    baseNote = baseNote,
+                    grayTint = MaterialTheme.colorScheme.placeholderText,
+                    accountViewModel = accountViewModel,
+                    showCounter = false,
+                    iconSizeModifier = Size15Modifier,
+                ) {
+                    onWantsToReply(baseNote)
+                }
+                Spacer(modifier = StdHorzSpacer)
+            },
+        )
+    }
 }
 
 @Composable
@@ -479,9 +486,7 @@ private fun RenderReplyRow(
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit,
 ) {
-    val hasReply by remember { derivedStateOf { !innerQuote && note.replyTo?.lastOrNull() != null } }
-
-    if (hasReply) {
+    if (!innerQuote && note.replyTo?.lastOrNull() != null) {
         RenderReply(note, backgroundBubbleColor, accountViewModel, nav, onWantsToReply)
     }
 }
@@ -504,8 +509,8 @@ private fun RenderReply(
 
         replyTo.value?.let { note ->
             ChatroomMessageCompose(
-                note,
-                null,
+                baseNote = note,
+                routeForLastRead = null,
                 innerQuote = true,
                 parentBackgroundColor = backgroundBubbleColor,
                 accountViewModel = accountViewModel,
@@ -525,7 +530,7 @@ private fun NoteRow(
     nav: (String) -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        when (remember(note) { note.event }) {
+        when (note.event) {
             is ChannelCreateEvent -> {
                 RenderCreateChannelNote(note)
             }
@@ -719,23 +724,20 @@ private fun DrawAuthorInfo(
     loadProfilePicture: Boolean,
     nav: (String) -> Unit,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = alignment,
-        modifier = Modifier.padding(top = Size10dp),
-    ) {
-        DisplayAndWatchNoteAuthor(baseNote, loadProfilePicture, nav)
+    baseNote.author?.let {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = alignment,
+            modifier =
+                Modifier
+                    .padding(top = Size10dp)
+                    .clickable {
+                        nav("User/${baseNote.author?.pubkeyHex}")
+                    },
+        ) {
+            WatchAndDisplayUser(it, loadProfilePicture, nav)
+        }
     }
-}
-
-@Composable
-private fun DisplayAndWatchNoteAuthor(
-    baseNote: Note,
-    loadProfilePicture: Boolean,
-    nav: (String) -> Unit,
-) {
-    val author = remember { baseNote.author }
-    author?.let { WatchAndDisplayUser(it, loadProfilePicture, nav) }
 }
 
 @Composable
@@ -744,16 +746,14 @@ private fun WatchAndDisplayUser(
     loadProfilePicture: Boolean,
     nav: (String) -> Unit,
 ) {
-    val route = "User/${author.pubkeyHex}"
-
     val userState by author.live().userMetadataInfo.observeAsState()
 
-    UserIcon(author.pubkeyHex, userState?.picture, loadProfilePicture, nav, route)
+    UserIcon(author.pubkeyHex, userState?.picture, loadProfilePicture)
 
-    userState?.let {
-        it.bestName()?.let { name ->
-            DisplayMessageUsername(name, it.tags, route, nav)
-        }
+    if (userState != null) {
+        DisplayMessageUsername(userState?.bestName() ?: author.pubkeyDisplayHex(), userState?.tags ?: EmptyTagList)
+    } else {
+        DisplayMessageUsername(author.pubkeyDisplayHex(), EmptyTagList)
     }
 }
 
@@ -762,40 +762,26 @@ private fun UserIcon(
     pubkeyHex: String,
     userProfilePicture: String?,
     loadProfilePicture: Boolean,
-    nav: (String) -> Unit,
-    route: String,
 ) {
     RobohashFallbackAsyncImage(
         robot = pubkeyHex,
         model = userProfilePicture,
         contentDescription = stringResource(id = R.string.profile_image),
         loadProfilePicture = loadProfilePicture,
-        modifier =
-            remember {
-                Modifier
-                    .width(Size25dp)
-                    .height(Size25dp)
-                    .clip(shape = CircleShape)
-                    .clickable(onClick = { nav(route) })
-            },
+        modifier = chatAuthorImage,
     )
 }
 
 @Composable
 private fun DisplayMessageUsername(
     userDisplayName: String,
-    userTags: ImmutableListOfLists<String>?,
-    route: String,
-    nav: (String) -> Unit,
+    userTags: ImmutableListOfLists<String>,
 ) {
     Spacer(modifier = StdHorzSpacer)
-    CreateClickableTextWithEmoji(
-        clickablePart = userDisplayName,
-        maxLines = 1,
+    CreateTextWithEmoji(
+        text = userDisplayName,
         tags = userTags,
+        maxLines = 1,
         fontWeight = FontWeight.Bold,
-        overrideColor = MaterialTheme.colorScheme.onBackground,
-        route = route,
-        nav = nav,
     )
 }
