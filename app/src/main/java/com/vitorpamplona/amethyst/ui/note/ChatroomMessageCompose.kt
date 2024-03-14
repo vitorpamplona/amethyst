@@ -304,7 +304,10 @@ fun NormalChatNote(
 
             val modif2 = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier
 
-            val showDetails = remember { mutableStateOf(false) }
+            val showDetails =
+                remember {
+                    mutableStateOf(note.zaps.isNotEmpty() || note.zapPayments.isNotEmpty() || note.reactions.isNotEmpty())
+                }
 
             val clickableModifier =
                 remember {
@@ -447,7 +450,7 @@ private fun MessageBubbleLines(
         nav = nav,
     )
 
-    if (showDetails.value || baseNote.zaps.isNotEmpty() || baseNote.zapPayments.isNotEmpty() || baseNote.reactions.isNotEmpty()) {
+    if (showDetails.value) {
         ConstrainedStatusRow(
             bubbleSize = bubbleSize,
             availableBubbleSize = availableBubbleSize,
