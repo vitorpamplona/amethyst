@@ -208,6 +208,7 @@ fun PrepareChannelViewModels(
     val channelScreenModel: NewPostViewModel = viewModel()
     channelScreenModel.accountViewModel = accountViewModel
     channelScreenModel.account = accountViewModel.account
+    channelScreenModel.originalNote = LocalCache.getNoteIfExists(baseChannel.idHex)
 
     ChannelScreen(
         channel = baseChannel,

@@ -115,7 +115,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.HalfEndPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
@@ -1125,6 +1127,18 @@ fun DisplayDraft() {
         color = MaterialTheme.colorScheme.placeholderText,
         maxLines = 1,
         modifier = HalfStartPadding,
+    )
+}
+
+@Composable
+fun DisplayDraftChat() {
+    Text(
+        "Draft",
+        color = MaterialTheme.colorScheme.placeholderText,
+        modifier = HalfEndPadding,
+        fontWeight = FontWeight.Bold,
+        fontSize = Font12SP,
+        maxLines = 1,
     )
 }
 

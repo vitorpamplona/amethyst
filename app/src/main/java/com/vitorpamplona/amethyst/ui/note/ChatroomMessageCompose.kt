@@ -455,6 +455,9 @@ private fun MessageBubbleLines(
             bubbleSize = bubbleSize,
             availableBubbleSize = availableBubbleSize,
             firstColumn = {
+                if (baseNote.isDraft()) {
+                    DisplayDraftChat()
+                }
                 IncognitoBadge(baseNote)
                 ChatTimeAgo(baseNote)
                 RelayBadgesHorizontal(baseNote, accountViewModel, nav = nav)
