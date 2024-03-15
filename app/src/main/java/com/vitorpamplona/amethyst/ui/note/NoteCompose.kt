@@ -115,9 +115,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
+import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
@@ -131,10 +131,10 @@ import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.boostedNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.channelNotePictureModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
-import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.normalNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.normalWithTopMarginNoteModifier
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyBackground
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
@@ -1113,11 +1113,6 @@ fun SecondUserInfoRow(
             DisplayPoW(pow)
         }
 
-        if (note.isDraft()) {
-            Spacer(StdHorzSpacer)
-            DisplayDraft()
-        }
-
         DisplayOts(note, accountViewModel)
     }
 }
@@ -1126,10 +1121,10 @@ fun SecondUserInfoRow(
 fun DisplayDraft() {
     Text(
         "Draft",
-        color = MaterialTheme.colorScheme.lessImportantLink,
-        fontSize = Font14SP,
         fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.placeholderText,
         maxLines = 1,
+        modifier = HalfStartPadding,
     )
 }
 
@@ -1173,6 +1168,11 @@ fun FirstUserInfoRow(
             (editState.value as? GenericLoadable.Loaded<EditState>)?.loaded?.let {
                 DisplayEditStatus(it)
             }
+        }
+
+        if (baseNote.isDraft()) {
+            Spacer(StdHorzSpacer)
+            DisplayDraft()
         }
 
         TimeAgo(baseNote)
