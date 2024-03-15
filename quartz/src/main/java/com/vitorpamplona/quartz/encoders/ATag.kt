@@ -69,6 +69,15 @@ data class ATag(val kind: Int, val pubKeyHex: String, val dTag: String, val rela
             }
         }
 
+        fun parseAtagUnckecked(atag: String): ATag? {
+            return try {
+                val parts = atag.split(":")
+                ATag(parts[0].toInt(), parts[1], parts[2], null)
+            } catch (t: Throwable) {
+                null
+            }
+        }
+
         fun parseNAddr(naddr: String): ATag? {
             try {
                 val key = naddr.removePrefix("nostr:")

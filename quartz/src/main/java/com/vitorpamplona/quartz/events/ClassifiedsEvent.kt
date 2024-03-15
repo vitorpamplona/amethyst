@@ -52,6 +52,26 @@ class ClassifiedsEvent(
 
     fun location() = tags.firstOrNull { it.size > 1 && it[0] == "location" }?.get(1)
 
+    fun isWellFormed(): Boolean {
+        var hasImage = false
+        var hasTitle = false
+        var hasPrice = false
+
+        tags.forEach {
+            if (it.size > 1) {
+                if (it[0] == "image") {
+                    hasImage = true
+                } else if (it[0] == "title") {
+                    hasTitle = true
+                } else if (it[0] == "price") {
+                    hasPrice = true
+                }
+            }
+        }
+
+        return hasImage && hasPrice && hasTitle
+    }
+
     fun publishedAt() =
         try {
             tags.firstOrNull { it.size > 1 && it[0] == "published_at" }?.get(1)?.toLongOrNull()
