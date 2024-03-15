@@ -107,8 +107,6 @@ private object PrefKeys {
     const val LOGIN_WITH_EXTERNAL_SIGNER = "login_with_external_signer"
     const val AUTOMATICALLY_SHOW_PROFILE_PICTURE = "automatically_show_profile_picture"
     const val SIGNER_PACKAGE_NAME = "signer_package_name"
-    const val NEW_POST_DRAFT = "draft_new_post"
-    const val DRAFT_REPLY_POST = "draft_reply_post"
     const val HAS_DONATED_IN_VERSION = "has_donated_in_version"
     const val PENDING_ATTESTATIONS = "pending_attestations"
 
@@ -394,38 +392,6 @@ object LocalPreferences {
                 return@withContext account
             }
         }
-
-    fun saveDraft(
-        message: String,
-        replyPost: String?,
-        account: Account,
-    ) {
-        val prefs = encryptedPreferences(account.keyPair.pubKey.toNpub())
-        with(prefs.edit()) {
-            putString(PrefKeys.NEW_POST_DRAFT, message)
-            putString(PrefKeys.DRAFT_REPLY_POST, replyPost)
-            apply()
-        }
-    }
-
-    fun loadReplyDraft(account: Account): String? {
-        val prefs = encryptedPreferences(account.keyPair.pubKey.toNpub())
-        return prefs.getString(PrefKeys.DRAFT_REPLY_POST, null)
-    }
-
-    fun loadDraft(account: Account): String? {
-        val prefs = encryptedPreferences(account.keyPair.pubKey.toNpub())
-        return prefs.getString(PrefKeys.NEW_POST_DRAFT, null)
-    }
-
-    fun clearDraft(account: Account) {
-        val prefs = encryptedPreferences(account.keyPair.pubKey.toNpub())
-        with(prefs.edit()) {
-            remove(PrefKeys.DRAFT_REPLY_POST)
-            remove(PrefKeys.NEW_POST_DRAFT)
-            apply()
-        }
-    }
 
     suspend fun innerLoadCurrentAccountFromEncryptedStorage(npub: String?): Account? =
         withContext(Dispatchers.IO) {

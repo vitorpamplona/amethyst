@@ -263,7 +263,7 @@ class Relay(
                 val subscriptionId = msgArray.get(1).asText()
                 val event = Event.fromJson(msgArray.get(2))
 
-                Log.w("Relay", "Relay onEVENT ${event.kind} $url, $subscriptionId ${msgArray.get(2)}")
+                // Log.w("Relay", "Relay onEVENT ${event.kind} $url, $subscriptionId ${msgArray.get(2)}")
                 listeners.forEach {
                     it.onEvent(
                         this@Relay,

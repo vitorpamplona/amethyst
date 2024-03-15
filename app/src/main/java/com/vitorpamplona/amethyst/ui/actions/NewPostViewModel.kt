@@ -35,7 +35,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fonfon.kgeohash.toGeoHash
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.RichTextParser
 import com.vitorpamplona.amethyst.commons.insertUrlAtCursor
 import com.vitorpamplona.amethyst.model.Account
@@ -229,13 +228,6 @@ open class NewPostViewModel() : ViewModel() {
         forwardZapTo = Split()
         forwardZapToEditting = TextFieldValue("")
 
-        viewModelScope.launch(Dispatchers.IO) {
-            val draft = loadDraft()
-            if (draft != null) {
-                message = TextFieldValue(draft)
-                updateMessage(message)
-            }
-        }
         quote?.let {
             message = TextFieldValue(message.text + "\nnostr:${it.toNEvent()}")
             urlPreview = findUrlInMessage()
@@ -685,7 +677,7 @@ open class NewPostViewModel() : ViewModel() {
         originalNote = null
 
         viewModelScope.launch(Dispatchers.IO) {
-            clearDraft()
+            accountViewModel?.deleteDraft(draftTag)
         }
 
         NostrSearchEventOrUserDataSource.clear()
@@ -705,16 +697,6 @@ open class NewPostViewModel() : ViewModel() {
 
     open fun saveDraft() {
         sendPost(localDraft = draftTag)
-    }
-
-    open fun loadDraft(): String? {
-        account?.let { return LocalPreferences.loadDraft(it) }
-
-        return null
-    }
-
-    open fun clearDraft() {
-        account?.let { LocalPreferences.clearDraft(it) }
     }
 
     open fun updateMessage(it: TextFieldValue) {

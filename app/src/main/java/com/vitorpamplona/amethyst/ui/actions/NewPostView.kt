@@ -64,7 +64,6 @@ import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -125,10 +124,8 @@ import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.RichTextParser
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
@@ -204,17 +201,7 @@ fun NewPostView(
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
-            val replyDraft = LocalPreferences.loadReplyDraft(accountViewModel.account)
-            if (replyDraft.isNullOrBlank()) {
-                postViewModel.load(accountViewModel, baseReplyTo, quote, fork, version)
-            } else {
-                val note = LocalCache.checkGetOrCreateNote(replyDraft)
-                if (note == null) {
-                    postViewModel.load(accountViewModel, baseReplyTo, quote, fork, version)
-                } else {
-                    postViewModel.load(accountViewModel, note, quote, fork, version)
-                }
-            }
+            postViewModel.load(accountViewModel, baseReplyTo, quote, fork, version)
 
             postViewModel.imageUploadingError.collect { error ->
                 withContext(Dispatchers.Main) { Toast.makeText(context, error, Toast.LENGTH_SHORT).show() }

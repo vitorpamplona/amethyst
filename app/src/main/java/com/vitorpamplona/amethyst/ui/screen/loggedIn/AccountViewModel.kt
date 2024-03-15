@@ -1318,6 +1318,11 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
             }
         }
     }
+
+    suspend fun deleteDraft(draftTag: String) {
+        val notes = LocalCache.draftNotes(draftTag)
+        account.delete(notes)
+    }
 }
 
 class HasNotificationDot(bottomNavigationItems: ImmutableList<Route>) {

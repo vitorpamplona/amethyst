@@ -26,13 +26,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -40,7 +38,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -52,12 +49,9 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -83,26 +77,19 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.service.relays.RelayPoolStatus
-import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
-import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -479,16 +466,7 @@ fun ListContent(
         mutableStateOf<String?>(null)
     }
 
-    var showDraft by remember { mutableStateOf(false) }
     var wantsToPost by remember { mutableStateOf(false) }
-
-    LaunchedEffect(drawerState.isOpen) {
-        if (drawerState.isOpen) {
-            launch(Dispatchers.IO) {
-                draftText = LocalPreferences.loadDraft(accountViewModel.account)
-            }
-        }
-    }
 
     Column(
         modifier =
@@ -566,18 +544,6 @@ fun ListContent(
             },
         )
 
-        draftText?.let {
-            IconRow(
-                title = stringResource(R.string.edit_draft),
-                icon = R.drawable.ic_lists,
-                tint = MaterialTheme.colorScheme.onBackground,
-                onClick = {
-                    coroutineScope.launch { drawerState.close() }
-                    showDraft = true
-                },
-            )
-        }
-
         NavigationRow(
             title = stringResource(R.string.settings),
             icon = Route.Settings.icon,
@@ -634,24 +600,6 @@ fun ListContent(
         )
     }
 
-    if (showDraft) {
-        EditDraftDialog(
-            {
-                draftText = null
-                showDraft = false
-            },
-            {
-                coroutineScope.launch(Dispatchers.IO) {
-                    LocalPreferences.saveDraft(it, null, accountViewModel.account)
-                    draftText = null
-                    showDraft = false
-                    wantsToPost = true
-                }
-            },
-            draftText!!,
-        )
-    }
-
     if (disconnectTorDialog) {
         AlertDialog(
             title = { Text(text = stringResource(R.string.do_you_really_want_to_disable_tor_title)) },
@@ -676,62 +624,6 @@ fun ListContent(
                 }
             },
         )
-    }
-}
-
-@Composable
-fun EditDraftDialog(
-    onClose: () -> Unit,
-    onPost: (String) -> Unit,
-    draftText: String,
-) {
-    var message by remember {
-        mutableStateOf(TextFieldValue(draftText))
-    }
-    Dialog(
-        onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier.padding(10.dp),
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    CloseButton(onPress = { onClose() })
-                    PostButton(isActive = true, onPost = { onPost(message.text) })
-                }
-
-                Column(
-                    modifier = Modifier.padding(8.dp),
-                ) {
-                    OutlinedTextField(
-                        value = message,
-                        onValueChange = { message = it },
-                        keyboardOptions =
-                            KeyboardOptions.Default.copy(
-                                capitalization = KeyboardCapitalization.Sentences,
-                            ),
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .border(
-                                    width = 1.dp,
-                                    color = MaterialTheme.colorScheme.surface,
-                                    shape = RoundedCornerShape(8.dp),
-                                ),
-                        colors =
-                            OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color.Transparent,
-                                unfocusedBorderColor = Color.Transparent,
-                            ),
-                        textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-                    )
-                }
-            }
-        }
     }
 }
 
