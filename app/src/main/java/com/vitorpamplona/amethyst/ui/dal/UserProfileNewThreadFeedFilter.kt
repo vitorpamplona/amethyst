@@ -41,8 +41,15 @@ class UserProfileNewThreadFeedFilter(val user: User, val account: Account) :
     }
 
     override fun feed(): List<Note> {
-        val notes = innerApplyFilter(LocalCache.noteListCache)
-        val longFormNotes = innerApplyFilter(LocalCache.addressables.values)
+        val notes =
+            LocalCache.notes.filterIntoSet { _, it ->
+                acceptableEvent(it)
+            }
+
+        val longFormNotes =
+            LocalCache.addressables.filterIntoSet { _, it ->
+                acceptableEvent(it)
+            }
 
         return sort(notes + longFormNotes)
     }
@@ -52,28 +59,26 @@ class UserProfileNewThreadFeedFilter(val user: User, val account: Account) :
     }
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        return collection
-            .filter {
-                it.author == user &&
-                    (
-                        it.event is TextNoteEvent ||
-                            it.event is ClassifiedsEvent ||
-                            it.event is RepostEvent ||
-                            it.event is GenericRepostEvent ||
-                            it.event is LongTextNoteEvent ||
-                            it.event is PollNoteEvent ||
-                            it.event is HighlightEvent ||
-                            it.event is AudioTrackEvent ||
-                            it.event is AudioHeaderEvent
-                    ) &&
-                    it.isNewThread() &&
-                    account.isAcceptable(it) == true
-            }
-            .toSet()
+        return collection.filterTo(HashSet()) { acceptableEvent(it) }
+    }
+
+    fun acceptableEvent(it: Note): Boolean {
+        return it.author == user &&
+            (
+                it.event is TextNoteEvent ||
+                    it.event is ClassifiedsEvent ||
+                    it.event is RepostEvent ||
+                    it.event is GenericRepostEvent ||
+                    it.event is LongTextNoteEvent ||
+                    it.event is PollNoteEvent ||
+                    it.event is HighlightEvent ||
+                    it.event is AudioTrackEvent ||
+                    it.event is AudioHeaderEvent
+            ) && it.isNewThread() && account.isAcceptable(it)
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+        return collection.sortedWith(DefaultFeedOrder)
     }
 
     override fun limit() = 200

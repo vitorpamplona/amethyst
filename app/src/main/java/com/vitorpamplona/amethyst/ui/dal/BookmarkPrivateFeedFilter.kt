@@ -45,7 +45,6 @@ class BookmarkPrivateFeedFilter(val account: Account) : FeedFilter<Note>() {
         return notes
             .plus(addresses)
             .toSet()
-            .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-            .reversed()
+            .sortedWith(DefaultFeedOrder)
     }
 }

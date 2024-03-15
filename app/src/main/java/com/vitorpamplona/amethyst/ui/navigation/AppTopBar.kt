@@ -655,15 +655,15 @@ class FollowListViewModel(val account: Account) : ViewModel() {
 
         val newFollowLists =
             LocalCache.addressables
-                .mapNotNull {
-                    val event = (it.value.event as? PeopleListEvent)
+                .mapNotNull { _, addressableNote ->
+                    val event = (addressableNote.event as? PeopleListEvent)
                     // Has to have an list
                     if (
                         event != null &&
                         event.pubKey == account.userProfile().pubkeyHex &&
                         (event.tags.size > 1 || event.content.length > 50)
                     ) {
-                        CodeName(event.address().toTag(), PeopleListName(it.value), CodeNameType.PEOPLE_LIST)
+                        CodeName(event.address().toTag(), PeopleListName(addressableNote), CodeNameType.PEOPLE_LIST)
                     } else {
                         null
                     }
@@ -974,44 +974,44 @@ fun debugState(context: Context) {
     Log.d(
         "STATE DUMP",
         "Notes: " +
-            LocalCache.noteListCache.filter { it.liveSet != null }.size +
+            LocalCache.notes.filter { _, it -> it.liveSet != null }.size +
             " / " +
-            LocalCache.noteListCache.filter { it.event != null }.size +
+            LocalCache.notes.filter { _, it -> it.event != null }.size +
             " / " +
-            LocalCache.noteListCache.size,
+            LocalCache.notes.size(),
     )
     Log.d(
         "STATE DUMP",
         "Addressables: " +
-            LocalCache.addressables.filter { it.value.liveSet != null }.size +
+            LocalCache.addressables.filter { _, it -> it.liveSet != null }.size +
             " / " +
-            LocalCache.addressables.filter { it.value.event != null }.size +
+            LocalCache.addressables.filter { _, it -> it.event != null }.size +
             " / " +
-            LocalCache.addressables.size,
+            LocalCache.addressables.size(),
     )
     Log.d(
         "STATE DUMP",
         "Users: " +
-            LocalCache.userListCache.filter { it.liveSet != null }.size +
+            LocalCache.users.filter { _, it -> it.liveSet != null }.size +
             " / " +
-            LocalCache.userListCache.filter { it.latestMetadata != null }.size +
+            LocalCache.users.filter { _, it -> it.latestMetadata != null }.size +
             " / " +
-            LocalCache.userListCache.size,
+            LocalCache.users.size(),
     )
 
     Log.d(
         "STATE DUMP",
         "Memory used by Events: " +
-            LocalCache.noteListCache.sumOf { it.event?.countMemory() ?: 0 } / (1024 * 1024) +
+            LocalCache.notes.sumOfLong { _, note -> note.event?.countMemory() ?: 0L } / (1024 * 1024) +
             " MB",
     )
 
-    LocalCache.noteListCache
-        .groupBy { it.event?.kind() }
-        .forEach { Log.d("STATE DUMP", "Kind ${it.key}: \t${it.value.size} elements ") }
-    LocalCache.addressables.values
-        .groupBy { it.event?.kind() }
-        .forEach { Log.d("STATE DUMP", "Kind ${it.key}: \t${it.value.size} elements ") }
+    LocalCache.notes
+        .countByGroup { _, it -> it.event?.kind() }
+        .forEach { Log.d("STATE DUMP", "Kind ${it.key}: \t${it.value} elements ") }
+    LocalCache.addressables
+        .countByGroup { _, it -> it.event?.kind() }
+        .forEach { Log.d("STATE DUMP", "Kind ${it.key}: \t${it.value} elements ") }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

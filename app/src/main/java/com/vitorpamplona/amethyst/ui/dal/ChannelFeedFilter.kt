@@ -44,6 +44,6 @@ class ChannelFeedFilter(val channel: Channel, val account: Account) : AdditiveFe
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+        return collection.sortedWith(DefaultFeedOrder)
     }
 }

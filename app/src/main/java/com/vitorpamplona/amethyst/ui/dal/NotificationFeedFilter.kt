@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -35,7 +34,6 @@ import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.GitIssueEvent
 import com.vitorpamplona.quartz.events.GitPatchEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
-import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
@@ -54,8 +52,24 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
             MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
     }
 
+    fun buildFilterParams(account: Account): FilterByListParams {
+        return FilterByListParams.create(
+            userHex = account.userProfile().pubkeyHex,
+            selectedListName = account.defaultNotificationFollowList.value,
+            followLists = account.liveNotificationFollowLists.value,
+            hiddenUsers = account.flowHiddenUsers.value,
+        )
+    }
+
     override fun feed(): List<Note> {
-        return sort(innerApplyFilter(LocalCache.noteListCache))
+        val filterParams = buildFilterParams(account)
+
+        val notifications =
+            LocalCache.notes.filterIntoSet { _, note ->
+                acceptableEvent(note, filterParams)
+            }
+
+        return sort(notifications)
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
@@ -63,32 +77,31 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
     }
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val isGlobal = account.defaultNotificationFollowList.value == GLOBAL_FOLLOWS
-        val isHiddenList = showHiddenKey()
+        val filterParams = buildFilterParams(account)
 
-        val followingKeySet = account.liveNotificationFollowLists.value?.users ?: emptySet()
+        return collection.filterTo(HashSet()) { acceptableEvent(it, filterParams) }
+    }
 
-        val loggedInUser = account.userProfile()
-        val loggedInUserHex = loggedInUser.pubkeyHex
+    fun acceptableEvent(
+        it: Note,
+        filterParams: FilterByListParams,
+    ): Boolean {
+        val loggedInUserHex = account.userProfile().pubkeyHex
 
-        return collection
-            .filterTo(HashSet()) {
-                it.event !is ChannelCreateEvent &&
-                    it.event !is ChannelMetadataEvent &&
-                    it.event !is LnZapRequestEvent &&
-                    it.event !is BadgeDefinitionEvent &&
-                    it.event !is BadgeProfilesEvent &&
-                    it.event !is GiftWrapEvent &&
-                    (it.event is LnZapEvent || it.author !== loggedInUser) &&
-                    (isGlobal || it.author?.pubkeyHex in followingKeySet) &&
-                    it.event?.isTaggedUser(loggedInUserHex) ?: false &&
-                    (isHiddenList || it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&
-                    tagsAnEventByUser(it, loggedInUserHex)
-            }
+        return it.event !is ChannelCreateEvent &&
+            it.event !is ChannelMetadataEvent &&
+            it.event !is LnZapRequestEvent &&
+            it.event !is BadgeDefinitionEvent &&
+            it.event !is BadgeProfilesEvent &&
+            it.event !is GiftWrapEvent &&
+            (filterParams.isGlobal || filterParams.followLists?.users?.contains(it.author?.pubkeyHex) == true) &&
+            it.event?.isTaggedUser(loggedInUserHex) ?: false &&
+            (filterParams.isHiddenList || it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&
+            tagsAnEventByUser(it, loggedInUserHex)
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+        return collection.sortedWith(DefaultFeedOrder)
     }
 
     fun tagsAnEventByUser(
