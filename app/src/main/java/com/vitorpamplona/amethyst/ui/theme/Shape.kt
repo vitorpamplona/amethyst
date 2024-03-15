@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.theme
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,6 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 val Shapes =
@@ -173,7 +175,7 @@ val ZeroPadding = PaddingValues(0.dp)
 val FeedPadding = PaddingValues(top = 10.dp, bottom = 10.dp)
 val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
 
-val ChatPaddingInnerQuoteModifier = Modifier.padding(top = 10.dp, end = 5.dp)
+val ChatPaddingInnerQuoteModifier = Modifier.padding(top = 10.dp)
 val ChatPaddingModifier =
     Modifier.fillMaxWidth(1f)
         .padding(
@@ -220,3 +222,12 @@ val boostedNoteModifier =
             end = 0.dp,
             top = 0.dp,
         )
+
+val liveStreamTag =
+    Modifier
+        .clip(SmallBorder)
+        .background(Color.Black)
+        .padding(horizontal = Size5dp)
+
+val chatAuthorImage = Modifier.size(20.dp).clip(shape = CircleShape)
+val AuthorInfoVideoFeed = Modifier.width(75.dp)

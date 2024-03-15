@@ -452,7 +452,7 @@ class Relay(
                         eventUploadCounterInBytes += event.bytesUsedInMemory()
 
                         // Sends everything.
-                        Client.allSubscriptions().forEach { sendFilter(requestId = it) }
+                        renewFilters()
                     }
                 }
             }

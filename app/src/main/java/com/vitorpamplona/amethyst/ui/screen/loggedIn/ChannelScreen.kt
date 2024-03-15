@@ -133,7 +133,6 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
-import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
@@ -155,6 +154,7 @@ import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
+import com.vitorpamplona.amethyst.ui.theme.liveStreamTag
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
@@ -167,6 +167,9 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 @Composable
@@ -1096,20 +1099,19 @@ fun OfflineFlag() {
 
 @Composable
 fun ScheduledFlag(starts: Long?) {
-    val context = LocalContext.current
-    val startsIn = starts?.let { timeAgo(it, context) }
+    val startsIn =
+        starts?.let {
+            SimpleDateFormat.getDateTimeInstance(
+                DateFormat.SHORT,
+                DateFormat.SHORT,
+            ).format(Date(starts * 1000))
+        }
 
     Text(
         text = startsIn ?: stringResource(id = R.string.live_stream_planned_tag),
         color = Color.White,
         fontWeight = FontWeight.Bold,
-        modifier =
-            remember {
-                Modifier
-                    .clip(SmallBorder)
-                    .background(Color.Black)
-                    .padding(horizontal = 5.dp)
-            },
+        modifier = liveStreamTag,
     )
 }
 

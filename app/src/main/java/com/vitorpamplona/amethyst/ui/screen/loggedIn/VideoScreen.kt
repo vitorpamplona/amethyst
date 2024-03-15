@@ -35,7 +35,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -64,6 +63,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
@@ -91,11 +91,14 @@ import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.theme.AuthorInfoVideoFeed
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size39Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.FileHeaderEvent
@@ -321,8 +324,8 @@ private fun RenderVideoOrPictureNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    Column(remember { Modifier.fillMaxSize(1f) }, verticalArrangement = Arrangement.Center) {
-        Row(remember { Modifier.weight(1f) }, verticalAlignment = Alignment.CenterVertically) {
+    Column(Modifier.fillMaxSize(1f), verticalArrangement = Arrangement.Center) {
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             val noteEvent = remember { note.event }
             if (noteEvent is FileHeaderEvent) {
                 FileHeaderDisplay(note, false, accountViewModel)
@@ -332,18 +335,17 @@ private fun RenderVideoOrPictureNote(
         }
     }
 
-    Row(verticalAlignment = Alignment.Bottom, modifier = remember { Modifier.fillMaxSize(1f) }) {
-        Column(remember { Modifier.weight(1f) }) {
+    Row(modifier = Modifier.fillMaxSize(1f), verticalAlignment = Alignment.Bottom) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
             RenderAuthorInformation(note, nav, accountViewModel)
         }
 
         Column(
-            remember { Modifier.width(65.dp).padding(bottom = 10.dp) },
+            modifier = AuthorInfoVideoFeed,
             verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Row(horizontalArrangement = Arrangement.Center) {
-                ReactionsColumn(note, accountViewModel, nav)
-            }
+            ReactionsColumn(note, accountViewModel, nav)
         }
     }
 }
@@ -354,32 +356,34 @@ private fun RenderAuthorInformation(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    Row(remember { Modifier.padding(10.dp) }, verticalAlignment = Alignment.Bottom) {
-        Column(remember { Modifier.size(55.dp) }, verticalArrangement = Arrangement.Center) {
-            NoteAuthorPicture(note, nav, accountViewModel, 55.dp)
-        }
+    Row(modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        NoteAuthorPicture(note, nav, accountViewModel, Size55dp)
+
+        Spacer(modifier = DoubleHorzSpacer)
 
         Column(
-            remember { Modifier.padding(start = 10.dp, end = 10.dp).height(65.dp).weight(1f) },
+            Modifier.height(65.dp).weight(1f),
             verticalArrangement = Arrangement.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 NoteUsernameDisplay(note, remember { Modifier.weight(1f) })
                 VideoUserOptionAction(note, accountViewModel, nav)
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                ObserveDisplayNip05Status(
-                    note.author!!,
-                    Modifier.weight(1f),
-                    accountViewModel,
-                    nav = nav,
-                )
-            }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 2.dp),
-            ) {
-                RelayBadges(baseNote = note, accountViewModel, nav)
+            if (accountViewModel.settings.featureSet != FeatureSetType.SIMPLIFIED) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ObserveDisplayNip05Status(
+                        note.author!!,
+                        Modifier.weight(1f),
+                        accountViewModel,
+                        nav = nav,
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 2.dp),
+                ) {
+                    RelayBadges(baseNote = note, accountViewModel, nav)
+                }
             }
         }
     }
@@ -457,11 +461,9 @@ fun ReactionsColumn(
         )
     }
 
-    Spacer(modifier = Modifier.height(8.dp))
-
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(bottom = 75.dp, end = 20.dp),
+        modifier = Modifier.padding(bottom = 75.dp, end = 10.dp),
     ) {
         ReplyReaction(
             baseNote = baseNote,
