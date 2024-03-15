@@ -281,8 +281,6 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
 
                     event.plainContent(account.signer) {
                         LocalCache.justConsume(it, relay)
-                        val draftNote = LocalCache.getNoteIfExists(it.id)
-                        draftNote?.updateDraft(event.id)
                     }
                 }
 

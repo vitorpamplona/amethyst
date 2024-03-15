@@ -371,6 +371,7 @@ open class NewPostViewModel() : ViewModel() {
                     zapRaiserAmount = localZapRaiserAmount,
                     geohash = geoHash,
                     nip94attachments = usedAttachments,
+                    draftTag = localDraft,
                 )
             } else {
                 account?.sendChannelMessage(
@@ -383,6 +384,7 @@ open class NewPostViewModel() : ViewModel() {
                     zapRaiserAmount = localZapRaiserAmount,
                     geohash = geoHash,
                     nip94attachments = usedAttachments,
+                    draftTag = localDraft,
                 )
             }
         } else if (originalNote?.event is PrivateDmEvent) {
@@ -396,6 +398,7 @@ open class NewPostViewModel() : ViewModel() {
                 zapRaiserAmount = localZapRaiserAmount,
                 geohash = geoHash,
                 nip94attachments = usedAttachments,
+                draftTag = localDraft,
             )
         } else if (originalNote?.event is ChatMessageEvent) {
             val receivers =
@@ -443,6 +446,7 @@ open class NewPostViewModel() : ViewModel() {
                     zapRaiserAmount = localZapRaiserAmount,
                     geohash = geoHash,
                     nip94attachments = usedAttachments,
+                    draftTag = localDraft,
                 )
             }
         } else if (originalNote?.event is GitIssueEvent) {
@@ -483,6 +487,7 @@ open class NewPostViewModel() : ViewModel() {
                 relayList = relayList,
                 geohash = geoHash,
                 nip94attachments = usedAttachments,
+                draftTag = localDraft,
             )
         } else {
             if (wantsPoll) {
@@ -501,6 +506,7 @@ open class NewPostViewModel() : ViewModel() {
                     relayList,
                     geoHash,
                     nip94attachments = usedAttachments,
+                    draftTag = localDraft,
                 )
             } else if (wantsProduct) {
                 account?.sendClassifieds(
@@ -519,6 +525,7 @@ open class NewPostViewModel() : ViewModel() {
                     relayList = relayList,
                     geohash = geoHash,
                     nip94attachments = usedAttachments,
+                    draftTag = localDraft,
                 )
             } else {
                 // adds markers
@@ -555,7 +562,7 @@ open class NewPostViewModel() : ViewModel() {
                     relayList = relayList,
                     geohash = geoHash,
                     nip94attachments = usedAttachments,
-                    draftTag = draftTag,
+                    draftTag = localDraft,
                 )
             }
         }

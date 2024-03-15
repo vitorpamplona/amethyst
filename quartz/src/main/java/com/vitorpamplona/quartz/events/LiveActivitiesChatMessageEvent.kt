@@ -72,6 +72,7 @@ class LiveActivitiesChatMessageEvent(
             zapRaiserAmount: Long?,
             geohash: String? = null,
             nip94attachments: List<FileHeaderEvent>? = null,
+            isDraft: Boolean,
             onReady: (LiveActivitiesChatMessageEvent) -> Unit,
         ) {
             val content = message
@@ -98,7 +99,7 @@ class LiveActivitiesChatMessageEvent(
             }
             tags.add(arrayOf("alt", ALT))
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady, isDraft)
         }
     }
 }

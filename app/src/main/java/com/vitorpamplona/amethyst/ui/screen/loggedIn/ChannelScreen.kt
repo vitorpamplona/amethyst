@@ -325,6 +325,7 @@ fun ChannelScreen(
                         mentions = tagger.pTags,
                         wantsToMarkAsSensitive = false,
                         nip94attachments = usedAttachments,
+                        draftTag = null,
                     )
                 } else if (channel is LiveActivitiesChannel) {
                     accountViewModel.account.sendLiveMessage(
@@ -334,6 +335,7 @@ fun ChannelScreen(
                         mentions = tagger.pTags,
                         wantsToMarkAsSensitive = false,
                         nip94attachments = usedAttachments,
+                        draftTag = null,
                     )
                 }
                 newPostModel.message = TextFieldValue("")

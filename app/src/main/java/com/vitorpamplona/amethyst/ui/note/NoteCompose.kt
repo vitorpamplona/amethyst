@@ -1171,7 +1171,6 @@ fun FirstUserInfoRow(
         }
 
         if (baseNote.isDraft()) {
-            Spacer(StdHorzSpacer)
             DisplayDraft()
         }
 

@@ -348,6 +348,7 @@ fun ChatroomScreen(
                         mentions = null,
                         wantsToMarkAsSensitive = false,
                         nip94attachments = usedAttachments,
+                        draftTag = null,
                     )
                 }
 
