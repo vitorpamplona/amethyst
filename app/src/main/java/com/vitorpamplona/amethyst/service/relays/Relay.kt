@@ -344,16 +344,15 @@ class Relay(
         afterEOSEPerSubscription = LinkedHashMap(afterEOSEPerSubscription.size)
     }
 
-    fun sendFilter(requestId: String) {
+    fun sendFilter(
+        requestId: String,
+        filters: List<TypedFilter>,
+    ) {
         checkNotInMainThread()
 
         if (read) {
             if (isConnected()) {
                 if (isReady) {
-                    val filters =
-                        Client.getSubscriptionFilters(requestId).filter { filter ->
-                            activeTypes.any { it in filter.types }
-                        }
                     if (filters.isNotEmpty()) {
                         val request =
                             filters.joinToStringLimited(
@@ -423,7 +422,14 @@ class Relay(
 
     fun renewFilters() {
         // Force update all filters after AUTH.
-        Client.allSubscriptions().forEach { sendFilter(requestId = it) }
+        Client.allSubscriptions().forEach {
+            val filters =
+                it.value.filter { filter ->
+                    activeTypes.any { it in filter.types }
+                }
+
+            sendFilter(requestId = it.key, filters)
+        }
     }
 
     fun send(signedEvent: EventInterface) {

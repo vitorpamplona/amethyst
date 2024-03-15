@@ -356,7 +356,9 @@ private fun RenderRoomTopBar(
 
                 RoomNameOnlyDisplay(
                     room,
-                    Modifier.padding(start = 10.dp).weight(1f),
+                    Modifier
+                        .padding(start = 10.dp)
+                        .weight(1f),
                     fontWeight = FontWeight.Normal,
                     accountViewModel.userProfile(),
                 )
@@ -504,7 +506,10 @@ fun GenericMainTopBar(
                 ) {
                     Box(Modifier) {
                         Column(
-                            modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
@@ -784,12 +789,14 @@ fun SimpleTextSpinner(
         }
         Box(
             modifier =
-                Modifier.matchParentSize().clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                ) {
-                    optionsShowing = true
-                },
+                Modifier
+                    .matchParentSize()
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                    ) {
+                        optionsShowing = true
+                    },
         )
     }
 
@@ -922,13 +929,7 @@ fun AmethystClickableIcon() {
 
 fun debugState(context: Context) {
     Client.allSubscriptions()
-        .map {
-            "$it ${
-                Client.getSubscriptionFilters(it)
-                    .joinToString { it.filter.toJson() }
-            }"
-        }
-        .forEach { Log.d("STATE DUMP", it) }
+        .forEach { Log.d("STATE DUMP", "${it.key} ${it.value.joinToString { it.filter.toJson() }}") }
 
     NostrAccountDataSource.printCounter()
     NostrChannelDataSource.printCounter()
