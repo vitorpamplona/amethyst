@@ -65,7 +65,7 @@ class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     ): Boolean {
         val noteEvent = it.event
 
-        return ((noteEvent is FileHeaderEvent && noteEvent.hasUrl()) || noteEvent is FileStorageHeaderEvent) &&
+        return ((noteEvent is FileHeaderEvent && noteEvent.hasUrl() && noteEvent.isImageOrVideo()) || (noteEvent is FileStorageHeaderEvent && noteEvent.isImageOrVideo())) &&
             params.match(noteEvent) &&
             account.isAcceptable(it)
     }
