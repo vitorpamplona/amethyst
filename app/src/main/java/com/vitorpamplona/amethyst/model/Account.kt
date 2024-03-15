@@ -56,6 +56,7 @@ import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.Contact
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
+import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.EmojiUrl
@@ -1422,6 +1423,7 @@ class Account(
         relayList: List<Relay>? = null,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
+        draftTag: String?,
     ) {
         if (!isWriteable()) return
 
@@ -1445,20 +1447,28 @@ class Account(
             nip94attachments = nip94attachments,
             forkedFrom = forkedFrom,
             signer = signer,
+            isDraft = draftTag != null,
         ) {
-            Client.send(it, relayList = relayList)
-            LocalCache.justConsume(it, null)
-
-            // broadcast replied notes
-            replyingTo?.let {
-                LocalCache.getNoteIfExists(replyingTo)?.event?.let {
-                    Client.send(it, relayList = relayList)
+            if (draftTag != null) {
+                DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                    Client.send(draftEvent, relayList = relayList)
+                    LocalCache.justConsume(draftEvent, null)
                 }
-            }
-            replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
-            addresses?.forEach {
-                LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
-                    Client.send(it, relayList = relayList)
+            } else {
+                Client.send(it, relayList = relayList)
+                LocalCache.justConsume(it, null)
+
+                // broadcast replied notes
+                replyingTo?.let {
+                    LocalCache.getNoteIfExists(replyingTo)?.event?.let {
+                        Client.send(it, relayList = relayList)
+                    }
+                }
+                replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
+                addresses?.forEach {
+                    LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
+                        Client.send(it, relayList = relayList)
+                    }
                 }
             }
         }
@@ -2210,6 +2220,7 @@ class Account(
 
     fun cachedDecryptContent(note: Note): String? {
         val event = note.event
+
         return if (event is PrivateDmEvent && isWriteable()) {
             event.cachedContentFor(signer)
         } else if (event is LnZapRequestEvent && event.isPrivateZap() && isWriteable()) {

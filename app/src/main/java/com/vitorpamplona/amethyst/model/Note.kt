@@ -106,6 +106,7 @@ open class Note(val idHex: String) {
     var event: EventInterface? = null
     var author: User? = null
     var replyTo: List<Note>? = null
+    var draft: String? = null
 
     // These fields are updated every time an event related to this note is received.
     var replies = listOf<Note>()
@@ -182,6 +183,17 @@ open class Note(val idHex: String) {
     open fun address(): ATag? = null
 
     open fun createdAt() = event?.createdAt()
+
+    fun updateDraft(id: String) {
+        draft = id
+    }
+
+    fun isDraft(): Boolean {
+        draft?.let {
+            return it.isNotBlank()
+        }
+        return false
+    }
 
     fun loadEvent(
         event: Event,

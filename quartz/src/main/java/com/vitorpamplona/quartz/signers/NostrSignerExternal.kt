@@ -40,7 +40,13 @@ class NostrSignerExternal(
         tags: Array<Array<String>>,
         content: String,
         onReady: (T) -> Unit,
+        isDraft: Boolean,
     ) {
+        if (isDraft) {
+            unsignedEvent(createdAt, kind, tags, content, onReady)
+            return
+        }
+
         val id = Event.generateId(pubKey, createdAt, kind, tags, content).toHexKey()
 
         val event =
@@ -84,6 +90,28 @@ class NostrSignerExternal(
                     ?.let { onReady(it) }
             }
         }
+    }
+
+    fun <T : Event> unsignedEvent(
+        createdAt: Long,
+        kind: Int,
+        tags: Array<Array<String>>,
+        content: String,
+        onReady: (T) -> Unit,
+    ) {
+        val id = Event.generateId(pubKey, createdAt, kind, tags, content)
+
+        onReady(
+            EventFactory.create(
+                id.toHexKey(),
+                pubKey,
+                createdAt,
+                kind,
+                tags,
+                content,
+                "",
+            ) as T,
+        )
     }
 
     override fun nip04Encrypt(

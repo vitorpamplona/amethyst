@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
+import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
@@ -69,7 +70,8 @@ class HomeConversationsFeedFilter(val account: Account) : AdditiveFeedFilter<Not
                     it.event is TextNoteEvent ||
                         it.event is PollNoteEvent ||
                         it.event is ChannelMessageEvent ||
-                        it.event is LiveActivitiesChatMessageEvent
+                        it.event is LiveActivitiesChatMessageEvent ||
+                        it.event is DraftEvent
                 ) &&
                     (
                         isGlobal ||

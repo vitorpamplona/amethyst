@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -51,6 +52,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.distinctUntilChanged
@@ -113,6 +115,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
@@ -128,6 +131,7 @@ import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.boostedNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.channelNotePictureModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.normalNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.normalWithTopMarginNoteModifier
@@ -1109,8 +1113,24 @@ fun SecondUserInfoRow(
             DisplayPoW(pow)
         }
 
+        if (note.isDraft()) {
+            Spacer(StdHorzSpacer)
+            DisplayDraft()
+        }
+
         DisplayOts(note, accountViewModel)
     }
+}
+
+@Composable
+fun DisplayDraft() {
+    Text(
+        "Draft",
+        color = MaterialTheme.colorScheme.lessImportantLink,
+        fontSize = Font14SP,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+    )
 }
 
 @Composable

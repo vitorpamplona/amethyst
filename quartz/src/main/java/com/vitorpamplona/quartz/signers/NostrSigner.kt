@@ -32,6 +32,7 @@ abstract class NostrSigner(val pubKey: HexKey) {
         tags: Array<Array<String>>,
         content: String,
         onReady: (T) -> Unit,
+        isDraft: Boolean = false,
     )
 
     abstract fun nip04Encrypt(

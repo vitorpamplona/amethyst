@@ -74,6 +74,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 enum class UserSuggestionAnchor {
     MAIN_MESSAGE,
@@ -83,6 +84,7 @@ enum class UserSuggestionAnchor {
 
 @Stable
 open class NewPostViewModel() : ViewModel() {
+    var draftTag: String = UUID.randomUUID().toString()
     var accountViewModel: AccountViewModel? = null
     var account: Account? = null
     var requiresNIP24: Boolean = false
@@ -306,11 +308,17 @@ open class NewPostViewModel() : ViewModel() {
         }
     }
 
-    fun sendPost(relayList: List<Relay>? = null) {
-        viewModelScope.launch(Dispatchers.IO) { innerSendPost(relayList) }
+    fun sendPost(
+        relayList: List<Relay>? = null,
+        localDraft: String? = null,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) { innerSendPost(relayList, localDraft) }
     }
 
-    suspend fun innerSendPost(relayList: List<Relay>? = null) {
+    private suspend fun innerSendPost(
+        relayList: List<Relay>? = null,
+        localDraft: String?,
+    ) {
         if (accountViewModel == null) {
             cancel()
             return
@@ -555,11 +563,13 @@ open class NewPostViewModel() : ViewModel() {
                     relayList = relayList,
                     geohash = geoHash,
                     nip94attachments = usedAttachments,
+                    draftTag = draftTag,
                 )
             }
         }
-
-        cancel()
+        if (localDraft == null) {
+            cancel()
+        }
     }
 
     fun upload(
@@ -693,8 +703,8 @@ open class NewPostViewModel() : ViewModel() {
         pTags = pTags?.filter { it != userToRemove }
     }
 
-    open fun saveDraft(message: String) {
-        account?.let { LocalPreferences.saveDraft(message, originalNote?.idHex, it) }
+    open fun saveDraft() {
+        sendPost(localDraft = draftTag)
     }
 
     open fun loadDraft(): String? {
@@ -708,9 +718,6 @@ open class NewPostViewModel() : ViewModel() {
     }
 
     open fun updateMessage(it: TextFieldValue) {
-        viewModelScope.launch(Dispatchers.IO) {
-            saveDraft(it.text)
-        }
         message = it
         urlPreview = findUrlInMessage()
 
@@ -731,6 +738,10 @@ open class NewPostViewModel() : ViewModel() {
                 NostrSearchEventOrUserDataSource.clear()
                 userSuggestions = emptyList()
             }
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            saveDraft()
         }
     }
 
@@ -755,10 +766,16 @@ open class NewPostViewModel() : ViewModel() {
                 userSuggestions = emptyList()
             }
         }
+        viewModelScope.launch(Dispatchers.IO) {
+            saveDraft()
+        }
     }
 
     open fun updateSubject(it: TextFieldValue) {
         subject = it
+        viewModelScope.launch(Dispatchers.IO) {
+            saveDraft()
+        }
     }
 
     open fun updateZapForwardTo(it: TextFieldValue) {
@@ -785,6 +802,9 @@ open class NewPostViewModel() : ViewModel() {
                 userSuggestions = emptyList()
             }
         }
+        viewModelScope.launch(Dispatchers.IO) {
+            saveDraft()
+        }
     }
 
     open fun autocompleteWithUser(item: User) {
@@ -800,9 +820,6 @@ open class NewPostViewModel() : ViewModel() {
                         message.text.replaceRange(lastWordStart, it.end, wordToInsert),
                         TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length),
                     )
-                viewModelScope.launch(Dispatchers.IO) {
-                    saveDraft(message.text)
-                }
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.addItem(item)
                 forwardZapToEditting = TextFieldValue("")
@@ -832,6 +849,10 @@ open class NewPostViewModel() : ViewModel() {
             userSuggestionAnchor = null
             userSuggestionsMainMessage = null
             userSuggestions = emptyList()
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            saveDraft()
         }
     }
 
@@ -902,8 +923,8 @@ open class NewPostViewModel() : ViewModel() {
                     nip94attachments = nip94attachments + event
 
                     message = message.insertUrlAtCursor(imageUrl)
-                    saveDraft(message.text)
                     urlPreview = findUrlInMessage()
+                    saveDraft()
                 }
             },
             onError = {
@@ -945,10 +966,10 @@ open class NewPostViewModel() : ViewModel() {
 
                         note?.let {
                             message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
-                            saveDraft(message.text)
                         }
 
                         urlPreview = findUrlInMessage()
+                        saveDraft()
                     }
                 },
                 onError = {
@@ -969,6 +990,7 @@ open class NewPostViewModel() : ViewModel() {
         locUtil?.let {
             location =
                 it.locationStateFlow.mapLatest { it.toGeoHash(GeohashPrecision.KM_5_X_5.digits).toString() }
+            saveDraft()
         }
         viewModelScope.launch(Dispatchers.IO) { locUtil?.start() }
     }

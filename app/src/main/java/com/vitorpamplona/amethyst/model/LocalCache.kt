@@ -61,6 +61,7 @@ import com.vitorpamplona.quartz.events.CommunityListEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
+import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.Event
@@ -2042,6 +2043,13 @@ object LocalCache {
         }
     }
 
+    private fun consume(
+        event: DraftEvent,
+        relay: Relay?,
+    ) {
+        consumeBaseReplaceable(event, relay)
+    }
+
     fun justConsume(
         event: Event,
         relay: Relay?,
@@ -2079,6 +2087,7 @@ object LocalCache {
                 }
                 is ContactListEvent -> consume(event)
                 is DeletionEvent -> consume(event)
+                is DraftEvent -> consume(event, relay)
                 is EmojiPackEvent -> consume(event, relay)
                 is EmojiPackSelectionEvent -> consume(event, relay)
                 is SealedGossipEvent -> consume(event, relay)

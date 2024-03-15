@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.events.CalendarRSVPEvent
 import com.vitorpamplona.quartz.events.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
@@ -229,6 +230,16 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         )
     }
 
+    fun createDraftsFilter() =
+        TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                JsonFilter(
+                    kinds = listOf(DraftEvent.KIND),
+                    authors = listOf(account.userProfile().pubkeyHex),
+                ),
+        )
+
     fun createGiftWrapsToMeFilter() =
         TypedFilter(
             types = COMMON_FEED_TYPES,
@@ -262,22 +273,38 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         checkNotInMainThread()
 
         if (LocalCache.justVerify(event)) {
-            if (event is GiftWrapEvent) {
-                // Avoid decrypting over and over again if the event already exist.
-                val note = LocalCache.getNoteIfExists(event.id)
-                if (note != null && relay.brief in note.relays) return
+            when (event) {
+                is DraftEvent -> {
+                    // Avoid decrypting over and over again if the event already exist.
+                    val note = LocalCache.getNoteIfExists(event.id)
+                    if (note != null && relay.brief in note.relays) return
 
-                event.cachedGift(account.signer) { this.consume(it, relay) }
-            }
+                    event.plainContent(account.signer) {
+                        LocalCache.justConsume(it, relay)
+                        val draftNote = LocalCache.getNoteIfExists(it.id)
+                        draftNote?.updateDraft(event.id)
+                    }
+                }
 
-            if (event is SealedGossipEvent) {
-                // Avoid decrypting over and over again if the event already exist.
-                val note = LocalCache.getNoteIfExists(event.id)
-                if (note != null && relay.brief in note.relays) return
+                is GiftWrapEvent -> {
+                    // Avoid decrypting over and over again if the event already exist.
+                    val note = LocalCache.getNoteIfExists(event.id)
+                    if (note != null && relay.brief in note.relays) return
 
-                event.cachedGossip(account.signer) { LocalCache.justConsume(it, relay) }
-            } else {
-                LocalCache.justConsume(event, relay)
+                    event.cachedGift(account.signer) { this.consume(it, relay) }
+                }
+
+                is SealedGossipEvent -> {
+                    // Avoid decrypting over and over again if the event already exist.
+                    val note = LocalCache.getNoteIfExists(event.id)
+                    if (note != null && relay.brief in note.relays) return
+
+                    event.cachedGossip(account.signer) { LocalCache.justConsume(it, relay) }
+                }
+
+                else -> {
+                    LocalCache.justConsume(event, relay)
+                }
             }
         }
     }
@@ -328,6 +355,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     createAccountSettingsFilter(),
                     createAccountLastPostsListFilter(),
                     createOtherAccountsBaseFilter(),
+                    createDraftsFilter(),
                 )
                     .ifEmpty { null }
         } else {
