@@ -440,6 +440,8 @@
     <string name="connectivity_type_always">Mindig</string>
     <string name="connectivity_type_wifi_only">Csak WIFI</string>
     <string name="connectivity_type_never">Soha</string>
+    <string name="ui_feature_set_type_complete">Teljes</string>
+    <string name="ui_feature_set_type_simplified">Egyszerűsített</string>
     <string name="system">Rendszer</string>
     <string name="light">Világos</string>
     <string name="dark">Sötét</string>
@@ -451,6 +453,8 @@
     <string name="automatically_show_url_preview">Az URL előnézetének automatikus megjelenítése</string>
     <string name="automatically_hide_nav_bars">Magával ragadó görgetés</string>
     <string name="automatically_hide_nav_bars_description">Navigációs sáv görgetés közbeni elrejtése</string>
+    <string name="ui_style">Felület típusa</string>
+    <string name="ui_style_description">Válaszd ki a bejegyzés stílusát</string>
     <string name="load_image">Kép Betöltése</string>
     <string name="spamming_users">Spammerek</string>
     <string name="muted_button">Lenémítva. Kattínts a feloldásért</string>
