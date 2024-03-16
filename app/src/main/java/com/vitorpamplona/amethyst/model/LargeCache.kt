@@ -47,79 +47,87 @@ class LargeCache<K, V> {
     }
 
     fun forEach(consumer: BiConsumer<K, V>) {
-        cache.forEach(consumer)
+        innerForEach(consumer)
     }
 
     fun filter(consumer: BiFilter<K, V>): List<V> {
         val runner = BiFilterCollector(consumer)
-        cache.forEach(runner)
+        innerForEach(runner)
         return runner.results
     }
 
     fun filterIntoSet(consumer: BiFilter<K, V>): Set<V> {
         val runner = BiFilterUniqueCollector(consumer)
-        cache.forEach(runner)
+        innerForEach(runner)
         return runner.results
     }
 
     fun <R> mapNotNull(consumer: BiMapper<K, V, R?>): List<R> {
         val runner = BiMapCollector(consumer)
-        cache.forEach(runner)
+        innerForEach(runner)
         return runner.results
     }
 
     fun <R> mapNotNullIntoSet(consumer: BiMapper<K, V, R?>): Set<R> {
         val runner = BiMapUniqueCollector(consumer)
-        cache.forEach(runner)
+        innerForEach(runner)
         return runner.results
     }
 
     fun <R> mapFlatten(consumer: BiMapper<K, V, Collection<R>?>): List<R> {
         val runner = BiMapFlattenCollector(consumer)
-        cache.forEach(runner)
+        innerForEach(runner)
         return runner.results
     }
 
     fun <R> mapFlattenIntoSet(consumer: BiMapper<K, V, Collection<R>?>): Set<R> {
         val runner = BiMapFlattenUniqueCollector(consumer)
-        cache.forEach(runner)
+        innerForEach(runner)
         return runner.results
     }
 
     fun <R> map(consumer: BiNotNullMapper<K, V, R>): List<R> {
         val runner = BiNotNullMapCollector(consumer)
-        cache.forEach(runner)
+        innerForEach(runner)
         return runner.results
     }
 
     fun sumOf(consumer: BiSumOf<K, V>): Int {
         val runner = BiSumOfCollector(consumer)
-        cache.forEach(runner)
+        innerForEach(runner)
         return runner.sum
     }
 
     fun sumOfLong(consumer: BiSumOfLong<K, V>): Long {
         val runner = BiSumOfLongCollector(consumer)
-        cache.forEach(runner)
+        innerForEach(runner)
         return runner.sum
     }
 
     fun <R> groupBy(consumer: BiNotNullMapper<K, V, R>): Map<R, List<V>> {
         val runner = BiGroupByCollector(consumer)
-        cache.forEach(runner)
+        innerForEach(runner)
         return runner.results
     }
 
     fun <R> countByGroup(consumer: BiNotNullMapper<K, V, R>): Map<R, Int> {
         val runner = BiCountByGroupCollector(consumer)
-        cache.forEach(runner)
+        innerForEach(runner)
         return runner.results
     }
 
     fun count(consumer: BiFilter<K, V>): Int {
         val runner = BiCountIfCollector(consumer)
-        cache.forEach(runner)
+        innerForEach(runner)
         return runner.count
+    }
+
+    private fun innerForEach(runner: BiConsumer<K, V>) {
+        // val (value, elapsed) =
+        //    measureTimedValue {
+        cache.forEach(runner)
+        //    }
+        // println("LargeCache full loop $elapsed \t for $runner")
     }
 }
 
