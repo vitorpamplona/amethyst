@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.util.Log
 import android.util.Patterns
-import com.vitorpamplona.amethyst.commons.RichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.encoders.ATag

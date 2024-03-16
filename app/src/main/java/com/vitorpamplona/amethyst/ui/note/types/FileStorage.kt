@@ -27,9 +27,9 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import com.vitorpamplona.amethyst.commons.BaseMediaContent
-import com.vitorpamplona.amethyst.commons.MediaLocalImage
-import com.vitorpamplona.amethyst.commons.MediaLocalVideo
+import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
+import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning

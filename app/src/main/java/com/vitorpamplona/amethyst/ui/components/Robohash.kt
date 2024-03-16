@@ -30,7 +30,7 @@ import coil.fetch.Fetcher
 import coil.fetch.SourceResult
 import coil.request.ImageRequest
 import coil.request.Options
-import com.vitorpamplona.amethyst.commons.Robohash
+import com.vitorpamplona.amethyst.commons.robohash.Robohash
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import okio.buffer
 import okio.source

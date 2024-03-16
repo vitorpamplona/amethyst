@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.amethyst.commons.Robohash
-import com.vitorpamplona.amethyst.commons.RobohashAssembler
+import com.vitorpamplona.amethyst.commons.robohash.Robohash
+import com.vitorpamplona.amethyst.commons.robohash.RobohashAssembler
 import okio.Buffer
 import okio.buffer
 import okio.source

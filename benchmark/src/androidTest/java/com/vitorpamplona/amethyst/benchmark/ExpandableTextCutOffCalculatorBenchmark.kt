@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.amethyst.commons.ExpandableTextCutOffCalculator
-import com.vitorpamplona.amethyst.commons.nthIndexOf
+import com.vitorpamplona.amethyst.commons.richtext.ExpandableTextCutOffCalculator
+import com.vitorpamplona.amethyst.commons.richtext.nthIndexOf
 import junit.framework.TestCase
 import org.junit.Rule
 import org.junit.Test
