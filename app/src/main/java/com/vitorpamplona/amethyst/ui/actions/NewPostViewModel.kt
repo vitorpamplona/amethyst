@@ -309,6 +309,8 @@ open class NewPostViewModel() : ViewModel() {
         draft: Note,
         accountViewModel: AccountViewModel,
     ) {
+        Log.d("draft", draft.event!!.toJson())
+
         draftTag = LocalCache.drafts.filter {
             it.value.contains(draft.idHex)
         }.keys.firstOrNull() ?: draftTag
@@ -361,6 +363,22 @@ open class NewPostViewModel() : ViewModel() {
 
         if (forwardZapTo.items.isNotEmpty()) {
             wantsForwardZapTo = true
+        }
+
+        val polls = draft.event?.tags()?.filter { it.size > 1 && it[0] == "poll_option" } ?: emptyList()
+        wantsPoll = polls.isNotEmpty()
+
+        polls.forEach {
+            pollOptions[it[1].toInt()] = it[2]
+        }
+
+        val minMax = draft.event?.tags()?.filter { it.size > 1 && (it[0] == "value_minimum" || it[0] == "value_maximum") } ?: listOf()
+        minMax.forEach {
+            if (it[0] == "value_maximum") {
+                valueMaximum = it[1].toInt()
+            } else if (it[0] == "value_minimum") {
+                valueMinimum = it[1].toInt()
+            }
         }
 
         message = TextFieldValue(draft.event?.content() ?: "")
