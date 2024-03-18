@@ -165,6 +165,10 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
@@ -189,6 +193,7 @@ fun ChannelScreen(
     }
 }
 
+@OptIn(FlowPreview::class)
 @Composable
 fun PrepareChannelViewModels(
     baseChannel: Channel,
@@ -206,6 +211,18 @@ fun PrepareChannelViewModels(
         )
 
     val channelScreenModel: NewPostViewModel = viewModel()
+
+    LaunchedEffect(Unit) {
+        launch(Dispatchers.IO) {
+            channelScreenModel.draftTextChanges
+                .receiveAsFlow()
+                .debounce(1000)
+                .collectLatest {
+                    channelScreenModel.sendPost(localDraft = channelScreenModel.draftTag)
+                }
+        }
+    }
+
     channelScreenModel.accountViewModel = accountViewModel
     channelScreenModel.account = accountViewModel.account
     channelScreenModel.originalNote = LocalCache.getNoteIfExists(baseChannel.idHex)
@@ -680,7 +697,12 @@ fun ShowVideoStreaming(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center,
-                            modifier = remember { Modifier.fillMaxWidth().heightIn(min = 50.dp, max = 300.dp) },
+                            modifier =
+                                remember {
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 50.dp, max = 300.dp)
+                                },
                         ) {
                             val zoomableUrlVideo =
                                 remember(streamingInfo) {

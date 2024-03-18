@@ -171,13 +171,18 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.lang.Math.round
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
 fun NewPostView(
     onClose: () -> Unit,
@@ -201,6 +206,14 @@ fun NewPostView(
     var relayList = remember { accountViewModel.account.activeWriteRelays().toImmutableList() }
 
     LaunchedEffect(Unit) {
+        launch(Dispatchers.IO) {
+            postViewModel.draftTextChanges
+                .receiveAsFlow()
+                .debounce(1000)
+                .collectLatest {
+                    postViewModel.sendPost(relayList = relayList, localDraft = postViewModel.draftTag)
+                }
+        }
         launch(Dispatchers.IO) {
             postViewModel.load(accountViewModel, baseReplyTo, quote, fork, version, draft)
 

@@ -69,6 +69,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.mapLatest
@@ -83,7 +84,7 @@ enum class UserSuggestionAnchor {
 
 @Stable
 open class NewPostViewModel() : ViewModel() {
-    private var draftTag: String = UUID.randomUUID().toString()
+    var draftTag: String = UUID.randomUUID().toString()
     var accountViewModel: AccountViewModel? = null
     var account: Account? = null
     var requiresNIP24: Boolean = false
@@ -166,6 +167,8 @@ open class NewPostViewModel() : ViewModel() {
     // NIP24 Wrapped DMs / Group messages
     var nip24 by mutableStateOf(false)
 
+    val draftTextChanges = Channel<String>(Channel.CONFLATED)
+
     fun lnAddress(): String? {
         return account?.userProfile()?.info?.lnAddress()
     }
@@ -190,7 +193,7 @@ open class NewPostViewModel() : ViewModel() {
         this.account = accountViewModel.account
 
         if (draft != null) {
-            loadfromDraft(draft, accountViewModel)
+            loadFromDraft(draft, accountViewModel)
         } else {
             originalNote = replyingTo
             replyingTo?.let { replyNote ->
@@ -305,7 +308,7 @@ open class NewPostViewModel() : ViewModel() {
         }
     }
 
-    private fun loadfromDraft(
+    private fun loadFromDraft(
         draft: Note,
         accountViewModel: AccountViewModel,
     ) {
@@ -798,9 +801,8 @@ open class NewPostViewModel() : ViewModel() {
         pTags = pTags?.filter { it != userToRemove }
     }
 
-    open fun saveDraft() {
-        // TODO: find a way to send only the last modification so we dont get rate limited
-        sendPost(localDraft = draftTag)
+    open suspend fun saveDraft() {
+        draftTextChanges.send("")
     }
 
     open fun updateMessage(it: TextFieldValue) {
@@ -1010,7 +1012,9 @@ open class NewPostViewModel() : ViewModel() {
 
                     message = message.insertUrlAtCursor(imageUrl)
                     urlPreview = findUrlInMessage()
-                    saveDraft()
+                    viewModelScope.launch(Dispatchers.IO) {
+                        saveDraft()
+                    }
                 }
             },
             onError = {
@@ -1055,7 +1059,9 @@ open class NewPostViewModel() : ViewModel() {
                         }
 
                         urlPreview = findUrlInMessage()
-                        saveDraft()
+                        viewModelScope.launch(Dispatchers.IO) {
+                            saveDraft()
+                        }
                     }
                 },
                 onError = {
@@ -1076,7 +1082,7 @@ open class NewPostViewModel() : ViewModel() {
         locUtil?.let {
             location =
                 it.locationStateFlow.mapLatest { it.toGeoHash(GeohashPrecision.KM_5_X_5.digits).toString() }
-            saveDraft()
+            viewModelScope.launch(Dispatchers.IO) { saveDraft() }
         }
         viewModelScope.launch(Dispatchers.IO) { locUtil?.start() }
     }

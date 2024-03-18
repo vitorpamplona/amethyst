@@ -124,6 +124,10 @@ import com.vitorpamplona.quartz.events.findURLs
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -208,6 +212,7 @@ fun LoadRoomByAuthor(
     content(room)
 }
 
+@OptIn(FlowPreview::class)
 @Composable
 fun PrepareChatroomViewModels(
     room: ChatroomKey,
@@ -237,6 +242,15 @@ fun PrepareChatroomViewModels(
     }
 
     LaunchedEffect(key1 = newPostModel) {
+        launch(Dispatchers.IO) {
+            newPostModel.draftTextChanges
+                .receiveAsFlow()
+                .debounce(1000)
+                .collectLatest {
+                    newPostModel.sendPost(localDraft = newPostModel.draftTag)
+                }
+        }
+
         launch(Dispatchers.IO) {
             val hasNIP24 =
                 accountViewModel.userProfile().privateChatrooms[room]?.roomMessages?.any {
