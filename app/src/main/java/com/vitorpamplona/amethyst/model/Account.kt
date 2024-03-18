@@ -1345,6 +1345,7 @@ class Account(
                 DraftEvent.create(draftTag, it, signer) { draftEvent ->
                     Client.send(draftEvent, relayList = relayList)
                     LocalCache.justConsume(draftEvent, null)
+                    LocalCache.justConsume(it, null)
                 }
             } else {
                 Client.send(it, relayList = relayList)
@@ -1405,6 +1406,7 @@ class Account(
                 DraftEvent.create(draftTag, it, signer) { draftEvent ->
                     Client.send(draftEvent, relayList = relayList)
                     LocalCache.justConsume(draftEvent, null)
+                    LocalCache.justConsume(it, null)
                 }
             } else {
                 Client.send(it, relayList = relayList)
@@ -1471,6 +1473,7 @@ class Account(
                 DraftEvent.create(draftTag, it, signer) { draftEvent ->
                     Client.send(draftEvent, relayList = relayList)
                     LocalCache.justConsume(draftEvent, null)
+                    LocalCache.justConsume(it, null)
                 }
             } else {
                 Client.send(it, relayList = relayList)
@@ -1560,6 +1563,7 @@ class Account(
                 DraftEvent.create(draftTag, it, signer) { draftEvent ->
                     Client.send(draftEvent, relayList = relayList)
                     LocalCache.justConsume(draftEvent, null)
+                    LocalCache.justConsume(it, null)
                 }
             } else {
                 Client.send(it, relayList = relayList)
@@ -1610,6 +1614,7 @@ class Account(
                 DraftEvent.create(draftTag, it, signer) { draftEvent ->
                     Client.send(draftEvent)
                     LocalCache.justConsume(draftEvent, null)
+                    LocalCache.justConsume(it, null)
                 }
             } else {
                 Client.send(it)
@@ -1653,6 +1658,7 @@ class Account(
                 DraftEvent.create(draftTag, it, signer) { draftEvent ->
                     Client.send(draftEvent)
                     LocalCache.justConsume(draftEvent, null)
+                    LocalCache.justConsume(it, null)
                 }
             } else {
                 Client.send(it)
@@ -1723,6 +1729,7 @@ class Account(
                 DraftEvent.create(draftTag, it, signer) { draftEvent ->
                     Client.send(draftEvent)
                     LocalCache.justConsume(draftEvent, null)
+                    LocalCache.justConsume(it, null)
                 }
             } else {
                 Client.send(it)
