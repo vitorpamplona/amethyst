@@ -185,6 +185,7 @@ fun NewPostView(
     quote: Note? = null,
     fork: Note? = null,
     version: Note? = null,
+    draft: Note? = null,
     enableMessageInterface: Boolean = false,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -201,7 +202,7 @@ fun NewPostView(
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
-            postViewModel.load(accountViewModel, baseReplyTo, quote, fork, version)
+            postViewModel.load(accountViewModel, baseReplyTo, quote, fork, version, draft)
 
             postViewModel.imageUploadingError.collect { error ->
                 withContext(Dispatchers.Main) { Toast.makeText(context, error, Toast.LENGTH_SHORT).show() }

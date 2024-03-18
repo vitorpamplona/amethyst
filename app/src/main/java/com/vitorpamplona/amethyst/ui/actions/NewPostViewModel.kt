@@ -184,120 +184,129 @@ open class NewPostViewModel() : ViewModel() {
         quote: Note?,
         fork: Note?,
         version: Note?,
+        draft: Note?,
     ) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
 
-        originalNote = replyingTo
-        replyingTo?.let { replyNote ->
-            if (replyNote.event is BaseTextNoteEvent) {
-                this.eTags = (replyNote.replyTo ?: emptyList()).plus(replyNote)
-            } else {
-                this.eTags = listOf(replyNote)
-            }
+        if (draft != null) {
+            loadfromDraft(draft)
+        } else {
+            originalNote = replyingTo
+            replyingTo?.let { replyNote ->
+                if (replyNote.event is BaseTextNoteEvent) {
+                    this.eTags = (replyNote.replyTo ?: emptyList()).plus(replyNote)
+                } else {
+                    this.eTags = listOf(replyNote)
+                }
 
-            if (replyNote.event !is CommunityDefinitionEvent) {
-                replyNote.author?.let { replyUser ->
-                    val currentMentions =
-                        (replyNote.event as? TextNoteEvent)?.mentions()?.map { LocalCache.getOrCreateUser(it) }
-                            ?: emptyList()
+                if (replyNote.event !is CommunityDefinitionEvent) {
+                    replyNote.author?.let { replyUser ->
+                        val currentMentions =
+                            (replyNote.event as? TextNoteEvent)?.mentions()?.map { LocalCache.getOrCreateUser(it) }
+                                ?: emptyList()
 
-                    if (currentMentions.contains(replyUser)) {
-                        this.pTags = currentMentions
-                    } else {
-                        this.pTags = currentMentions.plus(replyUser)
+                        if (currentMentions.contains(replyUser)) {
+                            this.pTags = currentMentions
+                        } else {
+                            this.pTags = currentMentions.plus(replyUser)
+                        }
                     }
                 }
+            }
+                ?: run {
+                    eTags = null
+                    pTags = null
+                }
+
+            canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
+            canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
+            canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channelHex() == null
+            contentToAddUrl = null
+
+            wantsForwardZapTo = false
+            wantsToMarkAsSensitive = false
+            wantsToAddGeoHash = false
+            wantsZapraiser = false
+            zapRaiserAmount = null
+            forwardZapTo = Split()
+            forwardZapToEditting = TextFieldValue("")
+
+            quote?.let {
+                message = TextFieldValue(message.text + "\nnostr:${it.toNEvent()}")
+                urlPreview = findUrlInMessage()
+
+                it.author?.let { quotedUser ->
+                    if (quotedUser.pubkeyHex != accountViewModel.userProfile().pubkeyHex) {
+                        if (forwardZapTo.items.none { it.key.pubkeyHex == quotedUser.pubkeyHex }) {
+                            forwardZapTo.addItem(quotedUser)
+                        }
+                        if (forwardZapTo.items.none { it.key.pubkeyHex == accountViewModel.userProfile().pubkeyHex }) {
+                            forwardZapTo.addItem(accountViewModel.userProfile())
+                        }
+
+                        val pos = forwardZapTo.items.indexOfFirst { it.key.pubkeyHex == quotedUser.pubkeyHex }
+                        forwardZapTo.updatePercentage(pos, 0.9f)
+                    }
+                }
+            }
+
+            fork?.let {
+                message = TextFieldValue(version?.event?.content() ?: it.event?.content() ?: "")
+                urlPreview = findUrlInMessage()
+
+                it.event?.isSensitive()?.let {
+                    if (it) wantsToMarkAsSensitive = true
+                }
+
+                it.event?.zapraiserAmount()?.let {
+                    zapRaiserAmount = it
+                }
+
+                it.event?.zapSplitSetup()?.let {
+                    val totalWeight = it.sumOf { if (it.isLnAddress) 0.0 else it.weight }
+
+                    it.forEach {
+                        if (!it.isLnAddress) {
+                            forwardZapTo.addItem(LocalCache.getOrCreateUser(it.lnAddressOrPubKeyHex), (it.weight / totalWeight).toFloat())
+                        }
+                    }
+                }
+
+                // Only adds if it is not already set up.
+                if (forwardZapTo.items.isEmpty()) {
+                    it.author?.let { forkedAuthor ->
+                        if (forkedAuthor.pubkeyHex != accountViewModel.userProfile().pubkeyHex) {
+                            if (forwardZapTo.items.none { it.key.pubkeyHex == forkedAuthor.pubkeyHex }) forwardZapTo.addItem(forkedAuthor)
+                            if (forwardZapTo.items.none { it.key.pubkeyHex == accountViewModel.userProfile().pubkeyHex }) forwardZapTo.addItem(accountViewModel.userProfile())
+
+                            val pos = forwardZapTo.items.indexOfFirst { it.key.pubkeyHex == forkedAuthor.pubkeyHex }
+                            forwardZapTo.updatePercentage(pos, 0.8f)
+                        }
+                    }
+                }
+
+                it.author?.let {
+                    if (this.pTags == null) {
+                        this.pTags = listOf(it)
+                    } else if (this.pTags?.contains(it) != true) {
+                        this.pTags = listOf(it) + (this.pTags ?: emptyList())
+                    }
+                }
+
+                forkedFromNote = it
+            } ?: run {
+                forkedFromNote = null
+            }
+
+            if (!forwardZapTo.items.isEmpty()) {
+                wantsForwardZapTo = true
             }
         }
-            ?: run {
-                eTags = null
-                pTags = null
-            }
+    }
 
-        canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
-        canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
-        canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channelHex() == null
-        contentToAddUrl = null
-
-        wantsForwardZapTo = false
-        wantsToMarkAsSensitive = false
-        wantsToAddGeoHash = false
-        wantsZapraiser = false
-        zapRaiserAmount = null
-        forwardZapTo = Split()
-        forwardZapToEditting = TextFieldValue("")
-
-        quote?.let {
-            message = TextFieldValue(message.text + "\nnostr:${it.toNEvent()}")
-            urlPreview = findUrlInMessage()
-
-            it.author?.let { quotedUser ->
-                if (quotedUser.pubkeyHex != accountViewModel.userProfile().pubkeyHex) {
-                    if (forwardZapTo.items.none { it.key.pubkeyHex == quotedUser.pubkeyHex }) {
-                        forwardZapTo.addItem(quotedUser)
-                    }
-                    if (forwardZapTo.items.none { it.key.pubkeyHex == accountViewModel.userProfile().pubkeyHex }) {
-                        forwardZapTo.addItem(accountViewModel.userProfile())
-                    }
-
-                    val pos = forwardZapTo.items.indexOfFirst { it.key.pubkeyHex == quotedUser.pubkeyHex }
-                    forwardZapTo.updatePercentage(pos, 0.9f)
-                }
-            }
-        }
-
-        fork?.let {
-            message = TextFieldValue(version?.event?.content() ?: it.event?.content() ?: "")
-            urlPreview = findUrlInMessage()
-
-            it.event?.isSensitive()?.let {
-                if (it) wantsToMarkAsSensitive = true
-            }
-
-            it.event?.zapraiserAmount()?.let {
-                zapRaiserAmount = it
-            }
-
-            it.event?.zapSplitSetup()?.let {
-                val totalWeight = it.sumOf { if (it.isLnAddress) 0.0 else it.weight }
-
-                it.forEach {
-                    if (!it.isLnAddress) {
-                        forwardZapTo.addItem(LocalCache.getOrCreateUser(it.lnAddressOrPubKeyHex), (it.weight / totalWeight).toFloat())
-                    }
-                }
-            }
-
-            // Only adds if it is not already set up.
-            if (forwardZapTo.items.isEmpty()) {
-                it.author?.let { forkedAuthor ->
-                    if (forkedAuthor.pubkeyHex != accountViewModel.userProfile().pubkeyHex) {
-                        if (forwardZapTo.items.none { it.key.pubkeyHex == forkedAuthor.pubkeyHex }) forwardZapTo.addItem(forkedAuthor)
-                        if (forwardZapTo.items.none { it.key.pubkeyHex == accountViewModel.userProfile().pubkeyHex }) forwardZapTo.addItem(accountViewModel.userProfile())
-
-                        val pos = forwardZapTo.items.indexOfFirst { it.key.pubkeyHex == forkedAuthor.pubkeyHex }
-                        forwardZapTo.updatePercentage(pos, 0.8f)
-                    }
-                }
-            }
-
-            it.author?.let {
-                if (this.pTags == null) {
-                    this.pTags = listOf(it)
-                } else if (this.pTags?.contains(it) != true) {
-                    this.pTags = listOf(it) + (this.pTags ?: emptyList())
-                }
-            }
-
-            forkedFromNote = it
-        } ?: run {
-            forkedFromNote = null
-        }
-
-        if (!forwardZapTo.items.isEmpty()) {
-            wantsForwardZapTo = true
-        }
+    private fun loadfromDraft(draft: Note?) {
+        // TODO: finish the loadfromDraft method
     }
 
     fun sendPost(
