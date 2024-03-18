@@ -60,6 +60,7 @@ object ShowFullTextCache {
 fun ExpandableRichTextViewer(
     content: String,
     canPreview: Boolean,
+    quotesLeft: Int,
     modifier: Modifier,
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
@@ -94,6 +95,7 @@ fun ExpandableRichTextViewer(
         RichTextViewer(
             text,
             canPreview,
+            quotesLeft,
             modifier.align(Alignment.TopStart),
             tags,
             backgroundColor,

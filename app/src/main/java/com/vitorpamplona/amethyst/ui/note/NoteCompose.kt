@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,7 +55,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
@@ -78,8 +76,6 @@ import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
-import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
-import com.vitorpamplona.amethyst.ui.note.types.CommunityHeader
 import com.vitorpamplona.amethyst.ui.note.types.DisplayPeopleList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayRelaySet
 import com.vitorpamplona.amethyst.ui.note.types.EditState
@@ -110,7 +106,6 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
@@ -137,7 +132,6 @@ import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
-import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
@@ -172,10 +166,8 @@ import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NoteCompose(
     baseNote: Note,
@@ -187,16 +179,27 @@ fun NoteCompose(
     makeItShort: Boolean = false,
     addMarginTop: Boolean = true,
     showHidden: Boolean = false,
+    quotesLeft: Int,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val hasEvent by baseNote.live().hasEvent.observeAsState(baseNote.event != null)
-
-    Crossfade(targetState = hasEvent, label = "Event presence") {
-        if (it) {
-            CheckHiddenNoteCompose(
-                note = baseNote,
+    WatchNoteEvent(
+        baseNote = baseNote,
+        accountViewModel = accountViewModel,
+        showDivider = !isBoostedNote && !isQuotedNote,
+        modifier,
+    ) {
+        CheckHiddenNoteCompose(
+            note = baseNote,
+            modifier = modifier,
+            showHidden = showHidden,
+            showHiddenWarning = isQuotedNote || isBoostedNote,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        ) { canPreview ->
+            NormalNote(
+                baseNote = baseNote,
                 routeForLastRead = routeForLastRead,
                 modifier = modifier,
                 isBoostedNote = isBoostedNote,
@@ -204,22 +207,46 @@ fun NoteCompose(
                 unPackReply = unPackReply,
                 makeItShort = makeItShort,
                 addMarginTop = addMarginTop,
-                showHidden = showHidden,
+                canPreview = canPreview,
+                quotesLeft = quotesLeft,
                 parentBackgroundColor = parentBackgroundColor,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
-        } else {
-            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
-                BlankNote(
-                    remember {
-                        modifier.combinedClickable(
-                            onClick = {},
-                            onLongClick = showPopup,
-                        )
-                    },
-                    !isBoostedNote && !isQuotedNote,
-                )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun WatchNoteEvent(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    showDivider: Boolean,
+    modifier: Modifier = Modifier,
+    onNoteEventFound: @Composable () -> Unit,
+) {
+    if (baseNote.event != null) {
+        onNoteEventFound()
+    } else {
+        // avoid observing costs if already has an event.
+
+        val hasEvent by baseNote.live().hasEvent.observeAsState(baseNote.event != null)
+        Crossfade(targetState = hasEvent, label = "Event presence") {
+            if (it) {
+                onNoteEventFound()
+            } else {
+                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                    BlankNote(
+                        remember {
+                            modifier.combinedClickable(
+                                onClick = {},
+                                onLongClick = showPopup,
+                            )
+                        },
+                        showDivider,
+                    )
+                }
             }
         }
     }
@@ -228,93 +255,64 @@ fun NoteCompose(
 @Composable
 fun CheckHiddenNoteCompose(
     note: Note,
-    routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
-    isBoostedNote: Boolean = false,
-    isQuotedNote: Boolean = false,
-    unPackReply: Boolean = true,
-    makeItShort: Boolean = false,
-    addMarginTop: Boolean = true,
+    showHiddenWarning: Boolean,
     showHidden: Boolean = false,
-    parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
+    normalNote: @Composable (canPreview: Boolean) -> Unit,
 ) {
     if (showHidden) {
         // Ignores reports as well
-        val state by
-            remember(note) {
-                mutableStateOf(
-                    AccountViewModel.NoteComposeReportState(),
-                )
-            }
-
-        RenderReportState(
-            state = state,
-            note = note,
-            routeForLastRead = routeForLastRead,
-            modifier = modifier,
-            isBoostedNote = isBoostedNote,
-            isQuotedNote = isQuotedNote,
-            unPackReply = unPackReply,
-            makeItShort = makeItShort,
-            addMarginTop = addMarginTop,
-            parentBackgroundColor = parentBackgroundColor,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        normalNote(true)
     } else {
-        val isHidden by
-            remember(note) {
-                accountViewModel.account.liveHiddenUsers
-                    .map { note.isHiddenFor(it) }
-                    .distinctUntilChanged()
-            }
-                .observeAsState(accountViewModel.isNoteHidden(note))
-
-        val showAnyway =
-            remember {
-                mutableStateOf(false)
-            }
-
-        Crossfade(targetState = isHidden, label = "CheckHiddenNoteCompose") {
-            if (!it || showAnyway.value) {
-                LoadedNoteCompose(
-                    note = note,
-                    routeForLastRead = routeForLastRead,
-                    modifier = modifier,
-                    isBoostedNote = isBoostedNote,
-                    isQuotedNote = isQuotedNote,
-                    unPackReply = unPackReply,
-                    makeItShort = makeItShort,
-                    addMarginTop = addMarginTop,
-                    parentBackgroundColor = parentBackgroundColor,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            } else if (isQuotedNote || isBoostedNote) {
-                HiddenNoteByMe(
-                    isQuote = true,
-                    onClick = { showAnyway.value = true },
-                )
+        WatchIsHidden(note, showHiddenWarning, accountViewModel) {
+            LoadReportsNoteCompose(note, modifier, accountViewModel, nav) { canPreview ->
+                normalNote(canPreview)
             }
         }
     }
 }
 
 @Composable
-fun LoadedNoteCompose(
+fun WatchIsHidden(
     note: Note,
-    routeForLastRead: String? = null,
+    showHiddenWarning: Boolean,
+    accountViewModel: AccountViewModel,
+    notHiddenNote: @Composable () -> Unit,
+) {
+    val isHidden by remember(note) {
+        accountViewModel.account.liveHiddenUsers
+            .map { note.isHiddenFor(it) }
+            .distinctUntilChanged()
+    }
+        .observeAsState(accountViewModel.isNoteHidden(note))
+
+    val showAnyway =
+        remember {
+            mutableStateOf(false)
+        }
+
+    Crossfade(targetState = isHidden, label = "CheckHiddenNoteCompose") {
+        if (!it || showAnyway.value) {
+            notHiddenNote()
+        } else if (showHiddenWarning) {
+            // if it is a quoted or boosted note, how the hidden warning.
+            HiddenNoteByMe(
+                isQuote = true,
+                onClick = { showAnyway.value = true },
+            )
+        }
+    }
+}
+
+@Composable
+fun LoadReportsNoteCompose(
+    note: Note,
     modifier: Modifier = Modifier,
-    isBoostedNote: Boolean = false,
-    isQuotedNote: Boolean = false,
-    unPackReply: Boolean = true,
-    makeItShort: Boolean = false,
-    addMarginTop: Boolean = true,
-    parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
+    normalNote: @Composable (canPreview: Boolean) -> Unit,
 ) {
     var state by
         remember(note) {
@@ -330,20 +328,9 @@ fun LoadedNoteCompose(
     }
 
     Crossfade(targetState = state, label = "LoadedNoteCompose") {
-        RenderReportState(
-            it,
-            note,
-            routeForLastRead,
-            modifier,
-            isBoostedNote,
-            isQuotedNote,
-            unPackReply,
-            makeItShort,
-            addMarginTop,
-            parentBackgroundColor,
-            accountViewModel,
-            nav,
-        )
+        RenderReportState(state = it, note = note, modifier = modifier, accountViewModel = accountViewModel, nav = nav) { canPreview ->
+            normalNote(canPreview)
+        }
     }
 }
 
@@ -351,16 +338,10 @@ fun LoadedNoteCompose(
 fun RenderReportState(
     state: AccountViewModel.NoteComposeReportState,
     note: Note,
-    routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
-    isBoostedNote: Boolean = false,
-    isQuotedNote: Boolean = false,
-    unPackReply: Boolean = true,
-    makeItShort: Boolean = false,
-    addMarginTop: Boolean = true,
-    parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
+    normalNote: @Composable (canPreview: Boolean) -> Unit,
 ) {
     var showReportedNote by remember(note) { mutableStateOf(false) }
 
@@ -371,27 +352,13 @@ fun RenderReportState(
                 state.isHiddenAuthor,
                 accountViewModel,
                 modifier,
-                isBoostedNote,
                 nav,
                 onClick = { showReportedNote = true },
             )
         } else {
             val canPreview = (!state.isAcceptable && showReportedNote) || state.canPreview
 
-            NormalNote(
-                baseNote = note,
-                routeForLastRead = routeForLastRead,
-                modifier = modifier,
-                isBoostedNote = isBoostedNote,
-                isQuotedNote = isQuotedNote,
-                unPackReply = unPackReply,
-                makeItShort = makeItShort,
-                addMarginTop = addMarginTop,
-                canPreview = canPreview,
-                parentBackgroundColor = parentBackgroundColor,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+            normalNote(canPreview)
         }
     }
 }
@@ -422,6 +389,7 @@ fun NormalNote(
     makeItShort: Boolean = false,
     addMarginTop: Boolean = true,
     canPreview: Boolean = true,
+    quotesLeft: Int,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -439,35 +407,25 @@ fun NormalNote(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
-            is CommunityDefinitionEvent ->
-                (baseNote as? AddressableNote)?.let {
-                    CommunityHeader(
-                        baseNote = it,
-                        showBottomDiviser = true,
-                        sendToCommunity = true,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
-            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
             else ->
                 LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) {
                         showPopup,
                     ->
                     CheckNewAndRenderNote(
-                        baseNote,
-                        routeForLastRead,
-                        modifier,
-                        isBoostedNote,
-                        isQuotedNote,
-                        unPackReply,
-                        makeItShort,
-                        addMarginTop,
-                        canPreview,
-                        parentBackgroundColor,
-                        accountViewModel,
-                        showPopup,
-                        nav,
+                        baseNote = baseNote,
+                        routeForLastRead = routeForLastRead,
+                        modifier = modifier,
+                        isBoostedNote = isBoostedNote,
+                        isQuotedNote = isQuotedNote,
+                        unPackReply = unPackReply,
+                        makeItShort = makeItShort,
+                        addMarginTop = addMarginTop,
+                        canPreview = canPreview,
+                        quotesLeft = quotesLeft,
+                        parentBackgroundColor = parentBackgroundColor,
+                        accountViewModel = accountViewModel,
+                        showPopup = showPopup,
+                        nav = nav,
                     )
                 }
         }
@@ -484,17 +442,6 @@ fun NormalNote(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
-            is CommunityDefinitionEvent ->
-                (baseNote as? AddressableNote)?.let {
-                    CommunityHeader(
-                        baseNote = it,
-                        showBottomDiviser = true,
-                        sendToCommunity = true,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
-            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
             is FileHeaderEvent -> FileHeaderDisplay(baseNote, false, accountViewModel)
             is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, false, accountViewModel)
             else ->
@@ -511,6 +458,7 @@ fun NormalNote(
                         makeItShort = makeItShort,
                         addMarginTop = addMarginTop,
                         canPreview = canPreview,
+                        quotesLeft = quotesLeft,
                         parentBackgroundColor = parentBackgroundColor,
                         accountViewModel = accountViewModel,
                         showPopup = showPopup,
@@ -518,6 +466,36 @@ fun NormalNote(
                     )
                 }
         }
+    }
+}
+
+@Composable
+fun calculateBackgroundColor(
+    createdAt: Long?,
+    routeForLastRead: String? = null,
+    parentBackgroundColor: MutableState<Color>? = null,
+    accountViewModel: AccountViewModel,
+): MutableState<Color> {
+    val defaultBackgroundColor = MaterialTheme.colorScheme.background
+    val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
+    return remember(createdAt) {
+        mutableStateOf<Color>(
+            if (routeForLastRead != null) {
+                val isNew = accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt)
+
+                if (isNew) {
+                    if (parentBackgroundColor != null) {
+                        newItemColor.compositeOver(parentBackgroundColor.value)
+                    } else {
+                        newItemColor.compositeOver(defaultBackgroundColor)
+                    }
+                } else {
+                    parentBackgroundColor?.value ?: defaultBackgroundColor
+                }
+            } else {
+                parentBackgroundColor?.value ?: defaultBackgroundColor
+            },
+        )
     }
 }
 
@@ -532,45 +510,19 @@ private fun CheckNewAndRenderNote(
     makeItShort: Boolean = false,
     addMarginTop: Boolean = true,
     canPreview: Boolean = true,
+    quotesLeft: Int,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     showPopup: () -> Unit,
     nav: (String) -> Unit,
 ) {
-    val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
-    val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val backgroundColor =
-        remember(baseNote) {
-            mutableStateOf<Color>(parentBackgroundColor?.value ?: defaultBackgroundColor)
-        }
-
-    LaunchedEffect(key1 = routeForLastRead, key2 = parentBackgroundColor?.value) {
-        routeForLastRead?.let {
-            accountViewModel.loadAndMarkAsRead(it, baseNote.createdAt()) { isNew ->
-                val newBackgroundColor =
-                    if (isNew) {
-                        if (parentBackgroundColor != null) {
-                            newItemColor.compositeOver(parentBackgroundColor.value)
-                        } else {
-                            newItemColor.compositeOver(defaultBackgroundColor)
-                        }
-                    } else {
-                        parentBackgroundColor?.value ?: defaultBackgroundColor
-                    }
-
-                if (newBackgroundColor != backgroundColor.value) {
-                    launch(Dispatchers.Main) { backgroundColor.value = newBackgroundColor }
-                }
-            }
-        }
-            ?: run {
-                val newBackgroundColor = parentBackgroundColor?.value ?: defaultBackgroundColor
-
-                if (newBackgroundColor != backgroundColor.value) {
-                    launch(Dispatchers.Main) { backgroundColor.value = newBackgroundColor }
-                }
-            }
-    }
+        calculateBackgroundColor(
+            baseNote.createdAt(),
+            routeForLastRead,
+            parentBackgroundColor,
+            accountViewModel,
+        )
 
     ClickableNote(
         baseNote = baseNote,
@@ -589,6 +541,7 @@ private fun CheckNewAndRenderNote(
             unPackReply = unPackReply,
             makeItShort = makeItShort,
             canPreview = canPreview,
+            quotesLeft = quotesLeft,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -641,6 +594,7 @@ fun InnerNoteWithReactions(
     unPackReply: Boolean,
     makeItShort: Boolean,
     canPreview: Boolean,
+    quotesLeft: Int,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -675,6 +629,7 @@ fun InnerNoteWithReactions(
                 makeItShort = makeItShort,
                 canPreview = canPreview,
                 showSecondRow = showSecondRow,
+                quotesLeft = quotesLeft,
                 backgroundColor = backgroundColor,
                 editState = editState,
                 accountViewModel = accountViewModel,
@@ -701,12 +656,6 @@ fun InnerNoteWithReactions(
             )
         }
     }
-
-    if (notBoostedNorQuote) {
-        HorizontalDivider(
-            thickness = DividerThickness,
-        )
-    }
 }
 
 @Composable
@@ -717,6 +666,7 @@ fun NoteBody(
     makeItShort: Boolean = false,
     canPreview: Boolean = true,
     showSecondRow: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
@@ -758,6 +708,7 @@ fun NoteBody(
         makeItShort = makeItShort,
         canPreview = canPreview,
         editState = editState,
+        quotesLeft = quotesLeft,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -776,6 +727,7 @@ private fun RenderNoteRow(
     backgroundColor: MutableState<Color>,
     makeItShort: Boolean,
     canPreview: Boolean,
+    quotesLeft: Int,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -792,16 +744,16 @@ private fun RenderNoteRow(
             RenderAudioHeader(baseNote, accountViewModel, nav)
         }
         is ReactionEvent -> {
-            RenderReaction(baseNote, backgroundColor, accountViewModel, nav)
+            RenderReaction(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
         is RepostEvent -> {
-            RenderRepost(baseNote, backgroundColor, accountViewModel, nav)
+            RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
         is GenericRepostEvent -> {
-            RenderRepost(baseNote, backgroundColor, accountViewModel, nav)
+            RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
         is ReportEvent -> {
-            RenderReport(baseNote, backgroundColor, accountViewModel, nav)
+            RenderReport(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
         is LongTextNoteEvent -> {
             RenderLongFormContent(baseNote, accountViewModel, nav)
@@ -838,6 +790,7 @@ private fun RenderNoteRow(
                 baseNote,
                 makeItShort,
                 canPreview,
+                quotesLeft,
                 backgroundColor,
                 accountViewModel,
                 nav,
@@ -848,6 +801,7 @@ private fun RenderNoteRow(
                 baseNote,
                 makeItShort,
                 canPreview,
+                quotesLeft,
                 backgroundColor,
                 accountViewModel,
                 nav,
@@ -858,6 +812,7 @@ private fun RenderNoteRow(
                 baseNote,
                 makeItShort,
                 canPreview,
+                quotesLeft,
                 backgroundColor,
                 accountViewModel,
                 nav,
@@ -876,6 +831,7 @@ private fun RenderNoteRow(
                 baseNote,
                 makeItShort,
                 canPreview,
+                quotesLeft,
                 backgroundColor,
                 accountViewModel,
                 nav,
@@ -886,6 +842,7 @@ private fun RenderNoteRow(
                 baseNote,
                 makeItShort,
                 canPreview,
+                quotesLeft,
                 backgroundColor,
                 accountViewModel,
                 nav,
@@ -906,8 +863,7 @@ private fun RenderNoteRow(
         is CommunityPostApprovalEvent -> {
             RenderPostApproval(
                 baseNote,
-                makeItShort,
-                canPreview,
+                quotesLeft,
                 backgroundColor,
                 accountViewModel,
                 nav,
@@ -918,6 +874,7 @@ private fun RenderNoteRow(
                 baseNote,
                 makeItShort,
                 canPreview,
+                quotesLeft,
                 backgroundColor,
                 accountViewModel,
                 nav,
@@ -928,6 +885,7 @@ private fun RenderNoteRow(
                 baseNote,
                 makeItShort,
                 canPreview,
+                quotesLeft,
                 backgroundColor,
                 editState,
                 accountViewModel,
@@ -940,18 +898,18 @@ private fun RenderNoteRow(
 @Composable
 fun RenderRepost(
     note: Note,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val boostedNote = remember { note.replyTo?.lastOrNull() }
-
-    boostedNote?.let {
+    note.replyTo?.lastOrNull()?.let {
         NoteCompose(
             it,
             modifier = Modifier,
             isBoostedNote = true,
             unPackReply = false,
+            quotesLeft = quotesLeft - 1,
             parentBackgroundColor = backgroundColor,
             accountViewModel = accountViewModel,
             nav = nav,
@@ -1048,21 +1006,19 @@ private fun ReplyNoteComposition(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val replyBackgroundColor = remember { mutableStateOf(backgroundColor.value) }
     val defaultReplyBackground = MaterialTheme.colorScheme.replyBackground
 
-    LaunchedEffect(key1 = backgroundColor.value, key2 = defaultReplyBackground) {
-        launch(Dispatchers.Default) {
-            val newReplyBackgroundColor = defaultReplyBackground.compositeOver(backgroundColor.value)
-            if (replyBackgroundColor.value != newReplyBackgroundColor) {
-                replyBackgroundColor.value = newReplyBackgroundColor
-            }
+    val replyBackgroundColor =
+        remember {
+            mutableStateOf(
+                defaultReplyBackground.compositeOver(backgroundColor.value),
+            )
         }
-    }
 
     NoteCompose(
         baseNote = replyingDirectlyTo,
         isQuotedNote = true,
+        quotesLeft = 0,
         modifier = MaterialTheme.colorScheme.replyModifier,
         unPackReply = false,
         makeItShort = true,

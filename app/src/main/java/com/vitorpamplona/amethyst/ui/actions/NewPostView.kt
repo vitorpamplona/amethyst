@@ -336,6 +336,7 @@ fun NewPostView(
                                             makeItShort = true,
                                             unPackReply = false,
                                             isQuotedNote = true,
+                                            quotesLeft = 1,
                                             modifier = MaterialTheme.colorScheme.replyModifier,
                                             accountViewModel = accountViewModel,
                                             nav = nav,
@@ -413,11 +414,12 @@ fun NewPostView(
                                             val backgroundColor = remember { mutableStateOf(bgColor) }
 
                                             BechLink(
-                                                myUrlPreview,
-                                                true,
-                                                backgroundColor,
-                                                accountViewModel,
-                                                nav,
+                                                word = myUrlPreview,
+                                                canPreview = true,
+                                                quotesLeft = 1,
+                                                backgroundColor = backgroundColor,
+                                                accountViewModel = accountViewModel,
+                                                nav = nav,
                                             )
                                         } else if (RichTextParser.isUrlWithoutScheme(myUrlPreview)) {
                                             LoadUrlPreview("https://$myUrlPreview", myUrlPreview, accountViewModel)

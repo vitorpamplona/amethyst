@@ -32,13 +32,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -46,8 +44,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -55,11 +51,10 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
+import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.screen.BadgeCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
-import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.launch
 
@@ -86,24 +81,12 @@ fun BadgeCompose(
     if (note == null) {
         BlankNote(Modifier, !isInnerNote)
     } else {
-        val defaultBackgroundColor = MaterialTheme.colorScheme.background
-        val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
-        val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
-
-        LaunchedEffect(key1 = likeSetCard) {
-            accountViewModel.loadAndMarkAsRead(routeForLastRead, likeSetCard.createdAt()) { isNew ->
-                val newBackgroundColor =
-                    if (isNew) {
-                        newItemColor.compositeOver(defaultBackgroundColor)
-                    } else {
-                        defaultBackgroundColor
-                    }
-
-                if (backgroundColor.value != newBackgroundColor) {
-                    backgroundColor.value = newBackgroundColor
-                }
-            }
-        }
+        val backgroundColor =
+            calculateBackgroundColor(
+                createdAt = likeSetCard.createdAt(),
+                routeForLastRead = routeForLastRead,
+                accountViewModel = accountViewModel,
+            )
 
         Column(
             modifier =
@@ -173,21 +156,8 @@ fun BadgeCompose(
                     }
 
                     note.replyTo?.firstOrNull()?.let {
-                        NoteCompose(
-                            baseNote = it,
-                            routeForLastRead = null,
-                            isBoostedNote = true,
-                            showHidden = showHidden,
-                            parentBackgroundColor = backgroundColor,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
+                        BadgeDisplay(baseNote = it)
                     }
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(top = 10.dp),
-                        thickness = DividerThickness,
-                    )
                 }
             }
         }

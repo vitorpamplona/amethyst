@@ -232,6 +232,7 @@ fun RenderAppDefinition(
                         TranslatableRichTextViewer(
                             content = it,
                             canPreview = false,
+                            quotesLeft = 1,
                             tags = tags,
                             backgroundColor = backgroundColor,
                             id = note.idHex,

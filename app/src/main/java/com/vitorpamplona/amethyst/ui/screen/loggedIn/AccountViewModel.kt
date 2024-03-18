@@ -681,41 +681,42 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         val relevantReports: ImmutableSet<Note> = persistentSetOf(),
     )
 
-    fun isNoteAcceptable(
+    suspend fun isNoteAcceptable(
         note: Note,
         onReady: (NoteComposeReportState) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
-            val isFromLoggedInFollow = note.author?.let { userProfile().isFollowingCached(it) } ?: true
+        val newState =
+            withContext(Dispatchers.IO) {
+                val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
+                val isFromLoggedInFollow = note.author?.let { userProfile().isFollowingCached(it) } ?: true
 
-            if (isFromLoggedIn || isFromLoggedInFollow) {
-                // No need to process if from trusted people
-                onReady(NoteComposeReportState(true, true, false, persistentSetOf()))
-            } else if (note.author?.let { account.isHidden(it) } == true) {
-                onReady(NoteComposeReportState(false, false, true, persistentSetOf()))
-            } else {
-                val newCanPreview = !note.hasAnyReports()
-
-                val newIsAcceptable = account.isAcceptable(note)
-
-                if (newCanPreview && newIsAcceptable) {
-                    // No need to process reports if nothing is wrong
-                    onReady(NoteComposeReportState(true, true, false, persistentSetOf()))
+                if (isFromLoggedIn || isFromLoggedInFollow) {
+                    // No need to process if from trusted people
+                    NoteComposeReportState(true, true, false, persistentSetOf())
+                } else if (note.author?.let { account.isHidden(it) } == true) {
+                    NoteComposeReportState(false, false, true, persistentSetOf())
                 } else {
-                    val newRelevantReports = account.getRelevantReports(note)
+                    val newCanPreview = !note.hasAnyReports()
 
-                    onReady(
+                    val newIsAcceptable = account.isAcceptable(note)
+
+                    if (newCanPreview && newIsAcceptable) {
+                        // No need to process reports if nothing is wrong
+                        NoteComposeReportState(true, true, false, persistentSetOf())
+                    } else {
+                        val newRelevantReports = account.getRelevantReports(note)
+
                         NoteComposeReportState(
                             newIsAcceptable,
                             newCanPreview,
                             false,
                             newRelevantReports.toImmutableSet(),
-                        ),
-                    )
+                        )
+                    }
                 }
             }
-        }
+
+        onReady(newState)
     }
 
     fun unwrap(
@@ -1067,20 +1068,22 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     fun loadAndMarkAsRead(
         routeForLastRead: String,
         createdAt: Long?,
-        onIsNew: (Boolean) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val lastTime = account.loadLastRead(routeForLastRead)
+    ): Boolean {
+        if (createdAt == null) return false
 
-            if (createdAt != null) {
+        val lastTime = account.loadLastRead(routeForLastRead)
+
+        val onIsNew = createdAt > lastTime
+
+        if (onIsNew) {
+            viewModelScope.launch(Dispatchers.IO) {
                 if (account.markAsRead(routeForLastRead, createdAt)) {
                     refreshMarkAsReadObservers()
                 }
-                onIsNew(createdAt > lastTime)
-            } else {
-                onIsNew(false)
             }
         }
+
+        return onIsNew
     }
 
     fun markAllAsRead(

@@ -67,6 +67,7 @@ fun RenderTextModificationEvent(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -113,6 +114,7 @@ fun RenderTextModificationEvent(
                 TranslatableRichTextViewer(
                     content = it,
                     canPreview = canPreview && !makeItShort,
+                    quotesLeft = quotesLeft,
                     modifier = Modifier.fillMaxWidth(),
                     tags = EmptyTagList,
                     backgroundColor = backgroundColor,
@@ -182,6 +184,7 @@ fun RenderTextModificationEvent(
                                 makeItShort = false,
                                 canPreview = true,
                                 showSecondRow = false,
+                                quotesLeft = quotesLeft,
                                 backgroundColor = backgroundColor,
                                 editState = editState,
                                 accountViewModel = accountViewModel,

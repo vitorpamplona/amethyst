@@ -163,6 +163,7 @@ fun VideoDisplay(
                 TranslatableRichTextViewer(
                     content = it,
                     canPreview = canPreview && !makeItShort,
+                    quotesLeft = 1,
                     modifier = Modifier.fillMaxWidth(),
                     tags = tags,
                     backgroundColor = backgroundColor,

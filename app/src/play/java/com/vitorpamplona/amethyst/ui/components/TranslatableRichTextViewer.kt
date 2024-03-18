@@ -71,6 +71,7 @@ import java.util.Locale
 fun TranslatableRichTextViewer(
     content: String,
     canPreview: Boolean,
+    quotesLeft: Int,
     modifier: Modifier = Modifier,
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
@@ -93,15 +94,16 @@ fun TranslatableRichTextViewer(
 
     Crossfade(targetState = translatedTextState) {
         RenderText(
-            it,
-            content,
-            canPreview,
-            modifier,
-            tags,
-            backgroundColor,
-            id,
-            accountViewModel,
-            nav,
+            translatedTextState = it,
+            content = content,
+            canPreview = canPreview,
+            quotesLeft = quotesLeft,
+            modifier = modifier,
+            tags = tags,
+            backgroundColor = backgroundColor,
+            id = id,
+            accountViewModel = accountViewModel,
+            nav = nav,
         )
     }
 }
@@ -111,6 +113,7 @@ private fun RenderText(
     translatedTextState: TranslationConfig,
     content: String,
     canPreview: Boolean,
+    quotesLeft: Int,
     modifier: Modifier,
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
@@ -130,6 +133,7 @@ private fun RenderText(
         ExpandableRichTextViewer(
             toBeViewed,
             canPreview,
+            quotesLeft,
             modifier,
             tags,
             backgroundColor,

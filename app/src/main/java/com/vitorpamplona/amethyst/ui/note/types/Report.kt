@@ -20,31 +20,26 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.ReportEvent
 
 @Composable
 fun RenderReport(
     note: Note,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -81,6 +76,7 @@ fun RenderReport(
         tags = EmptyTagList,
         backgroundColor = backgroundColor,
         id = note.idHex,
+        quotesLeft = 1,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -89,18 +85,10 @@ fun RenderReport(
         NoteCompose(
             baseNote = it,
             isQuotedNote = true,
-            modifier =
-                Modifier
-                    .padding(top = 5.dp)
-                    .fillMaxWidth()
-                    .clip(shape = QuoteBorder)
-                    .border(
-                        1.dp,
-                        MaterialTheme.colorScheme.subtleBorder,
-                        QuoteBorder,
-                    ),
+            modifier = MaterialTheme.colorScheme.replyModifier,
             unPackReply = false,
             makeItShort = true,
+            quotesLeft = quotesLeft - 1,
             parentBackgroundColor = backgroundColor,
             accountViewModel = accountViewModel,
             nav = nav,

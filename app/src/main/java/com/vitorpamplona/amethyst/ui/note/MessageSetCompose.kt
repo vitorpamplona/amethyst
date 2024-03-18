@@ -30,24 +30,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.MessageSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -66,24 +59,12 @@ fun MessageSetCompose(
 
     val scope = rememberCoroutineScope()
 
-    val defaultBackgroundColor = MaterialTheme.colorScheme.background
-    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
-    val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
-
-    LaunchedEffect(key1 = messageSetCard) {
-        accountViewModel.loadAndMarkAsRead(routeForLastRead, messageSetCard.createdAt()) { isNew ->
-            val newBackgroundColor =
-                if (isNew) {
-                    newItemColor.compositeOver(defaultBackgroundColor)
-                } else {
-                    defaultBackgroundColor
-                }
-
-            if (backgroundColor.value != newBackgroundColor) {
-                backgroundColor.value = newBackgroundColor
-            }
-        }
-    }
+    val backgroundColor =
+        calculateBackgroundColor(
+            createdAt = messageSetCard.createdAt(),
+            routeForLastRead = routeForLastRead,
+            accountViewModel = accountViewModel,
+        )
 
     val columnModifier =
         remember(backgroundColor.value) {
@@ -125,6 +106,7 @@ fun MessageSetCompose(
                     isBoostedNote = true,
                     addMarginTop = false,
                     showHidden = showHidden,
+                    quotesLeft = 1,
                     parentBackgroundColor = backgroundColor,
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -133,9 +115,5 @@ fun MessageSetCompose(
                 NoteDropDownMenu(baseNote, popupExpanded, null, accountViewModel, nav)
             }
         }
-
-        HorizontalDivider(
-            thickness = DividerThickness,
-        )
     }
 }

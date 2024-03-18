@@ -56,7 +56,6 @@ import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -91,7 +90,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
@@ -258,7 +256,6 @@ fun RenderChannelCardReportState(
                 state.isHiddenAuthor,
                 accountViewModel,
                 modifier,
-                false,
                 nav,
                 onClick = { showReportedNote = true },
             )
@@ -307,41 +304,13 @@ private fun CheckNewAndRenderChannelCard(
     showPopup: () -> Unit,
     nav: (String) -> Unit,
 ) {
-    val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
-    val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val backgroundColor =
-        remember {
-            mutableStateOf<Color>(
-                parentBackgroundColor?.value ?: defaultBackgroundColor,
-            )
-        }
-
-    LaunchedEffect(key1 = routeForLastRead, key2 = parentBackgroundColor?.value) {
-        routeForLastRead?.let {
-            accountViewModel.loadAndMarkAsRead(routeForLastRead, baseNote.createdAt()) { isNew ->
-                val newBackgroundColor =
-                    if (isNew) {
-                        if (parentBackgroundColor != null) {
-                            newItemColor.compositeOver(parentBackgroundColor.value)
-                        } else {
-                            newItemColor.compositeOver(defaultBackgroundColor)
-                        }
-                    } else {
-                        parentBackgroundColor?.value ?: defaultBackgroundColor
-                    }
-
-                if (newBackgroundColor != backgroundColor.value) {
-                    launch(Dispatchers.Main) { backgroundColor.value = newBackgroundColor }
-                }
-            }
-        }
-            ?: run {
-                val newBackgroundColor = parentBackgroundColor?.value ?: defaultBackgroundColor
-                if (newBackgroundColor != backgroundColor.value) {
-                    launch(Dispatchers.Main) { backgroundColor.value = newBackgroundColor }
-                }
-            }
-    }
+        calculateBackgroundColor(
+            createdAt = baseNote.createdAt(),
+            routeForLastRead = routeForLastRead,
+            parentBackgroundColor = parentBackgroundColor,
+            accountViewModel = accountViewModel,
+        )
 
     ClickableNote(
         baseNote = baseNote,

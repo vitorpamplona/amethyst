@@ -51,6 +51,7 @@ fun RenderTextEvent(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
@@ -103,6 +104,7 @@ fun RenderTextEvent(
                 TranslatableRichTextViewer(
                     content = eventContent,
                     canPreview = canPreview && !makeItShort,
+                    quotesLeft = quotesLeft,
                     modifier = modifier,
                     tags = tags,
                     backgroundColor = backgroundColor,

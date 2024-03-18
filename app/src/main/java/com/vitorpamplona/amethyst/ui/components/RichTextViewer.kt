@@ -129,6 +129,7 @@ fun isMarkdown(content: String): Boolean {
 fun RichTextViewer(
     content: String,
     canPreview: Boolean,
+    quotesLeft: Int,
     modifier: Modifier,
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
@@ -139,7 +140,7 @@ fun RichTextViewer(
         if (remember(content) { isMarkdown(content) }) {
             RenderContentAsMarkdown(content, tags, accountViewModel, nav)
         } else {
-            RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, nav)
+            RenderRegular(content, tags, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
         }
     }
 }
@@ -277,6 +278,7 @@ private fun RenderRegular(
     content: String,
     tags: ImmutableListOfLists<String>,
     canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -287,6 +289,7 @@ private fun RenderRegular(
                 word,
                 state,
                 backgroundColor,
+                quotesLeft,
                 accountViewModel,
                 nav,
             )
@@ -394,10 +397,10 @@ private fun RenderWordWithoutPreview(
         is CashuSegment -> Text(word.segmentText)
         is EmailSegment -> ClickableEmail(word.segmentText)
         is PhoneSegment -> ClickablePhone(word.segmentText)
-        is BechSegment -> BechLink(word.segmentText, false, backgroundColor, accountViewModel, nav)
+        is BechSegment -> BechLink(word.segmentText, false, 0, backgroundColor, accountViewModel, nav)
         is HashTagSegment -> HashTag(word, nav)
         is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
-        is HashIndexEventSegment -> TagLink(word, false, backgroundColor, accountViewModel, nav)
+        is HashIndexEventSegment -> TagLink(word, false, 0, backgroundColor, accountViewModel, nav)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
         is RegularTextSegment -> Text(word.segmentText)
     }
@@ -408,6 +411,7 @@ private fun RenderWordWithPreview(
     word: Segment,
     state: RichTextViewerState,
     backgroundColor: MutableState<Color>,
+    quotesLeft: Int,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -420,10 +424,10 @@ private fun RenderWordWithPreview(
         is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
         is EmailSegment -> ClickableEmail(word.segmentText)
         is PhoneSegment -> ClickablePhone(word.segmentText)
-        is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
+        is BechSegment -> BechLink(word.segmentText, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is HashTagSegment -> HashTag(word, nav)
         is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
-        is HashIndexEventSegment -> TagLink(word, true, backgroundColor, accountViewModel, nav)
+        is HashIndexEventSegment -> TagLink(word, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
         is RegularTextSegment -> Text(word.segmentText)
     }
@@ -643,6 +647,7 @@ private fun ObserveUser(
 fun BechLink(
     word: String,
     canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -655,14 +660,17 @@ fun BechLink(
         }
     }
 
-    if (canPreview && loadedLink?.baseNote != null) {
+    val baseNote = loadedLink?.baseNote
+
+    if (canPreview && quotesLeft > 0 && baseNote != null) {
         Row {
             DisplayFullNote(
-                loadedLink?.baseNote!!,
-                accountViewModel,
-                backgroundColor,
-                nav,
-                loadedLink?.nip19?.additionalChars?.ifBlank { null },
+                note = baseNote,
+                extraChars = loadedLink?.nip19?.additionalChars?.ifBlank { null },
+                quotesLeft = quotesLeft,
+                backgroundColor = backgroundColor,
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         }
     } else if (loadedLink?.nip19 != null) {
@@ -683,17 +691,19 @@ fun BechLink(
 
 @Composable
 private fun DisplayFullNote(
-    it: Note,
-    accountViewModel: AccountViewModel,
-    backgroundColor: MutableState<Color>,
-    nav: (String) -> Unit,
+    note: Note,
     extraChars: String?,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
     NoteCompose(
-        baseNote = it,
+        baseNote = note,
         accountViewModel = accountViewModel,
         modifier = MaterialTheme.colorScheme.innerPostModifier,
         parentBackgroundColor = backgroundColor,
+        quotesLeft = quotesLeft - 1,
         isQuotedNote = true,
         nav = nav,
     )
@@ -806,6 +816,7 @@ fun LoadNote(
 fun TagLink(
     word: HashIndexEventSegment,
     canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -819,6 +830,7 @@ fun TagLink(
                     it,
                     word.extras,
                     canPreview,
+                    quotesLeft,
                     accountViewModel,
                     backgroundColor,
                     nav,
@@ -833,21 +845,23 @@ private fun DisplayNoteFromTag(
     baseNote: Note,
     addedChars: String?,
     canPreview: Boolean,
+    quotesLeft: Int,
     accountViewModel: AccountViewModel,
     backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
 ) {
-    if (canPreview) {
+    if (canPreview && quotesLeft > 0) {
         NoteCompose(
             baseNote = baseNote,
             accountViewModel = accountViewModel,
             modifier = MaterialTheme.colorScheme.innerPostModifier,
             parentBackgroundColor = backgroundColor,
             isQuotedNote = true,
+            quotesLeft = quotesLeft - 1,
             nav = nav,
         )
     } else {
-        ClickableNoteTag(baseNote, nav)
+        ClickableNoteTag(baseNote, accountViewModel, nav)
     }
 
     addedChars?.ifBlank { null }?.let { Text(text = it) }

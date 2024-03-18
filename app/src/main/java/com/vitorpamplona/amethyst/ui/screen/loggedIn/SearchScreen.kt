@@ -411,8 +411,13 @@ private fun DisplaySearchResults(
         ) { _, item ->
             NoteCompose(
                 item,
+                quotesLeft = 1,
                 accountViewModel = accountViewModel,
                 nav = nav,
+            )
+
+            HorizontalDivider(
+                thickness = DividerThickness,
             )
         }
     }

@@ -38,6 +38,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.pullrefresh.PullRefreshIndicator
@@ -56,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
@@ -227,24 +229,15 @@ private fun FeedLoaded(
                     modifier = Modifier,
                     isBoostedNote = false,
                     showHidden = state.showHidden.value,
+                    quotesLeft = 3,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
             }
 
-            /*var see by
-                remember {
-                    mutableStateOf(false)
-                }
-
-            if (see) {
-            } else {
-                Row(defaultModifier) {
-                    Button(onClick = { see = true }) {
-                        Text("Show")
-                    }
-                }
-            }*/
+            HorizontalDivider(
+                thickness = DividerThickness,
+            )
         }
     }
 }

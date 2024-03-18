@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.pullrefresh.PullRefreshIndicator
 import androidx.compose.material3.pullrefresh.pullRefresh
 import androidx.compose.material3.pullrefresh.rememberPullRefreshState
@@ -55,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ZapTheDevsCard
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
@@ -196,6 +198,9 @@ private fun FeedLoaded(
                     nav,
                 )
             }
+            HorizontalDivider(
+                thickness = DividerThickness,
+            )
         }
     }
 }
@@ -302,6 +307,7 @@ fun NoteCardCompose(
         makeItShort = makeItShort,
         addMarginTop = addMarginTop,
         showHidden = showHidden,
+        quotesLeft = 3,
         parentBackgroundColor = parentBackgroundColor,
         accountViewModel = accountViewModel,
         nav = nav,

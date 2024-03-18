@@ -303,7 +303,6 @@ fun RenderReportState(
                     state.isHiddenAuthor,
                     accountViewModel,
                     Modifier.fillMaxWidth(),
-                    false,
                     nav,
                     onClick = { showReportedNote = true },
                 )

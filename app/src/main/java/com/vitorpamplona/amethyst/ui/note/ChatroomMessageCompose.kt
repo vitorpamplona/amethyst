@@ -204,7 +204,6 @@ fun LoadedChatMessageCompose(
                 state.isHiddenAuthor,
                 accountViewModel,
                 Modifier,
-                innerQuote,
                 nav,
                 onClick = { showReportedNote = true },
             )
@@ -290,7 +289,7 @@ fun NormalChatNote(
 
     if (routeForLastRead != null) {
         LaunchedEffect(key1 = routeForLastRead) {
-            accountViewModel.loadAndMarkAsRead(routeForLastRead, note.createdAt()) {}
+            accountViewModel.loadAndMarkAsRead(routeForLastRead, note.createdAt())
         }
     }
 
@@ -445,6 +444,7 @@ private fun MessageBubbleLines(
     NoteRow(
         note = baseNote,
         canPreview = canPreview,
+        innerQuote = innerQuote,
         backgroundBubbleColor = backgroundBubbleColor,
         accountViewModel = accountViewModel,
         nav = nav,
@@ -528,6 +528,7 @@ private fun RenderReply(
 private fun NoteRow(
     note: Note,
     canPreview: Boolean,
+    innerQuote: Boolean,
     backgroundBubbleColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -544,6 +545,7 @@ private fun NoteRow(
                 RenderRegularTextNote(
                     note,
                     canPreview,
+                    innerQuote,
                     backgroundBubbleColor,
                     accountViewModel,
                     nav,
@@ -640,6 +642,7 @@ fun ChatTimeAgo(baseNote: Note) {
 private fun RenderRegularTextNote(
     note: Note,
     canPreview: Boolean,
+    innerQuote: Boolean,
     backgroundBubbleColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -655,6 +658,7 @@ private fun RenderRegularTextNote(
                 TranslatableRichTextViewer(
                     content = eventContent,
                     canPreview = canPreview,
+                    quotesLeft = if (innerQuote) 0 else 1,
                     modifier = HalfTopPadding,
                     tags = tags,
                     backgroundColor = backgroundBubbleColor,
@@ -667,6 +671,7 @@ private fun RenderRegularTextNote(
             TranslatableRichTextViewer(
                 content = stringResource(id = R.string.could_not_decrypt_the_message),
                 canPreview = true,
+                quotesLeft = 0,
                 modifier = HalfTopPadding,
                 tags = EmptyTagList,
                 backgroundColor = backgroundBubbleColor,

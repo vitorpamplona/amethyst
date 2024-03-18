@@ -216,6 +216,7 @@ fun AudioHeader(
                     TranslatableRichTextViewer(
                         content = it,
                         canPreview = true,
+                        quotesLeft = 1,
                         tags = tags,
                         backgroundColor = background,
                         id = note.idHex,

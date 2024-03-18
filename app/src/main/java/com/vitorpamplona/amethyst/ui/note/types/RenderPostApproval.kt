@@ -45,8 +45,7 @@ import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 @Composable
 fun RenderPostApproval(
     note: Note,
-    makeItShort: Boolean,
-    canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -56,12 +55,13 @@ fun RenderPostApproval(
     val noteEvent = note.event as? CommunityPostApprovalEvent ?: return
 
     Column(Modifier.fillMaxWidth()) {
-        noteEvent.communities().forEach {
-            LoadAddressableNote(it, accountViewModel) {
-                it?.let {
-                    NoteCompose(
-                        it,
-                        parentBackgroundColor = backgroundColor,
+        noteEvent.communities().forEach { tag ->
+            LoadAddressableNote(tag, accountViewModel) { baseNote ->
+                baseNote?.let {
+                    CommunityHeader(
+                        baseNote = it,
+                        showBottomDiviser = false,
+                        sendToCommunity = true,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
@@ -88,6 +88,7 @@ fun RenderPostApproval(
                 unPackReply = false,
                 makeItShort = true,
                 isQuotedNote = true,
+                quotesLeft = quotesLeft - 1,
                 parentBackgroundColor = backgroundColor,
                 accountViewModel = accountViewModel,
                 nav = nav,

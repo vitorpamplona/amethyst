@@ -65,6 +65,7 @@ fun NotifyRequestDialog(
             TranslatableRichTextViewer(
                 textContent,
                 canPreview = true,
+                quotesLeft = 1,
                 Modifier.fillMaxWidth(),
                 EmptyTagList,
                 background,

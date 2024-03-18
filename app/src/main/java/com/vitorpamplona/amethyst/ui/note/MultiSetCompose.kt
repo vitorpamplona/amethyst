@@ -36,7 +36,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,7 +53,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -74,7 +72,6 @@ import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifierSmaller
@@ -88,14 +85,12 @@ import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifierWithPadding
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
-import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.ui.theme.profile35dpModifier
 import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import com.vitorpamplona.quartz.events.EmptyTagList
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.time.ExperimentalTime
 
@@ -115,24 +110,12 @@ fun MultiSetCompose(
 
     val scope = rememberCoroutineScope()
 
-    val defaultBackgroundColor = MaterialTheme.colorScheme.background
-    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
-    val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
-
-    LaunchedEffect(key1 = multiSetCard) {
-        accountViewModel.loadAndMarkAsRead(routeForLastRead, multiSetCard.maxCreatedAt) { isNew ->
-            val newBackgroundColor =
-                if (isNew) {
-                    newItemColor.compositeOver(defaultBackgroundColor)
-                } else {
-                    defaultBackgroundColor
-                }
-
-            if (backgroundColor.value != newBackgroundColor) {
-                launch(Dispatchers.Main) { backgroundColor.value = newBackgroundColor }
-            }
-        }
-    }
+    val backgroundColor =
+        calculateBackgroundColor(
+            createdAt = multiSetCard.maxCreatedAt,
+            routeForLastRead = routeForLastRead,
+            accountViewModel = accountViewModel,
+        )
 
     val columnModifier =
         remember(backgroundColor.value) {
@@ -163,6 +146,7 @@ fun MultiSetCompose(
                 modifier = HalfTopPadding,
                 isBoostedNote = true,
                 showHidden = showHidden,
+                quotesLeft = 1,
                 parentBackgroundColor = backgroundColor,
                 accountViewModel = accountViewModel,
                 nav = nav,
@@ -170,10 +154,6 @@ fun MultiSetCompose(
 
             NoteDropDownMenu(baseNote, popupExpanded, null, accountViewModel, nav)
         }
-
-        HorizontalDivider(
-            thickness = DividerThickness,
-        )
     }
 }
 
@@ -471,6 +451,7 @@ fun CrossfadeToDisplayComment(
     TranslatableRichTextViewer(
         content = comment,
         canPreview = true,
+        quotesLeft = 1,
         tags = EmptyTagList,
         modifier = textBoxModifier,
         backgroundColor = backgroundColor,

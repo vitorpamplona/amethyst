@@ -180,6 +180,7 @@ fun LongCommunityHeader(
                 TranslatableRichTextViewer(
                     content = summary ?: stringResource(id = R.string.community_no_descriptor),
                     canPreview = false,
+                    quotesLeft = 1,
                     tags = EmptyTagList,
                     backgroundColor = background,
                     id = baseNote.idHex,

@@ -77,8 +77,6 @@ import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun ChatroomHeaderCompose(
@@ -408,11 +406,8 @@ private fun WatchNotificationChanges(
     onNewStatus: (Boolean) -> Unit,
 ) {
     LaunchedEffect(key1 = note, accountViewModel.accountMarkAsReadUpdates.intValue) {
-        launch(Dispatchers.IO) {
-            note.event?.createdAt()?.let {
-                val lastTime = accountViewModel.account.loadLastRead(route)
-                onNewStatus(it > lastTime)
-            }
+        note.event?.createdAt()?.let {
+            onNewStatus(it > accountViewModel.account.loadLastRead(route))
         }
     }
 }
