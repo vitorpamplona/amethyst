@@ -441,6 +441,8 @@
     <string name="connectivity_type_always">Siempre</string>
     <string name="connectivity_type_wifi_only">Solo Wi-Fi</string>
     <string name="connectivity_type_never">Nunca</string>
+    <string name="ui_feature_set_type_complete">Completo</string>
+    <string name="ui_feature_set_type_simplified">Simplificado</string>
     <string name="system">Sistema</string>
     <string name="light">Claro</string>
     <string name="dark">Oscuro</string>
@@ -452,6 +454,8 @@
     <string name="automatically_show_url_preview">Vista previa de URL</string>
     <string name="automatically_hide_nav_bars">Desplazamiento inmersivo</string>
     <string name="automatically_hide_nav_bars_description">Ocultar barras de navegación al desplazarse</string>
+    <string name="ui_style">Modo de interfaz</string>
+    <string name="ui_style_description">Elegir el estilo de publicación</string>
     <string name="load_image">Cargar imagen</string>
     <string name="spamming_users">Spammers</string>
     <string name="muted_button">Silenciado. Hacer clic para reactivar el sonido.</string>
