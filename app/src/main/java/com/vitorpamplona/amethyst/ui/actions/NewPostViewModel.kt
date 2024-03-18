@@ -703,6 +703,7 @@ open class NewPostViewModel() : ViewModel() {
     }
 
     open fun saveDraft() {
+        // TODO: find a way to send only the last modification so we dont get rate limited
         sendPost(localDraft = draftTag)
     }
 
