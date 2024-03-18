@@ -143,9 +143,8 @@ object LocalCache {
     }
 
     fun draftNotes(draftTag: String): List<Note> {
-        return notes.values.filter {
+        return notes.filter { _, it ->
             it.event?.tags()?.filter { it.size > 1 && it[0] == "d" }?.map {
-                Log.d("tag", it[1])
                 it[1]
             }?.firstOrNull() == draftTag
         }
