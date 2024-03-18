@@ -381,6 +381,16 @@ open class NewPostViewModel() : ViewModel() {
             }
         }
 
+        wantsProduct = draft.event?.kind() == 30402
+
+        title = TextFieldValue(draft.event?.tags()?.filter { it.size > 1 && it[0] == "title" }?.map { it[1] }?.firstOrNull() ?: "")
+        price = TextFieldValue(draft.event?.tags()?.filter { it.size > 1 && it[0] == "price" }?.map { it[1] }?.firstOrNull() ?: "")
+        category = TextFieldValue(draft.event?.tags()?.filter { it.size > 1 && it[0] == "t" }?.map { it[1] }?.firstOrNull() ?: "")
+        locationText = TextFieldValue(draft.event?.tags()?.filter { it.size > 1 && it[0] == "location" }?.map { it[1] }?.firstOrNull() ?: "")
+        condition = ClassifiedsEvent.CONDITION.entries.firstOrNull {
+            it.value == draft.event?.tags()?.filter { it.size > 1 && it[0] == "condition" }?.map { it[1] }?.firstOrNull()
+        } ?: ClassifiedsEvent.CONDITION.USED_LIKE_NEW
+
         message = TextFieldValue(draft.event?.content() ?: "")
         urlPreview = findUrlInMessage()
     }
