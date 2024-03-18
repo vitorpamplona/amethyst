@@ -335,12 +335,8 @@ open class NewPostViewModel() : ViewModel() {
         }
 
         eTags =
-            draft.event?.tags()?.filter { it.size > 1 && it[0] == "e" && it.getOrNull(3) != "fork" }?.map {
-                val forked = it[3] == "fork"
-                val note = LocalCache.getOrCreateNote(it[1])
-                if (forked) {
-                    forkedFromNote = note
-                }
+            draft.event?.tags()?.filter { it.size > 1 && it[0] == "e" && it.getOrNull(3) != "fork" }?.mapNotNull {
+                val note = LocalCache.checkGetOrCreateNote(it[1])
                 note
             }
 
@@ -350,13 +346,13 @@ open class NewPostViewModel() : ViewModel() {
             }
 
         draft.event?.tags()?.filter { it.size > 1 && it[0] == "e" && it.getOrNull(3) == "fork" }?.forEach {
-            val note = LocalCache.getOrCreateNote(it[1])
+            val note = LocalCache.checkGetOrCreateNote(it[1])
             forkedFromNote = note
         }
 
         originalNote =
             draft.event?.tags()?.filter { it.size > 1 && it[0] == "e" && it.getOrNull(3) == "root" }?.map {
-                LocalCache.getOrCreateNote(it[1])
+                LocalCache.checkGetOrCreateNote(it[1])
             }?.firstOrNull()
 
         canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channelHex() == null
