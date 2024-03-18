@@ -45,6 +45,7 @@ import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
+import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
@@ -122,6 +123,11 @@ fun NoteDropDownMenu(
             mutableStateOf(false)
         }
 
+    val wantsToEditDraft =
+        remember {
+            mutableStateOf(false)
+        }
+
     if (wantsToEditPost.value) {
         // avoids changing while drafting a note and a new event shows up.
         val versionLookingAt =
@@ -137,6 +143,18 @@ fun NoteDropDownMenu(
             edit = note,
             versionLookingAt = versionLookingAt,
             accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+
+    if (wantsToEditDraft.value) {
+        NewPostView(
+            onClose = {
+                popupExpanded.value = false
+                wantsToEditDraft.value = false
+            },
+            accountViewModel = accountViewModel,
+            draft = note,
             nav = nav,
         )
     }
@@ -219,6 +237,12 @@ fun NoteDropDownMenu(
             },
         )
         HorizontalDivider(thickness = DividerThickness)
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.edit_draft)) },
+            onClick = {
+                wantsToEditDraft.value = true
+            },
+        )
         if (note.event is TextNoteEvent) {
             if (state.isLoggedUser) {
                 DropdownMenuItem(

@@ -97,6 +97,7 @@ fun ZapRaiserRequest(
                     } else {
                         newPostViewModel.zapRaiserAmount = it.toLongOrNull()
                     }
+                    newPostViewModel.saveDraft()
                 }
             },
             placeholder = {

@@ -190,7 +190,7 @@ open class NewPostViewModel() : ViewModel() {
         this.account = accountViewModel.account
 
         if (draft != null) {
-            loadfromDraft(draft)
+            loadfromDraft(draft, accountViewModel)
         } else {
             originalNote = replyingTo
             replyingTo?.let { replyNote ->
@@ -305,8 +305,68 @@ open class NewPostViewModel() : ViewModel() {
         }
     }
 
-    private fun loadfromDraft(draft: Note?) {
-        // TODO: finish the loadfromDraft method
+    private fun loadfromDraft(
+        draft: Note,
+        accountViewModel: AccountViewModel,
+    ) {
+        Log.d("draft", draft.event?.toJson().toString())
+
+        canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
+        canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
+        contentToAddUrl = null
+
+        val localfowardZapTo = draft.event?.tags()?.filter { it.size > 1 && it[0] == "zap" } ?: listOf()
+        forwardZapTo = Split()
+        localfowardZapTo.forEach {
+            val user = LocalCache.getOrCreateUser(it[1])
+            val value = it.last().toFloatOrNull() ?: 0f
+            forwardZapTo.addItem(user, value)
+        }
+        forwardZapToEditting = TextFieldValue("")
+        wantsForwardZapTo = localfowardZapTo.isNotEmpty()
+
+        wantsToMarkAsSensitive = draft.event?.tags()?.any { it.size > 1 && it[0] == "content-warning" } ?: false
+        wantsToAddGeoHash = draft.event?.tags()?.any { it.size > 1 && it[0] == "g" } ?: false
+        val zapraiser = draft.event?.tags()?.filter { it.size > 1 && it[0] == "zapraiser" } ?: listOf()
+        wantsZapraiser = zapraiser.isNotEmpty()
+        zapRaiserAmount = null
+        if (wantsZapraiser) {
+            zapRaiserAmount = zapraiser.first()[1].toLongOrNull() ?: 0
+        }
+
+        eTags =
+            draft.event?.tags()?.filter { it.size > 1 && it[0] == "e" && it.getOrNull(3) != "fork" }?.map {
+                val forked = it[3] == "fork"
+                val note = LocalCache.getOrCreateNote(it[1])
+                if (forked) {
+                    forkedFromNote = note
+                }
+                note
+            }
+
+        pTags =
+            draft.event?.tags()?.filter { it.size > 1 && it[0] == "p" }?.map {
+                LocalCache.getOrCreateUser(it[1])
+            }
+
+        draft.event?.tags()?.filter { it.size > 1 && it[0] == "e" && it.getOrNull(3) == "fork" }?.forEach {
+            val note = LocalCache.getOrCreateNote(it[1])
+            forkedFromNote = note
+        }
+
+        originalNote =
+            draft.event?.tags()?.filter { it.size > 1 && it[0] == "e" && it.getOrNull(3) == "root" }?.map {
+                LocalCache.getOrCreateNote(it[1])
+            }?.firstOrNull()
+
+        canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channelHex() == null
+
+        if (forwardZapTo.items.isNotEmpty()) {
+            wantsForwardZapTo = true
+        }
+
+        message = TextFieldValue(draft.event?.content() ?: "")
+        urlPreview = findUrlInMessage()
     }
 
     fun sendPost(
