@@ -6,6 +6,7 @@
     <string name="your_profile_image">頭像圖片</string>
     <string name="scan_qr">掃描 QR</string>
     <string name="show_anyway">一直顯示</string>
+    <string name="post_was_hidden">此帖被隱藏，因爲它提到了你隱藏的用戶或單詞</string>
     <string name="post_was_flagged_as_inappropriate_by">貼文被標記為不當</string>
     <string name="post_not_found">事件正在加載或無法在你的中繼器列表中找到</string>
     <string name="channel_image">頻道圖片</string>
@@ -16,6 +17,7 @@
     <string name="spam">垃圾郵件</string>
     <string name="impersonation">冒充</string>
     <string name="illegal_behavior">非法行為</string>
+    <string name="other">其它</string>
     <string name="unknown">未知</string>
     <string name="relay_icon">中繼器圖標</string>
     <string name="unknown_author">未知作者</string>
@@ -23,6 +25,9 @@
     <string name="copy_user_pubkey">複製作者@npub</string>
     <string name="copy_note_id">複製筆記ID</string>
     <string name="broadcast">廣播</string>
+    <string name="timestamp_it">時間戳</string>
+    <string name="timestamp_pending">時間戳：待確認</string>
+    <string name="timestamp_pending_short">OTS：待定</string>
     <string name="request_deletion">請求刪除</string>
     <string name="block_report">屏蔽/舉報</string>
     <string name="block_hide_user"><![CDATA[阻止並隱藏用户]]></string>
@@ -33,7 +38,7 @@
     <string name="login_with_a_private_key_to_be_able_to_reply">你正在使用公鑰，公鑰是只讀的。使用私鑰登錄以便回覆</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">你正在使用公鑰，公鑰是只讀的。使用私鑰登錄以便提升貼文</string>
     <string name="login_with_a_private_key_to_like_posts">使用私鑰登錄以便點贊貼文</string>
-    <string name="no_zap_amount_setup_long_press_to_change">沒有設置Zap金額。長按以更改</string>
+    <string name="no_zap_amount_setup_long_press_to_change">沒有設置打閃金額。長按以更改</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">你正在使用公鑰，公鑰是只讀的。使用私鑰登錄以便發送打閃</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">你正在使用公鑰，公鑰是只讀的。使用私鑰登錄以便關注</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">你正在使用公鑰，公鑰是只讀的。使用私鑰登錄以便取關</string>
@@ -43,12 +48,16 @@
     <string name="view_count">瀏覽次數</string>
     <string name="boost">提升</string>
     <string name="boosted">已提升</string>
+    <string name="edited">已編輯</string>
+    <string name="edited_number">編輯 #%1$s</string>
+    <string name="original">原版</string>
     <string name="quote">引用</string>
-    <string name="new_amount_in_sats">新的金額 (sats)</string>
+    <string name="propose_an_edit">提議編輯</string>
+    <string name="new_amount_in_sats">新的聰金額</string>
     <string name="add">添加</string>
     <string name="replying_to">"回覆 "</string>
     <string name="and">" 和 "</string>
-    <string name="in_channel">" 在頻道 "</string>
+    <string name="in_channel">"在頻道 "</string>
     <string name="profile_banner">個人檔案橫幅</string>
     <string name="payment_successful">付款成功</string>
     <string name="error_parsing_error_message">錯誤解析錯誤消息</string>
@@ -58,13 +67,13 @@
     <string name="security_filters">安全過濾器</string>
     <string name="log_out">登出</string>
     <string name="show_more">顯示更多</string>
-    <string name="lightning_invoice">閃電網絡發票</string>
+    <string name="lightning_invoice">閃電發票</string>
     <string name="pay">付款</string>
     <string name="lightning_tips">閃電小費</string>
     <string name="note_to_receiver">寫給收款方的留言</string>
     <string name="thank_you_so_much">非常感謝！</string>
-    <string name="amount_in_sats">數量 (sats)</string>
-    <string name="send_sats">發送 sats</string>
+    <string name="amount_in_sats">聰金額</string>
+    <string name="send_sats">發送聰</string>
     <string name="error_parsing_preview_for">"解析 %1$s 預覽出錯：%2$s"</string>
     <string name="preview_card_image_for">"預覽 %1$s 卡片圖片"</string>
     <string name="new_channel">新頻道</string>
@@ -105,7 +114,7 @@
     <string name="failed_to_save_the_image">保存圖片失敗</string>
     <string name="upload_image">上傳圖片</string>
     <string name="uploading">上傳中…</string>
-    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">用户尚未設置閃電地址以接收 sats</string>
+    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">用户尚未設置閃電地址以接收聰</string>
     <string name="reply_here">"回覆這裡.."</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">複製筆記ID到剪貼板，供分享</string>
     <string name="copy_channel_id_note_to_the_clipboard">複製頻道ID（筆記）到剪貼板</string>
@@ -139,12 +148,15 @@
     <string name="clear">清除</string>
     <string name="app_logo">應用標誌</string>
     <string name="nsec_npub_hex_private_key">nsec/ npub/ hex 私鑰</string>
+    <string name="ncryptsec_password">打開密鑰的密碼</string>
     <string name="show_password">顯示密碼</string>
     <string name="hide_password">隱藏密碼</string>
     <string name="invalid_key">無效密鑰</string>
+    <string name="invalid_key_with_message">無效的密鑰：%1$s</string>
     <string name="i_accept_the">"我接受"</string>
     <string name="terms_of_use">使用條款</string>
     <string name="acceptance_of_terms_is_required">需要接受條款</string>
+    <string name="password_is_required">密碼必填</string>
     <string name="key_is_required">需要密鑰</string>
     <string name="name_is_required">名稱為必填</string>
     <string name="login">登錄</string>
@@ -195,8 +207,19 @@
     <string name="mark_all_new_as_read">將所有新內容標記為已讀</string>
     <string name="mark_all_as_read">將所有內容標記為已讀</string>
     <string name="backup_keys">備份密鑰</string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">## 備份與安全提示
+        \n\n你的帳戶由一個私鑰保護。私鑰是以 **nsec1** 開頭的隨機字符串。任何擁有你的私鑰的人都可以使用你的身份發佈內容。
+        \n\n- **不要**將你的私鑰添加到任何你不信任的網站或軟件，亦不要在網上公開。
+        \n- Amethyst 開發人員**永遠不會**要求你提供私鑰。
+        \n- **請**保留你的私鑰的安全備份，以備帳戶恢復。我們建議使用密碼管理器。
+    </string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">        爲了額外的安全性，你可以用密碼加密你的密鑰。此密鑰以 **ncryptsec1** 開頭，沒有密碼就不能使用。
+        \n\n如果你丟失密碼，你將無法恢復你的密鑰。
+    </string>
+    <string name="failed_to_encrypt_key">私鑰加密失敗</string>
     <string name="secret_key_copied_to_clipboard">私人密鑰（nsec）已複製到剪貼板</string>
     <string name="copy_my_secret_key">複製我的私人密鑰</string>
+    <string name="encrypt_and_copy_my_secret_key">加密並複製我的密鑰</string>
     <string name="biometric_authentication_failed">身份驗證失敗</string>
     <string name="biometric_authentication_failed_explainer">生物計未能驗證此手機的所有者</string>
     <string name="biometric_authentication_failed_explainer_with_error">生物計未能驗證此手機的所有者。錯誤：%1$s</string>
@@ -417,6 +440,8 @@
     <string name="connectivity_type_always">始終</string>
     <string name="connectivity_type_wifi_only">僅限 WiFi</string>
     <string name="connectivity_type_never">永不</string>
+    <string name="ui_feature_set_type_complete">完整版</string>
+    <string name="ui_feature_set_type_simplified">簡化版</string>
     <string name="system">系統</string>
     <string name="light">淺色</string>
     <string name="dark">深色</string>
@@ -428,6 +453,8 @@
     <string name="automatically_show_url_preview">鏈接預覽</string>
     <string name="automatically_hide_nav_bars">沉浸式捲動</string>
     <string name="automatically_hide_nav_bars_description">捲動時隱藏導航欄</string>
+    <string name="ui_style">界面模式</string>
+    <string name="ui_style_description">選擇帖子樣式</string>
     <string name="load_image">加載圖像</string>
     <string name="spamming_users">垃圾郵件</string>
     <string name="muted_button">靜音。點擊取消靜音</string>
@@ -634,4 +661,28 @@
     <string name="show_npub_as_a_qr_code">將 npub 顯示爲二維碼</string>
     <string name="invalid_nip19_uri">地址無效</string>
     <string name="invalid_nip19_uri_description">Amethyst 收到了要打開的 URI，但該 URI 無效：%1$s</string>
+    <string name="zap_the_devs_title">打閃開發人員</string>
+    <string name="zap_the_devs_description">你的捐贈幫助我們做出不同的貢獻。 每個聰都很重要！</string>
+    <string name="donate_now">立即捐款</string>
+    <string name="version_name">版本 %1$s</string>
+    <string name="thank_you">謝謝！</string>
+    <string name="max_limit">最大上限</string>
+    <string name="git_web_address">網址</string>
+    <string name="existed_since">OTS：%1$s</string>
+    <string name="ots_info_title">時間戳證明</string>
+    <string name="ots_info_description">有在 %1$s 之前的某個時間簽署了此帖子的證明。此證明是在那個日期和時間在比特幣區塊鏈中記錄的時間戳。</string>
+    <string name="edit_post">編輯帖子</string>
+    <string name="proposal_to_edit">提議改進帖子</string>
+    <string name="message_to_author">變動摘要</string>
+    <string name="message_to_author_placeholder">快速修正…</string>
+    <string name="accept_the_suggestion">接受提議</string>
+    <string name="accessibility_download_for_offline">下載</string>
+    <string name="accessibility_lyrics_on">開啓歌詞</string>
+    <string name="accessibility_lyrics_off">關閉歌詞</string>
+    <string name="accessibility_turn_on_sealed_message">密封消息關閉。點擊打開密封消息</string>
+    <string name="accessibility_turn_off_sealed_message">密封消息關閉。點擊打開密封消息</string>
+    <string name="accessibility_send">發送</string>
+    <string name="accessibility_play_username">作爲音頻播放用戶名</string>
+    <string name="accessibility_scan_qr_code">掃描二維碼</string>
+    <string name="accessibility_navigate_to_alby">導航到第三方錢包提供商 Alby</string>
 </resources>

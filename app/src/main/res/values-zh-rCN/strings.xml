@@ -6,6 +6,7 @@
     <string name="your_profile_image">头像图片</string>
     <string name="scan_qr">扫描二维码</string>
     <string name="show_anyway">仍然显示</string>
+    <string name="post_was_hidden">此帖被隐藏，因为它提到了你隐藏的用户或单词</string>
     <string name="post_was_flagged_as_inappropriate_by">帖文被标记为不当</string>
     <string name="post_not_found">事件正在加载或无法在你的中继列表中找到</string>
     <string name="channel_image">频道图片</string>
@@ -16,6 +17,7 @@
     <string name="spam">垃圾信息</string>
     <string name="impersonation">冒充</string>
     <string name="illegal_behavior">非法行为</string>
+    <string name="other">其它</string>
     <string name="unknown">未知</string>
     <string name="relay_icon">中继器图标</string>
     <string name="unknown_author">未知作者</string>
@@ -23,6 +25,9 @@
     <string name="copy_user_pubkey">复制作者@npub</string>
     <string name="copy_note_id">复制笔记ID</string>
     <string name="broadcast">广播</string>
+    <string name="timestamp_it">时间戳</string>
+    <string name="timestamp_pending">时间戳：待确认</string>
+    <string name="timestamp_pending_short">OTS：待定</string>
     <string name="request_deletion">请求删除</string>
     <string name="block_report">屏蔽/举报</string>
     <string name="block_hide_user"><![CDATA[阻止并隐藏用户]]></string>
@@ -33,7 +38,7 @@
     <string name="login_with_a_private_key_to_be_able_to_reply">你正在使用公钥，公钥是只读的。使用私钥登录以便回复</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">你正在使用公钥，公钥是只读的。使用私钥登录以便提升帖子</string>
     <string name="login_with_a_private_key_to_like_posts">使用私钥登录以便点赞帖子</string>
-    <string name="no_zap_amount_setup_long_press_to_change">没有设置Zap金额。长按以更改</string>
+    <string name="no_zap_amount_setup_long_press_to_change">没有设置打闪金额。长按以更改</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">你正在使用公钥，公钥是只读的。使用私钥登录以便发送打闪</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">你正在使用公钥，公钥是只读的。使用私钥登录以便能够关注</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">你正在使用公钥，公钥是只读的。使用私钥登录以便能够取消关注</string>
@@ -43,12 +48,16 @@
     <string name="view_count">浏览次数</string>
     <string name="boost">提升</string>
     <string name="boosted">已提升</string>
+    <string name="edited">已编辑</string>
+    <string name="edited_number">编辑 #%1$s</string>
+    <string name="original">原版</string>
     <string name="quote">引用</string>
+    <string name="propose_an_edit">提议编辑</string>
     <string name="new_amount_in_sats">新的聪金额</string>
     <string name="add">添加</string>
     <string name="replying_to">"回复 "</string>
     <string name="and">" 和 "</string>
-    <string name="in_channel">" 在频道 "</string>
+    <string name="in_channel">"在频道 "</string>
     <string name="profile_banner">个人档案横幅</string>
     <string name="payment_successful">付款成功</string>
     <string name="error_parsing_error_message">解析错误信息时出错</string>
@@ -63,7 +72,7 @@
     <string name="lightning_tips">闪电小费</string>
     <string name="note_to_receiver">给收款方的留言</string>
     <string name="thank_you_so_much">非常感谢！</string>
-    <string name="amount_in_sats">聪数量</string>
+    <string name="amount_in_sats">聪金额</string>
     <string name="send_sats">发送聪</string>
     <string name="error_parsing_preview_for">"解析 %1$s 预览出错：%2$s"</string>
     <string name="preview_card_image_for">"预览 %1$s 卡片图片"</string>
@@ -139,12 +148,15 @@
     <string name="clear">清除</string>
     <string name="app_logo">应用图标</string>
     <string name="nsec_npub_hex_private_key">nsec/ npub/ hex 私钥</string>
+    <string name="ncryptsec_password">打开密钥的密码</string>
     <string name="show_password">显示密码</string>
     <string name="hide_password">隐藏密码</string>
     <string name="invalid_key">无效密钥</string>
+    <string name="invalid_key_with_message">无效的密钥：%1$s</string>
     <string name="i_accept_the">"我接受"</string>
     <string name="terms_of_use">使用条款</string>
     <string name="acceptance_of_terms_is_required">需要接受条款</string>
+    <string name="password_is_required">密码必填</string>
     <string name="key_is_required">需要密钥</string>
     <string name="name_is_required">名称必填</string>
     <string name="login">登录</string>
@@ -195,8 +207,19 @@
     <string name="mark_all_new_as_read">将所有新内容标记为已读</string>
     <string name="mark_all_as_read">将所有内容标记为已读</string>
     <string name="backup_keys">备份密匙</string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">## 备份与安全提示
+        \n\n你的帐户由一个私钥保护。私钥是以**nsec1**开头的随机字符串。任何拥有你的私钥的人都可以使用你的身份发布内容。
+        \n\n- **不要**将你的私钥添加到任何你不信任的网站或软件，亦不要在网上公开。
+        \n- Amethyst 开发人员**永远不会**要求你提供私钥。
+        \n- **请**保留你的私钥的安全备份，以备帐户恢复。我们建议使用密码管理器。
+    </string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">        为了额外的安全性，你可以用密码加密你的密钥。 此密钥以 **ncryptsec1** 开头，没有密码就不能使用。
+        \n\n如果你丢失密码， 你将无法恢复你的密钥。
+    </string>
+    <string name="failed_to_encrypt_key">私钥加密失败</string>
     <string name="secret_key_copied_to_clipboard">私人密钥（nsec）已复制到剪贴板</string>
     <string name="copy_my_secret_key">复制我的私人密钥</string>
+    <string name="encrypt_and_copy_my_secret_key">加密并复制我的密钥。</string>
     <string name="biometric_authentication_failed">身份验证失败</string>
     <string name="biometric_authentication_failed_explainer">生物计未能验证此手机的所有者</string>
     <string name="biometric_authentication_failed_explainer_with_error">生物计未能验证此手机的所有者。错误：%1$s</string>
@@ -417,6 +440,8 @@
     <string name="connectivity_type_always">始终</string>
     <string name="connectivity_type_wifi_only">仅限 WiFi</string>
     <string name="connectivity_type_never">从不</string>
+    <string name="ui_feature_set_type_complete">完整版</string>
+    <string name="ui_feature_set_type_simplified">简化版</string>
     <string name="system">系统</string>
     <string name="light">浅色</string>
     <string name="dark">深色</string>
@@ -428,6 +453,8 @@
     <string name="automatically_show_url_preview">URL 预览</string>
     <string name="automatically_hide_nav_bars">沉浸式滚动</string>
     <string name="automatically_hide_nav_bars_description">滚动时隐藏导航栏</string>
+    <string name="ui_style">界面模式</string>
+    <string name="ui_style_description">选择帖子样式</string>
     <string name="load_image">加载图像</string>
     <string name="spamming_users">垃圾邮件</string>
     <string name="muted_button">静音。点击取消静音</string>
@@ -634,4 +661,29 @@
     <string name="show_npub_as_a_qr_code">将 npub 显示为二维码</string>
     <string name="invalid_nip19_uri">地址无效</string>
     <string name="invalid_nip19_uri_description">Amethyst 收到了要打开的 URI，但该 uri 无效：%1$s</string>
+    <string name="zap_the_devs_title">打闪开发人员！</string>
+    <string name="zap_the_devs_description">你的捐赠帮助我们做出不同的贡献。每个聪都很重要！</string>
+    <string name="donate_now">立即捐款</string>
+    <string name="version_name">版本 %1$s</string>
+    <string name="thank_you">谢谢！</string>
+    <string name="max_limit">最大上限</string>
+    <string name="forked_from"></string>
+    <string name="git_web_address">网址</string>
+    <string name="existed_since">OTS：%1$s</string>
+    <string name="ots_info_title">时间戳证明</string>
+    <string name="ots_info_description">%1$s之前的某个时候签署了此帖子的证明。此证明是在那个日期和时间在比特币区块链中盖章的。</string>
+    <string name="edit_post">编辑帖子</string>
+    <string name="proposal_to_edit">提议改进帖子</string>
+    <string name="message_to_author">变动摘要</string>
+    <string name="message_to_author_placeholder">快速修正…</string>
+    <string name="accept_the_suggestion">接受建议</string>
+    <string name="accessibility_download_for_offline">下载</string>
+    <string name="accessibility_lyrics_on">开启歌词</string>
+    <string name="accessibility_lyrics_off">关闭歌词</string>
+    <string name="accessibility_turn_on_sealed_message">密封消息关闭。点击打开密封消息</string>
+    <string name="accessibility_turn_off_sealed_message">密封消息开启。点击关闭密封消息</string>
+    <string name="accessibility_send">发送</string>
+    <string name="accessibility_play_username">作为音频播放用户名</string>
+    <string name="accessibility_scan_qr_code">扫描二维码</string>
+    <string name="accessibility_navigate_to_alby">导航到第三方钱包提供商 Alby</string>
 </resources>

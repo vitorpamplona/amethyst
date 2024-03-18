@@ -142,6 +142,7 @@
     <string name="clear">মুছে ফেলুন</string>
     <string name="app_logo">অ্যাপের লোগো</string>
     <string name="nsec_npub_hex_private_key">Nsec.. অথবা Npub..</string>
+    <string name="ncryptsec_password">কী খুলতে পাসওয়ার্ড</string>
     <string name="show_password">পাসওয়ার্ড দেখান</string>
     <string name="hide_password">পাসওয়ার্ড লুকান</string>
     <string name="invalid_key">অকেজো চাবি</string>

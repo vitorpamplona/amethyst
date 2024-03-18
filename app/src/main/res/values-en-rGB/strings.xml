@@ -15,4 +15,7 @@
     <string name="group_picture">Group Picture</string>
     <string name="explicit_content">Explicit Content</string>
     <string name="spam">Spam</string>
+    <string name="cancel">Cancel</string>
+    <string name="posts">Posts</string>
+    <string name="bytes"></string>
 </resources>
