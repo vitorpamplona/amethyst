@@ -1756,6 +1756,7 @@ class Account(
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
+        draftTag: String? = null,
     ) {
         if (!isWriteable()) return
 
@@ -1773,9 +1774,19 @@ class Account(
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
             nip94attachments = nip94attachments,
+            draftTag = draftTag,
             signer = signer,
         ) {
-            broadcastPrivately(it)
+            if (draftTag != null) {
+                DraftEvent.create(draftTag, it.msg, signer) { draftEvent ->
+                    Client.send(draftEvent)
+                    LocalCache.justConsume(draftEvent, null)
+                    LocalCache.justConsume(it.msg, null)
+                    LocalCache.addDraft(draftTag, it.msg.id())
+                }
+            } else {
+                broadcastPrivately(it)
+            }
         }
     }
 

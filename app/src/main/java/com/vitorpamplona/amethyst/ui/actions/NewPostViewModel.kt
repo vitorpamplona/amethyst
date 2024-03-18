@@ -339,7 +339,7 @@ open class NewPostViewModel() : ViewModel() {
         }
 
         eTags =
-            draft.event?.tags()?.filter { it.size > 1 && it[0] == "e" && it.getOrNull(3) != "fork" }?.mapNotNull {
+            draft.event?.tags()?.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) != "fork" }?.mapNotNull {
                 val note = LocalCache.checkGetOrCreateNote(it[1])
                 note
             }
@@ -349,13 +349,13 @@ open class NewPostViewModel() : ViewModel() {
                 LocalCache.getOrCreateUser(it[1])
             }
 
-        draft.event?.tags()?.filter { it.size > 1 && it[0] == "e" && it.getOrNull(3) == "fork" }?.forEach {
+        draft.event?.tags()?.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "fork" }?.forEach {
             val note = LocalCache.checkGetOrCreateNote(it[1])
             forkedFromNote = note
         }
 
         originalNote =
-            draft.event?.tags()?.filter { it.size > 1 && it[0] == "e" && it.getOrNull(3) == "root" }?.map {
+            draft.event?.tags()?.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "root" }?.map {
                 LocalCache.checkGetOrCreateNote(it[1])
             }?.firstOrNull()
 
@@ -529,6 +529,7 @@ open class NewPostViewModel() : ViewModel() {
                     zapRaiserAmount = localZapRaiserAmount,
                     geohash = geoHash,
                     nip94attachments = usedAttachments,
+                    draftTag = localDraft,
                 )
             } else {
                 account?.sendPrivateMessage(

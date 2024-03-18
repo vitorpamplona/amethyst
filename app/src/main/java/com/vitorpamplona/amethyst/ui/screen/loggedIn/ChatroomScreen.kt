@@ -116,6 +116,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.encoders.Hex
+import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.findURLs
@@ -230,6 +232,9 @@ fun PrepareChatroomViewModels(
     if (newPostModel.requiresNIP24) {
         newPostModel.nip24 = true
     }
+    room.users.forEach {
+        newPostModel.toUsers = TextFieldValue(newPostModel.toUsers.text + " @${Hex.decode(it).toNpub()}")
+    }
 
     LaunchedEffect(key1 = newPostModel) {
         launch(Dispatchers.IO) {
@@ -315,7 +320,10 @@ fun ChatroomScreen(
                 accountViewModel = accountViewModel,
                 nav = nav,
                 routeForLastRead = "Room/${room.hashCode()}",
-                onWantsToReply = { replyTo.value = it },
+                onWantsToReply = {
+                    replyTo.value = it
+                    newPostModel.originalNote = it
+                },
             )
         }
 

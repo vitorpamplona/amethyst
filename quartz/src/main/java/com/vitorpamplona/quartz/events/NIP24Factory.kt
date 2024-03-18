@@ -77,6 +77,7 @@ class NIP24Factory {
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
+        draftTag: String? = null,
         onReady: (Result) -> Unit,
     ) {
         val senderPublicKey = signer.pubKey
@@ -92,15 +93,25 @@ class NIP24Factory {
             markAsSensitive = markAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
+            isDraft = draftTag != null,
             nip94attachments = nip94attachments,
         ) { senderMessage ->
-            createWraps(senderMessage, to.plus(senderPublicKey).toSet(), signer) { wraps ->
+            if (draftTag != null) {
                 onReady(
                     Result(
                         msg = senderMessage,
-                        wraps = wraps,
+                        wraps = listOf(),
                     ),
                 )
+            } else {
+                createWraps(senderMessage, to.plus(senderPublicKey).toSet(), signer) { wraps ->
+                    onReady(
+                        Result(
+                            msg = senderMessage,
+                            wraps = wraps,
+                        ),
+                    )
+                }
             }
         }
     }

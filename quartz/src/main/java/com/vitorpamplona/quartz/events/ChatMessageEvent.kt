@@ -82,6 +82,7 @@ class ChatMessageEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             nip94attachments: List<FileHeaderEvent>? = null,
+            isDraft: Boolean,
             onReady: (ChatMessageEvent) -> Unit,
         ) {
             val tags = mutableListOf<Array<String>>()
@@ -106,7 +107,7 @@ class ChatMessageEvent(
             }
             // tags.add(arrayOf("alt", alt))
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady, isDraft)
         }
     }
 }
