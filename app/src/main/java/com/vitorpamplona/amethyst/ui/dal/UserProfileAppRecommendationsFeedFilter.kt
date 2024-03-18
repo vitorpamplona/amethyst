@@ -31,7 +31,12 @@ class UserProfileAppRecommendationsFeedFilter(val user: User) : AdditiveFeedFilt
     }
 
     override fun feed(): List<Note> {
-        return sort(innerApplyFilter(LocalCache.addressables.values))
+        val recommendations =
+            LocalCache.addressables.mapFlattenIntoSet { _, note ->
+                filterMap(note)
+            }
+
+        return sort(recommendations)
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
@@ -39,26 +44,21 @@ class UserProfileAppRecommendationsFeedFilter(val user: User) : AdditiveFeedFilt
     }
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val recommendations =
-            collection
-                .asSequence()
-                .filter { it.event is AppRecommendationEvent }
-                .mapNotNull {
-                    val noteEvent = it.event as? AppRecommendationEvent
-                    if (noteEvent != null && noteEvent.pubKey == user.pubkeyHex) {
-                        noteEvent.recommendations()
-                    } else {
-                        null
-                    }
-                }
-                .flatten()
-                .map { LocalCache.getOrCreateAddressableNote(it) }
-                .toSet()
+        return collection.mapNotNull { filterMap(it) }.flatten().toSet()
+    }
 
-        return recommendations
+    fun filterMap(it: Note): List<Note>? {
+        val noteEvent = it.event
+        if (noteEvent is AppRecommendationEvent) {
+            if (noteEvent.pubKey == user.pubkeyHex) {
+                return noteEvent.recommendations().map { LocalCache.getOrCreateAddressableNote(it) }
+            }
+        }
+
+        return null
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
+        return collection.sortedWith(DefaultFeedOrder)
     }
 }

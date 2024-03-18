@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
@@ -35,7 +34,6 @@ import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
@@ -43,69 +41,70 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
     }
 
     override fun showHiddenKey(): Boolean {
-        return account.defaultHomeFollowList.value ==
-            PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
-            account.defaultHomeFollowList.value ==
-            MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
+        return account.defaultHomeFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+            account.defaultHomeFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
+    }
+
+    fun buildFilterParams(account: Account): FilterByListParams {
+        return FilterByListParams.create(
+            userHex = account.userProfile().pubkeyHex,
+            selectedListName = account.defaultHomeFollowList.value,
+            followLists = account.liveHomeFollowLists.value,
+            hiddenUsers = account.flowHiddenUsers.value,
+        )
     }
 
     override fun feed(): List<Note> {
-        val notes = innerApplyFilter(LocalCache.noteListCache, true)
-        val longFormNotes = innerApplyFilter(LocalCache.addressables.values, false)
+        val gRelays = account.activeGlobalRelays().toSet()
+        val filterParams = buildFilterParams(account)
+
+        val notes =
+            LocalCache.notes.filterIntoSet { _, note ->
+                // Avoids processing addressables twice.
+                (note.event?.kind() ?: 99999) < 10000 && acceptableEvent(note, gRelays, filterParams)
+            }
+
+        val longFormNotes =
+            LocalCache.addressables.filterIntoSet { _, note ->
+                acceptableEvent(note, gRelays, filterParams)
+            }
 
         return sort(notes + longFormNotes)
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection, false)
+        return innerApplyFilter(collection)
     }
 
-    private fun innerApplyFilter(
-        collection: Collection<Note>,
-        ignoreAddressables: Boolean,
-    ): Set<Note> {
-        val isGlobal = account.defaultHomeFollowList.value == GLOBAL_FOLLOWS
-        val gRelays = account.activeGlobalRelays()
-        val isHiddenList = showHiddenKey()
+    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
+        val gRelays = account.activeGlobalRelays().toSet()
+        val filterParams = buildFilterParams(account)
 
-        val followingKeySet = account.liveHomeFollowLists.value?.users ?: emptySet()
-        val followingTagSet = account.liveHomeFollowLists.value?.hashtags ?: emptySet()
-        val followingGeohashSet = account.liveHomeFollowLists.value?.geotags ?: emptySet()
-        val followingCommunities = account.liveHomeFollowLists.value?.communities ?: emptySet()
+        return collection.filterTo(HashSet()) {
+            acceptableEvent(it, gRelays, filterParams)
+        }
+    }
 
-        val oneMinuteInTheFuture = TimeUtils.now() + (1 * 60) // one minute in the future.
-
-        return collection
-            .asSequence()
-            .filter { it ->
-                val noteEvent = it.event
-                val isGlobalRelay = it.relays.any { gRelays.contains(it.url) }
-                (
-                    noteEvent is TextNoteEvent ||
-                        noteEvent is ClassifiedsEvent ||
-                        noteEvent is RepostEvent ||
-                        noteEvent is GenericRepostEvent ||
-                        noteEvent is LongTextNoteEvent ||
-                        noteEvent is PollNoteEvent ||
-                        noteEvent is HighlightEvent ||
-                        noteEvent is AudioTrackEvent ||
-                        noteEvent is AudioHeaderEvent
-                ) &&
-                    (!ignoreAddressables || noteEvent.kind() < 10000) &&
-                    (
-                        (isGlobal && isGlobalRelay) ||
-                            it.author?.pubkeyHex in followingKeySet ||
-                            noteEvent.isTaggedHashes(followingTagSet) ||
-                            noteEvent.isTaggedGeoHashes(followingGeohashSet) ||
-                            noteEvent.isTaggedAddressableNotes(followingCommunities)
-                    ) &&
-                    // && account.isAcceptable(it)  // This filter follows only. No need to check if
-                    // acceptable
-                    (isHiddenList || it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true) &&
-                    ((it.event?.createdAt() ?: 0) < oneMinuteInTheFuture) &&
-                    it.isNewThread()
-            }
-            .toSet()
+    fun acceptableEvent(
+        it: Note,
+        globalRelays: Set<String>,
+        filterParams: FilterByListParams,
+    ): Boolean {
+        val noteEvent = it.event
+        val isGlobalRelay = it.relays.any { globalRelays.contains(it.url) }
+        return (
+            noteEvent is TextNoteEvent ||
+                noteEvent is ClassifiedsEvent ||
+                noteEvent is RepostEvent ||
+                noteEvent is GenericRepostEvent ||
+                noteEvent is LongTextNoteEvent ||
+                noteEvent is PollNoteEvent ||
+                noteEvent is HighlightEvent ||
+                noteEvent is AudioTrackEvent ||
+                noteEvent is AudioHeaderEvent
+        ) &&
+            filterParams.match(noteEvent, isGlobalRelay) &&
+            it.isNewThread()
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
@@ -115,6 +114,6 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
             } else {
                 it.idHex
             }
-        }.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+        }.sortedWith(DefaultFeedOrder)
     }
 }

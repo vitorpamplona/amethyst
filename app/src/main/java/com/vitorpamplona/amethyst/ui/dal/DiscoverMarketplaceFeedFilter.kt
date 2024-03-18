@@ -21,13 +21,11 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 open class DiscoverMarketplaceFeedFilter(
     val account: Account,
@@ -46,10 +44,13 @@ open class DiscoverMarketplaceFeedFilter(
     }
 
     override fun feed(): List<Note> {
-        val classifieds =
-            LocalCache.addressables.filter { it.value.event is ClassifiedsEvent }.map { it.value }
+        val params = buildFilterParams(account)
 
-        val notes = innerApplyFilter(classifieds)
+        val notes =
+            LocalCache.addressables.filterIntoSet { _, it ->
+                val noteEvent = it.event
+                noteEvent is ClassifiedsEvent && noteEvent.isWellFormed() && params.match(noteEvent)
+            }
 
         return sort(notes)
     }
@@ -58,35 +59,22 @@ open class DiscoverMarketplaceFeedFilter(
         return innerApplyFilter(collection)
     }
 
+    fun buildFilterParams(account: Account): FilterByListParams {
+        return FilterByListParams.create(
+            account.userProfile().pubkeyHex,
+            account.defaultDiscoveryFollowList.value,
+            account.liveDiscoveryFollowLists.value,
+            account.flowHiddenUsers.value,
+        )
+    }
+
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val now = TimeUtils.now()
-        val isGlobal = account.defaultDiscoveryFollowList.value == GLOBAL_FOLLOWS
-        val isHiddenList = showHiddenKey()
+        val params = buildFilterParams(account)
 
-        val followingKeySet = account.liveDiscoveryFollowLists.value?.users ?: emptySet()
-        val followingTagSet = account.liveDiscoveryFollowLists.value?.hashtags ?: emptySet()
-        val followingGeohashSet = account.liveDiscoveryFollowLists.value?.geotags ?: emptySet()
-
-        val activities =
-            collection
-                .asSequence()
-                .filter {
-                    it.event is ClassifiedsEvent &&
-                        it.event?.hasTagWithContent("image") == true &&
-                        it.event?.hasTagWithContent("price") == true &&
-                        it.event?.hasTagWithContent("title") == true
-                }
-                .filter {
-                    isGlobal ||
-                        it.author?.pubkeyHex in followingKeySet ||
-                        it.event?.isTaggedHashes(followingTagSet) == true ||
-                        it.event?.isTaggedGeoHashes(followingGeohashSet) == true
-                }
-                .filter { isHiddenList || it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true }
-                .filter { (it.createdAt() ?: 0) <= now }
-                .toSet()
-
-        return activities
+        return collection.filterTo(HashSet()) {
+            val noteEvent = it.event
+            noteEvent is ClassifiedsEvent && noteEvent.isWellFormed() && params.match(noteEvent)
+        }
     }
 
     override fun sort(collection: Set<Note>): List<Note> {

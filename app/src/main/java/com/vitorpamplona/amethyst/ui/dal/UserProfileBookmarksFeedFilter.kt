@@ -47,7 +47,6 @@ class UserProfileBookmarksFeedFilter(val user: User, val account: Account) : Fee
 
         return (notes + addresses)
             .filter { account.isAcceptable(it) }
-            .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-            .reversed()
+            .sortedWith(DefaultFeedOrder)
     }
 }

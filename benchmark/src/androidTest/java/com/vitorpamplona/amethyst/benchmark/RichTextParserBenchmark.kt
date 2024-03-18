@@ -25,10 +25,10 @@ import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
-import com.vitorpamplona.amethyst.commons.HashTagSegment
-import com.vitorpamplona.amethyst.commons.ImageSegment
-import com.vitorpamplona.amethyst.commons.LinkSegment
-import com.vitorpamplona.amethyst.commons.RichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
+import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
+import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import junit.framework.TestCase.assertNull

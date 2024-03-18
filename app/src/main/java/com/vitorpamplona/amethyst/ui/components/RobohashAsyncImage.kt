@@ -49,7 +49,7 @@ import coil.fetch.FetchResult
 import coil.fetch.Fetcher
 import coil.request.ImageRequest
 import coil.request.Options
-import com.vitorpamplona.amethyst.commons.CachedRobohash
+import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.theme.isLight
 import java.util.Base64

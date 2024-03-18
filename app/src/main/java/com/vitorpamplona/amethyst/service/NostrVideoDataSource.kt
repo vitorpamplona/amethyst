@@ -40,6 +40,8 @@ object NostrVideoDataSource : NostrDataSource("VideoFeed") {
 
     var job: Job? = null
 
+    val SUPPORTED_VIDEO_MIME_TYPES = listOf("image/jpeg", "image/gif", "image/png", "image/webp", "video/mp4", "video/mpeg", "video/webm", "audio/aac", "audio/mpeg", "audio/webm", "audio/wav")
+
     override fun start() {
         job?.cancel()
         job =
@@ -68,6 +70,7 @@ object NostrVideoDataSource : NostrDataSource("VideoFeed") {
                     authors = follows,
                     kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND),
                     limit = 200,
+                    tags = mapOf("m" to SUPPORTED_VIDEO_MIME_TYPES),
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
@@ -93,6 +96,7 @@ object NostrVideoDataSource : NostrDataSource("VideoFeed") {
                                 hashToLoad
                                     .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
                                     .flatten(),
+                            "m" to SUPPORTED_VIDEO_MIME_TYPES,
                         ),
                     limit = 100,
                     since =
@@ -120,6 +124,7 @@ object NostrVideoDataSource : NostrDataSource("VideoFeed") {
                                 hashToLoad
                                     .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
                                     .flatten(),
+                            "m" to SUPPORTED_VIDEO_MIME_TYPES,
                         ),
                     limit = 100,
                     since =

@@ -24,6 +24,7 @@ import android.util.Log
 import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.data.LargeCache
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
@@ -121,30 +122,16 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.time.measureTimedValue
 
 object LocalCache {
     val antiSpam = AntiSpamFilter()
 
-    private val users = ConcurrentHashMap<HexKey, User>(5000)
-    private val notes = ConcurrentHashMap<HexKey, Note>(5000)
+    val users = LargeCache<HexKey, User>()
+    val notes = LargeCache<HexKey, Note>()
+    val addressables = LargeCache<String, AddressableNote>()
+
     val channels = ConcurrentHashMap<HexKey, Channel>()
-    val addressables = ConcurrentHashMap<String, AddressableNote>(100)
-
-    val awaitingPaymentRequests =
-        ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
-
-    var noteListCache: List<Note> = emptyList()
-    var userListCache: List<User> = emptyList()
-
-    fun updateListCache() {
-        val (value, elapsed) =
-            measureTimedValue {
-                noteListCache = ArrayList(notes.values)
-                userListCache = ArrayList(users.values)
-            }
-        Log.d("LocalCache", "UpdateListCache $elapsed")
-    }
+    val awaitingPaymentRequests = ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
 
     fun checkGetOrCreateUser(key: String): User? {
         // checkNotInMainThread()
@@ -166,27 +153,24 @@ object LocalCache {
 
     fun getOrCreateUser(key: HexKey): User {
         // checkNotInMainThread()
+        require(isValidHex(key = key)) { "$key is not a valid hex" }
 
-        return users[key]
-            ?: run {
-                require(isValidHex(key = key)) { "$key is not a valid hex" }
-
-                val newObject = User(key)
-                users.putIfAbsent(key, newObject) ?: newObject
-            }
+        return users.getOrCreate(key) {
+            User(it)
+        }
     }
 
     fun getUserIfExists(key: String): User? {
         if (key.isEmpty()) return null
-        return users[key]
+        return users.get(key)
     }
 
     fun getAddressableNoteIfExists(key: String): AddressableNote? {
-        return addressables[key]
+        return addressables.get(key)
     }
 
     fun getNoteIfExists(key: String): Note? {
-        return addressables[key] ?: notes[key]
+        return addressables.get(key) ?: notes.get(key)
     }
 
     fun getChannelIfExists(key: String): Channel? {
@@ -226,24 +210,21 @@ object LocalCache {
     ): Note {
         checkNotInMainThread()
 
-        return notes.get(idHex)
-            ?: run {
-                require(isValidHex(idHex)) { "$idHex is not a valid hex" }
+        require(isValidHex(idHex)) { "$idHex is not a valid hex" }
 
-                notes.putIfAbsent(idHex, note) ?: note
-            }
+        return notes.getOrCreate(idHex) {
+            note
+        }
     }
 
     fun getOrCreateNote(idHex: String): Note {
         checkNotInMainThread()
 
-        return notes.get(idHex)
-            ?: run {
-                require(isValidHex(idHex)) { "$idHex is not a valid hex" }
+        require(isValidHex(idHex)) { "$idHex is not a valid hex" }
 
-                val newObject = Note(idHex)
-                notes.putIfAbsent(idHex, newObject) ?: newObject
-            }
+        return notes.getOrCreate(idHex) {
+            Note(idHex)
+        }
     }
 
     fun checkGetOrCreateChannel(key: String): Channel? {
@@ -298,11 +279,9 @@ object LocalCache {
 
         // we can't use naddr here because naddr might include relay info and
         // the preferred relay should not be part of the index.
-        return addressables[key.toTag()]
-            ?: run {
-                val newObject = AddressableNote(key)
-                addressables.putIfAbsent(key.toTag(), newObject) ?: newObject
-            }
+        return addressables.getOrCreate(key.toTag()) {
+            AddressableNote(key)
+        }
     }
 
     fun getOrCreateAddressableNote(key: ATag): AddressableNote {
@@ -771,9 +750,6 @@ object LocalCache {
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
-            if (version.liveSet != null) {
-                updateListCache()
-            }
             version.liveSet?.innerOts?.invalidateData()
         }
 
@@ -1433,9 +1409,6 @@ object LocalCache {
             checkGetOrCreateNote(it)?.let { editedNote ->
                 modificationCache.remove(editedNote.idHex)
                 // must update list of Notes to quickly update the user.
-                if (editedNote.liveSet != null) {
-                    updateListCache()
-                }
                 editedNote.liveSet?.innerModifications?.invalidateData()
             }
         }
@@ -1646,10 +1619,10 @@ object LocalCache {
             }
         }
 
-        return userListCache.filter {
-            (it.anyNameStartsWith(username)) ||
-                it.pubkeyHex.startsWith(username, true) ||
-                it.pubkeyNpub().startsWith(username, true)
+        return users.filter { _, user: User ->
+            (user.anyNameStartsWith(username)) ||
+                user.pubkeyHex.startsWith(username, true) ||
+                user.pubkeyNpub().startsWith(username, true)
         }
     }
 
@@ -1665,39 +1638,39 @@ object LocalCache {
             }
         }
 
-        return noteListCache.filter {
+        return notes.filter { _, note ->
             (
-                it.event !is GenericRepostEvent &&
-                    it.event !is RepostEvent &&
-                    it.event !is CommunityPostApprovalEvent &&
-                    it.event !is ReactionEvent &&
-                    it.event !is GiftWrapEvent &&
-                    it.event !is SealedGossipEvent &&
-                    it.event !is OtsEvent &&
-                    it.event !is LnZapEvent &&
-                    it.event !is LnZapRequestEvent
+                note.event !is GenericRepostEvent &&
+                    note.event !is RepostEvent &&
+                    note.event !is CommunityPostApprovalEvent &&
+                    note.event !is ReactionEvent &&
+                    note.event !is GiftWrapEvent &&
+                    note.event !is SealedGossipEvent &&
+                    note.event !is OtsEvent &&
+                    note.event !is LnZapEvent &&
+                    note.event !is LnZapRequestEvent
             ) &&
                 (
-                    it.event?.content()?.contains(text, true)
+                    note.event?.content()?.contains(text, true)
                         ?: false ||
-                        it.event?.matchTag1With(text) ?: false ||
-                        it.idHex.startsWith(text, true) ||
-                        it.idNote().startsWith(text, true)
+                        note.event?.matchTag1With(text) ?: false ||
+                        note.idHex.startsWith(text, true) ||
+                        note.idNote().startsWith(text, true)
                 )
         } +
-            addressables.values.filter {
+            addressables.filter { _, addressable ->
                 (
-                    it.event !is GenericRepostEvent &&
-                        it.event !is RepostEvent &&
-                        it.event !is CommunityPostApprovalEvent &&
-                        it.event !is ReactionEvent &&
-                        it.event !is GiftWrapEvent &&
-                        it.event !is LnZapEvent &&
-                        it.event !is LnZapRequestEvent
+                    addressable.event !is GenericRepostEvent &&
+                        addressable.event !is RepostEvent &&
+                        addressable.event !is CommunityPostApprovalEvent &&
+                        addressable.event !is ReactionEvent &&
+                        addressable.event !is GiftWrapEvent &&
+                        addressable.event !is LnZapEvent &&
+                        addressable.event !is LnZapRequestEvent
                 ) &&
                     (
-                        it.event?.content()?.contains(text, true)
-                            ?: false || it.event?.matchTag1With(text) ?: false || it.idHex.startsWith(text, true)
+                        addressable.event?.content()?.contains(text, true)
+                            ?: false || addressable.event?.matchTag1With(text) ?: false || addressable.idHex.startsWith(text, true)
                     )
             }
     }
@@ -1720,17 +1693,15 @@ object LocalCache {
     suspend fun findStatusesForUser(user: User): ImmutableList<AddressableNote> {
         checkNotInMainThread()
 
-        return addressables
-            .filter {
-                val noteEvent = it.value.event
-                (
-                    noteEvent is StatusEvent &&
-                        noteEvent.pubKey == user.pubkeyHex &&
-                        !noteEvent.isExpired() &&
-                        noteEvent.content.isNotBlank()
-                )
-            }
-            .values
+        return addressables.filter { _, it ->
+            val noteEvent = it.event
+            (
+                noteEvent is StatusEvent &&
+                    noteEvent.pubKey == user.pubkeyHex &&
+                    !noteEvent.isExpired() &&
+                    noteEvent.content.isNotBlank()
+            )
+        }
             .sortedWith(compareBy({ it.event?.expiration() ?: it.event?.createdAt() }, { it.idHex }))
             .reversed()
             .toImmutableList()
@@ -1742,7 +1713,7 @@ object LocalCache {
         var minTime: Long? = null
         val time = TimeUtils.now()
 
-        noteListCache.forEach { item ->
+        notes.forEach { _, item ->
             val noteEvent = item.event
             if ((noteEvent is OtsEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time))) {
                 noteEvent.verifiedTime?.let { stampedTime ->
@@ -1774,7 +1745,7 @@ object LocalCache {
         val time = TimeUtils.now()
 
         val newNotes =
-            noteListCache.filter { item ->
+            notes.filter { _, item ->
                 val noteEvent = item.event
 
                 noteEvent is TextNoteModificationEvent && noteEvent.pubKey == originalAuthor && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time)
@@ -1786,11 +1757,9 @@ object LocalCache {
     }
 
     fun cleanObservers() {
-        noteListCache.forEach { it.clearLive() }
-
-        addressables.forEach { it.value.clearLive() }
-
-        userListCache.forEach { it.clearLive() }
+        notes.forEach { _, it -> it.clearLive() }
+        addressables.forEach { _, it -> it.clearLive() }
+        users.forEach { _, it -> it.clearLive() }
     }
 
     fun pruneOldAndHiddenMessages(account: Account) {
@@ -1816,8 +1785,8 @@ object LocalCache {
             }
         }
 
-        userListCache.forEach { userPair ->
-            userPair.privateChatrooms.values.map {
+        users.forEach { _, user ->
+            user.privateChatrooms.values.map {
                 val toBeRemoved = it.pruneMessagesToTheLatestOnly()
 
                 val childrenToBeRemoved = mutableListOf<Note>()
@@ -1832,7 +1801,7 @@ object LocalCache {
 
                 if (toBeRemoved.size > 1) {
                     println(
-                        "PRUNE: ${toBeRemoved.size} private messages with ${userPair.toBestDisplayName()} removed. ${it.roomMessages.size} kept",
+                        "PRUNE: ${toBeRemoved.size} private messages with ${user.toBestDisplayName()} removed. ${it.roomMessages.size} kept",
                     )
                 }
             }
@@ -1841,21 +1810,20 @@ object LocalCache {
 
     fun prunePastVersionsOfReplaceables() {
         val toBeRemoved =
-            noteListCache
-                .filter {
-                    val noteEvent = it.event
-                    if (noteEvent is AddressableEvent) {
-                        noteEvent.createdAt() <
-                            (addressables[noteEvent.address().toTag()]?.event?.createdAt() ?: 0)
-                    } else {
-                        false
-                    }
+            notes.filter { _, note ->
+                val noteEvent = note.event
+                if (noteEvent is AddressableEvent) {
+                    noteEvent.createdAt() <
+                        (addressables.get(noteEvent.address().toTag())?.event?.createdAt() ?: 0)
+                } else {
+                    false
                 }
+            }
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
         toBeRemoved.forEach {
-            val newerVersion = addressables[(it.event as? AddressableEvent)?.address()?.toTag()]
+            val newerVersion = (it.event as? AddressableEvent)?.address()?.toTag()?.let { tag -> addressables.get(tag) }
             if (newerVersion != null) {
                 it.moveAllReferencesTo(newerVersion)
             }
@@ -1875,23 +1843,22 @@ object LocalCache {
         checkNotInMainThread()
 
         val toBeRemoved =
-            noteListCache
-                .filter {
-                    (
-                        (it.event is TextNoteEvent && !it.isNewThread()) ||
-                            it.event is ReactionEvent ||
-                            it.event is LnZapEvent ||
-                            it.event is LnZapRequestEvent ||
-                            it.event is ReportEvent ||
-                            it.event is GenericRepostEvent
-                    ) &&
-                        it.replyTo?.any { it.liveSet?.isInUse() == true } != true &&
-                        it.liveSet?.isInUse() != true && // don't delete if observing.
-                        it.author?.pubkeyHex !in
-                        accounts && // don't delete if it is the logged in account
-                        it.event?.isTaggedUsers(accounts) !=
-                        true // don't delete if it's a notification to the logged in user
-                }
+            notes.filter { _, note ->
+                (
+                    (note.event is TextNoteEvent && !note.isNewThread()) ||
+                        note.event is ReactionEvent ||
+                        note.event is LnZapEvent ||
+                        note.event is LnZapRequestEvent ||
+                        note.event is ReportEvent ||
+                        note.event is GenericRepostEvent
+                ) &&
+                    note.replyTo?.any { it.liveSet?.isInUse() == true } != true &&
+                    note.liveSet?.isInUse() != true && // don't delete if observing.
+                    note.author?.pubkeyHex !in
+                    accounts && // don't delete if it is the logged in account
+                    note.event?.isTaggedUsers(accounts) !=
+                    true // don't delete if it's a notification to the logged in user
+            }
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
@@ -1958,7 +1925,7 @@ object LocalCache {
         checkNotInMainThread()
 
         val now = TimeUtils.now()
-        val toBeRemoved = noteListCache.filter { it.event?.isExpirationBefore(now) == true }
+        val toBeRemoved = notes.filter { _, it -> it.event?.isExpirationBefore(now) == true }
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
@@ -1983,11 +1950,7 @@ object LocalCache {
             account.liveHiddenUsers.value
                 ?.hiddenUsers
                 ?.map { userHex ->
-                    (
-                        noteListCache.filter { it.event?.pubKey() == userHex } +
-                            addressables.values.filter { it.event?.pubKey() == userHex }
-                    )
-                        .toSet()
+                    (notes.filter { _, it -> it.event?.pubKey() == userHex } + addressables.filter { _, it -> it.event?.pubKey() == userHex }).toSet()
                 }
                 ?.flatten()
                 ?: emptyList()
@@ -2006,13 +1969,13 @@ object LocalCache {
         checkNotInMainThread()
 
         var removingContactList = 0
-        userListCache.forEach {
+        users.forEach { _, user ->
             if (
-                it.pubkeyHex !in loggedIn &&
-                (it.liveSet == null || it.liveSet?.isInUse() == false) &&
-                it.latestContactList != null
+                user.pubkeyHex !in loggedIn &&
+                (user.liveSet == null || user.liveSet?.isInUse() == false) &&
+                user.latestContactList != null
             ) {
-                it.latestContactList = null
+                user.latestContactList = null
                 removingContactList++
             }
         }
@@ -2172,7 +2135,6 @@ class LocalCacheLiveData {
     fun invalidateData(newNote: Note) {
         bundler.invalidateList(newNote) {
                 bundledNewNotes ->
-            LocalCache.updateListCache()
             _newEventBundles.emit(bundledNewNotes)
         }
     }

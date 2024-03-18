@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.service
 
 import android.util.LruCache
-import com.vitorpamplona.amethyst.commons.RichTextParser
-import com.vitorpamplona.amethyst.commons.RichTextViewerState
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 
 object CachedRichTextParser {

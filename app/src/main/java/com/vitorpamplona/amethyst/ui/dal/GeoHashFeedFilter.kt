@@ -36,7 +36,12 @@ class GeoHashFeedFilter(val tag: String, val account: Account) : AdditiveFeedFil
     }
 
     override fun feed(): List<Note> {
-        return sort(innerApplyFilter(LocalCache.noteListCache))
+        val notes =
+            LocalCache.notes.filterIntoSet { _, it ->
+                acceptableEvent(it, tag)
+            }
+
+        return sort(notes)
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
@@ -44,25 +49,24 @@ class GeoHashFeedFilter(val tag: String, val account: Account) : AdditiveFeedFil
     }
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val myTag = tag ?: return emptySet()
+        return collection.filterTo(HashSet<Note>()) { acceptableEvent(it, tag) }
+    }
 
-        return collection
-            .asSequence()
-            .filter {
-                (
-                    it.event is TextNoteEvent ||
-                        it.event is LongTextNoteEvent ||
-                        it.event is ChannelMessageEvent ||
-                        it.event is PrivateDmEvent ||
-                        it.event is PollNoteEvent ||
-                        it.event is AudioHeaderEvent
-                ) && it.event?.isTaggedGeoHash(myTag) == true
-            }
-            .filter { account.isAcceptable(it) }
-            .toSet()
+    fun acceptableEvent(
+        it: Note,
+        geoTag: String,
+    ): Boolean {
+        return (
+            it.event is TextNoteEvent ||
+                it.event is LongTextNoteEvent ||
+                it.event is ChannelMessageEvent ||
+                it.event is PrivateDmEvent ||
+                it.event is PollNoteEvent ||
+                it.event is AudioHeaderEvent
+        ) && it.event?.isTaggedGeoHash(geoTag) == true && account.isAcceptable(it)
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+        return collection.sortedWith(DefaultFeedOrder)
     }
 }

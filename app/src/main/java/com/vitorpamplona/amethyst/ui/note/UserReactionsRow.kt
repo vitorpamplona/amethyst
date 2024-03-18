@@ -232,7 +232,7 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
         val replies = mutableMapOf<String, Int>()
         val takenIntoAccount = mutableSetOf<HexKey>()
 
-        LocalCache.noteListCache.forEach {
+        LocalCache.notes.forEach { _, it ->
             val noteEvent = it.event
             if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id())) {
                 if (noteEvent is ReactionEvent) {

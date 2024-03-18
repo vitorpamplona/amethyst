@@ -47,6 +47,6 @@ class ChatroomFeedFilter(val withUser: ChatroomKey, val account: Account) :
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+        return collection.sortedWith(DefaultFeedOrder)
     }
 }

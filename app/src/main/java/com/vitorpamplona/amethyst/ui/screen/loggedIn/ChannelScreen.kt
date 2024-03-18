@@ -101,7 +101,7 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
@@ -674,24 +674,21 @@ fun ShowVideoStreaming(
 
             streamingInfo?.let { event ->
                 val url = remember(streamingInfo) { event.streaming() }
-                val artworkUri = remember(streamingInfo) { event.image() }
-                val title = remember(streamingInfo) { baseChannel.toBestDisplayName() }
-
-                val author = remember(streamingInfo) { baseChannel.creatorName() }
 
                 url?.let {
                     CrossfadeCheckIfUrlIsOnline(url, accountViewModel) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = remember { Modifier.heightIn(max = 300.dp) },
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = remember { Modifier.fillMaxWidth().heightIn(min = 50.dp, max = 300.dp) },
                         ) {
                             val zoomableUrlVideo =
-                                remember(it) {
+                                remember(streamingInfo) {
                                     MediaUrlVideo(
                                         url = url,
-                                        description = title,
-                                        artworkUri = artworkUri,
-                                        authorName = author,
+                                        description = baseChannel.toBestDisplayName(),
+                                        artworkUri = event.image(),
+                                        authorName = baseChannel.creatorName(),
                                         uri = event.toNostrUri(),
                                     )
                                 }

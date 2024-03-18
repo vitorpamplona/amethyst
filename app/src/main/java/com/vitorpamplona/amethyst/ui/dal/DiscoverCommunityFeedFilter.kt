@@ -21,15 +21,14 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
+import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 open class DiscoverCommunityFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
@@ -44,9 +43,27 @@ open class DiscoverCommunityFeedFilter(val account: Account) : AdditiveFeedFilte
     }
 
     override fun feed(): List<Note> {
-        val allNotes = LocalCache.addressables.values
+        val filterParams =
+            FilterByListParams.create(
+                userHex = account.userProfile().pubkeyHex,
+                selectedListName = account.defaultDiscoveryFollowList.value,
+                followLists = account.liveDiscoveryFollowLists.value,
+                hiddenUsers = account.flowHiddenUsers.value,
+            )
 
-        val notes = innerApplyFilter(allNotes)
+        // Here we only need to look for CommunityDefinition Events
+        val notes =
+            LocalCache.addressables.mapNotNullIntoSet { key, note ->
+                val noteEvent = note.event
+                if (noteEvent == null && shouldInclude(ATag.parseAtagUnckecked(key), filterParams)) {
+                    // send unloaded communities to the screen
+                    note
+                } else if (noteEvent is CommunityDefinitionEvent && filterParams.match(noteEvent)) {
+                    note
+                } else {
+                    null
+                }
+            }
 
         return sort(notes)
     }
@@ -56,40 +73,43 @@ open class DiscoverCommunityFeedFilter(val account: Account) : AdditiveFeedFilte
     }
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val now = TimeUtils.now()
-        val isGlobal = account.defaultDiscoveryFollowList.value == GLOBAL_FOLLOWS
-        val isHiddenList = showHiddenKey()
+        // here, we need to look for CommunityDefinition in new collection AND new CommunityDefinition from Post Approvals
+        val filterParams =
+            FilterByListParams.create(
+                userHex = account.userProfile().pubkeyHex,
+                selectedListName = account.defaultDiscoveryFollowList.value,
+                followLists = account.liveDiscoveryFollowLists.value,
+                hiddenUsers = account.flowHiddenUsers.value,
+            )
 
-        val followingKeySet = account.liveDiscoveryFollowLists.value?.users ?: emptySet()
-        val followingTagSet = account.liveDiscoveryFollowLists.value?.hashtags ?: emptySet()
-        val followingGeohashSet = account.liveDiscoveryFollowLists.value?.geotags ?: emptySet()
+        return collection.mapNotNull { note ->
+            // note event here will never be null
+            val noteEvent = note.event
+            if (noteEvent is CommunityDefinitionEvent && filterParams.match(noteEvent)) {
+                listOf(note)
+            } else if (noteEvent is CommunityPostApprovalEvent) {
+                noteEvent.communities().mapNotNull {
+                    val definitionNote = LocalCache.getOrCreateAddressableNote(it)
+                    val definitionEvent = definitionNote.event
 
-        val createEvents = collection.filter { it.event is CommunityDefinitionEvent }
-        val anyOtherCommunityEvent =
-            collection
-                .asSequence()
-                .filter { it.event is CommunityPostApprovalEvent }
-                .mapNotNull { (it.event as? CommunityPostApprovalEvent)?.communities() }
-                .flatten()
-                .map { LocalCache.getOrCreateAddressableNote(it) }
-                .toSet()
-
-        val activities =
-            (createEvents + anyOtherCommunityEvent)
-                .asSequence()
-                .filter { it.event is CommunityDefinitionEvent }
-                .filter {
-                    isGlobal ||
-                        it.author?.pubkeyHex in followingKeySet ||
-                        it.event?.isTaggedHashes(followingTagSet) == true ||
-                        it.event?.isTaggedGeoHashes(followingGeohashSet) == true
+                    if (definitionEvent == null && shouldInclude(it, filterParams)) {
+                        definitionNote
+                    } else if (definitionEvent is CommunityDefinitionEvent && filterParams.match(definitionEvent)) {
+                        definitionNote
+                    } else {
+                        null
+                    }
                 }
-                .filter { isHiddenList || it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true }
-                .filter { (it.createdAt() ?: 0) <= now }
-                .toSet()
-
-        return activities
+            } else {
+                null
+            }
+        }.flatten().toSet()
     }
+
+    private fun shouldInclude(
+        aTag: ATag?,
+        params: FilterByListParams,
+    ) = aTag != null && aTag.kind == CommunityDefinitionEvent.KIND && params.match(aTag)
 
     override fun sort(collection: Set<Note>): List<Note> {
         val followingKeySet =

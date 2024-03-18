@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
@@ -31,7 +30,6 @@ import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_PLANNED
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 open class DiscoverLiveFeedFilter(
     val account: Account,
@@ -64,33 +62,15 @@ open class DiscoverLiveFeedFilter(
     }
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val now = TimeUtils.now()
-        val isGlobal = account.defaultDiscoveryFollowList.value == GLOBAL_FOLLOWS
-        val isHiddenList = showHiddenKey()
+        val filterParams =
+            FilterByListParams.create(
+                userHex = account.userProfile().pubkeyHex,
+                selectedListName = account.defaultDiscoveryFollowList.value,
+                followLists = account.liveDiscoveryFollowLists.value,
+                hiddenUsers = account.flowHiddenUsers.value,
+            )
 
-        val followingKeySet = account.liveDiscoveryFollowLists.value?.users ?: emptySet()
-        val followingTagSet = account.liveDiscoveryFollowLists.value?.hashtags ?: emptySet()
-        val followingGeohashSet = account.liveDiscoveryFollowLists.value?.geotags ?: emptySet()
-
-        val activities =
-            collection
-                .asSequence()
-                .filter { it.event is LiveActivitiesEvent }
-                .filter {
-                    isGlobal ||
-                        (it.event as LiveActivitiesEvent).participantsIntersect(followingKeySet) ||
-                        it.event?.isTaggedHashes(
-                            followingTagSet,
-                        ) == true ||
-                        it.event?.isTaggedGeoHashes(
-                            followingGeohashSet,
-                        ) == true
-                }
-                .filter { isHiddenList || it.author?.let { !account.isHidden(it.pubkeyHex) } ?: true }
-                .filter { (it.createdAt() ?: 0) <= now }
-                .toSet()
-
-        return activities
+        return collection.filterTo(HashSet()) { it.event is LiveActivitiesEvent && filterParams.match(it.event) }
     }
 
     override fun sort(collection: Set<Note>): List<Note> {

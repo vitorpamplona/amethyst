@@ -36,7 +36,17 @@ class UserProfileConversationsFeedFilter(val user: User, val account: Account) :
     }
 
     override fun feed(): List<Note> {
-        return sort(innerApplyFilter(LocalCache.noteListCache))
+        val notes =
+            LocalCache.notes.filterIntoSet { _, it ->
+                acceptableEvent(it)
+            }
+
+        val longFormNotes =
+            LocalCache.addressables.filterIntoSet { _, it ->
+                acceptableEvent(it)
+            }
+
+        return sort(notes + longFormNotes)
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
@@ -44,23 +54,21 @@ class UserProfileConversationsFeedFilter(val user: User, val account: Account) :
     }
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        return collection
-            .filter {
-                it.author == user &&
-                    (
-                        it.event is TextNoteEvent ||
-                            it.event is PollNoteEvent ||
-                            it.event is ChannelMessageEvent ||
-                            it.event is LiveActivitiesChatMessageEvent
-                    ) &&
-                    !it.isNewThread() &&
-                    account.isAcceptable(it) == true
-            }
-            .toSet()
+        return collection.filterTo(HashSet()) { acceptableEvent(it) }
+    }
+
+    fun acceptableEvent(it: Note): Boolean {
+        return it.author == user &&
+            (
+                it.event is TextNoteEvent ||
+                    it.event is PollNoteEvent ||
+                    it.event is ChannelMessageEvent ||
+                    it.event is LiveActivitiesChatMessageEvent
+            ) && !it.isNewThread() && account.isAcceptable(it)
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+        return collection.sortedWith(DefaultFeedOrder)
     }
 
     override fun limit() = 200

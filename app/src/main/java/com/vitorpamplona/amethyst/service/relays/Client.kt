@@ -98,7 +98,7 @@ object Client : RelayPool.Listener {
         checkNotInMainThread()
 
         subscriptions = subscriptions + Pair(subscriptionId, filters)
-        RelayPool.sendFilter(subscriptionId)
+        RelayPool.sendFilter(subscriptionId, filters)
     }
 
     fun sendFilterOnlyIfDisconnected(
@@ -134,7 +134,7 @@ object Client : RelayPool.Listener {
                 newSporadicRelay(
                     relay,
                     feedTypes,
-                    onConnected = { relay -> relay.send(signedEvent) },
+                    onConnected = { myRelay -> myRelay.send(signedEvent) },
                     onDone = onDone,
                 )
             }
@@ -152,7 +152,9 @@ object Client : RelayPool.Listener {
         RelayPool.addRelay(relay)
 
         relay.connectAndRun {
-            allSubscriptions().forEach { relay.sendFilter(requestId = it) }
+            allSubscriptions().forEach {
+                relay.sendFilter(it.key, it.value)
+            }
 
             onConnected(relay)
 
@@ -264,8 +266,8 @@ object Client : RelayPool.Listener {
         listeners = listeners.minus(listener)
     }
 
-    fun allSubscriptions(): Set<String> {
-        return subscriptions.keys
+    fun allSubscriptions(): Map<String, List<TypedFilter>> {
+        return subscriptions
     }
 
     fun getSubscriptionFilters(subId: String): List<TypedFilter> {

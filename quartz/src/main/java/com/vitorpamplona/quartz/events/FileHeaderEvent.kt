@@ -58,6 +58,12 @@ class FileHeaderEvent(
 
     fun hasUrl() = tags.any { it.size > 1 && it[0] == URL }
 
+    fun isImageOrVideo(): Boolean {
+        val mimeType = mimeType() ?: return false
+
+        return mimeType.startsWith("image/") || mimeType.startsWith("video/")
+    }
+
     companion object {
         const val KIND = 1063
         const val ALT_DESCRIPTION = "Verifiable file url"

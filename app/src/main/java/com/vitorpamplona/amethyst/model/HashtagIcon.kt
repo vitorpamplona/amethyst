@@ -28,8 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.HashTagSegment
-import com.vitorpamplona.amethyst.commons.RegularTextSegment
+import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
+import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
 import com.vitorpamplona.amethyst.ui.components.HashTag
 import com.vitorpamplona.amethyst.ui.components.RenderRegular
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn

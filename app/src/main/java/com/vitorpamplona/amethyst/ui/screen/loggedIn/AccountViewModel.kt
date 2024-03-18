@@ -911,7 +911,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     }
 
     fun getAddressableNoteIfExists(key: String): AddressableNote? {
-        return LocalCache.addressables[key]
+        return LocalCache.getAddressableNoteIfExists(key)
     }
 
     suspend fun findStatusesForUser(
