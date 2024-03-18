@@ -276,11 +276,20 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             when (event) {
                 is DraftEvent -> {
                     // Avoid decrypting over and over again if the event already exist.
+
                     val note = LocalCache.getNoteIfExists(event.id)
                     if (note != null && relay.brief in note.relays) return
 
                     event.plainContent(account.signer) {
+                        val tag =
+                            event.tags().filter { it.size > 1 && it[0] == "d" }.map {
+                                it[1]
+                            }.firstOrNull()
+
                         LocalCache.justConsume(it, relay)
+                        tag?.let { lTag ->
+                            LocalCache.addDraft(lTag, it.id())
+                        }
                     }
                 }
 

@@ -1346,6 +1346,7 @@ class Account(
                     Client.send(draftEvent, relayList = relayList)
                     LocalCache.justConsume(draftEvent, null)
                     LocalCache.justConsume(it, null)
+                    LocalCache.addDraft(draftTag, it.id())
                 }
             } else {
                 Client.send(it, relayList = relayList)
@@ -1407,6 +1408,7 @@ class Account(
                     Client.send(draftEvent, relayList = relayList)
                     LocalCache.justConsume(draftEvent, null)
                     LocalCache.justConsume(it, null)
+                    LocalCache.addDraft(draftTag, it.id())
                 }
             } else {
                 Client.send(it, relayList = relayList)
@@ -1474,6 +1476,7 @@ class Account(
                     Client.send(draftEvent, relayList = relayList)
                     LocalCache.justConsume(draftEvent, null)
                     LocalCache.justConsume(it, null)
+                    LocalCache.addDraft(draftTag, it.id())
                 }
             } else {
                 Client.send(it, relayList = relayList)
@@ -1564,6 +1567,7 @@ class Account(
                     Client.send(draftEvent, relayList = relayList)
                     LocalCache.justConsume(draftEvent, null)
                     LocalCache.justConsume(it, null)
+                    LocalCache.addDraft(draftTag, it.id())
                 }
             } else {
                 Client.send(it, relayList = relayList)
@@ -1615,6 +1619,7 @@ class Account(
                     Client.send(draftEvent)
                     LocalCache.justConsume(draftEvent, null)
                     LocalCache.justConsume(it, null)
+                    LocalCache.addDraft(draftTag, it.id())
                 }
             } else {
                 Client.send(it)
@@ -1659,6 +1664,7 @@ class Account(
                     Client.send(draftEvent)
                     LocalCache.justConsume(draftEvent, null)
                     LocalCache.justConsume(it, null)
+                    LocalCache.addDraft(draftTag, it.id())
                 }
             } else {
                 Client.send(it)
@@ -1730,6 +1736,7 @@ class Account(
                     Client.send(draftEvent)
                     LocalCache.justConsume(draftEvent, null)
                     LocalCache.justConsume(it, null)
+                    LocalCache.addDraft(draftTag, it.id())
                 }
             } else {
                 Client.send(it)

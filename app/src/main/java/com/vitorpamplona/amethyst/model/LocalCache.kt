@@ -129,7 +129,7 @@ object LocalCache {
     val users = LargeCache<HexKey, User>()
     val notes = LargeCache<HexKey, Note>()
     val addressables = LargeCache<String, AddressableNote>()
-
+    val drafts = ConcurrentHashMap<String, MutableList<HexKey>>()
     val channels = ConcurrentHashMap<HexKey, Channel>()
     val awaitingPaymentRequests = ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
 
@@ -143,11 +143,18 @@ object LocalCache {
     }
 
     fun draftNotes(draftTag: String): List<Note> {
-        return notes.filter { _, it ->
-            it.event?.tags()?.filter { it.size > 1 && it[0] == "d" }?.map {
-                it[1]
-            }?.firstOrNull() == draftTag
-        }
+        return drafts[draftTag]?.mapNotNull {
+            checkGetOrCreateNote(it)
+        } ?: listOf()
+    }
+
+    fun addDraft(
+        key: String,
+        value: String,
+    ) {
+        val data = drafts[key] ?: mutableListOf()
+        data.add(value)
+        drafts[key] = data
     }
 
     fun getOrCreateUser(key: HexKey): User {

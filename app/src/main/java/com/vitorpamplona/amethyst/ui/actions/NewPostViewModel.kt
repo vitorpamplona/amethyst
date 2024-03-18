@@ -83,7 +83,7 @@ enum class UserSuggestionAnchor {
 
 @Stable
 open class NewPostViewModel() : ViewModel() {
-    var draftTag: String = UUID.randomUUID().toString()
+    private var draftTag: String = UUID.randomUUID().toString()
     var accountViewModel: AccountViewModel? = null
     var account: Account? = null
     var requiresNIP24: Boolean = false
@@ -309,7 +309,9 @@ open class NewPostViewModel() : ViewModel() {
         draft: Note,
         accountViewModel: AccountViewModel,
     ) {
-        Log.d("draft", draft.event?.toJson().toString())
+        draftTag = LocalCache.drafts.filter {
+            it.value.contains(draft.idHex)
+        }.keys.firstOrNull() ?: draftTag
 
         canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
         canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
