@@ -32,8 +32,7 @@ object Nip96MediaServers {
         listOf(
             ServerName("Nostr.Build", "https://nostr.build"),
             ServerName("NostrCheck.me", "https://nostrcheck.me"),
-            ServerName("Nostrage", "https://nostrage.com"),
-            ServerName("Sove", "https://sove.rent"),
+            ServerName("NostPic", "https://nostpic.com"),
             ServerName("Sovbit", "https://files.sovbit.host"),
             ServerName("Void.cat", "https://void.cat"),
         )
