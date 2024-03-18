@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 @Composable
@@ -367,7 +368,7 @@ fun TranslateAndWatchLanguageChanges(
     LaunchedEffect(accountState) {
         // This takes some time. Launches as a Composition scope to make sure this gets cancel if this
         // item gets out of view.
-        launch(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             LanguageTranslatorService.autoTranslate(
                 content,
                 accountViewModel.account.dontTranslateFrom,
