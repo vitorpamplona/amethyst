@@ -37,6 +37,7 @@ import coil.imageLoader
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -1022,37 +1023,6 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
-    suspend fun parseNIP19(
-        str: String,
-        onNote: (LoadedBechLink) -> Unit,
-    ) {
-        withContext(Dispatchers.IO) {
-            Nip19Bech32.uriToRoute(str)?.let {
-                var returningNote: Note? = null
-
-                when (val parsed = it.entity) {
-                    is Nip19Bech32.NSec -> {}
-                    is Nip19Bech32.NPub -> {}
-                    is Nip19Bech32.NProfile -> {}
-                    is Nip19Bech32.Note -> LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note }
-                    is Nip19Bech32.NEvent -> LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note }
-                    is Nip19Bech32.NEmbed -> {
-                        loadNEmbedIfNeeded(parsed.event)
-
-                        LocalCache.checkGetOrCreateNote(parsed.event.id)?.let { note ->
-                            returningNote = note
-                        }
-                    }
-                    is Nip19Bech32.NRelay -> {}
-                    is Nip19Bech32.NAddress -> LocalCache.checkGetOrCreateNote(parsed.atag)?.let { note -> returningNote = note }
-                    else -> {}
-                }
-
-                onNote(LoadedBechLink(returningNote, it))
-            }
-        }
-    }
-
     fun checkIsOnline(
         media: String?,
         onDone: (Boolean) -> Unit,
@@ -1318,6 +1288,37 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) {
             unwrapIfNeeded(note?.event) {
                 onReady(it)
+            }
+        }
+    }
+
+    val bechLinkCache = CachedLoadedBechLink(this)
+
+    class CachedLoadedBechLink(val accountViewModel: AccountViewModel) : GenericBaseCache<String, LoadedBechLink>(20) {
+        override suspend fun compute(key: String): LoadedBechLink? {
+            return Nip19Bech32.uriToRoute(key)?.let {
+                var returningNote: Note? = null
+
+                when (val parsed = it.entity) {
+                    is Nip19Bech32.NSec -> {}
+                    is Nip19Bech32.NPub -> {}
+                    is Nip19Bech32.NProfile -> {}
+                    is Nip19Bech32.Note -> withContext(Dispatchers.IO) { LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note } }
+                    is Nip19Bech32.NEvent -> withContext(Dispatchers.IO) { LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note } }
+                    is Nip19Bech32.NEmbed ->
+                        withContext(Dispatchers.IO) {
+                            accountViewModel.loadNEmbedIfNeeded(parsed.event)
+
+                            LocalCache.checkGetOrCreateNote(parsed.event.id)?.let { note ->
+                                returningNote = note
+                            }
+                        }
+                    is Nip19Bech32.NRelay -> {}
+                    is Nip19Bech32.NAddress -> withContext(Dispatchers.IO) { LocalCache.checkGetOrCreateNote(parsed.atag)?.let { note -> returningNote = note } }
+                    else -> {}
+                }
+
+                LoadedBechLink(returningNote, it)
             }
         }
     }

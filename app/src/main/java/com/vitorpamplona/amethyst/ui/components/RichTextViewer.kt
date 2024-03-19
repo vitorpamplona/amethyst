@@ -69,6 +69,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
 import com.halilibo.richtext.ui.material3.Material3RichText
+import com.vitorpamplona.amethyst.commons.compose.produceCachedState
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
 import com.vitorpamplona.amethyst.commons.richtext.EmailSegment
@@ -98,7 +99,6 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadedBechLink
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.MarkdownTextStyle
@@ -562,15 +562,15 @@ fun ObserveNIP19(
     accountViewModel: AccountViewModel,
     onRefresh: () -> Unit,
 ) {
-    when (val parsed = entity) {
-        is Nip19Bech32.NPub -> ObserveNIP19User(parsed.hex, accountViewModel, onRefresh)
-        is Nip19Bech32.NProfile -> ObserveNIP19User(parsed.hex, accountViewModel, onRefresh)
+    when (entity) {
+        is Nip19Bech32.NPub -> ObserveNIP19User(entity.hex, accountViewModel, onRefresh)
+        is Nip19Bech32.NProfile -> ObserveNIP19User(entity.hex, accountViewModel, onRefresh)
 
-        is Nip19Bech32.Note -> ObserveNIP19Event(parsed.hex, accountViewModel, onRefresh)
-        is Nip19Bech32.NEvent -> ObserveNIP19Event(parsed.hex, accountViewModel, onRefresh)
-        is Nip19Bech32.NEmbed -> ObserveNIP19Event(parsed.event.id, accountViewModel, onRefresh)
+        is Nip19Bech32.Note -> ObserveNIP19Event(entity.hex, accountViewModel, onRefresh)
+        is Nip19Bech32.NEvent -> ObserveNIP19Event(entity.hex, accountViewModel, onRefresh)
+        is Nip19Bech32.NEmbed -> ObserveNIP19Event(entity.event.id, accountViewModel, onRefresh)
 
-        is Nip19Bech32.NAddress -> ObserveNIP19Event(parsed.atag, accountViewModel, onRefresh)
+        is Nip19Bech32.NAddress -> ObserveNIP19Event(entity.atag, accountViewModel, onRefresh)
 
         is Nip19Bech32.NSec -> {}
         is Nip19Bech32.NRelay -> {}
@@ -652,13 +652,7 @@ fun BechLink(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    var loadedLink by remember { mutableStateOf<LoadedBechLink?>(null) }
-
-    if (loadedLink == null) {
-        LaunchedEffect(key1 = word) {
-            accountViewModel.parseNIP19(word) { loadedLink = it }
-        }
-    }
+    val loadedLink by produceCachedState(cache = accountViewModel.bechLinkCache, key = word)
 
     val baseNote = loadedLink?.baseNote
 
