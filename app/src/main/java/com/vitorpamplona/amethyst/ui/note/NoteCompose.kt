@@ -124,7 +124,6 @@ import com.vitorpamplona.amethyst.ui.theme.boostedNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.channelNotePictureModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
-import com.vitorpamplona.amethyst.ui.theme.normalNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.normalWithTopMarginNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.replyBackground
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
@@ -177,7 +176,6 @@ fun NoteCompose(
     isQuotedNote: Boolean = false,
     unPackReply: Boolean = true,
     makeItShort: Boolean = false,
-    addMarginTop: Boolean = true,
     showHidden: Boolean = false,
     quotesLeft: Int,
     parentBackgroundColor: MutableState<Color>? = null,
@@ -198,7 +196,7 @@ fun NoteCompose(
             accountViewModel = accountViewModel,
             nav = nav,
         ) { canPreview ->
-            NormalNote(
+            AcceptableNote(
                 baseNote = baseNote,
                 routeForLastRead = routeForLastRead,
                 modifier = modifier,
@@ -206,7 +204,6 @@ fun NoteCompose(
                 isQuotedNote = isQuotedNote,
                 unPackReply = unPackReply,
                 makeItShort = makeItShort,
-                addMarginTop = addMarginTop,
                 canPreview = canPreview,
                 quotesLeft = quotesLeft,
                 parentBackgroundColor = parentBackgroundColor,
@@ -383,7 +380,7 @@ fun WatchForReports(
 }
 
 @Composable
-fun NormalNote(
+fun AcceptableNote(
     baseNote: Note,
     routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
@@ -391,7 +388,6 @@ fun NormalNote(
     isQuotedNote: Boolean = false,
     unPackReply: Boolean = true,
     makeItShort: Boolean = false,
-    addMarginTop: Boolean = true,
     canPreview: Boolean = true,
     quotesLeft: Int,
     parentBackgroundColor: MutableState<Color>? = null,
@@ -423,7 +419,6 @@ fun NormalNote(
                         isQuotedNote = isQuotedNote,
                         unPackReply = unPackReply,
                         makeItShort = makeItShort,
-                        addMarginTop = addMarginTop,
                         canPreview = canPreview,
                         quotesLeft = quotesLeft,
                         parentBackgroundColor = parentBackgroundColor,
@@ -460,7 +455,6 @@ fun NormalNote(
                         isQuotedNote = isQuotedNote,
                         unPackReply = unPackReply,
                         makeItShort = makeItShort,
-                        addMarginTop = addMarginTop,
                         canPreview = canPreview,
                         quotesLeft = quotesLeft,
                         parentBackgroundColor = parentBackgroundColor,
@@ -512,7 +506,6 @@ private fun CheckNewAndRenderNote(
     isQuotedNote: Boolean = false,
     unPackReply: Boolean = true,
     makeItShort: Boolean = false,
-    addMarginTop: Boolean = true,
     canPreview: Boolean = true,
     quotesLeft: Int,
     parentBackgroundColor: MutableState<Color>? = null,
@@ -541,7 +534,6 @@ private fun CheckNewAndRenderNote(
             backgroundColor = backgroundColor,
             isBoostedNote = isBoostedNote,
             isQuotedNote = isQuotedNote,
-            addMarginTop = addMarginTop,
             unPackReply = unPackReply,
             makeItShort = makeItShort,
             canPreview = canPreview,
@@ -594,7 +586,6 @@ fun InnerNoteWithReactions(
     backgroundColor: MutableState<Color>,
     isBoostedNote: Boolean,
     isQuotedNote: Boolean,
-    addMarginTop: Boolean,
     unPackReply: Boolean,
     makeItShort: Boolean,
     canPreview: Boolean,
@@ -607,10 +598,8 @@ fun InnerNoteWithReactions(
 
     Row(
         modifier =
-            if (!isBoostedNote && addMarginTop) {
+            if (!isBoostedNote) {
                 normalWithTopMarginNoteModifier
-            } else if (!isBoostedNote) {
-                normalNoteModifier
             } else {
                 boostedNoteModifier
             },

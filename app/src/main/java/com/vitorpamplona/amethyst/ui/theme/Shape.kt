@@ -200,14 +200,6 @@ val imageHeaderBannerSize = Modifier.fillMaxWidth().height(150.dp)
 
 val authorNotePictureForImageHeader = Modifier.size(75.dp).padding(10.dp)
 
-val normalNoteModifier =
-    Modifier.fillMaxWidth()
-        .padding(
-            start = 12.dp,
-            end = 12.dp,
-            top = 0.dp,
-        )
-
 val normalWithTopMarginNoteModifier =
     Modifier.fillMaxWidth()
         .padding(

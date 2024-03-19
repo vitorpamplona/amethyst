@@ -104,7 +104,6 @@ fun MessageSetCompose(
                     baseNote = baseNote,
                     routeForLastRead = null,
                     isBoostedNote = true,
-                    addMarginTop = false,
                     showHidden = showHidden,
                     quotesLeft = 1,
                     parentBackgroundColor = backgroundColor,
