@@ -34,7 +34,7 @@ data class Settings(
     val automaticallyShowProfilePictures: ConnectivityType = ConnectivityType.ALWAYS,
     val dontShowPushNotificationSelector: Boolean = false,
     val dontAskForNotificationPermissions: Boolean = false,
-    val featureSet: FeatureSetType = FeatureSetType.SIMPLIFIED,
+    val featureSet: FeatureSetType = FeatureSetType.COMPLETE,
 )
 
 enum class ThemeType(val screenCode: Int, val resourceId: Int) {
@@ -92,7 +92,7 @@ fun parseFeatureSetType(screenCode: Int): FeatureSetType {
         FeatureSetType.COMPLETE.screenCode -> FeatureSetType.COMPLETE
         FeatureSetType.SIMPLIFIED.screenCode -> FeatureSetType.SIMPLIFIED
         else -> {
-            FeatureSetType.SIMPLIFIED
+            FeatureSetType.COMPLETE
         }
     }
 }
