@@ -535,7 +535,7 @@ open class Note(val idHex: String) {
         option: Int?,
         user: User,
         account: Account,
-        remainingZapEvents: List<Pair<Note, Note?>>,
+        remainingZapEvents: Map<Note, Note?>,
         onWasZappedByAuthor: () -> Unit,
     ) {
         if (remainingZapEvents.isEmpty()) {
@@ -543,8 +543,8 @@ open class Note(val idHex: String) {
         }
 
         remainingZapEvents.forEach { next ->
-            val zapRequest = next.first.event as LnZapRequestEvent
-            val zapEvent = next.second?.event as? LnZapEvent
+            val zapRequest = next.key.event as LnZapRequestEvent
+            val zapEvent = next.value?.event as? LnZapEvent
 
             if (!zapRequest.isPrivateZap()) {
                 // public events
@@ -588,7 +588,7 @@ open class Note(val idHex: String) {
         account: Account,
         onWasZappedByAuthor: () -> Unit,
     ) {
-        isZappedByCalculation(null, user, account, zaps.toList(), onWasZappedByAuthor)
+        isZappedByCalculation(null, user, account, zaps, onWasZappedByAuthor)
         if (account.userProfile() == user) {
             recursiveIsPaidByCalculation(account, zapPayments.toList(), onWasZappedByAuthor)
         }
@@ -600,7 +600,7 @@ open class Note(val idHex: String) {
         account: Account,
         onWasZappedByAuthor: () -> Unit,
     ) {
-        isZappedByCalculation(option, user, account, zaps.toList(), onWasZappedByAuthor)
+        isZappedByCalculation(option, user, account, zaps, onWasZappedByAuthor)
     }
 
     fun getReactionBy(user: User): String? {
