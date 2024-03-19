@@ -57,6 +57,7 @@ dependencies {
     api libs.kotlinx.collections.immutable
 
     testImplementation libs.junit
+    androidTestImplementation platform(libs.androidx.compose.bom)
     androidTestImplementation libs.androidx.junit
     androidTestImplementation libs.androidx.espresso.core
 }

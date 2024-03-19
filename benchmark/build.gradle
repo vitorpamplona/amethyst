@@ -48,6 +48,7 @@ android {
 }
 
 dependencies {
+    androidTestImplementation platform(libs.androidx.compose.bom)
     androidTestImplementation libs.androidx.runner
     androidTestImplementation libs.androidx.junit
     androidTestImplementation libs.junit
