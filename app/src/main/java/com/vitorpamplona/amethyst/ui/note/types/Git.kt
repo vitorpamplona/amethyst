@@ -325,10 +325,10 @@ private fun RenderGitRepositoryEvent(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val title = remember(noteEvent) { noteEvent.name() ?: noteEvent.dTag() }
-    val summary = remember(noteEvent) { noteEvent.description() }
-    val web = remember(noteEvent) { noteEvent.web() }
-    val clone = remember(noteEvent) { noteEvent.clone() }
+    val title = noteEvent.name() ?: noteEvent.dTag()
+    val summary = noteEvent.description()
+    val web = noteEvent.web()
+    val clone = noteEvent.clone()
 
     Row(
         modifier =

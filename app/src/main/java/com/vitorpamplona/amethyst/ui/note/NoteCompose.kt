@@ -728,57 +728,23 @@ private fun RenderNoteRow(
 ) {
     val noteEvent = baseNote.event
     when (noteEvent) {
-        is AppDefinitionEvent -> {
-            RenderAppDefinition(baseNote, accountViewModel, nav)
-        }
-        is AudioTrackEvent -> {
-            RenderAudioTrack(baseNote, accountViewModel, nav)
-        }
-        is AudioHeaderEvent -> {
-            RenderAudioHeader(baseNote, accountViewModel, nav)
-        }
-        is ReactionEvent -> {
-            RenderReaction(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-        is RepostEvent -> {
-            RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-        is GenericRepostEvent -> {
-            RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-        is ReportEvent -> {
-            RenderReport(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-        is LongTextNoteEvent -> {
-            RenderLongFormContent(baseNote, accountViewModel, nav)
-        }
-        is WikiNoteEvent -> {
-            RenderWikiContent(baseNote, accountViewModel, nav)
-        }
-        is BadgeAwardEvent -> {
-            RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
-        }
-        is FhirResourceEvent -> {
-            RenderFhirResource(baseNote, accountViewModel, nav)
-        }
-        is PeopleListEvent -> {
-            DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
-        }
-        is RelaySetEvent -> {
-            DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
-        }
-        is PinListEvent -> {
-            RenderPinListEvent(baseNote, backgroundColor, accountViewModel, nav)
-        }
-        is EmojiPackEvent -> {
-            RenderEmojiPack(baseNote, true, backgroundColor, accountViewModel)
-        }
-        is LiveActivitiesEvent -> {
-            RenderLiveActivityEvent(baseNote, accountViewModel, nav)
-        }
-        is GitRepositoryEvent -> {
-            RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
-        }
+        is AppDefinitionEvent -> RenderAppDefinition(baseNote, accountViewModel, nav)
+        is AudioTrackEvent -> RenderAudioTrack(baseNote, accountViewModel, nav)
+        is AudioHeaderEvent -> RenderAudioHeader(baseNote, accountViewModel, nav)
+        is ReactionEvent -> RenderReaction(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is RepostEvent -> RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is GenericRepostEvent -> RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is ReportEvent -> RenderReport(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is LongTextNoteEvent -> RenderLongFormContent(baseNote, accountViewModel, nav)
+        is WikiNoteEvent -> RenderWikiContent(baseNote, accountViewModel, nav)
+        is BadgeAwardEvent -> RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
+        is FhirResourceEvent -> RenderFhirResource(baseNote, accountViewModel, nav)
+        is PeopleListEvent -> DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
+        is RelaySetEvent -> DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
+        is PinListEvent -> RenderPinListEvent(baseNote, backgroundColor, accountViewModel, nav)
+        is EmojiPackEvent -> RenderEmojiPack(baseNote, true, backgroundColor, accountViewModel)
+        is LiveActivitiesEvent -> RenderLiveActivityEvent(baseNote, accountViewModel, nav)
+        is GitRepositoryEvent -> RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
         is GitPatchEvent -> {
             RenderGitPatchEvent(
                 baseNote,
@@ -842,18 +808,10 @@ private fun RenderNoteRow(
                 nav,
             )
         }
-        is FileHeaderEvent -> {
-            FileHeaderDisplay(baseNote, true, accountViewModel)
-        }
-        is VideoHorizontalEvent -> {
-            VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
-        }
-        is VideoVerticalEvent -> {
-            VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
-        }
-        is FileStorageHeaderEvent -> {
-            FileStorageHeaderDisplay(baseNote, true, accountViewModel)
-        }
+        is FileHeaderEvent -> FileHeaderDisplay(baseNote, true, accountViewModel)
+        is VideoHorizontalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+        is VideoVerticalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+        is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, true, accountViewModel)
         is CommunityPostApprovalEvent -> {
             RenderPostApproval(
                 baseNote,
