@@ -687,6 +687,7 @@ fun NoteBody(
     if (showSecondRow) {
         SecondUserInfoRow(
             baseNote,
+            editState,
             accountViewModel,
             nav,
         )
@@ -1035,6 +1036,7 @@ private fun ReplyNoteComposition(
 @Composable
 fun SecondUserInfoRow(
     note: Note,
+    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -1069,7 +1071,22 @@ fun SecondUserInfoRow(
             DisplayPoW(pow)
         }
 
-        DisplayOts(note, accountViewModel)
+        DisplayOtsIfInOriginal(note, editState, accountViewModel)
+    }
+}
+
+@Composable
+fun DisplayOtsIfInOriginal(
+    note: Note,
+    editState: State<GenericLoadable<EditState>>,
+    accountViewModel: AccountViewModel,
+) {
+    val editState = (editState.value as? GenericLoadable.Loaded<EditState>)?.loaded?.modificationToShow?.value
+
+    if (editState == null) {
+        DisplayOts(note = note, accountViewModel = accountViewModel)
+    } else {
+        DisplayOts(note = editState, accountViewModel = accountViewModel)
     }
 }
 

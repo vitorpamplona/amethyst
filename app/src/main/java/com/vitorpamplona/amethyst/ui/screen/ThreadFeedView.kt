@@ -92,6 +92,7 @@ import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.BlankNote
+import com.vitorpamplona.amethyst.ui.note.DisplayOtsIfInOriginal
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
@@ -105,7 +106,6 @@ import com.vitorpamplona.amethyst.ui.note.elements.DisplayEditStatus
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingCommunityInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingHashtagsInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
-import com.vitorpamplona.amethyst.ui.note.elements.DisplayOts
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayPoW
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayReward
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayZapSplits
@@ -468,7 +468,7 @@ fun NoteMaster(
                             DisplayPoW(pow)
                         }
 
-                        DisplayOts(note, accountViewModel)
+                        DisplayOtsIfInOriginal(note, editState, accountViewModel)
                     }
                 }
             }
