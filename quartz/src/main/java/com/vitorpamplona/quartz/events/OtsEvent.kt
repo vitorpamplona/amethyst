@@ -48,6 +48,8 @@ class OtsEvent(
     @Transient
     var verifiedTime: Long? = null
 
+    override fun isContentEncoded() = true
+
     fun digestEvent() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
 
     fun digest() = digestEvent()?.hexToByteArray()

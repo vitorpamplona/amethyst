@@ -36,6 +36,8 @@ class FileStorageEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    override fun isContentEncoded() = true
+
     fun type() = tags.firstOrNull { it.size > 1 && it[0] == TYPE }?.get(1)
 
     fun decryptKey() = tags.firstOrNull { it.size > 2 && it[0] == DECRYPT }?.let { AESGCM(it[1], it[2]) }

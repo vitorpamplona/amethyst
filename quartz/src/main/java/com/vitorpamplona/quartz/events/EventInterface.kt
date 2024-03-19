@@ -27,6 +27,8 @@ import java.math.BigDecimal
 
 @Immutable
 interface EventInterface {
+    fun isContentEncoded(): Boolean
+
     fun countMemory(): Long
 
     fun id(): HexKey

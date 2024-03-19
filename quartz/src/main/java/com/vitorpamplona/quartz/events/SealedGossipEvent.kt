@@ -39,6 +39,8 @@ class SealedGossipEvent(
 ) : WrappedEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
 
+    override fun isContentEncoded() = true
+
     fun preCachedGossip(signer: NostrSigner): Event? {
         return cachedInnerEvent[signer.pubKey]
     }

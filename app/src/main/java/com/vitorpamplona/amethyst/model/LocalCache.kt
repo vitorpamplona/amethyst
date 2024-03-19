@@ -1629,39 +1629,51 @@ object LocalCache {
         }
 
         return notes.filter { _, note ->
-            (
-                note.event !is GenericRepostEvent &&
-                    note.event !is RepostEvent &&
-                    note.event !is CommunityPostApprovalEvent &&
-                    note.event !is ReactionEvent &&
-                    note.event !is GiftWrapEvent &&
-                    note.event !is SealedGossipEvent &&
-                    note.event !is OtsEvent &&
-                    note.event !is LnZapEvent &&
-                    note.event !is LnZapRequestEvent
-            ) &&
-                (
-                    note.event?.content()?.contains(text, true)
-                        ?: false ||
-                        note.event?.matchTag1With(text) ?: false ||
-                        note.idHex.startsWith(text, true) ||
-                        note.idNote().startsWith(text, true)
-                )
+            if (note.event is GenericRepostEvent ||
+                note.event is RepostEvent ||
+                note.event is CommunityPostApprovalEvent ||
+                note.event is ReactionEvent ||
+                note.event is LnZapEvent ||
+                note.event is LnZapRequestEvent
+            ) {
+                return@filter false
+            }
+
+            if (note.event?.matchTag1With(text) == true ||
+                note.idHex.startsWith(text, true) ||
+                note.idNote().startsWith(text, true)
+            ) {
+                return@filter true
+            }
+
+            if (note.event?.isContentEncoded() == false) {
+                return@filter note.event?.content()?.contains(text, true) ?: false
+            }
+
+            return@filter false
         } +
             addressables.filter { _, addressable ->
-                (
-                    addressable.event !is GenericRepostEvent &&
-                        addressable.event !is RepostEvent &&
-                        addressable.event !is CommunityPostApprovalEvent &&
-                        addressable.event !is ReactionEvent &&
-                        addressable.event !is GiftWrapEvent &&
-                        addressable.event !is LnZapEvent &&
-                        addressable.event !is LnZapRequestEvent
-                ) &&
-                    (
-                        addressable.event?.content()?.contains(text, true)
-                            ?: false || addressable.event?.matchTag1With(text) ?: false || addressable.idHex.startsWith(text, true)
-                    )
+                if (addressable.event is GenericRepostEvent ||
+                    addressable.event is RepostEvent ||
+                    addressable.event is CommunityPostApprovalEvent ||
+                    addressable.event is ReactionEvent ||
+                    addressable.event is LnZapEvent ||
+                    addressable.event is LnZapRequestEvent
+                ) {
+                    return@filter false
+                }
+
+                if (addressable.event?.matchTag1With(text) == true ||
+                    addressable.idHex.startsWith(text, true)
+                ) {
+                    return@filter true
+                }
+
+                if (addressable.event?.isContentEncoded() == false) {
+                    return@filter addressable.event?.content()?.contains(text, true) ?: false
+                }
+
+                return@filter false
             }
     }
 

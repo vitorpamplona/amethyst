@@ -40,6 +40,8 @@ class PrivateDmEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig), ChatroomKeyable {
     @Transient private var decryptedContent: Map<HexKey, String> = mapOf()
 
+    override fun isContentEncoded() = true
+
     /**
      * This may or may not be the actual recipient's pub key. The event is intended to look like a
      * nip-04 EncryptedDmEvent but may omit the recipient, too. This value can be queried and used for
