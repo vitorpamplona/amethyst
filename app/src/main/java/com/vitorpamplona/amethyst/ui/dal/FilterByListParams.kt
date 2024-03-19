@@ -35,7 +35,7 @@ class FilterByListParams(
     val isHiddenList: Boolean,
     val followLists: Account.LiveFollowLists?,
     val hiddenLists: Account.LiveHiddenUsers,
-    val now: Long = TimeUtils.now(),
+    val now: Long = TimeUtils.oneMinuteFromNow(),
 ) {
     fun isNotHidden(userHex: String) = !(hiddenLists.hiddenUsers.contains(userHex) || hiddenLists.spammers.contains(userHex))
 
