@@ -266,10 +266,8 @@ fun CheckHiddenNoteCompose(
         // Ignores reports as well
         normalNote(true)
     } else {
-        WatchIsHidden(note, showHiddenWarning, accountViewModel) {
-            LoadReportsNoteCompose(note, modifier, accountViewModel, nav) { canPreview ->
-                normalNote(canPreview)
-            }
+        WatchIsHidden(note, showHiddenWarning, modifier, accountViewModel, nav) { canPreview ->
+            normalNote(canPreview)
         }
     }
 }
@@ -278,10 +276,12 @@ fun CheckHiddenNoteCompose(
 fun WatchIsHidden(
     note: Note,
     showHiddenWarning: Boolean,
+    modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
-    notHiddenNote: @Composable () -> Unit,
+    nav: (String) -> Unit,
+    normalNote: @Composable (canPreview: Boolean) -> Unit,
 ) {
-    val isHidden by remember(note) {
+    val isHiddenState by remember(note) {
         accountViewModel.account.liveHiddenUsers
             .map { note.isHiddenFor(it) }
             .distinctUntilChanged()
@@ -293,9 +293,13 @@ fun WatchIsHidden(
             mutableStateOf(false)
         }
 
-    Crossfade(targetState = isHidden, label = "CheckHiddenNoteCompose") {
-        if (!it || showAnyway.value) {
-            notHiddenNote()
+    Crossfade(targetState = isHiddenState, label = "CheckHiddenNoteCompose") { isHidden ->
+        if (showAnyway.value) {
+            normalNote(true)
+        } else if (!isHidden) {
+            LoadReportsNoteCompose(note, modifier, accountViewModel, nav) { canPreview ->
+                normalNote(canPreview)
+            }
         } else if (showHiddenWarning) {
             // if it is a quoted or boosted note, how the hidden warning.
             HiddenNoteByMe(
