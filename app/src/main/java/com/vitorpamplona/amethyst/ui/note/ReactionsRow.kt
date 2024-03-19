@@ -67,6 +67,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -98,6 +99,7 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.zap
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
@@ -663,11 +665,11 @@ fun TextCount(
 
 @Composable
 fun SlidingAnimationAmount(
-    amount: MutableState<String>,
+    amount: String,
     textColor: Color,
 ) {
     AnimatedContent(
-        targetState = amount.value,
+        targetState = amount,
         transitionSpec = AnimatedContentTransitionScope<String>::transitionSpec,
         label = "SlidingAnimationAmount",
     ) { count ->
@@ -788,7 +790,7 @@ fun LikeReaction(
                 ),
     ) {
         ObserveLikeIcon(baseNote, accountViewModel) { reactionType ->
-            Crossfade(targetState = reactionType.value, label = "LikeIcon") {
+            Crossfade(targetState = reactionType, label = "LikeIcon") {
                 if (it != null) {
                     RenderReactionType(it, heartSizeModifier, iconFontSize)
                 } else {
@@ -826,19 +828,17 @@ fun LikeReaction(
 fun ObserveLikeIcon(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    inner: @Composable (MutableState<String?>) -> Unit,
+    inner: @Composable (String?) -> Unit,
 ) {
-    val reactionType = remember(baseNote) { mutableStateOf<String?>(null) }
-
     val reactionsState by baseNote.live().reactions.observeAsState()
 
-    LaunchedEffect(key1 = reactionsState) {
-        accountViewModel.loadReactionTo(reactionsState?.note) { newReactionType ->
-            if (reactionType.value != newReactionType) {
-                reactionType.value = newReactionType
+    val reactionType by
+        produceState(initialValue = null as String?, key1 = reactionsState) {
+            val newReactionType = accountViewModel.loadReactionTo(reactionsState?.note)
+            if (value != newReactionType) {
+                value = newReactionType
             }
         }
-    }
 
     inner(reactionType)
 }
@@ -1119,9 +1119,11 @@ fun ObserveZapIcon(
         val zapsState by baseNote.live().zaps.observeAsState()
 
         LaunchedEffect(key1 = zapsState) {
-            accountViewModel.calculateIfNoteWasZappedByAccount(baseNote) { newWasZapped ->
-                if (wasZappedByLoggedInUser.value != newWasZapped) {
-                    wasZappedByLoggedInUser.value = newWasZapped
+            if (zapsState?.note?.zapPayments?.isNotEmpty() == true || zapsState?.note?.zaps?.isNotEmpty() == true) {
+                accountViewModel.calculateIfNoteWasZappedByAccount(baseNote) { newWasZapped ->
+                    if (wasZappedByLoggedInUser.value != newWasZapped) {
+                        wasZappedByLoggedInUser.value = newWasZapped
+                    }
                 }
             }
         }
@@ -1134,20 +1136,24 @@ fun ObserveZapIcon(
 fun ObserveZapAmountText(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    inner: @Composable (MutableState<String>) -> Unit,
+    inner: @Composable (String) -> Unit,
 ) {
-    val zapAmountTxt = remember(baseNote) { mutableStateOf(showAmount(baseNote.zapsAmount)) }
     val zapsState by baseNote.live().zaps.observeAsState()
 
-    LaunchedEffect(key1 = zapsState) {
-        accountViewModel.calculateZapAmount(baseNote) { newZapAmount ->
-            if (zapAmountTxt.value != newZapAmount) {
-                zapAmountTxt.value = newZapAmount
+    if (zapsState?.note?.zapPayments?.isNotEmpty() == true) {
+        val zapAmountTxt by
+            produceState(initialValue = showAmount(baseNote.zapsAmount), key1 = baseNote) {
+                accountViewModel.calculateZapAmount(baseNote) { newZapAmount ->
+                    if (value != newZapAmount) {
+                        value = newZapAmount
+                    }
+                }
             }
-        }
-    }
 
-    inner(zapAmountTxt)
+        inner(zapAmountTxt)
+    } else {
+        inner(showAmount(zapsState?.note?.zapsAmount))
+    }
 }
 
 @Composable

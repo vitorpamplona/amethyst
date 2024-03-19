@@ -221,21 +221,21 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) { account.delete(account.boostsTo(note)) }
     }
 
-    fun calculateIfNoteWasZappedByAccount(
+    suspend fun calculateIfNoteWasZappedByAccount(
         zappedNote: Note,
         onWasZapped: (Boolean) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             account.calculateIfNoteWasZappedByAccount(zappedNote) { onWasZapped(true) }
         }
     }
 
-    fun calculateZapAmount(
+    suspend fun calculateZapAmount(
         zappedNote: Note,
         onZapAmount: (String) -> Unit,
     ) {
         if (zappedNote.zapPayments.isNotEmpty()) {
-            viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.IO) {
                 account.calculateZappedAmount(zappedNote) { onZapAmount(showAmount(it)) }
             }
         } else {
@@ -243,28 +243,45 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
-    fun calculateZapraiser(
+    suspend fun calculateZapraiser(
         zappedNote: Note,
         onZapraiserStatus: (ZapraiserStatus) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val zapraiserAmount = zappedNote.event?.zapraiserAmount() ?: 0
-            account.calculateZappedAmount(zappedNote) { newZapAmount ->
-                var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
+        val zapraiserAmount = zappedNote.event?.zapraiserAmount() ?: 0
+        if (zappedNote.zapPayments.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                account.calculateZappedAmount(zappedNote) { newZapAmount ->
+                    var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
 
-                if (percentage > 1) {
-                    percentage = 1f
-                }
-
-                val newZapraiserProgress = percentage
-                val newZapraiserLeft =
-                    if (percentage > 0.99) {
-                        "0"
-                    } else {
-                        showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
+                    if (percentage > 1) {
+                        percentage = 1f
                     }
-                onZapraiserStatus(ZapraiserStatus(newZapraiserProgress, newZapraiserLeft))
+
+                    val newZapraiserProgress = percentage
+                    val newZapraiserLeft =
+                        if (percentage > 0.99) {
+                            "0"
+                        } else {
+                            showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
+                        }
+                    onZapraiserStatus(ZapraiserStatus(newZapraiserProgress, newZapraiserLeft))
+                }
             }
+        } else {
+            var percentage = zappedNote.zapsAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
+
+            if (percentage > 1) {
+                percentage = 1f
+            }
+
+            val newZapraiserProgress = percentage
+            val newZapraiserLeft =
+                if (percentage > 0.99) {
+                    "0"
+                } else {
+                    showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
+                }
+            onZapraiserStatus(ZapraiserStatus(newZapraiserProgress, newZapraiserLeft))
         }
     }
 
@@ -776,15 +793,10 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) { UrlCachedPreviewer.previewInfo(url, onResult) }
     }
 
-    fun loadReactionTo(
-        note: Note?,
-        onNewReactionType: (String?) -> Unit,
-    ) {
-        if (note == null) return
+    suspend fun loadReactionTo(note: Note?): String? {
+        if (note == null) return null
 
-        viewModelScope.launch(Dispatchers.Default) {
-            onNewReactionType(note.getReactionBy(userProfile()))
-        }
+        return note.getReactionBy(userProfile())
     }
 
     fun verifyNip05(
