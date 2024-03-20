@@ -280,6 +280,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     val note = LocalCache.getNoteIfExists(event.id)
                     if (note != null && relay.brief in note.relays) return
 
+                    LocalCache.justConsume(event, relay)
                     event.plainContent(account.signer) {
                         val tag =
                             event.tags().filter { it.size > 1 && it[0] == "d" }.map {
