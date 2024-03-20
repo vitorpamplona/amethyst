@@ -197,7 +197,7 @@ fun InnerChannelCardWithReactions(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    when (remember { baseNote.event }) {
+    when (baseNote.event) {
         is LiveActivitiesEvent -> {
             InnerCardRow(baseNote, accountViewModel, nav)
         }
@@ -496,12 +496,11 @@ fun RenderLiveActivityThumb(
         Spacer(modifier = DoubleVertSpacer)
 
         ChannelHeader(
-            channelHex = remember { baseNote.idHex },
+            channelHex = baseNote.idHex,
             showVideo = false,
-            showBottomDiviser = false,
             showFlag = false,
             sendToChannel = true,
-            modifier = remember { Modifier.padding(start = 0.dp, end = 0.dp, top = 5.dp, bottom = 5.dp) },
+            modifier = Modifier,
             accountViewModel = accountViewModel,
             nav = nav,
         )

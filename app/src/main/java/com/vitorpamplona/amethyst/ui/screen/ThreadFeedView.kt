@@ -20,13 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,6 +32,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -49,9 +47,6 @@ import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.pullrefresh.PullRefreshIndicator
-import androidx.compose.material3.pullrefresh.pullRefresh
-import androidx.compose.material3.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -80,7 +75,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -147,7 +141,6 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -195,117 +188,100 @@ fun ThreadFeedView(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
-
     val listState = rememberLazyListState()
 
-    var refreshing by remember { mutableStateOf(false) }
-    val refresh = {
-        refreshing = true
-        viewModel.invalidateData()
-        refreshing = false
+    RefresheableBox(viewModel) {
+        RenderFeedState(
+            viewModel = viewModel,
+            accountViewModel = accountViewModel,
+            listState = listState,
+            nav = nav,
+            routeForLastRead = null,
+            onLoaded = {
+                RenderThreadFeed(noteId, it, listState, accountViewModel, nav)
+            },
+        )
     }
-    val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
+}
 
-    Box(Modifier.pullRefresh(pullRefreshState)) {
-        Column {
-            Crossfade(
-                targetState = feedState,
-                animationSpec = tween(durationMillis = 100),
-                label = "ThreadViewMainState",
-            ) { state ->
-                when (state) {
-                    is FeedState.Empty -> {
-                        FeedEmpty { refreshing = true }
-                    }
-                    is FeedState.FeedError -> {
-                        FeedError(state.errorMessage) { refreshing = true }
-                    }
-                    is FeedState.Loaded -> {
-                        refreshing = false
-                        LaunchedEffect(noteId) {
-                            launch(Dispatchers.IO) {
-                                // waits to load the thread to scroll to item.
-                                delay(100)
-                                val noteForPosition = state.feed.value.filter { it.idHex == noteId }.firstOrNull()
-                                var position = state.feed.value.indexOf(noteForPosition)
+@Composable
+fun RenderThreadFeed(
+    noteId: String,
+    state: FeedState.Loaded,
+    listState: LazyListState,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    LaunchedEffect(noteId) {
+        // waits to load the thread to scroll to item.
+        delay(100)
+        val noteForPosition = state.feed.value.filter { it.idHex == noteId }.firstOrNull()
+        var position = state.feed.value.indexOf(noteForPosition)
 
-                                if (position >= 0) {
-                                    if (position >= 1 && position < state.feed.value.size - 1) {
-                                        position-- // show the replying note
-                                    }
-
-                                    withContext(Dispatchers.Main) { listState.scrollToItem(position) }
-                                }
-                            }
-                        }
-
-                        LazyColumn(
-                            contentPadding = FeedPadding,
-                            state = listState,
-                        ) {
-                            itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { index, item ->
-                                if (index == 0) {
-                                    ProvideTextStyle(TextStyle(fontSize = 18.sp, lineHeight = 1.20.em)) {
-                                        NoteMaster(
-                                            item,
-                                            modifier =
-                                                Modifier.drawReplyLevel(
-                                                    item.replyLevel(),
-                                                    MaterialTheme.colorScheme.placeholderText,
-                                                    if (item.idHex == noteId) {
-                                                        MaterialTheme.colorScheme.lessImportantLink
-                                                    } else {
-                                                        MaterialTheme.colorScheme.placeholderText
-                                                    },
-                                                ),
-                                            accountViewModel = accountViewModel,
-                                            nav = nav,
-                                        )
-                                    }
-                                } else {
-                                    val selectedNoteColor = MaterialTheme.colorScheme.selectedNote
-                                    val background =
-                                        remember {
-                                            if (item.idHex == noteId) mutableStateOf(selectedNoteColor) else null
-                                        }
-
-                                    NoteCompose(
-                                        item,
-                                        modifier =
-                                            Modifier.drawReplyLevel(
-                                                item.replyLevel(),
-                                                MaterialTheme.colorScheme.placeholderText,
-                                                if (item.idHex == noteId) {
-                                                    MaterialTheme.colorScheme.lessImportantLink
-                                                } else {
-                                                    MaterialTheme.colorScheme.placeholderText
-                                                },
-                                            ),
-                                        parentBackgroundColor = background,
-                                        isBoostedNote = false,
-                                        unPackReply = false,
-                                        quotesLeft = 3,
-                                        accountViewModel = accountViewModel,
-                                        nav = nav,
-                                    )
-                                }
-
-                                HorizontalDivider(
-                                    modifier = StdTopPadding,
-                                    thickness = DividerThickness,
-                                )
-                            }
-                        }
-                    }
-                    FeedState.Loading -> {
-                        LoadingFeed()
-                    }
-                }
+        if (position >= 0) {
+            if (position >= 1 && position < state.feed.value.size - 1) {
+                position-- // show the replying note
             }
-        }
 
-        PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
+            listState.scrollToItem(position)
+        }
+    }
+
+    LazyColumn(
+        contentPadding = FeedPadding,
+        state = listState,
+    ) {
+        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { index, item ->
+            if (index == 0) {
+                ProvideTextStyle(TextStyle(fontSize = 18.sp, lineHeight = 1.20.em)) {
+                    NoteMaster(
+                        item,
+                        modifier =
+                            Modifier.drawReplyLevel(
+                                item.replyLevel(),
+                                MaterialTheme.colorScheme.placeholderText,
+                                if (item.idHex == noteId) {
+                                    MaterialTheme.colorScheme.lessImportantLink
+                                } else {
+                                    MaterialTheme.colorScheme.placeholderText
+                                },
+                            ),
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            } else {
+                val selectedNoteColor = MaterialTheme.colorScheme.selectedNote
+                val background =
+                    remember {
+                        if (item.idHex == noteId) mutableStateOf(selectedNoteColor) else null
+                    }
+
+                NoteCompose(
+                    item,
+                    modifier =
+                        Modifier.drawReplyLevel(
+                            item.replyLevel(),
+                            MaterialTheme.colorScheme.placeholderText,
+                            if (item.idHex == noteId) {
+                                MaterialTheme.colorScheme.lessImportantLink
+                            } else {
+                                MaterialTheme.colorScheme.placeholderText
+                            },
+                        ),
+                    parentBackgroundColor = background,
+                    isBoostedNote = false,
+                    unPackReply = false,
+                    quotesLeft = 3,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+
+            HorizontalDivider(
+                thickness = DividerThickness,
+            )
+        }
     }
 }
 
@@ -504,7 +480,6 @@ fun NoteMaster(
                         ChannelHeader(
                             channelHex = note.channelHex()!!,
                             showVideo = true,
-                            showBottomDiviser = false,
                             sendToChannel = true,
                             accountViewModel = accountViewModel,
                             nav = nav,

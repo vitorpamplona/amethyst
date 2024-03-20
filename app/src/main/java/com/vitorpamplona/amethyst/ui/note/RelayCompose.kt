@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,7 +47,7 @@ import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import java.time.Instant
 import java.time.ZoneId
@@ -62,49 +62,44 @@ fun RelayCompose(
 ) {
     val context = LocalContext.current
 
-    Column {
-        Row(
-            modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp),
+    Row(
+        modifier = StdPadding,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center,
         ) {
-            Column(
-                modifier = Modifier.padding(start = 10.dp).weight(1f),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        relay.url.trim().removePrefix("wss://"),
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-
-                    val lastTime by
-                        remember(relay.lastEvent) {
-                            derivedStateOf { timeAgo(relay.lastEvent, context = context) }
-                        }
-
-                    Text(
-                        text = lastTime,
-                        maxLines = 1,
-                    )
-                }
-
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    "${relay.counter} ${stringResource(R.string.posts_received)}",
-                    color = MaterialTheme.colorScheme.placeholderText,
+                    relay.url.trim().removePrefix("wss://"),
+                    fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+
+                val lastTime by
+                    remember(relay.lastEvent) {
+                        derivedStateOf { timeAgo(relay.lastEvent, context = context) }
+                    }
+
+                Text(
+                    text = lastTime,
+                    maxLines = 1,
+                )
             }
 
-            Column(modifier = Modifier.padding(start = 10.dp)) {
-                RelayOptions(accountViewModel, relay, onAddRelay, onRemoveRelay)
-            }
+            Text(
+                "${relay.counter} ${stringResource(R.string.posts_received)}",
+                color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
 
-        HorizontalDivider(
-            modifier = Modifier.padding(top = 10.dp),
-            thickness = DividerThickness,
-        )
+        Column(modifier = Modifier.padding(start = 10.dp)) {
+            RelayOptions(accountViewModel, relay, onAddRelay, onRemoveRelay)
+        }
     }
 }
 

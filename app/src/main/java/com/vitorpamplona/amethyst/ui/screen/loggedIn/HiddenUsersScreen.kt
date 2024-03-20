@@ -312,10 +312,6 @@ fun MutedWordHeader(
                 MutedWordActionOptions(tag, account)
             }
         }
-
-        HorizontalDivider(
-            thickness = DividerThickness,
-        )
     }
 }
 

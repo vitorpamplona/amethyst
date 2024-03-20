@@ -233,7 +233,6 @@ fun AcceptableNote(
                 ChannelHeader(
                     channelNote = baseNote,
                     showVideo = !makeItShort,
-                    showBottomDiviser = true,
                     sendToChannel = true,
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -267,7 +266,6 @@ fun AcceptableNote(
                 ChannelHeader(
                     channelNote = baseNote,
                     showVideo = !makeItShort,
-                    showBottomDiviser = true,
                     sendToChannel = true,
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -742,7 +740,6 @@ private fun ReplyRow(
         ChannelHeader(
             channelHex = it,
             showVideo = false,
-            showBottomDiviser = false,
             sendToChannel = true,
             modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
             accountViewModel = accountViewModel,
