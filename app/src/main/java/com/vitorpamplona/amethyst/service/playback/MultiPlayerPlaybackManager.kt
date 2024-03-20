@@ -27,6 +27,7 @@ import android.util.LruCache
 import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.Player
+import androidx.media3.common.Player.PositionInfo
 import androidx.media3.common.Player.STATE_IDLE
 import androidx.media3.common.Player.STATE_READY
 import androidx.media3.exoplayer.ExoPlayer
@@ -142,6 +143,14 @@ class MultiPlayerPlaybackManager(
                             }
                         }
                     }
+                }
+
+                override fun onPositionDiscontinuity(
+                    oldPosition: PositionInfo,
+                    newPosition: PositionInfo,
+                    reason: Int,
+                ) {
+                    cachedPositions.add(uri, newPosition.positionMs)
                 }
             },
         )
