@@ -846,7 +846,14 @@ class Account(
     }
 
     suspend fun delete(note: Note) {
-        return delete(listOf(note))
+        if (note.isDraft()) {
+            note.event?.let {
+                val drafts = LocalCache.getDrafts(it.id())
+                return delete(drafts)
+            }
+        } else {
+            return delete(listOf(note))
+        }
     }
 
     suspend fun delete(notes: List<Note>) {
@@ -898,10 +905,17 @@ class Account(
 
     fun broadcast(note: Note) {
         note.event?.let {
-            if (it is WrappedEvent && it.host != null) {
-                it.host?.let { hostEvent -> Client.send(hostEvent) }
+            if (note.isDraft()) {
+                val drafts = LocalCache.getDrafts(it.id())
+                drafts.forEach { draftNote ->
+                    broadcast(draftNote)
+                }
             } else {
-                Client.send(it)
+                if (it is WrappedEvent && it.host != null) {
+                    it.host?.let { hostEvent -> Client.send(hostEvent) }
+                } else {
+                    Client.send(it)
+                }
             }
         }
     }
@@ -930,6 +944,7 @@ class Account(
 
     fun timestamp(note: Note) {
         if (!isWriteable()) return
+        if (note.isDraft()) return
 
         val id = note.event?.id() ?: note.idHex
 
@@ -1942,6 +1957,7 @@ class Account(
         isPrivate: Boolean,
     ) {
         if (!isWriteable()) return
+        if (note.isDraft()) return
 
         if (note is AddressableNote) {
             BookmarkListEvent.addReplaceable(

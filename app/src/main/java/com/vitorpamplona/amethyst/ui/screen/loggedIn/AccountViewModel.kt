@@ -1209,6 +1209,14 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         baseNote: Note,
         onMore: () -> Unit,
     ) {
+        if (baseNote.isDraft()) {
+            toast(
+                R.string.draft_note,
+                R.string.it_s_not_possible_to_quote_to_a_draft_note,
+            )
+            return
+        }
+
         if (isWriteable()) {
             if (hasBoosted(baseNote)) {
                 deleteBoostsTo(baseNote)

@@ -148,6 +148,14 @@ object LocalCache {
         } ?: listOf()
     }
 
+    fun getDrafts(eventId: String): List<Note> {
+        return drafts.filter {
+            it.value.any { it == eventId }
+        }.keys.mapNotNull {
+            checkGetOrCreateNote(it)
+        }
+    }
+
     fun addDraft(
         key: String,
         value: String,

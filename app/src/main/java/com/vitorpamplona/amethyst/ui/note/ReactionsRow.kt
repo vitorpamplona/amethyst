@@ -307,7 +307,12 @@ fun RenderZapRaiser(
         }
 
     LinearProgressIndicator(
-        modifier = remember(details) { Modifier.fillMaxWidth().height(if (details) 24.dp else 4.dp) },
+        modifier =
+            remember(details) {
+                Modifier
+                    .fillMaxWidth()
+                    .height(if (details) 24.dp else 4.dp)
+            },
         color = color,
         progress = { zapraiserStatus.progress },
     )
@@ -587,6 +592,13 @@ fun ReplyReaction(
     IconButton(
         modifier = iconSizeModifier,
         onClick = {
+            if (baseNote.isDraft()) {
+                accountViewModel.toast(
+                    R.string.draft_note,
+                    R.string.it_s_not_possible_to_reply_to_a_draft_note,
+                )
+                return@IconButton
+            }
             if (accountViewModel.isWriteable()) {
                 onPress()
             } else {
@@ -774,7 +786,8 @@ fun LikeReaction(
     Box(
         contentAlignment = Center,
         modifier =
-            Modifier.size(iconSize)
+            Modifier
+                .size(iconSize)
                 .combinedClickable(
                     role = Role.Button,
                     interactionSource = remember { MutableInteractionSource() },
@@ -782,6 +795,7 @@ fun LikeReaction(
                     onClick = {
                         likeClick(
                             accountViewModel,
+                            baseNote,
                             onMultipleChoices = { wantsToReact = true },
                             onWantsToSignReaction = { accountViewModel.reactToOrDelete(baseNote) },
                         )
@@ -884,9 +898,17 @@ fun ObserveLikeText(
 
 private fun likeClick(
     accountViewModel: AccountViewModel,
+    baseNote: Note,
     onMultipleChoices: () -> Unit,
     onWantsToSignReaction: () -> Unit,
 ) {
+    if (baseNote.isDraft()) {
+        accountViewModel.toast(
+            R.string.draft_note,
+            R.string.it_s_not_possible_to_react_to_a_draft_note,
+        )
+        return
+    }
     if (accountViewModel.account.reactionChoices.isEmpty()) {
         accountViewModel.toast(
             R.string.no_reactions_setup,
@@ -1080,6 +1102,14 @@ fun zapClick(
     onError: (String, String) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
 ) {
+    if (baseNote.isDraft()) {
+        accountViewModel.toast(
+            R.string.draft_note,
+            R.string.it_s_not_possible_to_zap_to_a_draft_note,
+        )
+        return
+    }
+
     if (accountViewModel.account.zapAmountChoices.isEmpty()) {
         accountViewModel.toast(
             context.getString(R.string.error_dialog_zap_error),
