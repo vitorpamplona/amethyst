@@ -203,7 +203,13 @@ fun NormalChatNote(
 
             val showDetails =
                 remember {
-                    mutableStateOf(note.zaps.isNotEmpty() || note.zapPayments.isNotEmpty() || note.reactions.isNotEmpty())
+                    mutableStateOf(
+                        if (accountViewModel.settings.featureSet == FeatureSetType.SIMPLIFIED) {
+                            note.zaps.isNotEmpty() || note.zapPayments.isNotEmpty() || note.reactions.isNotEmpty()
+                        } else {
+                            true
+                        },
+                    )
                 }
 
             val clickableModifier =
@@ -213,7 +219,9 @@ fun NormalChatNote(
                             if (note.event is ChannelCreateEvent) {
                                 nav("Channel/${note.idHex}")
                             } else {
-                                showDetails.value = !showDetails.value
+                                if (accountViewModel.settings.featureSet == FeatureSetType.SIMPLIFIED) {
+                                    showDetails.value = !showDetails.value
+                                }
                             }
                         },
                         onLongClick = { popupExpanded = true },
