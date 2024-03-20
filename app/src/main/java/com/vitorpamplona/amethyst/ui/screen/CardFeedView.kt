@@ -265,7 +265,6 @@ private fun RenderCardItem(
             BadgeCompose(
                 item,
                 accountViewModel = accountViewModel,
-                showHidden = showHidden,
                 nav = nav,
                 routeForLastRead = routeForLastRead,
             )
@@ -304,7 +303,7 @@ fun NoteCardCompose(
         isQuotedNote = isQuotedNote,
         unPackReply = unPackReply,
         makeItShort = makeItShort,
-        showHidden = showHidden,
+        isHiddenFeed = showHidden,
         quotesLeft = 3,
         parentBackgroundColor = parentBackgroundColor,
         accountViewModel = accountViewModel,

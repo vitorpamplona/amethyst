@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -32,7 +31,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -61,9 +59,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -97,7 +94,6 @@ import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatroomMessageCompose(
     baseNote: Note,
@@ -108,111 +104,13 @@ fun ChatroomMessageCompose(
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit,
 ) {
-    val hasEvent by baseNote.live().hasEvent.observeAsState(baseNote.event != null)
-
-    Crossfade(targetState = hasEvent) {
-        if (it) {
-            CheckHiddenChatMessage(
-                baseNote,
-                routeForLastRead,
-                innerQuote,
-                parentBackgroundColor,
-                accountViewModel,
-                nav,
-                onWantsToReply,
-            )
-        } else {
-            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup,
-                ->
-                BlankNote(
-                    remember {
-                        Modifier.combinedClickable(
-                            onClick = {},
-                            onLongClick = showPopup,
-                        )
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun CheckHiddenChatMessage(
-    baseNote: Note,
-    routeForLastRead: String?,
-    innerQuote: Boolean = false,
-    parentBackgroundColor: MutableState<Color>? = null,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    onWantsToReply: (Note) -> Unit,
-) {
-    val isHidden by
-        remember {
-            accountViewModel.account.liveHiddenUsers
-                .map { baseNote.isHiddenFor(it) }
-                .distinctUntilChanged()
-        }
-            .observeAsState(accountViewModel.isNoteHidden(baseNote))
-
-    if (!isHidden) {
-        LoadedChatMessageCompose(
-            baseNote,
-            routeForLastRead,
-            innerQuote,
-            parentBackgroundColor,
-            accountViewModel,
-            nav,
-            onWantsToReply,
-        )
-    }
-}
-
-@Composable
-fun LoadedChatMessageCompose(
-    baseNote: Note,
-    routeForLastRead: String?,
-    innerQuote: Boolean = false,
-    parentBackgroundColor: MutableState<Color>? = null,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    onWantsToReply: (Note) -> Unit,
-) {
-    var state by remember {
-        mutableStateOf(
-            AccountViewModel.NoteComposeReportState(),
-        )
-    }
-
-    WatchForReports(baseNote, accountViewModel) { newState ->
-        if (state != newState) {
-            state = newState
-        }
-    }
-
-    var showReportedNote by remember { mutableStateOf(false) }
-
-    val showHiddenNote by
-        remember(state, showReportedNote) {
-            derivedStateOf { !state.isAcceptable && !showReportedNote }
-        }
-
-    Crossfade(targetState = showHiddenNote) {
-        if (it) {
-            HiddenNote(
-                state.relevantReports,
-                state.isHiddenAuthor,
-                accountViewModel,
-                Modifier,
-                nav,
-                onClick = { showReportedNote = true },
-            )
-        } else {
-            val canPreview by
-                remember(state, showReportedNote) {
-                    derivedStateOf { (!state.isAcceptable && showReportedNote) || state.canPreview }
-                }
-
+    WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel) {
+        WatchBlockAndReport(
+            note = baseNote,
+            showHiddenWarning = innerQuote,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        ) { canPreview ->
             NormalChatNote(
                 baseNote,
                 routeForLastRead,

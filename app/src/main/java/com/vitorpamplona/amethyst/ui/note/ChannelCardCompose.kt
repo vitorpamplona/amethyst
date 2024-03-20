@@ -21,9 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,7 +34,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,7 +46,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Alignment.Companion.TopEnd
@@ -81,7 +77,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.OfflineFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
@@ -106,7 +101,6 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChannelCardCompose(
     baseNote: Note,
@@ -114,160 +108,29 @@ fun ChannelCardCompose(
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     forceEventKind: Int?,
-    showHidden: Boolean = false,
+    isHiddenFeed: Boolean = false,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val hasEvent by baseNote.live().hasEvent.observeAsState(baseNote.event != null)
-
-    Crossfade(targetState = hasEvent, label = "ChannelCardCompose") {
-        if (it) {
-            if (forceEventKind == null || baseNote.event?.kind() == forceEventKind) {
-                CheckHiddenChannelCardCompose(
-                    baseNote,
-                    routeForLastRead,
-                    modifier,
-                    parentBackgroundColor,
-                    showHidden,
-                    accountViewModel,
-                    nav,
+    WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel) {
+        if (forceEventKind == null || baseNote.event?.kind() == forceEventKind) {
+            CheckHiddenFeedWatchBlockAndReport(
+                note = baseNote,
+                modifier = modifier,
+                showHidden = isHiddenFeed,
+                showHiddenWarning = false,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            ) { canPreview ->
+                NormalChannelCard(
+                    baseNote = baseNote,
+                    routeForLastRead = routeForLastRead,
+                    modifier = modifier,
+                    parentBackgroundColor = parentBackgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
             }
-        } else {
-            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup,
-                ->
-                BlankNote(
-                    remember {
-                        modifier.combinedClickable(
-                            onClick = {},
-                            onLongClick = showPopup,
-                        )
-                    },
-                    false,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun CheckHiddenChannelCardCompose(
-    note: Note,
-    routeForLastRead: String? = null,
-    modifier: Modifier = Modifier,
-    parentBackgroundColor: MutableState<Color>? = null,
-    showHidden: Boolean,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    if (showHidden) {
-        val state by remember {
-            mutableStateOf(
-                AccountViewModel.NoteComposeReportState(),
-            )
-        }
-
-        RenderChannelCardReportState(
-            state = state,
-            note = note,
-            routeForLastRead = routeForLastRead,
-            modifier = modifier,
-            parentBackgroundColor = parentBackgroundColor,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    } else {
-        val isHidden by
-            accountViewModel.account.liveHiddenUsers
-                .map { note.isHiddenFor(it) }
-                .distinctUntilChanged()
-                .observeAsState(accountViewModel.isNoteHidden(note))
-
-        Crossfade(targetState = isHidden, label = "CheckHiddenChannelCardCompose") {
-            if (!it) {
-                LoadedChannelCardCompose(
-                    note,
-                    routeForLastRead,
-                    modifier,
-                    parentBackgroundColor,
-                    accountViewModel,
-                    nav,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun LoadedChannelCardCompose(
-    note: Note,
-    routeForLastRead: String? = null,
-    modifier: Modifier = Modifier,
-    parentBackgroundColor: MutableState<Color>? = null,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    var state by remember {
-        mutableStateOf(
-            AccountViewModel.NoteComposeReportState(),
-        )
-    }
-
-    val scope = rememberCoroutineScope()
-
-    WatchForReports(note, accountViewModel) { newState ->
-        if (state != newState) {
-            scope.launch(Dispatchers.Main) { state = newState }
-        }
-    }
-
-    Crossfade(targetState = state, label = "CheckHiddenChannelCardCompose") {
-        RenderChannelCardReportState(
-            it,
-            note,
-            routeForLastRead,
-            modifier,
-            parentBackgroundColor,
-            accountViewModel,
-            nav,
-        )
-    }
-}
-
-@Composable
-fun RenderChannelCardReportState(
-    state: AccountViewModel.NoteComposeReportState,
-    note: Note,
-    routeForLastRead: String? = null,
-    modifier: Modifier = Modifier,
-    parentBackgroundColor: MutableState<Color>? = null,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    var showReportedNote by remember { mutableStateOf(false) }
-
-    Crossfade(
-        targetState = !state.isAcceptable && !showReportedNote,
-        label = "CheckHiddenChannelCardCompose",
-    ) { showHiddenNote ->
-        if (showHiddenNote) {
-            HiddenNote(
-                state.relevantReports,
-                state.isHiddenAuthor,
-                accountViewModel,
-                modifier,
-                nav,
-                onClick = { showReportedNote = true },
-            )
-        } else {
-            NormalChannelCard(
-                note,
-                routeForLastRead,
-                modifier,
-                parentBackgroundColor,
-                accountViewModel,
-                nav,
-            )
         }
     }
 }
@@ -368,10 +231,6 @@ fun InnerCardRow(
             )
         }
     }
-
-    HorizontalDivider(
-        thickness = DividerThickness,
-    )
 }
 
 @Composable

@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.findHashtags
 import kotlinx.coroutines.Dispatchers
@@ -400,6 +401,11 @@ private fun DisplaySearchResults(
                 hasNewMessages = hasNewMessages,
                 loadProfilePicture = automaticallyShowProfilePicture,
                 onClick = { nav("Channel/${item.idHex}") },
+            )
+
+            HorizontalDivider(
+                modifier = StdTopPadding,
+                thickness = DividerThickness,
             )
         }
 

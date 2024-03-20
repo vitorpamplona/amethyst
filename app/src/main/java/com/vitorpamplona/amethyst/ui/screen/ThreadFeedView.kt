@@ -147,6 +147,7 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -288,11 +289,12 @@ fun ThreadFeedView(
                                         accountViewModel = accountViewModel,
                                         nav = nav,
                                     )
-
-                                    HorizontalDivider(
-                                        thickness = DividerThickness,
-                                    )
                                 }
+
+                                HorizontalDivider(
+                                    modifier = StdTopPadding,
+                                    thickness = DividerThickness,
+                                )
                             }
                         }
                     }
@@ -626,10 +628,6 @@ fun NoteMaster(
             }
 
             ReactionsRow(note, true, editState, accountViewModel, nav)
-
-            HorizontalDivider(
-                thickness = DividerThickness,
-            )
         }
 
         NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)

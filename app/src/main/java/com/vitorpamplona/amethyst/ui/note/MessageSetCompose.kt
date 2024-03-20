@@ -104,7 +104,7 @@ fun MessageSetCompose(
                     baseNote = baseNote,
                     routeForLastRead = null,
                     isBoostedNote = true,
-                    showHidden = showHidden,
+                    isHiddenFeed = showHidden,
                     quotesLeft = 1,
                     parentBackgroundColor = backgroundColor,
                     accountViewModel = accountViewModel,

@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,7 +53,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.UnfollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.WatchIsHiddenUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.LnZapEvent
@@ -77,11 +75,11 @@ fun ZapNoteCompose(
         }
     }
 
+    val route = remember(baseAuthor) { "User/${baseAuthor?.pubkeyHex}" }
+
     if (baseAuthor == null) {
         BlankNote()
     } else {
-        val route = remember(baseAuthor) { "User/${baseAuthor?.pubkeyHex}" }
-
         Column(
             modifier =
                 Modifier.clickable(
@@ -90,11 +88,6 @@ fun ZapNoteCompose(
             verticalArrangement = Arrangement.Center,
         ) {
             baseAuthor?.let { RenderZapNote(it, baseReqResponse.zapEvent, nav, accountViewModel) }
-
-            HorizontalDivider(
-                modifier = Modifier.padding(top = 10.dp),
-                thickness = DividerThickness,
-            )
         }
     }
 }

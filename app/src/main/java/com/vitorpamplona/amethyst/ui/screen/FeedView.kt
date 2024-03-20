@@ -228,7 +228,7 @@ private fun FeedLoaded(
                     routeForLastRead = routeForLastRead,
                     modifier = Modifier,
                     isBoostedNote = false,
-                    showHidden = state.showHidden.value,
+                    isHiddenFeed = state.showHidden.value,
                     quotesLeft = 3,
                     accountViewModel = accountViewModel,
                     nav = nav,
