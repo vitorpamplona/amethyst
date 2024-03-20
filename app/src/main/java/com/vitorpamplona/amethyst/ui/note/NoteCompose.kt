@@ -745,6 +745,7 @@ private fun ReplyRow(
             accountViewModel = accountViewModel,
             nav = nav,
         )
+        Spacer(modifier = StdVertSpacer)
     }
 
     if (showReply) {
