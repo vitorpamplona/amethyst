@@ -751,11 +751,13 @@ private fun ReplyRow(
         val replyingDirectlyTo =
             remember(note) {
                 if (noteEvent is BaseTextNoteEvent) {
-                    val replyingTo = noteEvent.replyingTo()
+                    val replyingTo = noteEvent.replyingToAddressOrEvent()
                     if (replyingTo != null) {
-                        note.replyTo?.firstOrNull {
-                            // important to test both ids in case it's a replaceable event.
-                            it.idHex == replyingTo || it.event?.id() == replyingTo
+                        val newNote = accountViewModel.getNoteIfExists(replyingTo)
+                        if (newNote != null && newNote.channelHex() == null && newNote.event?.kind() != CommunityDefinitionEvent.KIND) {
+                            newNote
+                        } else {
+                            note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.KIND }
                         }
                     } else {
                         note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.KIND }

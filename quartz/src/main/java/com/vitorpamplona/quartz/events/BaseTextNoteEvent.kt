@@ -79,6 +79,22 @@ open class BaseTextNoteEvent(
         return newStyleReply ?: newStyleRoot ?: oldStylePositional
     }
 
+    fun replyingToAddress(): ATag? {
+        val oldStylePositional = tags.lastOrNull { it.size > 1 && it[0] == "a" }?.let { ATag.parseAtag(it[1], it[2]) }
+        val newStyleReply = tags.lastOrNull { it.size > 3 && it[0] == "a" && it[3] == "reply" }?.let { ATag.parseAtag(it[1], it[2]) }
+        val newStyleRoot = tags.lastOrNull { it.size > 3 && it[0] == "a" && it[3] == "root" }?.let { ATag.parseAtag(it[1], it[2]) }
+
+        return newStyleReply ?: newStyleRoot ?: oldStylePositional
+    }
+
+    fun replyingToAddressOrEvent(): String? {
+        val oldStylePositional = tags.lastOrNull { it.size > 1 && (it[0] == "e" || it[0] == "a") }?.get(1)
+        val newStyleReply = tags.lastOrNull { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "reply" }?.get(1)
+        val newStyleRoot = tags.lastOrNull { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "root" }?.get(1)
+
+        return newStyleReply ?: newStyleRoot ?: oldStylePositional
+    }
+
     @Transient private var citedUsersCache: Set<String>? = null
 
     @Transient private var citedNotesCache: Set<String>? = null
