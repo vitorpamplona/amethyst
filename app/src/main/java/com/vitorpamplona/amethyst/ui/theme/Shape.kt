@@ -182,8 +182,8 @@ val ChatPaddingModifier =
         .padding(
             start = 12.dp,
             end = 12.dp,
-            top = 5.dp,
-            bottom = 5.dp,
+            top = 3.dp,
+            bottom = 3.dp,
         )
 
 val profileContentHeaderModifier =
