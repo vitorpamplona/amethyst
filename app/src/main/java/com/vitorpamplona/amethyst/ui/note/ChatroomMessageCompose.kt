@@ -66,6 +66,7 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -105,6 +106,7 @@ fun ChatroomMessageCompose(
     innerQuote: Boolean = false,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    newPostViewModel: NewPostViewModel?,
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit,
 ) {
@@ -118,11 +120,12 @@ fun ChatroomMessageCompose(
                 innerQuote,
                 parentBackgroundColor,
                 accountViewModel,
+                newPostViewModel,
                 nav,
                 onWantsToReply,
             )
         } else {
-            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup,
+            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel, newPostViewModel = newPostViewModel) { showPopup,
                 ->
                 BlankNote(
                     remember {
@@ -144,6 +147,7 @@ fun CheckHiddenChatMessage(
     innerQuote: Boolean = false,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    newPostViewModel: NewPostViewModel?,
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit,
 ) {
@@ -162,6 +166,7 @@ fun CheckHiddenChatMessage(
             innerQuote,
             parentBackgroundColor,
             accountViewModel,
+            newPostViewModel,
             nav,
             onWantsToReply,
         )
@@ -175,6 +180,7 @@ fun LoadedChatMessageCompose(
     innerQuote: Boolean = false,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    newPostViewModel: NewPostViewModel?,
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit,
 ) {
@@ -220,6 +226,7 @@ fun LoadedChatMessageCompose(
                 canPreview,
                 parentBackgroundColor,
                 accountViewModel,
+                newPostViewModel,
                 nav,
                 onWantsToReply,
             )
@@ -236,6 +243,7 @@ fun NormalChatNote(
     canPreview: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
+    newPostViewModel: NewPostViewModel?,
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit,
 ) {
@@ -347,6 +355,7 @@ fun NormalChatNote(
                         availableBubbleSize,
                         showDetails,
                         accountViewModel,
+                        newPostViewModel,
                         nav,
                     )
                 }
@@ -357,6 +366,7 @@ fun NormalChatNote(
                 popupExpanded = popupExpanded,
                 onDismiss = { popupExpanded = false },
                 accountViewModel = accountViewModel,
+                newPostViewModel = newPostViewModel,
             )
         }
     }
@@ -374,6 +384,7 @@ private fun RenderBubble(
     availableBubbleSize: MutableState<Int>,
     showDetails: State<Boolean>,
     accountViewModel: AccountViewModel,
+    newPostViewModel: NewPostViewModel?,
     nav: (String) -> Unit,
 ) {
     val bubbleSize = remember { mutableIntStateOf(0) }
@@ -403,6 +414,7 @@ private fun RenderBubble(
             canPreview,
             showDetails,
             accountViewModel,
+            newPostViewModel,
             nav,
         )
     }
@@ -421,6 +433,7 @@ private fun MessageBubbleLines(
     canPreview: Boolean,
     showDetails: State<Boolean>,
     accountViewModel: AccountViewModel,
+    newPostViewModel: NewPostViewModel?,
     nav: (String) -> Unit,
 ) {
     if (drawAuthorInfo) {
@@ -437,6 +450,7 @@ private fun MessageBubbleLines(
         innerQuote = innerQuote,
         backgroundBubbleColor = backgroundBubbleColor,
         accountViewModel = accountViewModel,
+        newPostViewModel = newPostViewModel,
         nav = nav,
         onWantsToReply = onWantsToReply,
     )
@@ -489,11 +503,12 @@ private fun RenderReplyRow(
     innerQuote: Boolean,
     backgroundBubbleColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
+    newPostViewModel: NewPostViewModel?,
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit,
 ) {
     if (!innerQuote && note.replyTo?.lastOrNull() != null) {
-        RenderReply(note, backgroundBubbleColor, accountViewModel, nav, onWantsToReply)
+        RenderReply(note, backgroundBubbleColor, accountViewModel, newPostViewModel, nav, onWantsToReply)
     }
 }
 
@@ -502,6 +517,7 @@ private fun RenderReply(
     note: Note,
     backgroundBubbleColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
+    newPostViewModel: NewPostViewModel?,
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit,
 ) {
@@ -520,6 +536,7 @@ private fun RenderReply(
                 innerQuote = true,
                 parentBackgroundColor = backgroundBubbleColor,
                 accountViewModel = accountViewModel,
+                newPostViewModel = newPostViewModel,
                 nav = nav,
                 onWantsToReply = onWantsToReply,
             )

@@ -175,6 +175,7 @@ import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 @Composable
 fun ChannelScreen(
@@ -307,6 +308,7 @@ fun ChannelScreen(
             RefreshingChatroomFeedView(
                 viewModel = feedViewModel,
                 accountViewModel = accountViewModel,
+                newPostViewModel = newPostModel,
                 nav = nav,
                 routeForLastRead = "Channel/${channel.idHex}",
                 onWantsToReply = { replyTo.value = it },
@@ -315,7 +317,7 @@ fun ChannelScreen(
 
         Spacer(modifier = DoubleVertSpacer)
 
-        replyTo.value?.let { DisplayReplyingToNote(it, accountViewModel, nav) { replyTo.value = null } }
+        replyTo.value?.let { DisplayReplyingToNote(it, accountViewModel, newPostModel, nav) { replyTo.value = null } }
 
         val scope = rememberCoroutineScope()
 
@@ -358,6 +360,8 @@ fun ChannelScreen(
                 }
                 newPostModel.message = TextFieldValue("")
                 replyTo.value = null
+                accountViewModel.deleteDraft(newPostModel.draftTag)
+                newPostModel.draftTag = UUID.randomUUID().toString()
                 feedViewModel.sendToTop()
             }
         }
@@ -368,6 +372,7 @@ fun ChannelScreen(
 fun DisplayReplyingToNote(
     replyingNote: Note?,
     accountViewModel: AccountViewModel,
+    newPostModel: NewPostViewModel,
     nav: (String) -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -386,6 +391,7 @@ fun DisplayReplyingToNote(
                     null,
                     innerQuote = true,
                     accountViewModel = accountViewModel,
+                    newPostViewModel = newPostModel,
                     nav = nav,
                     onWantsToReply = {},
                 )

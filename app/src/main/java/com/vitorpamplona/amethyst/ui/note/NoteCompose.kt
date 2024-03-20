@@ -239,7 +239,7 @@ fun WatchNoteEvent(
             if (it) {
                 onNoteEventFound()
             } else {
-                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel, newPostViewModel = null) { showPopup ->
                     BlankNote(
                         remember {
                             modifier.combinedClickable(
@@ -414,7 +414,7 @@ fun AcceptableNote(
                     nav = nav,
                 )
             else ->
-                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) {
+                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel, newPostViewModel = null) {
                         showPopup,
                     ->
                     CheckNewAndRenderNote(
@@ -450,7 +450,7 @@ fun AcceptableNote(
             is FileHeaderEvent -> FileHeaderDisplay(baseNote, false, accountViewModel)
             is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, false, accountViewModel)
             else ->
-                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) {
+                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel, newPostViewModel = null) {
                         showPopup,
                     ->
                     CheckNewAndRenderNote(

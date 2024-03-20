@@ -289,7 +289,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
 
                         LocalCache.justConsume(it, relay)
                         tag?.let { lTag ->
-                            LocalCache.addDraft(lTag, it.id())
+                            LocalCache.addDraft(lTag, event.id(), it.id())
                         }
                     }
                 }

@@ -130,6 +130,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.UUID
 
 @Composable
 fun ChatroomScreen(
@@ -332,6 +333,7 @@ fun ChatroomScreen(
             RefreshingChatroomFeedView(
                 viewModel = feedViewModel,
                 accountViewModel = accountViewModel,
+                newPostViewModel = newPostModel,
                 nav = nav,
                 routeForLastRead = "Room/${room.hashCode()}",
                 onWantsToReply = {
@@ -343,13 +345,16 @@ fun ChatroomScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        replyTo.value?.let { DisplayReplyingToNote(it, accountViewModel, nav) { replyTo.value = null } }
+        replyTo.value?.let { DisplayReplyingToNote(it, accountViewModel, newPostModel, nav) { replyTo.value = null } }
 
         val scope = rememberCoroutineScope()
 
         // LAST ROW
         PrivateMessageEditFieldRow(newPostModel, isPrivate = true, accountViewModel) {
             scope.launch(Dispatchers.IO) {
+                accountViewModel.deleteDraft(newPostModel.draftTag)
+                newPostModel.draftTag = UUID.randomUUID().toString()
+
                 val urls = findURLs(newPostModel.message.text)
                 val usedAttachments = newPostModel.nip94attachments.filter { it.urls().intersect(urls.toSet()).isNotEmpty() }
 
@@ -361,6 +366,7 @@ fun ChatroomScreen(
                         mentions = null,
                         wantsToMarkAsSensitive = false,
                         nip94attachments = usedAttachments,
+                        draftTag = null,
                     )
                 } else {
                     accountViewModel.account.sendPrivateMessage(

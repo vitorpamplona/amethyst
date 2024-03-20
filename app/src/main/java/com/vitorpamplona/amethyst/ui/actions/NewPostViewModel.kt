@@ -315,7 +315,7 @@ open class NewPostViewModel() : ViewModel() {
         Log.d("draft", draft.event!!.toJson())
 
         draftTag = LocalCache.drafts.filter {
-            it.value.contains(draft.idHex)
+            it.value.any { it.eventId == draft.event?.id() }
         }.keys.firstOrNull() ?: draftTag
 
         canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
@@ -394,7 +394,15 @@ open class NewPostViewModel() : ViewModel() {
             it.value == draft.event?.tags()?.filter { it.size > 1 && it[0] == "condition" }?.map { it[1] }?.firstOrNull()
         } ?: ClassifiedsEvent.CONDITION.USED_LIKE_NEW
 
-        message = TextFieldValue(draft.event?.content() ?: "")
+        message =
+            if (draft.event is PrivateDmEvent) {
+                val event = draft.event as PrivateDmEvent
+                TextFieldValue(event.cachedContentFor(accountViewModel.account.signer) ?: "")
+            } else {
+                TextFieldValue(draft.event?.content() ?: "")
+            }
+
+        nip24 = draft.event is ChatMessageEvent
         urlPreview = findUrlInMessage()
     }
 

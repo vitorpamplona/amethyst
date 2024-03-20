@@ -134,7 +134,7 @@ fun ChannelCardCompose(
                 )
             }
         } else {
-            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup,
+            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel, newPostViewModel = null) { showPopup,
                 ->
                 BlankNote(
                     remember {
@@ -281,7 +281,7 @@ fun NormalChannelCard(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+    LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel, newPostViewModel = null) { showPopup ->
         CheckNewAndRenderChannelCard(
             baseNote,
             routeForLastRead,

@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
@@ -84,6 +85,8 @@ import androidx.core.graphics.ColorUtils
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.NewPostView
+import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
@@ -132,6 +135,7 @@ val externalLinkForNote = { note: Note ->
 fun LongPressToQuickAction(
     baseNote: Note,
     accountViewModel: AccountViewModel,
+    newPostViewModel: NewPostViewModel?,
     content: @Composable (() -> Unit) -> Unit,
 ) {
     val popupExpanded = remember { mutableStateOf(false) }
@@ -140,7 +144,7 @@ fun LongPressToQuickAction(
 
     content(showPopup)
 
-    NoteQuickActionMenu(baseNote, popupExpanded.value, hidePopup, accountViewModel)
+    NoteQuickActionMenu(baseNote, popupExpanded.value, hidePopup, accountViewModel, newPostViewModel)
 }
 
 @Composable
@@ -149,20 +153,24 @@ fun NoteQuickActionMenu(
     popupExpanded: Boolean,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
+    newPostViewModel: NewPostViewModel?,
 ) {
     val showSelectTextDialog = remember { mutableStateOf(false) }
     val showDeleteAlertDialog = remember { mutableStateOf(false) }
     val showBlockAlertDialog = remember { mutableStateOf(false) }
     val showReportDialog = remember { mutableStateOf(false) }
+    val editDraftDialog = remember { mutableStateOf(false) }
 
     if (popupExpanded) {
         RenderMainPopup(
             accountViewModel,
+            newPostViewModel,
             note,
             onDismiss,
             showBlockAlertDialog,
             showDeleteAlertDialog,
             showReportDialog,
+            editDraftDialog,
         )
     }
 
@@ -199,16 +207,29 @@ fun NoteQuickActionMenu(
             onDismiss()
         }
     }
+
+    if (editDraftDialog.value) {
+        NewPostView(
+            onClose = {
+                editDraftDialog.value = false
+            },
+            accountViewModel = accountViewModel,
+            draft = note,
+            nav = { },
+        )
+    }
 }
 
 @Composable
 private fun RenderMainPopup(
     accountViewModel: AccountViewModel,
+    newPostViewModel: NewPostViewModel?,
     note: Note,
     onDismiss: () -> Unit,
     showBlockAlertDialog: MutableState<Boolean>,
     showDeleteAlertDialog: MutableState<Boolean>,
     showReportDialog: MutableState<Boolean>,
+    editDraftDialog: MutableState<Boolean>,
 ) {
     val context = LocalContext.current
     val primaryLight = lightenColor(MaterialTheme.colorScheme.primary, 0.1f)
@@ -276,6 +297,21 @@ private fun RenderMainPopup(
                             clipboardManager.setText(AnnotatedString("nostr:${note.toNEvent()}"))
                             showToast(R.string.copied_note_id_to_clipboard)
                             onDismiss()
+                        }
+                    }
+
+                    if (note.isDraft()) {
+                        VerticalDivider(color = primaryLight)
+                        NoteQuickActionItem(
+                            Icons.Default.Edit,
+                            stringResource(R.string.edit_draft),
+                        ) {
+                            if (newPostViewModel != null) {
+                                newPostViewModel.load(accountViewModel, null, null, null, null, note)
+                                onDismiss()
+                            } else {
+                                editDraftDialog.value = true
+                            }
                         }
                     }
 
@@ -389,14 +425,20 @@ fun NoteQuickActionItem(
     onClick: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.size(70.dp).clickable { onClick() },
+        modifier =
+            Modifier
+                .size(70.dp)
+                .clickable { onClick() },
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(24.dp).padding(bottom = 5.dp),
+            modifier =
+                Modifier
+                    .size(24.dp)
+                    .padding(bottom = 5.dp),
             tint = Color.White,
         )
         Text(text = label, fontSize = 12.sp, color = Color.White, textAlign = TextAlign.Center)
@@ -527,7 +569,10 @@ fun QuickActionAlertDialog(
         text = { Text(textContent) },
         confirmButton = {
             Row(
-                modifier = Modifier.padding(all = 8.dp).fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .padding(all = 8.dp)
+                        .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 TextButton(onClick = onClickDontShowAgain) {
