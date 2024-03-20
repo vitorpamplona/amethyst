@@ -48,6 +48,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.BottomStart
+import androidx.compose.ui.Alignment.Companion.Center
+import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -255,7 +257,7 @@ private fun RenderNoteRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    when (remember { baseNote.event }) {
+    when (baseNote.event) {
         is LiveActivitiesEvent -> {
             RenderLiveActivityThumb(baseNote, accountViewModel, nav)
         }
@@ -828,7 +830,7 @@ fun RenderChannelThumb(
         onBottomRow = {
             if (participantUsers.isNotEmpty()) {
                 Spacer(modifier = StdVertSpacer)
-                Row { Gallery(participantUsers, accountViewModel) }
+                Gallery(participantUsers, accountViewModel)
             }
         },
     )
@@ -845,9 +847,10 @@ fun Gallery(
 
         if (users.size > 6) {
             Text(
-                text = remember(users) { " + " + (showCount(users.size - 6)) },
+                text = " + " + showCount(users.size - 6),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.align(CenterVertically),
             )
         }
     }
