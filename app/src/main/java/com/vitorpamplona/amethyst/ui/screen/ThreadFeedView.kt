@@ -789,43 +789,41 @@ private fun RenderClassifiedsReaderForThread(
 
 @Composable
 private fun RenderLongFormHeaderForThread(noteEvent: LongTextNoteEvent) {
-    Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
-        Column {
-            noteEvent.image()?.let {
-                AsyncImage(
-                    model = it,
-                    contentDescription =
-                        stringResource(
-                            R.string.preview_card_image_for,
-                            it,
-                        ),
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+    Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
+        noteEvent.image()?.let {
+            AsyncImage(
+                model = it,
+                contentDescription =
+                    stringResource(
+                        R.string.preview_card_image_for,
+                        it,
+                    ),
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
 
-            noteEvent.title()?.let {
+        noteEvent.title()?.let {
+            Spacer(modifier = DoubleVertSpacer)
+            Text(
+                text = it,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        noteEvent
+            .summary()
+            ?.ifBlank { null }
+            ?.let {
                 Spacer(modifier = DoubleVertSpacer)
                 Text(
                     text = it,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.fillMaxWidth(),
+                    color = Color.Gray,
                 )
             }
-
-            noteEvent
-                .summary()
-                ?.ifBlank { null }
-                ?.let {
-                    Spacer(modifier = DoubleVertSpacer)
-                    Text(
-                        text = it,
-                        modifier = Modifier.fillMaxWidth(),
-                        color = Color.Gray,
-                    )
-                }
-        }
     }
 }
 

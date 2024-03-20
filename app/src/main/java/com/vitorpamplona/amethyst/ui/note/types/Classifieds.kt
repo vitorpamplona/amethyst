@@ -88,8 +88,9 @@ fun RenderClassifieds(
                         contentScale = ContentScale.FillWidth,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                } ?: run {
+                    DefaultImageHeader(note, accountViewModel)
                 }
-                    ?: DefaultImageHeader(note, accountViewModel)
             }
 
             Row(
