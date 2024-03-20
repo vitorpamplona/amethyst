@@ -47,12 +47,12 @@ class FilterByListParams(
         return if (noteEvent is LiveActivitiesEvent) {
             noteEvent.participantsIntersect(followLists.users) ||
                 noteEvent.isTaggedHashes(followLists.hashtags) ||
-                noteEvent.isTaggedGeoHashes(followLists.users) ||
+                noteEvent.isTaggedGeoHashes(followLists.geotags) ||
                 noteEvent.isTaggedAddressableNotes(followLists.communities)
         } else {
             noteEvent.pubKey in followLists.users ||
                 noteEvent.isTaggedHashes(followLists.hashtags) ||
-                noteEvent.isTaggedGeoHashes(followLists.users) ||
+                noteEvent.isTaggedGeoHashes(followLists.geotags) ||
                 noteEvent.isTaggedAddressableNotes(followLists.communities)
         }
     }
