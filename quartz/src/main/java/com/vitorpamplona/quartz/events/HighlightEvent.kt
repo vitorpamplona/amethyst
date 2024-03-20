@@ -34,13 +34,13 @@ class HighlightEvent(
     content: String,
     sig: HexKey,
 ) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun inUrl() = taggedUrls().firstOrNull()
+    fun inUrl() = firstTaggedUrl()
 
-    fun author() = taggedUsers().firstOrNull()
+    fun author() = firstTaggedUser()
 
     fun quote() = content
 
-    fun inPost() = taggedAddresses().firstOrNull()
+    fun inPost() = firstTaggedAddress()
 
     companion object {
         const val KIND = 9802

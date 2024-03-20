@@ -30,6 +30,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.InputStreamReader
+import java.util.zip.GZIPInputStream
 
 @RunWith(AndroidJUnit4::class)
 class LargeDBSignatureCheck {
@@ -46,6 +47,28 @@ class LargeDBSignatureCheck {
             var counter = 0
             eventArray.forEach {
                 assertTrue(it.hasValidSignature())
+                counter++
+            }
+
+            assertEquals(eventArray.size, counter)
+        }
+
+    @Test
+    fun insertStartupDatabase() =
+        runBlocking {
+            // This file includes duplicates
+            val fullDBInputStream = getInstrumentation().context.assets.open("nostr_vitor_startup_data.json")
+
+            val eventArray =
+                Event.mapper.readValue<ArrayList<Event>>(
+                    GZIPInputStream(fullDBInputStream),
+                ) as List<Event>
+
+            var counter = 0
+            eventArray.forEach {
+                if (it.sig != "") {
+                    assertTrue(it.hasValidSignature())
+                }
                 counter++
             }
 

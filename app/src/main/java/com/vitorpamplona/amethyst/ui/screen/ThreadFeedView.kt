@@ -93,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.components.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.DisplayDraft
+import com.vitorpamplona.amethyst.ui.note.DisplayOtsIfInOriginal
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
@@ -106,7 +107,6 @@ import com.vitorpamplona.amethyst.ui.note.elements.DisplayEditStatus
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingCommunityInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingHashtagsInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
-import com.vitorpamplona.amethyst.ui.note.elements.DisplayOts
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayPoW
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayReward
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayZapSplits
@@ -264,34 +264,35 @@ fun ThreadFeedView(
                                         )
                                     }
                                 } else {
-                                    Column {
-                                        Row {
-                                            val selectedNoteColor = MaterialTheme.colorScheme.selectedNote
-                                            val background =
-                                                remember {
-                                                    if (item.idHex == noteId) mutableStateOf(selectedNoteColor) else null
-                                                }
-
-                                            NoteCompose(
-                                                item,
-                                                modifier =
-                                                    Modifier.drawReplyLevel(
-                                                        item.replyLevel(),
-                                                        MaterialTheme.colorScheme.placeholderText,
-                                                        if (item.idHex == noteId) {
-                                                            MaterialTheme.colorScheme.lessImportantLink
-                                                        } else {
-                                                            MaterialTheme.colorScheme.placeholderText
-                                                        },
-                                                    ),
-                                                parentBackgroundColor = background,
-                                                isBoostedNote = false,
-                                                unPackReply = false,
-                                                accountViewModel = accountViewModel,
-                                                nav = nav,
-                                            )
+                                    val selectedNoteColor = MaterialTheme.colorScheme.selectedNote
+                                    val background =
+                                        remember {
+                                            if (item.idHex == noteId) mutableStateOf(selectedNoteColor) else null
                                         }
-                                    }
+
+                                    NoteCompose(
+                                        item,
+                                        modifier =
+                                            Modifier.drawReplyLevel(
+                                                item.replyLevel(),
+                                                MaterialTheme.colorScheme.placeholderText,
+                                                if (item.idHex == noteId) {
+                                                    MaterialTheme.colorScheme.lessImportantLink
+                                                } else {
+                                                    MaterialTheme.colorScheme.placeholderText
+                                                },
+                                            ),
+                                        parentBackgroundColor = background,
+                                        isBoostedNote = false,
+                                        unPackReply = false,
+                                        quotesLeft = 3,
+                                        accountViewModel = accountViewModel,
+                                        nav = nav,
+                                    )
+
+                                    HorizontalDivider(
+                                        thickness = DividerThickness,
+                                    )
                                 }
                             }
                         }
@@ -377,7 +378,6 @@ fun NoteMaster(
             note.author?.let { account.isHidden(it) } ?: false,
             accountViewModel,
             Modifier,
-            false,
             nav,
             onClick = { showHiddenNote = true },
         )
@@ -473,7 +473,7 @@ fun NoteMaster(
                             DisplayDraft()
                         }
 
-                        DisplayOts(note, accountViewModel)
+                        DisplayOtsIfInOriginal(note, editState, accountViewModel)
                     }
                 }
             }
@@ -527,8 +527,7 @@ fun NoteMaster(
                     } else if (noteEvent is CommunityPostApprovalEvent) {
                         RenderPostApproval(
                             baseNote,
-                            false,
-                            true,
+                            quotesLeft = 3,
                             backgroundColor,
                             accountViewModel,
                             nav,
@@ -559,9 +558,9 @@ fun NoteMaster(
                     } else if (noteEvent is GitRepositoryEvent) {
                         RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
                     } else if (noteEvent is GitPatchEvent) {
-                        RenderGitPatchEvent(baseNote, false, true, backgroundColor, accountViewModel, nav)
+                        RenderGitPatchEvent(baseNote, false, true, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is GitIssueEvent) {
-                        RenderGitIssueEvent(baseNote, false, true, backgroundColor, accountViewModel, nav)
+                        RenderGitIssueEvent(baseNote, false, true, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is AppDefinitionEvent) {
                         RenderAppDefinition(baseNote, accountViewModel, nav)
                     } else if (noteEvent is HighlightEvent) {
@@ -572,17 +571,19 @@ fun NoteMaster(
                             noteEvent.inPost(),
                             false,
                             true,
+                            quotesLeft = 3,
                             backgroundColor,
                             accountViewModel,
                             nav,
                         )
                     } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
-                        RenderRepost(baseNote, backgroundColor, accountViewModel, nav)
+                        RenderRepost(baseNote, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is TextNoteModificationEvent) {
                         RenderTextModificationEvent(
                             note = baseNote,
                             makeItShort = false,
                             canPreview = true,
+                            quotesLeft = 3,
                             backgroundColor,
                             accountViewModel,
                             nav,
@@ -597,6 +598,7 @@ fun NoteMaster(
                             baseNote,
                             false,
                             canPreview,
+                            quotesLeft = 3,
                             backgroundColor,
                             accountViewModel,
                             nav,
@@ -611,6 +613,7 @@ fun NoteMaster(
                             baseNote,
                             false,
                             canPreview,
+                            quotesLeft = 3,
                             backgroundColor,
                             editState,
                             accountViewModel,
@@ -890,6 +893,7 @@ private fun RenderWikiHeaderForThreadPreview() {
                     baseNote!!,
                     false,
                     true,
+                    quotesLeft = 3,
                     backgroundColor,
                     editState,
                     accountViewModel,

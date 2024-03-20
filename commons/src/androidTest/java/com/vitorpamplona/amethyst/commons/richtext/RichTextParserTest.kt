@@ -4036,7 +4036,7 @@ class RichTextParserTest {
     @Test
     fun testShortTextToParse() {
         val state =
-            com.vitorpamplona.amethyst.commons.RichTextParser()
+            RichTextParser()
                 .parseText("Hi, how are you doing? ", EmptyTagList)
         org.junit.Assert.assertTrue(state.urlSet.isEmpty())
         org.junit.Assert.assertTrue(state.imagesForPager.isEmpty())
@@ -4051,8 +4051,7 @@ class RichTextParserTest {
     @Test
     fun testShortNewLinesTextToParse() {
         val state =
-            com.vitorpamplona.amethyst.commons.RichTextParser()
-                .parseText("\nHi, \nhow\n\n\n are you doing? \n", EmptyTagList)
+            RichTextParser().parseText("\nHi, \nhow\n\n\n are you doing? \n", EmptyTagList)
         org.junit.Assert.assertTrue(state.urlSet.isEmpty())
         org.junit.Assert.assertTrue(state.imagesForPager.isEmpty())
         org.junit.Assert.assertTrue(state.imageList.isEmpty())
@@ -4076,7 +4075,7 @@ class RichTextParserTest {
                 .trimIndent()
 
         val state =
-            com.vitorpamplona.amethyst.commons.RichTextParser()
+            RichTextParser()
                 .parseText(text, EmptyTagList)
         org.junit.Assert.assertEquals(
             "https://lnshort.it/live-stream-embeds/",
@@ -4153,7 +4152,7 @@ class RichTextParserTest {
             "That’s it ! That’s the #note https://cdn.nostr.build/i/1dc0726b6cb0f94a92bd66765ffb90f6c67e90c17bb957fc3d5d4782cbd73de7.jpg "
 
         val state =
-            com.vitorpamplona.amethyst.commons.RichTextParser()
+            RichTextParser()
                 .parseText(text, EmptyTagList)
 
         printStateForDebug(state)
@@ -4186,7 +4185,7 @@ class RichTextParserTest {
             "That’s it! https://cdn.nostr.build/i/1dc0726b6cb0f94a92bd66765ffb90f6c67e90c17bb957fc3d5d4782cbd73de7.jpg That’s the #note"
 
         val state =
-            com.vitorpamplona.amethyst.commons.RichTextParser()
+            RichTextParser()
                 .parseText(text, EmptyTagList)
 
         printStateForDebug(state)
@@ -4217,7 +4216,7 @@ class RichTextParserTest {
         val text = "That’s it! http://vitorpamplona.com/. That’s the note"
 
         val state =
-            com.vitorpamplona.amethyst.commons.RichTextParser()
+            RichTextParser()
                 .parseText(text, EmptyTagList)
 
         printStateForDebug(state)
@@ -4281,7 +4280,7 @@ class RichTextParserTest {
             }
     }
 
-    private fun printStateForDebug(state: com.vitorpamplona.amethyst.commons.RichTextViewerState) {
+    private fun printStateForDebug(state: RichTextViewerState) {
         state.paragraphs.forEach { paragraph ->
             paragraph.words.forEach { seg ->
                 println(

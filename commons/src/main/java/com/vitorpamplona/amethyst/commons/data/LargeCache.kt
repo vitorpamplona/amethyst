@@ -62,6 +62,12 @@ class LargeCache<K, V> {
         return runner.results
     }
 
+    fun <R> map(consumer: BiNotNullMapper<K, V, R>): List<R> {
+        val runner = BiNotNullMapCollector(consumer)
+        innerForEach(runner)
+        return runner.results
+    }
+
     fun <R> mapNotNull(consumer: BiMapper<K, V, R?>): List<R> {
         val runner = BiMapCollector(consumer)
         innerForEach(runner)
@@ -82,12 +88,6 @@ class LargeCache<K, V> {
 
     fun <R> mapFlattenIntoSet(consumer: BiMapper<K, V, Collection<R>?>): Set<R> {
         val runner = BiMapFlattenUniqueCollector(consumer)
-        innerForEach(runner)
-        return runner.results
-    }
-
-    fun <R> map(consumer: BiNotNullMapper<K, V, R>): List<R> {
-        val runner = BiNotNullMapCollector(consumer)
         innerForEach(runner)
         return runner.results
     }

@@ -37,12 +37,12 @@ class Nip30Test {
 
         assertEquals(
             "Alex Gleason ",
-            (result!![0] as Nip30CustomEmoji.TextType).text,
+            (result[0] as Nip30CustomEmoji.TextType).text,
         )
 
         assertEquals(
             "http://soapbox",
-            (result!![1] as Nip30CustomEmoji.ImageUrlType).url,
+            (result[1] as Nip30CustomEmoji.ImageUrlType).url,
         )
     }
 
@@ -57,12 +57,12 @@ class Nip30Test {
 
         assertEquals(
             "http://soapbox",
-            (result!![0] as Nip30CustomEmoji.ImageUrlType).url,
+            (result[0] as Nip30CustomEmoji.ImageUrlType).url,
         )
 
         assertEquals(
             "Alex Gleason",
-            (result!![1] as Nip30CustomEmoji.TextType).text,
+            (result[1] as Nip30CustomEmoji.TextType).text,
         )
     }
 
@@ -80,19 +80,19 @@ class Nip30Test {
 
         assertEquals(7, result!!.size)
 
-        assertEquals("Hello ", (result!![0] as Nip30CustomEmoji.TextType).text)
+        assertEquals("Hello ", (result[0] as Nip30CustomEmoji.TextType).text)
 
-        assertEquals("http://gleasonator", (result!![1] as Nip30CustomEmoji.ImageUrlType).url)
+        assertEquals("http://gleasonator", (result[1] as Nip30CustomEmoji.ImageUrlType).url)
 
-        assertEquals(" 😂 ", (result!![2] as Nip30CustomEmoji.TextType).text)
+        assertEquals(" 😂 ", (result[2] as Nip30CustomEmoji.TextType).text)
 
-        assertEquals("http://ablobcatrainbow", (result!![3] as Nip30CustomEmoji.ImageUrlType).url)
+        assertEquals("http://ablobcatrainbow", (result[3] as Nip30CustomEmoji.ImageUrlType).url)
 
-        assertEquals(" ", (result!![4] as Nip30CustomEmoji.TextType).text)
+        assertEquals(" ", (result[4] as Nip30CustomEmoji.TextType).text)
 
-        assertEquals("http://disputed", (result!![5] as Nip30CustomEmoji.ImageUrlType).url)
+        assertEquals("http://disputed", (result[5] as Nip30CustomEmoji.ImageUrlType).url)
 
-        assertEquals(" yolo", (result!![6] as Nip30CustomEmoji.TextType).text)
+        assertEquals(" yolo", (result[6] as Nip30CustomEmoji.TextType).text)
     }
 
     @Test()
@@ -114,11 +114,11 @@ class Nip30Test {
 
         assertEquals(3, result!!.size)
 
-        assertEquals("hello ", (result!![0] as Nip30CustomEmoji.TextType).text)
+        assertEquals("hello ", (result[0] as Nip30CustomEmoji.TextType).text)
 
-        assertEquals("http://vitor", (result!![1] as Nip30CustomEmoji.ImageUrlType).url)
+        assertEquals("http://vitor", (result[1] as Nip30CustomEmoji.ImageUrlType).url)
 
-        assertEquals(" how :can I help:", (result!![2] as Nip30CustomEmoji.TextType).text)
+        assertEquals(" how :can I help:", (result[2] as Nip30CustomEmoji.TextType).text)
     }
 
     @Test()
@@ -130,9 +130,9 @@ class Nip30Test {
 
         assertEquals(3, result!!.size)
 
-        assertEquals("\uD883\uDEDE\uD883\uDEDE麺の", (result!![0] as Nip30CustomEmoji.TextType).text)
-        assertEquals("http://x30EDE", (result!![1] as Nip30CustomEmoji.ImageUrlType).url)
-        assertEquals("。:\uD883\uDEDE:(Violation of NIP-30)", (result!![2] as Nip30CustomEmoji.TextType).text)
+        assertEquals("\uD883\uDEDE\uD883\uDEDE麺の", (result[0] as Nip30CustomEmoji.TextType).text)
+        assertEquals("http://x30EDE", (result[1] as Nip30CustomEmoji.ImageUrlType).url)
+        assertEquals("。:\uD883\uDEDE:(Violation of NIP-30)", (result[2] as Nip30CustomEmoji.TextType).text)
     }
 
     @Test()
@@ -155,14 +155,14 @@ class Nip30Test {
         assertEquals(9, result!!.size)
 
         var i = 0
-        assertEquals("\u200B", (result!![i++] as Nip30CustomEmoji.TextType).text)
-        assertEquals("https://media.misskeyusercontent.com/emoji/_ri.png", (result!![i++] as Nip30CustomEmoji.ImageUrlType).url)
-        assertEquals("\u200B\u200B", (result!![i++] as Nip30CustomEmoji.TextType).text)
-        assertEquals("https://media.misskeyusercontent.com/emoji/_ri.png", (result!![i++] as Nip30CustomEmoji.ImageUrlType).url)
-        assertEquals("\u200Bはﾍﾞｲｸﾄﾞﾓﾁｮﾁｮ\u200B", (result!![i++] as Nip30CustomEmoji.TextType).text)
-        assertEquals("https://media.misskeyusercontent.com/emoji/petthex_japanesecake.gif", (result!![i++] as Nip30CustomEmoji.ImageUrlType).url)
-        assertEquals("\u200Bを食べました\u200B", (result!![i++] as Nip30CustomEmoji.TextType).text)
-        assertEquals("https://media.misskeyusercontent.com/misskey/f6294900-f678-43cc-bc36-3ee5deeca4c2.gif", (result!![i++] as Nip30CustomEmoji.ImageUrlType).url)
-        assertEquals("\u200B\n#ioメシヨソイゲーム\nhttps://misskey.io/play/9g3qza4jow", (result!![i++] as Nip30CustomEmoji.TextType).text)
+        assertEquals("\u200B", (result[i++] as Nip30CustomEmoji.TextType).text)
+        assertEquals("https://media.misskeyusercontent.com/emoji/_ri.png", (result[i++] as Nip30CustomEmoji.ImageUrlType).url)
+        assertEquals("\u200B\u200B", (result[i++] as Nip30CustomEmoji.TextType).text)
+        assertEquals("https://media.misskeyusercontent.com/emoji/_ri.png", (result[i++] as Nip30CustomEmoji.ImageUrlType).url)
+        assertEquals("\u200Bはﾍﾞｲｸﾄﾞﾓﾁｮﾁｮ\u200B", (result[i++] as Nip30CustomEmoji.TextType).text)
+        assertEquals("https://media.misskeyusercontent.com/emoji/petthex_japanesecake.gif", (result[i++] as Nip30CustomEmoji.ImageUrlType).url)
+        assertEquals("\u200Bを食べました\u200B", (result[i++] as Nip30CustomEmoji.TextType).text)
+        assertEquals("https://media.misskeyusercontent.com/misskey/f6294900-f678-43cc-bc36-3ee5deeca4c2.gif", (result[i++] as Nip30CustomEmoji.ImageUrlType).url)
+        assertEquals("\u200B\n#ioメシヨソイゲーム\nhttps://misskey.io/play/9g3qza4jow", (result[i] as Nip30CustomEmoji.TextType).text)
     }
 }

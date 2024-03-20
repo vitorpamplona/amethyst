@@ -105,6 +105,7 @@ fun RenderPinListEvent(
                     TranslatableRichTextViewer(
                         content = pin,
                         canPreview = true,
+                        quotesLeft = 1,
                         tags = EmptyTagList,
                         backgroundColor = backgroundColor,
                         id = baseNote.idHex,

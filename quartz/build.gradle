@@ -57,7 +57,9 @@ dependencies {
     implementation 'net.java.dev.jna:jna:5.14.0@aar'
 
     // Performant Parser of JSONs into Events
-    api libs.jackson.module.kotlin
+    api(libs.jackson.module.kotlin) {
+        exclude(module: 'byte-buddy') // Workaround https://github.com/FasterXML/jackson-databind/issues/4428 until Jackson 2.17.1
+    }
 
     // immutable collections to avoid recomposition
     api libs.kotlinx.collections.immutable
@@ -66,6 +68,7 @@ dependencies {
     api libs.url.detector
 
     testImplementation libs.junit
+    androidTestImplementation platform(libs.androidx.compose.bom)
     androidTestImplementation libs.androidx.junit
     androidTestImplementation libs.androidx.espresso.core
 }

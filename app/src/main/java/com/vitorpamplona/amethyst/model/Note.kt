@@ -317,6 +317,12 @@ open class Note(val idHex: String) {
     }
 
     fun removeAllChildNotes(): List<Note> {
+        val repliesChanged = replies.isNotEmpty()
+        val reactionsChanged = reactions.isNotEmpty()
+        val zapsChanged = zaps.isNotEmpty() || zapPayments.isNotEmpty()
+        val boostsChanged = boosts.isNotEmpty()
+        val reportsChanged = reports.isNotEmpty()
+
         val toBeRemoved =
             replies +
                 reactions.values.flatten() +
@@ -337,11 +343,11 @@ open class Note(val idHex: String) {
         relays = listOf<RelayBriefInfoCache.RelayBriefInfo>()
         lastReactionsDownloadTime = emptyMap()
 
-        liveSet?.innerReplies?.invalidateData()
-        liveSet?.innerReactions?.invalidateData()
-        liveSet?.innerBoosts?.invalidateData()
-        liveSet?.innerReports?.invalidateData()
-        liveSet?.innerZaps?.invalidateData()
+        if (repliesChanged) liveSet?.innerReplies?.invalidateData()
+        if (reactionsChanged) liveSet?.innerReactions?.invalidateData()
+        if (boostsChanged) liveSet?.innerBoosts?.invalidateData()
+        if (reportsChanged) liveSet?.innerReports?.invalidateData()
+        if (zapsChanged) liveSet?.innerZaps?.invalidateData()
 
         return toBeRemoved
     }
@@ -536,7 +542,7 @@ open class Note(val idHex: String) {
         option: Int?,
         user: User,
         account: Account,
-        remainingZapEvents: List<Pair<Note, Note?>>,
+        remainingZapEvents: Map<Note, Note?>,
         onWasZappedByAuthor: () -> Unit,
     ) {
         if (remainingZapEvents.isEmpty()) {
@@ -544,8 +550,8 @@ open class Note(val idHex: String) {
         }
 
         remainingZapEvents.forEach { next ->
-            val zapRequest = next.first.event as LnZapRequestEvent
-            val zapEvent = next.second?.event as? LnZapEvent
+            val zapRequest = next.key.event as LnZapRequestEvent
+            val zapEvent = next.value?.event as? LnZapEvent
 
             if (!zapRequest.isPrivateZap()) {
                 // public events
@@ -589,7 +595,7 @@ open class Note(val idHex: String) {
         account: Account,
         onWasZappedByAuthor: () -> Unit,
     ) {
-        isZappedByCalculation(null, user, account, zaps.toList(), onWasZappedByAuthor)
+        isZappedByCalculation(null, user, account, zaps, onWasZappedByAuthor)
         if (account.userProfile() == user) {
             recursiveIsPaidByCalculation(account, zapPayments.toList(), onWasZappedByAuthor)
         }
@@ -601,7 +607,7 @@ open class Note(val idHex: String) {
         account: Account,
         onWasZappedByAuthor: () -> Unit,
     ) {
-        isZappedByCalculation(option, user, account, zaps.toList(), onWasZappedByAuthor)
+        isZappedByCalculation(option, user, account, zaps, onWasZappedByAuthor)
     }
 
     fun getReactionBy(user: User): String? {

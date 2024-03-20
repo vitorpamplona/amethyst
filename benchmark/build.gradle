@@ -9,7 +9,11 @@ android {
     compileSdk 34
 
     defaultConfig {
+        minSdk 26
+        targetSdk 34
+
         // Enable measuring on an emulator, or devices with low battery
+        testInstrumentationRunner 'androidx.benchmark.junit4.AndroidBenchmarkRunner'
         testInstrumentationRunnerArguments["androidx.benchmark.suppressErrors"] = "EMULATOR,LOW-BATTERY"
     }
 
@@ -21,12 +25,7 @@ android {
         jvmTarget = '17'
     }
 
-    defaultConfig {
-        minSdk 26
-        targetSdk 34
-
-        testInstrumentationRunner 'androidx.benchmark.junit4.AndroidBenchmarkRunner'
-    }
+    sourceSets.androidTest.assets.srcDirs += ["../quartz/src/androidTest/assets"]
 
     testBuildType = "benchmark"
     buildTypes {
@@ -49,6 +48,7 @@ android {
 }
 
 dependencies {
+    androidTestImplementation platform(libs.androidx.compose.bom)
     androidTestImplementation libs.androidx.runner
     androidTestImplementation libs.androidx.junit
     androidTestImplementation libs.junit

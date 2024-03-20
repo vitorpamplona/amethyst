@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.events.ImmutableListOfLists
 fun TranslatableRichTextViewer(
     content: String,
     canPreview: Boolean,
+    quotesLeft: Int,
     modifier: Modifier = Modifier,
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
@@ -40,6 +41,7 @@ fun TranslatableRichTextViewer(
 ) = ExpandableRichTextViewer(
     content,
     canPreview,
+    quotesLeft,
     modifier,
     tags,
     backgroundColor,

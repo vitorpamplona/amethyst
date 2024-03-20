@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.StringToastMsg
+import com.vitorpamplona.amethyst.ui.theme.BigPadding
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
@@ -271,6 +272,7 @@ private fun RenderOptionAfterVote(
                 TranslatableRichTextViewer(
                     poolOption.descriptor,
                     canPreview,
+                    quotesLeft = 1,
                     Modifier,
                     tags,
                     backgroundColor,
@@ -303,14 +305,15 @@ private fun RenderOptionBeforeVote(
             ),
     ) {
         TranslatableRichTextViewer(
-            description,
-            canPreview,
-            remember { Modifier.padding(15.dp) },
-            tags,
-            backgroundColor,
+            content = description,
+            canPreview = canPreview,
+            quotesLeft = 1,
+            modifier = BigPadding,
+            tags = tags,
+            backgroundColor = backgroundColor,
             id = description,
-            accountViewModel,
-            nav,
+            accountViewModel = accountViewModel,
+            nav = nav,
         )
     }
 }

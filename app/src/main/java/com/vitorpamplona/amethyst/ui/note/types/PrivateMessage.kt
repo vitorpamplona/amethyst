@@ -50,6 +50,7 @@ fun RenderPrivateMessage(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -81,6 +82,7 @@ fun RenderPrivateMessage(
                     TranslatableRichTextViewer(
                         content = eventContent,
                         canPreview = canPreview && !makeItShort,
+                        quotesLeft = quotesLeft,
                         modifier = modifier,
                         tags = tags,
                         backgroundColor = backgroundColor,
@@ -109,12 +111,13 @@ fun RenderPrivateMessage(
                 "@$recipient",
             ),
             canPreview = !makeItShort,
-            Modifier.fillMaxWidth(),
-            EmptyTagList,
-            backgroundColor,
+            quotesLeft = 0,
+            modifier = Modifier.fillMaxWidth(),
+            tags = EmptyTagList,
+            backgroundColor = backgroundColor,
             id = note.idHex,
-            accountViewModel,
-            nav,
+            accountViewModel = accountViewModel,
+            nav = nav,
         )
     }
 }

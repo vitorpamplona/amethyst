@@ -37,6 +37,7 @@ import coil.imageLoader
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ServiceManager
+import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -220,21 +221,21 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) { account.delete(account.boostsTo(note)) }
     }
 
-    fun calculateIfNoteWasZappedByAccount(
+    suspend fun calculateIfNoteWasZappedByAccount(
         zappedNote: Note,
         onWasZapped: (Boolean) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             account.calculateIfNoteWasZappedByAccount(zappedNote) { onWasZapped(true) }
         }
     }
 
-    fun calculateZapAmount(
+    suspend fun calculateZapAmount(
         zappedNote: Note,
         onZapAmount: (String) -> Unit,
     ) {
         if (zappedNote.zapPayments.isNotEmpty()) {
-            viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.IO) {
                 account.calculateZappedAmount(zappedNote) { onZapAmount(showAmount(it)) }
             }
         } else {
@@ -242,28 +243,45 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
-    fun calculateZapraiser(
+    suspend fun calculateZapraiser(
         zappedNote: Note,
         onZapraiserStatus: (ZapraiserStatus) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val zapraiserAmount = zappedNote.event?.zapraiserAmount() ?: 0
-            account.calculateZappedAmount(zappedNote) { newZapAmount ->
-                var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
+        val zapraiserAmount = zappedNote.event?.zapraiserAmount() ?: 0
+        if (zappedNote.zapPayments.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                account.calculateZappedAmount(zappedNote) { newZapAmount ->
+                    var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
 
-                if (percentage > 1) {
-                    percentage = 1f
-                }
-
-                val newZapraiserProgress = percentage
-                val newZapraiserLeft =
-                    if (percentage > 0.99) {
-                        "0"
-                    } else {
-                        showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
+                    if (percentage > 1) {
+                        percentage = 1f
                     }
-                onZapraiserStatus(ZapraiserStatus(newZapraiserProgress, newZapraiserLeft))
+
+                    val newZapraiserProgress = percentage
+                    val newZapraiserLeft =
+                        if (percentage > 0.99) {
+                            "0"
+                        } else {
+                            showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
+                        }
+                    onZapraiserStatus(ZapraiserStatus(newZapraiserProgress, newZapraiserLeft))
+                }
             }
+        } else {
+            var percentage = zappedNote.zapsAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
+
+            if (percentage > 1) {
+                percentage = 1f
+            }
+
+            val newZapraiserProgress = percentage
+            val newZapraiserLeft =
+                if (percentage > 0.99) {
+                    "0"
+                } else {
+                    showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
+                }
+            onZapraiserStatus(ZapraiserStatus(newZapraiserProgress, newZapraiserLeft))
         }
     }
 
@@ -681,41 +699,42 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         val relevantReports: ImmutableSet<Note> = persistentSetOf(),
     )
 
-    fun isNoteAcceptable(
+    suspend fun isNoteAcceptable(
         note: Note,
         onReady: (NoteComposeReportState) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
-            val isFromLoggedInFollow = note.author?.let { userProfile().isFollowingCached(it) } ?: true
+        val newState =
+            withContext(Dispatchers.IO) {
+                val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
+                val isFromLoggedInFollow = note.author?.let { userProfile().isFollowingCached(it) } ?: true
 
-            if (isFromLoggedIn || isFromLoggedInFollow) {
-                // No need to process if from trusted people
-                onReady(NoteComposeReportState(true, true, false, persistentSetOf()))
-            } else if (note.author?.let { account.isHidden(it) } == true) {
-                onReady(NoteComposeReportState(false, false, true, persistentSetOf()))
-            } else {
-                val newCanPreview = !note.hasAnyReports()
-
-                val newIsAcceptable = account.isAcceptable(note)
-
-                if (newCanPreview && newIsAcceptable) {
-                    // No need to process reports if nothing is wrong
-                    onReady(NoteComposeReportState(true, true, false, persistentSetOf()))
+                if (isFromLoggedIn || isFromLoggedInFollow) {
+                    // No need to process if from trusted people
+                    NoteComposeReportState(true, true, false, persistentSetOf())
+                } else if (note.author?.let { account.isHidden(it) } == true) {
+                    NoteComposeReportState(false, false, true, persistentSetOf())
                 } else {
-                    val newRelevantReports = account.getRelevantReports(note)
+                    val newCanPreview = !note.hasAnyReports()
 
-                    onReady(
+                    val newIsAcceptable = account.isAcceptable(note)
+
+                    if (newCanPreview && newIsAcceptable) {
+                        // No need to process reports if nothing is wrong
+                        NoteComposeReportState(true, true, false, persistentSetOf())
+                    } else {
+                        val newRelevantReports = account.getRelevantReports(note)
+
                         NoteComposeReportState(
                             newIsAcceptable,
                             newCanPreview,
                             false,
                             newRelevantReports.toImmutableSet(),
-                        ),
-                    )
+                        )
+                    }
                 }
             }
-        }
+
+        onReady(newState)
     }
 
     fun unwrap(
@@ -774,15 +793,10 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) { UrlCachedPreviewer.previewInfo(url, onResult) }
     }
 
-    fun loadReactionTo(
-        note: Note?,
-        onNewReactionType: (String?) -> Unit,
-    ) {
-        if (note == null) return
+    suspend fun loadReactionTo(note: Note?): String? {
+        if (note == null) return null
 
-        viewModelScope.launch(Dispatchers.Default) {
-            onNewReactionType(note.getReactionBy(userProfile()))
-        }
+        return note.getReactionBy(userProfile())
     }
 
     fun verifyNip05(
@@ -1021,37 +1035,6 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
-    suspend fun parseNIP19(
-        str: String,
-        onNote: (LoadedBechLink) -> Unit,
-    ) {
-        withContext(Dispatchers.IO) {
-            Nip19Bech32.uriToRoute(str)?.let {
-                var returningNote: Note? = null
-
-                when (val parsed = it.entity) {
-                    is Nip19Bech32.NSec -> {}
-                    is Nip19Bech32.NPub -> {}
-                    is Nip19Bech32.NProfile -> {}
-                    is Nip19Bech32.Note -> LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note }
-                    is Nip19Bech32.NEvent -> LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note }
-                    is Nip19Bech32.NEmbed -> {
-                        loadNEmbedIfNeeded(parsed.event)
-
-                        LocalCache.checkGetOrCreateNote(parsed.event.id)?.let { note ->
-                            returningNote = note
-                        }
-                    }
-                    is Nip19Bech32.NRelay -> {}
-                    is Nip19Bech32.NAddress -> LocalCache.checkGetOrCreateNote(parsed.atag)?.let { note -> returningNote = note }
-                    else -> {}
-                }
-
-                onNote(LoadedBechLink(returningNote, it))
-            }
-        }
-    }
-
     fun checkIsOnline(
         media: String?,
         onDone: (Boolean) -> Unit,
@@ -1067,20 +1050,22 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     fun loadAndMarkAsRead(
         routeForLastRead: String,
         createdAt: Long?,
-        onIsNew: (Boolean) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val lastTime = account.loadLastRead(routeForLastRead)
+    ): Boolean {
+        if (createdAt == null) return false
 
-            if (createdAt != null) {
+        val lastTime = account.loadLastRead(routeForLastRead)
+
+        val onIsNew = createdAt > lastTime
+
+        if (onIsNew) {
+            viewModelScope.launch(Dispatchers.IO) {
                 if (account.markAsRead(routeForLastRead, createdAt)) {
                     refreshMarkAsReadObservers()
                 }
-                onIsNew(createdAt > lastTime)
-            } else {
-                onIsNew(false)
             }
         }
+
+        return onIsNew
     }
 
     fun markAllAsRead(
@@ -1319,9 +1304,41 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
+
     suspend fun deleteDraft(draftTag: String) {
         val notes = LocalCache.draftNotes(draftTag)
         account.delete(notes)
+    }    
+
+    val bechLinkCache = CachedLoadedBechLink(this)
+
+    class CachedLoadedBechLink(val accountViewModel: AccountViewModel) : GenericBaseCache<String, LoadedBechLink>(20) {
+        override suspend fun compute(key: String): LoadedBechLink? {
+            return Nip19Bech32.uriToRoute(key)?.let {
+                var returningNote: Note? = null
+
+                when (val parsed = it.entity) {
+                    is Nip19Bech32.NSec -> {}
+                    is Nip19Bech32.NPub -> {}
+                    is Nip19Bech32.NProfile -> {}
+                    is Nip19Bech32.Note -> withContext(Dispatchers.IO) { LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note } }
+                    is Nip19Bech32.NEvent -> withContext(Dispatchers.IO) { LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note } }
+                    is Nip19Bech32.NEmbed ->
+                        withContext(Dispatchers.IO) {
+                            accountViewModel.loadNEmbedIfNeeded(parsed.event)
+
+                            LocalCache.checkGetOrCreateNote(parsed.event.id)?.let { note ->
+                                returningNote = note
+                            }
+                        }
+                    is Nip19Bech32.NRelay -> {}
+                    is Nip19Bech32.NAddress -> withContext(Dispatchers.IO) { LocalCache.checkGetOrCreateNote(parsed.atag)?.let { note -> returningNote = note } }
+                    else -> {}
+                }
+
+                LoadedBechLink(returningNote, it)
+            }
+        }
     }
 }
 

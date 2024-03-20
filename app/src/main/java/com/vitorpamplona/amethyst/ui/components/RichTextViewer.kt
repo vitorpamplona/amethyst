@@ -69,6 +69,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.markdown.MarkdownParseOptions
 import com.halilibo.richtext.ui.material3.Material3RichText
+import com.vitorpamplona.amethyst.commons.compose.produceCachedState
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
 import com.vitorpamplona.amethyst.commons.richtext.EmailSegment
@@ -98,7 +99,6 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadedBechLink
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.MarkdownTextStyle
@@ -129,6 +129,7 @@ fun isMarkdown(content: String): Boolean {
 fun RichTextViewer(
     content: String,
     canPreview: Boolean,
+    quotesLeft: Int,
     modifier: Modifier,
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
@@ -139,7 +140,7 @@ fun RichTextViewer(
         if (remember(content) { isMarkdown(content) }) {
             RenderContentAsMarkdown(content, tags, accountViewModel, nav)
         } else {
-            RenderRegular(content, tags, canPreview, backgroundColor, accountViewModel, nav)
+            RenderRegular(content, tags, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
         }
     }
 }
@@ -277,6 +278,7 @@ private fun RenderRegular(
     content: String,
     tags: ImmutableListOfLists<String>,
     canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -287,6 +289,7 @@ private fun RenderRegular(
                 word,
                 state,
                 backgroundColor,
+                quotesLeft,
                 accountViewModel,
                 nav,
             )
@@ -394,10 +397,10 @@ private fun RenderWordWithoutPreview(
         is CashuSegment -> Text(word.segmentText)
         is EmailSegment -> ClickableEmail(word.segmentText)
         is PhoneSegment -> ClickablePhone(word.segmentText)
-        is BechSegment -> BechLink(word.segmentText, false, backgroundColor, accountViewModel, nav)
+        is BechSegment -> BechLink(word.segmentText, false, 0, backgroundColor, accountViewModel, nav)
         is HashTagSegment -> HashTag(word, nav)
         is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
-        is HashIndexEventSegment -> TagLink(word, false, backgroundColor, accountViewModel, nav)
+        is HashIndexEventSegment -> TagLink(word, false, 0, backgroundColor, accountViewModel, nav)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
         is RegularTextSegment -> Text(word.segmentText)
     }
@@ -408,6 +411,7 @@ private fun RenderWordWithPreview(
     word: Segment,
     state: RichTextViewerState,
     backgroundColor: MutableState<Color>,
+    quotesLeft: Int,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -420,10 +424,10 @@ private fun RenderWordWithPreview(
         is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
         is EmailSegment -> ClickableEmail(word.segmentText)
         is PhoneSegment -> ClickablePhone(word.segmentText)
-        is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
+        is BechSegment -> BechLink(word.segmentText, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is HashTagSegment -> HashTag(word, nav)
         is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
-        is HashIndexEventSegment -> TagLink(word, true, backgroundColor, accountViewModel, nav)
+        is HashIndexEventSegment -> TagLink(word, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
         is RegularTextSegment -> Text(word.segmentText)
     }
@@ -558,15 +562,15 @@ fun ObserveNIP19(
     accountViewModel: AccountViewModel,
     onRefresh: () -> Unit,
 ) {
-    when (val parsed = entity) {
-        is Nip19Bech32.NPub -> ObserveNIP19User(parsed.hex, accountViewModel, onRefresh)
-        is Nip19Bech32.NProfile -> ObserveNIP19User(parsed.hex, accountViewModel, onRefresh)
+    when (entity) {
+        is Nip19Bech32.NPub -> ObserveNIP19User(entity.hex, accountViewModel, onRefresh)
+        is Nip19Bech32.NProfile -> ObserveNIP19User(entity.hex, accountViewModel, onRefresh)
 
-        is Nip19Bech32.Note -> ObserveNIP19Event(parsed.hex, accountViewModel, onRefresh)
-        is Nip19Bech32.NEvent -> ObserveNIP19Event(parsed.hex, accountViewModel, onRefresh)
-        is Nip19Bech32.NEmbed -> ObserveNIP19Event(parsed.event.id, accountViewModel, onRefresh)
+        is Nip19Bech32.Note -> ObserveNIP19Event(entity.hex, accountViewModel, onRefresh)
+        is Nip19Bech32.NEvent -> ObserveNIP19Event(entity.hex, accountViewModel, onRefresh)
+        is Nip19Bech32.NEmbed -> ObserveNIP19Event(entity.event.id, accountViewModel, onRefresh)
 
-        is Nip19Bech32.NAddress -> ObserveNIP19Event(parsed.atag, accountViewModel, onRefresh)
+        is Nip19Bech32.NAddress -> ObserveNIP19Event(entity.atag, accountViewModel, onRefresh)
 
         is Nip19Bech32.NSec -> {}
         is Nip19Bech32.NRelay -> {}
@@ -643,26 +647,24 @@ private fun ObserveUser(
 fun BechLink(
     word: String,
     canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    var loadedLink by remember { mutableStateOf<LoadedBechLink?>(null) }
+    val loadedLink by produceCachedState(cache = accountViewModel.bechLinkCache, key = word)
 
-    if (loadedLink == null) {
-        LaunchedEffect(key1 = word) {
-            accountViewModel.parseNIP19(word) { loadedLink = it }
-        }
-    }
+    val baseNote = loadedLink?.baseNote
 
-    if (canPreview && loadedLink?.baseNote != null) {
+    if (canPreview && quotesLeft > 0 && baseNote != null) {
         Row {
             DisplayFullNote(
-                loadedLink?.baseNote!!,
-                accountViewModel,
-                backgroundColor,
-                nav,
-                loadedLink?.nip19?.additionalChars?.ifBlank { null },
+                note = baseNote,
+                extraChars = loadedLink?.nip19?.additionalChars?.ifBlank { null },
+                quotesLeft = quotesLeft,
+                backgroundColor = backgroundColor,
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         }
     } else if (loadedLink?.nip19 != null) {
@@ -683,17 +685,19 @@ fun BechLink(
 
 @Composable
 private fun DisplayFullNote(
-    it: Note,
-    accountViewModel: AccountViewModel,
-    backgroundColor: MutableState<Color>,
-    nav: (String) -> Unit,
+    note: Note,
     extraChars: String?,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
     NoteCompose(
-        baseNote = it,
+        baseNote = note,
         accountViewModel = accountViewModel,
         modifier = MaterialTheme.colorScheme.innerPostModifier,
         parentBackgroundColor = backgroundColor,
+        quotesLeft = quotesLeft - 1,
         isQuotedNote = true,
         nav = nav,
     )
@@ -806,6 +810,7 @@ fun LoadNote(
 fun TagLink(
     word: HashIndexEventSegment,
     canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -819,6 +824,7 @@ fun TagLink(
                     it,
                     word.extras,
                     canPreview,
+                    quotesLeft,
                     accountViewModel,
                     backgroundColor,
                     nav,
@@ -833,21 +839,23 @@ private fun DisplayNoteFromTag(
     baseNote: Note,
     addedChars: String?,
     canPreview: Boolean,
+    quotesLeft: Int,
     accountViewModel: AccountViewModel,
     backgroundColor: MutableState<Color>,
     nav: (String) -> Unit,
 ) {
-    if (canPreview) {
+    if (canPreview && quotesLeft > 0) {
         NoteCompose(
             baseNote = baseNote,
             accountViewModel = accountViewModel,
             modifier = MaterialTheme.colorScheme.innerPostModifier,
             parentBackgroundColor = backgroundColor,
             isQuotedNote = true,
+            quotesLeft = quotesLeft - 1,
             nav = nav,
         )
     } else {
-        ClickableNoteTag(baseNote, nav)
+        ClickableNoteTag(baseNote, accountViewModel, nav)
     }
 
     addedChars?.ifBlank { null }?.let { Text(text = it) }

@@ -1103,6 +1103,7 @@ private fun DrawAdditionalInfo(
             TranslatableRichTextViewer(
                 content = it,
                 canPreview = false,
+                quotesLeft = 1,
                 tags = EmptyTagList,
                 backgroundColor = background,
                 id = it,

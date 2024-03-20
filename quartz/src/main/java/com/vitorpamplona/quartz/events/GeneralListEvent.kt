@@ -42,6 +42,8 @@ abstract class GeneralListEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     @Transient private var privateTagsCache: Array<Array<String>>? = null
 
+    override fun isContentEncoded() = true
+
     fun category() = dTag()
 
     fun bookmarkedPosts() = taggedEvents()

@@ -100,6 +100,7 @@ val HalfTopPadding = Modifier.padding(top = 5.dp)
 
 val HalfPadding = Modifier.padding(5.dp)
 val StdPadding = Modifier.padding(10.dp)
+val BigPadding = Modifier.padding(15.dp)
 
 val HalfHorzPadding = Modifier.padding(horizontal = 5.dp)
 val HalfVertPadding = Modifier.padding(vertical = 5.dp)
@@ -199,14 +200,6 @@ val emptyLineItemModifier = Modifier.height(Size75dp).fillMaxWidth()
 val imageHeaderBannerSize = Modifier.fillMaxWidth().height(150.dp)
 
 val authorNotePictureForImageHeader = Modifier.size(75.dp).padding(10.dp)
-
-val normalNoteModifier =
-    Modifier.fillMaxWidth()
-        .padding(
-            start = 12.dp,
-            end = 12.dp,
-            top = 0.dp,
-        )
 
 val normalWithTopMarginNoteModifier =
     Modifier.fillMaxWidth()

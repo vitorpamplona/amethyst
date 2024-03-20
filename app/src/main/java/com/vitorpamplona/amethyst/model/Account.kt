@@ -238,8 +238,10 @@ class Account(
     private val liveHomeList: StateFlow<NoteState?> by lazy {
         defaultHomeFollowList
             .transformLatest {
-                LocalCache.checkGetOrCreateAddressableNote(it)?.flow()?.metadata?.stateFlow?.let {
-                    emit(it)
+                if (it != GLOBAL_FOLLOWS && it != KIND3_FOLLOWS) {
+                    LocalCache.checkGetOrCreateAddressableNote(it)?.flow()?.metadata?.stateFlow?.let {
+                        emit(it)
+                    }
                 }
             }
             .flattenMerge()
@@ -273,8 +275,10 @@ class Account(
     private val liveNotificationList: StateFlow<NoteState?> by lazy {
         defaultNotificationFollowList
             .transformLatest {
-                LocalCache.checkGetOrCreateAddressableNote(it)?.flow()?.metadata?.stateFlow?.let {
-                    emit(it)
+                if (it != GLOBAL_FOLLOWS && it != KIND3_FOLLOWS) {
+                    LocalCache.checkGetOrCreateAddressableNote(it)?.flow()?.metadata?.stateFlow?.let {
+                        emit(it)
+                    }
                 }
             }
             .flattenMerge()
@@ -308,8 +312,10 @@ class Account(
     private val liveStoriesList: StateFlow<NoteState?> by lazy {
         defaultStoriesFollowList
             .transformLatest {
-                LocalCache.checkGetOrCreateAddressableNote(it)?.flow()?.metadata?.stateFlow?.let {
-                    emit(it)
+                if (it != GLOBAL_FOLLOWS && it != KIND3_FOLLOWS) {
+                    LocalCache.checkGetOrCreateAddressableNote(it)?.flow()?.metadata?.stateFlow?.let {
+                        emit(it)
+                    }
                 }
             }
             .flattenMerge()
@@ -343,8 +349,10 @@ class Account(
     private val liveDiscoveryList: StateFlow<NoteState?> by lazy {
         defaultDiscoveryFollowList
             .transformLatest {
-                LocalCache.checkGetOrCreateAddressableNote(it)?.flow()?.metadata?.stateFlow?.let {
-                    emit(it)
+                if (it != GLOBAL_FOLLOWS && it != KIND3_FOLLOWS) {
+                    LocalCache.checkGetOrCreateAddressableNote(it)?.flow()?.metadata?.stateFlow?.let {
+                        emit(it)
+                    }
                 }
             }
             .flattenMerge()

@@ -40,8 +40,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
@@ -62,22 +60,21 @@ fun RenderHighlight(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val quote = remember { (note.event as? HighlightEvent)?.quote() ?: "" }
-    val author = remember { (note.event as? HighlightEvent)?.author() }
-    val url = remember { (note.event as? HighlightEvent)?.inUrl() }
-    val postHex = remember { (note.event as? HighlightEvent)?.taggedAddresses()?.firstOrNull() }
+    val noteEvent = note.event as? HighlightEvent ?: return
 
     DisplayHighlight(
-        highlight = quote,
-        authorHex = author,
-        url = url,
-        postAddress = postHex,
+        highlight = noteEvent.quote(),
+        authorHex = noteEvent.author(),
+        url = noteEvent.inUrl(),
+        postAddress = noteEvent.inPost(),
         makeItShort = makeItShort,
         canPreview = canPreview,
+        quotesLeft = quotesLeft,
         backgroundColor = backgroundColor,
         accountViewModel = accountViewModel,
         nav = nav,
@@ -92,6 +89,7 @@ fun DisplayHighlight(
     postAddress: ATag?,
     makeItShort: Boolean,
     canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -104,7 +102,8 @@ fun DisplayHighlight(
     TranslatableRichTextViewer(
         quote,
         canPreview = canPreview && !makeItShort,
-        remember { Modifier.fillMaxWidth() },
+        quotesLeft,
+        Modifier.fillMaxWidth(),
         EmptyTagList,
         backgroundColor,
         id = quote,
@@ -171,7 +170,7 @@ fun LoadAndDisplayUrl(url: String) {
         }
 
     validatedUrl?.host?.let { host ->
-        Text(remember { "-" }, maxLines = 1)
+        Text("-", maxLines = 1)
         ClickableUrl(urlText = host, url = url)
     }
 }
@@ -182,17 +181,15 @@ private fun LoadAndDisplayPost(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    LoadAddressableNote(aTag = postAddress, accountViewModel) {
-        it?.let { note ->
-            val noteEvent by
-                note.live().metadata.map { it.note.event }.distinctUntilChanged().observeAsState(note.event)
+    LoadAddressableNote(aTag = postAddress, accountViewModel) { aTag ->
+        aTag?.let { note ->
+            val noteState by note.live().metadata.observeAsState()
+            val noteEvent = noteState?.note?.event as? LongTextNoteEvent ?: return@LoadAddressableNote
 
-            val title = remember(noteEvent) { (noteEvent as? LongTextNoteEvent)?.title() }
-
-            title?.let {
-                Text(remember { "-" }, maxLines = 1)
+            noteEvent.title()?.let {
+                Text("-", maxLines = 1)
                 ClickableText(
-                    text = AnnotatedString(title),
+                    text = AnnotatedString(it),
                     onClick = { routeFor(note, accountViewModel.userProfile())?.let { nav(it) } },
                     style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
                 )

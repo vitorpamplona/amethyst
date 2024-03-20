@@ -62,7 +62,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
-import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
@@ -219,15 +218,6 @@ fun RenderBadgeAward(
     }
 
     note.replyTo?.firstOrNull()?.let {
-        NoteCompose(
-            it,
-            modifier = Modifier,
-            isBoostedNote = false,
-            isQuotedNote = true,
-            unPackReply = false,
-            parentBackgroundColor = backgroundColor,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        BadgeDisplay(baseNote = it)
     }
 }

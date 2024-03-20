@@ -444,11 +444,12 @@ fun payViaIntent(
         ContextCompat.startActivity(context, intent, null)
     } catch (e: Exception) {
         if (e is CancellationException) throw e
-        if (e.message != null) {
-            onError(context.getString(R.string.no_wallet_found_with_error, e.message!!))
-        } else {
-            onError(context.getString(R.string.no_wallet_found))
-        }
+        // don't display ugly error messages
+        // if (e.message != null) {
+        //   onError(context.getString(R.string.no_wallet_found_with_error, e.message!!))
+        // } else {
+        onError(context.getString(R.string.no_wallet_found))
+        // }
     }
 }
 

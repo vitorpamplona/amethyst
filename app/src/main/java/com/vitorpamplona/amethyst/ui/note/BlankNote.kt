@@ -121,13 +121,12 @@ fun HiddenNote(
     isHiddenAuthor: Boolean,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
-    isQuote: Boolean = false,
     nav: (String) -> Unit,
     onClick: () -> Unit,
 ) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Row(
-            modifier = Modifier.padding(start = if (!isQuote) 30.dp else 25.dp, end = 20.dp),
+            modifier = Modifier.padding(horizontal = 20.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {

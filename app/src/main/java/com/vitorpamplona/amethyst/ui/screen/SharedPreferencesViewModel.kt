@@ -53,7 +53,7 @@ class SettingsState() {
     var automaticallyShowProfilePictures by mutableStateOf(ConnectivityType.ALWAYS)
     var dontShowPushNotificationSelector by mutableStateOf<Boolean>(false)
     var dontAskForNotificationPermissions by mutableStateOf<Boolean>(false)
-    var featureSet by mutableStateOf(FeatureSetType.SIMPLIFIED)
+    var featureSet by mutableStateOf(FeatureSetType.COMPLETE)
 
     var isOnMobileData: State<Boolean> = mutableStateOf(false)
 

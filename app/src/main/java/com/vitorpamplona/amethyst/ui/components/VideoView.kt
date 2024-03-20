@@ -669,43 +669,6 @@ private fun RenderVideoPlayer(
                 }
             }
 
-        val factory =
-            remember(controller) {
-                { context: Context ->
-                    PlayerView(context).apply {
-                        player = controller
-                        layoutParams =
-                            FrameLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.WRAP_CONTENT,
-                            )
-                        setBackgroundColor(Color.Transparent.toArgb())
-                        setShutterBackgroundColor(Color.Transparent.toArgb())
-                        controllerAutoShow = false
-                        thumbData?.thumb?.let { defaultArtwork = it }
-                        hideController()
-                        resizeMode =
-                            if (maxHeight.isFinite) {
-                                AspectRatioFrameLayout.RESIZE_MODE_FIT
-                            } else {
-                                AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
-                            }
-                        onDialog?.let { innerOnDialog ->
-                            setFullscreenButtonClickListener {
-                                controller.pause()
-                                innerOnDialog(it)
-                            }
-                        }
-                        setControllerVisibilityListener(
-                            PlayerView.ControllerVisibilityListener { visible ->
-                                controllerVisible.value = visible == View.VISIBLE
-                                onControllerVisibilityChanged?.let { callback -> callback(visible == View.VISIBLE) }
-                            },
-                        )
-                    }
-                }
-            }
-
         val ratio = remember { aspectRatio(dimensions) }
 
         if (ratio != null) {
@@ -719,7 +682,39 @@ private fun RenderVideoPlayer(
 
         AndroidView(
             modifier = myModifier,
-            factory = factory,
+            factory = { context: Context ->
+                PlayerView(context).apply {
+                    player = controller
+                    layoutParams =
+                        FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                        )
+                    setBackgroundColor(Color.Transparent.toArgb())
+                    setShutterBackgroundColor(Color.Transparent.toArgb())
+                    controllerAutoShow = false
+                    thumbData?.thumb?.let { defaultArtwork = it }
+                    hideController()
+                    resizeMode =
+                        if (maxHeight.isFinite) {
+                            AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        } else {
+                            AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
+                        }
+                    onDialog?.let { innerOnDialog ->
+                        setFullscreenButtonClickListener {
+                            controller.pause()
+                            innerOnDialog(it)
+                        }
+                    }
+                    setControllerVisibilityListener(
+                        PlayerView.ControllerVisibilityListener { visible ->
+                            controllerVisible.value = visible == View.VISIBLE
+                            onControllerVisibilityChanged?.let { callback -> callback(visible == View.VISIBLE) }
+                        },
+                    )
+                }
+            },
         )
 
         waveform?.let { Waveform(it, controller, remember { Modifier.align(Alignment.Center) }) }

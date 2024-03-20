@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 @Composable
 fun RenderReaction(
     note: Note,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -42,6 +43,7 @@ fun RenderReaction(
             modifier = Modifier,
             isBoostedNote = true,
             unPackReply = false,
+            quotesLeft = quotesLeft - 1,
             parentBackgroundColor = backgroundColor,
             accountViewModel = accountViewModel,
             nav = nav,

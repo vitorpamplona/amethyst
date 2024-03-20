@@ -46,6 +46,7 @@ fun RenderPoll(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -70,7 +71,8 @@ fun RenderPoll(
             TranslatableRichTextViewer(
                 content = eventContent,
                 canPreview = canPreview && !makeItShort,
-                modifier = remember { Modifier.fillMaxWidth() },
+                quotesLeft = quotesLeft,
+                modifier = Modifier.fillMaxWidth(),
                 tags = tags,
                 backgroundColor = backgroundColor,
                 id = note.idHex,

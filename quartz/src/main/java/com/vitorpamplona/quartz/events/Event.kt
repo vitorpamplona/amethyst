@@ -54,6 +54,8 @@ open class Event(
     val content: String,
     val sig: HexKey,
 ) : EventInterface {
+    override fun isContentEncoded() = false
+
     override fun countMemory(): Long {
         return 12L +
             id.bytesUsedInMemory() +

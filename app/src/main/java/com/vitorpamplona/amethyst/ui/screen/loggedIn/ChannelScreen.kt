@@ -834,6 +834,7 @@ fun LongChannelHeader(
                 TranslatableRichTextViewer(
                     content = summary ?: stringResource(id = R.string.groups_no_descriptor),
                     canPreview = false,
+                    quotesLeft = 1,
                     tags = tags,
                     backgroundColor = background,
                     id = baseChannel.idHex,
