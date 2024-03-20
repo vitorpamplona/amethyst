@@ -321,7 +321,7 @@ fun RenderRegular(
     val textStyle =
         remember(currentTextStyle) {
             currentTextStyle.copy(
-                lineHeight = 1.4.em,
+                lineHeight = 1.3.em,
             )
         }
 

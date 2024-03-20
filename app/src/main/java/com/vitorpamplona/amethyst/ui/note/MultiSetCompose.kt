@@ -145,7 +145,7 @@ fun MultiSetCompose(
                 routeForLastRead = null,
                 modifier = HalfTopPadding,
                 isBoostedNote = true,
-                showHidden = showHidden,
+                isHiddenFeed = showHidden,
                 quotesLeft = 1,
                 parentBackgroundColor = backgroundColor,
                 accountViewModel = accountViewModel,

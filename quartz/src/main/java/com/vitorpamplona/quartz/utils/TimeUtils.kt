@@ -34,6 +34,8 @@ object TimeUtils {
 
     fun now() = System.currentTimeMillis() / 1000
 
+    fun oneMinuteFromNow() = now() + ONE_MINUTE
+
     fun oneMinuteAgo() = now() - ONE_MINUTE
 
     fun fiveMinutesAgo() = now() - FIVE_MINUTES

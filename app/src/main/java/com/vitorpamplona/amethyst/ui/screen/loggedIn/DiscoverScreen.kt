@@ -37,6 +37,7 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
@@ -74,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableGridFeedState
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
@@ -352,6 +354,10 @@ private fun DiscoverFeedLoaded(
                     nav = nav,
                 )
             }
+
+            HorizontalDivider(
+                thickness = DividerThickness,
+            )
         }
     }
 }
@@ -384,6 +390,10 @@ private fun DiscoverFeedColumnsLoaded(
                     nav = nav,
                 )
             }
+
+            HorizontalDivider(
+                thickness = DividerThickness,
+            )
         }
     }
 }

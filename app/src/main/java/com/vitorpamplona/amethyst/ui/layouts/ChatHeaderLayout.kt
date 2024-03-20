@@ -47,7 +47,6 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
-import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Composable
@@ -134,10 +133,5 @@ fun ChatHeaderLayout(
                 }
             }
         }
-
-        HorizontalDivider(
-            modifier = StdTopPadding,
-            thickness = DividerThickness,
-        )
     }
 }

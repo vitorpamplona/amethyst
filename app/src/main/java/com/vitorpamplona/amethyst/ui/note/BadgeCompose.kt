@@ -64,7 +64,6 @@ fun BadgeCompose(
     likeSetCard: BadgeCard,
     isInnerNote: Boolean = false,
     routeForLastRead: String,
-    showHidden: Boolean = false,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -79,7 +78,7 @@ fun BadgeCompose(
     val scope = rememberCoroutineScope()
 
     if (note == null) {
-        BlankNote(Modifier, !isInnerNote)
+        BlankNote(Modifier)
     } else {
         val backgroundColor =
             calculateBackgroundColor(

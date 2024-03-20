@@ -1172,10 +1172,12 @@ fun ObserveZapAmountText(
 
     if (zapsState?.note?.zapPayments?.isNotEmpty() == true) {
         val zapAmountTxt by
-            produceState(initialValue = showAmount(baseNote.zapsAmount), key1 = baseNote) {
-                accountViewModel.calculateZapAmount(baseNote) { newZapAmount ->
-                    if (value != newZapAmount) {
-                        value = newZapAmount
+            produceState(initialValue = showAmount(baseNote.zapsAmount), key1 = zapsState) {
+                zapsState?.note?.let {
+                    accountViewModel.calculateZapAmount(it) { newZapAmount ->
+                        if (value != newZapAmount) {
+                            value = newZapAmount
+                        }
                     }
                 }
             }

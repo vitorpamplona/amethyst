@@ -311,6 +311,7 @@ private fun RenderMainPopup(
                                 onDismiss()
                             } else {
                                 editDraftDialog.value = true
+                                onDismiss()
                             }
                         }
                     }
