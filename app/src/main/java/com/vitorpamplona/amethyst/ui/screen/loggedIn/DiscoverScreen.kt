@@ -348,7 +348,7 @@ private fun DiscoverFeedLoaded(
                 ChannelCardCompose(
                     baseNote = item,
                     routeForLastRead = routeForLastRead,
-                    modifier = Modifier,
+                    modifier = Modifier.fillMaxWidth(),
                     forceEventKind = forceEventKind,
                     accountViewModel = accountViewModel,
                     nav = nav,
