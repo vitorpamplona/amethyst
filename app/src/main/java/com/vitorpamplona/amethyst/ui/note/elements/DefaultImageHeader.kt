@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.note.elements
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.Composable
@@ -42,7 +41,6 @@ import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.authorNotePictureForImageHeader
-import com.vitorpamplona.amethyst.ui.theme.imageHeaderBannerSize
 
 @Composable
 fun DefaultImageHeader(
@@ -63,7 +61,10 @@ fun DefaultImageHeader(
 }
 
 @Composable
-private fun BoxScope.BannerImage(author: User) {
+fun BannerImage(
+    author: User,
+    imageModifier: Modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp),
+) {
     val currentInfo by author.live().userMetadataInfo.observeAsState()
     currentInfo?.banner?.let {
         AsyncImage(
@@ -73,18 +74,16 @@ private fun BoxScope.BannerImage(author: User) {
                     R.string.preview_card_image_for,
                     it,
                 ),
-            contentScale = ContentScale.FillWidth,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 200.dp),
+            contentScale = ContentScale.Crop,
+            modifier = imageModifier,
+            placeholder = painterResource(R.drawable.profile_banner),
         )
     } ?: run {
         Image(
             painter = painterResource(R.drawable.profile_banner),
             contentDescription = stringResource(R.string.profile_banner),
-            contentScale = ContentScale.FillWidth,
-            modifier = imageHeaderBannerSize,
+            contentScale = ContentScale.Crop,
+            modifier = imageModifier,
         )
     }
 }

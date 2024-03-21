@@ -131,7 +131,7 @@ abstract class Channel(val idHex: String) {
     }
 
     open fun profilePicture(): String? {
-        return creator?.profilePicture()
+        return creator?.info?.banner
     }
 
     open fun updateChannelInfo(
