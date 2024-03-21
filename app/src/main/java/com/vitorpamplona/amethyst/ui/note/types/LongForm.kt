@@ -86,9 +86,7 @@ private fun LongFormHeader(
             remember { accountViewModel.settings.showImages.value }
 
         if (automaticallyShowUrlPreview) {
-            println("ImagePreview: $title $image")
             image?.let {
-                println("ImagePreview: Drawing $title $image")
                 AsyncImage(
                     model = it,
                     contentDescription =
@@ -100,7 +98,6 @@ private fun LongFormHeader(
                     modifier = Modifier.fillMaxWidth(),
                 )
             } ?: run {
-                println("ImagePreview: DefaultHeader $title $image")
                 DefaultImageHeader(note, accountViewModel)
             }
         }
