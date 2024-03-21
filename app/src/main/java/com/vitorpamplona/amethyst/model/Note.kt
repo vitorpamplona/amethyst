@@ -171,7 +171,8 @@ open class Note(val idHex: String) {
             event is LiveActivitiesEvent
         ) {
             (event as? ChannelMessageEvent)?.channel()
-                ?: (event as? ChannelMetadataEvent)?.channel() ?: (event as? ChannelCreateEvent)?.id
+                ?: (event as? ChannelMetadataEvent)?.channel()
+                ?: (event as? ChannelCreateEvent)?.id
                 ?: (event as? LiveActivitiesChatMessageEvent)?.activity()?.toTag()
                 ?: (event as? LiveActivitiesEvent)?.address()?.toTag()
         } else {

@@ -32,6 +32,17 @@ class LargeCache<K, V> {
 
     fun size() = cache.size
 
+    fun isEmpty() = cache.isEmpty()
+
+    fun containsKey(key: K) = cache.containsKey(key)
+
+    fun put(
+        key: K,
+        value: V,
+    ) {
+        cache.put(key, value)
+    }
+
     fun getOrCreate(
         key: K,
         builder: (key: K) -> V,

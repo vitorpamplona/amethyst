@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
+import com.vitorpamplona.amethyst.commons.data.LargeCache
 import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
+import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.Hex
@@ -33,7 +35,6 @@ import com.vitorpamplona.quartz.encoders.toNote
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import kotlinx.coroutines.Dispatchers
-import java.util.concurrent.ConcurrentHashMap
 
 @Stable
 class PublicChatChannel(idHex: String) : Channel(idHex) {
@@ -110,7 +111,7 @@ abstract class Channel(val idHex: String) {
 
     var updatedMetadataAt: Long = 0
 
-    val notes = ConcurrentHashMap<HexKey, Note>()
+    val notes = LargeCache<HexKey, Note>()
 
     open fun id() = Hex.decode(idHex)
 
@@ -145,7 +146,7 @@ abstract class Channel(val idHex: String) {
     }
 
     fun addNote(note: Note) {
-        notes[note.idHex] = note
+        notes.put(note.idHex, note)
     }
 
     fun removeNote(note: Note) {
@@ -163,18 +164,18 @@ abstract class Channel(val idHex: String) {
 
     fun pruneOldAndHiddenMessages(account: Account): Set<Note> {
         val important =
-            notes.values
-                .filter { it.author?.let { it1 -> account.isHidden(it1) } == false }
-                .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-                .reversed()
-                .take(1000)
+            notes.filter { key, it ->
+                it.author?.let { author -> account.isHidden(author) } == false
+            }
+                .sortedWith(DefaultFeedOrder)
+                .take(500)
                 .toSet()
 
-        val toBeRemoved = notes.values.filter { it !in important }.toSet()
+        val toBeRemoved = notes.filter { key, it -> it !in important }
 
         toBeRemoved.forEach { notes.remove(it.idHex) }
 
-        return toBeRemoved
+        return toBeRemoved.toSet()
     }
 }
 
