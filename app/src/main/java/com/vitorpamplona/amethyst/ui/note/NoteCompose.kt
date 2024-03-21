@@ -684,7 +684,7 @@ fun RenderRepost(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    note.replyTo?.lastOrNull()?.let {
+    note.replyTo?.lastOrNull { it.event !is CommunityDefinitionEvent }?.let {
         NoteCompose(
             it,
             modifier = Modifier,
