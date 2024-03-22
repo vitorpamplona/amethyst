@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -65,14 +64,14 @@ private fun LongFormHeader(
     note: Note,
     accountViewModel: AccountViewModel,
 ) {
-    val image = remember(noteEvent) { noteEvent.image() }
-    val title = remember(noteEvent) { noteEvent.title() }
+    val image = noteEvent.image()
+    val title = noteEvent.title()
     val summary =
         remember(noteEvent) {
             noteEvent.summary()?.ifBlank { null } ?: noteEvent.content.take(200).ifBlank { null }
         }
 
-    Row(
+    Column(
         modifier =
             Modifier
                 .padding(top = Size5dp)
@@ -83,51 +82,50 @@ private fun LongFormHeader(
                     QuoteBorder,
                 ),
     ) {
-        Column {
-            val automaticallyShowUrlPreview =
-                remember { accountViewModel.settings.showUrlPreview.value }
+        val automaticallyShowUrlPreview =
+            remember { accountViewModel.settings.showImages.value }
 
-            if (automaticallyShowUrlPreview) {
-                image?.let {
-                    AsyncImage(
-                        model = it,
-                        contentDescription =
-                            stringResource(
-                                R.string.preview_card_image_for,
-                                it,
-                            ),
-                        contentScale = ContentScale.FillWidth,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                    ?: DefaultImageHeader(note, accountViewModel)
-            }
-
-            title?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(start = 10.dp, end = 10.dp, top = 10.dp),
+        if (automaticallyShowUrlPreview) {
+            image?.let {
+                AsyncImage(
+                    model = it,
+                    contentDescription =
+                        stringResource(
+                            R.string.preview_card_image_for,
+                            it,
+                        ),
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier.fillMaxWidth(),
                 )
+            } ?: run {
+                DefaultImageHeader(note, accountViewModel)
             }
+        }
 
-            summary?.let {
-                Spacer(modifier = StdVertSpacer)
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
-                    color = Color.Gray,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+        title?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 10.dp, top = 10.dp),
+            )
+        }
+
+        summary?.let {
+            Spacer(modifier = StdVertSpacer)
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                color = Color.Gray,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

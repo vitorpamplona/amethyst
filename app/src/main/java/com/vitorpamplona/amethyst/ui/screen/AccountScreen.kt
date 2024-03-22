@@ -37,7 +37,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -120,6 +123,7 @@ fun LoggedInPage(
     accountViewModel.serviceManager = activity.serviceManager
 
     if (accountViewModel.account.signer is NostrSignerExternal) {
+        val lifeCycleOwner = LocalLifecycleOwner.current
         val launcher =
             rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.StartActivityForResult(),
@@ -137,7 +141,30 @@ fun LoggedInPage(
                 },
             )
 
-        DisposableEffect(accountViewModel, accountViewModel.account, launcher, activity) {
+        DisposableEffect(accountViewModel, accountViewModel.account, launcher, activity, lifeCycleOwner) {
+            val observer =
+                LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        accountViewModel.account.signer.launcher.registerLauncher(
+                            launcher = {
+                                try {
+                                    activity.prepareToLaunchSigner()
+                                    launcher.launch(it)
+                                } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
+                                    Log.e("Signer", "Error opening Signer app", e)
+                                    accountViewModel.toast(
+                                        R.string.error_opening_external_signer,
+                                        R.string.error_opening_external_signer_description,
+                                    )
+                                }
+                            },
+                            contentResolver = { Amethyst.instance.contentResolver },
+                        )
+                    }
+                }
+
+            lifeCycleOwner.lifecycle.addObserver(observer)
             accountViewModel.account.signer.launcher.registerLauncher(
                 launcher = {
                     try {
@@ -154,7 +181,11 @@ fun LoggedInPage(
                 },
                 contentResolver = { Amethyst.instance.contentResolver },
             )
-            onDispose { accountViewModel.account.signer.launcher.clearLauncher() }
+            onDispose {
+                Log.d("onDispose", "Called onDispose")
+                accountViewModel.account.signer.launcher.clearLauncher()
+                lifeCycleOwner.lifecycle.removeObserver(observer)
+            }
         }
     }
 

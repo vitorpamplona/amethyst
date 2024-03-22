@@ -60,7 +60,6 @@ fun RenderPostApproval(
                 baseNote?.let {
                     CommunityHeader(
                         baseNote = it,
-                        showBottomDiviser = false,
                         sendToCommunity = true,
                         accountViewModel = accountViewModel,
                         nav = nav,

@@ -25,11 +25,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
@@ -82,6 +84,9 @@ private fun FeedLoaded(
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.pubkeyHex }) { _, item ->
             UserCompose(item, accountViewModel = accountViewModel, nav = nav)
+            HorizontalDivider(
+                thickness = DividerThickness,
+            )
         }
     }
 }

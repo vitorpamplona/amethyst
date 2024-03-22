@@ -53,7 +53,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -139,7 +138,6 @@ import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
@@ -583,7 +581,6 @@ fun MyTextField(
 fun ChannelHeader(
     channelNote: Note,
     showVideo: Boolean,
-    showBottomDiviser: Boolean,
     sendToChannel: Boolean,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
@@ -594,8 +591,8 @@ fun ChannelHeader(
         ChannelHeader(
             channelHex = it,
             showVideo = showVideo,
-            showBottomDiviser = showBottomDiviser,
             sendToChannel = sendToChannel,
+            modifier = modifier,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -606,7 +603,6 @@ fun ChannelHeader(
 fun ChannelHeader(
     channelHex: String,
     showVideo: Boolean,
-    showBottomDiviser: Boolean,
     showFlag: Boolean = true,
     sendToChannel: Boolean = false,
     modifier: Modifier = StdPadding,
@@ -617,7 +613,6 @@ fun ChannelHeader(
         ChannelHeader(
             it,
             showVideo,
-            showBottomDiviser,
             showFlag,
             sendToChannel,
             modifier,
@@ -631,7 +626,6 @@ fun ChannelHeader(
 fun ChannelHeader(
     baseChannel: Channel,
     showVideo: Boolean,
-    showBottomDiviser: Boolean,
     showFlag: Boolean = true,
     sendToChannel: Boolean = false,
     modifier: Modifier = StdPadding,
@@ -666,12 +660,6 @@ fun ChannelHeader(
             if (expanded.value) {
                 LongChannelHeader(baseChannel = baseChannel, accountViewModel = accountViewModel, nav = nav)
             }
-        }
-
-        if (showBottomDiviser) {
-            HorizontalDivider(
-                thickness = DividerThickness,
-            )
         }
     }
 }

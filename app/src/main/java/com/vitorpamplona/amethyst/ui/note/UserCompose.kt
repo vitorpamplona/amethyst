@@ -24,7 +24,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -32,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 
@@ -40,37 +38,26 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 fun UserCompose(
     baseUser: User,
     overallModifier: Modifier = StdPadding,
-    showDiviser: Boolean = true,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    Column(
+    Row(
         modifier =
-            Modifier.clickable(
+            overallModifier.clickable(
                 onClick = { nav("User/${baseUser.pubkeyHex}") },
             ),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = overallModifier,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            UserPicture(baseUser, Size55dp, accountViewModel = accountViewModel, nav = nav)
+        UserPicture(baseUser, Size55dp, accountViewModel = accountViewModel, nav = nav)
 
-            Column(modifier = remember { Modifier.padding(start = 10.dp).weight(1f) }) {
-                Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser) }
+        Column(modifier = remember { Modifier.padding(start = 10.dp).weight(1f) }) {
+            Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser) }
 
-                AboutDisplay(baseUser)
-            }
-
-            Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
-                UserActionOptions(baseUser, accountViewModel)
-            }
+            AboutDisplay(baseUser)
         }
 
-        if (showDiviser) {
-            HorizontalDivider(
-                thickness = DividerThickness,
-            )
+        Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
+            UserActionOptions(baseUser, accountViewModel)
         }
     }
 }

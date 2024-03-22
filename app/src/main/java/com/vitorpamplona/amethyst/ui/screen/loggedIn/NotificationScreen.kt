@@ -120,7 +120,9 @@ fun NotificationScreen(
         SummaryBar(
             model = userReactionsStatsModel,
         )
-
+        HorizontalDivider(
+            thickness = DividerThickness,
+        )
         RefreshableCardView(
             viewModel = notifFeedViewModel,
             accountViewModel = accountViewModel,
@@ -229,10 +231,6 @@ fun SummaryBar(model: UserReactionsViewModel) {
             }
         }
     }
-
-    HorizontalDivider(
-        thickness = DividerThickness,
-    )
 }
 
 @Composable

@@ -294,7 +294,6 @@ private fun DisplayOwnerInformation(
                 UserCompose(
                     baseUser = it,
                     accountViewModel = accountViewModel,
-                    showDiviser = false,
                     nav = nav,
                 )
             }

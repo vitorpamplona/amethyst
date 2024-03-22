@@ -135,8 +135,9 @@ fun VideoDisplay(
                             contentScale = ContentScale.FillWidth,
                             modifier = MaterialTheme.colorScheme.imageModifier,
                         )
+                    } ?: run {
+                        DefaultImageHeader(note, accountViewModel)
                     }
-                        ?: DefaultImageHeader(note, accountViewModel)
                 }
             } else {
                 ZoomableContentView(

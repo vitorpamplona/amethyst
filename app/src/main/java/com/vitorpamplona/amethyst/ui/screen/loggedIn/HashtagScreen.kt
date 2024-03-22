@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -47,7 +46,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
 import com.vitorpamplona.amethyst.ui.screen.NostrHashtagFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 
 @Composable
@@ -142,27 +140,18 @@ fun HashtagHeader(
     account: AccountViewModel,
     onClick: () -> Unit = {},
 ) {
-    Column(
-        Modifier.fillMaxWidth().clickable { onClick() },
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }.then(modifier),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
     ) {
-        Column(modifier = modifier) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    "#$tag",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f),
-                )
-
-                HashtagActionOptions(tag, account)
-            }
-        }
-
-        HorizontalDivider(
-            thickness = DividerThickness,
+        Text(
+            "#$tag",
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f),
         )
+
+        HashtagActionOptions(tag, account)
     }
 }
 

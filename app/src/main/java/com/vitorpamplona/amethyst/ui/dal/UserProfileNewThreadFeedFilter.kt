@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
@@ -43,7 +45,7 @@ class UserProfileNewThreadFeedFilter(val user: User, val account: Account) :
     override fun feed(): List<Note> {
         val notes =
             LocalCache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it)
+                it !is AddressableNote && it.event !is AddressableEvent && acceptableEvent(it)
             }
 
         val longFormNotes =

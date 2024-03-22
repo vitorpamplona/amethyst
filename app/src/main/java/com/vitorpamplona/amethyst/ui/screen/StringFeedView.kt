@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,16 +38,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-
-@Composable
-fun RefreshingFeedStringFeedView(
-    viewModel: StringFeedViewModel,
-    enablePullRefresh: Boolean = true,
-    inner: @Composable (String) -> Unit,
-) {
-    RefresheableBox(viewModel, enablePullRefresh) { StringFeedView(viewModel, inner = inner) }
-}
 
 @Composable
 fun StringFeedView(
@@ -112,7 +105,13 @@ private fun FeedLoaded(
     ) {
         item { pre?.let { it() } }
 
-        itemsIndexed(state.feed.value, key = { _, item -> item }) { _, item -> inner(item) }
+        itemsIndexed(state.feed.value, key = { _, item -> item }) { _, item ->
+            inner(item)
+
+            HorizontalDivider(
+                thickness = DividerThickness,
+            )
+        }
 
         item { post?.let { it() } }
     }

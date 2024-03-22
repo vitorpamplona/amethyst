@@ -520,6 +520,9 @@ fun ShowUserSuggestionList(
                 key = { _, item -> item.pubkeyHex },
             ) { _, item ->
                 UserLine(item, accountViewModel) { channelScreenModel.autocompleteWithUser(item) }
+                HorizontalDivider(
+                    thickness = DividerThickness,
+                )
             }
         }
     }
@@ -835,6 +838,9 @@ fun LongRoomHeader(
                         overallModifier = lineModifier,
                         accountViewModel = accountViewModel,
                         nav = nav,
+                    )
+                    HorizontalDivider(
+                        thickness = DividerThickness,
                     )
                 }
             }

@@ -239,7 +239,6 @@ fun AcceptableNote(
                 ChannelHeader(
                     channelNote = baseNote,
                     showVideo = !makeItShort,
-                    showBottomDiviser = true,
                     sendToChannel = true,
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -273,7 +272,6 @@ fun AcceptableNote(
                 ChannelHeader(
                     channelNote = baseNote,
                     showVideo = !makeItShort,
-                    showBottomDiviser = true,
                     sendToChannel = true,
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -692,7 +690,7 @@ fun RenderRepost(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    note.replyTo?.lastOrNull()?.let {
+    note.replyTo?.lastOrNull { it.event !is CommunityDefinitionEvent }?.let {
         NoteCompose(
             it,
             modifier = Modifier,
@@ -748,23 +746,25 @@ private fun ReplyRow(
         ChannelHeader(
             channelHex = it,
             showVideo = false,
-            showBottomDiviser = false,
             sendToChannel = true,
             modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
             accountViewModel = accountViewModel,
             nav = nav,
         )
+        Spacer(modifier = StdVertSpacer)
     }
 
     if (showReply) {
         val replyingDirectlyTo =
             remember(note) {
                 if (noteEvent is BaseTextNoteEvent) {
-                    val replyingTo = noteEvent.replyingTo()
+                    val replyingTo = noteEvent.replyingToAddressOrEvent()
                     if (replyingTo != null) {
-                        note.replyTo?.firstOrNull {
-                            // important to test both ids in case it's a replaceable event.
-                            it.idHex == replyingTo || it.event?.id() == replyingTo
+                        val newNote = accountViewModel.getNoteIfExists(replyingTo)
+                        if (newNote != null && newNote.channelHex() == null && newNote.event?.kind() != CommunityDefinitionEvent.KIND) {
+                            newNote
+                        } else {
+                            note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.KIND }
                         }
                     } else {
                         note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.KIND }

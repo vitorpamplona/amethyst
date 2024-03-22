@@ -56,15 +56,12 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
                 .selectedChatsFollowList()
                 .mapNotNull { LocalCache.getChannelIfExists(it) }
                 .mapNotNull { it ->
-                    it.notes.values
-                        .filter { account.isAcceptable(it) && it.event != null }
-                        .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-                        .lastOrNull()
+                    it.notes.filter { key, it -> account.isAcceptable(it) && it.event != null }
+                        .sortedWith(DefaultFeedOrder)
+                        .firstOrNull()
                 }
 
-        return (privateMessages + publicChannels)
-            .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-            .reversed()
+        return (privateMessages + publicChannels).sortedWith(DefaultFeedOrder)
     }
 
     override fun updateListWith(

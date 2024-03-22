@@ -48,6 +48,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.BottomStart
+import androidx.compose.ui.Alignment.Companion.Center
+import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,6 +70,7 @@ import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.layouts.LeftPictureLayout
+import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
@@ -197,7 +200,7 @@ fun InnerChannelCardWithReactions(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    when (remember { baseNote.event }) {
+    when (baseNote.event) {
         is LiveActivitiesEvent -> {
             InnerCardRow(baseNote, accountViewModel, nav)
         }
@@ -255,7 +258,7 @@ private fun RenderNoteRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    when (remember { baseNote.event }) {
+    when (baseNote.event) {
         is LiveActivitiesEvent -> {
             RenderLiveActivityThumb(baseNote, accountViewModel, nav)
         }
@@ -305,29 +308,29 @@ fun RenderClassifiedsThumb(
                 ),
             )
 
-    RenderClassifiedsThumb(card, baseNote.author)
+    InnerRenderClassifiedsThumb(card, baseNote)
 }
 
 @Preview
 @Composable
 fun RenderClassifiedsThumbPreview() {
     Surface(Modifier.size(200.dp)) {
-        RenderClassifiedsThumb(
+        InnerRenderClassifiedsThumb(
             card =
                 ClassifiedsThumb(
                     image = null,
                     title = "Like New",
                     price = Price("800000", "SATS", null),
                 ),
-            author = null,
+            note = Note("hex"),
         )
     }
 }
 
 @Composable
-fun RenderClassifiedsThumb(
+fun InnerRenderClassifiedsThumb(
     card: ClassifiedsThumb,
-    author: User?,
+    note: Note,
 ) {
     Box(
         Modifier.fillMaxWidth().aspectRatio(1f),
@@ -340,8 +343,7 @@ fun RenderClassifiedsThumb(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-        }
-            ?: run { author?.let { DisplayAuthorBanner(it) } }
+        } ?: run { DisplayAuthorBanner(note) }
 
         Row(
             Modifier.fillMaxWidth().background(Color.Black.copy(0.6f)).padding(Size5dp),
@@ -449,8 +451,7 @@ fun RenderLiveActivityThumb(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize().clip(QuoteBorder),
                 )
-            }
-                ?: run { baseNote.author?.let { DisplayAuthorBanner(it) } }
+            } ?: run { DisplayAuthorBanner(baseNote) }
 
             Box(Modifier.padding(10.dp)) {
                 Crossfade(targetState = card.status, label = "RenderLiveActivityThumb") {
@@ -496,12 +497,11 @@ fun RenderLiveActivityThumb(
         Spacer(modifier = DoubleVertSpacer)
 
         ChannelHeader(
-            channelHex = remember { baseNote.idHex },
+            channelHex = baseNote.idHex,
             showVideo = false,
-            showBottomDiviser = false,
             showFlag = false,
             sendToChannel = true,
-            modifier = remember { Modifier.padding(start = 0.dp, end = 0.dp, top = 5.dp, bottom = 5.dp) },
+            modifier = Modifier,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -559,8 +559,7 @@ fun RenderCommunitiesThumb(
                         modifier = Modifier.fillMaxSize().clip(QuoteBorder),
                     )
                 }
-            }
-                ?: run { baseNote.author?.let { DisplayAuthorBanner(it) } }
+            } ?: run { DisplayAuthorBanner(baseNote) }
         },
         onTitleRow = {
             Text(
@@ -780,16 +779,13 @@ fun RenderChannelThumb(
     LeftPictureLayout(
         onImage = {
             cover?.let {
-                Box(contentAlignment = BottomStart) {
-                    AsyncImage(
-                        model = it,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().clip(QuoteBorder),
-                    )
-                }
-            }
-                ?: run { baseNote.author?.let { DisplayAuthorBanner(it) } }
+                AsyncImage(
+                    model = it,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().clip(QuoteBorder),
+                )
+            } ?: run { DisplayAuthorBanner(baseNote) }
         },
         onTitleRow = {
             Text(
@@ -829,7 +825,7 @@ fun RenderChannelThumb(
         onBottomRow = {
             if (participantUsers.isNotEmpty()) {
                 Spacer(modifier = StdVertSpacer)
-                Row { Gallery(participantUsers, accountViewModel) }
+                Gallery(participantUsers, accountViewModel)
             }
         },
     )
@@ -846,27 +842,20 @@ fun Gallery(
 
         if (users.size > 6) {
             Text(
-                text = remember(users) { " + " + (showCount(users.size - 6)) },
+                text = " + " + showCount(users.size - 6),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.align(CenterVertically),
             )
         }
     }
 }
 
 @Composable
-fun DisplayAuthorBanner(author: User) {
-    val picture by
-        author
-            .live()
-            .metadata
-            .map { it.user.info?.banner?.ifBlank { null } ?: it.user.info?.picture?.ifBlank { null } }
-            .observeAsState()
+fun DisplayAuthorBanner(note: Note) {
+    val authorState by note.live().authorChanges.observeAsState(note.author)
 
-    AsyncImage(
-        model = picture,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.fillMaxSize().clip(QuoteBorder),
-    )
+    authorState?.let { author ->
+        BannerImage(author, Modifier.fillMaxSize().clip(QuoteBorder))
+    }
 }

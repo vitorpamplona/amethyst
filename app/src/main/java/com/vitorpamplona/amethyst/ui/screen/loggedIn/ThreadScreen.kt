@@ -20,11 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -79,7 +76,5 @@ fun ThreadScreen(
         onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Column(Modifier.fillMaxHeight()) {
-        Column { ThreadFeedView(noteId, feedViewModel, accountViewModel, nav) }
-    }
+    ThreadFeedView(noteId, feedViewModel, accountViewModel, nav)
 }

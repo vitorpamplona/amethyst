@@ -1547,18 +1547,17 @@ fun TabFollowedTags(
     account: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp),
-        ) {
-            baseUser.latestContactList?.let {
-                it.unverifiedFollowTagSet().forEach { hashtag ->
-                    HashtagHeader(
-                        tag = hashtag,
-                        account = account,
-                        onClick = { nav("Hashtag/$hashtag") },
-                    )
-                }
+    Column(Modifier.fillMaxHeight().padding(vertical = 0.dp)) {
+        baseUser.latestContactList?.let {
+            it.unverifiedFollowTagSet().forEach { hashtag ->
+                HashtagHeader(
+                    tag = hashtag,
+                    account = account,
+                    onClick = { nav("Hashtag/$hashtag") },
+                )
+                HorizontalDivider(
+                    thickness = DividerThickness,
+                )
             }
         }
     }

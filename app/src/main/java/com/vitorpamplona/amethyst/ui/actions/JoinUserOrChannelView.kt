@@ -357,6 +357,10 @@ private fun RenderSearchResults(
 
                         searchBarViewModel.clear()
                     }
+
+                    HorizontalDivider(
+                        thickness = DividerThickness,
+                    )
                 }
 
                 itemsIndexed(
@@ -367,6 +371,10 @@ private fun RenderSearchResults(
                         nav("Channel/${item.idHex}")
                         searchBarViewModel.clear()
                     }
+
+                    HorizontalDivider(
+                        thickness = DividerThickness,
+                    )
                 }
             }
         }
@@ -404,39 +412,30 @@ fun UserComposeForChat(
     accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {
-    Column(
+    Row(
         modifier =
             Modifier.clickable(
                 onClick = onClick,
+            ).padding(
+                start = 12.dp,
+                end = 12.dp,
+                top = 10.dp,
+                bottom = 10.dp,
             ),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
+        ClickableUserPicture(baseUser, Size55dp, accountViewModel)
+
+        Column(
             modifier =
-                Modifier.padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 10.dp,
-                ),
-            verticalAlignment = Alignment.CenterVertically,
+                Modifier
+                    .padding(start = 10.dp)
+                    .weight(1f),
         ) {
-            ClickableUserPicture(baseUser, Size55dp, accountViewModel)
+            Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser) }
 
-            Column(
-                modifier =
-                    Modifier
-                        .padding(start = 10.dp)
-                        .weight(1f),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser) }
-
-                DisplayUserAboutInfo(baseUser)
-            }
+            DisplayUserAboutInfo(baseUser)
         }
-
-        HorizontalDivider(
-            modifier = Modifier.padding(top = 10.dp),
-            thickness = DividerThickness,
-        )
     }
 }
 

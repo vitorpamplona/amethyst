@@ -31,10 +31,11 @@ class ChannelFeedFilter(val channel: Channel, val account: Account) : AdditiveFe
 
     // returns the last Note of each user.
     override fun feed(): List<Note> {
-        return channel.notes.values
-            .filter { account.isAcceptable(it) }
-            .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-            .reversed()
+        return sort(
+            channel.notes.filterIntoSet { key, it ->
+                account.isAcceptable(it)
+            },
+        )
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {

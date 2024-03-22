@@ -120,7 +120,7 @@ val externalLinkForNote = { note: Note ->
         } else if (note.event is AudioTrackEvent) {
             "https://zapstr.live/?track=${note.address()?.toNAddr()}"
         } else {
-            "https://habla.news/a/${note.address()?.toNAddr()}"
+            "https://njump.me/${note.address()?.toNAddr()}"
         }
     } else {
         if (note.event is FileHeaderEvent) {

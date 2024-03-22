@@ -23,48 +23,67 @@ package com.vitorpamplona.amethyst.ui.note.elements
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.authorNotePictureForImageHeader
-import com.vitorpamplona.amethyst.ui.theme.imageHeaderBannerSize
 
 @Composable
 fun DefaultImageHeader(
     note: Note,
     accountViewModel: AccountViewModel,
 ) {
-    Box {
-        note.author?.info?.banner?.let {
-            AsyncImage(
-                model = it,
-                contentDescription =
-                    stringResource(
-                        R.string.preview_card_image_for,
-                        it,
-                    ),
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-            ?: Image(
-                painter = painterResource(R.drawable.profile_banner),
-                contentDescription = stringResource(R.string.profile_banner),
-                contentScale = ContentScale.FillWidth,
-                modifier = imageHeaderBannerSize,
-            )
+    val authorState by note.live().authorChanges.observeAsState(note.author)
 
-        Box(authorNotePictureForImageHeader.align(Alignment.BottomStart)) {
-            NoteAuthorPicture(baseNote = note, accountViewModel = accountViewModel, size = Size55dp)
+    authorState?.let { author ->
+        Box {
+            BannerImage(author)
+
+            Box(authorNotePictureForImageHeader.align(Alignment.BottomStart)) {
+                BaseUserPicture(author, Size55dp, accountViewModel, Modifier)
+            }
         }
+    }
+}
+
+@Composable
+fun BannerImage(
+    author: User,
+    imageModifier: Modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp),
+) {
+    val currentInfo by author.live().userMetadataInfo.observeAsState()
+    currentInfo?.banner?.let {
+        AsyncImage(
+            model = it,
+            contentDescription =
+                stringResource(
+                    R.string.preview_card_image_for,
+                    it,
+                ),
+            contentScale = ContentScale.Crop,
+            modifier = imageModifier,
+            placeholder = painterResource(R.drawable.profile_banner),
+        )
+    } ?: run {
+        Image(
+            painter = painterResource(R.drawable.profile_banner),
+            contentDescription = stringResource(R.string.profile_banner),
+            contentScale = ContentScale.Crop,
+            modifier = imageModifier,
+        )
     }
 }

@@ -48,9 +48,8 @@ open class DiscoverLiveFeedFilter(
     }
 
     override fun feed(): List<Note> {
-        val allChannelNotes =
-            LocalCache.channels.values.mapNotNull { LocalCache.getNoteIfExists(it.idHex) }
-        val allMessageNotes = LocalCache.channels.values.map { it.notes.values }.flatten()
+        val allChannelNotes = LocalCache.channels.values.mapNotNull { LocalCache.getNoteIfExists(it.idHex) }
+        val allMessageNotes = LocalCache.channels.values.map { it.notes.filter { key, it -> it.event is LiveActivitiesEvent } }.flatten()
 
         val notes = innerApplyFilter(allChannelNotes + allMessageNotes)
 

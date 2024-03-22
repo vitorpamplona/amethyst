@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.GitIssueEvent
 import com.vitorpamplona.quartz.events.GitPatchEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
@@ -87,6 +88,7 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
         filterParams: FilterByListParams,
     ): Boolean {
         val loggedInUserHex = account.userProfile().pubkeyHex
+        val loggedInUser = account.userProfile()
 
         return it.event !is ChannelCreateEvent &&
             it.event !is ChannelMetadataEvent &&
@@ -94,6 +96,7 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
             it.event !is BadgeDefinitionEvent &&
             it.event !is BadgeProfilesEvent &&
             it.event !is GiftWrapEvent &&
+            (it.event is LnZapEvent || it.author !== loggedInUser) &&
             (filterParams.isGlobal || filterParams.followLists?.users?.contains(it.author?.pubkeyHex) == true) &&
             it.event?.isTaggedUser(loggedInUserHex) ?: false &&
             (filterParams.isHiddenList || it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&

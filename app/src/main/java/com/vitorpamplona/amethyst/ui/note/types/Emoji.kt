@@ -127,8 +127,9 @@ private fun WikiNoteHeader(
                         contentScale = ContentScale.FillWidth,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                } ?: run {
+                    DefaultImageHeader(note, accountViewModel)
                 }
-                    ?: DefaultImageHeader(note, accountViewModel)
             }
 
             title?.let {
