@@ -316,7 +316,7 @@ fun WatchAccountForDiscoveryScreen(
     discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
     accountViewModel: AccountViewModel,
 ) {
-    val listState by accountViewModel.account.liveStoriesFollowLists.collectAsStateWithLifecycle()
+    val listState by accountViewModel.account.liveDiscoveryFollowLists.collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, listState) {
         NostrDiscoveryDataSource.resetFilters()
