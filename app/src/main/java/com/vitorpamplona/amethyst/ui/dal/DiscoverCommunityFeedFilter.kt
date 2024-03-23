@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
@@ -112,21 +111,15 @@ open class DiscoverCommunityFeedFilter(val account: Account) : AdditiveFeedFilte
     ) = aTag != null && aTag.kind == CommunityDefinitionEvent.KIND && params.match(aTag)
 
     override fun sort(collection: Set<Note>): List<Note> {
-        val followingKeySet =
-            account.liveDiscoveryFollowLists.value?.users ?: account.liveKind3Follows.value.users
-
-        val counter = ParticipantListBuilder()
-        val participantCounts =
-            collection.associate { it to counter.countFollowsThatParticipateOn(it, followingKeySet) }
-
-        val allParticipants =
-            collection.associate { it to counter.countFollowsThatParticipateOn(it, null) }
+        val lastNote =
+            collection.associateWith { note ->
+                note.boosts.maxOfOrNull { it.createdAt() ?: 0 } ?: 0
+            }
 
         return collection
             .sortedWith(
                 compareBy(
-                    { participantCounts[it] },
-                    { allParticipants[it] },
+                    { lastNote[it] },
                     { it.createdAt() },
                     { it.idHex },
                 ),
