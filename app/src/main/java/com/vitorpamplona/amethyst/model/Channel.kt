@@ -108,10 +108,9 @@ class LiveActivitiesChannel(val address: ATag) : Channel(address.toTag()) {
 @Stable
 abstract class Channel(val idHex: String) {
     var creator: User? = null
-
     var updatedMetadataAt: Long = 0
-
     val notes = LargeCache<HexKey, Note>()
+    var lastNoteCreatedAt: Long = 0
 
     open fun id() = Hex.decode(idHex)
 
@@ -147,6 +146,10 @@ abstract class Channel(val idHex: String) {
 
     fun addNote(note: Note) {
         notes.put(note.idHex, note)
+
+        if ((note.createdAt() ?: 0) > lastNoteCreatedAt) {
+            lastNoteCreatedAt = note.createdAt() ?: 0
+        }
     }
 
     fun removeNote(note: Note) {

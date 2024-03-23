@@ -85,17 +85,15 @@ open class DiscoverChatFeedFilter(val account: Account) : AdditiveFeedFilter<Not
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
-        val followingKeySet =
-            account.liveDiscoveryFollowLists.value?.users ?: account.liveKind3Follows.value.users
-
-        val counter = ParticipantListBuilder()
-        val participantCounts =
-            collection.associate { it to counter.countFollowsThatParticipateOn(it, followingKeySet) }
+        val lastNote =
+            collection.associateWith { note ->
+                LocalCache.getChannelIfExists(note.idHex)?.lastNoteCreatedAt ?: 0
+            }
 
         return collection
             .sortedWith(
                 compareBy(
-                    { participantCounts[it] },
+                    { lastNote[it] },
                     { it.createdAt() },
                     { it.idHex },
                 ),
