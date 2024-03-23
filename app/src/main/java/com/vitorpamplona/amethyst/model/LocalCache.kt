@@ -129,7 +129,7 @@ object LocalCache {
     val notes = LargeCache<HexKey, Note>()
     val addressables = LargeCache<String, AddressableNote>()
 
-    val channels = ConcurrentHashMap<HexKey, Channel>()
+    val channels = LargeCache<HexKey, Channel>()
     val awaitingPaymentRequests = ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
 
     fun checkGetOrCreateUser(key: String): User? {
@@ -164,7 +164,7 @@ object LocalCache {
     }
 
     fun getChannelIfExists(key: String): Channel? {
-        return channels[key]
+        return channels.get(key)
     }
 
     fun checkGetOrCreateNote(key: String): Note? {
@@ -217,15 +217,24 @@ object LocalCache {
         }
     }
 
+    fun getOrCreateChannel(
+        key: String,
+        channelFactory: (String) -> Channel,
+    ): Channel {
+        checkNotInMainThread()
+
+        return channels.getOrCreate(key, channelFactory)
+    }
+
     fun checkGetOrCreateChannel(key: String): Channel? {
         checkNotInMainThread()
 
         if (isValidHex(key)) {
-            return getOrCreateChannel(key) { PublicChatChannel(key) }
+            return channels.getOrCreate(key) { PublicChatChannel(key) }
         }
         val aTag = ATag.parse(key, null)
         if (aTag != null) {
-            return getOrCreateChannel(aTag.toTag()) { LiveActivitiesChannel(aTag) }
+            return channels.getOrCreate(aTag.toTag()) { LiveActivitiesChannel(aTag) }
         }
         return null
     }
@@ -235,19 +244,6 @@ object LocalCache {
         if (key.contains(":")) return false
 
         return HexValidator.isHex(key)
-    }
-
-    fun getOrCreateChannel(
-        key: String,
-        channelFactory: (String) -> Channel,
-    ): Channel {
-        checkNotInMainThread()
-
-        return channels[key]
-            ?: run {
-                val newObject = channelFactory(key)
-                channels.putIfAbsent(key, newObject) ?: newObject
-            }
     }
 
     fun checkGetOrCreateAddressableNote(key: String): AddressableNote? {
@@ -941,10 +937,10 @@ object LocalCache {
                         masterNote.removeReport(deleteNote)
                     }
 
-                    deleteNote.channelHex()?.let { channels[it]?.removeNote(deleteNote) }
+                    deleteNote.channelHex()?.let { getChannelIfExists(it)?.removeNote(deleteNote) }
 
                     (deleteNote.event as? LiveActivitiesChatMessageEvent)?.activity()?.let {
-                        channels[it.toTag()]?.removeNote(deleteNote)
+                        getChannelIfExists(it.toTag())?.removeNote(deleteNote)
                     }
 
                     if (deleteNote.event is PrivateDmEvent) {
@@ -1681,14 +1677,14 @@ object LocalCache {
         checkNotInMainThread()
 
         val key = decodeEventIdAsHexOrNull(text)
-        if (key != null && channels[key] != null) {
-            return listOfNotNull(channels[key])
+        if (key != null && getChannelIfExists(key) != null) {
+            return listOfNotNull(getChannelIfExists(key))
         }
 
-        return channels.values.filter {
-            it.anyNameStartsWith(text) ||
-                it.idHex.startsWith(text, true) ||
-                it.idNote().startsWith(text, true)
+        return channels.filter { _, channel ->
+            channel.anyNameStartsWith(text) ||
+                channel.idHex.startsWith(text, true) ||
+                channel.idNote().startsWith(text, true)
         }
     }
 
@@ -1767,8 +1763,8 @@ object LocalCache {
     fun pruneOldAndHiddenMessages(account: Account) {
         checkNotInMainThread()
 
-        channels.forEach { it ->
-            val toBeRemoved = it.value.pruneOldAndHiddenMessages(account)
+        channels.forEach { _, channel ->
+            val toBeRemoved = channel.pruneOldAndHiddenMessages(account)
 
             val childrenToBeRemoved = mutableListOf<Note>()
 
@@ -1780,9 +1776,9 @@ object LocalCache {
 
             removeFromCache(childrenToBeRemoved)
 
-            if (toBeRemoved.size > 100 || it.value.notes.size() > 100) {
+            if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
                 println(
-                    "PRUNE: ${toBeRemoved.size} messages removed from ${it.value.toBestDisplayName()}. ${it.value.notes.size()} kept",
+                    "PRUNE: ${toBeRemoved.size} messages removed from ${channel.toBestDisplayName()}. ${channel.notes.size()} kept",
                 )
             }
         }
