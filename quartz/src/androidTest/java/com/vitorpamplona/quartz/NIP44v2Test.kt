@@ -38,16 +38,16 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 
 @RunWith(AndroidJUnit4::class)
-public class NIP44v2Test {
-    val vectors: VectorFile =
+class NIP44v2Test {
+    private val vectors: VectorFile =
         jacksonObjectMapper()
             .readValue(
                 getInstrumentation().context.assets.open("nip44.vectors.json"),
                 VectorFile::class.java,
             )
 
-    val random = SecureRandom()
-    val nip44v2 = Nip44v2(Secp256k1.get(), random)
+    private val random = SecureRandom()
+    private val nip44v2 = Nip44v2(Secp256k1.get(), random)
 
     @Test
     fun conversationKeyTest() {
@@ -71,21 +71,25 @@ public class NIP44v2Test {
     fun encryptDecryptTest() {
         for (v in vectors.v2?.valid?.encryptDecrypt!!) {
             val pub2 = com.vitorpamplona.quartz.crypto.KeyPair(v.sec2!!.hexToByteArray())
-            val conversationKey = nip44v2.getConversationKey(v.sec1!!.hexToByteArray(), pub2.pubKey)
-            assertEquals(v.conversationKey, conversationKey.toHexKey())
+            val conversationKey1 = nip44v2.getConversationKey(v.sec1!!.hexToByteArray(), pub2.pubKey)
+            assertEquals(v.conversationKey, conversationKey1.toHexKey())
 
             val ciphertext =
                 nip44v2
                     .encryptWithNonce(
                         v.plaintext!!,
-                        conversationKey,
+                        conversationKey1,
                         v.nonce!!.hexToByteArray(),
                     )
                     .encodePayload()
 
             assertEquals(v.payload, ciphertext)
 
-            val decrypted = nip44v2.decrypt(v.payload!!, conversationKey)
+            val pub1 = com.vitorpamplona.quartz.crypto.KeyPair(v.sec1.hexToByteArray())
+            val conversationKey2 = nip44v2.getConversationKey(v.sec2.hexToByteArray(), pub1.pubKey)
+            assertEquals(v.conversationKey, conversationKey2.toHexKey())
+
+            val decrypted = nip44v2.decrypt(v.payload!!, conversationKey2)
             assertEquals(v.plaintext, decrypted)
         }
     }
@@ -116,7 +120,7 @@ public class NIP44v2Test {
     }
 
     @Test
-    fun invalidMessageLenghts() {
+    fun invalidMessageLengths() {
         for (v in vectors.v2?.invalid?.encryptMsgLengths!!) {
             val key = ByteArray(32)
             random.nextBytes(key)
@@ -154,7 +158,7 @@ public class NIP44v2Test {
         }
     }
 
-    fun sha256Hex(data: ByteArray): String {
+    private fun sha256Hex(data: ByteArray): String {
         // Creates a new buffer every time
         return MessageDigest.getInstance("SHA-256").digest(data).toHexKey()
     }
