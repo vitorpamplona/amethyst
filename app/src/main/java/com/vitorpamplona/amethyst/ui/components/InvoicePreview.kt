@@ -44,13 +44,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.hashtags.Lightning
 import com.vitorpamplona.amethyst.service.lnurl.CachedLnInvoiceParser
 import com.vitorpamplona.amethyst.service.lnurl.InvoiceAmount
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
@@ -135,7 +136,7 @@ fun InvoicePreview(
                         .padding(bottom = 10.dp),
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.lightning),
+                    imageVector = CustomHashTagIcons.Lightning,
                     null,
                     modifier = Size20Modifier,
                     tint = Color.Unspecified,

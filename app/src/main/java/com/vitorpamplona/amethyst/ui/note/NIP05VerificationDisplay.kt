@@ -45,12 +45,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -231,7 +231,7 @@ fun DisplayStatus(
     when (type) {
         "music" ->
             Icon(
-                painter = painterResource(id = R.drawable.tunestr),
+                imageVector = CustomHashTagIcons.Tunestr,
                 null,
                 modifier = Size15Modifier.padding(end = Size5dp),
                 tint = MaterialTheme.colorScheme.placeholderText,

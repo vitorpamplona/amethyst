@@ -34,13 +34,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.hashtags.Lightning
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -59,7 +60,7 @@ fun ZapRaiserRequest(
             modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
         ) {
             Icon(
-                painter = painterResource(R.drawable.lightning),
+                imageVector = CustomHashTagIcons.Lightning,
                 null,
                 modifier = Size20Modifier,
                 tint = Color.Unspecified,

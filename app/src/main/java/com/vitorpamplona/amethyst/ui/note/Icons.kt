@@ -63,6 +63,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.hashtags.Cashu
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -231,7 +233,7 @@ fun ZapIcon(
 @Composable
 fun CashuIcon(modifier: Modifier) {
     Icon(
-        painter = painterResource(R.drawable.cashu),
+        imageVector = CustomHashTagIcons.Cashu,
         "Cashu",
         tint = Color.Unspecified,
         modifier = modifier,

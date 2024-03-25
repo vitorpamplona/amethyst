@@ -52,7 +52,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
@@ -761,7 +760,7 @@ private fun InlineIcon(hashtagIcon: HashtagIcon) =
         ),
     ) {
         Icon(
-            painter = painterResource(hashtagIcon.icon),
+            imageVector = hashtagIcon.icon,
             contentDescription = hashtagIcon.description,
             tint = Color.Unspecified,
             modifier = hashtagIcon.modifier,

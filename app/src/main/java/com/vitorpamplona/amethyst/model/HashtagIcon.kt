@@ -25,9 +25,24 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
+import com.vitorpamplona.amethyst.commons.hashtags.Btc
+import com.vitorpamplona.amethyst.commons.hashtags.Cashu
+import com.vitorpamplona.amethyst.commons.hashtags.Coffee
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.hashtags.Footstr
+import com.vitorpamplona.amethyst.commons.hashtags.Grownostr
+import com.vitorpamplona.amethyst.commons.hashtags.Lightning
+import com.vitorpamplona.amethyst.commons.hashtags.Mate
+import com.vitorpamplona.amethyst.commons.hashtags.Nostr
+import com.vitorpamplona.amethyst.commons.hashtags.Plebs
+import com.vitorpamplona.amethyst.commons.hashtags.Skull
+import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
+import com.vitorpamplona.amethyst.commons.hashtags.Weed
+import com.vitorpamplona.amethyst.commons.hashtags.Zap
 import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
 import com.vitorpamplona.amethyst.ui.components.HashTag
@@ -42,7 +57,7 @@ fun RenderHashTagIcons() {
 
     ThemeComparisonColumn {
         RenderRegular(
-            "Testing rendering of hashtags: #Bitcoin, #nostr, #lightning, #zap, #amethyst, #cashu, #plebs, #coffee, #skullofsatoshi, #grownostr, #footstr, #tunestr, #weed",
+            "Testing rendering of hashtags: #Bitcoin, #nostr, #lightning, #zap, #amethyst, #cashu, #plebs, #coffee, #skullofsatoshi, #grownostr, #footstr, #tunestr, #weed, #mate",
             EmptyTagList,
         ) { word, state ->
             when (word) {
@@ -67,28 +82,30 @@ fun checkForHashtagWithIcon(tag: String): HashtagIcon? {
         "grownostr", "gardening", "garden" -> growstr
         "footstr" -> footstr
         "tunestr", "music", "nowplaying" -> tunestr
+        "mate", "matechain", "matestr" -> matestr
         "weed", "weedstr", "420", "cannabis", "marijuana" -> weed
         else -> null
     }
 }
 
-val bitcoin = HashtagIcon(R.drawable.ht_btc, "Bitcoin", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
-val nostr = HashtagIcon(R.drawable.ht_nostr, "Nostr", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
-val lightning = HashtagIcon(R.drawable.lightning, "Lightning", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
-val zap = HashtagIcon(R.drawable.zap, "Zap", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
-val amethyst = HashtagIcon(R.drawable.amethyst, "Amethyst", Modifier.padding(start = 2.dp, bottom = 1.dp, top = 1.dp))
-val cashu = HashtagIcon(R.drawable.cashu, "Cashu", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
-val plebs = HashtagIcon(R.drawable.plebs, "Pleb", Modifier.padding(start = 2.dp, bottom = 1.dp, top = 1.dp))
-val coffee = HashtagIcon(R.drawable.coffee, "Coffee", Modifier.padding(start = 3.dp, bottom = 1.dp, top = 1.dp))
-val skull = HashtagIcon(R.drawable.skull, "SkullofSatoshi", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
-val growstr = HashtagIcon(R.drawable.grownostr, "GrowNostr", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
-val footstr = HashtagIcon(R.drawable.footstr, "Footstr", Modifier.padding(start = 2.dp, bottom = 1.dp, top = 1.dp))
-val tunestr = HashtagIcon(R.drawable.tunestr, "Tunestr", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
-val weed = HashtagIcon(R.drawable.weed, "Weed", Modifier.padding(start = 1.dp, bottom = 0.dp, top = 0.dp))
+val bitcoin = HashtagIcon(CustomHashTagIcons.Btc, "Bitcoin", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
+val nostr = HashtagIcon(CustomHashTagIcons.Nostr, "Nostr", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
+val lightning = HashtagIcon(CustomHashTagIcons.Lightning, "Lightning", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
+val zap = HashtagIcon(CustomHashTagIcons.Zap, "Zap", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
+val amethyst = HashtagIcon(CustomHashTagIcons.Amethyst, "Amethyst", Modifier.padding(start = 2.dp, bottom = 1.dp, top = 1.dp))
+val cashu = HashtagIcon(CustomHashTagIcons.Cashu, "Cashu", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
+val plebs = HashtagIcon(CustomHashTagIcons.Plebs, "Pleb", Modifier.padding(start = 2.dp, bottom = 1.dp, top = 1.dp))
+val coffee = HashtagIcon(CustomHashTagIcons.Coffee, "Coffee", Modifier.padding(start = 3.dp, bottom = 1.dp, top = 1.dp))
+val skull = HashtagIcon(CustomHashTagIcons.Skull, "SkullofSatoshi", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
+val growstr = HashtagIcon(CustomHashTagIcons.Grownostr, "GrowNostr", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
+val footstr = HashtagIcon(CustomHashTagIcons.Footstr, "Footstr", Modifier.padding(start = 2.dp, bottom = 1.dp, top = 1.dp))
+val tunestr = HashtagIcon(CustomHashTagIcons.Tunestr, "Tunestr", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
+val weed = HashtagIcon(CustomHashTagIcons.Weed, "Weed", Modifier.padding(start = 1.dp, bottom = 0.dp, top = 0.dp))
+val matestr = HashtagIcon(CustomHashTagIcons.Mate, "Mate", Modifier.padding(start = 1.dp, bottom = 0.dp, top = 0.dp))
 
 @Immutable
 class HashtagIcon(
-    val icon: Int,
+    val icon: ImageVector,
     val description: String,
     val modifier: Modifier = Modifier,
 )

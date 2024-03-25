@@ -53,7 +53,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -65,6 +64,8 @@ import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fasterxml.jackson.databind.node.TextNode
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.hashtags.Cashu
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.service.CachedCashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
@@ -182,7 +183,7 @@ fun CashuPreview(
                         .padding(bottom = 10.dp),
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.cashu),
+                    imageVector = CustomHashTagIcons.Cashu,
                     null,
                     modifier = Size20Modifier,
                     tint = Color.Unspecified,
@@ -320,7 +321,7 @@ fun CashuPreviewNew(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.cashu),
+                    imageVector = CustomHashTagIcons.Cashu,
                     null,
                     modifier = Modifier.size(13.dp),
                     tint = Color.Unspecified,
