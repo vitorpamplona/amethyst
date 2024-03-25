@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.theme
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -102,6 +103,8 @@ val HalfPadding = Modifier.padding(5.dp)
 val StdPadding = Modifier.padding(10.dp)
 val BigPadding = Modifier.padding(15.dp)
 
+val RowColSpacing = Arrangement.spacedBy(3.dp)
+
 val HalfHorzPadding = Modifier.padding(horizontal = 5.dp)
 val HalfVertPadding = Modifier.padding(vertical = 5.dp)
 
@@ -136,6 +139,8 @@ val ReactionRowExpandButton = Modifier.width(65.dp).padding(start = 31.dp)
 
 val WidthAuthorPictureModifier = Modifier.width(55.dp)
 val WidthAuthorPictureModifierWithPadding = Modifier.width(65.dp)
+
+val VideoReactionColumnPadding = Modifier.padding(bottom = 75.dp)
 
 val DividerThickness = 0.25.dp
 
@@ -224,4 +229,4 @@ val liveStreamTag =
         .padding(horizontal = Size5dp)
 
 val chatAuthorImage = Modifier.size(20.dp).clip(shape = CircleShape)
-val AuthorInfoVideoFeed = Modifier.width(75.dp)
+val AuthorInfoVideoFeed = Modifier.width(75.dp).padding(end = 15.dp)

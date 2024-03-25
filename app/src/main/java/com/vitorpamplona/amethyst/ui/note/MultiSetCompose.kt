@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -76,8 +75,8 @@ import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifierSmaller
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size18dp
 import com.vitorpamplona.amethyst.ui.theme.Size19dp
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -223,7 +222,7 @@ fun RenderLikeGallery(
                     )
                 } else {
                     when (val shortReaction = reactionType) {
-                        "+" -> LikedIcon(modifier.size(Size18dp))
+                        "+" -> LikedIcon(modifier.size(Size19dp))
                         "-" -> Text(text = "\uD83D\uDC4E", modifier = modifier)
                         else -> Text(text = shortReaction, modifier = modifier)
                     }
@@ -268,7 +267,7 @@ fun RenderBoostGallery(
             modifier = NotificationIconModifierSmaller,
         ) {
             RepostedIcon(
-                modifier = remember { Modifier.size(Size19dp).align(Alignment.TopEnd) },
+                modifier = remember { Modifier.size(Size20dp).align(Alignment.TopEnd) },
             )
         }
 
@@ -289,7 +288,7 @@ fun RenderBoostGallery(
             modifier = NotificationIconModifierSmaller,
         ) {
             RepostedIcon(
-                modifier = remember { Modifier.size(Size19dp).align(Alignment.TopEnd) },
+                modifier = remember { Modifier.size(Size20dp).align(Alignment.TopEnd) },
             )
         }
 
@@ -494,13 +493,11 @@ private fun BoxedAuthor(
     accountViewModel: AccountViewModel,
 ) {
     Box(modifier = Size35Modifier.clickable(onClick = { nav(authorRouteFor(note)) })) {
-        WatchNoteAuthor(note) { targetAuthor ->
-            Crossfade(targetState = targetAuthor, modifier = Size35Modifier) { author ->
-                WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
-                    author,
-                    accountViewModel,
-                )
-            }
+        WatchAuthorWithBlank(note, Size35Modifier) { author ->
+            WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
+                author,
+                accountViewModel,
+            )
         }
     }
 }
@@ -544,16 +541,6 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
         }
         // }
     }
-}
-
-@Composable
-private fun WatchNoteAuthor(
-    baseNote: Note,
-    onContent: @Composable (User?) -> Unit,
-) {
-    val author by baseNote.live().authorChanges.observeAsState(baseNote.author)
-
-    onContent(author)
 }
 
 @Composable

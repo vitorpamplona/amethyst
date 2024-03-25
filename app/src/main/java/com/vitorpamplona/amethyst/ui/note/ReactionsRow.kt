@@ -99,7 +99,6 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.zap
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
@@ -111,13 +110,13 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DarkerGreen
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.Height24dpModifier
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.NoSoTinyBorders
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowExpandButton
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeight
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiserSize
+import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size17Modifier
@@ -229,7 +228,11 @@ private fun GenericInnerReactionRow(
     five: @Composable () -> Unit,
     six: @Composable () -> Unit,
 ) {
-    Row(verticalAlignment = CenterVertically, modifier = ReactionRowHeight) {
+    Row(
+        verticalAlignment = CenterVertically,
+        horizontalArrangement = RowColSpacing,
+        modifier = ReactionRowHeight,
+    ) {
         val fullWeight = remember { Modifier.weight(1f) }
 
         if (showReactionDetail) {
@@ -241,11 +244,11 @@ private fun GenericInnerReactionRow(
             }
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = fullWeight) { two() }
+        Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = fullWeight) { two() }
 
-        Row(verticalAlignment = CenterVertically, modifier = fullWeight) { three() }
+        Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = fullWeight) { three() }
 
-        Row(verticalAlignment = CenterVertically, modifier = fullWeight) { four() }
+        Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = fullWeight) { four() }
 
         Row(verticalAlignment = CenterVertically, modifier = fullWeight) { five() }
 
@@ -670,7 +673,6 @@ fun TextCount(
         text = showCount(count),
         fontSize = Font14SP,
         color = textColor,
-        modifier = HalfStartPadding,
         maxLines = 1,
     )
 }

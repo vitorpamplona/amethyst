@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -77,9 +76,7 @@ fun NoteAuthorPicture(
     modifier: Modifier = Modifier,
     onClick: ((User) -> Unit)? = null,
 ) {
-    val author by baseNote.live().authorChanges.observeAsState(baseNote.author)
-
-    Crossfade(targetState = author, label = "NoteAuthorPicture") {
+    WatchAuthorWithBlank(baseNote) {
         if (it == null) {
             DisplayBlankAuthor(size, modifier)
         } else {

@@ -52,10 +52,43 @@ fun NoteUsernameDisplay(
     showPlayButton: Boolean = true,
     textColor: Color = Color.Unspecified,
 ) {
-    val authorState by baseNote.live().authorChanges.observeAsState(baseNote.author)
+    WatchAuthor(baseNote) {
+        UsernameDisplay(it, weight, showPlayButton, textColor = textColor)
+    }
+}
 
-    Crossfade(targetState = authorState, modifier = weight, label = "NoteUsernameDisplay") {
-        it?.let { UsernameDisplay(it, weight, showPlayButton, textColor = textColor) }
+@Composable
+fun WatchAuthor(
+    baseNote: Note,
+    inner: @Composable (User) -> Unit,
+) {
+    val noteAuthor = baseNote.author
+    if (noteAuthor != null) {
+        inner(noteAuthor)
+    } else {
+        val authorState by baseNote.live().metadata.observeAsState()
+
+        authorState?.note?.author?.let {
+            inner(it)
+        }
+    }
+}
+
+@Composable
+fun WatchAuthorWithBlank(
+    baseNote: Note,
+    modifier: Modifier = Modifier,
+    inner: @Composable (User?) -> Unit,
+) {
+    val noteAuthor = baseNote.author
+    if (noteAuthor != null) {
+        inner(noteAuthor)
+    } else {
+        val authorState by baseNote.live().metadata.observeAsState()
+
+        Crossfade(targetState = authorState?.note?.author, modifier = modifier, label = "WatchAuthorWithBlank") { newAuthor ->
+            inner(newAuthor)
+        }
     }
 }
 

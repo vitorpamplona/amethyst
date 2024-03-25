@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.note.LoadStatuses
 import com.vitorpamplona.amethyst.ui.note.NIP05CheckingIcon
 import com.vitorpamplona.amethyst.ui.note.NIP05FailedVerification
 import com.vitorpamplona.amethyst.ui.note.NIP05VerifiedIcon
+import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
@@ -116,9 +117,9 @@ fun ObserveDisplayNip05Status(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val author by baseNote.live().authorChanges.observeAsState()
-
-    author?.let { ObserveDisplayNip05Status(it, columnModifier, accountViewModel, nav) }
+    WatchAuthor(baseNote = baseNote) {
+        ObserveDisplayNip05Status(it, columnModifier, accountViewModel, nav)
+    }
 }
 
 @Composable
