@@ -74,7 +74,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleButton
-import kotlin.time.measureTimedValue
 
 @Composable
 fun AmethystIcon(iconSize: Dp) {
@@ -88,16 +87,12 @@ fun AmethystIcon(iconSize: Dp) {
 
 @Composable
 fun FollowingIcon(iconSize: Dp) {
-    val (value, elapsed) =
-        measureTimedValue {
-            Icon(
-                imageVector = Following,
-                contentDescription = stringResource(id = R.string.following),
-                modifier = Modifier.size(iconSize),
-                tint = Color.Unspecified,
-            )
-        }
-    println("FollowingIcon $elapsed")
+    Icon(
+        imageVector = Following,
+        contentDescription = stringResource(id = R.string.following),
+        modifier = Modifier.size(iconSize),
+        tint = Color.Unspecified,
+    )
 }
 
 @Composable
