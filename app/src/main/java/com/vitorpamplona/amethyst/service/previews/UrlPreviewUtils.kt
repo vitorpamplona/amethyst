@@ -48,48 +48,24 @@ private const val ATTRIBUTE_VALUE_HTTP_EQUIV = "http-equiv"
 private val META_X_TITLE =
     arrayOf(
         "og:title",
-        "\"og:title\"",
-        "'og:title'",
-        "name",
-        "\"name\"",
-        "'name'",
         "twitter:title",
-        "\"twitter:title\"",
-        "'twitter:title'",
         "title",
-        "\"title\"",
-        "'title'",
     )
 
 // for <meta itemprop=... to get description
 private val META_X_DESCRIPTION =
     arrayOf(
         "og:description",
-        "\"og:description\"",
-        "'og:description'",
-        "description",
-        "\"description\"",
-        "'description'",
         "twitter:description",
-        "\"twitter:description\"",
-        "'twitter:description'",
         "description",
-        "\"description\"",
-        "'description'",
     )
 
 // for <meta itemprop=... to get image
 private val META_X_IMAGE =
     arrayOf(
         "og:image",
-        "\"og:image\"",
-        "'og:image'",
-        "image",
-        "\"image\"",
-        "'image'",
         "twitter:image",
-        "\"twitter:image\"",
-        "'twitter:image'",
+        "image",
     )
 
 private const val CONTENT = "content"
