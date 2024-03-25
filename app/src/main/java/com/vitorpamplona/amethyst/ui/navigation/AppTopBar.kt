@@ -31,7 +31,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -47,7 +47,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
@@ -185,8 +184,7 @@ private fun RenderTopRouteBar(
         Route.Video.base -> StoriesTopBar(followLists, drawerState, accountViewModel, nav)
         Route.Discover.base -> DiscoveryTopBar(followLists, drawerState, accountViewModel, nav)
         Route.Notification.base -> NotificationTopBar(followLists, drawerState, accountViewModel, nav)
-        Route.Settings.base ->
-            TopBarWithBackButton(stringResource(id = R.string.application_preferences), navPopBack)
+        Route.Settings.base -> TopBarWithBackButton(stringResource(id = R.string.application_preferences), navPopBack)
         else -> {
             if (id != null) {
                 when (currentRoute) {
@@ -495,27 +493,13 @@ fun GenericMainTopBar(
 ) {
     Column(modifier = BottomTopHeight) {
         TopAppBar(
-            colors =
-                TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
             title = {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
                 ) {
-                    Box(Modifier) {
-                        Column(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .fillMaxHeight(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            content()
-                        }
-                    }
+                    content()
                 }
             },
             navigationIcon = {
@@ -545,9 +529,7 @@ private fun LoggedInUserPictureDrawer(
     val profilePicture by
         accountViewModel.account.userProfile().live().profilePictureChanges.observeAsState()
 
-    IconButton(
-        onClick = onClick,
-    ) {
+    IconButton(onClick = onClick) {
         RobohashFallbackAsyncImage(
             robot = accountViewModel.userProfile().pubkeyHex,
             model = profilePicture,
