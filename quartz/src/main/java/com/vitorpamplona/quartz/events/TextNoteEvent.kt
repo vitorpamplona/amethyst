@@ -100,8 +100,11 @@ class TextNoteEvent(
                     )
                 }
             findHashtags(msg).forEach {
+                val lowercaseTag = it.lowercase()
                 tags.add(arrayOf("t", it))
-                tags.add(arrayOf("t", it.lowercase()))
+                if (it != lowercaseTag) {
+                    tags.add(arrayOf("t", it.lowercase()))
+                }
             }
             extraTags?.forEach { tags.add(arrayOf("t", it)) }
             zapReceiver?.forEach {
