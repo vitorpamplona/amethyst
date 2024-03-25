@@ -1115,6 +1115,11 @@ open class NewPostViewModel() : ViewModel() {
         } else {
             nip24 = !nip24
         }
+        if (message.text.isNotBlank()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                saveDraft()
+            }
+        }
     }
 
     fun updateMinZapAmountForPoll(textMin: String) {
