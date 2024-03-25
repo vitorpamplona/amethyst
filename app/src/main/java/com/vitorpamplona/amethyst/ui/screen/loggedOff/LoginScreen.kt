@@ -89,6 +89,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
@@ -245,7 +247,7 @@ fun LoginPage(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Image(
-            painterResource(id = R.drawable.amethyst),
+            imageVector = CustomHashTagIcons.Amethyst,
             contentDescription = stringResource(R.string.app_logo),
             modifier = Modifier.size(150.dp),
             contentScale = ContentScale.Inside,

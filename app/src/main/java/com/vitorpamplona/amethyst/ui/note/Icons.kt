@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
+import Following
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -63,6 +64,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -72,11 +74,12 @@ import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleButton
+import kotlin.time.measureTimedValue
 
 @Composable
 fun AmethystIcon(iconSize: Dp) {
     Icon(
-        painter = painterResource(R.drawable.amethyst),
+        imageVector = CustomHashTagIcons.Amethyst,
         contentDescription = stringResource(id = R.string.app_logo),
         modifier = Modifier.size(iconSize),
         tint = Color.Unspecified,
@@ -85,12 +88,16 @@ fun AmethystIcon(iconSize: Dp) {
 
 @Composable
 fun FollowingIcon(iconSize: Dp) {
-    Icon(
-        painter = painterResource(R.drawable.following),
-        contentDescription = stringResource(id = R.string.following),
-        modifier = Modifier.size(iconSize),
-        tint = Color.Unspecified,
-    )
+    val (value, elapsed) =
+        measureTimedValue {
+            Icon(
+                imageVector = Following,
+                contentDescription = stringResource(id = R.string.following),
+                modifier = Modifier.size(iconSize),
+                tint = Color.Unspecified,
+            )
+        }
+    println("FollowingIcon $elapsed")
 }
 
 @Composable
