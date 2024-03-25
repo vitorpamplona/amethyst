@@ -205,9 +205,6 @@ dependencies {
     // Websockets API
     implementation libs.okhttp
 
-    // HTML Parsing for Link Preview
-    implementation libs.jsoup
-
     // Encrypted Key Storage
     implementation libs.androidx.security.crypto.ktx
 
