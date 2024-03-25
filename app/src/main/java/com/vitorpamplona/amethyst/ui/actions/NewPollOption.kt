@@ -34,8 +34,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun NewPollOption(
@@ -45,7 +48,12 @@ fun NewPollOption(
     Row {
         val deleteIcon: @Composable (() -> Unit) = {
             IconButton(
-                onClick = { pollViewModel.pollOptions.remove(optionIndex) },
+                onClick = {
+                    pollViewModel.pollOptions.remove(optionIndex)
+                    pollViewModel.viewModelScope.launch(Dispatchers.IO) {
+                        pollViewModel.saveDraft()
+                    }
+                },
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
@@ -57,7 +65,12 @@ fun NewPollOption(
         OutlinedTextField(
             modifier = Modifier.weight(1F),
             value = pollViewModel.pollOptions[optionIndex] ?: "",
-            onValueChange = { pollViewModel.pollOptions[optionIndex] = it },
+            onValueChange = {
+                pollViewModel.pollOptions[optionIndex] = it
+                pollViewModel.viewModelScope.launch(Dispatchers.IO) {
+                    pollViewModel.saveDraft()
+                }
+            },
             label = {
                 Text(
                     text = stringResource(R.string.poll_option_index).format(optionIndex + 1),

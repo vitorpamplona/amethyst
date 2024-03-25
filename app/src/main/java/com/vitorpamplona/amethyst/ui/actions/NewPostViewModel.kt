@@ -1134,6 +1134,9 @@ open class NewPostViewModel() : ViewModel() {
         }
 
         checkMinMax()
+        viewModelScope.launch(Dispatchers.IO) {
+            saveDraft()
+        }
     }
 
     fun updateMaxZapAmountForPoll(textMax: String) {
@@ -1153,6 +1156,9 @@ open class NewPostViewModel() : ViewModel() {
         }
 
         checkMinMax()
+        viewModelScope.launch(Dispatchers.IO) {
+            saveDraft()
+        }
     }
 
     fun checkMinMax() {
