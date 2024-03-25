@@ -25,6 +25,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +42,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
@@ -106,8 +108,8 @@ fun UrlPreviewCard(
         AsyncImage(
             model = previewInfo.imageUrlFullPath,
             contentDescription = stringResource(R.string.preview_card_image_for, previewInfo.url),
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier.fillMaxWidth(),
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp),
         )
 
         Spacer(modifier = StdVertSpacer)
