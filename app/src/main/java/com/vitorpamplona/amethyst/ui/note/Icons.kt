@@ -144,11 +144,6 @@ fun HashCheckFailedIcon(iconSize: Dp) {
 }
 
 @Composable
-fun LikedIcon(iconSize: Dp) {
-    LikedIcon(modifier = remember(iconSize) { Modifier.size(iconSize) })
-}
-
-@Composable
 fun LikedIcon(modifier: Modifier) {
     Icon(
         painter = painterResource(R.drawable.ic_liked),

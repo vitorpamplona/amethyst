@@ -75,8 +75,8 @@ import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifierSmaller
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size18dp
 import com.vitorpamplona.amethyst.ui.theme.Size19dp
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -222,7 +222,7 @@ fun RenderLikeGallery(
                     )
                 } else {
                     when (val shortReaction = reactionType) {
-                        "+" -> LikedIcon(modifier.size(Size18dp))
+                        "+" -> LikedIcon(modifier.size(Size19dp))
                         "-" -> Text(text = "\uD83D\uDC4E", modifier = modifier)
                         else -> Text(text = shortReaction, modifier = modifier)
                     }
@@ -267,7 +267,7 @@ fun RenderBoostGallery(
             modifier = NotificationIconModifierSmaller,
         ) {
             RepostedIcon(
-                modifier = remember { Modifier.size(Size19dp).align(Alignment.TopEnd) },
+                modifier = remember { Modifier.size(Size20dp).align(Alignment.TopEnd) },
             )
         }
 
@@ -288,7 +288,7 @@ fun RenderBoostGallery(
             modifier = NotificationIconModifierSmaller,
         ) {
             RepostedIcon(
-                modifier = remember { Modifier.size(Size19dp).align(Alignment.TopEnd) },
+                modifier = remember { Modifier.size(Size20dp).align(Alignment.TopEnd) },
             )
         }
 
