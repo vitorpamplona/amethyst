@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -494,13 +493,11 @@ private fun BoxedAuthor(
     accountViewModel: AccountViewModel,
 ) {
     Box(modifier = Size35Modifier.clickable(onClick = { nav(authorRouteFor(note)) })) {
-        WatchNoteAuthor(note) { targetAuthor ->
-            Crossfade(targetState = targetAuthor, modifier = Size35Modifier) { author ->
-                WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
-                    author,
-                    accountViewModel,
-                )
-            }
+        WatchAuthorWithBlank(note, Size35Modifier) { author ->
+            WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
+                author,
+                accountViewModel,
+            )
         }
     }
 }
@@ -544,16 +541,6 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
         }
         // }
     }
-}
-
-@Composable
-private fun WatchNoteAuthor(
-    baseNote: Note,
-    onContent: @Composable (User?) -> Unit,
-) {
-    val author by baseNote.live().authorChanges.observeAsState(baseNote.author)
-
-    onContent(author)
 }
 
 @Composable

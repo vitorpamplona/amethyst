@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
+import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.authorNotePictureForImageHeader
@@ -47,14 +48,12 @@ fun DefaultImageHeader(
     note: Note,
     accountViewModel: AccountViewModel,
 ) {
-    val authorState by note.live().authorChanges.observeAsState(note.author)
-
-    authorState?.let { author ->
+    WatchAuthor(baseNote = note) {
         Box {
-            BannerImage(author)
+            BannerImage(it)
 
             Box(authorNotePictureForImageHeader.align(Alignment.BottomStart)) {
-                BaseUserPicture(author, Size55dp, accountViewModel, Modifier)
+                BaseUserPicture(it, Size55dp, accountViewModel, Modifier)
             }
         }
     }

@@ -965,8 +965,6 @@ class NoteLiveSet(u: Note) {
     val relays = innerRelays.map { it }
     val zaps = innerZaps.map { it }
 
-    val authorChanges = innerMetadata.map { it.note.author }.distinctUntilChanged()
-
     val hasEvent = innerMetadata.map { it.note.event != null }.distinctUntilChanged()
 
     val hasReactions =
@@ -1004,7 +1002,6 @@ class NoteLiveSet(u: Note) {
             reports.hasObservers() ||
             relays.hasObservers() ||
             zaps.hasObservers() ||
-            authorChanges.hasObservers() ||
             hasEvent.hasObservers() ||
             hasReactions.hasObservers() ||
             replyCount.hasObservers() ||

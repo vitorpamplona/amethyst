@@ -853,9 +853,7 @@ fun Gallery(
 
 @Composable
 fun DisplayAuthorBanner(note: Note) {
-    val authorState by note.live().authorChanges.observeAsState(note.author)
-
-    authorState?.let { author ->
-        BannerImage(author, Modifier.fillMaxSize().clip(QuoteBorder))
+    WatchAuthor(note) {
+        BannerImage(it, Modifier.fillMaxSize().clip(QuoteBorder))
     }
 }
