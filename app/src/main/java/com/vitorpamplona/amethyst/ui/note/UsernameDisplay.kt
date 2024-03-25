@@ -49,11 +49,10 @@ import com.vitorpamplona.quartz.events.ImmutableListOfLists
 fun NoteUsernameDisplay(
     baseNote: Note,
     weight: Modifier = Modifier,
-    showPlayButton: Boolean = true,
     textColor: Color = Color.Unspecified,
 ) {
     WatchAuthor(baseNote) {
-        UsernameDisplay(it, weight, showPlayButton, textColor = textColor)
+        UsernameDisplay(it, weight, textColor = textColor)
     }
 }
 
@@ -96,7 +95,6 @@ fun WatchAuthorWithBlank(
 fun UsernameDisplay(
     baseUser: User,
     weight: Modifier = Modifier,
-    showPlayButton: Boolean = true,
     fontWeight: FontWeight = FontWeight.Bold,
     textColor: Color = Color.Unspecified,
 ) {
@@ -105,7 +103,7 @@ fun UsernameDisplay(
     Crossfade(targetState = userMetadata, modifier = weight, label = "UsernameDisplay") {
         val name = it?.bestName()
         if (name != null) {
-            UserDisplay(name, it.tags, weight, showPlayButton, fontWeight, textColor)
+            UserDisplay(name, it.tags, weight, fontWeight, textColor)
         } else {
             NPubDisplay(baseUser, weight, fontWeight, textColor)
         }
@@ -134,7 +132,6 @@ private fun UserDisplay(
     bestDisplayName: String,
     tags: ImmutableListOfLists<String>?,
     modifier: Modifier,
-    showPlayButton: Boolean = true,
     fontWeight: FontWeight = FontWeight.Bold,
     textColor: Color = Color.Unspecified,
 ) {

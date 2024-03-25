@@ -1100,7 +1100,7 @@ fun FowardZapTo(
                 Spacer(modifier = DoubleHorzSpacer)
 
                 Column(modifier = Modifier.weight(1f)) {
-                    UsernameDisplay(splitItem.key, showPlayButton = false)
+                    UsernameDisplay(splitItem.key)
                     Text(
                         text = String.format("%.0f%%", splitItem.percentage * 100),
                         maxLines = 1,

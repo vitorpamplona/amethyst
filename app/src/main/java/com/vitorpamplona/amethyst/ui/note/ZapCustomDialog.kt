@@ -388,7 +388,7 @@ fun PayViaIntentDialog(
 
                             Column(modifier = Modifier.weight(1f)) {
                                 if (it.user != null) {
-                                    UsernameDisplay(it.user, showPlayButton = false)
+                                    UsernameDisplay(it.user)
                                 } else {
                                     Text(
                                         text = stringResource(id = R.string.wallet_number, index + 1),
