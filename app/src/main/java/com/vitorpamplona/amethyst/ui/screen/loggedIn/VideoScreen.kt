@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size39Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.VideoReactionColumnPadding
 import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.FileHeaderEvent
@@ -462,7 +463,7 @@ fun ReactionsColumn(
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(bottom = 75.dp, end = 10.dp),
+        modifier = VideoReactionColumnPadding,
     ) {
         ReplyReaction(
             baseNote = baseNote,
@@ -495,7 +496,7 @@ fun ReactionsColumn(
             nav = nav,
             iconSize = Size40dp,
             heartSizeModifier = Size35Modifier,
-            28.sp,
+            iconFontSize = 28.sp,
         )
         ZapReaction(
             baseNote = baseNote,

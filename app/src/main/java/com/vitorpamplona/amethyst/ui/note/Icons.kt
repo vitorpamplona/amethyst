@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -204,6 +205,18 @@ fun ZappedIcon(iconSize: Dp) {
 @Composable
 fun ZappedIcon(modifier: Modifier) {
     ZapIcon(modifier = modifier, BitcoinOrange)
+}
+
+@Preview
+@Composable
+fun ReactionRowIconPreview() {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        CommentIcon(Size20Modifier, Color.Unspecified)
+        RepostedIcon(Size20Modifier)
+        LikeIcon(Size20Modifier, Color.Unspecified)
+        ZapIcon(Size20Modifier)
+        ZappedIcon(Size20Modifier)
+    }
 }
 
 @Composable
