@@ -32,12 +32,8 @@ import okhttp3.ResponseBody
 import okio.BufferedSource
 import okio.ByteString.Companion.decodeHex
 import okio.Options
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import java.io.ByteArrayInputStream
 import java.nio.charset.Charset
 
-private const val ELEMENT_TAG_META = "meta"
 private const val ATTRIBUTE_VALUE_PROPERTY = "property"
 private const val ATTRIBUTE_VALUE_NAME = "name"
 private const val ATTRIBUTE_VALUE_ITEMPROP = "itemprop"
@@ -112,15 +108,15 @@ suspend fun parseHtml(
         // sniff charset from Content-Type header or BOM
         val sniffedCharset = type.charset() ?: source.readBomAsCharset()
         if (sniffedCharset != null) {
-            val doc = Jsoup.parse(source.inputStream(), sniffedCharset.name(), url)
-            return@withContext parseUrlInfo(url, doc, type)
+            val metaTags = MetaTagsParser.parse(source.readByteArray().toString(sniffedCharset).headTagContents())
+            return@withContext parseUrlInfo(url, metaTags, type)
         }
 
         // if sniffing was failed, detect charset from content
         val bodyBytes = source.readByteArray()
         val charset = detectCharset(bodyBytes)
-        val doc = Jsoup.parse(ByteArrayInputStream(bodyBytes), charset.name(), url)
-        return@withContext parseUrlInfo(url, doc, type)
+        val metaTags = MetaTagsParser.parse(bodyBytes.toString(charset).headTagContents())
+        return@withContext parseUrlInfo(url, metaTags, type)
     }
 
 // taken from okhttp
@@ -178,11 +174,9 @@ private fun detectCharset(bodyBytes: ByteArray): Charset {
 
 private fun parseUrlInfo(
     url: String,
-    document: Document,
+    metaTags: Sequence<MetaTag>,
     type: MediaType,
 ): UrlInfoItem {
-    val metaTags = document.getElementsByTag(ELEMENT_TAG_META)
-
     var title: String = ""
     var description: String = ""
     var image: String = ""
@@ -246,14 +240,57 @@ private fun parseUrlInfo(
     return UrlInfoItem(url, title, description, image, type)
 }
 
+// HTML parsing stuff
+private val RE_HEAD = Regex("""<head\s*>(.*?)</head\s*>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+
+private fun String.headTagContents(): String = RE_HEAD.find(this)?.groupValues?.get(1) ?: ""
+
 private class MetaTag(private val attrs: Map<String, String>) {
     fun attr(name: String): String = attrs[name.lowercase()] ?: ""
 }
 
-// map of HTML element attribute name to its value, with some guarantees:
-// - attribute names are compared in a case-insensitive manner
+// map of HTML element attribute name to its value, with additional logics:
+// - attribute names are matched in a case-insensitive manner
 // - attribute names never duplicate
+// - commonly used character references in attribute values are resolved
 private class Attrs {
+    companion object {
+        val RE_CHAR_REF = Regex("""&(\w+)(;?)""")
+        val BASE_CHAR_REFS =
+            mapOf(
+                "amp" to "&",
+                "AMP" to "&",
+                "quot" to "\"",
+                "QUOT" to "\"",
+                "lt" to "<",
+                "LT" to "<",
+                "gt" to ">",
+                "GT" to ">",
+            )
+        val CHAR_REFS =
+            mapOf(
+                "apos" to "'",
+                "equals" to "=",
+                "grave" to "`",
+                "DiacriticalGrave" to "`",
+            )
+
+        fun replaceCharRefs(match: MatchResult): String {
+            val bcr = BASE_CHAR_REFS[match.groupValues[1]]
+            if (bcr != null) {
+                return bcr
+            }
+            // non-base char refs must be terminated by ';'
+            if (match.groupValues[2].isNotEmpty()) {
+                val cr = CHAR_REFS[match.groupValues[1]]
+                if (cr != null) {
+                    return cr
+                }
+            }
+            return match.value
+        }
+    }
+
     private val attrs = mutableMapOf<String, String>()
 
     fun add(attr: Pair<String, String>) {
@@ -261,7 +298,8 @@ private class Attrs {
         if (attrs.containsKey(name)) {
             throw IllegalArgumentException("duplicated attribute name: $name")
         }
-        attrs += Pair(name, attr.second)
+        val value = attr.second.replace(RE_CHAR_REF, Attrs::replaceCharRefs)
+        attrs += Pair(name, value)
     }
 
     fun freeze(): Map<String, String> = attrs.toImmutableMap()
@@ -275,8 +313,8 @@ private object MetaTagsParser {
     private val NON_UNQUOTED_ATTR_VALUE_CHARS = setOf('"', '\'', '=', '>', '<', '`')
 
     fun parse(input: String): Sequence<MetaTag> =
-        RE_META.findAll(input).map {
-            MetaTag(parseAttrs(it.groupValues[1]))
+        RE_META.findAll(input).mapNotNull {
+            runCatching { MetaTag(parseAttrs(it.groupValues[1])) }.getOrNull()
         }
 
     private enum class State {
