@@ -208,7 +208,7 @@ class Account(
     val saveable: AccountLiveData = AccountLiveData(this)
 
     @Immutable
-    data class LiveFollowLists(
+    class LiveFollowLists(
         val users: ImmutableSet<String> = persistentSetOf(),
         val hashtags: ImmutableSet<String> = persistentSetOf(),
         val geotags: ImmutableSet<String> = persistentSetOf(),

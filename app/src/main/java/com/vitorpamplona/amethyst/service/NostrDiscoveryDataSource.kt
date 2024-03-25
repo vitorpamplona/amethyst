@@ -178,9 +178,8 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                 filter =
                     JsonFilter(
                         authors = follows,
-                        kinds =
-                            listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND, ChannelMessageEvent.KIND),
-                        limit = 300,
+                        kinds = listOf(ChannelMessageEvent.KIND),
+                        limit = 500,
                         since =
                             latestEOSEs.users[account.userProfile()]
                                 ?.followList
@@ -194,7 +193,7 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                     filter =
                         JsonFilter(
                             ids = followChats,
-                            kinds = listOf(ChannelCreateEvent.KIND),
+                            kinds = listOf(ChannelCreateEvent.KIND, ChannelMessageEvent.KIND),
                             limit = 300,
                             since =
                                 latestEOSEs.users[account.userProfile()]
