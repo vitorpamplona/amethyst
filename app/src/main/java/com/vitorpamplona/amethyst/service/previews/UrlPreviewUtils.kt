@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.previews
 
 import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType
@@ -34,15 +35,14 @@ import okio.Options
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.io.ByteArrayInputStream
-import java.io.IOException
 import java.nio.charset.Charset
 
 private const val ELEMENT_TAG_META = "meta"
-private const val ATTRIBUTE_VALUE_CHARSET = "charset"
-private const val ATTRIBUTE_VALUE_HTTP_EQUIV = "http-equiv"
 private const val ATTRIBUTE_VALUE_PROPERTY = "property"
 private const val ATTRIBUTE_VALUE_NAME = "name"
 private const val ATTRIBUTE_VALUE_ITEMPROP = "itemprop"
+private const val ATTRIBUTE_VALUE_CHARSET = "charset"
+private const val ATTRIBUTE_VALUE_HTTP_EQUIV = "http-equiv"
 
 // for <meta itemprop=... to get title
 private val META_X_TITLE =
@@ -104,9 +104,9 @@ suspend fun getDocument(
             checkNotInMainThread()
             if (it.isSuccessful) {
                 val mimeType =
-                    it.headers.get("Content-Type")?.toMediaType()
+                    it.headers["Content-Type"]?.toMediaType()
                         ?: throw IllegalArgumentException(
-                            "Website returned unknown mimetype: ${it.headers.get("Content-Type")}",
+                            "Website returned unknown mimetype: ${it.headers["Content-Type"]}",
                         )
                 if (mimeType.type == "text" && mimeType.subtype == "html") {
                     parseHtml(url, it.body, mimeType)
@@ -142,11 +142,12 @@ suspend fun parseHtml(
 
         // if sniffing was failed, detect charset from content
         val bodyBytes = source.readByteArray()
-        val charset = detectCharset(bodyBytes, url)
+        val charset = detectCharset(bodyBytes)
         val doc = Jsoup.parse(ByteArrayInputStream(bodyBytes), charset.name(), url)
         return@withContext parseUrlInfo(url, doc, type)
     }
 
+// taken from okhttp
 private val UNICODE_BOMS =
     Options.of(
         // UTF-8
@@ -161,7 +162,6 @@ private val UNICODE_BOMS =
         "ffff0000".decodeHex(),
     )
 
-@Throws(IOException::class)
 private fun BufferedSource.readBomAsCharset(): Charset? {
     return when (select(UNICODE_BOMS)) {
         0 -> Charsets.UTF_8
@@ -174,16 +174,13 @@ private fun BufferedSource.readBomAsCharset(): Charset? {
     }
 }
 
-private val RE_CONTENT_TYPE_CHARSET = Regex("""charset\s*=\s*([^;]+)""")
+private val RE_CONTENT_TYPE_CHARSET = Regex("""charset=([^;]+)""")
 
-private fun detectCharset(
-    bodyBytes: ByteArray,
-    url: String,
-): Charset {
-    // tentatively decode response body as UTF-8
-    val tentativeDoc = Jsoup.parse(ByteArrayInputStream(bodyBytes), "utf-8", url)
-
-    tentativeDoc.getElementsByTag(ELEMENT_TAG_META).forEach { meta ->
+private fun detectCharset(bodyBytes: ByteArray): Charset {
+    // try to detect charset from meta tags parsed from first 1024 bytes of body
+    val firstPart = String(bodyBytes, 0, 1024, Charset.forName("utf-8"))
+    val metaTags = runCatching { MetaTagsParser.parse(firstPart) }.getOrDefault(emptySequence())
+    metaTags.forEach { meta ->
         val charsetAttr = meta.attr(ATTRIBUTE_VALUE_CHARSET)
         if (charsetAttr.isNotEmpty()) {
             runCatching { Charset.forName(charsetAttr) }.getOrNull()?.let {
@@ -199,6 +196,7 @@ private fun detectCharset(
                 }
         }
     }
+    // defaults to UTF-8
     return Charset.forName("utf-8")
 }
 
@@ -270,4 +268,157 @@ private fun parseUrlInfo(
         }
     }
     return UrlInfoItem(url, title, description, image, type)
+}
+
+private class MetaTag(private val attrs: Map<String, String>) {
+    fun attr(name: String): String = attrs[name.lowercase()] ?: ""
+}
+
+// map of HTML element attribute name to its value, with some guarantees:
+// - attribute names are compared in a case-insensitive manner
+// - attribute names never duplicate
+private class Attrs {
+    private val attrs = mutableMapOf<String, String>()
+
+    fun add(attr: Pair<String, String>) {
+        val name = attr.first.lowercase()
+        if (attrs.containsKey(name)) {
+            throw IllegalArgumentException("duplicated attribute name: $name")
+        }
+        attrs += Pair(name, attr.second)
+    }
+
+    fun freeze(): Map<String, String> = attrs.toImmutableMap()
+}
+
+// parser for parsing a partial HTML document into meta tags
+private object MetaTagsParser {
+    private val RE_META = Regex("""<meta\s+(.+?)\s*>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+
+    private val NON_ATTR_NAME_CHARS = setOf(Char(0x0), '"', '\'', '>', '/')
+    private val NON_UNQUOTED_ATTR_VALUE_CHARS = setOf('"', '\'', '=', '>', '<', '`')
+
+    fun parse(input: String): Sequence<MetaTag> =
+        RE_META.findAll(input).map {
+            MetaTag(parseAttrs(it.groupValues[1]))
+        }
+
+    private enum class State {
+        NAME,
+        BEFORE_EQ,
+        AFTER_EQ,
+        VALUE,
+        SPACE,
+    }
+
+    private fun parseAttrs(input: String): Map<String, String> {
+        val attrs = Attrs()
+
+        var state = State.NAME
+        var nameBegin = 0
+        var nameEnd = 0
+        var valueBegin = 0
+        var valueQuote: Char? = null
+
+        input.forEachIndexed { i, c ->
+            when (state) {
+                State.NAME -> {
+                    when {
+                        c == '=' -> {
+                            nameEnd = i
+                            state = State.AFTER_EQ
+                        }
+
+                        c.isWhitespace() -> {
+                            nameEnd = i
+                            state = State.BEFORE_EQ
+                        }
+
+                        NON_ATTR_NAME_CHARS.contains(c) || c.isISOControl() || !c.isDefined() -> {
+                            throw IllegalArgumentException("meta has invalid attributes part")
+                        }
+                    }
+                }
+
+                State.BEFORE_EQ -> {
+                    when {
+                        c == '=' -> {
+                            state = State.AFTER_EQ
+                        }
+
+                        c.isWhitespace() -> {}
+                        else -> throw IllegalArgumentException("meta has invalid attributes part")
+                    }
+                }
+
+                State.AFTER_EQ -> {
+                    when {
+                        c.isWhitespace() -> {}
+                        c == '\'' || c == '"' -> {
+                            valueBegin = i + 1
+                            valueQuote = c
+                            state = State.VALUE
+                        }
+
+                        else -> {
+                            valueBegin = i
+                            valueQuote = null
+                            state = State.VALUE
+                        }
+                    }
+                }
+
+                State.VALUE -> {
+                    var attr: Pair<String, String>? = null
+                    when {
+                        valueQuote != null -> {
+                            if (c == valueQuote) {
+                                attr =
+                                    Pair(
+                                        input.slice(nameBegin until nameEnd),
+                                        input.slice(valueBegin until i),
+                                    )
+                            }
+                        }
+
+                        valueQuote == null -> {
+                            when {
+                                c.isWhitespace() -> {
+                                    attr =
+                                        Pair(
+                                            input.slice(nameBegin until nameEnd),
+                                            input.slice(valueBegin until i),
+                                        )
+                                }
+
+                                i == input.length - 1 -> {
+                                    attr =
+                                        Pair(
+                                            input.slice(nameBegin until nameEnd),
+                                            input.slice(valueBegin..i),
+                                        )
+                                }
+
+                                NON_UNQUOTED_ATTR_VALUE_CHARS.contains(c) -> {
+                                    throw IllegalArgumentException("meta has invalid attributes part")
+                                }
+                            }
+                        }
+                    }
+                    if (attr != null) {
+                        attrs.add(attr)
+                        state = State.SPACE
+                    }
+                }
+
+                State.SPACE -> {
+                    if (!c.isWhitespace()) {
+                        nameBegin = i
+                        state = State.NAME
+                    }
+                }
+            }
+        }
+        return attrs.freeze()
+    }
 }
