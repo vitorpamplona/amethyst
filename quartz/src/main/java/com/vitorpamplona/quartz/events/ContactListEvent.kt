@@ -403,6 +403,7 @@ class UserMetadata {
     var banner: String? = null
     var website: String? = null
     var about: String? = null
+    var bot: Boolean? = null
 
     var nip05: String? = null
     var nip05Verified: Boolean = false
