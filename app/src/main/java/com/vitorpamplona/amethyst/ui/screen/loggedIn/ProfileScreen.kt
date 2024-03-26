@@ -180,6 +180,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 
 @Composable
@@ -1245,7 +1246,7 @@ private fun WatchApp(
     var appLogo by remember(baseApp) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = appState) {
-        launch(Dispatchers.Default) {
+        withContext(Dispatchers.Default) {
             val newAppLogo =
                 (appState?.note?.event as? AppDefinitionEvent)?.appMetaData()?.picture?.ifBlank { null }
             if (newAppLogo != appLogo) {

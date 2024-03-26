@@ -74,7 +74,7 @@ import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -88,7 +88,7 @@ fun RenderAppDefinition(
     var metadata by remember { mutableStateOf<UserMetadata?>(null) }
 
     LaunchedEffect(key1 = noteEvent) {
-        launch(Dispatchers.Default) { metadata = noteEvent.appMetaData() }
+        withContext(Dispatchers.Default) { metadata = noteEvent.appMetaData() }
     }
 
     metadata?.let {
