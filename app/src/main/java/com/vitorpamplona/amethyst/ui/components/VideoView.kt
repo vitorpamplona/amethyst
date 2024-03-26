@@ -408,7 +408,7 @@ fun GetVideoController(
     val keepPlaying =
         remember(videoUri) {
             mutableStateOf<Boolean>(
-                keepPlayingMutex != null && controller == keepPlayingMutex,
+                keepPlayingMutex != null && controller.value == keepPlayingMutex,
             )
         }
 
