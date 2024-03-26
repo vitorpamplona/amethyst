@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.crypto.CryptoUtils
 object TimeUtils {
     const val ONE_MINUTE = 60
     const val FIVE_MINUTES = 5 * ONE_MINUTE
+    const val FIFTEEN_MINUTES = 15 * ONE_MINUTE
     const val ONE_HOUR = 60 * ONE_MINUTE
     const val EIGHT_HOURS = 8 * ONE_HOUR
     const val ONE_DAY = 24 * ONE_HOUR
@@ -39,6 +40,8 @@ object TimeUtils {
     fun oneMinuteAgo() = now() - ONE_MINUTE
 
     fun fiveMinutesAgo() = now() - FIVE_MINUTES
+
+    fun fifteenMinutesAgo() = now() - FIFTEEN_MINUTES
 
     fun oneHourAgo() = now() - ONE_HOUR
 

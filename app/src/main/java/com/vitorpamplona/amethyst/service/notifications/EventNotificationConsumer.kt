@@ -108,7 +108,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         acc: Account,
     ) {
         if (
-            event.createdAt > TimeUtils.fiveMinutesAgo() && // old event being re-broadcasted
+            event.createdAt > TimeUtils.fifteenMinutesAgo() && // old event being re-broadcasted
             event.pubKey != acc.userProfile().pubkeyHex
         ) { // from the user
 
@@ -148,7 +148,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         val note = LocalCache.getNoteIfExists(event.id) ?: return
 
         // old event being re-broadcast
-        if (event.createdAt < TimeUtils.fiveMinutesAgo()) return
+        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
 
         if (acc.userProfile().pubkeyHex == event.verifiedRecipientPubKey()) {
             val followingKeySet = acc.followingKeySet()
@@ -187,7 +187,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         val noteZapEvent = LocalCache.getNoteIfExists(event.id) ?: return
 
         // old event being re-broadcast
-        if (event.createdAt < TimeUtils.fiveMinutesAgo()) return
+        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
 
         val noteZapRequest = event.zapRequest?.id?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
         val noteZapped =
@@ -195,7 +195,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
 
         if ((event.amount ?: BigDecimal.ZERO) < BigDecimal.TEN) return
 
-        if (acc.userProfile().pubkeyHex == event.zappedAuthor().firstOrNull()) {
+        if (event.isTaggedUser(acc.userProfile().pubkeyHex)) {
             val amount = showAmount(event.amount)
             (noteZapRequest.event as? LnZapRequestEvent)?.let { event ->
                 acc.decryptZapContentAuthor(noteZapRequest) {
