@@ -45,7 +45,7 @@ data class ResultOrError(
 )
 
 object LanguageTranslatorService {
-    var executorService = Executors.newScheduledThreadPool(5)
+    var executorService = Executors.newCachedThreadPool()
 
     private val options =
         LanguageIdentificationOptions.Builder()
