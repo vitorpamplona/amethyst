@@ -35,6 +35,17 @@ fun <K, V> produceCachedState(
     }
 }
 
+@Composable
+fun <K, V> produceCachedState(
+    cache: CachedState<K, V>,
+    key: String,
+    updateValue: K,
+): State<V?> {
+    return produceState(initialValue = cache.cached(updateValue), key1 = key) {
+        value = cache.update(updateValue)
+    }
+}
+
 interface CachedState<K, V> {
     fun cached(k: K): V?
 
