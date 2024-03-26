@@ -168,7 +168,11 @@ class PrivateDmEvent(
             tags.add(arrayOf("alt", ALT))
 
             signer.nip04Encrypt(message, recipientPubKey) { content ->
-                signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady, isDraft)
+                if (isDraft) {
+                    signer.assembleRumor(createdAt, KIND, tags.toTypedArray(), content, onReady)
+                } else {
+                    signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+                }
             }
         }
     }

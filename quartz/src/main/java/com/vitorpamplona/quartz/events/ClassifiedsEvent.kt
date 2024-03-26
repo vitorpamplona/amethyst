@@ -193,7 +193,11 @@ class ClassifiedsEvent(
             }
             tags.add(arrayOf("alt", ALT))
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), message, onReady, isDraft)
+            if (isDraft) {
+                signer.assembleRumor(createdAt, KIND, tags.toTypedArray(), message, onReady)
+            } else {
+                signer.sign(createdAt, KIND, tags.toTypedArray(), message, onReady)
+            }
         }
     }
 }

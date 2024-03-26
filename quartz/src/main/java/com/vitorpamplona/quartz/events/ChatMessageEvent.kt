@@ -107,7 +107,11 @@ class ChatMessageEvent(
             }
             // tags.add(arrayOf("alt", alt))
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady, isDraft)
+            if (isDraft) {
+                signer.assembleRumor(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+            } else {
+                signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+            }
         }
     }
 }

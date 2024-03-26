@@ -125,7 +125,11 @@ class TextNoteEvent(
                 }
             }
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady, isDraft)
+            if (isDraft) {
+                signer.assembleRumor(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+            } else {
+                signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+            }
         }
     }
 }

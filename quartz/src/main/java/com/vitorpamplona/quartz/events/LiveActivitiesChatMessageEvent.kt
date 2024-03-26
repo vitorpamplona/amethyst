@@ -99,7 +99,11 @@ class LiveActivitiesChatMessageEvent(
             }
             tags.add(arrayOf("alt", ALT))
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady, isDraft)
+            if (isDraft) {
+                signer.assembleRumor(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            } else {
+                signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            }
         }
     }
 }

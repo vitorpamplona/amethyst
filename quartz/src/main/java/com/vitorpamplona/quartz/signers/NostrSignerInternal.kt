@@ -38,14 +38,8 @@ class NostrSignerInternal(val keyPair: KeyPair) : NostrSigner(keyPair.pubKey.toH
         tags: Array<Array<String>>,
         content: String,
         onReady: (T) -> Unit,
-        isDraft: Boolean,
     ) {
         if (keyPair.privKey == null) return
-
-        if (isDraft) {
-            unsignedEvent(createdAt, kind, tags, content, onReady)
-            return
-        }
 
         if (isUnsignedPrivateEvent(kind, tags)) {
             // this is a private zap
@@ -84,30 +78,6 @@ class NostrSignerInternal(val keyPair: KeyPair) : NostrSigner(keyPair.pubKey.toH
                 tags,
                 content,
                 sig,
-            ) as T,
-        )
-    }
-
-    fun <T : Event> unsignedEvent(
-        createdAt: Long,
-        kind: Int,
-        tags: Array<Array<String>>,
-        content: String,
-        onReady: (T) -> Unit,
-    ) {
-        if (keyPair.privKey == null) return
-
-        val id = Event.generateId(pubKey, createdAt, kind, tags, content)
-
-        onReady(
-            EventFactory.create(
-                id.toHexKey(),
-                pubKey,
-                createdAt,
-                kind,
-                tags,
-                content,
-                "",
             ) as T,
         )
     }
