@@ -60,6 +60,7 @@ class TextNoteEvent(
             forkedFrom: Event? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
+            isDraft: Boolean,
             onReady: (TextNoteEvent) -> Unit,
         ) {
             val tags = mutableListOf<Array<String>>()
@@ -124,7 +125,7 @@ class TextNoteEvent(
                 }
             }
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady, isDraft)
         }
     }
 }

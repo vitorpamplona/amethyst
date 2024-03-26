@@ -80,6 +80,7 @@ class PollNoteEvent(
             zapRaiserAmount: Long?,
             geohash: String? = null,
             nip94attachments: List<FileHeaderEvent>? = null,
+            isDraft: Boolean,
             onReady: (PollNoteEvent) -> Unit,
         ) {
             val tags = mutableListOf<Array<String>>()
@@ -112,7 +113,7 @@ class PollNoteEvent(
             }
             tags.add(arrayOf("alt", ALT))
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady, isDraft)
         }
     }
 }

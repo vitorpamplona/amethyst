@@ -184,6 +184,13 @@ open class Note(val idHex: String) {
 
     open fun createdAt() = event?.createdAt()
 
+    fun isDraft(): Boolean {
+        event?.let {
+            return it.sig().isBlank()
+        }
+        return false
+    }
+
     fun loadEvent(
         event: Event,
         author: User,

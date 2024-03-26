@@ -52,6 +52,7 @@ fun WatchNoteEvent(
                 LongPressToQuickAction(
                     baseNote = baseNote,
                     accountViewModel = accountViewModel,
+                    newPostViewModel = null,
                 ) { showPopup ->
                     BlankNote(
                         remember {

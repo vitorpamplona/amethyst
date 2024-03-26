@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.BlankNote
+import com.vitorpamplona.amethyst.ui.note.DisplayDraft
 import com.vitorpamplona.amethyst.ui.note.DisplayOtsIfInOriginal
 import com.vitorpamplona.amethyst.ui.note.HiddenNote
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -446,6 +447,10 @@ fun NoteMaster(
                             DisplayPoW(pow)
                         }
 
+                        if (note.isDraft()) {
+                            DisplayDraft()
+                        }
+
                         DisplayOtsIfInOriginal(note, editState, accountViewModel)
                     }
                 }
@@ -605,7 +610,7 @@ fun NoteMaster(
             ReactionsRow(note, true, editState, accountViewModel, nav)
         }
 
-        NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
+        NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel, null)
     }
 }
 

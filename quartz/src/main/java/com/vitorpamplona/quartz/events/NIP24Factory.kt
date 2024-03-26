@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.events
 
-import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 
@@ -78,6 +77,7 @@ class NIP24Factory {
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
+        draftTag: String? = null,
         onReady: (Result) -> Unit,
     ) {
         val senderPublicKey = signer.pubKey
@@ -93,15 +93,25 @@ class NIP24Factory {
             markAsSensitive = markAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
+            isDraft = draftTag != null,
             nip94attachments = nip94attachments,
         ) { senderMessage ->
-            createWraps(senderMessage, to.plus(senderPublicKey).toSet(), signer) { wraps ->
+            if (draftTag != null) {
                 onReady(
                     Result(
                         msg = senderMessage,
-                        wraps = wraps,
+                        wraps = listOf(),
                     ),
                 )
+            } else {
+                createWraps(senderMessage, to.plus(senderPublicKey).toSet(), signer) { wraps ->
+                    onReady(
+                        Result(
+                            msg = senderMessage,
+                            wraps = wraps,
+                        ),
+                    )
+                }
             }
         }
     }
@@ -149,51 +159,6 @@ class NIP24Factory {
                 onReady(
                     Result(
                         msg = senderReaction,
-                        wraps = wraps,
-                    ),
-                )
-            }
-        }
-    }
-
-    fun createTextNoteNIP24(
-        msg: String,
-        to: List<HexKey>,
-        signer: NostrSigner,
-        replyTos: List<String>? = null,
-        mentions: List<String>? = null,
-        addresses: List<ATag>?,
-        extraTags: List<String>?,
-        zapReceiver: List<ZapSplitSetup>? = null,
-        markAsSensitive: Boolean = false,
-        replyingTo: String?,
-        root: String?,
-        directMentions: Set<HexKey>,
-        zapRaiserAmount: Long? = null,
-        geohash: String? = null,
-        onReady: (Result) -> Unit,
-    ) {
-        val senderPublicKey = signer.pubKey
-
-        TextNoteEvent.create(
-            msg = msg,
-            signer = signer,
-            replyTos = replyTos,
-            mentions = mentions,
-            zapReceiver = zapReceiver,
-            root = root,
-            extraTags = extraTags,
-            addresses = addresses,
-            directMentions = directMentions,
-            replyingTo = replyingTo,
-            markAsSensitive = markAsSensitive,
-            zapRaiserAmount = zapRaiserAmount,
-            geohash = geohash,
-        ) { senderMessage ->
-            createWraps(senderMessage, to.plus(senderPublicKey).toSet(), signer) { wraps ->
-                onReady(
-                    Result(
-                        msg = senderMessage,
                         wraps = wraps,
                     ),
                 )

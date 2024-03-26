@@ -94,6 +94,7 @@ class GitReplyEvent(
             forkedFrom: Event? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
+            isDraft: Boolean,
             onReady: (GitReplyEvent) -> Unit,
         ) {
             val tags = mutableListOf<Array<String>>()
@@ -156,7 +157,7 @@ class GitReplyEvent(
             }
             tags.add(arrayOf("alt", "a git issue reply"))
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady, isDraft)
         }
     }
 }

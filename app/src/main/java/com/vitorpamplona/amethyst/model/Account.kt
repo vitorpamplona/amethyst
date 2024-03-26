@@ -56,6 +56,7 @@ import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.Contact
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
+import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.EmojiUrl
@@ -845,7 +846,14 @@ class Account(
     }
 
     suspend fun delete(note: Note) {
-        return delete(listOf(note))
+        if (note.isDraft()) {
+            note.event?.let {
+                val drafts = LocalCache.getDrafts(it.id())
+                return delete(drafts)
+            }
+        } else {
+            return delete(listOf(note))
+        }
     }
 
     suspend fun delete(notes: List<Note>) {
@@ -897,10 +905,17 @@ class Account(
 
     fun broadcast(note: Note) {
         note.event?.let {
-            if (it is WrappedEvent && it.host != null) {
-                it.host?.let { hostEvent -> Client.send(hostEvent) }
+            if (note.isDraft()) {
+                val drafts = LocalCache.getDrafts(it.id())
+                drafts.forEach { draftNote ->
+                    broadcast(draftNote)
+                }
             } else {
-                Client.send(it)
+                if (it is WrappedEvent && it.host != null) {
+                    it.host?.let { hostEvent -> Client.send(hostEvent) }
+                } else {
+                    Client.send(it)
+                }
             }
         }
     }
@@ -929,6 +944,7 @@ class Account(
 
     fun timestamp(note: Note) {
         if (!isWriteable()) return
+        if (note.isDraft()) return
 
         val id = note.event?.id() ?: note.idHex
 
@@ -1318,6 +1334,7 @@ class Account(
         relayList: List<Relay>? = null,
         geohash: String? = null,
         nip94attachments: List<Event>? = null,
+        draftTag: String?,
     ) {
         if (!isWriteable()) return
 
@@ -1345,14 +1362,24 @@ class Account(
             geohash = geohash,
             nip94attachments = nip94attachments,
             signer = signer,
+            isDraft = draftTag != null,
         ) {
-            Client.send(it, relayList = relayList)
-            LocalCache.justConsume(it, null)
+            if (draftTag != null) {
+                DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                    Client.send(draftEvent, relayList = relayList)
+                    LocalCache.justConsume(draftEvent, null)
+                    LocalCache.justConsume(it, null)
+                    LocalCache.addDraft(draftTag, draftEvent.id(), it.id())
+                }
+            } else {
+                Client.send(it, relayList = relayList)
+                LocalCache.justConsume(it, null)
 
-            replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
-            addresses?.forEach {
-                LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
-                    Client.send(it, relayList = relayList)
+                replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
+                addresses?.forEach {
+                    LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
+                        Client.send(it, relayList = relayList)
+                    }
                 }
             }
         }
@@ -1373,6 +1400,7 @@ class Account(
         relayList: List<Relay>? = null,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
+        draftTag: String?,
     ) {
         if (!isWriteable()) return
 
@@ -1396,20 +1424,30 @@ class Account(
             nip94attachments = nip94attachments,
             forkedFrom = forkedFrom,
             signer = signer,
+            isDraft = draftTag != null,
         ) {
-            Client.send(it, relayList = relayList)
-            LocalCache.justConsume(it, null)
-
-            // broadcast replied notes
-            replyingTo?.let {
-                LocalCache.getNoteIfExists(replyingTo)?.event?.let {
-                    Client.send(it, relayList = relayList)
+            if (draftTag != null) {
+                DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                    Client.send(draftEvent, relayList = relayList)
+                    LocalCache.justConsume(draftEvent, null)
+                    LocalCache.justConsume(it, null)
+                    LocalCache.addDraft(draftTag, draftEvent.id(), it.id())
                 }
-            }
-            replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
-            addresses?.forEach {
-                LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
-                    Client.send(it, relayList = relayList)
+            } else {
+                Client.send(it, relayList = relayList)
+                LocalCache.justConsume(it, null)
+
+                // broadcast replied notes
+                replyingTo?.let {
+                    LocalCache.getNoteIfExists(replyingTo)?.event?.let {
+                        Client.send(it, relayList = relayList)
+                    }
+                }
+                replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
+                addresses?.forEach {
+                    LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
+                        Client.send(it, relayList = relayList)
+                    }
                 }
             }
         }
@@ -1430,6 +1468,7 @@ class Account(
         relayList: List<Relay>? = null,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
+        draftTag: String?,
     ) {
         if (!isWriteable()) return
 
@@ -1453,20 +1492,30 @@ class Account(
             nip94attachments = nip94attachments,
             forkedFrom = forkedFrom,
             signer = signer,
+            isDraft = draftTag != null,
         ) {
-            Client.send(it, relayList = relayList)
-            LocalCache.justConsume(it, null)
-
-            // broadcast replied notes
-            replyingTo?.let {
-                LocalCache.getNoteIfExists(replyingTo)?.event?.let {
-                    Client.send(it, relayList = relayList)
+            if (draftTag != null) {
+                DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                    Client.send(draftEvent, relayList = relayList)
+                    LocalCache.justConsume(draftEvent, null)
+                    LocalCache.justConsume(it, null)
+                    LocalCache.addDraft(draftTag, draftEvent.id(), it.id())
                 }
-            }
-            replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
-            addresses?.forEach {
-                LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
-                    Client.send(it, relayList = relayList)
+            } else {
+                Client.send(it, relayList = relayList)
+                LocalCache.justConsume(it, null)
+
+                // broadcast replied notes
+                replyingTo?.let {
+                    LocalCache.getNoteIfExists(replyingTo)?.event?.let {
+                        Client.send(it, relayList = relayList)
+                    }
+                }
+                replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
+                addresses?.forEach {
+                    LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
+                        Client.send(it, relayList = relayList)
+                    }
                 }
             }
         }
@@ -1510,6 +1559,7 @@ class Account(
         relayList: List<Relay>? = null,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
+        draftTag: String?,
     ) {
         if (!isWriteable()) return
 
@@ -1533,15 +1583,25 @@ class Account(
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
             nip94attachments = nip94attachments,
+            isDraft = draftTag != null,
         ) {
-            Client.send(it, relayList = relayList)
-            LocalCache.justConsume(it, null)
+            if (draftTag != null) {
+                DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                    Client.send(draftEvent, relayList = relayList)
+                    LocalCache.justConsume(draftEvent, null)
+                    LocalCache.justConsume(it, null)
+                    LocalCache.addDraft(draftTag, draftEvent.id(), it.id())
+                }
+            } else {
+                Client.send(it, relayList = relayList)
+                LocalCache.justConsume(it, null)
 
-            // Rebroadcast replies and tags to the current relay set
-            replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
-            addresses?.forEach {
-                LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
-                    Client.send(it, relayList = relayList)
+                // Rebroadcast replies and tags to the current relay set
+                replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
+                addresses?.forEach {
+                    LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
+                        Client.send(it, relayList = relayList)
+                    }
                 }
             }
         }
@@ -1557,6 +1617,7 @@ class Account(
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
+        draftTag: String?,
     ) {
         if (!isWriteable()) return
 
@@ -1574,9 +1635,19 @@ class Account(
             geohash = geohash,
             nip94attachments = nip94attachments,
             signer = signer,
+            isDraft = draftTag != null,
         ) {
-            Client.send(it)
-            LocalCache.justConsume(it, null)
+            if (draftTag != null) {
+                DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                    Client.send(draftEvent)
+                    LocalCache.justConsume(draftEvent, null)
+                    LocalCache.justConsume(it, null)
+                    LocalCache.addDraft(draftTag, draftEvent.id(), it.id())
+                }
+            } else {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
+            }
         }
     }
 
@@ -1590,6 +1661,7 @@ class Account(
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
+        draftTag: String?,
     ) {
         if (!isWriteable()) return
 
@@ -1608,9 +1680,19 @@ class Account(
             geohash = geohash,
             nip94attachments = nip94attachments,
             signer = signer,
+            isDraft = draftTag != null,
         ) {
-            Client.send(it)
-            LocalCache.justConsume(it, null)
+            if (draftTag != null) {
+                DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                    Client.send(draftEvent)
+                    LocalCache.justConsume(draftEvent, null)
+                    LocalCache.justConsume(it, null)
+                    LocalCache.addDraft(draftTag, draftEvent.id(), it.id())
+                }
+            } else {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
+            }
         }
     }
 
@@ -1624,6 +1706,7 @@ class Account(
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
+        draftTag: String?,
     ) {
         sendPrivateMessage(
             message,
@@ -1635,6 +1718,7 @@ class Account(
             zapRaiserAmount,
             geohash,
             nip94attachments,
+            draftTag,
         )
     }
 
@@ -1648,6 +1732,7 @@ class Account(
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
+        draftTag: String?,
     ) {
         if (!isWriteable()) return
 
@@ -1667,9 +1752,19 @@ class Account(
             nip94attachments = nip94attachments,
             signer = signer,
             advertiseNip18 = false,
+            isDraft = draftTag != null,
         ) {
-            Client.send(it)
-            LocalCache.consume(it, null)
+            if (draftTag != null) {
+                DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                    Client.send(draftEvent)
+                    LocalCache.justConsume(draftEvent, null)
+                    LocalCache.justConsume(it, null)
+                    LocalCache.addDraft(draftTag, draftEvent.id(), it.id())
+                }
+            } else {
+                Client.send(it)
+                LocalCache.consume(it, null)
+            }
         }
     }
 
@@ -1684,6 +1779,7 @@ class Account(
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
+        draftTag: String? = null,
     ) {
         if (!isWriteable()) return
 
@@ -1701,9 +1797,19 @@ class Account(
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
             nip94attachments = nip94attachments,
+            draftTag = draftTag,
             signer = signer,
         ) {
-            broadcastPrivately(it)
+            if (draftTag != null) {
+                DraftEvent.create(draftTag, it.msg, signer) { draftEvent ->
+                    Client.send(draftEvent)
+                    LocalCache.justConsume(draftEvent, null)
+                    LocalCache.justConsume(it.msg, null)
+                    LocalCache.addDraft(draftTag, draftEvent.id(), it.msg.id())
+                }
+            } else {
+                broadcastPrivately(it)
+            }
         }
     }
 
@@ -1851,6 +1957,7 @@ class Account(
         isPrivate: Boolean,
     ) {
         if (!isWriteable()) return
+        if (note.isDraft()) return
 
         if (note is AddressableNote) {
             BookmarkListEvent.addReplaceable(
@@ -2218,6 +2325,7 @@ class Account(
 
     fun cachedDecryptContent(note: Note): String? {
         val event = note.event
+
         return if (event is PrivateDmEvent && isWriteable()) {
             event.cachedContentFor(signer)
         } else if (event is LnZapRequestEvent && event.isPrivateZap() && isWriteable()) {

@@ -163,12 +163,17 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 @Composable
 fun ChannelScreen(
@@ -187,6 +192,7 @@ fun ChannelScreen(
     }
 }
 
+@OptIn(FlowPreview::class)
 @Composable
 fun PrepareChannelViewModels(
     baseChannel: Channel,
@@ -204,8 +210,21 @@ fun PrepareChannelViewModels(
         )
 
     val channelScreenModel: NewPostViewModel = viewModel()
+
+    LaunchedEffect(Unit) {
+        launch(Dispatchers.IO) {
+            channelScreenModel.draftTextChanges
+                .receiveAsFlow()
+                .debounce(1000)
+                .collectLatest {
+                    channelScreenModel.sendPost(localDraft = channelScreenModel.draftTag)
+                }
+        }
+    }
+
     channelScreenModel.accountViewModel = accountViewModel
     channelScreenModel.account = accountViewModel.account
+    channelScreenModel.originalNote = LocalCache.getNoteIfExists(baseChannel.idHex)
 
     ChannelScreen(
         channel = baseChannel,
@@ -287,6 +306,7 @@ fun ChannelScreen(
             RefreshingChatroomFeedView(
                 viewModel = feedViewModel,
                 accountViewModel = accountViewModel,
+                newPostViewModel = newPostModel,
                 nav = nav,
                 routeForLastRead = "Channel/${channel.idHex}",
                 onWantsToReply = { replyTo.value = it },
@@ -295,7 +315,7 @@ fun ChannelScreen(
 
         Spacer(modifier = DoubleVertSpacer)
 
-        replyTo.value?.let { DisplayReplyingToNote(it, accountViewModel, nav) { replyTo.value = null } }
+        replyTo.value?.let { DisplayReplyingToNote(it, accountViewModel, newPostModel, nav) { replyTo.value = null } }
 
         val scope = rememberCoroutineScope()
 
@@ -323,6 +343,7 @@ fun ChannelScreen(
                         mentions = tagger.pTags,
                         wantsToMarkAsSensitive = false,
                         nip94attachments = usedAttachments,
+                        draftTag = null,
                     )
                 } else if (channel is LiveActivitiesChannel) {
                     accountViewModel.account.sendLiveMessage(
@@ -332,10 +353,13 @@ fun ChannelScreen(
                         mentions = tagger.pTags,
                         wantsToMarkAsSensitive = false,
                         nip94attachments = usedAttachments,
+                        draftTag = null,
                     )
                 }
                 newPostModel.message = TextFieldValue("")
                 replyTo.value = null
+                accountViewModel.deleteDraft(newPostModel.draftTag)
+                newPostModel.draftTag = UUID.randomUUID().toString()
                 feedViewModel.sendToTop()
             }
         }
@@ -346,6 +370,7 @@ fun ChannelScreen(
 fun DisplayReplyingToNote(
     replyingNote: Note?,
     accountViewModel: AccountViewModel,
+    newPostModel: NewPostViewModel,
     nav: (String) -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -364,6 +389,7 @@ fun DisplayReplyingToNote(
                     null,
                     innerQuote = true,
                     accountViewModel = accountViewModel,
+                    newPostViewModel = newPostModel,
                     nav = nav,
                     onWantsToReply = {},
                 )
@@ -665,7 +691,12 @@ fun ShowVideoStreaming(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center,
-                            modifier = remember { Modifier.fillMaxWidth().heightIn(min = 50.dp, max = 300.dp) },
+                            modifier =
+                                remember {
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 50.dp, max = 300.dp)
+                                },
                         ) {
                             val zoomableUrlVideo =
                                 remember(streamingInfo) {

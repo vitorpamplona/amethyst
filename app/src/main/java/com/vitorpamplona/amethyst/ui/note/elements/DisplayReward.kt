@@ -185,6 +185,7 @@ class AddBountyAmountViewModel : ViewModel() {
                 root = null,
                 directMentions = setOf(),
                 forkedFrom = null,
+                draftTag = null,
             )
 
             nextAmount = TextFieldValue("")

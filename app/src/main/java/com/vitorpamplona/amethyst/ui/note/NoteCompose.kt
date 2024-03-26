@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -48,6 +49,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
@@ -105,8 +107,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.HalfEndPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
+import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
@@ -122,6 +127,7 @@ import com.vitorpamplona.amethyst.ui.theme.channelNotePictureModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.normalWithTopMarginNoteModifier
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyBackground
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
@@ -238,7 +244,7 @@ fun AcceptableNote(
                     nav = nav,
                 )
             else ->
-                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) {
+                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel, newPostViewModel = null) {
                         showPopup,
                     ->
                     CheckNewAndRenderNote(
@@ -273,7 +279,7 @@ fun AcceptableNote(
             is FileHeaderEvent -> FileHeaderDisplay(baseNote, false, accountViewModel)
             is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, false, accountViewModel)
             else ->
-                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) {
+                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel, newPostViewModel = null) {
                         showPopup,
                     ->
                     CheckNewAndRenderNote(
@@ -869,6 +875,29 @@ fun DisplayOtsIfInOriginal(
 }
 
 @Composable
+fun DisplayDraft() {
+    Text(
+        "Draft",
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.placeholderText,
+        maxLines = 1,
+        modifier = HalfStartPadding,
+    )
+}
+
+@Composable
+fun DisplayDraftChat() {
+    Text(
+        "Draft",
+        color = MaterialTheme.colorScheme.placeholderText,
+        modifier = HalfEndPadding,
+        fontWeight = FontWeight.Bold,
+        fontSize = Font12SP,
+        maxLines = 1,
+    )
+}
+
+@Composable
 fun FirstUserInfoRow(
     baseNote: Note,
     showAuthorPicture: Boolean,
@@ -908,6 +937,10 @@ fun FirstUserInfoRow(
             (editState.value as? GenericLoadable.Loaded<EditState>)?.loaded?.let {
                 DisplayEditStatus(it)
             }
+        }
+
+        if (baseNote.isDraft()) {
+            DisplayDraft()
         }
 
         TimeAgo(baseNote)

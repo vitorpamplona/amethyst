@@ -179,7 +179,7 @@ fun ZapCustomDialog(
                     )
 
                     ZapButton(
-                        isActive = postViewModel.canSend(),
+                        isActive = postViewModel.canSend() && !baseNote.isDraft(),
                     ) {
                         accountViewModel.zap(
                             baseNote,

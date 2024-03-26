@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -48,6 +49,7 @@ import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 fun RefreshingChatroomFeedView(
     viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
+    newPostViewModel: NewPostViewModel,
     nav: (String) -> Unit,
     routeForLastRead: String,
     onWantsToReply: (Note) -> Unit,
@@ -59,6 +61,7 @@ fun RefreshingChatroomFeedView(
             RenderChatroomFeedView(
                 viewModel,
                 accountViewModel,
+                newPostViewModel,
                 listState,
                 nav,
                 routeForLastRead,
@@ -72,6 +75,7 @@ fun RefreshingChatroomFeedView(
 fun RenderChatroomFeedView(
     viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
+    newPostViewModel: NewPostViewModel,
     listState: LazyListState,
     nav: (String) -> Unit,
     routeForLastRead: String,
@@ -91,6 +95,7 @@ fun RenderChatroomFeedView(
                 ChatroomFeedLoaded(
                     state,
                     accountViewModel,
+                    newPostViewModel,
                     listState,
                     nav,
                     routeForLastRead,
@@ -108,6 +113,7 @@ fun RenderChatroomFeedView(
 fun ChatroomFeedLoaded(
     state: FeedState.Loaded,
     accountViewModel: AccountViewModel,
+    newPostViewModel: NewPostViewModel,
     listState: LazyListState,
     nav: (String) -> Unit,
     routeForLastRead: String,
@@ -130,6 +136,7 @@ fun ChatroomFeedLoaded(
                 baseNote = item,
                 routeForLastRead = routeForLastRead,
                 accountViewModel = accountViewModel,
+                newPostViewModel = newPostViewModel,
                 nav = nav,
                 onWantsToReply = onWantsToReply,
             )

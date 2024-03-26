@@ -113,6 +113,7 @@ class ClassifiedsEvent(
             nip94attachments: List<Event>? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
+            isDraft: Boolean,
             onReady: (ClassifiedsEvent) -> Unit,
         ) {
             val tags = mutableListOf<Array<String>>()
@@ -192,7 +193,7 @@ class ClassifiedsEvent(
             }
             tags.add(arrayOf("alt", ALT))
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), message, onReady)
+            signer.sign(createdAt, KIND, tags.toTypedArray(), message, onReady, isDraft)
         }
     }
 }

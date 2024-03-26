@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.service.relays.RelayPoolStatus
+import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -159,7 +160,10 @@ fun DrawerContent(
             )
 
             ListContent(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                 drawerState,
                 openSheet,
                 accountViewModel,
@@ -231,7 +235,8 @@ fun ProfileContentTemplate(
                 model = profilePicture,
                 contentDescription = stringResource(id = R.string.profile_image),
                 modifier =
-                    Modifier.width(100.dp)
+                    Modifier
+                        .width(100.dp)
                         .height(100.dp)
                         .clip(shape = CircleShape)
                         .border(3.dp, MaterialTheme.colorScheme.background, CircleShape)
@@ -244,7 +249,10 @@ fun ProfileContentTemplate(
                 CreateTextWithEmoji(
                     text = bestDisplayName,
                     tags = tags,
-                    modifier = Modifier.padding(top = 7.dp).clickable(onClick = onClick),
+                    modifier =
+                        Modifier
+                            .padding(top = 7.dp)
+                            .clickable(onClick = onClick),
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     maxLines = 1,
@@ -454,8 +462,17 @@ fun ListContent(
     val proxyPort = remember { mutableStateOf(accountViewModel.account.proxyPort.toString()) }
     val context = LocalContext.current
 
+    var draftText by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    var wantsToPost by remember { mutableStateOf(false) }
+
     Column(
-        modifier = modifier.fillMaxHeight().verticalScroll(rememberScrollState()),
+        modifier =
+            modifier
+                .fillMaxHeight()
+                .verticalScroll(rememberScrollState()),
     ) {
         NavigationRow(
             title = stringResource(R.string.profile),
@@ -571,6 +588,18 @@ fun ListContent(
         )
     }
 
+    if (wantsToPost) {
+        NewPostView(
+            {
+                wantsToPost = false
+                draftText = null
+                coroutineScope.launch { drawerState.close() }
+            },
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+
     if (disconnectTorDialog) {
         AlertDialog(
             title = { Text(text = stringResource(R.string.do_you_really_want_to_disable_tor_title)) },
@@ -662,7 +691,8 @@ fun IconRow(
 ) {
     Row(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = onLongClick,
@@ -693,10 +723,16 @@ fun IconRowRelays(
     onClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { onClick() },
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 15.dp, horizontal = 25.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 15.dp, horizontal = 25.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -737,7 +773,10 @@ fun BottomContent(
             thickness = DividerThickness,
         )
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 15.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ClickableText(

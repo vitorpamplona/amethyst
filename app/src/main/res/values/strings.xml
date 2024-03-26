@@ -733,6 +733,8 @@
     <string name="could_not_download_from_the_server">Could not download uploaded media from the server</string>
     <string name="could_not_prepare_local_file_to_upload">Could not prepare local file to upload: %1$s</string>
 
+    <string name="edit_draft">Edit draft</string>
+
     <string name="login_with_qr_code">Login with QR Code</string>
     <string name="route">Route</string>
     <string name="route_home">Home</string>
@@ -819,4 +821,9 @@
     <string name="accessibility_play_username">Play username as audio</string>
     <string name="accessibility_scan_qr_code">Scan QR code</string>
     <string name="accessibility_navigate_to_alby">Navigate to the third-party wallet provider Alby</string>
+    <string name="it_s_not_possible_to_reply_to_a_draft_note">It\'s not possible to reply a draft note</string>
+    <string name="it_s_not_possible_to_quote_to_a_draft_note">It\'s not possible to quote a draft note</string>
+    <string name="it_s_not_possible_to_react_to_a_draft_note">It\'s not possible to react a draft note</string>
+    <string name="it_s_not_possible_to_zap_to_a_draft_note">It\'s not possible to zap a draft note</string>
+    <string name="draft_note">Draft Note</string>
 </resources>

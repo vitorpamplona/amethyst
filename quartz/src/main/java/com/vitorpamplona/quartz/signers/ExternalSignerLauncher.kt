@@ -172,6 +172,10 @@ class ExternalSignerLauncher(
                     22242,
                 ),
                 Permission(
+                    "sign_event",
+                    31234,
+                ),
+                Permission(
                     "nip04_encrypt",
                 ),
                 Permission(

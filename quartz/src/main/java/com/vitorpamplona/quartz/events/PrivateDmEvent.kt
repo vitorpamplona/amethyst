@@ -126,6 +126,7 @@ class PrivateDmEvent(
             zapRaiserAmount: Long?,
             geohash: String? = null,
             nip94attachments: List<FileHeaderEvent>? = null,
+            isDraft: Boolean,
             onReady: (PrivateDmEvent) -> Unit,
         ) {
             var message = msg
@@ -167,7 +168,7 @@ class PrivateDmEvent(
             tags.add(arrayOf("alt", ALT))
 
             signer.nip04Encrypt(message, recipientPubKey) { content ->
-                signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+                signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady, isDraft)
             }
         }
     }

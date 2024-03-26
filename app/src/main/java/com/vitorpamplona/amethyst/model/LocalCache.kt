@@ -62,6 +62,7 @@ import com.vitorpamplona.quartz.events.CommunityListEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
+import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.Event
@@ -128,7 +129,7 @@ object LocalCache {
     val users = LargeCache<HexKey, User>()
     val notes = LargeCache<HexKey, Note>()
     val addressables = LargeCache<String, AddressableNote>()
-
+    val drafts = ConcurrentHashMap<String, MutableList<Drafts>>()
     val channels = LargeCache<HexKey, Channel>()
     val awaitingPaymentRequests = ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
 
@@ -139,6 +140,34 @@ object LocalCache {
             return getOrCreateUser(key)
         }
         return null
+    }
+
+    fun draftNotes(draftTag: String): List<Note> {
+        return drafts[draftTag]?.mapNotNull {
+            getNoteIfExists(it.mainId)
+        } ?: listOf()
+    }
+
+    fun getDrafts(eventId: String): List<Note> {
+        return drafts.filter {
+            it.value.any { it.eventId == eventId }
+        }.values.map {
+            it.mapNotNull {
+                checkGetOrCreateNote(it.mainId)
+            }
+        }.flatten()
+    }
+
+    fun addDraft(
+        key: String,
+        mainId: String,
+        draftId: String,
+    ) {
+        val data = drafts[key] ?: mutableListOf()
+        if (data.none { it.mainId == mainId }) {
+            data.add(Drafts(mainId, draftId))
+            drafts[key] = data
+        }
     }
 
     fun getOrCreateUser(key: HexKey): User {
@@ -2013,6 +2042,13 @@ object LocalCache {
         }
     }
 
+    private fun consume(
+        event: DraftEvent,
+        relay: Relay?,
+    ) {
+        consumeBaseReplaceable(event, relay)
+    }
+
     fun justConsume(
         event: Event,
         relay: Relay?,
@@ -2050,6 +2086,7 @@ object LocalCache {
                 }
                 is ContactListEvent -> consume(event)
                 is DeletionEvent -> consume(event)
+                is DraftEvent -> consume(event, relay)
                 is EmojiPackEvent -> consume(event, relay)
                 is EmojiPackSelectionEvent -> consume(event, relay)
                 is SealedGossipEvent -> consume(event, relay)

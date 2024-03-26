@@ -116,14 +116,21 @@ import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.encoders.Hex
+import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.findURLs
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.UUID
 
 @Composable
 fun ChatroomScreen(
@@ -206,6 +213,7 @@ fun LoadRoomByAuthor(
     content(room)
 }
 
+@OptIn(FlowPreview::class)
 @Composable
 fun PrepareChatroomViewModels(
     room: ChatroomKey,
@@ -230,8 +238,20 @@ fun PrepareChatroomViewModels(
     if (newPostModel.requiresNIP24) {
         newPostModel.nip24 = true
     }
+    room.users.forEach {
+        newPostModel.toUsers = TextFieldValue(newPostModel.toUsers.text + " @${Hex.decode(it).toNpub()}")
+    }
 
     LaunchedEffect(key1 = newPostModel) {
+        launch(Dispatchers.IO) {
+            newPostModel.draftTextChanges
+                .receiveAsFlow()
+                .debounce(1000)
+                .collectLatest {
+                    newPostModel.sendPost(localDraft = newPostModel.draftTag)
+                }
+        }
+
         launch(Dispatchers.IO) {
             val hasNIP24 =
                 accountViewModel.userProfile().privateChatrooms[room]?.roomMessages?.any {
@@ -313,21 +333,28 @@ fun ChatroomScreen(
             RefreshingChatroomFeedView(
                 viewModel = feedViewModel,
                 accountViewModel = accountViewModel,
+                newPostViewModel = newPostModel,
                 nav = nav,
                 routeForLastRead = "Room/${room.hashCode()}",
-                onWantsToReply = { replyTo.value = it },
+                onWantsToReply = {
+                    replyTo.value = it
+                    newPostModel.originalNote = it
+                },
             )
         }
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        replyTo.value?.let { DisplayReplyingToNote(it, accountViewModel, nav) { replyTo.value = null } }
+        replyTo.value?.let { DisplayReplyingToNote(it, accountViewModel, newPostModel, nav) { replyTo.value = null } }
 
         val scope = rememberCoroutineScope()
 
         // LAST ROW
         PrivateMessageEditFieldRow(newPostModel, isPrivate = true, accountViewModel) {
             scope.launch(Dispatchers.IO) {
+                accountViewModel.deleteDraft(newPostModel.draftTag)
+                newPostModel.draftTag = UUID.randomUUID().toString()
+
                 val urls = findURLs(newPostModel.message.text)
                 val usedAttachments = newPostModel.nip94attachments.filter { it.urls().intersect(urls.toSet()).isNotEmpty() }
 
@@ -339,6 +366,7 @@ fun ChatroomScreen(
                         mentions = null,
                         wantsToMarkAsSensitive = false,
                         nip94attachments = usedAttachments,
+                        draftTag = null,
                     )
                 } else {
                     accountViewModel.account.sendPrivateMessage(
@@ -348,6 +376,7 @@ fun ChatroomScreen(
                         mentions = null,
                         wantsToMarkAsSensitive = false,
                         nip94attachments = usedAttachments,
+                        draftTag = null,
                     )
                 }
 
