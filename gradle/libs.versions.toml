@@ -20,7 +20,6 @@ fragmentKtx = "1.6.2"
 gms = "4.4.1"
 jacksonModuleKotlin = "2.17.0"
 jna = "5.14.0"
-jsoup = "1.17.2"
 junit = "4.13.2"
 kotlin = "1.9.22"
 kotlinxCollectionsImmutable = "0.3.7"
@@ -93,7 +92,6 @@ google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", v
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jacksonModuleKotlin" }
 jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
-jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
 lazysodium-android = { group = "com.goterl", name = "lazysodium-android", version.ref = "lazysodiumAndroid" }
