@@ -53,7 +53,9 @@ abstract class GenericBaseCache<K, V>(capacity: Int) : CachedState<K, V> {
 
         val v = compute(k)
 
-        cache.put(k, v)
+        if (v != null) {
+            cache.put(k, v)
+        }
 
         return v
     }
