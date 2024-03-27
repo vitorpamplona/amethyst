@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.preview
 
 import kotlinx.collections.immutable.toImmutableMap
-import java.lang.StringBuilder
 
 data class MetaTag(private val attrs: Map<String, String>) {
     /**
@@ -42,7 +41,7 @@ object MetaTagsParser {
             val s = TagScanner(input)
             while (!s.exhausted()) {
                 val t = s.nextTag() ?: continue
-                if (t.name == "/head") {
+                if (t.name == "head" && t.isEnd) {
                     break
                 }
                 if (t.name == "meta") {
@@ -52,61 +51,45 @@ object MetaTagsParser {
             }
         }
 
-    private data class RawTag(val name: String, val attrPart: String)
+    private data class RawTag(val isEnd: Boolean, val name: String, val attrPart: String)
 
     private class TagScanner(private val input: String) {
-        var p = 0
+        private var p = 0
 
         fun exhausted(): Boolean = p >= input.length
 
         private fun peek(): Char = input[p]
 
-        private fun consume(): Char {
-            return input[p++]
-        }
+        private fun consume(): Char = input[p++]
 
-        private fun consumeChar(c: Char): Boolean {
-            if (this.peek() == c) {
+        private fun skipWhile(pred: (Char) -> Boolean) {
+            while (!this.exhausted() && pred(this.peek())) {
                 this.consume()
-                return true
             }
-            return false
         }
 
         private fun skipSpaces() {
-            while (!this.exhausted() && this.peek().isWhitespace()) {
-                this.consume()
-            }
-        }
-
-        private fun skipUntil(c: Char) {
-            while (!this.exhausted() && this.peek() != c) {
-                this.consume()
-            }
-        }
-
-        private fun readWhile(pred: (Char) -> Boolean): String {
-            val sb = StringBuilder()
-            while (!this.exhausted() && pred(this.peek())) {
-                sb.append(this.consume())
-            }
-            return sb.toString()
+            this.skipWhile { it.isWhitespace() }
         }
 
         fun nextTag(): RawTag? {
-            skipUntil('<')
+            skipWhile { it != '<' }
             consume()
 
             // read tag name
-            val name = StringBuilder()
-            if (consumeChar('/')) {
-                name.append('/')
+            val isEnd = peek() == '/'
+            if (isEnd) {
+                consume()
             }
-            val n = readWhile { !it.isWhitespace() && it != '>' }
-            skipSpaces()
+            val nameStart = p
+            skipWhile { !it.isWhitespace() && it != '>' }
+            val nameEnd = p
 
-            // read until end of tag
-            val attrsPart = StringBuilder()
+            // seek to start of attrs part
+            skipSpaces()
+            val attrsStart = p
+
+            // skip until end of tag
             var quote: Char? = null
             while (!exhausted()) {
                 val c = consume()
@@ -129,13 +112,15 @@ object MetaTagsParser {
                         quote = null
                     }
                 }
-                attrsPart.append(c)
             }
+            val attrsEnd = p - 1
 
-            if (!n.matches(Regex("""[0-9a-zA-Z]+"""))) {
+            val name = input.slice(nameStart..<nameEnd)
+            if (!name.matches(Regex("""[0-9a-zA-Z]+"""))) {
                 return null
             }
-            return RawTag(name.append(n).toString().lowercase(), attrsPart.toString())
+            val attrsPart = input.slice(attrsStart..<attrsEnd)
+            return RawTag(isEnd, name.lowercase(), attrsPart)
         }
     }
 
