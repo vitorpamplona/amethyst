@@ -88,7 +88,23 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
         filterParams: FilterByListParams,
     ): Boolean {
         val loggedInUserHex = account.userProfile().pubkeyHex
-        val loggedInUser = account.userProfile()
+
+        val noteEvent = it.event
+        val notifAuthor =
+            if (noteEvent is LnZapEvent) {
+                val zapRequest = noteEvent.zapRequest
+                if (zapRequest != null) {
+                    if (noteEvent.zapRequest?.isPrivateZap() == true) {
+                        zapRequest.cachedPrivateZap()?.pubKey ?: zapRequest.pubKey
+                    } else {
+                        zapRequest.pubKey
+                    }
+                } else {
+                    noteEvent.pubKey
+                }
+            } else {
+                it.author?.pubkeyHex
+            }
 
         return it.event !is ChannelCreateEvent &&
             it.event !is ChannelMetadataEvent &&
@@ -96,10 +112,10 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
             it.event !is BadgeDefinitionEvent &&
             it.event !is BadgeProfilesEvent &&
             it.event !is GiftWrapEvent &&
-            (it.event is LnZapEvent || it.author !== loggedInUser) &&
-            (filterParams.isGlobal || filterParams.followLists?.users?.contains(it.author?.pubkeyHex) == true) &&
+            (it.event is LnZapEvent || notifAuthor != loggedInUserHex) &&
+            (filterParams.isGlobal || filterParams.followLists?.users?.contains(notifAuthor) == true) &&
             it.event?.isTaggedUser(loggedInUserHex) ?: false &&
-            (filterParams.isHiddenList || it.author == null || !account.isHidden(it.author!!.pubkeyHex)) &&
+            (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
             tagsAnEventByUser(it, loggedInUserHex)
     }
 

@@ -310,6 +310,19 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     event.cachedGossip(account.signer) { LocalCache.justConsume(it, relay) }
                 }
 
+                is LnZapEvent -> {
+                    // Avoid decrypting over and over again if the event already exist.
+
+                    val note = LocalCache.getNoteIfExists(event.id)
+                    if (note != null && relay.brief in note.relays) return
+
+                    event.zapRequest?.let {
+                        if (it.isPrivateZap()) {
+                            it.decryptPrivateZap(account.signer) {}
+                        }
+                    }
+                }
+
                 else -> {
                     LocalCache.justConsume(event, relay)
                 }
