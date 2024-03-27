@@ -18,20 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.previews
+package com.vitorpamplona.amethyst.commons.preview
 
 import kotlinx.collections.immutable.toImmutableMap
 import java.lang.StringBuilder
 
-internal data class MetaTag(private val attrs: Map<String, String>) {
+data class MetaTag(private val attrs: Map<String, String>) {
+    /**
+     * Returns a value of an attribute specified by its name (case insensitive), or empty string if it doesn't exist.
+     */
     fun attr(name: String): String = attrs[name.lowercase()] ?: ""
 }
 
-// parse a partial HTML document and extract meta tags
-internal object MetaTagsParser {
+object MetaTagsParser {
     private val NON_ATTR_NAME_CHARS = setOf(Char(0x0), '"', '\'', '>', '/')
     private val NON_UNQUOTED_ATTR_VALUE_CHARS = setOf('"', '\'', '=', '>', '<', '`')
 
+    /**
+     * Lazily parse a partial HTML document and extract meta tags.
+     */
     fun parse(input: String): Sequence<MetaTag> =
         sequence {
             val s = TagScanner(input)
