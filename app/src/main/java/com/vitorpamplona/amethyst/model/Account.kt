@@ -859,10 +859,11 @@ class Account(
     suspend fun delete(notes: List<Note>) {
         if (!isWriteable()) return
 
-        val myNotes = notes.filter { it.author == userProfile() }.mapNotNull { it.event?.id() }
+        val myEvents = notes.filter { it.author == userProfile() }
+        val myNoteVersions = myEvents.mapNotNull { it.event as? Event }
 
-        if (myNotes.isNotEmpty()) {
-            DeletionEvent.create(myNotes, signer) {
+        if (myNoteVersions.isNotEmpty()) {
+            DeletionEvent.create(myNoteVersions, signer) {
                 Client.send(it)
                 LocalCache.justConsume(it, null)
             }
@@ -1891,7 +1892,7 @@ class Account(
             Client.send(event)
             LocalCache.justConsume(event, null)
 
-            DeletionEvent.create(listOf(event.id), signer) { event2 ->
+            DeletionEvent.createForVersionOnly(listOf(event), signer) { event2 ->
                 Client.send(event2)
                 LocalCache.justConsume(event2, null)
             }

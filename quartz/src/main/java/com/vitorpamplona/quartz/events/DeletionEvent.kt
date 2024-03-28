@@ -34,22 +34,59 @@ class DeletionEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun deleteEvents() = tags.map { it[1] }
+    fun deleteEvents() = taggedEvents()
+
+    fun deleteAddresses() = taggedAddresses()
 
     companion object {
         const val KIND = 5
         const val ALT = "Deletion event"
 
         fun create(
-            deleteEvents: List<String>,
+            deleteEvents: List<Event>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (DeletionEvent) -> Unit,
         ) {
             val content = ""
-            val tags =
-                deleteEvents.map { arrayOf("e", it) }.plusElement(arrayOf("alt", ALT)).toTypedArray()
-            signer.sign(createdAt, KIND, tags, content, onReady)
+            val tags = mutableListOf<Array<String>>()
+
+            val kinds =
+                deleteEvents.mapTo(HashSet()) {
+                    "${it.kind}"
+                }.map {
+                    arrayOf("k", it)
+                }
+
+            tags.addAll(deleteEvents.map { arrayOf("e", it.id) })
+            tags.addAll(deleteEvents.mapNotNull { if (it is AddressableEvent) arrayOf("a", it.address().toTag()) else null })
+            tags.addAll(kinds)
+            tags.add(arrayOf("alt", ALT))
+
+            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+        }
+
+        fun createForVersionOnly(
+            deleteEvents: List<Event>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (DeletionEvent) -> Unit,
+        ) {
+            val content = ""
+            val tags = mutableListOf<Array<String>>()
+
+            val kinds =
+                deleteEvents.mapTo(HashSet()) {
+                    "${it.kind}"
+                }.map {
+                    arrayOf("k", it)
+                }
+
+            tags.addAll(deleteEvents.map { arrayOf("e", it.id) })
+            tags.addAll(kinds)
+            tags.add(arrayOf("alt", ALT))
+
+            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
         }
     }
 }
