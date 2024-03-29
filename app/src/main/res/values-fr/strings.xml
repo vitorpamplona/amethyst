@@ -622,6 +622,7 @@
     <string name="server_did_not_provide_a_url_after_uploading">Le serveur n\'a pas fourni d\'URL après le téléversement</string>
     <string name="could_not_download_from_the_server">Impossible de télécharger le média depuis le serveur</string>
     <string name="could_not_prepare_local_file_to_upload">Impossible de préparer le fichier local à téléverser: %1$s</string>
+    <string name="edit_draft">Modifier le brouillon</string>
     <string name="login_with_qr_code">Se connecter avec un QR Code</string>
     <string name="route">Route</string>
     <string name="route_home">Accueil</string>
@@ -693,4 +694,9 @@
     <string name="accessibility_play_username">Écouter le nom d\'utilisateur</string>
     <string name="accessibility_scan_qr_code">Scanner le QR code</string>
     <string name="accessibility_navigate_to_alby">Accéder au fournisseur de portefeuille tiers Alby</string>
+    <string name="it_s_not_possible_to_reply_to_a_draft_note">Il n\'est pas possible de répondre à un brouillon</string>
+    <string name="it_s_not_possible_to_quote_to_a_draft_note">Il n\'est pas possible de citer un brouillon</string>
+    <string name="it_s_not_possible_to_react_to_a_draft_note">Il n\'est pas possible de réagir à un brouillon</string>
+    <string name="it_s_not_possible_to_zap_to_a_draft_note">Il n\'est pas possible de zapper un brouillon</string>
+    <string name="draft_note">Brouillon</string>
 </resources>
