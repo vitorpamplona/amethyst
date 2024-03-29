@@ -200,8 +200,6 @@ class Nip96Uploader(val account: Account?) {
 
         nip98Header(server.apiUrl)?.let { requestBuilder.addHeader("Authorization", it) }
 
-        println(server.apiUrl.removeSuffix("/") + "/$hash.$extension")
-
         val request =
             requestBuilder
                 .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")

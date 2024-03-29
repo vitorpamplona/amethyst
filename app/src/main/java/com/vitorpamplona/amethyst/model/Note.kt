@@ -47,6 +47,7 @@ import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.GenericRepostEvent
@@ -96,6 +97,14 @@ class AddressableNote(val address: ATag) : Note(address.toTag()) {
 
     fun dTag(): String? {
         return (event as? AddressableEvent)?.dTag()
+    }
+
+    override fun wasOrShouldBeDeletedBy(
+        deletionEvents: Set<HexKey>,
+        deletionAddressables: Set<ATag>,
+    ): Boolean {
+        val thisEvent = event
+        return deletionAddressables.contains(address) || (thisEvent != null && deletionEvents.contains(thisEvent.id()))
     }
 }
 
@@ -184,12 +193,7 @@ open class Note(val idHex: String) {
 
     open fun createdAt() = event?.createdAt()
 
-    fun isDraft(): Boolean {
-        event?.let {
-            return it.sig().isBlank()
-        }
-        return false
-    }
+    fun isDraft() = event is DraftEvent
 
     fun loadEvent(
         event: Event,
@@ -934,6 +938,14 @@ open class Note(val idHex: String) {
         if (flowSet != null && flowSet?.isInUse() == false) {
             createOrDestroyFlowSync(false)
         }
+    }
+
+    open fun wasOrShouldBeDeletedBy(
+        deletionEvents: Set<HexKey>,
+        deletionAddressables: Set<ATag>,
+    ): Boolean {
+        val thisEvent = event
+        return deletionEvents.contains(idHex) || (thisEvent is AddressableEvent && deletionAddressables.contains(thisEvent.address()))
     }
 }
 

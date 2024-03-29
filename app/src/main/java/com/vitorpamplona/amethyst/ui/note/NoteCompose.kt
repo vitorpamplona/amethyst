@@ -40,6 +40,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -141,6 +142,7 @@ import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.FhirResourceEvent
 import com.vitorpamplona.quartz.events.FileHeaderEvent
@@ -244,7 +246,7 @@ fun AcceptableNote(
                     nav = nav,
                 )
             else ->
-                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel, newPostViewModel = null) {
+                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) {
                         showPopup,
                     ->
                     CheckNewAndRenderNote(
@@ -279,9 +281,7 @@ fun AcceptableNote(
             is FileHeaderEvent -> FileHeaderDisplay(baseNote, false, accountViewModel)
             is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, false, accountViewModel)
             else ->
-                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel, newPostViewModel = null) {
-                        showPopup,
-                    ->
+                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
                     CheckNewAndRenderNote(
                         baseNote = baseNote,
                         routeForLastRead = routeForLastRead,
@@ -466,7 +466,7 @@ fun InnerNoteWithReactions(
         }
     }
 
-    val isNotRepost = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent
+    val isNotRepost = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent && baseNote.event !is DraftEvent
 
     if (isNotRepost) {
         if (makeItShort) {
@@ -482,6 +482,10 @@ fun InnerNoteWithReactions(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
+        }
+    } else {
+        if (baseNote.event is DraftEvent) {
+            Spacer(modifier = DoubleVertSpacer)
         }
     }
 }
@@ -566,6 +570,7 @@ private fun RenderNoteRow(
         is AppDefinitionEvent -> RenderAppDefinition(baseNote, accountViewModel, nav)
         is AudioTrackEvent -> RenderAudioTrack(baseNote, accountViewModel, nav)
         is AudioHeaderEvent -> RenderAudioHeader(baseNote, accountViewModel, nav)
+        is DraftEvent -> RenderDraft(baseNote, backgroundColor, accountViewModel, nav)
         is ReactionEvent -> RenderReaction(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         is RepostEvent -> RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         is GenericRepostEvent -> RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
@@ -678,6 +683,68 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
+        }
+    }
+}
+
+@Composable
+fun ObserveDraftEvent(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    render: @Composable (Note) -> Unit,
+) {
+    val noteState by note.live().metadata.observeAsState()
+
+    val noteEvent = noteState?.note?.event as? DraftEvent ?: return
+    val noteAuthor = noteState?.note?.author ?: return
+
+    val innerNote =
+        produceState(initialValue = accountViewModel.createTempCachedDraftNote(noteEvent, noteAuthor), noteEvent.id) {
+            if (value == null || value?.event?.id() != noteEvent.id) {
+                accountViewModel.createTempDraftNote(noteEvent, noteAuthor) {
+                    value = it
+                }
+            }
+        }
+
+    innerNote.value?.let {
+        render(it)
+    }
+}
+
+@Composable
+fun RenderDraft(
+    note: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    ObserveDraftEvent(note, accountViewModel) {
+        val edits = remember { mutableStateOf(GenericLoadable.Empty<EditState>()) }
+
+        ReplyRow(
+            it,
+            true,
+            backgroundColor,
+            accountViewModel,
+            nav,
+        )
+
+        RenderNoteRow(
+            baseNote = it,
+            backgroundColor = backgroundColor,
+            makeItShort = false,
+            canPreview = true,
+            editState = edits,
+            quotesLeft = 3,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+
+        val zapSplits = remember(it.event) { it.event?.hasZapSplitSetup() }
+        if (zapSplits == true) {
+            Spacer(modifier = HalfDoubleVertSpacer)
+            DisplayZapSplits(it.event!!, false, accountViewModel, nav)
         }
     }
 }

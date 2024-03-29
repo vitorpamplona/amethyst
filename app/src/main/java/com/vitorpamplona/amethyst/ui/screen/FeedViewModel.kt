@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.dal.DiscoverChatFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverCommunityFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverLiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverMarketplaceFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.DraftEventsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.GeoHashFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
@@ -60,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
 import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.events.DeletionEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -267,6 +269,16 @@ class NostrBookmarkPrivateFeedViewModel(val account: Account) :
     }
 }
 
+@Stable
+class NostrDraftEventsFeedViewModel(val account: Account) :
+    FeedViewModel(DraftEventsFeedFilter(account)) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrDraftEventsFeedViewModel : ViewModel> create(modelClass: Class<NostrDraftEventsFeedViewModel>): NostrDraftEventsFeedViewModel {
+            return NostrDraftEventsFeedViewModel(account) as NostrDraftEventsFeedViewModel
+        }
+    }
+}
+
 class NostrUserAppRecommendationsFeedViewModel(val user: User) :
     FeedViewModel(UserProfileAppRecommendationsFeedFilter(user)) {
     class Factory(val user: User) : ViewModelProvider.Factory {
@@ -344,9 +356,24 @@ abstract class FeedViewModel(val localFilter: FeedFilter<Note>) :
         val oldNotesState = _feedContent.value
         if (localFilter is AdditiveFeedFilter && lastFeedKey == localFilter.feedKey()) {
             if (oldNotesState is FeedState.Loaded) {
+                val deletionEvents: List<DeletionEvent> =
+                    newItems.mapNotNull {
+                        val noteEvent = it.event
+                        if (noteEvent is DeletionEvent) noteEvent else null
+                    }
+
+                val oldList =
+                    if (deletionEvents.isEmpty()) {
+                        oldNotesState.feed.value
+                    } else {
+                        val deletedEventIds = deletionEvents.flatMapTo(HashSet()) { it.deleteEvents() }
+                        val deletedEventAddresses = deletionEvents.flatMapTo(HashSet()) { it.deleteAddresses() }
+                        oldNotesState.feed.value.filter { !it.wasOrShouldBeDeletedBy(deletedEventIds, deletedEventAddresses) }.toImmutableList()
+                    }
+
                 val newList =
                     localFilter
-                        .updateListWith(oldNotesState.feed.value, newItems)
+                        .updateListWith(oldList, newItems)
                         .distinctBy { it.idHex }
                         .toImmutableList()
                 if (!equalImmutableLists(newList, oldNotesState.feed.value)) {

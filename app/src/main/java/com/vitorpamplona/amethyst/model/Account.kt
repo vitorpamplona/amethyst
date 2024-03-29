@@ -61,6 +61,7 @@ import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.EmojiUrl
 import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileServersEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
@@ -845,18 +846,11 @@ class Account(
         }
     }
 
-    suspend fun delete(note: Note) {
-        if (note.isDraft()) {
-            note.event?.let {
-                val drafts = LocalCache.getDrafts(it.id())
-                return delete(drafts)
-            }
-        } else {
-            return delete(listOf(note))
-        }
+    fun delete(note: Note) {
+        delete(listOf(note))
     }
 
-    suspend fun delete(notes: List<Note>) {
+    fun delete(notes: List<Note>) {
         if (!isWriteable()) return
 
         val myEvents = notes.filter { it.author == userProfile() }
@@ -906,17 +900,10 @@ class Account(
 
     fun broadcast(note: Note) {
         note.event?.let {
-            if (note.isDraft()) {
-                val drafts = LocalCache.getDrafts(it.id())
-                drafts.forEach { draftNote ->
-                    broadcast(draftNote)
-                }
+            if (it is WrappedEvent && it.host != null) {
+                it.host?.let { hostEvent -> Client.send(hostEvent) }
             } else {
-                if (it is WrappedEvent && it.host != null) {
-                    it.host?.let { hostEvent -> Client.send(hostEvent) }
-                } else {
-                    Client.send(it)
-                }
+                Client.send(it)
             }
         }
     }
@@ -1366,11 +1353,13 @@ class Account(
             isDraft = draftTag != null,
         ) {
             if (draftTag != null) {
-                DraftEvent.create(draftTag, it, signer) { draftEvent ->
-                    Client.send(draftEvent, relayList = relayList)
-                    LocalCache.justConsume(draftEvent, null)
-                    LocalCache.justConsume(it, null)
-                    LocalCache.addDraft(draftTag, draftEvent.id(), it.id())
+                if (message.isBlank()) {
+                    deleteDraft(draftTag)
+                } else {
+                    DraftEvent.create(draftTag, it, emptyList(), signer) { draftEvent ->
+                        Client.send(draftEvent, relayList = relayList)
+                        LocalCache.justConsume(draftEvent, null)
+                    }
                 }
             } else {
                 Client.send(it, relayList = relayList)
@@ -1428,11 +1417,13 @@ class Account(
             isDraft = draftTag != null,
         ) {
             if (draftTag != null) {
-                DraftEvent.create(draftTag, it, signer) { draftEvent ->
-                    Client.send(draftEvent, relayList = relayList)
-                    LocalCache.justConsume(draftEvent, null)
-                    LocalCache.justConsume(it, null)
-                    LocalCache.addDraft(draftTag, draftEvent.id(), it.id())
+                if (message.isBlank()) {
+                    deleteDraft(draftTag)
+                } else {
+                    DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                        Client.send(draftEvent, relayList = relayList)
+                        LocalCache.justConsume(draftEvent, null)
+                    }
                 }
             } else {
                 Client.send(it, relayList = relayList)
@@ -1454,7 +1445,21 @@ class Account(
         }
     }
 
-    fun sendPost(
+    fun deleteDraft(draftTag: String) {
+        val key = DraftEvent.createAddressTag(userProfile().pubkeyHex, draftTag)
+        LocalCache.getAddressableNoteIfExists(key)?.let {
+            val noteEvent = it.event
+            if (noteEvent is DraftEvent) {
+                noteEvent.createDeletedEvent(signer) {
+                    Client.send(it)
+                    LocalCache.justConsume(it, null)
+                }
+            }
+            delete(it)
+        }
+    }
+
+    suspend fun sendPost(
         message: String,
         replyTo: List<Note>?,
         mentions: List<User>?,
@@ -1496,11 +1501,13 @@ class Account(
             isDraft = draftTag != null,
         ) {
             if (draftTag != null) {
-                DraftEvent.create(draftTag, it, signer) { draftEvent ->
-                    Client.send(draftEvent, relayList = relayList)
-                    LocalCache.justConsume(draftEvent, null)
-                    LocalCache.justConsume(it, null)
-                    LocalCache.addDraft(draftTag, draftEvent.id(), it.id())
+                if (message.isBlank()) {
+                    deleteDraft(draftTag)
+                } else {
+                    DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                        Client.send(draftEvent, relayList = relayList)
+                        LocalCache.justConsume(draftEvent, null)
+                    }
                 }
             } else {
                 Client.send(it, relayList = relayList)
@@ -1587,11 +1594,13 @@ class Account(
             isDraft = draftTag != null,
         ) {
             if (draftTag != null) {
-                DraftEvent.create(draftTag, it, signer) { draftEvent ->
-                    Client.send(draftEvent, relayList = relayList)
-                    LocalCache.justConsume(draftEvent, null)
-                    LocalCache.justConsume(it, null)
-                    LocalCache.addDraft(draftTag, draftEvent.id(), it.id())
+                if (message.isBlank()) {
+                    deleteDraft(draftTag)
+                } else {
+                    DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                        Client.send(draftEvent, relayList = relayList)
+                        LocalCache.justConsume(draftEvent, null)
+                    }
                 }
             } else {
                 Client.send(it, relayList = relayList)
@@ -1639,11 +1648,13 @@ class Account(
             isDraft = draftTag != null,
         ) {
             if (draftTag != null) {
-                DraftEvent.create(draftTag, it, signer) { draftEvent ->
-                    Client.send(draftEvent)
-                    LocalCache.justConsume(draftEvent, null)
-                    LocalCache.justConsume(it, null)
-                    LocalCache.addDraft(draftTag, draftEvent.id(), it.id())
+                if (message.isBlank()) {
+                    deleteDraft(draftTag)
+                } else {
+                    DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                        Client.send(draftEvent)
+                        LocalCache.justConsume(draftEvent, null)
+                    }
                 }
             } else {
                 Client.send(it)
@@ -1684,11 +1695,13 @@ class Account(
             isDraft = draftTag != null,
         ) {
             if (draftTag != null) {
-                DraftEvent.create(draftTag, it, signer) { draftEvent ->
-                    Client.send(draftEvent)
-                    LocalCache.justConsume(draftEvent, null)
-                    LocalCache.justConsume(it, null)
-                    LocalCache.addDraft(draftTag, draftEvent.id(), it.id())
+                if (message.isBlank()) {
+                    deleteDraft(draftTag)
+                } else {
+                    DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                        Client.send(draftEvent)
+                        LocalCache.justConsume(draftEvent, null)
+                    }
                 }
             } else {
                 Client.send(it)
@@ -1756,11 +1769,13 @@ class Account(
             isDraft = draftTag != null,
         ) {
             if (draftTag != null) {
-                DraftEvent.create(draftTag, it, signer) { draftEvent ->
-                    Client.send(draftEvent)
-                    LocalCache.justConsume(draftEvent, null)
-                    LocalCache.justConsume(it, null)
-                    LocalCache.addDraft(draftTag, draftEvent.id(), it.id())
+                if (message.isBlank()) {
+                    deleteDraft(draftTag)
+                } else {
+                    DraftEvent.create(draftTag, it, emptyList(), signer) { draftEvent ->
+                        Client.send(draftEvent)
+                        LocalCache.justConsume(draftEvent, null)
+                    }
                 }
             } else {
                 Client.send(it)
@@ -1802,11 +1817,13 @@ class Account(
             signer = signer,
         ) {
             if (draftTag != null) {
-                DraftEvent.create(draftTag, it.msg, signer) { draftEvent ->
-                    Client.send(draftEvent)
-                    LocalCache.justConsume(draftEvent, null)
-                    LocalCache.justConsume(it.msg, null)
-                    LocalCache.addDraft(draftTag, draftEvent.id(), it.msg.id())
+                if (message.isBlank()) {
+                    deleteDraft(draftTag)
+                } else {
+                    DraftEvent.create(draftTag, it.msg, emptyList(), signer) { draftEvent ->
+                        Client.send(draftEvent)
+                        LocalCache.justConsume(draftEvent, null)
+                    }
                 }
             } else {
                 broadcastPrivately(it)
@@ -2325,7 +2342,11 @@ class Account(
     }
 
     fun cachedDecryptContent(note: Note): String? {
-        val event = note.event
+        return cachedDecryptContent(note.event)
+    }
+
+    fun cachedDecryptContent(event: EventInterface?): String? {
+        if (event == null) return null
 
         return if (event is PrivateDmEvent && isWriteable()) {
             event.cachedContentFor(signer)

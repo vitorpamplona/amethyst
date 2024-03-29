@@ -237,7 +237,7 @@ fun NoteDropDownMenu(
             },
         )
         HorizontalDivider(thickness = DividerThickness)
-        if (note.isDraft()) {
+        if (state.isLoggedUser && note.isDraft()) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.edit_draft)) },
                 onClick = {

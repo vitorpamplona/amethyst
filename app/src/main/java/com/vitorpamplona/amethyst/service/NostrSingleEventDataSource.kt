@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.events.DeletionEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GitReplyEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
@@ -57,29 +58,45 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
         }
 
         return groupByEOSEPresence(addressesToWatch).map {
-            TypedFilter(
-                types = COMMON_FEED_TYPES,
-                filter =
-                    JsonFilter(
-                        kinds =
-                            listOf(
-                                TextNoteEvent.KIND,
-                                ReactionEvent.KIND,
-                                RepostEvent.KIND,
-                                GenericRepostEvent.KIND,
-                                ReportEvent.KIND,
-                                LnZapEvent.KIND,
-                                PollNoteEvent.KIND,
-                                CommunityPostApprovalEvent.KIND,
-                                LiveActivitiesChatMessageEvent.KIND,
-                            ),
-                        tags = mapOf("a" to it.mapNotNull { it.address()?.toTag() }),
-                        since = findMinimumEOSEs(it),
-                        // Max amount of "replies" to download on a specific event.
-                        limit = 1000,
-                    ),
+            listOf(
+                TypedFilter(
+                    types = COMMON_FEED_TYPES,
+                    filter =
+                        JsonFilter(
+                            kinds =
+                                listOf(
+                                    TextNoteEvent.KIND,
+                                    ReactionEvent.KIND,
+                                    RepostEvent.KIND,
+                                    GenericRepostEvent.KIND,
+                                    ReportEvent.KIND,
+                                    LnZapEvent.KIND,
+                                    PollNoteEvent.KIND,
+                                    CommunityPostApprovalEvent.KIND,
+                                    LiveActivitiesChatMessageEvent.KIND,
+                                ),
+                            tags = mapOf("a" to it.mapNotNull { it.address()?.toTag() }),
+                            since = findMinimumEOSEs(it),
+                            // Max amount of "replies" to download on a specific event.
+                            limit = 1000,
+                        ),
+                ),
+                TypedFilter(
+                    types = COMMON_FEED_TYPES,
+                    filter =
+                        JsonFilter(
+                            kinds =
+                                listOf(
+                                    DeletionEvent.KIND,
+                                ),
+                            tags = mapOf("a" to it.mapNotNull { it.address()?.toTag() }),
+                            since = findMinimumEOSEs(it),
+                            // Max amount of "replies" to download on a specific event.
+                            limit = 10,
+                        ),
+                ),
             )
-        }
+        }.flatten()
     }
 
     private fun createAddressFilter(): List<TypedFilter>? {
@@ -145,6 +162,20 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                             since = findMinimumEOSEs(it),
                             // Max amount of "replies" to download on a specific event.
                             limit = 1000,
+                        ),
+                ),
+                TypedFilter(
+                    types = COMMON_FEED_TYPES,
+                    filter =
+                        JsonFilter(
+                            kinds =
+                                listOf(
+                                    DeletionEvent.KIND,
+                                ),
+                            tags = mapOf("e" to it.map { it.idHex }),
+                            since = findMinimumEOSEs(it),
+                            // Max amount of "replies" to download on a specific event.
+                            limit = 10,
                         ),
                 ),
             )

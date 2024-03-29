@@ -68,6 +68,7 @@ class GiftWrapReceivingBenchmark {
             markAsSensitive = true,
             zapRaiserAmount = 10000,
             geohash = null,
+            isDraft = true,
             signer = sender,
         ) {
             SealedGossipEvent.create(
@@ -107,6 +108,7 @@ class GiftWrapReceivingBenchmark {
             markAsSensitive = true,
             zapRaiserAmount = 10000,
             geohash = null,
+            isDraft = true,
             signer = sender,
         ) {
             SealedGossipEvent.create(

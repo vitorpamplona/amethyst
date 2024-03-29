@@ -133,6 +133,8 @@ interface EventInterface {
 
     fun firstTaggedUrl(): String?
 
+    fun firstTaggedK(): Int?
+
     fun taggedEmojis(): List<EmojiUrl>
 
     fun matchTag1With(text: String): Boolean

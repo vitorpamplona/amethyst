@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.Subscription
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
+import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
@@ -293,7 +294,13 @@ abstract class NostrDataSource(val debugName: String) {
         eventId: String,
         relay: Relay,
     ) {
-        LocalCache.getNoteIfExists(eventId)?.addRelay(relay)
+        val note = LocalCache.getNoteIfExists(eventId)
+        val noteEvent = note?.event
+        if (noteEvent is AddressableEvent) {
+            LocalCache.getAddressableNoteIfExists(noteEvent.address().toTag())?.addRelay(relay)
+        } else {
+            note?.addRelay(relay)
+        }
     }
 
     open fun markAsEOSE(

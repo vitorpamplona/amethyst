@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.events
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -35,126 +35,171 @@ class DraftEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    @Transient private var decryptedContent: Map<HexKey, Event> = mapOf()
+    @Transient private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
 
-    @Transient private var citedNotesCache: Set<String>? = null
+    override fun isContentEncoded() = true
 
-    fun replyTos(): List<HexKey> {
-        val oldStylePositional = tags.filter { it.size > 1 && it.size <= 3 && it[0] == "e" }.map { it[1] }
-        val newStyleReply = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "reply" }?.get(1)
-        val newStyleRoot = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
+    fun isDeleted() = content == ""
 
-        val newStyleReplyTos = listOfNotNull(newStyleReply, newStyleRoot)
-
-        return if (newStyleReplyTos.isNotEmpty()) {
-            newStyleReplyTos
-        } else {
-            oldStylePositional
-        }
+    fun preCachedDraft(signer: NostrSigner): Event? {
+        return cachedInnerEvent[signer.pubKey]
     }
 
-    fun findCitations(): Set<HexKey> {
-        citedNotesCache?.let {
-            return it
-        }
+    fun allCache() = cachedInnerEvent.values
 
-        val citations = mutableSetOf<HexKey>()
-        // Removes citations from replies:
-        val matcher = tagSearch.matcher(content)
-        while (matcher.find()) {
-            try {
-                val tag = matcher.group(1)?.let { tags[it.toInt()] }
-                if (tag != null && tag.size > 1 && tag[0] == "e") {
-                    citations.add(tag[1])
-                }
-                if (tag != null && tag.size > 1 && tag[0] == "a") {
-                    citations.add(tag[1])
-                }
-            } catch (e: Exception) {
-            }
-        }
-
-        val matcher2 = Nip19Bech32.nip19regex.matcher(content)
-        while (matcher2.find()) {
-            val type = matcher2.group(2) // npub1
-            val key = matcher2.group(3) // bech32
-            val additionalChars = matcher2.group(4) // additional chars
-
-            if (type != null) {
-                val parsed = Nip19Bech32.parseComponents(type, key, additionalChars)?.entity
-
-                if (parsed != null) {
-                    when (parsed) {
-                        is Nip19Bech32.NEvent -> citations.add(parsed.hex)
-                        is Nip19Bech32.NAddress -> citations.add(parsed.atag)
-                        is Nip19Bech32.Note -> citations.add(parsed.hex)
-                        is Nip19Bech32.NEmbed -> citations.add(parsed.event.id)
-                    }
-                }
-            }
-        }
-
-        citedNotesCache = citations
-        return citations
+    fun addToCache(
+        pubKey: HexKey,
+        innerEvent: Event,
+    ) {
+        cachedInnerEvent = cachedInnerEvent + Pair(pubKey, innerEvent)
     }
 
-    fun tagsWithoutCitations(): List<String> {
-        val repliesTo = replyTos()
-        val tagAddresses =
-            taggedAddresses().filter {
-                it.kind != CommunityDefinitionEvent.KIND &&
-                    it.kind != WikiNoteEvent.KIND
-            }.map { it.toTag() }
-        if (repliesTo.isEmpty() && tagAddresses.isEmpty()) return emptyList()
-
-        val citations = findCitations()
-
-        return if (citations.isEmpty()) {
-            repliesTo + tagAddresses
-        } else {
-            repliesTo.filter { it !in citations }
-        }
-    }
-
-    fun cachedContentFor(): Event? {
-        return decryptedContent[dTag()]
-    }
-
-    fun plainContent(
+    fun cachedDraft(
         signer: NostrSigner,
         onReady: (Event) -> Unit,
     ) {
-        decryptedContent[dTag()]?.let {
+        cachedInnerEvent[signer.pubKey]?.let {
             onReady(it)
             return
         }
+        decrypt(signer) { draft ->
+            addToCache(signer.pubKey, draft)
 
-        signer.nip44Decrypt(content, signer.pubKey) { retVal ->
-            val event = runCatching { fromJson(retVal) }.getOrNull() ?: return@nip44Decrypt
-            decryptedContent = decryptedContent + Pair(dTag(), event)
+            onReady(draft)
+        }
+    }
 
-            onReady(event)
+    private fun decrypt(
+        signer: NostrSigner,
+        onReady: (Event) -> Unit,
+    ) {
+        try {
+            plainContent(signer) { onReady(fromJson(it)) }
+        } catch (e: Exception) {
+            // Log.e("UnwrapError", "Couldn't Decrypt the content", e)
+        }
+    }
+
+    private fun plainContent(
+        signer: NostrSigner,
+        onReady: (String) -> Unit,
+    ) {
+        if (content.isEmpty()) return
+
+        signer.nip44Decrypt(content, pubKey, onReady)
+    }
+
+    fun createDeletedEvent(
+        signer: NostrSigner,
+        onReady: (DraftEvent) -> Unit,
+    ) {
+        signer.sign<DraftEvent>(createdAt, KIND, tags, "") {
+            onReady(it)
         }
     }
 
     companion object {
         const val KIND = 31234
 
+        fun createAddressTag(
+            pubKey: HexKey,
+            dTag: String,
+        ): String {
+            return ATag(KIND, pubKey, dTag, null).toTag()
+        }
+
         fun create(
             dTag: String,
-            originalNote: EventInterface,
+            originalNote: LiveActivitiesChatMessageEvent,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (DraftEvent) -> Unit,
+        ) {
+            val tags = mutableListOf<Array<String>>()
+            originalNote.activity()?.let { tags.add(arrayOf("a", it.toTag())) }
+            originalNote.replyingTo()?.let { tags.add(arrayOf("e", it)) }
+
+            create(dTag, originalNote, emptyList(), signer, createdAt, onReady)
+        }
+
+        fun create(
+            dTag: String,
+            originalNote: ChannelMessageEvent,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (DraftEvent) -> Unit,
+        ) {
+            val tags = mutableListOf<Array<String>>()
+            originalNote.channel()?.let { tags.add(arrayOf("e", it)) }
+
+            create(dTag, originalNote, tags, signer, createdAt, onReady)
+        }
+
+        fun create(
+            dTag: String,
+            originalNote: GitReplyEvent,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (DraftEvent) -> Unit,
+        ) {
+            val tags = mutableListOf<Array<String>>()
+            originalNote.repository()?.let { tags.add(arrayOf("a", it.toTag())) }
+            originalNote.replyingTo()?.let { tags.add(arrayOf("e", it)) }
+
+            create(dTag, originalNote, tags, signer, createdAt, onReady)
+        }
+
+        fun create(
+            dTag: String,
+            originalNote: PollNoteEvent,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (DraftEvent) -> Unit,
+        ) {
+            val tagsWithMarkers =
+                originalNote.tags().filter {
+                    it.size > 3 && (it[0] == "e" || it[0] == "a") && (it[3] == "root" || it[3] == "reply")
+                }
+
+            create(dTag, originalNote, tagsWithMarkers, signer, createdAt, onReady)
+        }
+
+        fun create(
+            dTag: String,
+            originalNote: TextNoteEvent,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (DraftEvent) -> Unit,
+        ) {
+            val tagsWithMarkers =
+                originalNote.tags().filter {
+                    it.size > 3 && (it[0] == "e" || it[0] == "a") && (it[3] == "root" || it[3] == "reply")
+                }
+
+            create(dTag, originalNote, tagsWithMarkers, signer, createdAt, onReady)
+        }
+
+        fun create(
+            dTag: String,
+            innerEvent: Event,
+            anchorTagArray: List<Array<String>> = emptyList(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (DraftEvent) -> Unit,
         ) {
             val tags = mutableListOf<Array<String>>()
             tags.add(arrayOf("d", dTag))
-            tags.add(arrayOf("k", "${originalNote.kind()}"))
-            tags.addAll(originalNote.tags().filter { it.size > 1 && it[0] == "e" })
-            tags.addAll(originalNote.tags().filter { it.size > 1 && it[0] == "a" })
+            tags.add(arrayOf("k", "${innerEvent.kind}"))
 
-            signer.nip44Encrypt(originalNote.toJson(), signer.pubKey) { encryptedContent ->
-                signer.sign(createdAt, KIND, tags.toTypedArray(), encryptedContent, onReady)
+            if (anchorTagArray.isNotEmpty()) {
+                tags.addAll(anchorTagArray)
+            }
+
+            signer.nip44Encrypt(innerEvent.toJson(), signer.pubKey) { encryptedContent ->
+                signer.sign<DraftEvent>(createdAt, KIND, tags.toTypedArray(), encryptedContent) {
+                    it.addToCache(signer.pubKey, innerEvent)
+                    onReady(it)
+                }
             }
         }
     }

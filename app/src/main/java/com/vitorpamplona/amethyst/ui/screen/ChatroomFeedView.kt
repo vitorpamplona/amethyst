@@ -38,21 +38,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.note.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
+import com.vitorpamplona.quartz.events.DraftEvent
 
 @Composable
 fun RefreshingChatroomFeedView(
     viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
-    newPostViewModel: NewPostViewModel,
     nav: (String) -> Unit,
     routeForLastRead: String,
     onWantsToReply: (Note) -> Unit,
+    avoidDraft: String? = null,
     scrollStateKey: String? = null,
     enablePullRefresh: Boolean = true,
 ) {
@@ -61,11 +61,11 @@ fun RefreshingChatroomFeedView(
             RenderChatroomFeedView(
                 viewModel,
                 accountViewModel,
-                newPostViewModel,
                 listState,
                 nav,
                 routeForLastRead,
                 onWantsToReply,
+                avoidDraft,
             )
         }
     }
@@ -75,11 +75,11 @@ fun RefreshingChatroomFeedView(
 fun RenderChatroomFeedView(
     viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
-    newPostViewModel: NewPostViewModel,
     listState: LazyListState,
     nav: (String) -> Unit,
     routeForLastRead: String,
     onWantsToReply: (Note) -> Unit,
+    avoidDraft: String? = null,
 ) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
@@ -95,11 +95,11 @@ fun RenderChatroomFeedView(
                 ChatroomFeedLoaded(
                     state,
                     accountViewModel,
-                    newPostViewModel,
                     listState,
                     nav,
                     routeForLastRead,
                     onWantsToReply,
+                    avoidDraft,
                 )
             }
             is FeedState.Loading -> {
@@ -113,11 +113,11 @@ fun RenderChatroomFeedView(
 fun ChatroomFeedLoaded(
     state: FeedState.Loaded,
     accountViewModel: AccountViewModel,
-    newPostViewModel: NewPostViewModel,
     listState: LazyListState,
     nav: (String) -> Unit,
     routeForLastRead: String,
     onWantsToReply: (Note) -> Unit,
+    avoidDraft: String? = null,
 ) {
     LaunchedEffect(state.feed.value.firstOrNull()) {
         if (listState.firstVisibleItemIndex <= 1) {
@@ -132,14 +132,16 @@ fun ChatroomFeedLoaded(
         state = listState,
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-            ChatroomMessageCompose(
-                baseNote = item,
-                routeForLastRead = routeForLastRead,
-                accountViewModel = accountViewModel,
-                newPostViewModel = newPostViewModel,
-                nav = nav,
-                onWantsToReply = onWantsToReply,
-            )
+            val noteEvent = item.event
+            if (avoidDraft == null || noteEvent !is DraftEvent || noteEvent.dTag() != avoidDraft) {
+                ChatroomMessageCompose(
+                    baseNote = item,
+                    routeForLastRead = routeForLastRead,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    onWantsToReply = onWantsToReply,
+                )
+            }
             NewSubject(item)
         }
     }

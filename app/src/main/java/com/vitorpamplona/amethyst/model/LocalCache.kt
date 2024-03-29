@@ -105,6 +105,7 @@ import com.vitorpamplona.quartz.events.TextNoteModificationEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
+import com.vitorpamplona.quartz.events.WrappedEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
@@ -129,7 +130,6 @@ object LocalCache {
     val users = LargeCache<HexKey, User>()
     val notes = LargeCache<HexKey, Note>()
     val addressables = LargeCache<String, AddressableNote>()
-    val drafts = ConcurrentHashMap<String, MutableList<Drafts>>()
     val channels = LargeCache<HexKey, Channel>()
     val awaitingPaymentRequests = ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
 
@@ -140,34 +140,6 @@ object LocalCache {
             return getOrCreateUser(key)
         }
         return null
-    }
-
-    fun draftNotes(draftTag: String): List<Note> {
-        return drafts[draftTag]?.mapNotNull {
-            getNoteIfExists(it.mainId)
-        } ?: listOf()
-    }
-
-    fun getDrafts(eventId: String): List<Note> {
-        return drafts.filter {
-            it.value.any { it.eventId == eventId }
-        }.values.map {
-            it.mapNotNull {
-                checkGetOrCreateNote(it.mainId)
-            }
-        }.flatten()
-    }
-
-    fun addDraft(
-        key: String,
-        mainId: String,
-        draftId: String,
-    ) {
-        val data = drafts[key] ?: mutableListOf()
-        if (data.none { it.mainId == mainId }) {
-            data.add(Drafts(mainId, draftId))
-            drafts[key] = data
-        }
     }
 
     fun getOrCreateUser(key: HexKey): User {
@@ -379,7 +351,7 @@ object LocalCache {
             return
         }
 
-        val replyTo = event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+        val replyTo = computeReplyTo(event)
 
         note.loadEvent(event, author, replyTo)
 
@@ -462,13 +434,7 @@ object LocalCache {
             return
         }
 
-        val repository = event.repository()?.toTag()
-
-        val replyTo =
-            event
-                .tagsWithoutCitations()
-                .filter { it != repository }
-                .mapNotNull { checkGetOrCreateNote(it) }
+        val replyTo = computeReplyTo(event)
 
         // println("New GitReply ${event.id} for ${replyTo.firstOrNull()?.event?.id()} ${event.tagsWithoutCitations().filter { it != event.repository()?.toTag() }.firstOrNull()}")
 
@@ -506,7 +472,7 @@ object LocalCache {
             return
         }
 
-        val replyTo = event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+        val replyTo = computeReplyTo(event)
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, replyTo)
@@ -541,12 +507,64 @@ object LocalCache {
             return
         }
 
-        val replyTo = event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+        val replyTo = computeReplyTo(event)
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, replyTo)
 
             refreshObservers(note)
+        }
+    }
+
+    fun computeReplyTo(event: Event): List<Note> {
+        return when (event) {
+            is PollNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            is WikiNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            is LongTextNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            is GitReplyEvent -> event.tagsWithoutCitations().filter { it != event.repository()?.toTag() }.mapNotNull { checkGetOrCreateNote(it) }
+            is TextNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            is ChatMessageEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+            is LnZapEvent ->
+                event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
+                    (event.zapRequest?.taggedAddresses()?.map { getOrCreateAddressableNote(it) } ?: emptyList())
+            is LnZapRequestEvent ->
+                event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.taggedAddresses().map { getOrCreateAddressableNote(it) }
+            is BadgeProfilesEvent ->
+                event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.badgeAwardDefinitions().map { getOrCreateAddressableNote(it) }
+            is BadgeAwardEvent -> event.awardDefinition().map { getOrCreateAddressableNote(it) }
+            is PrivateDmEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+            is RepostEvent ->
+                event.boostedPost().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.taggedAddresses().map { getOrCreateAddressableNote(it) }
+            is GenericRepostEvent ->
+                event.boostedPost().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.taggedAddresses().map { getOrCreateAddressableNote(it) }
+            is CommunityPostApprovalEvent -> event.approvedEvents().mapNotNull { checkGetOrCreateNote(it) }
+            is ReactionEvent ->
+                event.originalPost().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.taggedAddresses().map { getOrCreateAddressableNote(it) }
+            is ReportEvent ->
+                event.reportedPost().mapNotNull { checkGetOrCreateNote(it.key) } +
+                    event.taggedAddresses().map { getOrCreateAddressableNote(it) }
+            is ChannelMessageEvent ->
+                event
+                    .tagsWithoutCitations()
+                    .filter { it != event.channel() }
+                    .mapNotNull { checkGetOrCreateNote(it) }
+            is LiveActivitiesChatMessageEvent ->
+                event
+                    .tagsWithoutCitations()
+                    .filter { it != event.activity()?.toTag() }
+                    .mapNotNull { checkGetOrCreateNote(it) }
+
+            is DraftEvent -> {
+                event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) } + event.taggedAddresses().mapNotNull { checkGetOrCreateAddressableNote(it.toTag()) }
+            }
+
+            else -> emptyList<Note>()
         }
     }
 
@@ -570,7 +588,7 @@ object LocalCache {
             return
         }
 
-        val replyTo = event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+        val replyTo = computeReplyTo(event)
 
         note.loadEvent(event, author, replyTo)
 
@@ -791,9 +809,7 @@ object LocalCache {
         // Already processed this event.
         if (note.event?.id() == event.id()) return
 
-        val replyTo =
-            event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
-                event.badgeAwardDefinitions().map { getOrCreateAddressableNote(it) }
+        val replyTo = computeReplyTo(event)
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, replyTo)
@@ -812,7 +828,7 @@ object LocalCache {
         // ${formattedDateTime(event.createdAt)}")
 
         val author = getOrCreateUser(event.pubKey)
-        val awardDefinition = event.awardDefinition().map { getOrCreateAddressableNote(it) }
+        val awardDefinition = computeReplyTo(event)
 
         note.loadEvent(event, author, awardDefinition)
 
@@ -872,6 +888,8 @@ object LocalCache {
         val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
 
+        val replyTos = computeReplyTo(event)
+
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
             version.moveAllReferencesTo(note)
@@ -886,7 +904,7 @@ object LocalCache {
         if (note.event?.id() == event.id()) return
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
-            note.loadEvent(event, author, emptyList())
+            note.loadEvent(event, author, replyTos)
 
             refreshObservers(note)
         }
@@ -923,7 +941,7 @@ object LocalCache {
 
         // Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
 
-        val repliesTo = event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+        val repliesTo = computeReplyTo(event)
 
         note.loadEvent(event, author, repliesTo)
 
@@ -947,52 +965,112 @@ object LocalCache {
                 // must be the same author
                 if (deleteNote.author?.pubkeyHex == event.pubKey) {
                     // reverts the add
-                    val mentions =
-                        deleteNote.event
-                            ?.tags()
-                            ?.filter { it.firstOrNull() == "p" }
-                            ?.mapNotNull { it.getOrNull(1) }
-                            ?.mapNotNull { checkGetOrCreateUser(it) }
-
-                    mentions?.forEach { user -> user.removeReport(deleteNote) }
-
-                    // Counts the replies
-                    deleteNote.replyTo?.forEach { masterNote ->
-                        masterNote.removeReply(deleteNote)
-                        masterNote.removeBoost(deleteNote)
-                        masterNote.removeReaction(deleteNote)
-                        masterNote.removeZap(deleteNote)
-                        masterNote.removeZapPayment(deleteNote)
-                        masterNote.removeReport(deleteNote)
-                    }
-
-                    deleteNote.channelHex()?.let { getChannelIfExists(it)?.removeNote(deleteNote) }
-
-                    (deleteNote.event as? LiveActivitiesChatMessageEvent)?.activity()?.let {
-                        getChannelIfExists(it.toTag())?.removeNote(deleteNote)
-                    }
-
-                    if (deleteNote.event is PrivateDmEvent) {
-                        val author = deleteNote.author
-                        val recipient =
-                            (deleteNote.event as? PrivateDmEvent)?.verifiedRecipientPubKey()?.let {
-                                checkGetOrCreateUser(it)
-                            }
-
-                        if (recipient != null && author != null) {
-                            author.removeMessage(recipient, deleteNote)
-                            recipient.removeMessage(author, deleteNote)
-                        }
-                    }
-
-                    notes.remove(deleteNote.idHex)
+                    deleteNote(deleteNote)
 
                     deletedAtLeastOne = true
                 }
             }
 
+        val addressList = event.deleteAddresses()
+        val addressSet = addressList.toSet()
+
+        addressList
+            .mapNotNull { getAddressableNoteIfExists(it.toTag()) }
+            .forEach { deleteNote ->
+                // must be the same author
+                if (deleteNote.author?.pubkeyHex == event.pubKey && (deleteNote.createdAt() ?: 0) < event.createdAt) {
+                    // Counts the replies
+                    deleteNote(deleteNote)
+
+                    addressables.remove(deleteNote.idHex)
+
+                    deletedAtLeastOne = true
+                }
+            }
+
+        notes.forEach { key, note ->
+            val noteEvent = note.event
+            if (noteEvent is AddressableEvent && noteEvent.address() in addressSet) {
+                if (noteEvent.pubKey() == event.pubKey && noteEvent.createdAt() <= event.createdAt) {
+                    deleteNote(note)
+                    deletedAtLeastOne = true
+                }
+            }
+        }
+
         if (deletedAtLeastOne) {
-            // refreshObservers()
+            val note = Note(event.id)
+            note.loadEvent(event, getOrCreateUser(event.pubKey), emptyList())
+            refreshObservers(note)
+        }
+    }
+
+    private fun deleteNote(deleteNote: Note) {
+        val deletedEvent = deleteNote.event
+
+        val mentions =
+            deleteNote.event
+                ?.tags()
+                ?.filter { it.firstOrNull() == "p" }
+                ?.mapNotNull { it.getOrNull(1) }
+                ?.mapNotNull { checkGetOrCreateUser(it) }
+
+        mentions?.forEach { user -> user.removeReport(deleteNote) }
+
+        // Counts the replies
+        deleteNote.replyTo?.forEach { masterNote ->
+            masterNote.removeReply(deleteNote)
+            masterNote.removeBoost(deleteNote)
+            masterNote.removeReaction(deleteNote)
+            masterNote.removeZap(deleteNote)
+            masterNote.removeZapPayment(deleteNote)
+            masterNote.removeReport(deleteNote)
+        }
+
+        deleteNote.channelHex()?.let { getChannelIfExists(it)?.removeNote(deleteNote) }
+
+        (deletedEvent as? LiveActivitiesChatMessageEvent)?.activity()?.let {
+            getChannelIfExists(it.toTag())?.removeNote(deleteNote)
+        }
+
+        if (deletedEvent is PrivateDmEvent) {
+            val author = deleteNote.author
+            val recipient =
+                deletedEvent.verifiedRecipientPubKey()?.let {
+                    checkGetOrCreateUser(it)
+                }
+
+            if (recipient != null && author != null) {
+                author.removeMessage(recipient, deleteNote)
+                recipient.removeMessage(author, deleteNote)
+            }
+        }
+
+        if (deletedEvent is DraftEvent) {
+            deletedEvent.allCache().forEach {
+                it?.let {
+                    deindexDraftAsRealEvent(deleteNote, it)
+                }
+            }
+        }
+
+        if (deletedEvent is WrappedEvent) {
+            deleteWraps(deletedEvent)
+        }
+
+        notes.remove(deleteNote.idHex)
+    }
+
+    fun deleteWraps(event: WrappedEvent) {
+        event.host?.let {
+            // seal
+            getNoteIfExists(it.id)?.let {
+                val noteEvent = it.event
+                if (noteEvent is WrappedEvent) {
+                    deleteWraps(noteEvent)
+                }
+            }
+            notes.remove(it.id)
         }
     }
 
@@ -1006,9 +1084,7 @@ object LocalCache {
         // ${formattedDateTime(event.createdAt)}")
 
         val author = getOrCreateUser(event.pubKey)
-        val repliesTo =
-            event.boostedPost().mapNotNull { checkGetOrCreateNote(it) } +
-                event.taggedAddresses().map { getOrCreateAddressableNote(it) }
+        val repliesTo = computeReplyTo(event)
 
         note.loadEvent(event, author, repliesTo)
 
@@ -1028,9 +1104,7 @@ object LocalCache {
         // ${formattedDateTime(event.createdAt)}")
 
         val author = getOrCreateUser(event.pubKey)
-        val repliesTo =
-            event.boostedPost().mapNotNull { checkGetOrCreateNote(it) } +
-                event.taggedAddresses().map { getOrCreateAddressableNote(it) }
+        val repliesTo = computeReplyTo(event)
 
         note.loadEvent(event, author, repliesTo)
 
@@ -1052,7 +1126,7 @@ object LocalCache {
         val author = getOrCreateUser(event.pubKey)
 
         val communities = event.communities()
-        val eventsApproved = event.approvedEvents().mapNotNull { checkGetOrCreateNote(it) }
+        val eventsApproved = computeReplyTo(event)
 
         val repliesTo = communities.map { getOrCreateAddressableNote(it) }
 
@@ -1071,9 +1145,7 @@ object LocalCache {
         if (note.event != null) return
 
         val author = getOrCreateUser(event.pubKey)
-        val repliesTo =
-            event.originalPost().mapNotNull { checkGetOrCreateNote(it) } +
-                event.taggedAddresses().map { getOrCreateAddressableNote(it) }
+        val repliesTo = computeReplyTo(event)
 
         note.loadEvent(event, author, repliesTo)
 
@@ -1101,9 +1173,7 @@ object LocalCache {
         if (note.event != null) return
 
         val mentions = event.reportedAuthor().mapNotNull { checkGetOrCreateUser(it.key) }
-        val repliesTo =
-            event.reportedPost().mapNotNull { checkGetOrCreateNote(it.key) } +
-                event.taggedAddresses().map { getOrCreateAddressableNote(it) }
+        val repliesTo = computeReplyTo(event)
 
         note.loadEvent(event, author, repliesTo)
 
@@ -1202,11 +1272,7 @@ object LocalCache {
             return
         }
 
-        val replyTo =
-            event
-                .tagsWithoutCitations()
-                .filter { it != event.channel() }
-                .mapNotNull { checkGetOrCreateNote(it) }
+        val replyTo = computeReplyTo(event)
 
         note.loadEvent(event, author, replyTo)
 
@@ -1245,11 +1311,7 @@ object LocalCache {
             return
         }
 
-        val replyTo =
-            event
-                .tagsWithoutCitations()
-                .filter { it != event.activity()?.toTag() }
-                .mapNotNull { checkGetOrCreateNote(it) }
+        val replyTo = computeReplyTo(event)
 
         note.loadEvent(event, author, replyTo)
 
@@ -1279,15 +1341,7 @@ object LocalCache {
 
         val author = getOrCreateUser(event.pubKey)
         val mentions = event.zappedAuthor().mapNotNull { checkGetOrCreateUser(it) }
-        val repliesTo =
-            event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
-                event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
-                (
-                    (zapRequest.event as? LnZapRequestEvent)?.taggedAddresses()?.map {
-                        getOrCreateAddressableNote(it)
-                    }
-                        ?: emptySet<Note>()
-                )
+        val repliesTo = computeReplyTo(event)
 
         note.loadEvent(event, author, repliesTo)
 
@@ -1308,9 +1362,7 @@ object LocalCache {
 
         val author = getOrCreateUser(event.pubKey)
         val mentions = event.zappedAuthor().mapNotNull { checkGetOrCreateUser(it) }
-        val repliesTo =
-            event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
-                event.taggedAddresses().map { getOrCreateAddressableNote(it) }
+        val repliesTo = computeReplyTo(event)
 
         note.loadEvent(event, author, repliesTo)
 
@@ -1512,7 +1564,7 @@ object LocalCache {
 
         // Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
 
-        val repliesTo = event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+        val repliesTo = computeReplyTo(event)
 
         note.loadEvent(event, author, repliesTo)
 
@@ -2046,7 +2098,112 @@ object LocalCache {
         event: DraftEvent,
         relay: Relay?,
     ) {
-        consumeBaseReplaceable(event, relay)
+        if (!event.isDeleted()) {
+            consumeBaseReplaceable(event, relay)
+
+            event.allCache().forEach {
+                it?.let {
+                    indexDraftAsRealEvent(event, it)
+                }
+            }
+        }
+    }
+
+    fun indexDraftAsRealEvent(
+        draftWrap: DraftEvent,
+        draft: Event,
+    ) {
+        val note = getOrCreateAddressableNote(draftWrap.address())
+        val author = getOrCreateUser(draftWrap.pubKey)
+
+        when (draft) {
+            is PrivateDmEvent -> {
+                draft.verifiedRecipientPubKey()?.let { getOrCreateUser(it) }?.let { recipient ->
+                    author.addMessage(recipient, note)
+                    recipient.addMessage(author, note)
+                }
+            }
+            is ChatMessageEvent -> {
+                val recipientsHex = draft.recipientsPubKey().plus(draftWrap.pubKey).toSet()
+                val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
+
+                if (recipients.isNotEmpty()) {
+                    recipients.forEach {
+                        val groupMinusRecipient = recipientsHex.minus(it.pubkeyHex)
+
+                        val authorGroup =
+                            if (groupMinusRecipient.isEmpty()) {
+                                // note to self
+                                ChatroomKey(persistentSetOf(it.pubkeyHex))
+                            } else {
+                                ChatroomKey(groupMinusRecipient.toImmutableSet())
+                            }
+
+                        it.addMessage(authorGroup, note)
+                    }
+                }
+            }
+            is ChannelMessageEvent -> {
+                draft.channel()?.let { channelId ->
+                    checkGetOrCreateChannel(channelId)?.let { channel ->
+                        channel.addNote(note)
+                    }
+                }
+            }
+            is TextNoteEvent -> {
+                val replyTo = computeReplyTo(draft)
+                val author = getOrCreateUser(draftWrap.pubKey)
+                note.loadEvent(draftWrap, author, replyTo)
+                replyTo.forEach { it.addReply(note) }
+            }
+        }
+    }
+
+    fun deindexDraftAsRealEvent(
+        draftWrap: Note,
+        draft: Event,
+    ) {
+        val author = draftWrap.author ?: return
+
+        when (draft) {
+            is PrivateDmEvent -> {
+                draft.verifiedRecipientPubKey()?.let { getOrCreateUser(it) }?.let { recipient ->
+                    author.removeMessage(recipient, draftWrap)
+                    recipient.removeMessage(author, draftWrap)
+                }
+            }
+            is ChatMessageEvent -> {
+                val recipientsHex = draft.recipientsPubKey().plus(author.pubkeyHex).toSet()
+                val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
+
+                if (recipients.isNotEmpty()) {
+                    recipients.forEach {
+                        val groupMinusRecipient = recipientsHex.minus(it.pubkeyHex)
+
+                        val authorGroup =
+                            if (groupMinusRecipient.isEmpty()) {
+                                // note to self
+                                ChatroomKey(persistentSetOf(it.pubkeyHex))
+                            } else {
+                                ChatroomKey(groupMinusRecipient.toImmutableSet())
+                            }
+
+                        it.removeMessage(authorGroup, draftWrap)
+                    }
+                }
+            }
+            is ChannelMessageEvent -> {
+                draft.channel()?.let { channelId ->
+                    checkGetOrCreateChannel(channelId)?.let { channel ->
+                        channel.removeNote(draftWrap)
+                    }
+                }
+            }
+            is TextNoteEvent -> {
+                val replyTo = computeReplyTo(draft)
+                replyTo.forEach { it.removeReply(draftWrap) }
+            }
+        }
     }
 
     fun justConsume(

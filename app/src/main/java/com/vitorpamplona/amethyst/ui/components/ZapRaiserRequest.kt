@@ -39,7 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
@@ -47,8 +46,6 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun ZapRaiserRequest(
@@ -97,12 +94,9 @@ fun ZapRaiserRequest(
             onValueChange = {
                 runCatching {
                     if (it.isEmpty()) {
-                        newPostViewModel.zapRaiserAmount = null
+                        newPostViewModel.updateZapRaiserAmount(null)
                     } else {
-                        newPostViewModel.zapRaiserAmount = it.toLongOrNull()
-                    }
-                    newPostViewModel.viewModelScope.launch(Dispatchers.IO) {
-                        newPostViewModel.saveDraft()
+                        newPostViewModel.updateZapRaiserAmount(it.toLongOrNull())
                     }
                 }
             },

@@ -71,8 +71,10 @@ import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
+import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
+import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.GiftWrapEvent
@@ -571,6 +573,10 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
 
     fun cachedDecrypt(note: Note): String? {
         return account.cachedDecryptContent(note)
+    }
+
+    fun cachedDecrypt(event: EventInterface?): String? {
+        return account.cachedDecryptContent(event)
     }
 
     fun decrypt(
@@ -1313,8 +1319,40 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     }
 
     suspend fun deleteDraft(draftTag: String) {
-        val notes = LocalCache.draftNotes(draftTag)
-        account.delete(notes)
+        account.deleteDraft(draftTag)
+    }
+
+    fun createTempCachedDraftNote(
+        noteEvent: DraftEvent,
+        author: User,
+    ): Note? {
+        return noteEvent.preCachedDraft(account.signer)?.let { createTempDraftNote(it, author) }
+    }
+
+    fun createTempDraftNote(
+        noteEvent: DraftEvent,
+        author: User,
+        onReady: (Note) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            noteEvent.cachedDraft(account.signer) {
+                onReady(createTempDraftNote(it, author))
+            }
+        }
+    }
+
+    fun createTempDraftNote(
+        innerEvent: Event,
+        author: User,
+    ): Note {
+        val note =
+            if (innerEvent is AddressableEvent) {
+                AddressableNote(innerEvent.address())
+            } else {
+                Note(innerEvent.id)
+            }
+        note.loadEvent(innerEvent, author, LocalCache.computeReplyTo(innerEvent))
+        return note
     }
 
     val bechLinkCache = CachedLoadedBechLink(this)

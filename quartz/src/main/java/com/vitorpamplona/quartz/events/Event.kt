@@ -97,6 +97,8 @@ open class Event(
 
     override fun firstTaggedUrl() = tags.firstOrNull { it.size > 1 && it[0] == "r" }?.let { it[1] }
 
+    override fun firstTaggedK() = tags.firstOrNull { it.size > 1 && it[0] == "k" }?.let { it[1].toIntOrNull() }
+
     override fun firstTaggedAddress() =
         tags
             .firstOrNull { it.size > 1 && it[0] == "a" }

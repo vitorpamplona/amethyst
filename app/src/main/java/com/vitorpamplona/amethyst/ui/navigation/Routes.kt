@@ -148,6 +148,13 @@ sealed class Route(
             contentDescriptor = R.string.route_home,
         )
 
+    object Drafts :
+        Route(
+            route = "Drafts",
+            icon = R.drawable.ic_topics,
+            contentDescriptor = R.string.drafts,
+        )
+
     object Profile :
         Route(
             route = "User/{id}",

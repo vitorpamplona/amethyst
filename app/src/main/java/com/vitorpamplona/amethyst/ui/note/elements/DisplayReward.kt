@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -175,20 +176,22 @@ class AddBountyAmountViewModel : ViewModel() {
         val newValue = nextAmount.text.trim().toLongOrNull()
 
         if (newValue != null) {
-            account?.sendPost(
-                message = newValue.toString(),
-                replyTo = listOfNotNull(bounty),
-                mentions = listOfNotNull(bounty?.author),
-                tags = listOf("bounty-added-reward"),
-                wantsToMarkAsSensitive = false,
-                replyingTo = null,
-                root = null,
-                directMentions = setOf(),
-                forkedFrom = null,
-                draftTag = null,
-            )
+            viewModelScope.launch {
+                account?.sendPost(
+                    message = newValue.toString(),
+                    replyTo = listOfNotNull(bounty),
+                    mentions = listOfNotNull(bounty?.author),
+                    tags = listOf("bounty-added-reward"),
+                    wantsToMarkAsSensitive = false,
+                    replyingTo = null,
+                    root = null,
+                    directMentions = setOf(),
+                    forkedFrom = null,
+                    draftTag = null,
+                )
 
-            nextAmount = TextFieldValue("")
+                nextAmount = TextFieldValue("")
+            }
         }
     }
 
@@ -237,10 +240,8 @@ fun AddBountyAmountDialog(
 
                     PostButton(
                         onPost = {
-                            scope.launch(Dispatchers.IO) {
-                                postViewModel.sendPost()
-                                onClose()
-                            }
+                            postViewModel.sendPost()
+                            onClose()
                         },
                         isActive = postViewModel.hasChanged(),
                     )

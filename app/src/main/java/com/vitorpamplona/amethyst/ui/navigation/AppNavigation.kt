@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomScreenByAuthor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DiscoverScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.DraftListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.GeoHashScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HiddenUsersScreen
@@ -214,6 +215,7 @@ fun AppNavigation(
 
         composable(Route.BlockedUsers.route, content = { HiddenUsersScreen(accountViewModel, nav) })
         composable(Route.Bookmarks.route, content = { BookmarkListScreen(accountViewModel, nav) })
+        composable(Route.Drafts.route, content = { DraftListScreen(accountViewModel, nav) })
 
         Route.Profile.let { route ->
             composable(

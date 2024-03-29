@@ -119,7 +119,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -177,7 +176,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -206,15 +204,18 @@ fun NewPostView(
     var showRelaysDialog by remember { mutableStateOf(false) }
     var relayList = remember { accountViewModel.account.activeWriteRelays().toImmutableList() }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(key1 = postViewModel.draftTag) {
         launch(Dispatchers.IO) {
             postViewModel.draftTextChanges
                 .receiveAsFlow()
                 .debounce(1000)
                 .collectLatest {
-                    postViewModel.sendPost(relayList = relayList, localDraft = postViewModel.draftTag)
+                    postViewModel.sendDraft(relayList = relayList)
                 }
         }
+    }
+
+    LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
             postViewModel.load(accountViewModel, baseReplyTo, quote, fork, version, draft)
 
@@ -366,7 +367,7 @@ fun NewPostView(
                                     }
                                 }
 
-                                if (enableMessageInterface) {
+                                if (postViewModel.wantsDirectMessage) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
@@ -596,10 +597,7 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
         }
 
         MarkAsSensitive(postViewModel) {
-            postViewModel.wantsToMarkAsSensitive = !postViewModel.wantsToMarkAsSensitive
-            postViewModel.viewModelScope.launch(Dispatchers.IO) {
-                postViewModel.saveDraft()
-            }
+            postViewModel.toggleMarkAsSensitive()
         }
 
         AddGeoHash(postViewModel) {
@@ -846,10 +844,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             MyTextField(
                 value = postViewModel.title,
                 onValueChange = {
-                    postViewModel.title = it
-                    postViewModel.viewModelScope.launch(Dispatchers.IO) {
-                        postViewModel.saveDraft()
-                    }
+                    postViewModel.updateTitle(it)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
@@ -886,16 +881,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 value = postViewModel.price,
                 onValueChange = {
-                    runCatching {
-                        if (it.text.isEmpty()) {
-                            postViewModel.price = TextFieldValue("")
-                        } else if (it.text.toLongOrNull() != null) {
-                            postViewModel.price = it
-                        }
-                    }
-                    postViewModel.viewModelScope.launch(Dispatchers.IO) {
-                        postViewModel.saveDraft()
-                    }
+                    postViewModel.updatePrice(it)
                 },
                 placeholder = {
                     Text(
@@ -961,10 +947,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                 placeholder = conditionTypes.filter { it.first == postViewModel.condition }.first().second,
                 options = conditionOptions,
                 onSelect = {
-                    postViewModel.condition = conditionTypes[it].first
-                    postViewModel.viewModelScope.launch(Dispatchers.IO) {
-                        postViewModel.saveDraft()
-                    }
+                    postViewModel.updateCondition(conditionTypes[it].first)
                 },
                 modifier =
                     Modifier
@@ -1030,10 +1013,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                         ?: "",
                 options = categoryOptions,
                 onSelect = {
-                    postViewModel.category = TextFieldValue(categoryTypes[it].second)
-                    postViewModel.viewModelScope.launch(Dispatchers.IO) {
-                        postViewModel.saveDraft()
-                    }
+                    postViewModel.updateCategory(TextFieldValue(categoryTypes[it].second))
                 },
                 modifier =
                     Modifier
@@ -1070,10 +1050,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             MyTextField(
                 value = postViewModel.locationText,
                 onValueChange = {
-                    postViewModel.locationText = it
-                    postViewModel.viewModelScope.launch(Dispatchers.IO) {
-                        postViewModel.saveDraft()
-                    }
+                    postViewModel.updateLocation(it)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {

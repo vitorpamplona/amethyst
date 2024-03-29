@@ -293,6 +293,7 @@
     <string name="block_only">Block</string>
 
     <string name="bookmarks">Bookmarks</string>
+    <string name="drafts">Drafts</string>
     <string name="private_bookmarks">Private Bookmarks</string>
     <string name="public_bookmarks">Public Bookmarks</string>
     <string name="add_to_private_bookmarks">Add to Private Bookmarks</string>

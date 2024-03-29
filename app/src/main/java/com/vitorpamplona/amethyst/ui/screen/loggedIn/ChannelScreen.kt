@@ -64,6 +64,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -210,21 +211,8 @@ fun PrepareChannelViewModels(
         )
 
     val channelScreenModel: NewPostViewModel = viewModel()
-
-    LaunchedEffect(Unit) {
-        launch(Dispatchers.IO) {
-            channelScreenModel.draftTextChanges
-                .receiveAsFlow()
-                .debounce(1000)
-                .collectLatest {
-                    channelScreenModel.sendPost(localDraft = channelScreenModel.draftTag)
-                }
-        }
-    }
-
     channelScreenModel.accountViewModel = accountViewModel
     channelScreenModel.account = accountViewModel.account
-    channelScreenModel.originalNote = LocalCache.getNoteIfExists(baseChannel.idHex)
 
     ChannelScreen(
         channel = baseChannel,
@@ -306,56 +294,34 @@ fun ChannelScreen(
             RefreshingChatroomFeedView(
                 viewModel = feedViewModel,
                 accountViewModel = accountViewModel,
-                newPostViewModel = newPostModel,
                 nav = nav,
                 routeForLastRead = "Channel/${channel.idHex}",
+                avoidDraft = newPostModel.draftTag,
                 onWantsToReply = { replyTo.value = it },
             )
         }
 
         Spacer(modifier = DoubleVertSpacer)
 
-        replyTo.value?.let { DisplayReplyingToNote(it, accountViewModel, newPostModel, nav) { replyTo.value = null } }
+        replyTo.value?.let { DisplayReplyingToNote(it, accountViewModel, nav) { replyTo.value = null } }
 
         val scope = rememberCoroutineScope()
+
+        LaunchedEffect(Unit) {
+            launch(Dispatchers.IO) {
+                newPostModel.draftTextChanges
+                    .receiveAsFlow()
+                    .debounce(1000)
+                    .collectLatest {
+                        innerSendPost(replyTo, channel, newPostModel, accountViewModel, newPostModel.draftTag)
+                    }
+            }
+        }
 
         // LAST ROW
         EditFieldRow(newPostModel, isPrivate = false, accountViewModel = accountViewModel) {
             scope.launch(Dispatchers.IO) {
-                val tagger =
-                    NewMessageTagger(
-                        message = newPostModel.message.text,
-                        pTags = listOfNotNull(replyTo.value?.author),
-                        eTags = listOfNotNull(replyTo.value),
-                        channelHex = channel.idHex,
-                        dao = accountViewModel,
-                    )
-                tagger.run()
-
-                val urls = findURLs(tagger.message)
-                val usedAttachments = newPostModel.nip94attachments.filter { it.urls().intersect(urls.toSet()).isNotEmpty() }
-
-                if (channel is PublicChatChannel) {
-                    accountViewModel.account.sendChannelMessage(
-                        message = tagger.message,
-                        toChannel = channel.idHex,
-                        replyTo = tagger.eTags,
-                        mentions = tagger.pTags,
-                        wantsToMarkAsSensitive = false,
-                        nip94attachments = usedAttachments,
-                        draftTag = null,
-                    )
-                } else if (channel is LiveActivitiesChannel) {
-                    accountViewModel.account.sendLiveMessage(
-                        message = tagger.message,
-                        toChannel = channel.address,
-                        replyTo = tagger.eTags,
-                        mentions = tagger.pTags,
-                        wantsToMarkAsSensitive = false,
-                        nip94attachments = usedAttachments,
-                        draftTag = null,
-                    )
-                }
+                innerSendPost(replyTo, channel, newPostModel, accountViewModel, null)
                 newPostModel.message = TextFieldValue("")
                 replyTo.value = null
                 accountViewModel.deleteDraft(newPostModel.draftTag)
@@ -366,11 +332,53 @@ fun ChannelScreen(
     }
 }
 
+private suspend fun innerSendPost(
+    replyTo: MutableState<Note?>,
+    channel: Channel,
+    newPostModel: NewPostViewModel,
+    accountViewModel: AccountViewModel,
+    draftTag: String?,
+) {
+    val tagger =
+        NewMessageTagger(
+            message = newPostModel.message.text,
+            pTags = listOfNotNull(replyTo.value?.author),
+            eTags = listOfNotNull(replyTo.value),
+            channelHex = channel.idHex,
+            dao = accountViewModel,
+        )
+    tagger.run()
+
+    val urls = findURLs(tagger.message)
+    val usedAttachments = newPostModel.nip94attachments.filter { it.urls().intersect(urls.toSet()).isNotEmpty() }
+
+    if (channel is PublicChatChannel) {
+        accountViewModel.account.sendChannelMessage(
+            message = tagger.message,
+            toChannel = channel.idHex,
+            replyTo = tagger.eTags,
+            mentions = tagger.pTags,
+            wantsToMarkAsSensitive = false,
+            nip94attachments = usedAttachments,
+            draftTag = draftTag,
+        )
+    } else if (channel is LiveActivitiesChannel) {
+        accountViewModel.account.sendLiveMessage(
+            message = tagger.message,
+            toChannel = channel.address,
+            replyTo = tagger.eTags,
+            mentions = tagger.pTags,
+            wantsToMarkAsSensitive = false,
+            nip94attachments = usedAttachments,
+            draftTag = draftTag,
+        )
+    }
+}
+
 @Composable
 fun DisplayReplyingToNote(
     replyingNote: Note?,
     accountViewModel: AccountViewModel,
-    newPostModel: NewPostViewModel,
     nav: (String) -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -389,7 +397,6 @@ fun DisplayReplyingToNote(
                     null,
                     innerQuote = true,
                     accountViewModel = accountViewModel,
-                    newPostViewModel = newPostModel,
                     nav = nav,
                     onWantsToReply = {},
                 )

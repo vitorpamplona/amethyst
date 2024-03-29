@@ -185,6 +185,8 @@ private fun RenderTopRouteBar(
         Route.Discover.base -> DiscoveryTopBar(followLists, drawerState, accountViewModel, nav)
         Route.Notification.base -> NotificationTopBar(followLists, drawerState, accountViewModel, nav)
         Route.Settings.base -> TopBarWithBackButton(stringResource(id = R.string.application_preferences), navPopBack)
+        Route.Bookmarks.base -> TopBarWithBackButton(stringResource(id = R.string.bookmarks), navPopBack)
+        Route.Drafts.base -> TopBarWithBackButton(stringResource(id = R.string.drafts), navPopBack)
         else -> {
             if (id != null) {
                 when (currentRoute) {

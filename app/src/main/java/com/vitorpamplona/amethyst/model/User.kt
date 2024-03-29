@@ -277,6 +277,18 @@ class User(val pubkeyHex: String) {
         }
     }
 
+    fun removeMessage(
+        room: ChatroomKey,
+        msg: Note,
+    ) {
+        checkNotInMainThread()
+        val privateChatroom = getOrCreatePrivateChatroom(room)
+        if (msg in privateChatroom.roomMessages) {
+            privateChatroom.removeMessageSync(msg)
+            liveSet?.innerMessages?.invalidateData()
+        }
+    }
+
     fun addRelayBeingUsed(
         relay: Relay,
         eventTime: Long,

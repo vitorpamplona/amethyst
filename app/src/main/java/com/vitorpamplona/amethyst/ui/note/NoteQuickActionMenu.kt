@@ -40,7 +40,6 @@ import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
@@ -86,7 +85,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
-import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
@@ -135,7 +133,6 @@ val externalLinkForNote = { note: Note ->
 fun LongPressToQuickAction(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    newPostViewModel: NewPostViewModel?,
     content: @Composable (() -> Unit) -> Unit,
 ) {
     val popupExpanded = remember { mutableStateOf(false) }
@@ -144,7 +141,7 @@ fun LongPressToQuickAction(
 
     content(showPopup)
 
-    NoteQuickActionMenu(baseNote, popupExpanded.value, hidePopup, accountViewModel, newPostViewModel)
+    NoteQuickActionMenu(baseNote, popupExpanded.value, hidePopup, accountViewModel)
 }
 
 @Composable
@@ -153,7 +150,6 @@ fun NoteQuickActionMenu(
     popupExpanded: Boolean,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
-    newPostViewModel: NewPostViewModel?,
 ) {
     val showSelectTextDialog = remember { mutableStateOf(false) }
     val showDeleteAlertDialog = remember { mutableStateOf(false) }
@@ -164,7 +160,6 @@ fun NoteQuickActionMenu(
     if (popupExpanded) {
         RenderMainPopup(
             accountViewModel,
-            newPostViewModel,
             note,
             onDismiss,
             showBlockAlertDialog,
@@ -223,7 +218,6 @@ fun NoteQuickActionMenu(
 @Composable
 private fun RenderMainPopup(
     accountViewModel: AccountViewModel,
-    newPostViewModel: NewPostViewModel?,
     note: Note,
     onDismiss: () -> Unit,
     showBlockAlertDialog: MutableState<Boolean>,
@@ -300,6 +294,7 @@ private fun RenderMainPopup(
                         }
                     }
 
+                    /*
                     if (note.isDraft()) {
                         VerticalDivider(color = primaryLight)
                         NoteQuickActionItem(
@@ -314,7 +309,7 @@ private fun RenderMainPopup(
                                 onDismiss()
                             }
                         }
-                    }
+                    }*/
 
                     if (!isOwnNote) {
                         VerticalDivider(color = primaryLight)

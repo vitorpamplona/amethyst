@@ -49,12 +49,15 @@ import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.Split
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
@@ -84,7 +87,8 @@ enum class UserSuggestionAnchor {
 
 @Stable
 open class NewPostViewModel() : ViewModel() {
-    var draftTag: String = UUID.randomUUID().toString()
+    var draftTag: String by mutableStateOf(UUID.randomUUID().toString())
+
     var accountViewModel: AccountViewModel? = null
     var account: Account? = null
     var requiresNIP24: Boolean = false
@@ -192,8 +196,17 @@ open class NewPostViewModel() : ViewModel() {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
 
-        if (draft != null) {
-            loadFromDraft(draft, accountViewModel)
+        val noteEvent = draft?.event
+        val noteAuthor = draft?.author
+
+        if (draft != null && noteEvent is DraftEvent && noteAuthor != null) {
+            accountViewModel.createTempDraftNote(noteEvent, noteAuthor) { innerNote ->
+                val oldTag = (draft.event as? AddressableEvent)?.dTag()
+                if (oldTag != null) {
+                    draftTag = oldTag
+                }
+                loadFromDraft(innerNote, accountViewModel)
+            }
         } else {
             originalNote = replyingTo
             replyingTo?.let { replyNote ->
@@ -226,14 +239,6 @@ open class NewPostViewModel() : ViewModel() {
             canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
             canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channelHex() == null
             contentToAddUrl = null
-
-            wantsForwardZapTo = false
-            wantsToMarkAsSensitive = false
-            wantsToAddGeoHash = false
-            wantsZapraiser = false
-            zapRaiserAmount = null
-            forwardZapTo = Split()
-            forwardZapToEditting = TextFieldValue("")
 
             quote?.let {
                 message = TextFieldValue(message.text + "\nnostr:${it.toNEvent()}")
@@ -313,16 +318,13 @@ open class NewPostViewModel() : ViewModel() {
         accountViewModel: AccountViewModel,
     ) {
         Log.d("draft", draft.event!!.toJson())
-
-        draftTag = LocalCache.drafts.filter {
-            it.value.any { it.eventId == draft.event?.id() }
-        }.keys.firstOrNull() ?: draftTag
+        val draftEvent = draft.event ?: return
 
         canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
         canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
         contentToAddUrl = null
 
-        val localfowardZapTo = draft.event?.tags()?.filter { it.size > 1 && it[0] == "zap" } ?: listOf()
+        val localfowardZapTo = draftEvent.tags().filter { it.size > 1 && it[0] == "zap" }
         forwardZapTo = Split()
         localfowardZapTo.forEach {
             val user = LocalCache.getOrCreateUser(it[1])
@@ -332,9 +334,9 @@ open class NewPostViewModel() : ViewModel() {
         forwardZapToEditting = TextFieldValue("")
         wantsForwardZapTo = localfowardZapTo.isNotEmpty()
 
-        wantsToMarkAsSensitive = draft.event?.tags()?.any { it.size > 1 && it[0] == "content-warning" } ?: false
-        wantsToAddGeoHash = draft.event?.tags()?.any { it.size > 1 && it[0] == "g" } ?: false
-        val zapraiser = draft.event?.tags()?.filter { it.size > 1 && it[0] == "zapraiser" } ?: listOf()
+        wantsToMarkAsSensitive = draftEvent.tags().any { it.size > 1 && it[0] == "content-warning" }
+        wantsToAddGeoHash = draftEvent.tags().any { it.size > 1 && it[0] == "g" }
+        val zapraiser = draftEvent.tags().filter { it.size > 1 && it[0] == "zapraiser" }
         wantsZapraiser = zapraiser.isNotEmpty()
         zapRaiserAmount = null
         if (wantsZapraiser) {
@@ -342,25 +344,34 @@ open class NewPostViewModel() : ViewModel() {
         }
 
         eTags =
-            draft.event?.tags()?.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) != "fork" }?.mapNotNull {
+            draftEvent.tags().filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) != "fork" }.mapNotNull {
                 val note = LocalCache.checkGetOrCreateNote(it[1])
                 note
             }
 
-        pTags =
-            draft.event?.tags()?.filter { it.size > 1 && it[0] == "p" }?.map {
-                LocalCache.getOrCreateUser(it[1])
-            }
+        if (draftEvent !is PrivateDmEvent && draftEvent !is ChatMessageEvent) {
+            pTags =
+                draftEvent.tags().filter { it.size > 1 && it[0] == "p" }.map {
+                    LocalCache.getOrCreateUser(it[1])
+                }
+        }
 
-        draft.event?.tags()?.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "fork" }?.forEach {
+        draftEvent.tags().filter { it.size > 3 && (it[0] == "e" || it[0] == "a") && it.get(3) == "fork" }.forEach {
             val note = LocalCache.checkGetOrCreateNote(it[1])
             forkedFromNote = note
         }
 
         originalNote =
-            draft.event?.tags()?.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "root" }?.map {
+            draftEvent.tags().filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "reply" }.map {
                 LocalCache.checkGetOrCreateNote(it[1])
-            }?.firstOrNull()
+            }.firstOrNull()
+
+        if (originalNote == null) {
+            originalNote =
+                draftEvent.tags().filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "root" }.map {
+                    LocalCache.checkGetOrCreateNote(it[1])
+                }.firstOrNull()
+        }
 
         canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channelHex() == null
 
@@ -368,14 +379,14 @@ open class NewPostViewModel() : ViewModel() {
             wantsForwardZapTo = true
         }
 
-        val polls = draft.event?.tags()?.filter { it.size > 1 && it[0] == "poll_option" } ?: emptyList()
+        val polls = draftEvent.tags().filter { it.size > 1 && it[0] == "poll_option" }
         wantsPoll = polls.isNotEmpty()
 
         polls.forEach {
             pollOptions[it[1].toInt()] = it[2]
         }
 
-        val minMax = draft.event?.tags()?.filter { it.size > 1 && (it[0] == "value_minimum" || it[0] == "value_maximum") } ?: listOf()
+        val minMax = draftEvent.tags().filter { it.size > 1 && (it[0] == "value_minimum" || it[0] == "value_maximum") }
         minMax.forEach {
             if (it[0] == "value_maximum") {
                 valueMaximum = it[1].toInt()
@@ -384,33 +395,56 @@ open class NewPostViewModel() : ViewModel() {
             }
         }
 
-        wantsProduct = draft.event?.kind() == 30402
+        wantsProduct = draftEvent.kind() == 30402
 
-        title = TextFieldValue(draft.event?.tags()?.filter { it.size > 1 && it[0] == "title" }?.map { it[1] }?.firstOrNull() ?: "")
-        price = TextFieldValue(draft.event?.tags()?.filter { it.size > 1 && it[0] == "price" }?.map { it[1] }?.firstOrNull() ?: "")
-        category = TextFieldValue(draft.event?.tags()?.filter { it.size > 1 && it[0] == "t" }?.map { it[1] }?.firstOrNull() ?: "")
-        locationText = TextFieldValue(draft.event?.tags()?.filter { it.size > 1 && it[0] == "location" }?.map { it[1] }?.firstOrNull() ?: "")
+        title = TextFieldValue(draftEvent.tags().filter { it.size > 1 && it[0] == "title" }.map { it[1] }?.firstOrNull() ?: "")
+        price = TextFieldValue(draftEvent.tags().filter { it.size > 1 && it[0] == "price" }.map { it[1] }?.firstOrNull() ?: "")
+        category = TextFieldValue(draftEvent.tags().filter { it.size > 1 && it[0] == "t" }.map { it[1] }?.firstOrNull() ?: "")
+        locationText = TextFieldValue(draftEvent.tags().filter { it.size > 1 && it[0] == "location" }.map { it[1] }?.firstOrNull() ?: "")
         condition = ClassifiedsEvent.CONDITION.entries.firstOrNull {
-            it.value == draft.event?.tags()?.filter { it.size > 1 && it[0] == "condition" }?.map { it[1] }?.firstOrNull()
+            it.value == draftEvent.tags().filter { it.size > 1 && it[0] == "condition" }.map { it[1] }.firstOrNull()
         } ?: ClassifiedsEvent.CONDITION.USED_LIKE_NEW
 
+        wantsDirectMessage = draftEvent is PrivateDmEvent || draftEvent is ChatMessageEvent
+
+        draftEvent.subject()?.let {
+            subject = TextFieldValue()
+        }
+
         message =
-            if (draft.event is PrivateDmEvent) {
-                val event = draft.event as PrivateDmEvent
-                TextFieldValue(event.cachedContentFor(accountViewModel.account.signer) ?: "")
+            if (draftEvent is PrivateDmEvent) {
+                val recepientNpub = draftEvent.verifiedRecipientPubKey()?.let { Hex.decode(it).toNpub() }
+                toUsers = TextFieldValue("@$recepientNpub")
+                TextFieldValue(draftEvent.cachedContentFor(accountViewModel.account.signer) ?: "")
             } else {
-                TextFieldValue(draft.event?.content() ?: "")
+                TextFieldValue(draftEvent.content())
             }
 
-        nip24 = draft.event is ChatMessageEvent
+        requiresNIP24 = draftEvent is ChatMessageEvent
+        nip24 = draftEvent is ChatMessageEvent
+
+        if (draftEvent is ChatMessageEvent) {
+            toUsers =
+                TextFieldValue(
+                    draftEvent.recipientsPubKey().mapNotNull { runCatching { Hex.decode(it).toNpub() }.getOrNull() }.joinToString(", ") { "@$it" },
+                )
+        }
+
         urlPreview = findUrlInMessage()
     }
 
-    fun sendPost(
-        relayList: List<Relay>? = null,
-        localDraft: String? = null,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) { innerSendPost(relayList, localDraft) }
+    fun sendPost(relayList: List<Relay>? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            innerSendPost(relayList, null)
+            accountViewModel?.deleteDraft(draftTag)
+            cancel()
+        }
+    }
+
+    fun sendDraft(relayList: List<Relay>? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            innerSendPost(relayList, draftTag)
+        }
     }
 
     private suspend fun innerSendPost(
@@ -422,8 +456,7 @@ open class NewPostViewModel() : ViewModel() {
             return
         }
 
-        val tagger =
-            NewMessageTagger(message.text, pTags, eTags, originalNote?.channelHex(), accountViewModel!!)
+        val tagger = NewMessageTagger(message.text, pTags, eTags, originalNote?.channelHex(), accountViewModel!!)
         tagger.run()
 
         val toUsersTagger = NewMessageTagger(toUsers.text, null, null, null, accountViewModel!!)
@@ -526,6 +559,7 @@ open class NewPostViewModel() : ViewModel() {
                 zapRaiserAmount = localZapRaiserAmount,
                 geohash = geoHash,
                 nip94attachments = usedAttachments,
+                draftTag = localDraft,
             )
         } else if (!dmUsers.isNullOrEmpty()) {
             if (nip24 || dmUsers.size > 1) {
@@ -599,19 +633,19 @@ open class NewPostViewModel() : ViewModel() {
         } else {
             if (wantsPoll) {
                 account?.sendPoll(
-                    tagger.message,
-                    tagger.eTags,
-                    tagger.pTags,
-                    pollOptions,
-                    valueMaximum,
-                    valueMinimum,
-                    consensusThreshold,
-                    closedAt,
-                    zapReceiver,
-                    wantsToMarkAsSensitive,
-                    localZapRaiserAmount,
-                    relayList,
-                    geoHash,
+                    message = tagger.message,
+                    replyTo = tagger.eTags,
+                    mentions = tagger.pTags,
+                    pollOptions = pollOptions,
+                    valueMaximum = valueMaximum,
+                    valueMinimum = valueMinimum,
+                    consensusThreshold = consensusThreshold,
+                    closedAt = closedAt,
+                    zapReceiver = zapReceiver,
+                    wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                    zapRaiserAmount = localZapRaiserAmount,
+                    relayList = relayList,
+                    geohash = geoHash,
                     nip94attachments = usedAttachments,
                     draftTag = localDraft,
                 )
@@ -672,9 +706,6 @@ open class NewPostViewModel() : ViewModel() {
                     draftTag = localDraft,
                 )
             }
-        }
-        if (localDraft == null) {
-            cancel()
         }
     }
 
@@ -759,7 +790,6 @@ open class NewPostViewModel() : ViewModel() {
         urlPreview = null
         isUploadingImage = false
         pTags = null
-        eTags = null
 
         wantsDirectMessage = false
 
@@ -777,6 +807,9 @@ open class NewPostViewModel() : ViewModel() {
 
         wantsProduct = false
         condition = ClassifiedsEvent.CONDITION.USED_LIKE_NEW
+        locationText = TextFieldValue("")
+        title = TextFieldValue("")
+        category = TextFieldValue("")
         price = TextFieldValue("")
 
         wantsForwardZapTo = false
@@ -788,13 +821,16 @@ open class NewPostViewModel() : ViewModel() {
         userSuggestions = emptyList()
         userSuggestionAnchor = null
         userSuggestionsMainMessage = null
-        originalNote = null
 
+        draftTag = UUID.randomUUID().toString()
+
+        NostrSearchEventOrUserDataSource.clear()
+    }
+
+    fun deleteDraft() {
         viewModelScope.launch(Dispatchers.IO) {
             accountViewModel?.deleteDraft(draftTag)
         }
-
-        NostrSearchEventOrUserDataSource.clear()
     }
 
     open fun findUrlInMessage(): String? {
@@ -809,8 +845,8 @@ open class NewPostViewModel() : ViewModel() {
         pTags = pTags?.filter { it != userToRemove }
     }
 
-    open suspend fun saveDraft() {
-        draftTextChanges.send("")
+    private fun saveDraft() {
+        draftTextChanges.trySend("")
     }
 
     open fun updateMessage(it: TextFieldValue) {
@@ -836,9 +872,7 @@ open class NewPostViewModel() : ViewModel() {
             }
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            saveDraft()
-        }
+        saveDraft()
     }
 
     open fun updateToUsers(it: TextFieldValue) {
@@ -862,16 +896,12 @@ open class NewPostViewModel() : ViewModel() {
                 userSuggestions = emptyList()
             }
         }
-        viewModelScope.launch(Dispatchers.IO) {
-            saveDraft()
-        }
+        saveDraft()
     }
 
     open fun updateSubject(it: TextFieldValue) {
         subject = it
-        viewModelScope.launch(Dispatchers.IO) {
-            saveDraft()
-        }
+        saveDraft()
     }
 
     open fun updateZapForwardTo(it: TextFieldValue) {
@@ -898,9 +928,7 @@ open class NewPostViewModel() : ViewModel() {
                 userSuggestions = emptyList()
             }
         }
-        viewModelScope.launch(Dispatchers.IO) {
-            saveDraft()
-        }
+        saveDraft()
     }
 
     open fun autocompleteWithUser(item: User) {
@@ -947,9 +975,7 @@ open class NewPostViewModel() : ViewModel() {
             userSuggestions = emptyList()
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            saveDraft()
-        }
+        saveDraft()
     }
 
     private fun newStateMapPollOptions(): SnapshotStateMap<Int, String> {
@@ -1020,9 +1046,7 @@ open class NewPostViewModel() : ViewModel() {
 
                     message = message.insertUrlAtCursor(imageUrl)
                     urlPreview = findUrlInMessage()
-                    viewModelScope.launch(Dispatchers.IO) {
-                        saveDraft()
-                    }
+                    saveDraft()
                 }
             },
             onError = {
@@ -1067,9 +1091,7 @@ open class NewPostViewModel() : ViewModel() {
                         }
 
                         urlPreview = findUrlInMessage()
-                        viewModelScope.launch(Dispatchers.IO) {
-                            saveDraft()
-                        }
+                        saveDraft()
                     }
                 },
                 onError = {
@@ -1090,7 +1112,7 @@ open class NewPostViewModel() : ViewModel() {
         locUtil?.let {
             location =
                 it.locationStateFlow.mapLatest { it.toGeoHash(GeohashPrecision.KM_5_X_5.digits).toString() }
-            viewModelScope.launch(Dispatchers.IO) { saveDraft() }
+            saveDraft()
         }
         viewModelScope.launch(Dispatchers.IO) { locUtil?.start() }
     }
@@ -1116,9 +1138,7 @@ open class NewPostViewModel() : ViewModel() {
             nip24 = !nip24
         }
         if (message.text.isNotBlank()) {
-            viewModelScope.launch(Dispatchers.IO) {
-                saveDraft()
-            }
+            saveDraft()
         }
     }
 
@@ -1139,9 +1159,7 @@ open class NewPostViewModel() : ViewModel() {
         }
 
         checkMinMax()
-        viewModelScope.launch(Dispatchers.IO) {
-            saveDraft()
-        }
+        saveDraft()
     }
 
     fun updateMaxZapAmountForPoll(textMax: String) {
@@ -1161,9 +1179,7 @@ open class NewPostViewModel() : ViewModel() {
         }
 
         checkMinMax()
-        viewModelScope.launch(Dispatchers.IO) {
-            saveDraft()
-        }
+        saveDraft()
     }
 
     fun checkMinMax() {
@@ -1181,6 +1197,60 @@ open class NewPostViewModel() : ViewModel() {
         sliderValue: Float,
     ) {
         forwardZapTo.updatePercentage(index, sliderValue)
+    }
+
+    fun updateZapRaiserAmount(newAmount: Long?) {
+        zapRaiserAmount = newAmount
+        saveDraft()
+    }
+
+    fun removePollOption(optionIndex: Int) {
+        pollOptions.remove(optionIndex)
+        saveDraft()
+    }
+
+    fun updatePollOption(
+        optionIndex: Int,
+        text: String,
+    ) {
+        pollOptions[optionIndex] = text
+        saveDraft()
+    }
+
+    fun toggleMarkAsSensitive() {
+        wantsToMarkAsSensitive = !wantsToMarkAsSensitive
+        saveDraft()
+    }
+
+    fun updateTitle(it: TextFieldValue) {
+        title = it
+        saveDraft()
+    }
+
+    fun updatePrice(it: TextFieldValue) {
+        runCatching {
+            if (it.text.isEmpty()) {
+                price = TextFieldValue("")
+            } else if (it.text.toLongOrNull() != null) {
+                price = it
+            }
+        }
+        saveDraft()
+    }
+
+    fun updateCondition(newCondition: ClassifiedsEvent.CONDITION) {
+        condition = newCondition
+        saveDraft()
+    }
+
+    fun updateCategory(value: TextFieldValue) {
+        category = value
+        saveDraft()
+    }
+
+    fun updateLocation(it: TextFieldValue) {
+        locationText = it
+        saveDraft()
     }
 }
 

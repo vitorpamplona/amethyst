@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.NoteQuickActionMenu
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
+import com.vitorpamplona.amethyst.ui.note.RenderDraft
 import com.vitorpamplona.amethyst.ui.note.RenderRepost
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayEditStatus
@@ -155,6 +156,7 @@ import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FhirResourceEvent
@@ -540,6 +542,8 @@ fun NoteMaster(
                         RenderGitIssueEvent(baseNote, false, true, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is AppDefinitionEvent) {
                         RenderAppDefinition(baseNote, accountViewModel, nav)
+                    } else if (noteEvent is DraftEvent) {
+                        RenderDraft(baseNote, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is HighlightEvent) {
                         DisplayHighlight(
                             noteEvent.quote(),
@@ -610,7 +614,7 @@ fun NoteMaster(
             ReactionsRow(note, true, editState, accountViewModel, nav)
         }
 
-        NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel, null)
+        NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
     }
 }
 

@@ -88,7 +88,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.service.relays.RelayPoolStatus
-import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
 import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -462,12 +461,6 @@ fun ListContent(
     val proxyPort = remember { mutableStateOf(accountViewModel.account.proxyPort.toString()) }
     val context = LocalContext.current
 
-    var draftText by remember {
-        mutableStateOf<String?>(null)
-    }
-
-    var wantsToPost by remember { mutableStateOf(false) }
-
     Column(
         modifier =
             modifier
@@ -490,6 +483,15 @@ fun ListContent(
             nav = nav,
             drawerState = drawerState,
             route = Route.Bookmarks.route,
+        )
+
+        NavigationRow(
+            title = stringResource(R.string.drafts),
+            icon = Route.Drafts.icon,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            drawerState = drawerState,
+            route = Route.Drafts.route,
         )
 
         IconRowRelays(
@@ -585,18 +587,6 @@ fun ListContent(
                 )
             },
             proxyPort,
-        )
-    }
-
-    if (wantsToPost) {
-        NewPostView(
-            {
-                wantsToPost = false
-                draftText = null
-                coroutineScope.launch { drawerState.close() }
-            },
-            accountViewModel = accountViewModel,
-            nav = nav,
         )
     }
 

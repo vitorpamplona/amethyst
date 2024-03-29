@@ -145,7 +145,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             types = COMMON_FEED_TYPES,
             filter =
                 JsonFilter(
-                    kinds = listOf(ReportEvent.KIND),
+                    kinds = listOf(DraftEvent.KIND, ReportEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     since =
                         latestEOSEs.users[account.userProfile()]
@@ -230,16 +230,6 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         )
     }
 
-    fun createDraftsFilter() =
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter =
-                JsonFilter(
-                    kinds = listOf(DraftEvent.KIND),
-                    authors = listOf(account.userProfile().pubkeyHex),
-                ),
-        )
-
     fun createGiftWrapsToMeFilter() =
         TypedFilter(
             types = COMMON_FEED_TYPES,
@@ -277,20 +267,14 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 is DraftEvent -> {
                     // Avoid decrypting over and over again if the event already exist.
 
-                    val note = LocalCache.getNoteIfExists(event.id)
-                    if (note != null && relay.brief in note.relays) return
+                    if (!event.isDeleted()) {
+                        val note = LocalCache.getNoteIfExists(event.id)
+                        if (note != null && relay.brief in note.relays) return
 
-                    LocalCache.justConsume(event, relay)
-                    event.plainContent(account.signer) {
-                        val tag =
-                            event.tags().filter { it.size > 1 && it[0] == "d" }.map {
-                                it[1]
-                            }.firstOrNull()
+                        // decrypts
+                        event.cachedDraft(account.signer) {}
 
-                        LocalCache.justConsume(it, relay)
-                        tag?.let { lTag ->
-                            LocalCache.addDraft(lTag, event.id(), it.id())
-                        }
+                        LocalCache.justConsume(event, relay)
                     }
                 }
 
@@ -376,7 +360,6 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     createAccountSettingsFilter(),
                     createAccountLastPostsListFilter(),
                     createOtherAccountsBaseFilter(),
-                    createDraftsFilter(),
                 )
                     .ifEmpty { null }
         } else {

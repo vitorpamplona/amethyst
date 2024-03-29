@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import kotlin.time.measureTimedValue
@@ -78,7 +80,7 @@ class ThreadAssembler {
                 val note = LocalCache.checkGetOrCreateNote(noteId) ?: return emptySet<Note>()
 
                 if (note.event != null) {
-                    val thread = mutableSetOf<Note>()
+                    val thread = OnlyLatestVersionSet()
 
                     val threadRoot = searchRoot(note, thread) ?: note
 
@@ -87,7 +89,7 @@ class ThreadAssembler {
                     // did not added them.
                     note.replies.forEach { loadDown(it, thread) }
 
-                    thread.toSet()
+                    thread
                 } else {
                     setOf(note)
                 }
@@ -107,5 +109,89 @@ class ThreadAssembler {
 
             note.replies.forEach { loadDown(it, thread) }
         }
+    }
+}
+
+class OnlyLatestVersionSet : MutableSet<Note> {
+    val map = hashMapOf<ATag, Long>()
+    val set = hashSetOf<Note>()
+
+    override fun add(element: Note): Boolean {
+        val loadedCreatedAt = element.createdAt()
+        val noteEvent = element.event
+
+        return if (element is AddressableNote && loadedCreatedAt != null) {
+            innerAdd(element.address, element, loadedCreatedAt)
+        } else if (noteEvent is AddressableEvent && loadedCreatedAt != null) {
+            innerAdd(noteEvent.address(), element, loadedCreatedAt)
+        } else {
+            set.add(element)
+        }
+    }
+
+    private fun innerAdd(
+        address: ATag,
+        element: Note,
+        loadedCreatedAt: Long,
+    ): Boolean {
+        val existing = map.get(address)
+        return if (existing == null) {
+            map.put(address, loadedCreatedAt)
+            set.add(element)
+        } else {
+            if (loadedCreatedAt > existing) {
+                map.put(address, loadedCreatedAt)
+                set.add(element)
+            } else {
+                false
+            }
+        }
+    }
+
+    override fun addAll(elements: Collection<Note>): Boolean {
+        return elements.map { add(it) }.any()
+    }
+
+    override val size: Int
+        get() = set.size
+
+    override fun clear() {
+        set.clear()
+        map.clear()
+    }
+
+    override fun isEmpty(): Boolean {
+        return set.isEmpty()
+    }
+
+    override fun containsAll(elements: Collection<Note>): Boolean {
+        return set.containsAll(elements)
+    }
+
+    override fun contains(element: Note): Boolean {
+        return set.contains(element)
+    }
+
+    override fun iterator(): MutableIterator<Note> {
+        return set.iterator()
+    }
+
+    override fun retainAll(elements: Collection<Note>): Boolean {
+        return set.retainAll(elements)
+    }
+
+    override fun removeAll(elements: Collection<Note>): Boolean {
+        return elements.map { remove(it) }.any()
+    }
+
+    override fun remove(element: Note): Boolean {
+        element.address()?.let {
+            map.remove(it)
+        }
+        (element.event as? AddressableEvent)?.address()?.let {
+            map.remove(it)
+        }
+
+        return set.remove(element)
     }
 }
