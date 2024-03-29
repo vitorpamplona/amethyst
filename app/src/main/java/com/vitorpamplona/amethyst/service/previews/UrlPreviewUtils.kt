@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.previews
 
+import com.vitorpamplona.amethyst.commons.preview.MetaTag
+import com.vitorpamplona.amethyst.commons.preview.MetaTagsParser
 import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import kotlinx.coroutines.Dispatchers
