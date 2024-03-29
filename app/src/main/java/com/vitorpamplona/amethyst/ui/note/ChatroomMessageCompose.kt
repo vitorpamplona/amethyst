@@ -493,24 +493,26 @@ private fun RenderDraftEvent(
     nav: (String) -> Unit,
 ) {
     ObserveDraftEvent(note, accountViewModel) {
-        RenderReplyRow(
-            note = it,
-            innerQuote = innerQuote,
-            backgroundBubbleColor = backgroundBubbleColor,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            onWantsToReply = onWantsToReply,
-        )
+        Column {
+            RenderReplyRow(
+                note = it,
+                innerQuote = innerQuote,
+                backgroundBubbleColor = backgroundBubbleColor,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onWantsToReply = onWantsToReply,
+            )
 
-        NoteRow(
-            note = it,
-            canPreview = canPreview,
-            innerQuote = innerQuote,
-            onWantsToReply = onWantsToReply,
-            backgroundBubbleColor = backgroundBubbleColor,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+            NoteRow(
+                note = it,
+                canPreview = canPreview,
+                innerQuote = innerQuote,
+                onWantsToReply = onWantsToReply,
+                backgroundBubbleColor = backgroundBubbleColor,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
     }
 }
 
