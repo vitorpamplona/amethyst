@@ -622,6 +622,7 @@
     <string name="server_did_not_provide_a_url_after_uploading">El servidor no proporcionó una URL después de la subida</string>
     <string name="could_not_download_from_the_server">No se pudo descargar el contenido subido desde el servidor</string>
     <string name="could_not_prepare_local_file_to_upload">No se pudo preparar el archivo local para subir: %1$s</string>
+    <string name="edit_draft">Editar borrador</string>
     <string name="login_with_qr_code">Iniciar sesión con código QR</string>
     <string name="route">Ruta</string>
     <string name="route_home">Inicio</string>
@@ -693,4 +694,9 @@
     <string name="accessibility_play_username">Reproducir nombre de usuario como audio</string>
     <string name="accessibility_scan_qr_code">Escanear código QR</string>
     <string name="accessibility_navigate_to_alby">Ir al proveedor externo de billeteras Alby</string>
+    <string name="it_s_not_possible_to_reply_to_a_draft_note">No es posible responder a un borrador de nota</string>
+    <string name="it_s_not_possible_to_quote_to_a_draft_note">No es posible citar un borrador de nota</string>
+    <string name="it_s_not_possible_to_react_to_a_draft_note">No es posible reaccionar a un borrador de nota</string>
+    <string name="it_s_not_possible_to_zap_to_a_draft_note">No es posible zapear un borrador de nota</string>
+    <string name="draft_note">Borrador de nota</string>
 </resources>
