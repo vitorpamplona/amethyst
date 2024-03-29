@@ -87,7 +87,7 @@ class ChatMessageEvent(
         ) {
             val tags = mutableListOf<Array<String>>()
             to?.forEach { tags.add(arrayOf("p", it)) }
-            replyTos?.forEach { tags.add(arrayOf("e", it)) }
+            replyTos?.forEach { tags.add(arrayOf("e", it, "", "reply")) }
             mentions?.forEach { tags.add(arrayOf("p", it, "", "mention")) }
             zapReceiver?.forEach {
                 tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))

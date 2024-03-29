@@ -146,7 +146,7 @@ class PrivateDmEvent(
 
             val tags = mutableListOf<Array<String>>()
             publishedRecipientPubKey?.let { tags.add(arrayOf("p", publishedRecipientPubKey)) }
-            replyTos?.forEach { tags.add(arrayOf("e", it)) }
+            replyTos?.forEach { tags.add(arrayOf("e", it, "", "reply")) }
             mentions?.forEach { tags.add(arrayOf("p", it)) }
             zapReceiver?.forEach {
                 tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
