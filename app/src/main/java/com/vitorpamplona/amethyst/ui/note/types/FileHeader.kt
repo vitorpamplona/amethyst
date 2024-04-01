@@ -67,6 +67,7 @@ fun FileHeaderDisplay(
                         url = fullUrl,
                         description = description,
                         hash = hash,
+                        blurhash = blurHash,
                         dim = dimensions,
                         uri = uri,
                         authorName = note.author?.toBestDisplayName(),
