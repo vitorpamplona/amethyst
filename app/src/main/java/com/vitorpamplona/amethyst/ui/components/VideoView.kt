@@ -883,13 +883,17 @@ fun ControlWhenPlayerIsActive(
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     // doesn't consider the mutex because the screen can turn off if the video
                     // being played in the mutex is not visible.
-                    view.keepScreenOn = isPlaying
+                    if (view.keepScreenOn != isPlaying) {
+                        view.keepScreenOn = isPlaying
+                    }
                 }
             }
 
         controller.addListener(listener)
         onDispose {
-            view.keepScreenOn = false
+            if (view.keepScreenOn) {
+                view.keepScreenOn = false
+            }
             controller.removeListener(listener)
         }
     }
