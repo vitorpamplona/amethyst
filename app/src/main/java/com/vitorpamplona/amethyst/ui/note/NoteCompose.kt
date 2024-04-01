@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -85,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderBadgeAward
+import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderClassifieds
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
@@ -121,7 +121,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.UserNameMaxRowHeight
 import com.vitorpamplona.amethyst.ui.theme.UserNameRowHeight
 import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
@@ -171,8 +170,6 @@ import com.vitorpamplona.quartz.events.TextNoteModificationEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
 @Composable
@@ -528,16 +525,6 @@ fun NoteBody(
         Spacer(modifier = Modifier.height(3.dp))
     }
 
-    if (!makeItShort) {
-        ReplyRow(
-            baseNote,
-            unPackReply,
-            backgroundColor,
-            accountViewModel,
-            nav,
-        )
-    }
-
     RenderNoteRow(
         baseNote = baseNote,
         backgroundColor = backgroundColor,
@@ -545,6 +532,7 @@ fun NoteBody(
         canPreview = canPreview,
         editState = editState,
         quotesLeft = quotesLeft,
+        unPackReply = unPackReply,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -564,6 +552,7 @@ private fun RenderNoteRow(
     makeItShort: Boolean,
     canPreview: Boolean,
     quotesLeft: Int,
+    unPackReply: Boolean,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -658,6 +647,7 @@ private fun RenderNoteRow(
                 makeItShort,
                 canPreview,
                 quotesLeft,
+                unPackReply,
                 backgroundColor,
                 accountViewModel,
                 nav,
@@ -687,6 +677,17 @@ private fun RenderNoteRow(
                 nav,
             )
         }
+        is ChannelMessageEvent ->
+            RenderChannelMessage(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                editState,
+                accountViewModel,
+                nav,
+            )
         is LiveActivitiesChatMessageEvent ->
             RenderLiveActivityChatMessage(
                 baseNote,
@@ -704,6 +705,7 @@ private fun RenderNoteRow(
                 makeItShort,
                 canPreview,
                 quotesLeft,
+                unPackReply,
                 backgroundColor,
                 editState,
                 accountViewModel,
@@ -748,14 +750,6 @@ fun RenderDraft(
     ObserveDraftEvent(note, accountViewModel) {
         val edits = remember { mutableStateOf(GenericLoadable.Empty<EditState>()) }
 
-        ReplyRow(
-            it,
-            true,
-            backgroundColor,
-            accountViewModel,
-            nav,
-        )
-
         RenderNoteRow(
             baseNote = it,
             backgroundColor = backgroundColor,
@@ -763,6 +757,7 @@ fun RenderDraft(
             canPreview = true,
             editState = edits,
             quotesLeft = 3,
+            unPackReply = true,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -808,81 +803,7 @@ fun getGradient(backgroundColor: MutableState<Color>): Brush {
 }
 
 @Composable
-private fun ReplyRow(
-    note: Note,
-    unPackReply: Boolean,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    val noteEvent = note.event
-
-    val showReply by
-        remember(note) {
-            derivedStateOf {
-                noteEvent is BaseTextNoteEvent && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
-            }
-        }
-
-    val showChannelInfo by
-        remember(note) {
-            derivedStateOf {
-                if (noteEvent is ChannelMessageEvent || noteEvent is LiveActivitiesChatMessageEvent) {
-                    note.channelHex()
-                } else {
-                    null
-                }
-            }
-        }
-
-    showChannelInfo?.let {
-        ChannelHeader(
-            channelHex = it,
-            showVideo = false,
-            sendToChannel = true,
-            modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-        Spacer(modifier = StdVertSpacer)
-    }
-
-    if (showReply) {
-        val replyingDirectlyTo =
-            remember(note) {
-                if (noteEvent is BaseTextNoteEvent) {
-                    val replyingTo = noteEvent.replyingToAddressOrEvent()
-                    if (replyingTo != null) {
-                        val newNote = accountViewModel.getNoteIfExists(replyingTo)
-                        if (newNote != null && newNote.channelHex() == null && newNote.event?.kind() != CommunityDefinitionEvent.KIND) {
-                            newNote
-                        } else {
-                            note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.KIND }
-                        }
-                    } else {
-                        note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.KIND }
-                    }
-                } else {
-                    note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.KIND }
-                }
-            }
-        if (replyingDirectlyTo != null && unPackReply) {
-            ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
-            Spacer(modifier = StdVertSpacer)
-        } else if (showChannelInfo != null) {
-            val replies = remember { note.replyTo?.toImmutableList() }
-            val mentions =
-                remember {
-                    (note.event as? BaseTextNoteEvent)?.mentions()?.toImmutableList() ?: persistentListOf()
-                }
-
-            ReplyInformationChannel(replies, mentions, accountViewModel, nav)
-        }
-    }
-}
-
-@Composable
-private fun ReplyNoteComposition(
+fun ReplyNoteComposition(
     replyingDirectlyTo: Note,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,

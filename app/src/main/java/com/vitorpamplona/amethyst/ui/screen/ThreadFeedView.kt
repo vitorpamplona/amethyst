@@ -121,14 +121,17 @@ import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
+import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
+import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
@@ -152,6 +155,7 @@ import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
@@ -167,10 +171,12 @@ import com.vitorpamplona.quartz.events.GitIssueEvent
 import com.vitorpamplona.quartz.events.GitPatchEvent
 import com.vitorpamplona.quartz.events.GitRepositoryEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
+import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.RelaySetEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteModificationEvent
@@ -480,6 +486,11 @@ fun NoteMaster(
                         ),
             ) {
                 Column {
+                    val canPreview =
+                        note.author == account.userProfile() ||
+                            (note.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||
+                            !noteForReports.hasAnyReports()
+
                     if (
                         (noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) &&
                         note.channelHex() != null
@@ -570,31 +581,55 @@ fun NoteMaster(
                             nav,
                         )
                     } else if (noteEvent is PollNoteEvent) {
-                        val canPreview =
-                            note.author == account.userProfile() ||
-                                (note.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||
-                                !noteForReports.hasAnyReports()
-
                         RenderPoll(
                             baseNote,
                             false,
                             canPreview,
                             quotesLeft = 3,
+                            unPackReply = false,
                             backgroundColor,
                             accountViewModel,
                             nav,
                         )
+                    } else if (noteEvent is PrivateDmEvent) {
+                        RenderPrivateMessage(
+                            baseNote,
+                            false,
+                            canPreview,
+                            3,
+                            backgroundColor,
+                            accountViewModel,
+                            nav,
+                        )
+                    } else if (noteEvent is ChannelMessageEvent) {
+                        RenderChannelMessage(
+                            baseNote,
+                            false,
+                            canPreview,
+                            3,
+                            backgroundColor,
+                            editState,
+                            accountViewModel,
+                            nav,
+                        )
+                    } else if (noteEvent is LiveActivitiesChatMessageEvent) {
+                        RenderLiveActivityChatMessage(
+                            baseNote,
+                            false,
+                            canPreview,
+                            3,
+                            backgroundColor,
+                            editState,
+                            accountViewModel,
+                            nav,
+                        )
                     } else {
-                        val canPreview =
-                            note.author == account.userProfile() ||
-                                (note.author?.let { account.userProfile().isFollowingCached(it) } ?: true) ||
-                                !noteForReports.hasAnyReports()
-
                         RenderTextEvent(
                             baseNote,
                             false,
                             canPreview,
                             quotesLeft = 3,
+                            unPackReply = false,
                             backgroundColor,
                             editState,
                             accountViewModel,
@@ -876,6 +911,7 @@ private fun RenderWikiHeaderForThreadPreview() {
                     false,
                     true,
                     quotesLeft = 3,
+                    unPackReply = false,
                     backgroundColor,
                     editState,
                     accountViewModel,

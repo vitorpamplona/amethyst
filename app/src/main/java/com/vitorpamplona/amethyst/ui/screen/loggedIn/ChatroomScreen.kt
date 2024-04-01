@@ -94,7 +94,6 @@ import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.ServerOption
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
-import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.DisplayRoomSubject
 import com.vitorpamplona.amethyst.ui.note.DisplayUserSetAsSubject
@@ -591,7 +590,7 @@ fun ChatroomHeader(
     room: ChatroomKey,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    onClick: () -> Unit,
 ) {
     if (room.users.size == 1) {
         LoadUser(baseUserHex = room.users.first(), accountViewModel) { baseUser ->
@@ -600,7 +599,7 @@ fun ChatroomHeader(
                     baseUser = baseUser,
                     modifier = modifier,
                     accountViewModel = accountViewModel,
-                    nav = nav,
+                    onClick = onClick,
                 )
             }
         }
@@ -609,7 +608,7 @@ fun ChatroomHeader(
             room = room,
             modifier = modifier,
             accountViewModel = accountViewModel,
-            nav = nav,
+            onClick = onClick,
         )
     }
 }
@@ -619,13 +618,13 @@ fun ChatroomHeader(
     baseUser: User,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    onClick: () -> Unit,
 ) {
     Column(
         modifier =
             Modifier.fillMaxWidth()
                 .clickable(
-                    onClick = { nav("User/${baseUser.pubkeyHex}") },
+                    onClick = onClick,
                 ),
     ) {
         Column(
@@ -641,7 +640,6 @@ fun ChatroomHeader(
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
                     UsernameDisplay(baseUser)
-                    ObserveDisplayNip05Status(baseUser, accountViewModel = accountViewModel, nav = nav)
                 }
             }
         }
@@ -653,12 +651,10 @@ fun GroupChatroomHeader(
     room: ChatroomKey,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    onClick: () -> Unit,
 ) {
-    val expanded = remember { mutableStateOf(false) }
-
     Column(
-        modifier = Modifier.fillMaxWidth().clickable { expanded.value = !expanded.value },
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     ) {
         Column(
             verticalArrangement = Arrangement.Center,
@@ -675,10 +671,6 @@ fun GroupChatroomHeader(
                     RoomNameOnlyDisplay(room, Modifier, FontWeight.Bold, accountViewModel.userProfile())
                     DisplayUserSetAsSubject(room, accountViewModel, FontWeight.Normal)
                 }
-            }
-
-            if (expanded.value) {
-                LongRoomHeader(room = room, accountViewModel = accountViewModel, nav = nav)
             }
         }
     }

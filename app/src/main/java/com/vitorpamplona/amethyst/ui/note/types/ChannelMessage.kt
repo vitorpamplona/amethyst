@@ -36,10 +36,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.events.ChannelMessageEvent
 
 @Composable
-fun RenderLiveActivityChatMessage(
+fun RenderChannelMessage(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,
@@ -52,8 +52,8 @@ fun RenderLiveActivityChatMessage(
     val noteEvent = note.event
     val showChannelInfo =
         remember(noteEvent) {
-            if (noteEvent is LiveActivitiesChatMessageEvent) {
-                noteEvent.activity()?.toTag()
+            if (noteEvent is ChannelMessageEvent) {
+                noteEvent.channel()
             } else {
                 null
             }

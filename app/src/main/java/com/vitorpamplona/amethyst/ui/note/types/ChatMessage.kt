@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomHeader
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -59,7 +60,11 @@ fun RenderChatMessage(
 
     userRoom?.let {
         if (it.users.size > 1 || (it.users.size == 1 && note.author == accountViewModel.account.userProfile())) {
-            ChatroomHeader(it, MaterialTheme.colorScheme.replyModifier.padding(10.dp), accountViewModel, nav)
+            ChatroomHeader(it, MaterialTheme.colorScheme.replyModifier.padding(10.dp), accountViewModel) {
+                routeFor(note, accountViewModel.userProfile())?.let {
+                    nav(it)
+                }
+            }
             Spacer(modifier = StdVertSpacer)
         }
     }
@@ -69,6 +74,7 @@ fun RenderChatMessage(
         makeItShort,
         canPreview,
         quotesLeft,
+        unPackReply = false,
         backgroundColor,
         editState,
         accountViewModel,
