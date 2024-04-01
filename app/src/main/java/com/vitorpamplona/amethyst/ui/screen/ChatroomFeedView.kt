@@ -52,6 +52,7 @@ fun RefreshingChatroomFeedView(
     nav: (String) -> Unit,
     routeForLastRead: String,
     onWantsToReply: (Note) -> Unit,
+    onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: String? = null,
     scrollStateKey: String? = null,
     enablePullRefresh: Boolean = true,
@@ -65,6 +66,7 @@ fun RefreshingChatroomFeedView(
                 nav,
                 routeForLastRead,
                 onWantsToReply,
+                onWantsToEditDraft,
                 avoidDraft,
             )
         }
@@ -79,6 +81,7 @@ fun RenderChatroomFeedView(
     nav: (String) -> Unit,
     routeForLastRead: String,
     onWantsToReply: (Note) -> Unit,
+    onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: String? = null,
 ) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
@@ -99,6 +102,7 @@ fun RenderChatroomFeedView(
                     nav,
                     routeForLastRead,
                     onWantsToReply,
+                    onWantsToEditDraft,
                     avoidDraft,
                 )
             }
@@ -117,6 +121,7 @@ fun ChatroomFeedLoaded(
     nav: (String) -> Unit,
     routeForLastRead: String,
     onWantsToReply: (Note) -> Unit,
+    onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: String? = null,
 ) {
     LaunchedEffect(state.feed.value.firstOrNull()) {
@@ -140,6 +145,7 @@ fun ChatroomFeedLoaded(
                     accountViewModel = accountViewModel,
                     nav = nav,
                     onWantsToReply = onWantsToReply,
+                    onWantsToEditDraft = onWantsToEditDraft,
                 )
             }
             NewSubject(item)

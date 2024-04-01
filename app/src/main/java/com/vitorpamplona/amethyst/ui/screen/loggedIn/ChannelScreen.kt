@@ -298,6 +298,9 @@ fun ChannelScreen(
                 routeForLastRead = "Channel/${channel.idHex}",
                 avoidDraft = newPostModel.draftTag,
                 onWantsToReply = { replyTo.value = it },
+                onWantsToEditDraft = {
+                    newPostModel.load(accountViewModel, null, null, null, null, it)
+                },
             )
         }
 
@@ -399,6 +402,7 @@ fun DisplayReplyingToNote(
                     accountViewModel = accountViewModel,
                     nav = nav,
                     onWantsToReply = {},
+                    onWantsToEditDraft = {},
                 )
             }
 

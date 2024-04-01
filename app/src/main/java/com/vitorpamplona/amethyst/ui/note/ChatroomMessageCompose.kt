@@ -105,6 +105,7 @@ fun ChatroomMessageCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit,
+    onWantsToEditDraft: (Note) -> Unit,
 ) {
     WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel) {
         WatchBlockAndReport(
@@ -123,6 +124,7 @@ fun ChatroomMessageCompose(
                 accountViewModel,
                 nav,
                 onWantsToReply,
+                onWantsToEditDraft,
             )
         }
     }
@@ -139,6 +141,7 @@ fun NormalChatNote(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit,
+    onWantsToEditDraft: (Note) -> Unit,
 ) {
     val drawAuthorInfo by
         remember(note) {
@@ -252,6 +255,7 @@ fun NormalChatNote(
                         innerQuote,
                         backgroundBubbleColor,
                         onWantsToReply,
+                        onWantsToEditDraft,
                         canPreview,
                         availableBubbleSize,
                         showDetails,
@@ -265,7 +269,9 @@ fun NormalChatNote(
                 note = note,
                 popupExpanded = popupExpanded,
                 onDismiss = { popupExpanded = false },
+                onWantsToEditDraft = { onWantsToEditDraft(note) },
                 accountViewModel = accountViewModel,
+                nav = nav,
             )
         }
     }
@@ -279,6 +285,7 @@ private fun RenderBubble(
     innerQuote: Boolean,
     backgroundBubbleColor: MutableState<Color>,
     onWantsToReply: (Note) -> Unit,
+    onWantsToEditDraft: (Note) -> Unit,
     canPreview: Boolean,
     availableBubbleSize: MutableState<Int>,
     showDetails: State<Boolean>,
@@ -309,6 +316,7 @@ private fun RenderBubble(
             backgroundBubbleColor,
             bubbleSize,
             onWantsToReply,
+            onWantsToEditDraft,
             canPreview,
             showDetails,
             accountViewModel,
@@ -327,6 +335,7 @@ private fun MessageBubbleLines(
     backgroundBubbleColor: MutableState<Color>,
     bubbleSize: MutableState<Int>,
     onWantsToReply: (Note) -> Unit,
+    onWantsToEditDraft: (Note) -> Unit,
     canPreview: Boolean,
     showDetails: State<Boolean>,
     accountViewModel: AccountViewModel,
@@ -349,6 +358,7 @@ private fun MessageBubbleLines(
             accountViewModel = accountViewModel,
             nav = nav,
             onWantsToReply = onWantsToReply,
+            onWantsToEditDraft = onWantsToEditDraft,
         )
     }
 
@@ -357,6 +367,7 @@ private fun MessageBubbleLines(
         canPreview = canPreview,
         innerQuote = innerQuote,
         onWantsToReply = onWantsToReply,
+        onWantsToEditDraft = onWantsToEditDraft,
         backgroundBubbleColor = backgroundBubbleColor,
         accountViewModel = accountViewModel,
         nav = nav,
@@ -403,9 +414,10 @@ private fun RenderReplyRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit,
+    onWantsToEditDraft: (Note) -> Unit,
 ) {
     if (!innerQuote && note.replyTo?.lastOrNull() != null) {
-        RenderReply(note, backgroundBubbleColor, accountViewModel, nav, onWantsToReply)
+        RenderReply(note, backgroundBubbleColor, accountViewModel, nav, onWantsToReply, onWantsToEditDraft)
     }
 }
 
@@ -416,6 +428,7 @@ private fun RenderReply(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     onWantsToReply: (Note) -> Unit,
+    onWantsToEditDraft: (Note) -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         val replyTo =
@@ -434,6 +447,7 @@ private fun RenderReply(
                 accountViewModel = accountViewModel,
                 nav = nav,
                 onWantsToReply = onWantsToReply,
+                onWantsToEditDraft = onWantsToEditDraft,
             )
         }
     }
@@ -445,6 +459,7 @@ private fun NoteRow(
     canPreview: Boolean,
     innerQuote: Boolean,
     onWantsToReply: (Note) -> Unit,
+    onWantsToEditDraft: (Note) -> Unit,
     backgroundBubbleColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -463,6 +478,7 @@ private fun NoteRow(
                     canPreview,
                     innerQuote,
                     onWantsToReply,
+                    onWantsToEditDraft,
                     backgroundBubbleColor,
                     accountViewModel,
                     nav,
@@ -488,6 +504,7 @@ private fun RenderDraftEvent(
     canPreview: Boolean,
     innerQuote: Boolean,
     onWantsToReply: (Note) -> Unit,
+    onWantsToEditDraft: (Note) -> Unit,
     backgroundBubbleColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -501,6 +518,7 @@ private fun RenderDraftEvent(
                 accountViewModel = accountViewModel,
                 nav = nav,
                 onWantsToReply = onWantsToReply,
+                onWantsToEditDraft = onWantsToEditDraft,
             )
 
             NoteRow(
@@ -508,6 +526,7 @@ private fun RenderDraftEvent(
                 canPreview = canPreview,
                 innerQuote = innerQuote,
                 onWantsToReply = onWantsToReply,
+                onWantsToEditDraft = onWantsToEditDraft,
                 backgroundBubbleColor = backgroundBubbleColor,
                 accountViewModel = accountViewModel,
                 nav = nav,

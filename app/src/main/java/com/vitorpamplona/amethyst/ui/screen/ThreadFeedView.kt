@@ -614,7 +614,14 @@ fun NoteMaster(
             ReactionsRow(note, true, editState, accountViewModel, nav)
         }
 
-        NoteQuickActionMenu(note, popupExpanded, { popupExpanded = false }, accountViewModel)
+        NoteQuickActionMenu(
+            note = note,
+            popupExpanded = popupExpanded,
+            onDismiss = { popupExpanded = false },
+            onWantsToEditDraft = { },
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }
 

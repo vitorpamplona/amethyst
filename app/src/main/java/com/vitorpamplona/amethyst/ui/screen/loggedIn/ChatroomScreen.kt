@@ -326,6 +326,9 @@ fun ChatroomScreen(
                 onWantsToReply = {
                     replyTo.value = it
                 },
+                onWantsToEditDraft = {
+                    newPostModel.load(accountViewModel, null, null, null, null, it)
+                },
             )
         }
 
