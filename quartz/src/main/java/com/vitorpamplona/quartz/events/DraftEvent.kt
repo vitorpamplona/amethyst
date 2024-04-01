@@ -45,6 +45,10 @@ class DraftEvent(
         return cachedInnerEvent[signer.pubKey]
     }
 
+    fun preCachedDraft(pubKey: HexKey): Event? {
+        return cachedInnerEvent[pubKey]
+    }
+
     fun allCache() = cachedInnerEvent.values
 
     fun addToCache(

@@ -645,10 +645,6 @@ fun ChatroomHeader(
                 }
             }
         }
-
-        HorizontalDivider(
-            thickness = DividerThickness,
-        )
     }
 }
 
@@ -685,10 +681,6 @@ fun GroupChatroomHeader(
                 LongRoomHeader(room = room, accountViewModel = accountViewModel, nav = nav)
             }
         }
-
-        HorizontalDivider(
-            thickness = DividerThickness,
-        )
     }
 }
 

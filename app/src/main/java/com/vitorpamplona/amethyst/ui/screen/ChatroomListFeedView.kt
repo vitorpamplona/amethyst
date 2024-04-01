@@ -39,7 +39,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
-import kotlin.time.ExperimentalTime
 
 @Composable
 fun ChatroomListFeedView(
@@ -81,7 +80,6 @@ private fun CrossFadeState(
     }
 }
 
-@OptIn(ExperimentalTime::class)
 @Composable
 private fun FeedLoaded(
     state: FeedState.Loaded,
