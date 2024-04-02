@@ -25,6 +25,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -83,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.chatAuthorBox
 import com.vitorpamplona.amethyst.ui.theme.chatAuthorImage
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -346,6 +348,7 @@ private fun MessageBubbleLines(
             baseNote,
             alignment,
             accountViewModel.settings.showProfilePictures.value,
+            accountViewModel,
             nav,
         )
     }
@@ -704,6 +707,7 @@ private fun DrawAuthorInfo(
     baseNote: Note,
     alignment: Arrangement.Horizontal,
     loadProfilePicture: Boolean,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     baseNote.author?.let {
@@ -717,7 +721,7 @@ private fun DrawAuthorInfo(
                         nav("User/${baseNote.author?.pubkeyHex}")
                     },
         ) {
-            WatchAndDisplayUser(it, loadProfilePicture, nav)
+            WatchAndDisplayUser(it, loadProfilePicture, accountViewModel, nav)
         }
     }
 }
@@ -726,11 +730,23 @@ private fun DrawAuthorInfo(
 private fun WatchAndDisplayUser(
     author: User,
     loadProfilePicture: Boolean,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     val userState by author.live().userMetadataInfo.observeAsState()
 
-    UserIcon(author.pubkeyHex, userState?.picture, loadProfilePicture)
+    Box(chatAuthorBox, contentAlignment = Alignment.TopEnd) {
+        InnerUserPicture(
+            userHex = author.pubkeyHex,
+            userPicture = userState?.picture,
+            userName = userState?.bestName(),
+            size = Size20dp,
+            modifier = Modifier,
+            accountViewModel = accountViewModel,
+        )
+
+        ObserveAndDisplayFollowingMark(author.pubkeyHex, Size5dp, accountViewModel)
+    }
 
     if (userState != null) {
         DisplayMessageUsername(userState?.bestName() ?: author.pubkeyDisplayHex(), userState?.tags ?: EmptyTagList)

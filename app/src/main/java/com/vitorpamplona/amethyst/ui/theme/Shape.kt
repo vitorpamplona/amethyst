@@ -228,5 +228,6 @@ val liveStreamTag =
         .background(Color.Black)
         .padding(horizontal = Size5dp)
 
+val chatAuthorBox = Modifier.size(20.dp)
 val chatAuthorImage = Modifier.size(20.dp).clip(shape = CircleShape)
 val AuthorInfoVideoFeed = Modifier.width(75.dp).padding(end = 15.dp)
