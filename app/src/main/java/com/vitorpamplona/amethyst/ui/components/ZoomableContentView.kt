@@ -501,8 +501,6 @@ private fun AddedImageFeatures(
             ImageUrlWithDownloadButton(content.url, showImage)
         }
     } else {
-        var verifiedHash by remember(content.url) { mutableStateOf<Boolean?>(null) }
-
         when (painter.value) {
             null,
             is AsyncImagePainter.State.Loading,
@@ -528,22 +526,30 @@ private fun AddedImageFeatures(
                 }
             }
             is AsyncImagePainter.State.Success -> {
-                if (content.hash != null) {
-                    LaunchedEffect(key1 = content.url) {
-                        launch(Dispatchers.IO) {
-                            val newVerifiedHash = verifyHash(content)
-                            if (newVerifiedHash != verifiedHash) {
-                                verifiedHash = newVerifiedHash
-                            }
-                        }
-                    }
-                }
-
-                verifiedHash?.let { HashVerificationSymbol(it, verifiedModifier) }
+                ShowHash(content, verifiedModifier)
             }
             else -> {}
         }
     }
+}
+
+@Composable
+fun ShowHash(
+    content: MediaUrlContent,
+    verifiedModifier: Modifier,
+) {
+    var verifiedHash by remember(content.url) { mutableStateOf<Boolean?>(null) }
+
+    if (content.hash != null) {
+        LaunchedEffect(key1 = content.url) {
+            val newVerifiedHash = verifyHash(content)
+            if (newVerifiedHash != verifiedHash) {
+                verifiedHash = newVerifiedHash
+            }
+        }
+    }
+
+    verifiedHash?.let { HashVerificationSymbol(it, verifiedModifier) }
 }
 
 fun aspectRatio(dim: String?): Float? {
