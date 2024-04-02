@@ -39,7 +39,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -54,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.compose.produceCachedStateAsync
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
@@ -724,16 +724,8 @@ fun ObserveDraftEvent(
     val noteState by note.live().metadata.observeAsState()
 
     val noteEvent = noteState?.note?.event as? DraftEvent ?: return
-    val noteAuthor = noteState?.note?.author ?: return
 
-    val innerNote =
-        produceState(initialValue = accountViewModel.createTempCachedDraftNote(noteEvent, noteAuthor), noteEvent.id) {
-            if (value == null || value?.event?.id() != noteEvent.id) {
-                accountViewModel.createTempDraftNote(noteEvent, noteAuthor) {
-                    value = it
-                }
-            }
-        }
+    val innerNote = produceCachedStateAsync(cache = accountViewModel.draftNoteCache, key = noteEvent)
 
     innerNote.value?.let {
         render(it)

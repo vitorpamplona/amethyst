@@ -38,6 +38,7 @@ import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
+import com.vitorpamplona.amethyst.commons.compose.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -1335,9 +1336,6 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         onReady: (Note) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            noteEvent.cachedDraft(account.signer) {
-                onReady(createTempDraftNote(it, author))
-            }
         }
     }
 
@@ -1353,6 +1351,21 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
             }
         note.loadEvent(innerEvent, author, LocalCache.computeReplyTo(innerEvent))
         return note
+    }
+
+    val draftNoteCache = CachedDraftNotes(this)
+
+    class CachedDraftNotes(val accountViewModel: AccountViewModel) : GenericBaseCacheAsync<DraftEvent, Note>(20) {
+        override suspend fun compute(
+            key: DraftEvent,
+            onReady: (Note?) -> Unit,
+        ) = withContext(Dispatchers.IO) {
+            key.cachedDraft(accountViewModel.account.signer) {
+                val author = LocalCache.getOrCreateUser(key.pubKey)
+                val note = accountViewModel.createTempDraftNote(it, author)
+                onReady(note)
+            }
+        }
     }
 
     val bechLinkCache = CachedLoadedBechLink(this)
