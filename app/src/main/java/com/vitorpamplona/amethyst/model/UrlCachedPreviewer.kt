@@ -26,8 +26,6 @@ import com.vitorpamplona.amethyst.service.previews.BahaUrlPreview
 import com.vitorpamplona.amethyst.service.previews.IUrlPreviewCallback
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @Stable
 object UrlCachedPreviewer {
@@ -37,46 +35,44 @@ object UrlCachedPreviewer {
     suspend fun previewInfo(
         url: String,
         onReady: suspend (UrlPreviewState) -> Unit,
-    ) = withContext(Dispatchers.IO) {
+    ) {
         cache[url]?.let {
             onReady(it)
-            return@withContext
+            return
         }
 
         BahaUrlPreview(
             url,
             object : IUrlPreviewCallback {
-                override suspend fun onComplete(urlInfo: UrlInfoItem) =
-                    withContext(Dispatchers.IO) {
-                        cache[url]?.let {
-                            if (it is UrlPreviewState.Loaded || it is UrlPreviewState.Empty) {
-                                onReady(it)
-                                return@withContext
-                            }
-                        }
-
-                        val state =
-                            if (urlInfo.fetchComplete() && urlInfo.url == url) {
-                                UrlPreviewState.Loaded(urlInfo)
-                            } else {
-                                UrlPreviewState.Empty
-                            }
-
-                        cache.put(url, state)
-                        onReady(state)
-                    }
-
-                override suspend fun onFailed(throwable: Throwable) =
-                    withContext(Dispatchers.IO) {
-                        cache[url]?.let {
+                override suspend fun onComplete(urlInfo: UrlInfoItem) {
+                    cache[url]?.let {
+                        if (it is UrlPreviewState.Loaded || it is UrlPreviewState.Empty) {
                             onReady(it)
-                            return@withContext
+                            return
+                        }
+                    }
+
+                    val state =
+                        if (urlInfo.fetchComplete() && urlInfo.url == url) {
+                            UrlPreviewState.Loaded(urlInfo)
+                        } else {
+                            UrlPreviewState.Empty
                         }
 
-                        val state = UrlPreviewState.Error(throwable.message ?: "Error Loading url preview")
-                        cache.put(url, state)
-                        onReady(state)
+                    cache.put(url, state)
+                    onReady(state)
+                }
+
+                override suspend fun onFailed(throwable: Throwable) {
+                    cache[url]?.let {
+                        onReady(it)
+                        return
                     }
+
+                    val state = UrlPreviewState.Error(throwable.message ?: "Error Loading url preview")
+                    cache.put(url, state)
+                    onReady(state)
+                }
             },
         )
             .fetchUrlPreview()
