@@ -466,13 +466,9 @@ private fun NoteRow(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         when (note.event) {
-            is ChannelCreateEvent -> {
-                RenderCreateChannelNote(note)
-            }
-            is ChannelMetadataEvent -> {
-                RenderChangeChannelMetadataNote(note)
-            }
-            is DraftEvent -> {
+            is ChannelCreateEvent -> RenderCreateChannelNote(note)
+            is ChannelMetadataEvent -> RenderChangeChannelMetadataNote(note)
+            is DraftEvent ->
                 RenderDraftEvent(
                     note,
                     canPreview,
@@ -483,8 +479,7 @@ private fun NoteRow(
                     accountViewModel,
                     nav,
                 )
-            }
-            else -> {
+            else ->
                 RenderRegularTextNote(
                     note,
                     canPreview,
@@ -493,7 +488,6 @@ private fun NoteRow(
                     accountViewModel,
                     nav,
                 )
-            }
         }
     }
 }

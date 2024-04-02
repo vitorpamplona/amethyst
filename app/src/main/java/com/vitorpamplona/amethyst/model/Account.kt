@@ -2353,7 +2353,7 @@ class Account(
         } else if (event is LnZapRequestEvent && event.isPrivateZap() && isWriteable()) {
             event.cachedPrivateZap()?.content
         } else {
-            event?.content()
+            event.content()
         }
     }
 
