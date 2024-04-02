@@ -174,7 +174,6 @@ import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
 @Composable
 fun ChannelScreen(
@@ -328,7 +327,6 @@ fun ChannelScreen(
                 newPostModel.message = TextFieldValue("")
                 replyTo.value = null
                 accountViewModel.deleteDraft(newPostModel.draftTag)
-                newPostModel.draftTag = UUID.randomUUID().toString()
                 feedViewModel.sendToTop()
             }
         }

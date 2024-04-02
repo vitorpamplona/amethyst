@@ -128,7 +128,6 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.UUID
 
 @Composable
 fun ChatroomScreen(
@@ -356,7 +355,6 @@ fun ChatroomScreen(
                 accountViewModel.deleteDraft(newPostModel.draftTag)
 
                 newPostModel.message = TextFieldValue("")
-                newPostModel.draftTag = UUID.randomUUID().toString()
 
                 replyTo.value = null
                 feedViewModel.sendToTop()
