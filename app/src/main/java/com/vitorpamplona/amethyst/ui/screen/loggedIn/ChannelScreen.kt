@@ -146,6 +146,7 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldLeadingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
+import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -974,21 +975,21 @@ private fun ShortChannelActionOptions(
 ) {
     LoadNote(baseNoteHex = channel.idHex, accountViewModel) {
         it?.let {
-            Spacer(modifier = StdHorzSpacer)
-            LikeReaction(
-                baseNote = it,
-                grayTint = MaterialTheme.colorScheme.onSurface,
-                accountViewModel = accountViewModel,
-                nav,
-            )
-            Spacer(modifier = StdHorzSpacer)
-            ZapReaction(
-                baseNote = it,
-                grayTint = MaterialTheme.colorScheme.onSurface,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-            Spacer(modifier = StdHorzSpacer)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = RowColSpacing) {
+                LikeReaction(
+                    baseNote = it,
+                    grayTint = MaterialTheme.colorScheme.onSurface,
+                    accountViewModel = accountViewModel,
+                    nav,
+                )
+                ZapReaction(
+                    baseNote = it,
+                    grayTint = MaterialTheme.colorScheme.onSurface,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+                Spacer(modifier = StdHorzSpacer)
+            }
         }
     }
 
