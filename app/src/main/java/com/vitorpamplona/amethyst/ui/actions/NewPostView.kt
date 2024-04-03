@@ -235,7 +235,12 @@ fun NewPostView(
     }
 
     Dialog(
-        onDismissRequest = { onClose() },
+        onDismissRequest = {
+            scope.launch {
+                postViewModel.sendDraftSync(relayList = relayList)
+                onClose()
+            }
+        },
         properties =
             DialogProperties(
                 usePlatformDefaultWidth = false,
@@ -294,8 +299,9 @@ fun NewPostView(
                             Spacer(modifier = StdHorzSpacer)
                             CloseButton(
                                 onPress = {
-                                    postViewModel.cancel()
                                     scope.launch {
+                                        postViewModel.sendDraftSync(relayList = relayList)
+                                        postViewModel.cancel()
                                         delay(100)
                                         onClose()
                                     }
