@@ -77,6 +77,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 enum class UserSuggestionAnchor {
@@ -200,12 +201,16 @@ open class NewPostViewModel() : ViewModel() {
         val noteAuthor = draft?.author
 
         if (draft != null && noteEvent is DraftEvent && noteAuthor != null) {
-            accountViewModel.createTempDraftNote(noteEvent, noteAuthor) { innerNote ->
-                val oldTag = (draft.event as? AddressableEvent)?.dTag()
-                if (oldTag != null) {
-                    draftTag = oldTag
+            viewModelScope.launch(Dispatchers.IO) {
+                accountViewModel.createTempDraftNote(noteEvent) { innerNote ->
+                    if (innerNote != null) {
+                        val oldTag = (draft.event as? AddressableEvent)?.dTag()
+                        if (oldTag != null) {
+                            draftTag = oldTag
+                        }
+                        loadFromDraft(innerNote, accountViewModel)
+                    }
                 }
-                loadFromDraft(innerNote, accountViewModel)
             }
         } else {
             originalNote = replyingTo
@@ -442,18 +447,22 @@ open class NewPostViewModel() : ViewModel() {
     }
 
     fun sendDraft(relayList: List<Relay>? = null) {
-        viewModelScope.launch(Dispatchers.IO) {
-            innerSendPost(relayList, draftTag)
+        viewModelScope.launch {
+            sendDraftSync(relayList)
         }
+    }
+
+    suspend fun sendDraftSync(relayList: List<Relay>? = null) {
+        innerSendPost(relayList, draftTag)
     }
 
     private suspend fun innerSendPost(
         relayList: List<Relay>? = null,
         localDraft: String?,
-    ) {
+    ) = withContext(Dispatchers.IO) {
         if (accountViewModel == null) {
             cancel()
-            return
+            return@withContext
         }
 
         val tagger = NewMessageTagger(message.text, pTags, eTags, originalNote?.channelHex(), accountViewModel!!)

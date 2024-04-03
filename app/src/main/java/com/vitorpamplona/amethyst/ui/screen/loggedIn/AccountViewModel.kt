@@ -1323,20 +1323,11 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         account.deleteDraft(draftTag)
     }
 
-    fun createTempCachedDraftNote(
+    suspend fun createTempDraftNote(
         noteEvent: DraftEvent,
-        author: User,
-    ): Note? {
-        return noteEvent.preCachedDraft(account.signer)?.let { createTempDraftNote(it, author) }
-    }
-
-    fun createTempDraftNote(
-        noteEvent: DraftEvent,
-        author: User,
-        onReady: (Note) -> Unit,
+        onReady: (Note?) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
-        }
+        draftNoteCache.update(noteEvent, onReady)
     }
 
     fun createTempDraftNote(
