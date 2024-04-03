@@ -276,6 +276,7 @@
     <string name="report_dialog_title">Bloquer et Signaler</string>
     <string name="block_only">Bloquer</string>
     <string name="bookmarks">Favoris</string>
+    <string name="drafts">Brouillons</string>
     <string name="private_bookmarks">Favoris Privés</string>
     <string name="public_bookmarks">Favoris Publics</string>
     <string name="add_to_private_bookmarks">Ajouter aux Favoris Privés</string>
