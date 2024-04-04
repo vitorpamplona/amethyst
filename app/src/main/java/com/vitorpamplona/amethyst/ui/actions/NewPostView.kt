@@ -1143,7 +1143,7 @@ fun FowardZapTo(
                 Slider(
                     value = splitItem.percentage,
                     onValueChange = { sliderValue ->
-                        val rounded = (round(sliderValue * 20)) / 20.0f
+                        val rounded = (round(sliderValue * 100)) / 100.0f
                         postViewModel.updateZapPercentage(index, rounded)
                     },
                     modifier = Modifier.weight(1.5f),
