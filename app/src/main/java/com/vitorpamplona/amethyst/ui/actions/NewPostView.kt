@@ -1102,8 +1102,12 @@ fun FowardZapTo(
                 text = stringResource(R.string.zap_split_title),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
-                modifier = Modifier.padding(start = 10.dp),
+                modifier = Modifier.padding(horizontal = 10.dp).weight(1f),
             )
+
+            OutlinedButton(onClick = { postViewModel.updateZapFromText() }) {
+                Text(text = stringResource(R.string.load_from_text))
+            }
         }
 
         HorizontalDivider(thickness = DividerThickness)

@@ -827,4 +827,6 @@
     <string name="it_s_not_possible_to_react_to_a_draft_note">It\'s not possible to react a draft note</string>
     <string name="it_s_not_possible_to_zap_to_a_draft_note">It\'s not possible to zap a draft note</string>
     <string name="draft_note">Draft Note</string>
+
+    <string name="load_from_text">From Msg</string>
 </resources>

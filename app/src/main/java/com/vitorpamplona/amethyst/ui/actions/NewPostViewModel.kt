@@ -938,7 +938,6 @@ open class NewPostViewModel() : ViewModel() {
                 userSuggestions = emptyList()
             }
         }
-        saveDraft()
     }
 
     open fun autocompleteWithUser(item: User) {
@@ -957,16 +956,6 @@ open class NewPostViewModel() : ViewModel() {
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.addItem(item)
                 forwardZapToEditting = TextFieldValue("")
-        /*
-        val lastWord = forwardZapToEditting.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
-        val lastWordStart = it.end - lastWord.length
-        val wordToInsert = "@${item.pubkeyNpub()}"
-        forwardZapTo = item
-
-        forwardZapToEditting = TextFieldValue(
-            forwardZapToEditting.text.replaceRange(lastWordStart, it.end, wordToInsert),
-            TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length)
-        )*/
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.TO_USERS) {
                 val lastWord =
                     toUsers.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
@@ -1207,6 +1196,18 @@ open class NewPostViewModel() : ViewModel() {
         sliderValue: Float,
     ) {
         forwardZapTo.updatePercentage(index, sliderValue)
+    }
+
+    fun updateZapFromText() {
+        viewModelScope.launch(Dispatchers.Default) {
+            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), null, accountViewModel!!)
+            tagger.run()
+            tagger.pTags?.forEach { taggedUser ->
+                if (!forwardZapTo.items.any { it.key == taggedUser }) {
+                    forwardZapTo.addItem(taggedUser)
+                }
+            }
+        }
     }
 
     fun updateZapRaiserAmount(newAmount: Long?) {
