@@ -45,6 +45,13 @@ class SealedGossipEvent(
         return cachedInnerEvent[signer.pubKey]
     }
 
+    fun addToCache(
+        pubKey: HexKey,
+        gift: Event,
+    ) {
+        cachedInnerEvent = cachedInnerEvent + Pair(pubKey, gift)
+    }
+
     fun cachedGossip(
         signer: NostrSigner,
         onReady: (Event) -> Unit,
@@ -59,8 +66,8 @@ class SealedGossipEvent(
             if (event is WrappedEvent) {
                 event.host = host ?: this
             }
+            addToCache(signer.pubKey, event)
 
-            cachedInnerEvent = cachedInnerEvent + Pair(signer.pubKey, event)
             onReady(event)
         }
     }
