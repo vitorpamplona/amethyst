@@ -53,7 +53,7 @@ import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 
 object ShowFullTextCache {
-    val cache = LruCache<String, Boolean>(20)
+    val cache = LruCache<String, Boolean>(10)
 }
 
 @Composable
