@@ -276,7 +276,7 @@ fun MainScreen(
                                 discoveryChatFeedViewModel.sendToTop()
                             }
                             Route.Notification.base -> {
-                                notifFeedViewModel.invalidateDataAndSendToTop()
+                                notifFeedViewModel.invalidateDataAndSendToTop(true)
                             }
                         }
 

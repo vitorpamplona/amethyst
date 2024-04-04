@@ -240,11 +240,7 @@ class Account(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val liveHomeList: Flow<ListNameNotePair> by lazy {
         defaultHomeFollowList.flatMapLatest { listName ->
-            println("AABBCC liveHomeList $listName changed")
             loadPeopleListFlowFromListName(listName)
-        }.transformLatest {
-            println("AABBCC liveHomeList after FlattenMerge")
-            emit(it)
         }
     }
 
@@ -252,12 +248,8 @@ class Account(
     fun loadPeopleListFlowFromListName(listName: String): Flow<ListNameNotePair> {
         return if (listName != GLOBAL_FOLLOWS && listName != KIND3_FOLLOWS) {
             val note = LocalCache.checkGetOrCreateAddressableNote(listName)
-            println("AABBCC loadPeopleListFlowFromListName $listName ${note?.idHex} ${note?.flow()?.metadata?.stateFlow?.subscriptionCount?.value}")
-
             note?.flow()?.metadata?.stateFlow?.mapLatest {
-                println("AABBCC loadPeopleListFlowFromListName running")
                 val noteEvent = it.note.event as? GeneralListEvent
-                println("AABBCC loadPeopleListFlowFromListName emitting ${noteEvent?.id}")
                 ListNameNotePair(listName, noteEvent)
             } ?: MutableStateFlow(ListNameNotePair(listName, null))
         } else {
@@ -271,19 +263,14 @@ class Account(
     ): Flow<LiveFollowLists?> {
         return combineTransform(kind3FollowsSource, peopleListFollowsSource) { kind3Follows, peopleListFollows ->
             if (peopleListFollows.listName == GLOBAL_FOLLOWS) {
-                println("AABBCC combinePeopleListFlows ${peopleListFollows.listName} Global")
                 emit(null)
             } else if (peopleListFollows.listName == KIND3_FOLLOWS) {
-                println("AABBCC combinePeopleListFlows ${peopleListFollows.listName} Kind 3")
                 emit(kind3Follows)
             } else if (peopleListFollows.event == null) {
-                println("AABBCC combinePeopleListFlows ${peopleListFollows.listName} Note is null")
                 emit(LiveFollowLists())
             } else {
-                println("AABBCC combinePeopleListFlows ${peopleListFollows.listName} ${peopleListFollows.event.id}")
                 val result = waitToDecrypt(peopleListFollows.event)
                 if (result == null) {
-                    println("AABBCC combinePeopleListFlows ${peopleListFollows.listName} returning null")
                     emit(LiveFollowLists())
                 } else {
                     emit(result)
