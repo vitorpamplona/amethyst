@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="point_to_the_qr_code">Aponte para o código QR</string>
+    <string name="point_to_the_qr_code">Aponte para o QR code</string>
     <string name="show_qr">Mostrar QR</string>
     <string name="profile_image">Imagem de perfil</string>
     <string name="your_profile_image">Sua Foto de Perfil</string>
@@ -274,6 +274,7 @@
     <string name="report_dialog_title">Bloquear e Denunciar</string>
     <string name="block_only">Bloquear</string>
     <string name="bookmarks">Itens Salvos</string>
+    <string name="drafts">Rascunhos</string>
     <string name="private_bookmarks">Itens Salvos Privados</string>
     <string name="public_bookmarks">Itens Salvos Públicos</string>
     <string name="add_to_private_bookmarks">Adicionar aos Itens Salvos Privados</string>
@@ -620,6 +621,7 @@
     <string name="server_did_not_provide_a_url_after_uploading">O servidor não forneceu uma URL após o upload</string>
     <string name="could_not_download_from_the_server">Não foi possível baixar o arquivo de mídia carregado do servidor</string>
     <string name="could_not_prepare_local_file_to_upload">Não foi possível preparar o arquivo local para enviar: %1$s</string>
+    <string name="edit_draft">Editar rascunho</string>
     <string name="login_with_qr_code">Entrar com Código QR</string>
     <string name="route">Rota</string>
     <string name="route_home">Início</string>
@@ -691,4 +693,10 @@
     <string name="accessibility_play_username">Reproduzir nome de usuário como áudio</string>
     <string name="accessibility_scan_qr_code">Escanear código QR</string>
     <string name="accessibility_navigate_to_alby">Navegar para o provedor de carteira de terceiros Alby</string>
+    <string name="it_s_not_possible_to_reply_to_a_draft_note">Não é possível responder uma nota em rascunho</string>
+    <string name="it_s_not_possible_to_quote_to_a_draft_note">Não é possível citar uma nota em rascunho</string>
+    <string name="it_s_not_possible_to_react_to_a_draft_note">Não é possível reagir uma nota em rascunho</string>
+    <string name="it_s_not_possible_to_zap_to_a_draft_note">Não é possível fazer um zap em uma nota em rascunho</string>
+    <string name="draft_note">Nota de rascunho</string>
+    <string name="load_from_text">Carregar do texto</string>
 </resources>
