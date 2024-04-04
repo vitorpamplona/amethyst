@@ -353,9 +353,14 @@ class Relay(
         if (read) {
             if (isConnected()) {
                 if (isReady) {
-                    if (filters.isNotEmpty()) {
+                    val relayFilters =
+                        filters.filter { filter ->
+                            activeTypes.any { it in filter.types }
+                        }
+
+                    if (relayFilters.isNotEmpty()) {
                         val request =
-                            filters.joinToStringLimited(
+                            relayFilters.joinToStringLimited(
                                 separator = ",",
                                 limit = 20,
                                 prefix = """["REQ","$requestId",""",
@@ -423,12 +428,7 @@ class Relay(
     fun renewFilters() {
         // Force update all filters after AUTH.
         Client.allSubscriptions().forEach {
-            val filters =
-                it.value.filter { filter ->
-                    activeTypes.any { it in filter.types }
-                }
-
-            sendFilter(requestId = it.key, filters)
+            sendFilter(requestId = it.key, it.value)
         }
     }
 

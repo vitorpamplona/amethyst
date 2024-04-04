@@ -81,7 +81,9 @@ object RelayPool : Relay.Listener {
         subscriptionId: String,
         filters: List<TypedFilter>,
     ) {
-        relays.forEach { it.sendFilter(subscriptionId, filters) }
+        relays.forEach { relay ->
+            relay.sendFilter(subscriptionId, filters)
+        }
     }
 
     fun connectAndSendFiltersIfDisconnected() {
