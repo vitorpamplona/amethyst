@@ -21,23 +21,16 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import android.util.Log
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.pullrefresh.PullRefreshIndicator
-import androidx.compose.material3.pullrefresh.pullRefresh
-import androidx.compose.material3.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -57,7 +50,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @Stable
-class RelayFeedViewModel : ViewModel() {
+class RelayFeedViewModel : ViewModel(), InvalidatableViewModel {
     val order =
         compareByDescending<RelayInfo> { it.lastEvent }
             .thenByDescending { it.counter }
@@ -112,8 +105,8 @@ class RelayFeedViewModel : ViewModel() {
 
     private val bundler = BundledUpdate(250, Dispatchers.IO)
 
-    fun invalidateData() {
-        bundler.invalidate {
+    override fun invalidateData(ignoreIfDoing: Boolean) {
+        bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
             refreshSuspended()
@@ -142,22 +135,7 @@ fun RelayFeedView(
         NewRelayListView({ wantsToAddRelay = "" }, accountViewModel, wantsToAddRelay, nav = nav)
     }
 
-    var refreshing by remember { mutableStateOf(false) }
-    val refresh = {
-        refreshing = true
-        viewModel.refresh()
-        refreshing = false
-    }
-    val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
-
-    val modifier =
-        if (enablePullRefresh) {
-            Modifier.fillMaxSize().pullRefresh(pullRefreshState)
-        } else {
-            Modifier.fillMaxSize()
-        }
-
-    Box(modifier) {
+    RefresheableBox(viewModel, enablePullRefresh) {
         val listState = rememberLazyListState()
 
         LazyColumn(
@@ -175,10 +153,6 @@ fun RelayFeedView(
                     thickness = DividerThickness,
                 )
             }
-        }
-
-        if (enablePullRefresh) {
-            PullRefreshIndicator(refreshing, pullRefreshState, Modifier.align(Alignment.TopCenter))
         }
     }
 }

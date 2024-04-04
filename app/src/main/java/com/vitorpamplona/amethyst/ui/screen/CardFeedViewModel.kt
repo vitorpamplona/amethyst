@@ -70,7 +70,7 @@ class NotificationViewModel(val account: Account) :
 }
 
 @Stable
-open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
+open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), InvalidatableViewModel {
     private val _feedContent = MutableStateFlow<CardFeedState>(CardFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
@@ -358,7 +358,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel() {
     private val bundler = BundledUpdate(1000, Dispatchers.IO)
     private val bundlerInsert = BundledInsert<Set<Note>>(1000, Dispatchers.IO)
 
-    fun invalidateData(ignoreIfDoing: Boolean = false) {
+    override fun invalidateData(ignoreIfDoing: Boolean) {
         bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
