@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -305,7 +304,6 @@ private fun RenderBubble(
                         bubbleSize.intValue = it.width
                     }
                 }
-                .animateContentSize()
         }
 
     Column(modifier = bubbleModifier) {
