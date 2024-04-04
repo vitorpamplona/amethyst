@@ -928,6 +928,7 @@ open class NewPostViewModel() : ViewModel() {
                                 compareBy(
                                     { account?.isFollowing(it) },
                                     { it.toBestDisplayName() },
+                                    { it.pubkeyHex },
                                 ),
                             )
                             .reversed()
