@@ -276,6 +276,7 @@
     <string name="report_dialog_title">Bloquear y reportar</string>
     <string name="block_only">Bloquear</string>
     <string name="bookmarks">Marcadores</string>
+    <string name="drafts">Borradores</string>
     <string name="private_bookmarks">Marcadores privados</string>
     <string name="public_bookmarks">Marcadores públicos</string>
     <string name="add_to_private_bookmarks">Agregar a marcadores privados</string>
