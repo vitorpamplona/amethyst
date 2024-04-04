@@ -127,6 +127,7 @@ class User(val pubkeyHex: String) {
 
         // Update following of the current user
         liveSet?.innerFollows?.invalidateData()
+        flowSet?.follows?.invalidateData()
 
         // Update Followers of the past user list
         // Update Followers of the new contact list
@@ -474,14 +475,16 @@ class User(val pubkeyHex: String) {
 @Stable
 class UserFlowSet(u: User) {
     // Observers line up here.
+    val follows = UserBundledRefresherFlow(u)
     val relays = UserBundledRefresherFlow(u)
 
     fun isInUse(): Boolean {
-        return relays.stateFlow.subscriptionCount.value > 0
+        return relays.stateFlow.subscriptionCount.value > 0 || follows.stateFlow.subscriptionCount.value > 0
     }
 
     fun destroy() {
         relays.destroy()
+        follows.destroy()
     }
 }
 
