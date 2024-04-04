@@ -554,7 +554,7 @@ fun NoteMaster(
                     } else if (noteEvent is AppDefinitionEvent) {
                         RenderAppDefinition(baseNote, accountViewModel, nav)
                     } else if (noteEvent is DraftEvent) {
-                        RenderDraft(baseNote, backgroundColor, accountViewModel, nav)
+                        RenderDraft(baseNote, 3, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is HighlightEvent) {
                         DisplayHighlight(
                             noteEvent.quote(),

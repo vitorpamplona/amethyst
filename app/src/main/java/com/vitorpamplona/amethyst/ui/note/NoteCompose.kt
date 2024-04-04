@@ -562,7 +562,7 @@ private fun RenderNoteRow(
         is AppDefinitionEvent -> RenderAppDefinition(baseNote, accountViewModel, nav)
         is AudioTrackEvent -> RenderAudioTrack(baseNote, accountViewModel, nav)
         is AudioHeaderEvent -> RenderAudioHeader(baseNote, accountViewModel, nav)
-        is DraftEvent -> RenderDraft(baseNote, backgroundColor, accountViewModel, nav)
+        is DraftEvent -> RenderDraft(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         is ReactionEvent -> RenderReaction(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         is RepostEvent -> RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         is GenericRepostEvent -> RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
@@ -735,6 +735,7 @@ fun ObserveDraftEvent(
 @Composable
 fun RenderDraft(
     note: Note,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -748,7 +749,7 @@ fun RenderDraft(
             makeItShort = false,
             canPreview = true,
             editState = edits,
-            quotesLeft = 3,
+            quotesLeft = quotesLeft,
             unPackReply = true,
             accountViewModel = accountViewModel,
             nav = nav,
