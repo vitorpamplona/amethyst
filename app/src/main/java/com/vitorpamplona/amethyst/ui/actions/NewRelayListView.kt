@@ -900,7 +900,15 @@ fun EditableServerConfig(
             onClick = {
                 if (url.isNotBlank() && url != "/") {
                     var addedWSS =
-                        if (!url.startsWith("wss://") && !url.startsWith("ws://")) "wss://$url" else url
+                        if (!url.startsWith("wss://") && !url.startsWith("ws://")) {
+                            if (url.endsWith(".onion") || url.endsWith(".onion/")) {
+                                "ws://$url"
+                            } else {
+                                "wss://$url"
+                            }
+                        } else {
+                            url
+                        }
                     if (url.endsWith("/")) addedWSS = addedWSS.dropLast(1)
                     onNewRelay(RelaySetupInfo(addedWSS, read, write, feedTypes = FeedType.values().toSet()))
                     url = ""

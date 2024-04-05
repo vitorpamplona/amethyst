@@ -280,6 +280,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="report_dialog_title">Blockieren und melden</string>
     <string name="block_only">Blockieren</string>
     <string name="bookmarks">Lesezeichen</string>
+    <string name="drafts">Entwürfe</string>
     <string name="private_bookmarks">Private Lesezeichen</string>
     <string name="public_bookmarks">Öffentliche Lesezeichen</string>
     <string name="add_to_private_bookmarks">Zu den privaten Lesezeichen hinzufügen</string>
@@ -625,6 +626,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="server_did_not_provide_a_url_after_uploading">Der Server hat nach dem Hochladen keine URL angegeben</string>
     <string name="could_not_download_from_the_server">Hochgeladene Medien konnten nicht vom Server heruntergeladen werden</string>
     <string name="could_not_prepare_local_file_to_upload">Lokale Datei konnte nicht zum Hochladen vorbereitet werden: %1$s</string>
+    <string name="edit_draft">Entwurf bearbeiten</string>
     <string name="login_with_qr_code">Einloggen mit QR-Code</string>
     <string name="route">Route</string>
     <string name="route_home">Startseite</string>
@@ -696,4 +698,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="accessibility_play_username">Benutzernamen als Audio abspielen</string>
     <string name="accessibility_scan_qr_code">QR-Code scannen</string>
     <string name="accessibility_navigate_to_alby">Navigieren Sie zum Drittanbieter-Wallet-Anbieter Alby</string>
+    <string name="it_s_not_possible_to_reply_to_a_draft_note">Es ist nicht möglich, auf einen Entwurf zu antworten</string>
+    <string name="it_s_not_possible_to_quote_to_a_draft_note">Es ist nicht möglich, einen Entwurf zu zitieren</string>
+    <string name="it_s_not_possible_to_react_to_a_draft_note">Es ist nicht möglich, auf einen Entwurf zu reagieren</string>
+    <string name="it_s_not_possible_to_zap_to_a_draft_note">Es ist nicht möglich, zap Zahlung an einen Entwurf senden</string>
+    <string name="draft_note">Entwurf</string>
+    <string name="load_from_text">Aus Nachricht laden</string>
 </resources>

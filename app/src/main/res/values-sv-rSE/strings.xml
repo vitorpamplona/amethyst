@@ -274,6 +274,7 @@
     <string name="report_dialog_title">Blockera och rapportera</string>
     <string name="block_only">Blockera</string>
     <string name="bookmarks">Bokmärken</string>
+    <string name="drafts">Utkast</string>
     <string name="private_bookmarks">Privata Bokmärken</string>
     <string name="public_bookmarks">Publika Bokmärken</string>
     <string name="add_to_private_bookmarks">Lägg till i Privata Bokmärken</string>
@@ -619,6 +620,7 @@
     <string name="server_did_not_provide_a_url_after_uploading">Servern gav inte en URL efter uppladdning</string>
     <string name="could_not_download_from_the_server">Kunde inte ladda ner uppladdade medier från servern</string>
     <string name="could_not_prepare_local_file_to_upload">Kunde inte förbereda lokal fil att ladda upp: %1$s</string>
+    <string name="edit_draft">Redigera utkast</string>
     <string name="login_with_qr_code">Logga in med QR-kod</string>
     <string name="route">Rutt</string>
     <string name="route_home">Hem</string>
@@ -690,4 +692,10 @@
     <string name="accessibility_play_username">Spela upp användarnamn som ljud</string>
     <string name="accessibility_scan_qr_code">Skanna QR-kod</string>
     <string name="accessibility_navigate_to_alby">Navigera till tredjeparts plånboksleverantören Alby</string>
+    <string name="it_s_not_possible_to_reply_to_a_draft_note">Det går inte att svara på ett utkast</string>
+    <string name="it_s_not_possible_to_quote_to_a_draft_note">Det går inte att citera ett utkast</string>
+    <string name="it_s_not_possible_to_react_to_a_draft_note">Det går inte att reagera på ett utkast</string>
+    <string name="it_s_not_possible_to_zap_to_a_draft_note">Det går inte att zappa ett utkast</string>
+    <string name="draft_note">Utkast</string>
+    <string name="load_from_text">Från meddelande</string>
 </resources>
