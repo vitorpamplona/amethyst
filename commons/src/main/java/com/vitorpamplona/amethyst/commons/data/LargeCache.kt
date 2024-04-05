@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentSkipListMap
 import java.util.function.BiConsumer
 
 class LargeCache<K, V> {
-    val cache = ConcurrentSkipListMap<K, V>()
+    private val cache = ConcurrentSkipListMap<K, V>()
 
     fun get(key: K) = cache.get(key)
 
