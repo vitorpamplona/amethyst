@@ -64,15 +64,17 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         account: Account,
     ) {
         pushWrappedEvent.cachedGift(account.signer) { notificationEvent ->
-            LocalCache.justConsume(notificationEvent, null)
-
-            unwrapAndConsume(notificationEvent, account) { innerEvent ->
-                if (innerEvent is PrivateDmEvent) {
-                    notify(innerEvent, account)
-                } else if (innerEvent is LnZapEvent) {
-                    notify(innerEvent, account)
-                } else if (innerEvent is ChatMessageEvent) {
-                    notify(innerEvent, account)
+            if (!LocalCache.hasConsumed(notificationEvent) && LocalCache.justVerify(notificationEvent)) {
+                unwrapAndConsume(notificationEvent, account) { innerEvent ->
+                    if (!LocalCache.hasConsumed(innerEvent)) {
+                        if (innerEvent is PrivateDmEvent) {
+                            notify(innerEvent, account)
+                        } else if (innerEvent is LnZapEvent) {
+                            notify(innerEvent, account)
+                        } else if (innerEvent is ChatMessageEvent) {
+                            notify(innerEvent, account)
+                        }
+                    }
                 }
             }
         }

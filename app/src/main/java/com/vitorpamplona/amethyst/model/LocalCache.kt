@@ -2306,6 +2306,10 @@ object LocalCache {
             e.printStackTrace()
         }
     }
+
+    fun hasConsumed(notificationEvent: Event): Boolean {
+        return notes.containsKey(notificationEvent.id)
+    }
 }
 
 @Stable
