@@ -959,53 +959,53 @@ object LocalCache {
     }
 
     fun consume(event: DeletionEvent) {
-        deletionIndex.add(event)
+        if (deletionIndex.add(event)) {
+            var deletedAtLeastOne = false
 
-        var deletedAtLeastOne = false
+            event.deleteEvents()
+                .mapNotNull { getNoteIfExists(it) }
+                .forEach { deleteNote ->
+                    // must be the same author
+                    if (deleteNote.author?.pubkeyHex == event.pubKey) {
+                        // reverts the add
+                        deleteNote(deleteNote)
 
-        event.deleteEvents()
-            .mapNotNull { getNoteIfExists(it) }
-            .forEach { deleteNote ->
-                // must be the same author
-                if (deleteNote.author?.pubkeyHex == event.pubKey) {
-                    // reverts the add
-                    deleteNote(deleteNote)
+                        deletedAtLeastOne = true
+                    }
+                }
 
-                    deletedAtLeastOne = true
+            val addressList = event.deleteAddressTags()
+            val addressSet = addressList.toSet()
+
+            addressList
+                .mapNotNull { getAddressableNoteIfExists(it) }
+                .forEach { deleteNote ->
+                    // must be the same author
+                    if (deleteNote.author?.pubkeyHex == event.pubKey && (deleteNote.createdAt() ?: 0) <= event.createdAt) {
+                        // Counts the replies
+                        deleteNote(deleteNote)
+
+                        addressables.remove(deleteNote.idHex)
+
+                        deletedAtLeastOne = true
+                    }
+                }
+
+            notes.forEach { key, note ->
+                val noteEvent = note.event
+                if (noteEvent is AddressableEvent && noteEvent.addressTag() in addressSet) {
+                    if (noteEvent.pubKey() == event.pubKey && noteEvent.createdAt() <= event.createdAt) {
+                        deleteNote(note)
+                        deletedAtLeastOne = true
+                    }
                 }
             }
 
-        val addressList = event.deleteAddresses()
-        val addressSet = addressList.toSet()
-
-        addressList
-            .mapNotNull { getAddressableNoteIfExists(it.toTag()) }
-            .forEach { deleteNote ->
-                // must be the same author
-                if (deleteNote.author?.pubkeyHex == event.pubKey && (deleteNote.createdAt() ?: 0) < event.createdAt) {
-                    // Counts the replies
-                    deleteNote(deleteNote)
-
-                    addressables.remove(deleteNote.idHex)
-
-                    deletedAtLeastOne = true
-                }
+            if (deletedAtLeastOne) {
+                val note = Note(event.id)
+                note.loadEvent(event, getOrCreateUser(event.pubKey), emptyList())
+                refreshObservers(note)
             }
-
-        notes.forEach { key, note ->
-            val noteEvent = note.event
-            if (noteEvent is AddressableEvent && noteEvent.address() in addressSet) {
-                if (noteEvent.pubKey() == event.pubKey && noteEvent.createdAt() <= event.createdAt) {
-                    deleteNote(note)
-                    deletedAtLeastOne = true
-                }
-            }
-        }
-
-        if (deletedAtLeastOne) {
-            val note = Note(event.id)
-            note.loadEvent(event, getOrCreateUser(event.pubKey), emptyList())
-            refreshObservers(note)
         }
     }
 

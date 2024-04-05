@@ -38,6 +38,8 @@ class DeletionEvent(
 
     fun deleteAddresses() = taggedAddresses()
 
+    fun deleteAddressTags() = tags.mapNotNull { if (it.size > 1 && it[0] == "a") it[1] else null }
+
     companion object {
         const val KIND = 5
         const val ALT = "Deletion event"

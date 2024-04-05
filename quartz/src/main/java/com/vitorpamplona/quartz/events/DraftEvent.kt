@@ -115,7 +115,7 @@ class DraftEvent(
             pubKey: HexKey,
             dTag: String,
         ): String {
-            return ATag(KIND, pubKey, dTag, null).toTag()
+            return ATag.assembleATag(KIND, pubKey, dTag)
         }
 
         fun create(

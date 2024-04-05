@@ -26,30 +26,49 @@ import com.vitorpamplona.quartz.events.DeletionEvent
 import com.vitorpamplona.quartz.events.Event
 
 class DeletionIndex {
-    data class DeletionRequest(val reference: String, val publicKey: HexKey)
+    data class DeletionRequest(val reference: String, val publicKey: HexKey) : Comparable<DeletionRequest> {
+        override fun compareTo(other: DeletionRequest): Int {
+            val compared = reference.compareTo(other.reference)
+
+            return if (compared == 0) {
+                publicKey.compareTo(publicKey)
+            } else {
+                compared
+            }
+        }
+    }
 
     // stores a set of id OR atags (kind:pubkey:dtag) by pubkey with the created at of the deletion event.
     // Anything newer than the date should not be deleted.
     private val deletedReferencesBefore = LargeCache<DeletionRequest, Long>()
 
-    fun add(event: DeletionEvent) {
+    fun add(event: DeletionEvent): Boolean {
+        var atLeastOne = false
+
         event.tags.forEach {
             if (it.size > 1 && (it[0] == "a" || it[0] == "e")) {
-                add(it[1], event.pubKey, event.createdAt)
+                if (add(it[1], event.pubKey, event.createdAt)) {
+                    atLeastOne = true
+                }
             }
         }
+
+        return atLeastOne
     }
 
     private fun add(
         ref: String,
         byPubKey: HexKey,
         createdAt: Long,
-    ) {
+    ): Boolean {
         val key = DeletionRequest(ref, byPubKey)
         val previousDeletionTime = deletedReferencesBefore.get(key)
+
         if (previousDeletionTime == null || createdAt > previousDeletionTime) {
             deletedReferencesBefore.put(key, createdAt)
+            return true
         }
+        return false
     }
 
     fun hasBeenDeleted(event: Event): Boolean {
