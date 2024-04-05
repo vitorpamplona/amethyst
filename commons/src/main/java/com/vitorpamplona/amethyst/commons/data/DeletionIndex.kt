@@ -35,25 +35,20 @@ class DeletionIndex {
     fun add(event: DeletionEvent) {
         event.tags.forEach {
             if (it.size > 1 && (it[0] == "a" || it[0] == "e")) {
-                add(it[1], event.createdAt, event.pubKey)
+                add(it[1], event.pubKey, event.createdAt)
             }
         }
     }
 
     private fun add(
         ref: String,
-        createdAt: Long,
         byPubKey: HexKey,
+        createdAt: Long,
     ) {
         val key = DeletionRequest(ref, byPubKey)
-        val deletionTime = deletedReferencesBefore.get(key)
-        if (deletionTime == null) {
+        val previousDeletionTime = deletedReferencesBefore.get(key)
+        if (previousDeletionTime == null || createdAt > previousDeletionTime) {
             deletedReferencesBefore.put(key, createdAt)
-        } else {
-            // updates with newer deletion.
-            if (createdAt > deletionTime) {
-                deletedReferencesBefore.put(key, createdAt)
-            }
         }
     }
 
@@ -62,7 +57,7 @@ class DeletionIndex {
         if (hasBeenDeleted(key)) return true
 
         if (event is AddressableEvent) {
-            if (hasBeenDeleted(key, event.createdAt)) return true
+            if (hasBeenDeleted(DeletionRequest(event.addressTag(), event.pubKey), event.createdAt)) return true
         }
 
         return false
@@ -75,6 +70,6 @@ class DeletionIndex {
         createdAt: Long,
     ): Boolean {
         val deletionTime = deletedReferencesBefore.get(key)
-        return deletionTime != null && createdAt < deletionTime
+        return deletionTime != null && createdAt <= deletionTime
     }
 }
