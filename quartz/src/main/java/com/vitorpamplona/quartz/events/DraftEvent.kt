@@ -78,7 +78,13 @@ class DraftEvent(
         onReady: (Event) -> Unit,
     ) {
         try {
-            plainContent(signer) { onReady(fromJson(it)) }
+            plainContent(signer) {
+                try {
+                    onReady(fromJson(it))
+                } catch (e: Exception) {
+                    // Log.e("UnwrapError", "Couldn't Decrypt the content", e)
+                }
+            }
         } catch (e: Exception) {
             // Log.e("UnwrapError", "Couldn't Decrypt the content", e)
         }
