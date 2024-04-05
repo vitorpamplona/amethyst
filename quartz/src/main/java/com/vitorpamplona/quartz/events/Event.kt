@@ -514,6 +514,8 @@ interface AddressableEvent {
     fun dTag(): String
 
     fun address(): ATag
+
+    fun addressTag(): String
 }
 
 @Immutable
@@ -529,6 +531,11 @@ open class BaseAddressableEvent(
     override fun dTag() = tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: ""
 
     override fun address() = ATag(kind, pubKey, dTag(), null)
+
+    /**
+     * Creates the tag in a memory effecient way (without creating the ATag class
+     */
+    override fun addressTag() = ATag.assembleATag(kind, pubKey, dTag())
 }
 
 fun String.bytesUsedInMemory(): Int {

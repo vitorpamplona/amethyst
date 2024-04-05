@@ -24,6 +24,7 @@ import android.util.Log
 import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.data.DeletionIndex
 import com.vitorpamplona.amethyst.commons.data.LargeCache
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Relay
@@ -132,6 +133,8 @@ object LocalCache {
     val addressables = LargeCache<String, AddressableNote>()
     val channels = LargeCache<HexKey, Channel>()
     val awaitingPaymentRequests = ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
+
+    val deletionIndex = DeletionIndex()
 
     fun checkGetOrCreateUser(key: String): User? {
         // checkNotInMainThread()
@@ -956,10 +959,11 @@ object LocalCache {
     }
 
     fun consume(event: DeletionEvent) {
+        deletionIndex.add(event)
+
         var deletedAtLeastOne = false
 
-        event
-            .deleteEvents()
+        event.deleteEvents()
             .mapNotNull { getNoteIfExists(it) }
             .forEach { deleteNote ->
                 // must be the same author
@@ -2210,6 +2214,8 @@ object LocalCache {
         event: Event,
         relay: Relay?,
     ) {
+        if (deletionIndex.hasBeenDeleted(event)) return
+
         checkNotInMainThread()
 
         try {

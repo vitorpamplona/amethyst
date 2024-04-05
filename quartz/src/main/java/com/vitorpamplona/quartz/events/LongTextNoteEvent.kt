@@ -39,6 +39,8 @@ class LongTextNoteEvent(
 
     override fun address() = ATag(kind, pubKey, dTag(), null)
 
+    override fun addressTag() = ATag.assembleATag(kind, pubKey, dTag())
+
     fun topics() = hashtags()
 
     fun title() = tags.firstOrNull { it.size > 1 && it[0] == "title" }?.get(1)
