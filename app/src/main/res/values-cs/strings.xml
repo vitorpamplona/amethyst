@@ -274,6 +274,7 @@
     <string name="report_dialog_title">Blokovat a nahlásit</string>
     <string name="block_only">Blokovat</string>
     <string name="bookmarks">Záložky</string>
+    <string name="drafts">Koncepty</string>
     <string name="private_bookmarks">Soukromé záložky</string>
     <string name="public_bookmarks">Veřejné záložky</string>
     <string name="add_to_private_bookmarks">Přidat do soukromých záložek</string>
@@ -620,6 +621,7 @@
     <string name="server_did_not_provide_a_url_after_uploading">Server po nahrání neposkytl URL</string>
     <string name="could_not_download_from_the_server">Nepodařilo se stáhnout nahraná média ze serveru</string>
     <string name="could_not_prepare_local_file_to_upload">Nelze připravit místní soubor k nahrání: %1$s</string>
+    <string name="edit_draft">Upravit koncept</string>
     <string name="login_with_qr_code">Přihlášení pomocí QR kódu</string>
     <string name="route">Trasa</string>
     <string name="route_home">Domů</string>
@@ -691,12 +693,10 @@
     <string name="accessibility_play_username">Přehrát uživatelské jméno jako audio</string>
     <string name="accessibility_scan_qr_code">Skenovat QR kód</string>
     <string name="accessibility_navigate_to_alby">Přejít na poskytovatele peněženky třetí strany Alby</string>
-    <string name="edit_draft">Upravit koncept</string>
     <string name="it_s_not_possible_to_reply_to_a_draft_note">Není možné odpovědět na koncept</string>
     <string name="it_s_not_possible_to_quote_to_a_draft_note">Není možné citovat koncept</string>
     <string name="it_s_not_possible_to_react_to_a_draft_note">Není možné reagovat na koncept</string>
     <string name="it_s_not_possible_to_zap_to_a_draft_note">Není možné poslat zap konceptu</string>
     <string name="draft_note">Koncept</string>
     <string name="load_from_text">Ze zprávy</string>
-    <string name="drafts">Koncepty</string>
 </resources>
