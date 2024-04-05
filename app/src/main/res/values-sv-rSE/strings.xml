@@ -690,4 +690,12 @@
     <string name="accessibility_play_username">Spela upp användarnamn som ljud</string>
     <string name="accessibility_scan_qr_code">Skanna QR-kod</string>
     <string name="accessibility_navigate_to_alby">Navigera till tredjeparts plånboksleverantören Alby</string>
+    <string name="edit_draft">Redigera utkast</string>
+    <string name="it_s_not_possible_to_reply_to_a_draft_note">Det går inte att svara på ett utkast</string>
+    <string name="it_s_not_possible_to_quote_to_a_draft_note">Det går inte att citera ett utkast</string>
+    <string name="it_s_not_possible_to_react_to_a_draft_note">Det går inte att reagera på ett utkast</string>
+    <string name="it_s_not_possible_to_zap_to_a_draft_note">Det går inte att zappa ett utkast</string>
+    <string name="draft_note">Utkast</string>
+    <string name="load_from_text">Från meddelande</string>
+    <string name="drafts">Utkast</string>
 </resources>
