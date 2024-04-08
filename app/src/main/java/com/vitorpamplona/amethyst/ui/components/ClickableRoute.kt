@@ -300,16 +300,14 @@ private fun RenderUserAsClickableText(
 ) {
     val userState by baseUser.live().userMetadataInfo.observeAsState()
 
-    userState?.bestName()?.let {
-        CreateClickableTextWithEmoji(
-            clickablePart = it,
-            suffix = additionalChars.ifBlank { null },
-            maxLines = 1,
-            route = "User/${baseUser.pubkeyHex}",
-            nav = nav,
-            tags = userState?.tags ?: EmptyTagList,
-        )
-    }
+    CreateClickableTextWithEmoji(
+        clickablePart = userState?.bestName() ?: ("@" + baseUser.pubkeyDisplayHex()),
+        suffix = additionalChars?.ifBlank { null },
+        maxLines = 1,
+        route = "User/${baseUser.pubkeyHex}",
+        nav = nav,
+        tags = userState?.tags ?: EmptyTagList,
+    )
 }
 
 @Composable
