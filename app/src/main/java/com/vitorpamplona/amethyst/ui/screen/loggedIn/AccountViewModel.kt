@@ -1035,13 +1035,6 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
-    fun loadNEmbedIfNeeded(nembed: Event) {
-        val baseNote = LocalCache.getNoteIfExists(nembed.id)
-        if (baseNote?.event == null) {
-            LocalCache.verifyAndConsume(nembed, null)
-        }
-    }
-
     fun checkIsOnline(
         media: String?,
         onDone: (Boolean) -> Unit,
@@ -1374,11 +1367,14 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
                     is Nip19Bech32.NEvent -> withContext(Dispatchers.IO) { LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note } }
                     is Nip19Bech32.NEmbed ->
                         withContext(Dispatchers.IO) {
-                            accountViewModel.loadNEmbedIfNeeded(parsed.event)
-
-                            LocalCache.checkGetOrCreateNote(parsed.event.id)?.let { note ->
-                                returningNote = note
+                            val baseNote = LocalCache.getOrCreateNote(parsed.event)
+                            if (baseNote.event == null) {
+                                launch(Dispatchers.IO) {
+                                    LocalCache.verifyAndConsume(parsed.event, null)
+                                }
                             }
+
+                            returningNote = baseNote
                         }
                     is Nip19Bech32.NRelay -> {}
                     is Nip19Bech32.NAddress -> withContext(Dispatchers.IO) { LocalCache.checkGetOrCreateNote(parsed.atag)?.let { note -> returningNote = note } }

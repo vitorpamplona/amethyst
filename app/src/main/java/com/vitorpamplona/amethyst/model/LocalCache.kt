@@ -171,6 +171,22 @@ object LocalCache {
         return channels.get(key)
     }
 
+    fun getNoteIfExists(event: Event): Note? {
+        return if (event is AddressableEvent) {
+            getAddressableNoteIfExists(event.addressTag())
+        } else {
+            getNoteIfExists(event.id)
+        }
+    }
+
+    fun getOrCreateNote(event: Event): Note {
+        return if (event is AddressableEvent) {
+            getOrCreateAddressableNote(event.address())
+        } else {
+            getOrCreateNote(event.id)
+        }
+    }
+
     fun checkGetOrCreateNote(key: String): Note? {
         checkNotInMainThread()
 
