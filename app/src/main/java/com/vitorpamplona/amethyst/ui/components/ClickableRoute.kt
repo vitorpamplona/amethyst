@@ -119,7 +119,7 @@ fun LoadOrCreateNote(
 @Composable
 private fun LoadAndDisplayEvent(
     event: Event,
-    additionalChars: String,
+    additionalChars: String?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -141,7 +141,7 @@ private fun LoadAndDisplayEvent(
 private fun DisplayEvent(
     hex: HexKey,
     kind: Int?,
-    additionalChars: String,
+    additionalChars: String?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -164,7 +164,7 @@ private fun DisplayNoteLink(
     it: Note,
     hex: HexKey,
     kind: Int?,
-    addedCharts: String,
+    addedCharts: String?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -218,7 +218,7 @@ private fun DisplayNoteLink(
 @Composable
 private fun DisplayAddress(
     nip19: Nip19Bech32.NAddress,
-    additionalChars: String,
+    additionalChars: String?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -245,16 +245,22 @@ private fun DisplayAddress(
     }
 
     if (noteBase == null) {
-        Text(
-            remember { "@${nip19.atag}$additionalChars" },
-        )
+        if (additionalChars != null) {
+            Text(
+                remember { "@${nip19.atag}$additionalChars" },
+            )
+        } else {
+            Text(
+                remember { "@${nip19.atag}" },
+            )
+        }
     }
 }
 
 @Composable
-private fun DisplayUser(
+public fun DisplayUser(
     userHex: HexKey,
-    additionalChars: String,
+    additionalChars: String?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -274,16 +280,22 @@ private fun DisplayUser(
     userBase?.let { RenderUserAsClickableText(it, additionalChars, nav) }
 
     if (userBase == null) {
-        Text(
-            remember { "@${userHex}$additionalChars" },
-        )
+        if (additionalChars != null) {
+            Text(
+                remember { "@${userHex}$additionalChars" },
+            )
+        } else {
+            Text(
+                remember { "@$userHex" },
+            )
+        }
     }
 }
 
 @Composable
 private fun RenderUserAsClickableText(
     baseUser: User,
-    additionalChars: String,
+    additionalChars: String?,
     nav: (String) -> Unit,
 ) {
     val userState by baseUser.live().userMetadataInfo.observeAsState()

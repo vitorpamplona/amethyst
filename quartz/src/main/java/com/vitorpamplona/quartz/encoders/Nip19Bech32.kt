@@ -53,7 +53,7 @@ object Nip19Bech32 {
         )
 
     @Immutable
-    data class ParseReturn(val entity: Entity, val additionalChars: String = "")
+    data class ParseReturn(val entity: Entity, val additionalChars: String? = null)
 
     interface Entity
 
@@ -96,7 +96,7 @@ object Nip19Bech32 {
 
             if (type == null) return null
 
-            return parseComponents(type, key, additionalChars)
+            return parseComponents(type, key, additionalChars.ifEmpty { null })
         } catch (e: Throwable) {
             Log.e("NIP19 Parser", "Issue trying to Decode NIP19 $uri: ${e.message}", e)
         }
@@ -123,7 +123,7 @@ object Nip19Bech32 {
                 "nembed1" -> nembed(bytes)
                 else -> null
             }?.let {
-                ParseReturn(it, additionalChars ?: "")
+                ParseReturn(it, additionalChars)
             }
         } catch (e: Throwable) {
             Log.w("NIP19 Parser", "Issue trying to Decode NIP19 $key: ${e.message}", e)

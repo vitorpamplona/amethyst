@@ -60,7 +60,7 @@ class NewMessageTaggerKeyParseTest {
             "1532adbe1b369beca9af174076c4736faeb5ef527f1275a4af200121c0f55605",
             (result?.key?.entity as? Nip19Bech32.Note)?.hex,
         )
-        assertEquals("", result?.restOfWord)
+        assertEquals(null, result?.restOfWord)
     }
 
     @Test
@@ -73,7 +73,7 @@ class NewMessageTaggerKeyParseTest {
             "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c",
             (result?.key?.entity as? Nip19Bech32.NPub)?.hex,
         )
-        assertEquals("", result?.restOfWord)
+        assertEquals(null, result?.restOfWord)
     }
 
     @Test

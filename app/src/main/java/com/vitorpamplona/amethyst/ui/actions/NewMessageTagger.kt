@@ -146,9 +146,9 @@ class NewMessageTagger(
 
     fun getNostrAddress(
         bechAddress: String,
-        restOfTheWord: String,
+        restOfTheWord: String?,
     ): String {
-        return if (restOfTheWord.isEmpty()) {
+        return if (restOfTheWord.isNullOrEmpty()) {
             "nostr:$bechAddress"
         } else {
             if (Bech32.ALPHABET.contains(restOfTheWord.get(0), true)) {
@@ -159,7 +159,7 @@ class NewMessageTagger(
         }
     }
 
-    @Immutable data class DirtyKeyInfo(val key: Nip19Bech32.ParseReturn, val restOfWord: String)
+    @Immutable data class DirtyKeyInfo(val key: Nip19Bech32.ParseReturn, val restOfWord: String?)
 
     fun parseDirtyWordForKey(mightBeAKey: String): DirtyKeyInfo? {
         var key = mightBeAKey
@@ -181,7 +181,7 @@ class NewMessageTagger(
                 val pubkey =
                     Nip19Bech32.uriToRoute(KeyPair(privKey = keyB32.bechToBytes()).pubKey.toNpub()) ?: return null
 
-                return DirtyKeyInfo(pubkey, restOfWord)
+                return DirtyKeyInfo(pubkey, restOfWord.ifEmpty { null })
             } else if (key.startsWith("npub1", true)) {
                 if (key.length < 63) {
                     return null
@@ -192,7 +192,7 @@ class NewMessageTagger(
 
                 val pubkey = Nip19Bech32.uriToRoute(keyB32) ?: return null
 
-                return DirtyKeyInfo(pubkey, restOfWord)
+                return DirtyKeyInfo(pubkey, restOfWord.ifEmpty { null })
             } else if (key.startsWith("note1", true)) {
                 if (key.length < 63) {
                     return null
@@ -203,7 +203,7 @@ class NewMessageTagger(
 
                 val noteId = Nip19Bech32.uriToRoute(keyB32) ?: return null
 
-                return DirtyKeyInfo(noteId, restOfWord)
+                return DirtyKeyInfo(noteId, restOfWord.ifEmpty { null })
             } else if (key.startsWith("nprofile", true)) {
                 val pubkeyRelay = Nip19Bech32.uriToRoute(key) ?: return null
 
