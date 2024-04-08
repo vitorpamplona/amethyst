@@ -59,7 +59,6 @@ import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
-import com.vitorpamplona.amethyst.ui.components.MarkdownParser
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.bottomNavigationItems
@@ -79,7 +78,6 @@ import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.GiftWrapEvent
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.Participant
@@ -1012,26 +1010,6 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
                     .reversed()
                     .toImmutableList(),
             )
-        }
-    }
-
-    fun returnNIP19References(
-        content: String,
-        tags: ImmutableListOfLists<String>?,
-        onNewReferences: (List<Nip19Bech32.Entity>) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            onNewReferences(MarkdownParser().returnNIP19References(content, tags))
-        }
-    }
-
-    fun returnMarkdownWithSpecialContent(
-        content: String,
-        tags: ImmutableListOfLists<String>?,
-        onNewContent: (String) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            onNewContent(MarkdownParser().returnMarkdownWithSpecialContent(content, tags))
         }
     }
 

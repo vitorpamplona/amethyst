@@ -36,6 +36,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -47,8 +48,10 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.halilibo.richtext.markdown.Markdown
-import com.halilibo.richtext.ui.material3.Material3RichText
+import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
+import com.halilibo.richtext.commonmark.MarkdownParseOptions
+import com.halilibo.richtext.markdown.BasicMarkdown
+import com.halilibo.richtext.ui.material3.RichText
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -112,12 +115,18 @@ fun ConnectOrbotDialog(
                         )
 
                     Row {
-                        Material3RichText(
+                        val content1 = stringResource(R.string.connect_through_your_orbot_setup_markdown)
+
+                        val astNode1 =
+                            remember {
+                                CommonmarkAstNodeParser(MarkdownParseOptions.MarkdownWithLinks).parse(content1)
+                            }
+
+                        RichText(
                             style = myMarkDownStyle,
+                            renderer = null,
                         ) {
-                            Markdown(
-                                content = stringResource(R.string.connect_through_your_orbot_setup_markdown),
-                            )
+                            BasicMarkdown(astNode1)
                         }
                     }
 

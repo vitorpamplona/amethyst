@@ -59,7 +59,7 @@ val Font18SP = 18.sp
 
 val MarkdownTextStyle = TextStyle(lineHeight = 1.30.em)
 
-val DefaultParagraphSpacing: TextUnit = 16.sp
+val DefaultParagraphSpacing: TextUnit = 18.sp
 
 internal val DefaultHeadingStyle: HeadingStyle = { level, textStyle ->
     when (level) {

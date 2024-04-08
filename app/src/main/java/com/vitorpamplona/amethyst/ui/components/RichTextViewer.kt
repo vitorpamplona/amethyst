@@ -29,12 +29,12 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -51,9 +51,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -65,9 +62,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.halilibo.richtext.markdown.Markdown
-import com.halilibo.richtext.markdown.MarkdownParseOptions
-import com.halilibo.richtext.ui.material3.Material3RichText
 import com.vitorpamplona.amethyst.commons.compose.produceCachedState
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
@@ -79,10 +73,8 @@ import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
-import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.PhoneSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SchemelessUrlSegment
 import com.vitorpamplona.amethyst.commons.richtext.Segment
@@ -93,33 +85,29 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
+import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
-import com.vitorpamplona.amethyst.ui.theme.MarkdownTextStyle
+import com.vitorpamplona.amethyst.ui.theme.inlinePlaceholder
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
-import com.vitorpamplona.amethyst.ui.theme.markdownStyle
-import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 
 fun isMarkdown(content: String): Boolean {
     return content.startsWith("> ") ||
         content.startsWith("# ") ||
         content.contains("##") ||
         content.contains("__") ||
+        content.contains("**") ||
         content.contains("```") ||
         content.contains("](")
 }
@@ -137,7 +125,7 @@ fun RichTextViewer(
 ) {
     Column(modifier = modifier) {
         if (remember(content) { isMarkdown(content) }) {
-            RenderContentAsMarkdown(content, tags, accountViewModel, nav)
+            RenderContentAsMarkdown(content, tags, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
         } else {
             RenderRegular(content, tags, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
         }
@@ -346,17 +334,6 @@ fun RenderRegular(
                 }
             }
         }
-
-        /*
-        // UrlPreviews and Images have a 5dp spacing down. This also adds the space to Text.
-        val lastElement = state.paragraphs.lastOrNull()?.words?.lastOrNull()
-        if (lastElement !is ImageSegment &&
-            lastElement !is LinkSegment &&
-            lastElement !is InvoiceSegment &&
-            lastElement !is CashuSegment
-        ) {
-            Spacer(modifier = StdVertSpacer)
-        }*/
     }
 }
 
@@ -462,186 +439,6 @@ fun RenderCustomEmoji(
     )
 }
 
-val markdownParseOptions =
-    MarkdownParseOptions(
-        autolink = true,
-        isImage = { url -> RichTextParser.isImageOrVideoUrl(url) },
-    )
-
-@Composable
-private fun RenderContentAsMarkdown(
-    content: String,
-    tags: ImmutableListOfLists<String>?,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    val uri = LocalUriHandler.current
-    val onClick =
-        remember {
-            { link: String ->
-                val route = uriToRoute(link)
-                if (route != null) {
-                    nav(route)
-                } else {
-                    runCatching { uri.openUri(link) }
-                }
-                Unit
-            }
-        }
-
-    ProvideTextStyle(MarkdownTextStyle) {
-        Material3RichText(style = MaterialTheme.colorScheme.markdownStyle) {
-            RefreshableContent(content, tags, accountViewModel) {
-                Markdown(
-                    content = it,
-                    markdownParseOptions = markdownParseOptions,
-                    onLinkClicked = onClick,
-                    onMediaCompose = { title, destination ->
-                        ZoomableContentView(
-                            content =
-                                remember(destination, tags) {
-                                    RichTextParser().parseMediaUrl(
-                                        destination,
-                                        tags ?: EmptyTagList,
-                                        title.ifEmpty { null } ?: content,
-                                    ) ?: MediaUrlImage(url = destination, description = title.ifEmpty { null } ?: content)
-                                },
-                            roundedCorner = true,
-                            accountViewModel = accountViewModel,
-                        )
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun RefreshableContent(
-    content: String,
-    tags: ImmutableListOfLists<String>?,
-    accountViewModel: AccountViewModel,
-    onCompose: @Composable (String) -> Unit,
-) {
-    var markdownWithSpecialContent by remember(content) { mutableStateOf<String?>(content) }
-
-    ObserverAllNIP19References(content, tags, accountViewModel) {
-        accountViewModel.returnMarkdownWithSpecialContent(content, tags) { newMarkdownWithSpecialContent ->
-            if (markdownWithSpecialContent != newMarkdownWithSpecialContent) {
-                markdownWithSpecialContent = newMarkdownWithSpecialContent
-            }
-        }
-    }
-
-    markdownWithSpecialContent?.let { onCompose(it) }
-}
-
-@Composable
-fun ObserverAllNIP19References(
-    content: String,
-    tags: ImmutableListOfLists<String>?,
-    accountViewModel: AccountViewModel,
-    onRefresh: () -> Unit,
-) {
-    var nip19References by remember(content) { mutableStateOf<List<Nip19Bech32.Entity>>(emptyList()) }
-
-    LaunchedEffect(key1 = content) {
-        accountViewModel.returnNIP19References(content, tags) {
-            nip19References = it
-            onRefresh()
-        }
-    }
-
-    nip19References.forEach { ObserveNIP19(it, accountViewModel, onRefresh) }
-}
-
-@Composable
-fun ObserveNIP19(
-    entity: Nip19Bech32.Entity,
-    accountViewModel: AccountViewModel,
-    onRefresh: () -> Unit,
-) {
-    when (entity) {
-        is Nip19Bech32.NPub -> ObserveNIP19User(entity.hex, accountViewModel, onRefresh)
-        is Nip19Bech32.NProfile -> ObserveNIP19User(entity.hex, accountViewModel, onRefresh)
-
-        is Nip19Bech32.Note -> ObserveNIP19Event(entity.hex, accountViewModel, onRefresh)
-        is Nip19Bech32.NEvent -> ObserveNIP19Event(entity.hex, accountViewModel, onRefresh)
-        is Nip19Bech32.NEmbed -> ObserveNIP19Event(entity.event.id, accountViewModel, onRefresh)
-
-        is Nip19Bech32.NAddress -> ObserveNIP19Event(entity.atag, accountViewModel, onRefresh)
-
-        is Nip19Bech32.NSec -> {}
-        is Nip19Bech32.NRelay -> {}
-    }
-}
-
-@Composable
-private fun ObserveNIP19Event(
-    hex: HexKey,
-    accountViewModel: AccountViewModel,
-    onRefresh: () -> Unit,
-) {
-    var baseNote by remember(hex) { mutableStateOf<Note?>(accountViewModel.getNoteIfExists(hex)) }
-
-    if (baseNote == null) {
-        LaunchedEffect(key1 = hex) {
-            accountViewModel.checkGetOrCreateNote(hex) { note ->
-                launch(Dispatchers.Main) { baseNote = note }
-            }
-        }
-    }
-
-    baseNote?.let { note -> ObserveNote(note, onRefresh) }
-}
-
-@Composable
-fun ObserveNote(
-    note: Note,
-    onRefresh: () -> Unit,
-) {
-    val loadedNoteId by note.live().metadata.observeAsState()
-
-    LaunchedEffect(key1 = loadedNoteId) {
-        if (loadedNoteId != null) {
-            onRefresh()
-        }
-    }
-}
-
-@Composable
-private fun ObserveNIP19User(
-    hex: HexKey,
-    accountViewModel: AccountViewModel,
-    onRefresh: () -> Unit,
-) {
-    var baseUser by remember(hex) { mutableStateOf<User?>(accountViewModel.getUserIfExists(hex)) }
-
-    if (baseUser == null) {
-        LaunchedEffect(key1 = hex) {
-            accountViewModel.checkGetOrCreateUser(hex)?.let { user ->
-                launch(Dispatchers.Main) { baseUser = user }
-            }
-        }
-    }
-
-    baseUser?.let { user -> ObserveUser(user, onRefresh) }
-}
-
-@Composable
-private fun ObserveUser(
-    user: User,
-    onRefresh: () -> Unit,
-) {
-    val loadedUserMetaId by user.live().metadata.observeAsState()
-
-    LaunchedEffect(key1 = loadedUserMetaId) {
-        if (loadedUserMetaId != null) {
-            onRefresh()
-        }
-    }
-}
-
 @Composable
 fun BechLink(
     word: String,
@@ -683,7 +480,7 @@ fun BechLink(
 }
 
 @Composable
-private fun DisplayFullNote(
+fun DisplayFullNote(
     note: Note,
     extraChars: String?,
     quotesLeft: Int,
@@ -752,13 +549,7 @@ fun HashTag(
 
 @Composable
 private fun InlineIcon(hashtagIcon: HashtagIcon) =
-    InlineTextContent(
-        Placeholder(
-            width = Font17SP,
-            height = Font17SP,
-            placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
-        ),
-    ) {
+    InlineTextContent(inlinePlaceholder) {
         Icon(
             imageVector = hashtagIcon.icon,
             contentDescription = hashtagIcon.description,

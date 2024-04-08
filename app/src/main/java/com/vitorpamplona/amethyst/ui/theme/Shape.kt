@@ -36,6 +36,8 @@ import androidx.compose.material3.Shapes
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.unit.dp
 
 val Shapes =
@@ -231,3 +233,10 @@ val liveStreamTag =
 val chatAuthorBox = Modifier.size(20.dp)
 val chatAuthorImage = Modifier.size(20.dp).clip(shape = CircleShape)
 val AuthorInfoVideoFeed = Modifier.width(75.dp).padding(end = 15.dp)
+
+val inlinePlaceholder =
+    Placeholder(
+        width = Font17SP,
+        height = Font17SP,
+        placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+    )

@@ -68,15 +68,16 @@ fun ExpandableRichTextViewer(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    var showFullText by remember {
-        val cached = ShowFullTextCache.cache[id]
-        if (cached == null) {
-            ShowFullTextCache.cache.put(id, false)
-            mutableStateOf(false)
-        } else {
-            mutableStateOf(cached)
+    var showFullText by
+        remember {
+            val cached = ShowFullTextCache.cache[id]
+            if (cached == null) {
+                ShowFullTextCache.cache.put(id, false)
+                mutableStateOf(false)
+            } else {
+                mutableStateOf(cached)
+            }
         }
-    }
 
     val whereToCut = remember(content) { ExpandableTextCutOffCalculator.indexToCutOff(content) }
 

@@ -48,6 +48,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -82,9 +83,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.fragment.app.FragmentActivity
-import com.halilibo.richtext.markdown.Markdown
+import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
+import com.halilibo.richtext.commonmark.MarkdownParseOptions
+import com.halilibo.richtext.markdown.BasicMarkdown
 import com.halilibo.richtext.ui.RichTextStyle
-import com.halilibo.richtext.ui.material3.Material3RichText
+import com.halilibo.richtext.ui.material3.RichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -140,12 +143,18 @@ fun AccountBackupDialog(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Material3RichText(
+                    val content1 = stringResource(R.string.account_backup_tips2_md)
+
+                    val astNode1 =
+                        remember {
+                            CommonmarkAstNodeParser(MarkdownParseOptions.MarkdownWithLinks).parse(content1)
+                        }
+
+                    RichText(
                         style = RichTextStyle().resolveDefaults(),
+                        renderer = null,
                     ) {
-                        Markdown(
-                            content = stringResource(R.string.account_backup_tips2_md),
-                        )
+                        BasicMarkdown(astNode1)
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -154,12 +163,18 @@ fun AccountBackupDialog(
 
                     Spacer(modifier = Modifier.height(30.dp))
 
-                    Material3RichText(
+                    val content = stringResource(R.string.account_backup_tips3_md)
+
+                    val astNode =
+                        remember {
+                            CommonmarkAstNodeParser(MarkdownParseOptions.MarkdownWithLinks).parse(content)
+                        }
+
+                    RichText(
                         style = RichTextStyle().resolveDefaults(),
+                        renderer = null,
                     ) {
-                        Markdown(
-                            content = stringResource(R.string.account_backup_tips3_md),
-                        )
+                        BasicMarkdown(astNode)
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
