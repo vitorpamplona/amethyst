@@ -312,7 +312,7 @@ private fun EncryptNSecCopyButton(
             }
         }
 
-    Button(
+    OutlinedButton(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             authenticate(
@@ -324,15 +324,10 @@ private fun EncryptNSecCopyButton(
             )
         },
         shape = ButtonBorder,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-            ),
         contentPadding = ButtonPadding,
         enabled = password.value.text.isNotBlank(),
     ) {
         Icon(
-            tint = MaterialTheme.colorScheme.onPrimary,
             imageVector = Icons.Default.Key,
             contentDescription =
                 stringResource(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
@@ -340,7 +335,6 @@ private fun EncryptNSecCopyButton(
         )
         Text(
             stringResource(id = R.string.encrypt_and_copy_my_secret_key),
-            color = MaterialTheme.colorScheme.onPrimary,
         )
     }
 }
