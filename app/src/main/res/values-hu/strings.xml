@@ -275,6 +275,7 @@
     <string name="report_dialog_title">Tiltás és Jelentés</string>
     <string name="block_only">Tiltás</string>
     <string name="bookmarks">Könyvjelzők</string>
+    <string name="drafts">Piszkozatok</string>
     <string name="private_bookmarks">Privát Könyvjelzők</string>
     <string name="public_bookmarks">Publikus Könyvjelzők</string>
     <string name="add_to_private_bookmarks">Hozzáadás a Privát Könyvjelzőimhez</string>
@@ -621,6 +622,7 @@
     <string name="server_did_not_provide_a_url_after_uploading">A szerver a feltöltés után nem adott URL-t</string>
     <string name="could_not_download_from_the_server">Nem sikerült a szerverről a feltöltött médiát letölteni</string>
     <string name="could_not_prepare_local_file_to_upload">Nem sikerült előkészíteni a helyi fájlt a feltöltésre: %1$s</string>
+    <string name="edit_draft">Piszkozat szerkesztése</string>
     <string name="login_with_qr_code">Bejelentkezés QR kóddal</string>
     <string name="route">Útvonal</string>
     <string name="route_home">Főoldal</string>
@@ -692,4 +694,10 @@
     <string name="accessibility_play_username">Felhasználónév lejátszása hangként</string>
     <string name="accessibility_scan_qr_code">QR-kód beolvasása</string>
     <string name="accessibility_navigate_to_alby">Keresd fel a harmadik féltől származó pénztárcaszolgáltatót, az Alby-t</string>
+    <string name="it_s_not_possible_to_reply_to_a_draft_note">A bejegyzésvázlatra nem lehet válaszolni</string>
+    <string name="it_s_not_possible_to_quote_to_a_draft_note">A bejegyzésvázlatot nem lehet idézni</string>
+    <string name="it_s_not_possible_to_react_to_a_draft_note">A bejegyzésvázlatra nem lehet reagálni</string>
+    <string name="it_s_not_possible_to_zap_to_a_draft_note">A bejegyzésvázlatra nem lehet zap-pelni</string>
+    <string name="draft_note">Bejegyzéspiszkozat</string>
+    <string name="load_from_text">Tőle üzenet</string>
 </resources>

@@ -700,4 +700,5 @@
     <string name="it_s_not_possible_to_react_to_a_draft_note">Het is niet mogelijk om op een concept te reageren</string>
     <string name="it_s_not_possible_to_zap_to_a_draft_note">Het is niet mogelijk om een concept op te zappen</string>
     <string name="draft_note">Concept notitie</string>
+    <string name="load_from_text">Van Msg</string>
 </resources>
