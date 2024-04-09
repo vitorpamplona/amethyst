@@ -47,9 +47,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
-import com.halilibo.richtext.markdown.Markdown
+import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
+import com.halilibo.richtext.commonmark.MarkdownParseOptions
+import com.halilibo.richtext.markdown.BasicMarkdown
 import com.halilibo.richtext.ui.RichTextStyle
-import com.halilibo.richtext.ui.material3.Material3RichText
+import com.halilibo.richtext.ui.material3.RichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.notifications.PushDistributorHandler
@@ -101,12 +103,18 @@ fun SelectNotificationProvider(sharedPreferencesViewModel: SharedPreferencesView
                             onDismissRequest = { distributorPresent = true },
                             title = { Text(stringResource(R.string.push_server_install_app)) },
                             text = {
-                                Material3RichText(
+                                val content = stringResource(R.string.push_server_install_app_description)
+
+                                val astNode =
+                                    remember {
+                                        CommonmarkAstNodeParser(MarkdownParseOptions.MarkdownWithLinks).parse(content)
+                                    }
+
+                                RichText(
                                     style = RichTextStyle().resolveDefaults(),
+                                    renderer = null,
                                 ) {
-                                    Markdown(
-                                        content = stringResource(R.string.push_server_install_app_description),
-                                    )
+                                    BasicMarkdown(astNode)
                                 }
                             },
                             confirmButton = {
