@@ -363,7 +363,7 @@ fun NoteMaster(
             reports,
             note.author?.let { account.isHidden(it) } ?: false,
             accountViewModel,
-            Modifier,
+            Modifier.fillMaxWidth(),
             nav,
             onClick = { showHiddenNote = true },
         )
