@@ -2330,7 +2330,14 @@ object LocalCache {
     }
 
     fun hasConsumed(notificationEvent: Event): Boolean {
-        return notes.containsKey(notificationEvent.id)
+        return if (notificationEvent is AddressableEvent) {
+            val note = addressables.get(notificationEvent.addressTag())
+            val noteEvent = note?.event
+            noteEvent != null && notificationEvent.createdAt <= noteEvent.createdAt()
+        } else {
+            val note = notes.get(notificationEvent.id)
+            note?.event != null
+        }
     }
 }
 

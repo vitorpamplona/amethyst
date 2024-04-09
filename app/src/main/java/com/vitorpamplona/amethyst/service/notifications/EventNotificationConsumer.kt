@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.notifications
 
 import android.app.NotificationManager
 import android.content.Context
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
@@ -45,6 +46,7 @@ import java.math.BigDecimal
 
 class EventNotificationConsumer(private val applicationContext: Context) {
     suspend fun consume(event: GiftWrapEvent) {
+        Log.d("EventNotificationConsumer", "New Notification Arrived")
         if (!LocalCache.justVerify(event)) return
         if (!notificationManager().areNotificationsEnabled()) return
 
@@ -64,14 +66,23 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         account: Account,
     ) {
         pushWrappedEvent.cachedGift(account.signer) { notificationEvent ->
-            if (!LocalCache.hasConsumed(notificationEvent) && LocalCache.justVerify(notificationEvent)) {
+            val consumed = LocalCache.hasConsumed(notificationEvent)
+            val verified = LocalCache.justVerify(notificationEvent)
+            Log.d("EventNotificationConsumer", "New Notification Arrived for ${account.userProfile().toBestDisplayName()} consumed= $consumed && verified= $verified")
+            if (!consumed && verified) {
+                Log.d("EventNotificationConsumer", "New Notification was verified")
                 unwrapAndConsume(notificationEvent, account) { innerEvent ->
-                    if (!LocalCache.hasConsumed(innerEvent)) {
+
+                    Log.d("EventNotificationConsumer", "Unwrapped consume $consumed ${innerEvent.javaClass.simpleName}")
+                    if (!consumed) {
                         if (innerEvent is PrivateDmEvent) {
+                            Log.d("EventNotificationConsumer", "New Nip-04 DM to Notify")
                             notify(innerEvent, account)
                         } else if (innerEvent is LnZapEvent) {
+                            Log.d("EventNotificationConsumer", "New Zap to Notify")
                             notify(innerEvent, account)
                         } else if (innerEvent is ChatMessageEvent) {
+                            Log.d("EventNotificationConsumer", "New ChatMessage to Notify")
                             notify(innerEvent, account)
                         }
                     }
@@ -86,6 +97,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         onReady: (Event) -> Unit,
     ) {
         if (!LocalCache.justVerify(event)) return
+        if (LocalCache.hasConsumed(event)) return
 
         when (event) {
             is GiftWrapEvent -> {
@@ -93,9 +105,11 @@ class EventNotificationConsumer(private val applicationContext: Context) {
             }
             is SealedGossipEvent -> {
                 event.cachedGossip(account.signer) {
-                    // this is not verifiable
-                    LocalCache.justConsume(it, null)
-                    onReady(it)
+                    if (!LocalCache.hasConsumed(it)) {
+                        // this is not verifiable
+                        LocalCache.justConsume(it, null)
+                        onReady(it)
+                    }
                 }
             }
             else -> {
