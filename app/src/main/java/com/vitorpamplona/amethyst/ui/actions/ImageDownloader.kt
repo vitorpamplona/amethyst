@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
+import com.vitorpamplona.amethyst.service.HttpClientManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import java.net.HttpURLConnection
@@ -36,7 +37,12 @@ class ImageDownloader {
                 try {
                     HttpURLConnection.setFollowRedirects(true)
                     var url = URL(imageUrl)
-                    var huc = url.openConnection() as HttpURLConnection
+                    var huc =
+                        if (HttpClientManager.getDefaultProxy() != null) {
+                            url.openConnection(HttpClientManager.getDefaultProxy()) as HttpURLConnection
+                        } else {
+                            url.openConnection() as HttpURLConnection
+                        }
                     huc.instanceFollowRedirects = true
                     var responseCode = huc.responseCode
 
@@ -45,7 +51,12 @@ class ImageDownloader {
 
                         // open the new connnection again
                         url = URL(newUrl)
-                        huc = url.openConnection() as HttpURLConnection
+                        huc =
+                            if (HttpClientManager.getDefaultProxy() != null) {
+                                url.openConnection(HttpClientManager.getDefaultProxy()) as HttpURLConnection
+                            } else {
+                                url.openConnection() as HttpURLConnection
+                            }
                         responseCode = huc.responseCode
                     }
 

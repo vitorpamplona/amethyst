@@ -63,7 +63,12 @@ class Relay(
         const val RECONNECTING_IN_SECONDS = 60 * 3
     }
 
-    private val httpClient = HttpClientManager.getHttpClient()
+    private val httpClient =
+        if (url.startsWith("ws://127.0.0.1") || url.startsWith("ws://localhost")) {
+            HttpClientManager.getHttpClient(false)
+        } else {
+            HttpClientManager.getHttpClient()
+        }
 
     private var listeners = setOf<Listener>()
     private var socket: WebSocket? = null
