@@ -269,7 +269,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
 
                     if (!event.isDeleted()) {
                         val note = LocalCache.getNoteIfExists(event.id)
-                        if (note != null && relay.brief in note.relays) return
+                        if (note?.event != null && relay.brief in note.relays) return
 
                         // decrypts
                         event.cachedDraft(account.signer) {}
@@ -281,30 +281,36 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 is GiftWrapEvent -> {
                     // Avoid decrypting over and over again if the event already exist.
                     val note = LocalCache.getNoteIfExists(event.id)
-                    if (note != null && relay.brief in note.relays) return
+                    if (note?.event != null && relay.brief in note.relays) return
 
                     event.cachedGift(account.signer) { this.consume(it, relay) }
+
+                    LocalCache.justConsume(event, relay)
                 }
 
                 is SealedGossipEvent -> {
                     // Avoid decrypting over and over again if the event already exist.
                     val note = LocalCache.getNoteIfExists(event.id)
-                    if (note != null && relay.brief in note.relays) return
+                    if (note?.event != null && relay.brief in note.relays) return
 
                     event.cachedGossip(account.signer) { LocalCache.justConsume(it, relay) }
+
+                    LocalCache.justConsume(event, relay)
                 }
 
                 is LnZapEvent -> {
                     // Avoid decrypting over and over again if the event already exist.
-
                     val note = LocalCache.getNoteIfExists(event.id)
-                    if (note != null && relay.brief in note.relays) return
+
+                    if (note?.event != null && relay.brief in note.relays) return
 
                     event.zapRequest?.let {
                         if (it.isPrivateZap()) {
                             it.decryptPrivateZap(account.signer) {}
                         }
                     }
+
+                    LocalCache.justConsume(event, relay)
                 }
 
                 else -> {
