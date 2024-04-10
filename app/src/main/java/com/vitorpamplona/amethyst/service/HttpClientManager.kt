@@ -39,6 +39,7 @@ object HttpClientManager {
     var proxyChangeListeners = ArrayList<() -> Unit>()
     private var defaultTimeout = DEFAULT_TIMEOUT_ON_WIFI
     private var defaultHttpClient: OkHttpClient? = null
+    private var defaultHttpClientWithoutProxy: OkHttpClient? = null
 
     // fires off every time value of the property changes
     private var internalProxy: Proxy? by
@@ -56,6 +57,10 @@ object HttpClientManager {
             // recreates singleton
             this.defaultHttpClient = buildHttpClient(internalProxy, defaultTimeout)
         }
+    }
+
+    fun getDefaultProxy(): Proxy? {
+        return this.internalProxy
     }
 
     fun setDefaultTimeout(timeout: Duration) {
@@ -98,11 +103,18 @@ object HttpClientManager {
         }
     }
 
-    fun getHttpClient(): OkHttpClient {
-        if (this.defaultHttpClient == null) {
-            this.defaultHttpClient = buildHttpClient(internalProxy, defaultTimeout)
+    fun getHttpClient(useProxy: Boolean = true): OkHttpClient {
+        return if (useProxy) {
+            if (this.defaultHttpClient == null) {
+                this.defaultHttpClient = buildHttpClient(internalProxy, defaultTimeout)
+            }
+            defaultHttpClient!!
+        } else {
+            if (this.defaultHttpClientWithoutProxy == null) {
+                this.defaultHttpClientWithoutProxy = buildHttpClient(null, defaultTimeout)
+            }
+            defaultHttpClientWithoutProxy!!
         }
-        return defaultHttpClient!!
     }
 
     fun initProxy(

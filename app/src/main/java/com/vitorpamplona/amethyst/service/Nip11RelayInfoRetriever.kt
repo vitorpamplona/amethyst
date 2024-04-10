@@ -121,8 +121,9 @@ class Nip11Retriever {
         try {
             val request: Request =
                 Request.Builder().header("Accept", "application/nostr+json").url(url).build()
+            val isLocalHost = dirtyUrl.startsWith("ws://127.0.0.1") || dirtyUrl.startsWith("ws://localhost")
 
-            HttpClientManager.getHttpClient()
+            HttpClientManager.getHttpClient(useProxy = !isLocalHost)
                 .newCall(request)
                 .enqueue(
                     object : Callback {
