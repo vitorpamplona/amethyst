@@ -1,7 +1,7 @@
 [versions]
 accompanistAdaptive = "0.34.0"
 activityCompose = "1.8.2"
-agp = "8.3.1"
+agp = "8.3.2"
 androidKotlinGeohash = "1.0"
 androidLifecycle = "2.7.0"
 androidxJunit = "1.2.0-alpha03"
