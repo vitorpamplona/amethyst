@@ -1607,7 +1607,7 @@ object LocalCache {
         refreshObservers(note)
     }
 
-    private fun consume(
+    fun consume(
         event: SealedGossipEvent,
         relay: Relay?,
     ) {
@@ -2114,7 +2114,7 @@ object LocalCache {
         }
     }
 
-    private fun consume(
+    fun consume(
         event: DraftEvent,
         relay: Relay?,
     ) {
