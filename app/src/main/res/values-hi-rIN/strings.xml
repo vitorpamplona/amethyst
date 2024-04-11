@@ -1,2 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools"></resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="point_to_the_qr_code">क्यूआर क्रमचित्र के अभिमुख करें</string>
+    <string name="show_qr">क्यूआर क्रमचित्र दिखाएँ</string>
+    <string name="profile_image">स्व चित्र</string>
+    <string name="your_profile_image">आपका चित्र</string>
+    <string name="scan_qr">क्यूआर क्रमचित्र का जाँच करें</string>
+    <string name="show_anyway">फिर भी दिखाएँ</string>
+    <string name="post_was_hidden">इस लेख को छिपाया गया क्योंकि इसमें आपके आच्छाद्य उपयोगकर्ता अथवा शब्द उल्लेखित हैं</string>
+    <string name="post_was_flagged_as_inappropriate_by">लेख को शान्त किया गया अथवा आपत्ति उठाया गया इनके द्वारा</string>
+</resources>
