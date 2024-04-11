@@ -424,18 +424,17 @@ fun UpdateZapAmountDialog(
                                 Modifier.weight(1f),
                             )
 
-              /* TODO: Find a way to open this in the PWA
-              IconButton(onClick = {
-                  onClose()
-                  runCatching { uri.openUri("https://app.mutinywallet.com/settings/connections?callbackUri=nostr+walletconnect&name=Amethyst") }
-              }) {
-                  Icon(
-                      painter = painterResource(R.mipmap.mutiny),
-                      null,
-                      modifier = Modifier.size(24.dp),
-                      tint = Color.Unspecified
-                  )
-              }*/
+                            IconButton(onClick = {
+                                onClose()
+                                runCatching { uri.openUri("https://app.mutinywallet.com/settings/connections?callbackUri=nostr+walletconnect&name=Amethyst") }
+                            }) {
+                                Icon(
+                                    painter = painterResource(R.mipmap.mutiny),
+                                    null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = Color.Unspecified,
+                                )
+                            }
 
                             IconButton(
                                 onClick = {
