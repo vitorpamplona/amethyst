@@ -50,6 +50,9 @@ enum class FeedType {
 val COMMON_FEED_TYPES =
     setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS, FeedType.GLOBAL)
 
+val EVENT_FINDER_TYPES =
+    setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL)
+
 class Relay(
     val url: String,
     val read: Boolean = true,

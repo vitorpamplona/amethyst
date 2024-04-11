@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.PublicChatChannel
-import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
+import com.vitorpamplona.amethyst.service.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
@@ -63,7 +63,7 @@ object NostrSingleChannelDataSource : NostrDataSource("SingleChannelFeed") {
 
         // downloads linked events to this event.
         return TypedFilter(
-            types = COMMON_FEED_TYPES,
+            types = EVENT_FINDER_TYPES,
             filter =
                 JsonFilter(
                     kinds = listOf(ChannelCreateEvent.KIND),
@@ -86,7 +86,7 @@ object NostrSingleChannelDataSource : NostrDataSource("SingleChannelFeed") {
         return directEventsToLoad.map {
             it.address().let { aTag ->
                 TypedFilter(
-                    types = COMMON_FEED_TYPES,
+                    types = EVENT_FINDER_TYPES,
                     filter =
                         JsonFilter(
                             kinds = listOf(aTag.kind),

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.EOSETime
+import com.vitorpamplona.amethyst.service.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import com.vitorpamplona.quartz.events.MetadataEvent
@@ -64,7 +65,7 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
                 val minEOSEs = findMinimumEOSEsForUsers(group)
                 listOf(
                     TypedFilter(
-                        types = COMMON_FEED_TYPES,
+                        types = EVENT_FINDER_TYPES,
                         filter =
                             JsonFilter(
                                 kinds = listOf(MetadataEvent.KIND, StatusEvent.KIND),
@@ -73,7 +74,7 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
                             ),
                     ),
                     TypedFilter(
-                        types = COMMON_FEED_TYPES,
+                        types = EVENT_FINDER_TYPES,
                         filter =
                             JsonFilter(
                                 kinds = listOf(ReportEvent.KIND),
