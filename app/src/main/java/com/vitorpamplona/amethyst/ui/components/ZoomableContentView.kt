@@ -141,6 +141,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
 
@@ -542,7 +543,10 @@ fun ShowHash(
 
     if (content.hash != null) {
         LaunchedEffect(key1 = content.url) {
-            val newVerifiedHash = verifyHash(content)
+            val newVerifiedHash =
+                withContext(Dispatchers.IO) {
+                    verifyHash(content)
+                }
             if (newVerifiedHash != verifiedHash) {
                 verifiedHash = newVerifiedHash
             }
