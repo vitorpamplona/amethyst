@@ -942,7 +942,7 @@ fun ZapReaction(
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
-    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
+    var showErrorMessageDialog by remember { mutableStateOf<List<String>>(emptyList()) }
     var wantsToPay by
         remember(baseNote) {
             mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
@@ -972,7 +972,7 @@ fun ZapReaction(
                         onError = { _, message ->
                             scope.launch {
                                 zappingProgress = 0f
-                                showErrorMessageDialog = message
+                                showErrorMessageDialog = showErrorMessageDialog + message
                             }
                         },
                         onPayViaIntent = { wantsToPay = it },
@@ -998,7 +998,7 @@ fun ZapReaction(
                 onError = { _, message ->
                     scope.launch {
                         zappingProgress = 0f
-                        showErrorMessageDialog = message
+                        showErrorMessageDialog = showErrorMessageDialog + message
                     }
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
@@ -1006,19 +1006,20 @@ fun ZapReaction(
             )
         }
 
-        if (showErrorMessageDialog != null) {
+        if (showErrorMessageDialog.isNotEmpty()) {
+            val msg = showErrorMessageDialog.joinToString("\n")
             ErrorMessageDialog(
                 title = stringResource(id = R.string.error_dialog_zap_error),
-                textContent = showErrorMessageDialog ?: "",
+                textContent = msg,
                 onClickStartMessage = {
                     baseNote.author?.let {
                         scope.launch(Dispatchers.IO) {
-                            val route = routeToMessage(it, showErrorMessageDialog, accountViewModel)
+                            val route = routeToMessage(it, msg, accountViewModel)
                             nav(route)
                         }
                     }
                 },
-                onDismiss = { showErrorMessageDialog = null },
+                onDismiss = { showErrorMessageDialog = emptyList() },
             )
         }
 
@@ -1038,7 +1039,7 @@ fun ZapReaction(
                     wantsToPay = persistentListOf()
                     scope.launch {
                         zappingProgress = 0f
-                        showErrorMessageDialog = it
+                        showErrorMessageDialog = showErrorMessageDialog + it
                     }
                 },
             )
@@ -1050,7 +1051,7 @@ fun ZapReaction(
                 onError = { _, message ->
                     scope.launch {
                         zappingProgress = 0f
-                        showErrorMessageDialog = message
+                        showErrorMessageDialog = showErrorMessageDialog + message
                     }
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
