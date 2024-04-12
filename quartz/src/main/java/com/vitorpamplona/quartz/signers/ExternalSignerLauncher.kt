@@ -125,20 +125,20 @@ class ExternalSignerLauncher(
             val localResults: Array<Result> = Result.fromJsonArray(results)
             localResults.forEach {
                 val signature = it.signature ?: ""
-                val packageName = it.`package` ?: ""
+                val packageName = it.`package`?.let { "-$it" } ?: ""
                 val id = it.id ?: ""
                 if (id.isNotBlank()) {
-                    val result = if (packageName.isNotBlank()) "$signature-$packageName" else signature
+                    val result = if (packageName.isNotBlank()) "$signature$packageName" else signature
                     val contentCache = contentCache.get(id)
                     contentCache?.invoke(result)
                 }
             }
         } else {
             val signature = data.getStringExtra("signature") ?: ""
-            val packageName = data.getStringExtra("package") ?: ""
+            val packageName = data.getStringExtra("package")?.let { "-$it" } ?: ""
             val id = data.getStringExtra("id") ?: ""
             if (id.isNotBlank()) {
-                val result = if (packageName.isNotBlank()) "$signature-$packageName" else signature
+                val result = if (packageName.isNotBlank()) "$signature$packageName" else signature
                 val contentCache = contentCache.get(id)
                 contentCache?.invoke(result)
             }

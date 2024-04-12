@@ -79,7 +79,7 @@ class NostrSignerExternal(
                         event.kind,
                         event.tags,
                         event.content,
-                        signature,
+                        signature.split("-")[0],
                     ) as? T?
                 )
                     ?.let { onReady(it) }
