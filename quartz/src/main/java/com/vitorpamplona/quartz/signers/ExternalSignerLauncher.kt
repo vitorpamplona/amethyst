@@ -99,7 +99,7 @@ class ExternalSignerLauncher(
     private val npub: String,
     val signerPackageName: String,
 ) {
-    private val contentCache = LruCache<String, (String) -> Unit>(20)
+    private val contentCache = LruCache<String, (String) -> Unit>(50)
 
     private var signerAppLauncher: ((Intent) -> Unit)? = null
     private var contentResolver: (() -> ContentResolver)? = null
