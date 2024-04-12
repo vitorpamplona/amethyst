@@ -97,7 +97,7 @@ class Result(
 
 class ExternalSignerLauncher(
     private val npub: String,
-    val signerPackageName: String = "com.greenart7c3.nostrsigner",
+    val signerPackageName: String,
 ) {
     private val contentCache = LruCache<String, (String) -> Unit>(20)
 

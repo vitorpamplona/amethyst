@@ -23,9 +23,7 @@ package com.vitorpamplona.quartz.signers
 import android.util.Log
 import com.goterl.lazysodium.BuildConfig
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventFactory
 import com.vitorpamplona.quartz.events.LnZapPrivateEvent
@@ -33,7 +31,7 @@ import com.vitorpamplona.quartz.events.LnZapRequestEvent
 
 class NostrSignerExternal(
     pubKey: HexKey,
-    val launcher: ExternalSignerLauncher = ExternalSignerLauncher(pubKey.hexToByteArray().toNpub()),
+    val launcher: ExternalSignerLauncher,
 ) : NostrSigner(pubKey) {
     override fun <T : Event> sign(
         createdAt: Long,
