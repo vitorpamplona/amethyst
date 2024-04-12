@@ -94,7 +94,7 @@ class NostrSignerExternal(
             Log.d("NostrExternalSigner", "Encrypt NIP04 Event: $decryptedContent")
         }
 
-        return launcher.encrypt(
+        launcher.encrypt(
             decryptedContent,
             toPublicKey,
             SignerType.NIP04_ENCRYPT,
@@ -111,7 +111,7 @@ class NostrSignerExternal(
             Log.d("NostrExternalSigner", "Decrypt NIP04 Event: $encryptedContent")
         }
 
-        return launcher.decrypt(
+        launcher.decrypt(
             encryptedContent,
             fromPublicKey,
             SignerType.NIP04_DECRYPT,
@@ -128,7 +128,7 @@ class NostrSignerExternal(
             Log.d("NostrExternalSigner", "Encrypt NIP44 Event: $decryptedContent")
         }
 
-        return launcher.encrypt(
+        launcher.encrypt(
             decryptedContent,
             toPublicKey,
             SignerType.NIP44_ENCRYPT,
@@ -145,7 +145,7 @@ class NostrSignerExternal(
             Log.d("NostrExternalSigner", "Decrypt NIP44 Event: $encryptedContent")
         }
 
-        return launcher.decrypt(
+        launcher.decrypt(
             encryptedContent,
             fromPublicKey,
             SignerType.NIP44_DECRYPT,
@@ -157,7 +157,7 @@ class NostrSignerExternal(
         event: LnZapRequestEvent,
         onReady: (LnZapPrivateEvent) -> Unit,
     ) {
-        return launcher.decryptZapEvent(event) { jsonEvent ->
+        launcher.decryptZapEvent(event) { jsonEvent ->
             try {
                 (Event.fromJson(jsonEvent) as? LnZapPrivateEvent)?.let { onReady(it) }
             } catch (e: Exception) {
