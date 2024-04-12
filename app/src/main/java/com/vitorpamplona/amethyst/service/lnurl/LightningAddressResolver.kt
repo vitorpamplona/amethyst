@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
 import com.vitorpamplona.quartz.encoders.Lud06
-import com.vitorpamplona.quartz.encoders.toLnUrl
 import okhttp3.Request
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -151,20 +150,6 @@ class LightningAddressResolver() {
         }
     }
 
-    fun lnAddressToLnUrl(
-        lnaddress: String,
-        onSuccess: (String) -> Unit,
-        onError: (String, String) -> Unit,
-        context: Context,
-    ) {
-        fetchLightningAddressJson(
-            lnaddress,
-            onSuccess = { onSuccess(it.toByteArray().toLnUrl()) },
-            onError = onError,
-            context = context,
-        )
-    }
-
     fun lnAddressInvoice(
         lnaddress: String,
         milliSats: Long,
@@ -190,7 +175,8 @@ class LightningAddressResolver() {
                         onError(
                             context.getString(R.string.error_unable_to_fetch_invoice),
                             context.getString(
-                                R.string.error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup,
+                                R.string.error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user,
+                                lnaddress,
                             ),
                         )
                         null
@@ -202,7 +188,8 @@ class LightningAddressResolver() {
                     onError(
                         context.getString(R.string.error_unable_to_fetch_invoice),
                         context.getString(
-                            R.string.callback_url_not_found_in_the_user_s_lightning_address_server_configuration,
+                            R.string.callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user,
+                            lnaddress,
                         ),
                     )
                 }
@@ -227,7 +214,8 @@ class LightningAddressResolver() {
                                         context.getString(R.string.error_unable_to_fetch_invoice),
                                         context.getString(
                                             R.string
-                                                .error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup,
+                                                .error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user,
+                                            lnaddress,
                                         ),
                                     )
                                     null
@@ -268,7 +256,8 @@ class LightningAddressResolver() {
                                             context.getString(R.string.error_unable_to_fetch_invoice),
                                             context.getString(
                                                 R.string
-                                                    .unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error,
+                                                    .unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user,
+                                                lnaddress,
                                                 reason,
                                             ),
                                         )
@@ -279,7 +268,8 @@ class LightningAddressResolver() {
                                         context.getString(R.string.error_unable_to_fetch_invoice),
                                         context.getString(
                                             R.string
-                                                .unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json,
+                                                .unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user,
+                                            lnaddress,
                                         ),
                                     )
                                 }
