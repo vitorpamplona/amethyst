@@ -426,7 +426,7 @@ fun UpdateZapAmountDialog(
 
                             IconButton(onClick = {
                                 onClose()
-                                runCatching { uri.openUri("https://app.mutinywallet.com/settings/connections?callbackUri=nostr+walletconnect&name=Amethyst") }
+                                runCatching { uri.openUri("https://app.mutinywallet.com/settings/connections?name=Amethyst") }
                             }) {
                                 Icon(
                                     painter = painterResource(R.mipmap.mutiny),
