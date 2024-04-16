@@ -561,11 +561,16 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Impossible de résoudre %1$s. Vérifiez si vous êtes connecté, si le serveur est actif et si l\'adresse Lightning %2$s est correcte.\n\nL\'erreur était : %3$s</string>
     <string name="could_not_fetch_invoice_from">Impossible de récupérer la facture depuis %1$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Erreur lors de l\'analyse du JSON à partir de l\'Adresse Lightning. Vérifiez la configuration lightning de l\'utilisateur</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Erreur lors de l\'analyse du JSON de %1$s. Vérifiez la configuration lightning de l\'utilisateur</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">URL de callback introuvable dans la configuration serveur de l\'adresse lightning de l\'utilisateur</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">URL de callback introuvable dans la réponse de %1$s</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Erreur lors de l\'analyse du JSON à partir de la récupération de la facture de l\'Adresse Lightning. Vérifiez la configuration Lightning de l\'utilisateur</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Erreur lors de l\'analyse du JSON de la facture de %1$s. Vérifiez la configuration lightning de l\'utilisateur</string>
     <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Montant de la facture (%1$s sats) incorrect de %2$s. Il aurait dû être %3$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Impossible de créer une facture lightning avant d\'envoyer le zap. Le portefeuille lightning du destinataire a envoyé l\'erreur suivante : %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Impossible de créer une facture lightning. Message de %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Impossible de créer une facture lightning avant d\'envoyer le zap. Élément pr introuvable dans le JSON résultant.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Impossible de créer une facture lightning avec %1$s. Élément pr introuvable dans le JSON résultant.</string>
     <string name="read_only_user">Utilisateur en lecture seule</string>
     <string name="no_reactions_setup">Aucune réaction configurée</string>
     <string name="select_push_server">Sélectionnez une application UnifiedPush</string>
@@ -700,4 +705,5 @@
     <string name="it_s_not_possible_to_react_to_a_draft_note">Il n\'est pas possible de réagir à un brouillon</string>
     <string name="it_s_not_possible_to_zap_to_a_draft_note">Il n\'est pas possible de zapper un brouillon</string>
     <string name="draft_note">Brouillon</string>
+    <string name="load_from_text">Depuis message</string>
 </resources>
