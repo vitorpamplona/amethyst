@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui
 
-import android.util.Log
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -45,8 +44,6 @@ fun prepareSharedViewModel(act: MainActivity): SharedPreferencesViewModel {
     val displayFeatures = calculateDisplayFeatures(act)
     val windowSizeClass = calculateWindowSizeClass(act)
 
-    println("ZZAAPP Launcher $act.isOnMobileDataState $sharedPreferencesViewModel $displayFeatures $windowSizeClass")
-
     LaunchedEffect(key1 = sharedPreferencesViewModel) {
         sharedPreferencesViewModel.init()
         sharedPreferencesViewModel.updateDisplaySettings(windowSizeClass, displayFeatures)
@@ -64,7 +61,6 @@ fun AppScreen(
     sharedPreferencesViewModel: SharedPreferencesViewModel,
     serviceManager: ServiceManager,
 ) {
-    Log.d("onDispose", "ZZAAPP Launcher AppScreen $sharedPreferencesViewModel $serviceManager")
     AmethystTheme(sharedPreferencesViewModel) {
         // A surface container using the 'background' color from the theme
         Surface(
@@ -77,8 +73,6 @@ fun AppScreen(
             LaunchedEffect(key1 = Unit) {
                 accountStateViewModel.tryLoginExistingAccountAsync()
             }
-
-            Log.d("onDispose", "ZZAAPP Launcher AccountScreen $accountStateViewModel $sharedPreferencesViewModel")
 
             AccountScreen(accountStateViewModel, sharedPreferencesViewModel)
         }

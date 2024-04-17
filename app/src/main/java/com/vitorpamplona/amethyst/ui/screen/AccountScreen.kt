@@ -182,7 +182,6 @@ fun LoggedInPage(
                 contentResolver = { Amethyst.instance.contentResolver },
             )
             onDispose {
-                Log.d("onDispose", "Called onDispose")
                 accountViewModel.account.signer.launcher.clearLauncher()
                 lifeCycleOwner.lifecycle.removeObserver(observer)
             }
