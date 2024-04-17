@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.collectSuccessfulSigningOperations
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.PayInvoiceErrorResponse
@@ -35,7 +36,6 @@ import com.vitorpamplona.quartz.events.ZapSplitSetup
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.round
 
@@ -59,9 +59,8 @@ class ZapPaymentHandler(val account: Account) {
         onPayViaIntent: (ImmutableList<Payable>) -> Unit,
         zapType: LnZapEvent.ZapType,
     ) = withContext(Dispatchers.IO) {
-        val zapSplitSetup = note.event?.zapSplitSetup()
-
         val noteEvent = note.event
+        val zapSplitSetup = noteEvent?.zapSplitSetup()
 
         val zapsToSend =
             if (!zapSplitSetup.isNullOrEmpty()) {
@@ -84,101 +83,216 @@ class ZapPaymentHandler(val account: Account) {
                 listOf(ZapSplitSetup(lud16, null, weight = 1.0, true))
             }
 
-        val totalWeight = zapsToSend.sumOf { it.weight }
-
-        val invoicesToPayOnIntent = mutableListOf<Payable>()
-
-        zapsToSend.forEachIndexed { index, value ->
-            val outerProgressMin = index / zapsToSend.size.toFloat()
-            val outerProgressMax = (index + 1) / zapsToSend.size.toFloat()
-
-            val zapValue = round((amountMilliSats * value.weight / totalWeight) / 1000f).toLong() * 1000
-
-            if (value.isLnAddress) {
-                innerZap(
-                    lud16 = value.lnAddressOrPubKeyHex,
-                    note = note,
-                    amount = zapValue,
-                    pollOption = pollOption,
-                    message = message,
-                    context = context,
-                    onError = onError,
-                    onProgress = {
-                        onProgress((it * (outerProgressMax - outerProgressMin)) + outerProgressMin)
-                    },
-                    zapType = zapType,
-                    onPayInvoiceThroughIntent = {
-                        invoicesToPayOnIntent.add(
-                            Payable(
-                                info = value,
-                                user = null,
-                                amountMilliSats = zapValue,
-                                invoice = it,
-                            ),
-                        )
-                    },
-                )
+        onProgress(0.02f)
+        signAllZapRequests(note, pollOption, message, zapType, zapsToSend) { splitZapRequestPairs ->
+            if (splitZapRequestPairs.isEmpty()) {
+                onProgress(0.00f)
+                return@signAllZapRequests
             } else {
-                val user = LocalCache.getUserIfExists(value.lnAddressOrPubKeyHex)
-                val lud16 = user?.info?.lnAddress()
+                onProgress(0.05f)
+            }
 
-                if (lud16 != null) {
-                    innerZap(
-                        lud16 = lud16,
-                        note = note,
-                        amount = zapValue,
-                        pollOption = pollOption,
-                        message = message,
-                        context = context,
-                        onError = onError,
-                        onProgress = {
-                            onProgress((it * (outerProgressMax - outerProgressMin)) + outerProgressMin)
-                        },
-                        zapType = zapType,
-                        overrideUser = user,
-                        onPayInvoiceThroughIntent = {
-                            invoicesToPayOnIntent.add(
-                                Payable(
-                                    info = value,
-                                    user = user,
-                                    amountMilliSats = zapValue,
-                                    invoice = it,
-                                ),
-                            )
-                        },
-                    )
+            assembleAllInvoices(splitZapRequestPairs.toList(), amountMilliSats, message, onError, onProgress = {
+                onProgress(it * 0.7f + 0.05f) // keeps within range.
+            }, context) {
+                if (it.isEmpty()) {
+                    onProgress(0.00f)
+                    return@assembleAllInvoices
                 } else {
-                    onError(
-                        context.getString(
-                            R.string.missing_lud16,
-                        ),
-                        context.getString(
-                            R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
-                            user?.toBestDisplayName() ?: value.lnAddressOrPubKeyHex,
-                        ),
+                    onProgress(0.75f)
+                }
+
+                if (account.hasWalletConnectSetup()) {
+                    payViaNWC(it.values.map { it.second }, note, onError, onProgress = {
+                        onProgress(it * 0.25f + 0.75f) // keeps within range.
+                    }, context) {
+                        // onProgress(1f)
+                    }
+                } else {
+                    onPayViaIntent(
+                        it.map {
+                            Payable(
+                                info = it.key.first,
+                                user = null,
+                                amountMilliSats = it.value.first,
+                                invoice = it.value.second,
+                            )
+                        }.toImmutableList(),
                     )
+
+                    onProgress(0f)
                 }
             }
         }
+    }
 
-        if (invoicesToPayOnIntent.isNotEmpty()) {
-            onPayViaIntent(invoicesToPayOnIntent.toImmutableList())
-            onProgress(1f)
-        } else {
-            launch(Dispatchers.IO) {
-                // Awaits for the event to come back to LocalCache.
-                var count = 0
-                while (invoicesToPayOnIntent.size < zapsToSend.size || count < 4) {
-                    count++
-                    Thread.sleep(5000)
-                }
-                if (invoicesToPayOnIntent.isNotEmpty()) {
-                    onPayViaIntent(invoicesToPayOnIntent.toImmutableList())
-                    onProgress(1f)
+    private fun calculateZapValue(
+        amountMilliSats: Long,
+        weight: Double,
+        totalWeight: Double,
+    ): Long {
+        val shareValue = amountMilliSats * (weight / totalWeight)
+        val roundedZapValue = round(shareValue / 1000f).toLong() * 1000
+        return roundedZapValue
+    }
+
+    suspend fun signAllZapRequests(
+        note: Note,
+        pollOption: Int?,
+        message: String,
+        zapType: LnZapEvent.ZapType,
+        zapsToSend: List<ZapSplitSetup>,
+        onAllDone: suspend (MutableMap<ZapSplitSetup, String>) -> Unit,
+    ) {
+        collectSuccessfulSigningOperations<ZapSplitSetup, String>(
+            operationsInput = zapsToSend,
+            runRequestFor = { next: ZapSplitSetup, onReady ->
+                if (next.isLnAddress) {
+                    prepareZapRequestIfNeeded(note, pollOption, message, zapType) { zapRequestJson ->
+                        if (zapRequestJson != null) {
+                            onReady(zapRequestJson)
+                        }
+                    }
                 } else {
-                    onProgress(1f)
+                    val user = LocalCache.getUserIfExists(next.lnAddressOrPubKeyHex)
+                    prepareZapRequestIfNeeded(note, pollOption, message, zapType, user) { zapRequestJson ->
+                        if (zapRequestJson != null) {
+                            onReady(zapRequestJson)
+                        }
+                    }
                 }
+            },
+            onReady = onAllDone,
+        )
+    }
+
+    suspend fun assembleAllInvoices(
+        invoices: List<Pair<ZapSplitSetup, String>>,
+        totalAmountMilliSats: Long,
+        message: String,
+        onError: (String, String) -> Unit,
+        onProgress: (percent: Float) -> Unit,
+        context: Context,
+        onAllDone: suspend (MutableMap<Pair<ZapSplitSetup, String>, Pair<Long, String>>) -> Unit,
+    ) {
+        var progressAllPayments = 0.00f
+        val totalWeight = invoices.sumOf { it.first.weight }
+
+        collectSuccessfulSigningOperations<Pair<ZapSplitSetup, String>, Pair<Long, String>>(
+            operationsInput = invoices,
+            runRequestFor = { splitZapRequestPair: Pair<ZapSplitSetup, String>, onReady ->
+                assembleInvoice(
+                    splitSetup = splitZapRequestPair.first,
+                    nostrZapRequest = splitZapRequestPair.second,
+                    zapValue = calculateZapValue(totalAmountMilliSats, splitZapRequestPair.first.weight, totalWeight),
+                    message = message,
+                    onError = onError,
+                    onProgressStep = { percentStepForThisPayment ->
+                        progressAllPayments += percentStepForThisPayment / invoices.size
+                        onProgress(progressAllPayments)
+                    },
+                    context = context,
+                    onReady = onReady,
+                )
+            },
+            onReady = onAllDone,
+        )
+    }
+
+    suspend fun payViaNWC(
+        invoices: List<String>,
+        note: Note,
+        onError: (String, String) -> Unit,
+        onProgress: (percent: Float) -> Unit,
+        context: Context,
+        onAllDone: suspend (MutableMap<String, Boolean>) -> Unit,
+    ) {
+        var progressAllPayments = 0.00f
+
+        collectSuccessfulSigningOperations<String, Boolean>(
+            operationsInput = invoices,
+            runRequestFor = { invoice: String, onReady ->
+                account.sendZapPaymentRequestFor(
+                    bolt11 = invoice,
+                    zappedNote = note,
+                    onSent = {
+                        progressAllPayments += 0.5f / invoices.size
+                        onProgress(progressAllPayments)
+                        onReady(true)
+                    },
+                    onResponse = { response ->
+                        if (response is PayInvoiceErrorResponse) {
+                            progressAllPayments += 0.5f / invoices.size
+                            onProgress(progressAllPayments)
+                            onError(
+                                context.getString(R.string.error_dialog_pay_invoice_error),
+                                context.getString(
+                                    R.string.wallet_connect_pay_invoice_error_error,
+                                    response.error?.message
+                                        ?: response.error?.code?.toString() ?: "Error parsing error message",
+                                ),
+                            )
+                        } else {
+                            progressAllPayments += 0.5f / invoices.size
+                            onProgress(progressAllPayments)
+                        }
+                    },
+                )
+            },
+            onReady = onAllDone,
+        )
+    }
+
+    private fun assembleInvoice(
+        splitSetup: ZapSplitSetup,
+        nostrZapRequest: String,
+        zapValue: Long,
+        message: String,
+        onError: (String, String) -> Unit,
+        onProgressStep: (percent: Float) -> Unit,
+        context: Context,
+        onReady: (Pair<Long, String>) -> Unit,
+    ) {
+        var progressThisPayment = 0.00f
+
+        var user: User? = null
+        val lud16 =
+            if (splitSetup.isLnAddress) {
+                splitSetup.lnAddressOrPubKeyHex
+            } else {
+                user = LocalCache.getUserIfExists(splitSetup.lnAddressOrPubKeyHex)
+                user?.info?.lnAddress()
             }
+
+        if (lud16 != null) {
+            LightningAddressResolver()
+                .lnAddressInvoice(
+                    lnaddress = lud16,
+                    milliSats = zapValue,
+                    message = message,
+                    nostrRequest = nostrZapRequest,
+                    onError = onError,
+                    onProgress = {
+                        val step = it - progressThisPayment
+                        progressThisPayment = it
+                        onProgressStep(step)
+                    },
+                    context = context,
+                    onSuccess = {
+                        onProgressStep(1 - progressThisPayment)
+                        onReady(Pair(zapValue, it))
+                    },
+                )
+        } else {
+            onError(
+                context.getString(
+                    R.string.missing_lud16,
+                ),
+                context.getString(
+                    R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
+                    user?.toBestDisplayName() ?: splitSetup.lnAddressOrPubKeyHex,
+                ),
+            )
         }
     }
 
@@ -196,65 +310,6 @@ class ZapPaymentHandler(val account: Account) {
             }
         } else {
             onReady(null)
-        }
-    }
-
-    private suspend fun innerZap(
-        lud16: String,
-        note: Note,
-        amount: Long,
-        pollOption: Int?,
-        message: String,
-        context: Context,
-        onError: (String, String) -> Unit,
-        onProgress: (percent: Float) -> Unit,
-        onPayInvoiceThroughIntent: (String) -> Unit,
-        zapType: LnZapEvent.ZapType,
-        overrideUser: User? = null,
-    ) {
-        onProgress(0.05f)
-
-        prepareZapRequestIfNeeded(note, pollOption, message, zapType, overrideUser) { zapRequestJson ->
-            onProgress(0.10f)
-
-            LightningAddressResolver()
-                .lnAddressInvoice(
-                    lud16,
-                    amount,
-                    message,
-                    zapRequestJson,
-                    onSuccess = {
-                        onProgress(0.7f)
-                        if (account.hasWalletConnectSetup()) {
-                            account.sendZapPaymentRequestFor(
-                                bolt11 = it,
-                                note,
-                                onResponse = { response ->
-                                    if (response is PayInvoiceErrorResponse) {
-                                        onProgress(0.0f)
-                                        onError(
-                                            context.getString(R.string.error_dialog_pay_invoice_error),
-                                            context.getString(
-                                                R.string.wallet_connect_pay_invoice_error_error,
-                                                response.error?.message
-                                                    ?: response.error?.code?.toString() ?: "Error parsing error message",
-                                            ),
-                                        )
-                                    } else {
-                                        onProgress(1f)
-                                    }
-                                },
-                            )
-                            onProgress(0.8f)
-                        } else {
-                            onPayInvoiceThroughIntent(it)
-                            onProgress(0f)
-                        }
-                    },
-                    onError = onError,
-                    onProgress = onProgress,
-                    context = context,
-                )
         }
     }
 }

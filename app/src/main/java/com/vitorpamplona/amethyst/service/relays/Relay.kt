@@ -90,6 +90,7 @@ class Relay(
     var afterEOSEPerSubscription = mutableMapOf<String, Boolean>()
 
     val authResponse = mutableMapOf<HexKey, Boolean>()
+    val sendWhenReady = mutableListOf<EventInterface>()
 
     fun register(listener: Listener) {
         listeners = listeners.plus(listener)
@@ -166,6 +167,13 @@ class Relay(
 
             // Log.w("Relay", "Relay OnOpen, Loading All subscriptions $url")
             onConnected(this@Relay)
+
+            synchronized(sendWhenReady) {
+                sendWhenReady.forEach {
+                    send(it)
+                }
+                sendWhenReady.clear()
+            }
 
             listeners.forEach { it.onRelayStateChange(this@Relay, StateType.CONNECT, null) }
         }
@@ -272,6 +280,7 @@ class Relay(
                 val event = Event.fromJson(msgArray.get(2))
 
                 // Log.w("Relay", "Relay onEVENT ${event.kind} $url, $subscriptionId ${msgArray.get(2)}")
+
                 listeners.forEach {
                     it.onEvent(
                         this@Relay,
@@ -456,6 +465,10 @@ class Relay(
                     if (isReady) {
                         socket?.send(event)
                         eventUploadCounterInBytes += event.bytesUsedInMemory()
+                    } else {
+                        synchronized(sendWhenReady) {
+                            sendWhenReady.add(signedEvent)
+                        }
                     }
                 } else {
                     // sends all filters after connection is successful.

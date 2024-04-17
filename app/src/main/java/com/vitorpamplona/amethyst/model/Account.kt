@@ -709,6 +709,7 @@ class Account(
     fun sendZapPaymentRequestFor(
         bolt11: String,
         zappedNote: Note?,
+        onSent: () -> Unit,
         onResponse: (Response?) -> Unit,
     ) {
         if (!isWriteable()) return
@@ -730,6 +731,8 @@ class Account(
                 LocalCache.consume(event, zappedNote) { it.response(signer) { onResponse(it) } }
 
                 Client.send(event, nip47.relayUri, wcListener.feedTypes) { wcListener.destroy() }
+
+                onSent()
             }
         }
     }

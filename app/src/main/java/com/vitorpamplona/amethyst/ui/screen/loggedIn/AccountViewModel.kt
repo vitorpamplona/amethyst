@@ -93,9 +93,12 @@ import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -291,26 +294,27 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         onNewState: (ImmutableList<ZapAmountCommentNotification>) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val myList = zaps.toList()
-
             val initialResults =
-                myList
-                    .associate {
-                        it.request to
-                            ZapAmountCommentNotification(
-                                it.request.author,
-                                it.request.event?.content()?.ifBlank { null },
-                                showAmountAxis((it.response?.event as? LnZapEvent)?.amount),
-                            )
-                    }
+                zaps.associate {
+                    it.request to
+                        ZapAmountCommentNotification(
+                            it.request.author,
+                            it.request.event?.content()?.ifBlank { null },
+                            showAmountAxis((it.response.event as? LnZapEvent)?.amount),
+                        )
+                }
                     .toMutableMap()
 
             collectSuccessfulSigningOperations<CombinedZap, ZapAmountCommentNotification>(
-                operationsInput = myList,
+                operationsInput = zaps.filter { (it.request.event as? LnZapRequestEvent)?.isPrivateZap() == true },
                 runRequestFor = { next, onReady ->
+                    checkNotInMainThread()
+
                     innerDecryptAmountMessage(next.request, next.response, onReady)
                 },
             ) {
+                checkNotInMainThread()
+
                 it.forEach { decrypted -> initialResults[decrypted.key.request] = decrypted.value }
 
                 onNewState(initialResults.values.toImmutableList())
@@ -477,7 +481,9 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
                     message,
                     context,
                     onError,
-                    onProgress,
+                    onProgress = {
+                        onProgress(it)
+                    },
                     onPayViaIntent,
                     zapType,
                 )
@@ -1392,48 +1398,41 @@ class HasNotificationDot(bottomNavigationItems: ImmutableList<Route>) {
 
 @Immutable data class LoadedBechLink(val baseNote: Note?, val nip19: Nip19Bech32.ParseReturn)
 
-public fun <T, K> allOrNothingSigningOperations(
-    remainingTos: List<T>,
-    runRequestFor: (T, (K) -> Unit) -> Unit,
-    output: MutableList<K> = mutableListOf(),
-    onReady: (List<K>) -> Unit,
-) {
-    if (remainingTos.isEmpty()) {
-        onReady(output)
-        return
-    }
-
-    val next = remainingTos.first()
-
-    runRequestFor(next) { result: K ->
-        output.add(result)
-        allOrNothingSigningOperations(remainingTos.minus(next), runRequestFor, output, onReady)
-    }
-}
-
 public suspend fun <T, K> collectSuccessfulSigningOperations(
     operationsInput: List<T>,
     runRequestFor: (T, (K) -> Unit) -> Unit,
     output: MutableMap<T, K> = mutableMapOf(),
-    onReady: (MutableMap<T, K>) -> Unit,
+    onReady: suspend (MutableMap<T, K>) -> Unit,
 ) {
     if (operationsInput.isEmpty()) {
         onReady(output)
         return
     }
 
-    for (input in operationsInput) {
-        // runs in sequence to avoid overcrowding Amber.
-        val result =
-            withTimeoutOrNull(100) {
-                suspendCancellableCoroutine { continuation ->
-                    runRequestFor(input) { result: K -> continuation.resume(result) }
+    val (value, elapsed) =
+        measureTimedValue {
+            coroutineScope {
+                val jobs =
+                    operationsInput.map {
+                        async {
+                            val result =
+                                withTimeoutOrNull(10000) {
+                                    suspendCancellableCoroutine { continuation ->
+                                        runRequestFor(it) { result: K -> continuation.resume(result) }
+                                    }
+                                }
+                            if (result != null) {
+                                output[it] = result
+                            }
+                        }
+                    }
+
+                // runs in parallel to avoid overcrowding Amber.
+                withTimeoutOrNull(15000) {
+                    jobs.joinAll()
                 }
             }
-        if (result != null) {
-            output[input] = result
         }
-    }
 
     onReady(output)
 }

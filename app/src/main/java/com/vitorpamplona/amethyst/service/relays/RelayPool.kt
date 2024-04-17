@@ -24,10 +24,15 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 
 /**
  * RelayPool manages the connection to multiple Relays and lets consumers deal with simple events.
@@ -56,6 +61,57 @@ object RelayPool : Relay.Listener {
 
     fun getRelays(url: String): List<Relay> {
         return relays.filter { it.url == url }
+    }
+
+    fun getOrCreateRelay(
+        url: String,
+        feedTypes: Set<FeedType>? = null,
+        onDone: (() -> Unit)? = null,
+        whenConnected: (Relay) -> Unit,
+    ) {
+        synchronized(this) {
+            val matching = getRelays(url)
+            if (matching.isNotEmpty()) {
+                matching.forEach { whenConnected(it) }
+            } else {
+                /** temporary connection */
+                newSporadicRelay(
+                    url,
+                    feedTypes,
+                    onConnected = whenConnected,
+                    onDone = onDone,
+                )
+            }
+        }
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    fun newSporadicRelay(
+        url: String,
+        feedTypes: Set<FeedType>?,
+        onConnected: (Relay) -> Unit,
+        onDone: (() -> Unit)?,
+    ) {
+        val relay = Relay(url, true, true, feedTypes ?: emptySet())
+        addRelay(relay)
+
+        relay.connectAndRun {
+            Client.allSubscriptions().forEach {
+                relay.sendFilter(it.key, it.value)
+            }
+
+            onConnected(relay)
+
+            GlobalScope.launch(Dispatchers.IO) {
+                delay(60000) // waits for a reply
+                relay.disconnect()
+                removeRelay(relay)
+
+                if (onDone != null) {
+                    onDone()
+                }
+            }
+        }
     }
 
     fun loadRelays(relayList: List<Relay>) {

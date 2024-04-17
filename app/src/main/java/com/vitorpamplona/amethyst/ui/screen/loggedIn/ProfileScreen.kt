@@ -1182,7 +1182,7 @@ fun DisplayLNAddress(
                         zapExpanded = false
                         // pay directly
                         if (accountViewModel.account.hasWalletConnectSetup()) {
-                            accountViewModel.account.sendZapPaymentRequestFor(it, null) { response ->
+                            accountViewModel.account.sendZapPaymentRequestFor(it, null, onSent = {}) { response ->
                                 if (response is PayInvoiceSuccessResponse) {
                                     showInfoMessageDialog = context.getString(R.string.payment_successful)
                                 } else if (response is PayInvoiceErrorResponse) {
