@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
@@ -42,7 +41,7 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
 
         return listOf(
             TypedFilter(
-                types = COMMON_FEED_TYPES,
+                types = EVENT_FINDER_TYPES,
                 filter =
                     JsonFilter(
                         kinds = listOf(MetadataEvent.KIND),
