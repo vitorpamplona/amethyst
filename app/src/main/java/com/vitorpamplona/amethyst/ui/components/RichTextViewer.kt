@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -128,6 +129,29 @@ fun RichTextViewer(
             RenderContentAsMarkdown(content, tags, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
         } else {
             RenderRegular(content, tags, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+    }
+}
+
+@Preview
+@Composable
+fun RenderStrangeNamePreview() {
+    val nav: (String) -> Unit = {}
+
+    Column(modifier = Modifier.padding(10.dp)) {
+        RenderRegular(
+            "If you want to stream or download the music from  nostr:npub1sctag667a7np6p6ety2up94pnwwxhd2ep8n8afr2gtr47cwd4ewsvdmmjm can you here",
+            EmptyTagList,
+        ) { word, state ->
+            when (word) {
+                is BechSegment -> {
+                    Text(
+                        "FreeFrom Official \uD80C\uDD66",
+                        modifier = Modifier.border(1.dp, Color.Red),
+                    )
+                }
+                is RegularTextSegment -> Text(word.segmentText)
+            }
         }
     }
 }
