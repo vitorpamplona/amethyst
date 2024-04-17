@@ -558,11 +558,16 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Kunde inte lösa %1$s. Kontrollera om du är ansluten, om servern är uppe och om Lightning Addressen %2$s är korrekt.\n\nUndantag var: %3$s</string>
     <string name="could_not_fetch_invoice_from">Kunde inte hämta fakturan från %1$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Fel vid tolkning av JSON från Lightning Address. Kontrollera användarens Lightning-konfiguration</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Fel vid tolkning av JSON från %1$s. Kontrollera användarens blixtkonfiguration</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">Återuppringnings-URL hittades inte i användarens konfiguration för Lightning Address-servern</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Callback URL hittades inte från %1$s\'s svar</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Fel vid tolkning av JSON från Lightning Address fakturahämtning. Kontrollera användarens Lightning-konfiguration</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Fel vid tolkning av JSON från %1$ss fakturahämtning. Kontrollera användarens blixtkonfiguration</string>
     <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Felaktig fakturabelopp (%1$s sats) från %2$s. Det borde ha varit %3$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Kunde inte skapa en Lightning-faktura innan Zap skickades. Mottagarens Lightning-plånbok skickade följande fel: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Det gick inte att skapa en blixt faktura. Meddelande från %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Kunde inte skapa en Lightning-faktura innan Zap skickades. Elementet pr hittades inte i den resulterande JSON.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Det gick inte att skapa en blixtfaktura från %1$s: Elementet pr hittades inte i den resulterande JSON.</string>
     <string name="read_only_user">Skrivskyddad användare</string>
     <string name="no_reactions_setup">Inga reaktioner konfigurerade</string>
     <string name="select_push_server">Välj en Push-meddelandetjänst</string>
