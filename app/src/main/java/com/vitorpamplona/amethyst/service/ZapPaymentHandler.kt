@@ -69,7 +69,7 @@ class ZapPaymentHandler(val account: Account) {
             } else if (noteEvent is LiveActivitiesEvent && noteEvent.hasHost()) {
                 noteEvent.hosts().map { ZapSplitSetup(it, null, weight = 1.0, false) }
             } else {
-                val lud16 = note.author?.info?.lud16?.trim() ?: note.author?.info?.lud06?.trim()
+                val lud16 = note.author?.info?.lnAddress()
 
                 if (lud16.isNullOrBlank()) {
                     onError(
