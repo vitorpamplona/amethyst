@@ -33,16 +33,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.accompanist.adaptive.calculateDisplayFeatures
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -53,10 +44,6 @@ import com.vitorpamplona.amethyst.ui.components.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.ui.components.keepPlayingMutex
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.debugState
-import com.vitorpamplona.amethyst.ui.screen.AccountScreen
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
-import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
-import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
@@ -76,14 +63,13 @@ import java.util.Timer
 import kotlin.concurrent.schedule
 
 class MainActivity : AppCompatActivity() {
-    private val isOnMobileDataState = mutableStateOf(false)
+    val isOnMobileDataState = mutableStateOf(false)
     private val isOnWifiDataState = mutableStateOf(false)
 
     // Service Manager is only active when the activity is active.
     val serviceManager = ServiceManager()
     private var shouldPauseService = true
 
-    @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,36 +77,8 @@ class MainActivity : AppCompatActivity() {
         Log.d("Lifetime Event", "MainActivity.onCreate")
 
         setContent {
-            val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
-
-            val displayFeatures = calculateDisplayFeatures(this)
-            val windowSizeClass = calculateWindowSizeClass(this)
-
-            LaunchedEffect(key1 = sharedPreferencesViewModel) {
-                sharedPreferencesViewModel.init()
-                sharedPreferencesViewModel.updateDisplaySettings(windowSizeClass, displayFeatures)
-            }
-
-            LaunchedEffect(isOnMobileDataState) {
-                sharedPreferencesViewModel.updateConnectivityStatusState(isOnMobileDataState)
-            }
-
-            AmethystTheme(sharedPreferencesViewModel) {
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
-                ) {
-                    val accountStateViewModel: AccountStateViewModel = viewModel()
-                    accountStateViewModel.serviceManager = serviceManager
-
-                    LaunchedEffect(key1 = Unit) {
-                        accountStateViewModel.tryLoginExistingAccountAsync()
-                    }
-
-                    AccountScreen(accountStateViewModel, sharedPreferencesViewModel)
-                }
-            }
+            val sharedPreferencesViewModel = prepareSharedViewModel(act = this)
+            AppScreen(sharedPreferencesViewModel = sharedPreferencesViewModel, serviceManager = serviceManager)
         }
     }
 
