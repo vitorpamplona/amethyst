@@ -6,8 +6,8 @@
     <string name="your_profile_image">आपका परिचय चित्र</string>
     <string name="scan_qr">क्यूआर क्रमचित्र को परखें</string>
     <string name="show_anyway">फिर भी दिखाएँ</string>
-    <string name="post_was_hidden">इस प्रसारण को छिपाया गया क्योंकि इसमें आपके आच्छाद्य उपयोगकर्ता अथवा शब्द उल्लेखित हैं</string>
-    <string name="post_was_flagged_as_inappropriate_by">प्रसारण को मौन किया गया अथवा आपत्ति उठाया गया इनके द्वारा</string>
+    <string name="post_was_hidden">इस प्रकाशित पत्र को छिपाया गया क्योंकि इसमें आपके आच्छाद्य उपयोगकर्ता अथवा शब्द उल्लेखित हैं</string>
+    <string name="post_was_flagged_as_inappropriate_by">प्रकाशित पत्र को मौन किया गया अथवा आपत्ति उठाया गया इनके द्वारा</string>
     <string name="post_not_found">घटना उपलब्ध किया जा रहा है अथवा आपके पुनःप्रसारक सूची द्वारा प्राप्य नहीं</string>
     <string name="channel_image">प्रणाली चित्र</string>
     <string name="referenced_event_not_found">उद्धृत घटना अप्राप्त</string>
@@ -36,7 +36,7 @@
     <string name="report_explicit_content">अभद्र विषयवस्तु की सूचना दें</string>
     <string name="report_illegal_behaviour">अवैध बरताव की सूचना दें</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। उत्तर देने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
-    <string name="login_with_a_private_key_to_be_able_to_boost_posts">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। टीकाओं को उद्धृत करने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
+    <string name="login_with_a_private_key_to_be_able_to_boost_posts">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। प्रकाशित पत्रों को उद्धृत करने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
     <string name="login_with_a_private_key_to_like_posts">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। प्रसारणों को चाहने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
     <string name="no_zap_amount_setup_long_press_to_change">ज्साप मात्रा स्थापित नहीं किया गया। दीर्घतः दबाएँ परिवर्तित करने के लिए</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। ज्साप भेजने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
@@ -84,13 +84,13 @@
     <string name="description">विवरण</string>
     <string name="about_us">"हमारा परिचय.. "</string>
     <string name="what_s_on_your_mind">आपके मन में क्या है।</string>
-    <string name="post">प्रसारण</string>
+    <string name="post">पत्र प्रकाशन</string>
     <string name="save">अभिलेखित करें</string>
     <string name="create">बनाएँ</string>
-    <string name="cancel">रोक दें</string>
+    <string name="cancel">निरस्त करें</string>
     <string name="failed_to_upload_the_image">चित्र आरोहण असफल</string>
     <string name="relay_address">पुनःप्रसारक पता</string>
-    <string name="posts">प्रसारण</string>
+    <string name="posts">पत्र</string>
     <string name="bytes">अष्टक</string>
     <string name="errors">अपक्रम</string>
     <string name="home_feed">मुख्य सूचनावली</string>
@@ -185,7 +185,7 @@
     <string name="channel_created">प्रणाली बनायी गयी</string>
     <string name="channel_information_changed_to">"प्रणाली सूचना परिवर्तित किया गया यथा"</string>
     <string name="public_chat">सार्वजनिक चर्चा</string>
-    <string name="posts_received">प्रसारण प्राप्त</string>
+    <string name="posts_received">पत्र प्राप्त</string>
     <string name="remove">हटाएँ</string>
     <string name="translations_auto">स्वचालित</string>
     <string name="translations_translated_from">इससे अनुवादित</string>
@@ -208,8 +208,8 @@
     <string name="mark_all_new_as_read">सब नये को पढ लिया चिह्नित करें</string>
     <string name="mark_all_as_read">सब पढ लिया चिह्नित करें</string>
     <string name="backup_keys">कुंचिका सुरक्षित करें</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## कुंचिका सुरक्षार्थ प्रतिलिपि तथा सुरक्षा सुझाव
-        \n\nआपकी लेखा एक गुप्त कुंचिका से सुरक्षित किया गया है। कुंचिका अक्षरों की एक लम्बी श्रृंखला है जो **nsec1** से आरम्भ होता है। जिस किसी के पास यह कुंचिका है वह टीका लिख सकेगा तथा आपका परिचय परिवर्तित कर सकेगा।
+    <string name="account_backup_tips2_md" tools:ignore="Typos">## कुंचिका सुरक्षार्थ प्रतिलिपि तथा सुरक्षा सुझाव
+        \n\nआपकी लेखा एक गुप्त कुंचिका से सुरक्षित किया गया है। कुंचिका अक्षरों की एक लम्बी श्रृंखला है जो **nsec1** से आरम्भ होता है। जिस किसी के पास यह कुंचिका है वह पत्र प्रकाशन कर सकेगा तथा आपका परिचय परिवर्तित कर सकेगा।
         \n\n- आपकी गुप्त कुंचिका किसी भी जालस्थान अथवा क्रमक में **ना** डालें जिसपर आपका विश्वास ना हो।
         \n- अमेथिस्ट क्रमलेख विकासकर्ता आपकी गुप्त कुंचिका **कभी नहीं** पूछेंगे।
         \n- आपकी गुप्त कुंचिका की एक सुरक्षित प्रतिलिपि **अवश्य** रखें अपनी लेखा पुनः प्राप्त करने के लिए। पारणशब्ध प्रबंधन क्रमक की पुनःशंसा करते हैं।
@@ -267,12 +267,12 @@
     <string name="report_dialog_blocking_a_user">उपयोगकर्ता को बाधित करने से उनका विषयवस्तु आपके लिए छिपाया जाएगा क्रमक में। आपके टीकाएँ सार्वजनिक रूप से दृश्य रहेंगे, उन जनों के लिए भी जिनहे आपने बाधित किया। बाधित उपयोगकर्ता सूचित हैं सुरक्षा छलनियाँ पटल पर।</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[उपयोगकर्ता को बाधित करें तथा छिपाएँ]]></string>
     <string name="report_dialog_report_btn">दुर्व्यवहार की सूचना दें</string>
-    <string name="report_dialog_reminder_public">सभी प्रसारित सूचनाएँ सार्वजनिक रूप से दृश्य होंगे।</string>
+    <string name="report_dialog_reminder_public">सभी प्रकाशित सूचनाएँ सार्वजनिक रूप से दृश्य होंगे।</string>
     <string name="report_dialog_additional_reason_placeholder">विकल्पतः अधिक प्रसंग उपलब्ध करवाएँ आपकी सूचना के विषय में…</string>
     <string name="report_dialog_additional_reason_label">अधिक प्रसंग</string>
     <string name="report_dialog_select_reason_label">कारण</string>
     <string name="report_dialog_select_reason_placeholder">एक कारण का चयन करें…</string>
-    <string name="report_dialog_post_report_btn">सूचना प्रसारित करें</string>
+    <string name="report_dialog_post_report_btn">सूचना प्रकाशित करें</string>
     <string name="report_dialog_title">बाधित करें तथा सूचना दें</string>
     <string name="block_only">बाधित करें</string>
     <string name="bookmarks">स्मारकचिह्न</string>
@@ -291,7 +291,7 @@
     <string name="wallet_connect_service_show_secret">गुप्त कुंचिका दिखाएँ</string>
     <string name="wallet_connect_service_secret_placeholder">nsec / षोडशांकरूप निजी कुंचिका</string>
     <string name="pledge_amount_in_sats">देय मात्रा साट्स में</string>
-    <string name="post_poll">मतदान प्रसारित करें</string>
+    <string name="post_poll">मतदान पत्र प्रकाशित करें</string>
     <string name="poll_heading_required">अनिवार्य प्रपत्रस्थान :</string>
     <string name="poll_zap_recipients">ज्साप के ग्राहक</string>
     <string name="poll_primary_description">प्रमुख मतदान विवरण…</string>
@@ -316,7 +316,7 @@
     <string name="lightning_create_and_add_invoice">बनाएँ तथा जोडें</string>
     <string name="poll_author_no_vote">मतदानकर्ता अपने ही मतदान में मत नहीं दे सकते।</string>
     <string name="hash_verification_info_title">इसका अर्थ क्या है?</string>
-    <string name="hash_verification_passed">यह विषयवस्तु वैसे ही है जैसे प्रसारण पर</string>
+    <string name="hash_verification_passed">यह विषयवस्तु वैसे ही है जैसे पत्र प्रकाशन पर</string>
     <string name="hash_verification_failed">यह विषयवस्तु परिवर्तित हुआ है। हो सकता है लेखक ने परिवर्तन देखा नहीं अथवा अनुमति दिया नहीं।</string>
     <string name="content_description_add_image">चित्र जोडें</string>
     <string name="content_description_add_video">चलचित्र जोडें</string>
@@ -337,7 +337,7 @@
     <string name="file_server">अभिलेख सेवाकर्ता</string>
     <string name="zap_forward_lnAddress">लै॰जाल पता अथवा @उपयोगकर्ता</string>
     <string name="upload_server_relays_nip95">आपके पुनःप्रसारक (NIP-95)</string>
-    <string name="upload_server_relays_nip95_explainer">अभिलेख आपके पुनःप्रसारक द्वारा रखे जाते हैं। नया NIP: जाँच करें यदि वे अवलम्बन कर्ते हैं</string>
+    <string name="upload_server_relays_nip95_explainer">अभिलेख आपके पुनःप्रसारक द्वारा रखे जाते हैं। नया NIP: जाँच करें यदि वे सक्षम हैं</string>
     <string name="connect_via_tor_short">टोर / ओर्बोट स्थापन</string>
     <string name="connect_via_tor">आपकी ओर्बोट स्थापना द्वारा संयोजन करें</string>
     <string name="do_you_really_want_to_disable_tor_title">क्या आपके ओर्बोट / टोर से संयोजन काटें</string>
@@ -375,17 +375,17 @@
     <string name="channel_list_join_channel">जुडें</string>
     <string name="today">आज</string>
     <string name="content_warning">विषयवस्तु चेतावनी</string>
-    <string name="content_warning_explanation">इस प्रसारण में संवेदनशील विषयवस्तु समावेशित है जो कुछ लोगों के लिए आपत्तिजनक अथवा व्याकुल करनेवाला लग सकता है</string>
+    <string name="content_warning_explanation">इस पत्र में संवेदनशील विषयवस्तु समावेशित है जो कुछ लोगों के लिए आपत्तिजनक अथवा व्याकुल करनेवाला लग सकता है</string>
     <string name="content_warning_hide_all_sensitive_content">संवेदनशील विषयवस्तु सर्वदा छिपाएँ</string>
     <string name="content_warning_show_all_sensitive_content">संवेदनशील विषयवस्तु सर्वदा दिखाएँ</string>
     <string name="content_warning_see_warnings">विषयवस्तु चेतावनीयाँ सर्वदा दिखाएँ</string>
     <string name="recommended_apps">प्रशंसित : </string>
     <string name="filter_spam_from_strangers">अपरिचित जन के भेजे गये कचरा संदेश छलनी द्वारा हटाएँ</string>
-    <string name="warn_when_posts_have_reports_from_your_follows">चेतावनी दें जब प्रसारण सूचित किये गये हों आपके अनुचरों द्वारा</string>
+    <string name="warn_when_posts_have_reports_from_your_follows">चेतावनी दें जब पत्र सूचित किये गये हों आपके अनुचरों द्वारा</string>
     <string name="new_reaction_symbol">नया प्रतिक्रिया चिह्न</string>
     <string name="no_reaction_type_setup_long_press_to_change">इस उपयोगकर्ता के लिए कोई प्रतिक्रिया प्रकार पूर्व चयनित नहीं। हृदयचिह्न घुण्डी पर दीर्घतः दबाएँ परिवर्तन करने के लिए</string>
     <string name="zapraiser">ज्सापोपार्जन योजना</string>
-    <string name="zapraiser_explainer">इस प्रसारण के साथ साट्स मात्रा का उपार्जन लक्ष्य जोडता है। अवलम्बी ग्राहक दान का प्रोत्साहन हेतु एक प्रगतिमान डण्डा के रूप में इसे दिखा सकते हैं</string>
+    <string name="zapraiser_explainer">इस प्रसारण के साथ साट्स मात्रा का उपार्जन लक्ष्य जोडता है। सक्षम ग्राहक दान का प्रोत्साहन हेतु एक प्रगतिमान डण्डा के रूप में इसे दिखा सकते हैं</string>
     <string name="zapraiser_target_amount_in_sats">लक्ष्य मात्रा साट्स में</string>
     <string name="sats_to_complete">ज्सापोपार्जन योजना %1$s पर। %2$s साट्स का लक्ष्य</string>
     <string name="read_from_relay">पुनःप्रसारक से पढें</string>
@@ -395,14 +395,14 @@
     <string name="version">संस्करण</string>
     <string name="software">क्रमक</string>
     <string name="contact">सम्पर्क</string>
-    <string name="supports">अवलम्बन किया हुआ NIPs</string>
+    <string name="supports">सक्षम NIPs</string>
     <string name="admission_fees">प्रवेश शुल्क</string>
     <string name="payments_url">भुगतान जालपता</string>
     <string name="limitations">परिसीमाएँ</string>
     <string name="countries">देश</string>
     <string name="languages">भाषाएँ</string>
     <string name="tags">लक्षणसूचक</string>
-    <string name="posting_policy">प्रसारण नीति</string>
+    <string name="posting_policy">पत्र प्रकाशन नीति</string>
     <string name="message_length">संदेश लम्बाई</string>
     <string name="subscriptions">ग्राहकताएँ</string>
     <string name="filters">छलनियाँ</string>
@@ -433,7 +433,7 @@
     <string name="discover_live">तत्क्षणप्रसार</string>
     <string name="discover_community">समुदाय</string>
     <string name="discover_chat">चर्चाएँ</string>
-    <string name="community_approved_posts">अनुमत प्राप्त प्रसारण</string>
+    <string name="community_approved_posts">अनुमति प्राप्त पत्र</string>
     <string name="groups_no_descriptor">इस झुण्ड का कोई विवरण नहीं नियम नहीं। इसके अधिपति से बात करें इनहे जोडने के लिए</string>
     <string name="community_no_descriptor">इस समुदाय का कोई विवरण नहीं। इसके अधिपति से बात करें इसे जोडने के लिए</string>
     <string name="add_sensitive_content_label">संवेदनशील विषयवस्तु</string>
@@ -456,7 +456,7 @@
     <string name="automatically_hide_nav_bars">निमग्न पृष्ठघुमाव</string>
     <string name="automatically_hide_nav_bars_description">मार्गदर्शनपट्टों को छिपाएँ पृष्ठघुमाव करने पर</string>
     <string name="ui_style">प्रयोगमाध्यम ढंग</string>
-    <string name="ui_style_description">प्रसारण शैली का चयन करें</string>
+    <string name="ui_style_description">पत्र शैली का चयन करें</string>
     <string name="load_image">चित्र प्राप्त करें</string>
     <string name="spamming_users">कचराकार</string>
     <string name="muted_button">मौन किया गया। सुनने के लिए टाँकें</string>
@@ -469,7 +469,7 @@
     <string name="default_relays">मूलविकल्प</string>
     <string name="select_a_relay_to_continue">पुनःप्रसारक चुनें आगे बढने के लिए</string>
     <string name="zap_forward_title">ज्साप आगे भेजें इनको :</string>
-    <string name="zap_forward_explainer">अवलम्बन करनेवाले ग्राहक ज्सापों को आगे भेजेंगे इस लै॰जाल पता को अथवा उपयोगकर्ता परिचय जो नीचे है तथा आपके पते को नहीं</string>
+    <string name="zap_forward_explainer">सक्षम ग्राहक ज्सापों को आगे भेजेंगे इस लै॰जाल पता को अथवा उपयोगकर्ता परिचय जो नीचे है तथा आपके पते को नहीं</string>
     <string name="geohash_title">स्थान अनावृत करें इस प्रकार </string>
     <string name="geohash_explainer">आपका भूगोलिक स्थान विभेदक जोडता है प्रसारण में। जनता जान जाएँगे आप वर्तमान स्थान से ५ कि॰मे॰ (३ मी॰) की दूरी के अन्दर हैं</string>
     <string name="add_sensitive_content_explainer">आपके विषयवस्तु दिखाने से पूर्व संवेदनशील विषयवस्तु चेतावनी जोडता है। यह आदर्श है किसी कार्यालय अनुचित विषयवस्तु के लिए अथवा जिससे कुछ लोगों को आपत्तिजनक अथवा व्याकुल करनेवाला लग सकता है</string>
@@ -502,4 +502,45 @@
     <string name="login_with_external_signer">आम्बेर के साथ प्रवेशांकन करें</string>
     <string name="status_update">आपकी स्थिति का नवीकरण करें</string>
     <string name="lightning_wallets_not_found">अपक्रम संदेश परखने में अपक्रम</string>
+    <string name="poll_zap_value_min_max_explainer">निर्वाचन का भार ज्साप मात्रा के अनुसार माना जाता है। आप एक न्यूनतम मात्रा स्थापित कर सकते हैं कचरालेखकर्ताओं से बचने के लिए तथा एक अधिकतम मात्रा बडे ज्सापकर्ताओं के द्वारा मतदान का अधिग्रहण होने से बचने के लिए। दोनों स्थानों में एक ही मात्रा का प्रयोग करें प्रत्येक निर्वाचन का मूल्य समान मानने को सुनिश्चित करने के लिए। रिक्त रख दें कुछ भी मात्रा स्वीकार करने के लिए।</string>
+    <string name="error_dialog_zap_error">ज्साप भेजने में असफल</string>
+    <string name="error_dialog_talk_to_user">उपयोगकर्ता को संदेश भेजें</string>
+    <string name="error_dialog_button_ok">ठीक है</string>
+    <string name="relay_information_document_error_assemble_url">%1$s तक जा नहीं पाए : %2$s</string>
+    <string name="relay_information_document_error_reach_server">%1$s तक जा नहीं पाए : %2$s</string>
+    <string name="relay_information_document_error_parse_result">%1$s से परिणाम परख नहीं पाए : %2$s</string>
+    <string name="relay_information_document_error_http_status">%1$s असफल हुआ इस संकेतक के साथ : %2$s</string>
+    <string name="active_for">के लिए सक्रिय : </string>
+    <string name="active_for_home">मुखपृष्ठ</string>
+    <string name="active_for_msg">सीधे संदेश</string>
+    <string name="active_for_chats">चर्चाएँ</string>
+    <string name="active_for_global">वैश्विक</string>
+    <string name="active_for_search">खोज</string>
+    <string name="zap_split_title">ज्साप विभाजन करें तथा आगे भेजें</string>
+    <string name="zap_split_explainer">सक्षम ग्राहक ज्सापों का विभाजन करेंगे तथा यहाँ जोडे गये उपयोगकर्ताओं को आगे भेजेंगे आपके स्थान पर</string>
+    <string name="zap_split_search_and_add_user">खोजें तथा उपयोगकर्ता जोडें</string>
+    <string name="zap_split_search_and_add_user_placeholder">उपयोगकर्ता नाम अथवा प्रदर्शन नाम</string>
+    <string name="missing_lud16">लैटनिंग स्थापना अनुपलब्ध</string>
+    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">उपयोगकर्ता %1$s का कोई लैटनिंग पता स्थापित नही साट्स प्राप्त करने के लिए</string>
+    <string name="zap_split_weight">प्रतिशत</string>
+    <string name="zap_split_weight_placeholder">२५</string>
+    <string name="splitting_zaps_with">ज्साप का विभाजन इसके साथ</string>
+    <string name="forwarding_zaps_to">ज्साप आगे भेजा जा रहा है इनको</string>
+    <string name="lightning_wallets_not_found2">लैटनिंग धनकोष ढूँढने में असफल</string>
+    <string name="paid">भुगतान किया गया</string>
+    <string name="wallet_number">धनकोष %1$s</string>
+    <string name="error_opening_external_signer">हस्ताक्षर क्रमक खोलने में अपक्रम</string>
+    <string name="error_opening_external_signer_description">हस्ताक्षर क्रमक ढूँढने में असफल। जाँच करें यदि क्रमक को अस्थापित नहीं किया गया हो</string>
+    <string name="sign_request_rejected">हस्ताक्षर याचना अस्वीकृत</string>
+    <string name="sign_request_rejected_description">सुनिश्चित करें हस्ताक्षर क्रमक ने इस व्यापार को अनुमति दिया</string>
+    <string name="no_wallet_found_with_error">कोई धनकोष प्राप्त नहीं लैटनिंग चालान चुकाने के लिए (अपक्रम : %1$s)। कृपया एक लैटनिंग धनकोष की स्थापना करें ज्सापों का प्रयोग करने के लिए</string>
+    <string name="no_wallet_found">कोई धनकोष प्राप्त नहीं लैटनिंग चालान चुकाने के लिए। कृपया एक लैटनिंग धनकोष की स्थापना करें ज्सापों का प्रयोग करने के लिए</string>
+    <string name="hidden_words">छिपाए गये शब्द</string>
+    <string name="hide_new_word_label">नया शब्द अथवा वाक्य छिपाएँ</string>
+    <string name="automatically_show_profile_picture">परिचय चित्र</string>
+    <string name="automatically_show_profile_picture_description">परिचय चित्र दिखाएँ</string>
+    <string name="select_an_option">विकल्प का चयन करें</string>
+    <string name="error_dialog_pay_invoice_error">चालान का भुगतान नहीं कर पाए</string>
+    <string name="error_dialog_pay_withdraw_error">निकाल नहीं पाए</string>
+    <string name="error_parsing_nip47_title">धनकोष संयोजन स्थापित नहीं कर पाए</string>
 </resources>

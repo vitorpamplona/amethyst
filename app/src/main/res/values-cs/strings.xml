@@ -559,11 +559,16 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Nepodařilo se vyřešit %1$s. Zkontrolujte, zda jste připojeni, zda je server aktivní a zda je adresa %2$s správná.\n\nVýjimka byla: %3$s</string>
     <string name="could_not_fetch_invoice_from">Nepodařilo se načíst fakturu z %1$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Chyba při analýze JSON z Lightning adresy. Zkontrolujte uživatelovo bleskové nastavení</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Chyba při analýze JSON z %1$s. Zkontrolujte uživatelské bleskové nastavení</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">URL adresa zpětného volání nebyla nalezena v konfiguraci serveru pro bleskovou adresu uživatele</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Adresa URL zpětného volání nebyla nalezena v odpovědi %1$s</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Chyba při analýze JSON z načtení faktur v Lightning adrese. Zkontrolujte uživatelské nastavení</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Chyba při analýze JSON z načtení faktury %1$s. Zkontrolujte uživatelské bleskové nastavení</string>
     <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Nesprávná částka faktury (%1$s sats) od %2$s. Měla by být %3$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Nepodařilo se vytvořit bleskovou fakturu před odesláním zap. Blesková peněženka příjemce odeslala následující chybu: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Nelze vytvořit bleskovou fakturu. Zpráva od %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Nepodařilo se vytvořit bleskovou fakturu před odesláním zap. Prvek pr nebyl nalezen v výsledném JSON.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nelze vytvořit bleskovou fakturu z %1$s: Prvek pr nebyl nalezen ve výsledném JSON.</string>
     <string name="read_only_user">Uživatel pouze pro čtení</string>
     <string name="no_reactions_setup">Žádné nastavení reakcí</string>
     <string name="select_push_server">Vyberte distributor push oznámení</string>

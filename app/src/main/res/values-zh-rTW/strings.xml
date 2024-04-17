@@ -275,6 +275,7 @@
     <string name="report_dialog_title">屏蔽並舉報</string>
     <string name="block_only">屏蔽</string>
     <string name="bookmarks">書籤</string>
+    <string name="drafts">草稿</string>
     <string name="private_bookmarks">私人書籤</string>
     <string name="public_bookmarks">公開書籤</string>
     <string name="add_to_private_bookmarks">添加到私人書籤</string>
@@ -559,11 +560,16 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">無法解析 %1$s。請檢查你是否已連接，服務器是否啓動，以及閃電地址 %2$s 是否正確。\n\n異常爲：%3$s</string>
     <string name="could_not_fetch_invoice_from">無法從 %1$s 獲取發票</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">從閃電地址解析 JSON 發生錯誤。請檢查用戶的閃電設置</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">從 %1$s 解析 JSON 發生錯誤。請檢查用戶的閃電設置</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">在用戶閃電地址伺服器配置中找不到回調 URL</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">從 %1$s 的響應中找不到回調 URL</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">從閃電地址的發票獲取解析 JSON 發生錯誤。請檢查用戶的閃電設置</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">從 %1$s 的閃電發票獲取解析 JSON 發生錯誤。請檢查用戶的閃電設置</string>
     <string name="incorrect_invoice_amount_sats_from_it_should_have_been">來自 %2$s 的錯誤的發票金額（%1$s 聰）。應該是 %3$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">無法在發送打閃前創建閃電發票。接收者閃電錢包發送了以下錯誤：%1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">無法創建閃電發票。來自 %1$s 的消息：%2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">無法在發送打閃前創建閃電發票。在生成的 JSON 中找不到 Element pr。</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">無法從 %1$s 創建閃電發票：在生成的 JSON 中找不到付款要求元素。</string>
     <string name="read_only_user">只讀用戶</string>
     <string name="no_reactions_setup">沒有設置回應</string>
     <string name="select_push_server">選擇一個統一推送應用</string>
@@ -621,6 +627,7 @@
     <string name="server_did_not_provide_a_url_after_uploading">上傳後伺服器沒有提供 URL</string>
     <string name="could_not_download_from_the_server">無法從伺服器下載上傳的媒體</string>
     <string name="could_not_prepare_local_file_to_upload">無法準備要上傳的本地文件：%1$s</string>
+    <string name="edit_draft">編輯草稿</string>
     <string name="login_with_qr_code">使用二維碼登錄</string>
     <string name="route">路徑</string>
     <string name="route_home">主頁</string>
@@ -664,6 +671,8 @@
     <string name="zap_the_devs_title">打閃開發人員</string>
     <string name="zap_the_devs_description">你的捐贈幫助我們做出不同的貢獻。 每個聰都很重要！</string>
     <string name="donate_now">立即捐款</string>
+    <string name="brought_to_you_by">贊助方：</string>
+    <string name="this_version_brought_to_you_by">此版本贊助方：</string>
     <string name="version_name">版本 %1$s</string>
     <string name="thank_you">謝謝！</string>
     <string name="max_limit">最大上限</string>
@@ -685,4 +694,10 @@
     <string name="accessibility_play_username">作爲音頻播放用戶名</string>
     <string name="accessibility_scan_qr_code">掃描二維碼</string>
     <string name="accessibility_navigate_to_alby">導航到第三方錢包提供商 Alby</string>
+    <string name="it_s_not_possible_to_reply_to_a_draft_note">無法回覆筆記草稿</string>
+    <string name="it_s_not_possible_to_quote_to_a_draft_note">無法引用筆記草稿</string>
+    <string name="it_s_not_possible_to_react_to_a_draft_note">無法回應筆記草稿</string>
+    <string name="it_s_not_possible_to_zap_to_a_draft_note">無法打閃筆記草稿</string>
+    <string name="draft_note">筆記草稿</string>
+    <string name="load_from_text">來自消息</string>
 </resources>

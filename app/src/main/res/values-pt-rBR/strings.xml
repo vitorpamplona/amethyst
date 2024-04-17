@@ -559,11 +559,16 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Não foi possível resolver %1$s. Verifique se você está conectado, se o servidor está funcionando e se o endereço Lightning %2$s está correto.\n\nExceção foi: %3$s</string>
     <string name="could_not_fetch_invoice_from">Não foi possível obter a fatura de %1$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Erro ao analisar JSON do Endereço Lightning. Verifique a configuração de Lightning do usuário</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Erro ao analisar JSON do %1$s. Verifique a configuração lightning do usuário</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">URL de retorno não encontrada na configuração do servidor de endereço Lightning do usuário</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">URL de retorno de chamada não encontrado da resposta %1$s</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Erro ao analisar o pedido de fatura do endereço Lightning. Verifique a configuração de Lightning do usuário</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Erro ao analisar JSON da busca de fatura %1$s. Verifique a configuração de iluminação do usuário</string>
     <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Quantidade incorreta na fatura (%1$s sats) de %2$s. Deveria ser %3$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Não foi possível criar uma fatura Lightning antes de enviar o zap. A carteira Lightning do destinatário enviou o seguinte erro: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Não foi possível criar uma fatura com raios. Mensagem do %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Não foi possível criar uma fatura Lightning antes de enviar o zap. O elemento pr não foi encontrado no JSON resultante.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Não foi possível criar uma fatura lightning a partir de %1$s: Elemento pr não encontrado no JSON resultante.</string>
     <string name="read_only_user">Usuário somente leitura</string>
     <string name="no_reactions_setup">Nenhuma configuração de reações</string>
     <string name="select_push_server">Selecione um Distribuidor de Notificações Push</string>

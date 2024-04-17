@@ -275,6 +275,7 @@
     <string name="report_dialog_title">阻止与举报</string>
     <string name="block_only">仅阻止</string>
     <string name="bookmarks">书签</string>
+    <string name="drafts">草稿</string>
     <string name="private_bookmarks">私人书签</string>
     <string name="public_bookmarks">公开书签</string>
     <string name="add_to_private_bookmarks">添加到私人书签</string>
@@ -559,11 +560,16 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">无法解析 %1$s。请检查你是否已连接，服务器是否启动，以及闪电地址 %2$s 是否正确。\n\n异常为：%3$s</string>
     <string name="could_not_fetch_invoice_from">无法从 %1$s 获取发票</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">从闪电地址解析JSON出错。请检查用户的打闪设置</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">从 %1$s 解析 JSON 发生错误。请检查用户的闪电设置</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">在用户闪电地址服务器配置中找不到回调URL</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">从 %1$s 的响应中找不到回调 URL</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">从闪电地址的发票获取解析JSON 发生错误。请检查用户的闪电设置</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">从 %1$s 的闪电发票获取解析JSON 发生错误。请检查用户的闪电设置</string>
     <string name="incorrect_invoice_amount_sats_from_it_should_have_been">来自 %2$s 的错误的发票金额（%1$s 聪）。它本应该是 %3$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">无法在发送打闪前创建闪电发票。接收者闪电钱包发送了以下错误： %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">无法创建闪电发票。来自 %1$s 的消息：%2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">无法在发送打闪前创建闪电发票。在生成的 JSON 中找不到 Element pr。</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">无法从 %1$s 创建闪电发票：在生成的 JSON 中找不到付款要求元素。</string>
     <string name="read_only_user">仅读用户</string>
     <string name="no_reactions_setup">没有设置回应</string>
     <string name="select_push_server">选择一个统一推送应用</string>
@@ -621,6 +627,7 @@
     <string name="server_did_not_provide_a_url_after_uploading">上传后服务器没有提供 URL</string>
     <string name="could_not_download_from_the_server">无法从服务器下载上传的媒体</string>
     <string name="could_not_prepare_local_file_to_upload">无法准备要上传的本地文件：%1$s</string>
+    <string name="edit_draft">编辑草稿</string>
     <string name="login_with_qr_code">使用二维码登录</string>
     <string name="route">路径</string>
     <string name="route_home">主页</string>
@@ -664,6 +671,8 @@
     <string name="zap_the_devs_title">打闪开发人员！</string>
     <string name="zap_the_devs_description">你的捐赠帮助我们做出不同的贡献。每个聪都很重要！</string>
     <string name="donate_now">立即捐款</string>
+    <string name="brought_to_you_by">赞助方：</string>
+    <string name="this_version_brought_to_you_by">此版本赞助商：</string>
     <string name="version_name">版本 %1$s</string>
     <string name="thank_you">谢谢！</string>
     <string name="max_limit">最大上限</string>
@@ -686,4 +695,10 @@
     <string name="accessibility_play_username">作为音频播放用户名</string>
     <string name="accessibility_scan_qr_code">扫描二维码</string>
     <string name="accessibility_navigate_to_alby">导航到第三方钱包提供商 Alby</string>
+    <string name="it_s_not_possible_to_reply_to_a_draft_note">无法回复笔记草稿</string>
+    <string name="it_s_not_possible_to_quote_to_a_draft_note">无法引用笔记草稿</string>
+    <string name="it_s_not_possible_to_react_to_a_draft_note">无法回应笔记草稿</string>
+    <string name="it_s_not_possible_to_zap_to_a_draft_note">无法打闪笔记草稿</string>
+    <string name="draft_note">笔记草稿</string>
+    <string name="load_from_text">来自消息</string>
 </resources>
