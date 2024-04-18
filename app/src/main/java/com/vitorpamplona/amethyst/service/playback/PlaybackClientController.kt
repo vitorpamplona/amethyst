@@ -27,10 +27,11 @@ import android.util.Log
 import android.util.LruCache
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.CancellationException
+import java.util.concurrent.Executors
 
 object PlaybackClientController {
+    var executorService = Executors.newCachedThreadPool()
     val cache = LruCache<Int, SessionToken>(1)
 
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
@@ -67,7 +68,7 @@ object PlaybackClientController {
                         Log.e("Playback Client", "Failed to load Playback Client for $videoUri", e)
                     }
                 },
-                MoreExecutors.directExecutor(),
+                executorService,
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
