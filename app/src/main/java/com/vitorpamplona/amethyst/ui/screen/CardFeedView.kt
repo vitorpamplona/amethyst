@@ -158,7 +158,11 @@ private fun FeedLoaded(
             ShowDonationCard(accountViewModel, nav)
         }
 
-        itemsIndexed(state.feed.value, key = { _, item -> item.id() }) { _, item ->
+        itemsIndexed(
+            items = state.feed.value,
+            key = { _, item -> item.id() },
+            contentType = { _, item -> item.javaClass.simpleName },
+        ) { _, item ->
             val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
 
             Row(defaultModifier) {
