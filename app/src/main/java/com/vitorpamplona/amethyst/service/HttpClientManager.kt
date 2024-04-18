@@ -77,7 +77,7 @@ object HttpClientManager {
         proxy: Proxy?,
         timeout: Duration,
     ): OkHttpClient {
-        val seconds = if (proxy != null) timeout.seconds * 2 else timeout.seconds
+        val seconds = if (proxy != null) timeout.seconds * 3 else timeout.seconds
         val duration = Duration.ofSeconds(seconds)
         return OkHttpClient.Builder()
             .proxy(proxy)
