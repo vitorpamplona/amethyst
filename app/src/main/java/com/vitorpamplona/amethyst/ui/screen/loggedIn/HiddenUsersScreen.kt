@@ -74,7 +74,6 @@ import com.vitorpamplona.amethyst.ui.screen.NostrSpammerAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.StringFeedView
-import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -103,6 +102,12 @@ fun HiddenUsersScreen(
         viewModel(
             factory = NostrSpammerAccountsFeedViewModel.Factory(accountViewModel.account),
         )
+
+    WatchAccountAndBlockList(accountViewModel = accountViewModel) {
+        hiddenFeedViewModel.invalidateData()
+        spammerFeedViewModel.invalidateData()
+        hiddenWordsFeedViewModel.invalidateData()
+    }
 
     HiddenUsersScreen(
         hiddenFeedViewModel,
@@ -197,14 +202,8 @@ fun HiddenUsersScreen(
         }
         HorizontalPager(state = pagerState) { page ->
             when (page) {
-                0 ->
-                    RefreshingUserFeedView(hiddenFeedViewModel, accountViewModel) {
-                        RefreshingFeedUserFeedView(hiddenFeedViewModel, accountViewModel, nav)
-                    }
-                1 ->
-                    RefreshingUserFeedView(spammerFeedViewModel, accountViewModel) {
-                        RefreshingFeedUserFeedView(spammerFeedViewModel, accountViewModel, nav)
-                    }
+                0 -> RefreshingFeedUserFeedView(hiddenFeedViewModel, accountViewModel, nav)
+                1 -> RefreshingFeedUserFeedView(spammerFeedViewModel, accountViewModel, nav)
                 2 -> HiddenWordsFeed(hiddenWordsViewModel, accountViewModel)
             }
         }
@@ -269,24 +268,16 @@ private fun AddMuteWordTextField(accountViewModel: AccountViewModel) {
 }
 
 @Composable
-fun RefreshingUserFeedView(
-    feedViewModel: UserFeedViewModel,
-    accountViewModel: AccountViewModel,
-    inner: @Composable () -> Unit,
-) {
-    WatchAccountAndBlockList(feedViewModel, accountViewModel)
-    inner()
-}
-
-@Composable
 fun WatchAccountAndBlockList(
-    feedViewModel: UserFeedViewModel,
     accountViewModel: AccountViewModel,
+    invalidate: () -> Unit,
 ) {
     val accountState by accountViewModel.accountLiveData.observeAsState()
     val blockListState by accountViewModel.account.flowHiddenUsers.collectAsStateWithLifecycle()
 
-    LaunchedEffect(accountViewModel, accountState, blockListState) { feedViewModel.invalidateData() }
+    LaunchedEffect(accountViewModel, accountState, blockListState) {
+        invalidate()
+    }
 }
 
 @Composable
