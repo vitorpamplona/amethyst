@@ -115,6 +115,7 @@ import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 
 public val DEFAULT_MUTED_SETTING = mutableStateOf(true)
@@ -394,6 +395,8 @@ fun GetVideoController(
 ) {
     val context = LocalContext.current
 
+    val onlyOnePreparing = AtomicBoolean()
+
     val controller =
         remember(videoUri) {
             mutableStateOf(
@@ -421,31 +424,36 @@ fun GetVideoController(
         // If it is not null, the user might have come back from a playing video, like clicking on
         // the notification of the video player.
         if (controller.value == null) {
-            scope.launch(Dispatchers.IO) {
-                Log.d("PlaybackService", "Preparing Video $videoUri ")
-                PlaybackClientController.prepareController(
-                    uid,
-                    videoUri,
-                    nostrUriCallback,
-                    context,
-                ) {
-                    scope.launch(Dispatchers.Main) {
-                        // REQUIRED TO BE RUN IN THE MAIN THREAD
-                        if (!it.isPlaying) {
-                            if (keepPlayingMutex?.isPlaying == true) {
-                                // There is a video playing, start this one on mute.
-                                it.volume = 0f
-                            } else {
-                                // There is no other video playing. Use the default mute state to
-                                // decide if sound is on or not.
-                                it.volume = if (defaultToStart) 0f else 1f
+            // If there is a connection, don't wait.
+            if (!onlyOnePreparing.getAndSet(true)) {
+                scope.launch(Dispatchers.IO) {
+                    Log.d("PlaybackService", "Preparing Video $videoUri ")
+                    PlaybackClientController.prepareController(
+                        uid,
+                        videoUri,
+                        nostrUriCallback,
+                        context,
+                    ) {
+                        scope.launch(Dispatchers.Main) {
+                            // REQUIRED TO BE RUN IN THE MAIN THREAD
+                            if (!it.isPlaying) {
+                                if (keepPlayingMutex?.isPlaying == true) {
+                                    // There is a video playing, start this one on mute.
+                                    it.volume = 0f
+                                } else {
+                                    // There is no other video playing. Use the default mute state to
+                                    // decide if sound is on or not.
+                                    it.volume = if (defaultToStart) 0f else 1f
+                                }
                             }
+
+                            it.setMediaItem(mediaItem.value)
+                            it.prepare()
+
+                            controller.value = it
+
+                            onlyOnePreparing.getAndSet(false)
                         }
-
-                        it.setMediaItem(mediaItem.value)
-                        it.prepare()
-
-                        controller.value = it
                     }
                 }
             }
@@ -454,6 +462,8 @@ fun GetVideoController(
             controller.value?.let {
                 scope.launch(Dispatchers.Main) {
                     if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED) {
+                        Log.d("PlaybackService", "Preparing Existing Video $videoUri ")
+
                         if (it.isPlaying) {
                             // There is a video playing, start this one on mute.
                             it.volume = 0f
@@ -497,32 +507,35 @@ fun GetVideoController(
                     // if the controller is null, restarts the controller with a new one
                     // if the controller is not null, just continue playing what the controller was playing
                     if (controller.value == null) {
-                        scope.launch(Dispatchers.IO) {
-                            Log.d("PlaybackService", "Preparing Video from Resume $videoUri ")
-                            PlaybackClientController.prepareController(
-                                uid,
-                                videoUri,
-                                nostrUriCallback,
-                                context,
-                            ) {
-                                scope.launch(Dispatchers.Main) {
-                                    // REQUIRED TO BE RUN IN THE MAIN THREAD
-                                    // checks again to make sure no other thread has created a controller.
-                                    if (!it.isPlaying) {
-                                        if (keepPlayingMutex?.isPlaying == true) {
-                                            // There is a video playing, start this one on mute.
-                                            it.volume = 0f
-                                        } else {
-                                            // There is no other video playing. Use the default mute state to
-                                            // decide if sound is on or not.
-                                            it.volume = if (defaultToStart) 0f else 1f
+                        if (!onlyOnePreparing.getAndSet(true)) {
+                            scope.launch(Dispatchers.IO) {
+                                Log.d("PlaybackService", "Preparing Video from Resume $videoUri ")
+                                PlaybackClientController.prepareController(
+                                    uid,
+                                    videoUri,
+                                    nostrUriCallback,
+                                    context,
+                                ) {
+                                    scope.launch(Dispatchers.Main) {
+                                        // REQUIRED TO BE RUN IN THE MAIN THREAD
+                                        // checks again to make sure no other thread has created a controller.
+                                        if (!it.isPlaying) {
+                                            if (keepPlayingMutex?.isPlaying == true) {
+                                                // There is a video playing, start this one on mute.
+                                                it.volume = 0f
+                                            } else {
+                                                // There is no other video playing. Use the default mute state to
+                                                // decide if sound is on or not.
+                                                it.volume = if (defaultToStart) 0f else 1f
+                                            }
                                         }
+
+                                        it.setMediaItem(mediaItem.value)
+                                        it.prepare()
+
+                                        controller.value = it
+                                        onlyOnePreparing.getAndSet(false)
                                     }
-
-                                    it.setMediaItem(mediaItem.value)
-                                    it.prepare()
-
-                                    controller.value = it
                                 }
                             }
                         }
