@@ -560,11 +560,16 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Nem sikerült megoldani: %1$s. Ellenőrizd, hogy csatlakozol-e, működik-e a szerver, és hogy a %2$s lightning cím helyes-e.\n\nKivétel: %3$s</string>
     <string name="could_not_fetch_invoice_from">Nem sikerült a számlát a következőtől: %1$s lekérni</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Hiba a Lightning-címből származó JSON elemzésekor. Ellenőrizd a felhasználó Lightning beállítását</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Hiba történt a %1$s JSON elemzése során. Ellenőrizd a felhasználó Lightning beállítását</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">A visszahívási URL a felhasználó Lightning címszerver konfigurációjában nem található</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">A visszahívási URL a %1$s válaszából nem található</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Hiba a Lightning cím számlalekérése során származó JSON elemzésekor. Ellenőrizd a felhasználó Lightning beállítását</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Hiba történt a %1$s számlalekérésnek a JSON elemzése során. Ellenőrizd a felhasználó Lightning beállítását</string>
     <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Helytelen számlaösszeg (%1$s sats) a következőtől: %2$s. %3$s kellett volna</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Nem sikerült a zap elküldése előtt lightning számlát készíteni. A fogadó fél lightning tárcája a következő hibát küldte: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Nem sikerült Lightning számlát létrehozni. Üzenet a következőtől %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Nem sikerült a zap elküldése előtt lightning számlát készíteni. A kapott JSON-ban a pr elem nem található.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nem lehet villámszámlát létrehozni a következőből: %1$s: A kapott JSON-ban nem található fizetési kérés elem.</string>
     <string name="read_only_user">Csak olvasható felhasználó</string>
     <string name="no_reactions_setup">Nincs reakcióbeállítás</string>
     <string name="select_push_server">Válassz ki egy UnifiedPush alkalmazást</string>
