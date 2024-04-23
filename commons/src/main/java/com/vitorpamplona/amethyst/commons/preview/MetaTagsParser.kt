@@ -130,7 +130,7 @@ object MetaTagsParser {
     // - commonly used character references in attribute values are resolved
     private class Attrs {
         companion object {
-            val RE_CHAR_REF = Regex("""&(\w+)(;?)""")
+            val RE_CHAR_REF = Regex("""&(#?)(\w+)(;?)""")
             val BASE_CHAR_REFS =
                 mapOf(
                     "amp" to "&",
@@ -148,16 +148,25 @@ object MetaTagsParser {
                     "equals" to "=",
                     "grave" to "`",
                     "DiacriticalGrave" to "`",
+                    "039" to "'",
+                    "8217" to "’",
+                    "8216" to "‘",
+                    "39" to "'",
+                    "ldquo" to "“",
+                    "rdquo" to "”",
+                    "mdash" to "—",
+                    "hellip" to "…",
+                    "x27" to "'",
                 )
 
             fun replaceCharRefs(match: MatchResult): String {
-                val bcr = BASE_CHAR_REFS[match.groupValues[1]]
+                val bcr = BASE_CHAR_REFS[match.groupValues[2]]
                 if (bcr != null) {
                     return bcr
                 }
                 // non-base char refs must be terminated by ';'
                 if (match.groupValues[2].isNotEmpty()) {
-                    val cr = CHAR_REFS[match.groupValues[1]]
+                    val cr = CHAR_REFS[match.groupValues[2]]
                     if (cr != null) {
                         return cr
                     }
