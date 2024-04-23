@@ -141,6 +141,8 @@ object MetaTagsParser {
                     "LT" to "<",
                     "gt" to ">",
                     "GT" to ">",
+                    "nbsp" to " ",
+                    "NBSP" to " ",
                 )
             val CHAR_REFS =
                 mapOf(
@@ -157,6 +159,7 @@ object MetaTagsParser {
                     "mdash" to "—",
                     "hellip" to "…",
                     "x27" to "'",
+                    "nbsp" to " ",
                 )
 
             fun replaceCharRefs(match: MatchResult): String {
@@ -165,7 +168,7 @@ object MetaTagsParser {
                     return bcr
                 }
                 // non-base char refs must be terminated by ';'
-                if (match.groupValues[2].isNotEmpty()) {
+                if (match.groupValues[3].isNotEmpty()) {
                     val cr = CHAR_REFS[match.groupValues[2]]
                     if (cr != null) {
                         return cr
