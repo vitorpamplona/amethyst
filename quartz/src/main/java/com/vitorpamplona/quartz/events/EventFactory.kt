@@ -79,6 +79,7 @@ class EventFactory {
                 CommunityPostApprovalEvent(id, pubKey, createdAt, tags, content, sig)
             ContactListEvent.KIND -> ContactListEvent(id, pubKey, createdAt, tags, content, sig)
             DeletionEvent.KIND -> DeletionEvent(id, pubKey, createdAt, tags, content, sig)
+            DirectMessageRelayListEvent.KIND -> DirectMessageRelayListEvent(id, pubKey, createdAt, tags, content, sig)
             DraftEvent.KIND -> DraftEvent(id, pubKey, createdAt, tags, content, sig)
             EmojiPackEvent.KIND -> EmojiPackEvent(id, pubKey, createdAt, tags, content, sig)
             EmojiPackSelectionEvent.KIND ->

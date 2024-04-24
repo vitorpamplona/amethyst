@@ -1409,30 +1409,27 @@ public suspend fun <T, K> collectSuccessfulSigningOperations(
         return
     }
 
-    val (value, elapsed) =
-        measureTimedValue {
-            coroutineScope {
-                val jobs =
-                    operationsInput.map {
-                        async {
-                            val result =
-                                withTimeoutOrNull(10000) {
-                                    suspendCancellableCoroutine { continuation ->
-                                        runRequestFor(it) { result: K -> continuation.resume(result) }
-                                    }
-                                }
-                            if (result != null) {
-                                output[it] = result
+    coroutineScope {
+        val jobs =
+            operationsInput.map {
+                async {
+                    val result =
+                        withTimeoutOrNull(10000) {
+                            suspendCancellableCoroutine { continuation ->
+                                runRequestFor(it) { result: K -> continuation.resume(result) }
                             }
                         }
+                    if (result != null) {
+                        output[it] = result
                     }
-
-                // runs in parallel to avoid overcrowding Amber.
-                withTimeoutOrNull(15000) {
-                    jobs.joinAll()
                 }
             }
+
+        // runs in parallel to avoid overcrowding Amber.
+        withTimeoutOrNull(15000) {
+            jobs.joinAll()
         }
+    }
 
     onReady(output)
 }
