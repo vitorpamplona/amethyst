@@ -77,7 +77,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
         val followSet = follows?.plus(account.userProfile().pubkeyHex)?.toList()?.ifEmpty { null }
 
         return TypedFilter(
-            types = setOf(FeedType.FOLLOWS),
+            types = setOf(if (follows == null) FeedType.GLOBAL else FeedType.FOLLOWS),
             filter =
                 JsonFilter(
                     kinds =
