@@ -561,11 +561,16 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Kon %1$s niet oplossen. Controleer of u verbonden bent, of de server online is en of het Lightning Adress %2$s juist is. \n\nUitzondering was: %3$s</string>
     <string name="could_not_fetch_invoice_from">Kan invoice niet ophalen van %1$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Fout bij het verwerken van JSON uit Lightning Adress. Controleer de Lightning setup van de gebruiker</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Fout bij het verwerken van JSON uit %1$s. Controleer de Lightning set-up van de gebruiker</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">Callback URL niet gevonden in de Lightning Adress configuratie van de gebruiker</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Callback URL niet gevonden uit het antwoord van %1$s</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Fout bij het verwerken van JSON uit Lightning Adress. Controleer de Lightning setup van de gebruiker</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Fout bij het verwerken van JSON uit de invoice van %1$s. Controleer de Lightning set-up van de gebruiker</string>
     <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Onjuist Invoice-bedrag (%1$s sats) van %2$s. Het had %3$s moeten zijn</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Kan geen Linghtning invoice aanmaken voor het verzenden van de zap. De Lightning wallet van de ontvanger verstuurde de volgende fout: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Kan geen Lightning invoice aanmaken. Bericht van %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Kan geen Linghtning invoice aanmaken voor het verzenden van de zap. Element pr niet gevonden in de resulterende JSON.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Kan geen Lightning invoice aanmaken van %1$s: PR-element niet gevonden in de JSON.</string>
     <string name="read_only_user">Read-only gebruiker</string>
     <string name="no_reactions_setup">Geen reacties setup</string>
     <string name="select_push_server">Selecteer een UnifiedPush App</string>

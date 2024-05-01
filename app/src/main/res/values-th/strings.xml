@@ -560,11 +560,16 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">เกิดข้อผิดพลาด %1$s. โปรดตรวจสอบเครือข่ายเน็ต และทบทวนว่า %2$s นั้นถูกต้อง\n\nข้อผิดพลาด : %3$s</string>
     <string name="could_not_fetch_invoice_from">ไม่สามารถสร้างบิลจาก %1$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">เกิดข้อผิดพลาดในการอ่าน JSON จากที่อยู่ Lightning โปรดตรวจสอบว่าที่อยู่นั้นถูกต้อง</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">เกิดข้อผิดพลาดในการอ่าน JSON จาก %1$s. โปรดตรวจสอบการตั้งค่า Lightning</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">ไม่พบ Callback URL จากที่อยู่ Lightning นี้ โปรดตรวจสอบการตั้งค่าระบบ Lightning ของท่าน</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">ไม่พบที่อยู่ URL จาก %1$s</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">เกิดข้อผิดพลาดในการอ่าน JSON จากบิลที่โหลดจากที่อยู่ Lightning โปรดตรวจสอบว่าที่อยู่นั้นถูกต้อง</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">เกิดข้อผิดพลาดในการอ่านบิล JSON จาก %1$s โปรดตรวจสอบการตั้งค่า lightning</string>
     <string name="incorrect_invoice_amount_sats_from_it_should_have_been">จำนวนที่ต้องชำระไม่ถูกต้อง (%1$s sats) จาก %2$s. มันควรจะเป็น %3$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">ไม่สามารถสร้างบิลชำระในการส่ง zap ได้ โดยเกิดข้อผิดพลาด %1$s จากกระเป๋าของผู้รับ</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">ไม่สามารถสร้าง lightning invoice ข้อความจาก %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">ไม่สามารถสร้างบิลชำระในการส่ง zap ได้ ไม่พบข้อมูล pr จากข้อมูลที่อยู่ผู้รับ</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">ไม่สามารถสร้างบิลชำระในการส่ง zap จาก %1$s เนื่องจากไม่พบ PR บน JSON</string>
     <string name="read_only_user">ดูอย่างเดียว</string>
     <string name="no_reactions_setup">ไม่มีรายการ reaction</string>
     <string name="select_push_server">เลือกแอพ UnifiedPush</string>
