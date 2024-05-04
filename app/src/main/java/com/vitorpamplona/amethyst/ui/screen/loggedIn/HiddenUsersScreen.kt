@@ -43,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -251,16 +252,14 @@ private fun AddMuteWordTextField(accountViewModel: AccountViewModel) {
                 KeyboardActions(
                     onSend = {
                         if (hasChanged) {
-                            accountViewModel.hide(currentWordToAdd.value)
-                            currentWordToAdd.value = ""
+                            hideIfWritable(accountViewModel, currentWordToAdd)
                         }
                     },
                 ),
             singleLine = true,
             trailingIcon = {
                 AddButton(isActive = hasChanged, modifier = HorzPadding) {
-                    accountViewModel.hide(currentWordToAdd.value)
-                    currentWordToAdd.value = ""
+                    hideIfWritable(accountViewModel, currentWordToAdd)
                 }
             },
         )
@@ -374,5 +373,20 @@ fun ShowWordButton(
         contentPadding = ButtonPadding,
     ) {
         Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
+    }
+}
+
+private fun hideIfWritable(
+    accountViewModel: AccountViewModel,
+    currentWordToAdd: MutableState<String>,
+) {
+    if (!accountViewModel.isWriteable()) {
+        accountViewModel.toast(
+            R.string.read_only_user,
+            R.string.login_with_a_private_key_to_be_able_to_hide_word,
+        )
+    } else {
+        accountViewModel.hide(currentWordToAdd.value)
+        currentWordToAdd.value = ""
     }
 }
