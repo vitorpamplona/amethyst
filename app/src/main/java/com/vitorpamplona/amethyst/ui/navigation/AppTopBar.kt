@@ -95,7 +95,6 @@ import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -112,7 +111,6 @@ import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.types.LongCommunityHeader
 import com.vitorpamplona.amethyst.ui.note.types.ShortCommunityHeader
-import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DislayGeoTagHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.GeoHashActionOptions
@@ -139,12 +137,15 @@ import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toPersistentList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 
 @Composable
@@ -621,111 +622,93 @@ class FollowListViewModel(val account: Account) : ViewModel() {
             ResourceName(R.string.follow_list_mute_list),
             CodeNameType.HARDCODED,
         )
+    val defaultLists = persistentListOf(kind3Follow, globalFollow, muteListFollow)
 
-    private var _kind3GlobalPeopleRoutes =
-        MutableStateFlow<ImmutableList<CodeName>>(emptyList<CodeName>().toPersistentList())
-    val kind3GlobalPeopleRoutes = _kind3GlobalPeopleRoutes.asStateFlow()
-
-    private var _kind3GlobalPeople =
-        MutableStateFlow<ImmutableList<CodeName>>(emptyList<CodeName>().toPersistentList())
-    val kind3GlobalPeople = _kind3GlobalPeople.asStateFlow()
-
-    fun refresh() {
-        viewModelScope.launch(Dispatchers.Default) { refreshFollows() }
-    }
-
-    private suspend fun refreshFollows() {
-        checkNotInMainThread()
-
-        val newFollowLists =
-            LocalCache.addressables
-                .mapNotNull { _, addressableNote ->
-                    val event = (addressableNote.event as? PeopleListEvent)
-                    // Has to have an list
-                    if (
-                        event != null &&
-                        event.pubKey == account.userProfile().pubkeyHex &&
-                        (event.tags.size > 1 || event.content.length > 50)
-                    ) {
-                        CodeName(event.address().toTag(), PeopleListName(addressableNote), CodeNameType.PEOPLE_LIST)
-                    } else {
-                        null
-                    }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val livePeopleListsFlow: Flow<List<CodeName>> =
+        LocalCache.live.newEventBundles.transformLatest { newNotes ->
+            val hasNewList =
+                newNotes.any {
+                    it.event?.pubKey() == account.userProfile().pubkeyHex &&
+                        (
+                            it.event is PeopleListEvent ||
+                                it.event is MuteListEvent ||
+                                it.event is ContactListEvent
+                        )
                 }
-                .sortedBy { it.name.name() }
 
-        val communities =
-            account.userProfile().cachedFollowingCommunitiesSet().mapNotNull {
-                LocalCache.checkGetOrCreateAddressableNote(it)?.let { communityNote ->
-                    CodeName(
-                        "Community/${communityNote.idHex}",
-                        CommunityName(communityNote),
-                        CodeNameType.ROUTE,
-                    )
-                }
-            }
-
-        val hashtags =
-            account.userProfile().cachedFollowingTagSet().map {
-                CodeName("Hashtag/$it", HashtagName(it), CodeNameType.ROUTE)
-            }
-
-        val geotags =
-            account.userProfile().cachedFollowingGeohashSet().map {
-                CodeName("Geohash/$it", GeoHashName(it), CodeNameType.ROUTE)
-            }
-
-        val routeList = (communities + hashtags + geotags).sortedBy { it.name.name() }
-
-        val kind3GlobalPeopleRouteList =
-            listOf(listOf(kind3Follow, globalFollow), newFollowLists, routeList, listOf(muteListFollow))
-                .flatten()
-                .toImmutableList()
-
-        if (!equalImmutableLists(_kind3GlobalPeopleRoutes.value, kind3GlobalPeopleRouteList)) {
-            _kind3GlobalPeopleRoutes.emit(kind3GlobalPeopleRouteList)
-        }
-
-        val kind3GlobalPeopleList =
-            listOf(listOf(kind3Follow, globalFollow), newFollowLists, listOf(muteListFollow))
-                .flatten()
-                .toImmutableList()
-
-        if (!equalImmutableLists(_kind3GlobalPeople.value, kind3GlobalPeopleList)) {
-            _kind3GlobalPeople.emit(kind3GlobalPeopleList)
-        }
-    }
-
-    var collectorJob: Job? = null
-
-    init {
-        Log.d("Init", "App Top Bar")
-        refresh()
-        collectorJob =
-            viewModelScope.launch(Dispatchers.IO) {
-                LocalCache.live.newEventBundles.collect { newNotes ->
-                    checkNotInMainThread()
-                    if (
-                        newNotes.any {
-                            it.event?.pubKey() == account.userProfile().pubkeyHex &&
-                                (
-                                    it.event is PeopleListEvent ||
-                                        it.event is MuteListEvent ||
-                                        it.event is ContactListEvent
-                                )
+            if (hasNewList) {
+                val newFollowLists =
+                    LocalCache.addressables
+                        .mapNotNull { _, addressableNote ->
+                            val event = (addressableNote.event as? PeopleListEvent)
+                            // Has to have an list
+                            if (
+                                event != null &&
+                                event.pubKey == account.userProfile().pubkeyHex &&
+                                (event.tags.size > 1 || event.content.length > 50)
+                            ) {
+                                CodeName(event.address().toTag(), PeopleListName(addressableNote), CodeNameType.PEOPLE_LIST)
+                            } else {
+                                null
+                            }
                         }
-                    ) {
-                        refresh()
+                        .sortedBy { it.name.name() }
+
+                emit(newFollowLists)
+            }
+        }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val liveKind3FollowsFlow: Flow<List<CodeName>> =
+        account.userProfile().flow().follows.stateFlow.transformLatest {
+
+            val communities =
+                it.user.cachedFollowingCommunitiesSet().mapNotNull {
+                    LocalCache.checkGetOrCreateAddressableNote(it)?.let { communityNote ->
+                        CodeName(
+                            "Community/${communityNote.idHex}",
+                            CommunityName(communityNote),
+                            CodeNameType.ROUTE,
+                        )
                     }
                 }
-            }
-    }
 
-    override fun onCleared() {
-        collectorJob?.cancel()
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
-        super.onCleared()
-    }
+            val hashtags =
+                it.user.cachedFollowingTagSet().map {
+                    CodeName("Hashtag/$it", HashtagName(it), CodeNameType.ROUTE)
+                }
+
+            val geotags =
+                it.user.cachedFollowingGeohashSet().map {
+                    CodeName("Geohash/$it", GeoHashName(it), CodeNameType.ROUTE)
+                }
+
+            emit(
+                (communities + hashtags + geotags).sortedBy { it.name.name() },
+            )
+        }
+
+    private val _kind3GlobalPeopleRoutes =
+        combineTransform(livePeopleListsFlow, liveKind3FollowsFlow) { myLivePeopleListsFlow, myLiveKind3FollowsFlow ->
+            emit(
+                listOf(listOf(kind3Follow, globalFollow), myLivePeopleListsFlow, myLiveKind3FollowsFlow, listOf(muteListFollow))
+                    .flatten()
+                    .toImmutableList(),
+            )
+        }
+    val kind3GlobalPeopleRoutes = _kind3GlobalPeopleRoutes.stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
+
+    private val _kind3GlobalPeople =
+        combineTransform(livePeopleListsFlow, liveKind3FollowsFlow) { myLivePeopleListsFlow, myLiveKind3FollowsFlow ->
+            emit(
+                listOf(listOf(kind3Follow, globalFollow), myLivePeopleListsFlow, listOf(muteListFollow))
+                    .flatten()
+                    .toImmutableList(),
+            )
+        }
+
+    val kind3GlobalPeople = _kind3GlobalPeople.stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
 
     class Factory(val account: Account) : ViewModelProvider.Factory {
         override fun <FollowListViewModel : ViewModel> create(modelClass: Class<FollowListViewModel>): FollowListViewModel {
