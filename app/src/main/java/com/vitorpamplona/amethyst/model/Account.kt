@@ -2318,6 +2318,10 @@ class Account(
             event.plainContent(signer, onReady)
         } else if (event is LnZapRequestEvent) {
             decryptZapContentAuthor(note) { onReady(it.content) }
+        } else if (event is DraftEvent) {
+            event.cachedDraft(signer) {
+                onReady(it.content)
+            }
         } else {
             event?.content()?.let { onReady(it) }
         }
