@@ -472,12 +472,7 @@ fun ZapVote(
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
             } else {
-                Spacer(Modifier.width(3.dp))
-                CircularProgressIndicator(
-                    progress = zappingProgress,
-                    modifier = Modifier.size(14.dp),
-                    strokeWidth = 2.dp,
-                )
+                OutboxIcon(iconSizeModifier, grayTint)
             }
         }
     }

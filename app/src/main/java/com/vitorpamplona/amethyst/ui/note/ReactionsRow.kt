@@ -1062,19 +1062,7 @@ fun ZapReaction(
         }
 
         if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
-            Spacer(ModifierWidth3dp)
-
-            CircularProgressIndicator(
-                progress =
-                    animateFloatAsState(
-                        targetValue = zappingProgress,
-                        animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
-                        label = "ZapIconIndicator",
-                    )
-                        .value,
-                modifier = remember { Modifier.size(animationSize) },
-                strokeWidth = 2.dp,
-            )
+            OutboxIcon(iconSizeModifier, grayTint)
         } else {
             ObserveZapIcon(
                 baseNote,

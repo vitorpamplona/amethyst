@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Outbox
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContentCopy
@@ -226,6 +227,20 @@ fun ZapIcon(
 ) {
     Icon(
         imageVector = Icons.Default.Bolt,
+        contentDescription = stringResource(contentDescriptor),
+        tint = tint,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun OutboxIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+    contentDescriptor: Int = R.string.zap_description,
+) {
+    Icon(
+        imageVector = Icons.Default.Outbox,
         contentDescription = stringResource(contentDescriptor),
         tint = tint,
         modifier = modifier,
