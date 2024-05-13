@@ -77,7 +77,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
@@ -301,7 +301,7 @@ fun ZapDonationButton(
     baseNote: Note,
     grayTint: Color,
     accountViewModel: AccountViewModel,
-    iconSize: Dp = Size20dp,
+    iconSize: Dp = Size35dp,
     iconSizeModifier: Modifier = Size20Modifier,
     animationSize: Dp = 14.dp,
     nav: (String) -> Unit,
@@ -345,7 +345,7 @@ fun ZapDonationButton(
         if (wantsToZap) {
             ZapAmountChoicePopup(
                 baseNote = baseNote,
-                iconSize = iconSize,
+                popupYOffset = iconSize,
                 accountViewModel = accountViewModel,
                 onDismiss = {
                     wantsToZap = false

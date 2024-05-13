@@ -1431,7 +1431,7 @@ private fun ActionableReactionButton(
 fun ZapAmountChoicePopup(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    iconSize: Dp,
+    popupYOffset: Dp,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
     onError: (title: String, text: String) -> Unit,
@@ -1441,11 +1441,11 @@ fun ZapAmountChoicePopup(
     val context = LocalContext.current
     val zapMessage = ""
 
-    val iconSizePx = with(LocalDensity.current) { -iconSize.toPx().toInt() }
+    val yOffset = with(LocalDensity.current) { -popupYOffset.toPx().toInt() }
 
     Popup(
         alignment = Alignment.BottomCenter,
-        offset = IntOffset(0, iconSizePx),
+        offset = IntOffset(0, yOffset),
         onDismissRequest = { onDismiss() },
     ) {
         FlowRow(horizontalArrangement = Arrangement.Center) {
