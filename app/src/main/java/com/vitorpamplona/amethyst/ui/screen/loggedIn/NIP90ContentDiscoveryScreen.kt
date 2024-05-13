@@ -72,25 +72,31 @@ private fun RenderNostrNIP90ContentDiscoveryScreen(
         if (DVMID != null) {
             Text(text = "Debug: DVM KEY:\n " + DVMID)
         }
-        // TODO Send KIND 5300 Event with p tag = DVMID
 
-        /*note.event?.let {
-            ReactionEvent.create(emojiUrl, it, signer) {
-                Client.send(it)
-                LocalCache.consume(it)
+        if (DVMID != null) {
+            // TODO 1 Send KIND 5300 Event with p tag = DVMID (crashes)
+
+            /*
+            var signer = accountViewModel.account.signer
+            NIP90ContentDiscoveryRequestEvent.create(DVMID, signer) {
+                // Client.send(it)
+                // LocalCache.justConsume(it, null)
             }
-        }*/
 
-        // TODO PARSE AND LOAD RESULTS FROM KIND 6300 REPLY to resultfeedmodel (RN this still is the bookmark list)
-        // TODO Render Results
+             */
 
-        HorizontalPager(state = pagerState) {
-            RefresheableFeedView(
-                resultFeedViewModel,
-                null,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+            // TODO 2 PARSE AND LOAD RESULTS FROM KIND 6300 REPLY to resultfeedmodel (RN this still is the bookmark list)
+
+            // TODO 3 Render Results (hopefully works when 2 is working)
+
+            HorizontalPager(state = pagerState) {
+                RefresheableFeedView(
+                    resultFeedViewModel,
+                    null,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
         }
     }
 }
