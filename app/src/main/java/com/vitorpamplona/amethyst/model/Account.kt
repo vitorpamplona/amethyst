@@ -148,7 +148,7 @@ val DefaultReactions =
         "\uD83D\uDE31",
     )
 
-val DefaultZapAmounts = listOf(500L, 1000L, 5000L)
+val DefaultZapAmounts = listOf(100L, 500L, 1000L)
 
 fun getLanguagesSpokenByUser(): Set<String> {
     val languageList = ConfigurationCompat.getLocales(Resources.getSystem().getConfiguration())
