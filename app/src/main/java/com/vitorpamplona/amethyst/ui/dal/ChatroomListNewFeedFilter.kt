@@ -46,12 +46,12 @@ class ChatroomListNewFeedFilter(val account: Account) : AdditiveFeedFilter<Note>
 
         val privateMessages =
             newChatrooms.mapNotNull { it ->
-                it.value.roomMessages.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).lastOrNull {
+                it.value.roomMessages.sortedWith(DefaultFeedOrder).firstOrNull {
                     it.event != null
                 }
             }
 
-        return privateMessages.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+        return privateMessages.sortedWith(DefaultFeedOrder)
     }
 
     override fun updateListWith(

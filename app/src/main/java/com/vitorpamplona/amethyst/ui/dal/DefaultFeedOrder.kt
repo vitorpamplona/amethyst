@@ -21,5 +21,23 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.quartz.events.Event
 
-val DefaultFeedOrder = compareBy<Note>({ it.createdAt() }, { it.idHex }).reversed()
+val DefaultFeedOrder: Comparator<Note> =
+    compareBy<Note>(
+        {
+            val noteEvent = it.event
+            if (noteEvent == null) {
+                null
+            } else {
+                if (noteEvent is Event) {
+                    noteEvent.createdAt
+                } else {
+                    null
+                }
+            }
+        },
+        {
+            it.idHex
+        },
+    ).reversed()
