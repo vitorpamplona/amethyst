@@ -985,7 +985,8 @@ fun ZapReaction(
         if (wantsToZap) {
             ZapAmountChoicePopup(
                 baseNote = baseNote,
-                iconSize = iconSize,
+                zapAmountChoices = accountViewModel.account.zapAmountChoices,
+                popupYOffset = iconSize,
                 accountViewModel = accountViewModel,
                 onDismiss = {
                     wantsToZap = false
@@ -1039,6 +1040,11 @@ fun ZapReaction(
                     wantsToPay = persistentListOf()
                     scope.launch {
                         zappingProgress = 0f
+                        showErrorMessageDialog = showErrorMessageDialog + it
+                    }
+                },
+                justShowError = {
+                    scope.launch {
                         showErrorMessageDialog = showErrorMessageDialog + it
                     }
                 },
@@ -1430,6 +1436,7 @@ private fun ActionableReactionButton(
 @Composable
 fun ZapAmountChoicePopup(
     baseNote: Note,
+    zapAmountChoices: List<Long>,
     accountViewModel: AccountViewModel,
     popupYOffset: Dp,
     onDismiss: () -> Unit,
@@ -1449,7 +1456,7 @@ fun ZapAmountChoicePopup(
         onDismissRequest = { onDismiss() },
     ) {
         FlowRow(horizontalArrangement = Arrangement.Center) {
-            accountViewModel.account.zapAmountChoices.forEach { amountInSats ->
+            zapAmountChoices.forEach { amountInSats ->
                 Button(
                     modifier = Modifier.padding(horizontal = 3.dp),
                     onClick = {

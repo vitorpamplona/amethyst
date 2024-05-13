@@ -79,7 +79,7 @@ fun ClickableWithdrawal(withdrawalString: String) {
 
     ClickableText(
         text = withdraw,
-        onClick = { payViaIntent(withdrawalString, context) { showErrorMessageDialog = it } },
+        onClick = { payViaIntent(withdrawalString, context, { }) { showErrorMessageDialog = it } },
         style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
     )
 }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
+import android.content.Context
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -306,7 +307,7 @@ fun ZapDonationButton(
     animationSize: Dp = 14.dp,
     nav: (String) -> Unit,
 ) {
-    var wantsToZap by remember { mutableStateOf(false) }
+    var wantsToZap by remember { mutableStateOf<List<Long>?>(null) }
     var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
     var wantsToPay by
         remember(baseNote) {
@@ -323,14 +324,14 @@ fun ZapDonationButton(
 
     Button(
         onClick = {
-            zapClick(
+            customZapClick(
                 baseNote,
                 accountViewModel,
                 context,
                 onZappingProgress = { progress: Float ->
                     scope.launch { zappingProgress = progress }
                 },
-                onMultipleChoices = { wantsToZap = true },
+                onMultipleChoices = { options -> wantsToZap = options },
                 onError = { _, message ->
                     scope.launch {
                         zappingProgress = 0f
@@ -342,17 +343,18 @@ fun ZapDonationButton(
         },
         modifier = Modifier.fillMaxWidth(),
     ) {
-        if (wantsToZap) {
+        if (wantsToZap != null) {
             ZapAmountChoicePopup(
                 baseNote = baseNote,
+                zapAmountChoices = wantsToZap ?: accountViewModel.account.zapAmountChoices,
                 popupYOffset = iconSize,
                 accountViewModel = accountViewModel,
                 onDismiss = {
-                    wantsToZap = false
+                    wantsToZap = null
                     zappingProgress = 0f
                 },
                 onChangeAmount = {
-                    wantsToZap = false
+                    wantsToZap = null
                 },
                 onError = { _, message ->
                     scope.launch {
@@ -392,6 +394,11 @@ fun ZapDonationButton(
                     wantsToPay = persistentListOf()
                     scope.launch {
                         zappingProgress = 0f
+                        showErrorMessageDialog = it
+                    }
+                },
+                justShowError = {
+                    scope.launch {
                         showErrorMessageDialog = it
                     }
                 },
@@ -445,6 +452,61 @@ fun ZapDonationButton(
             Text(text = stringResource(id = R.string.thank_you))
         } else {
             Text(text = stringResource(id = R.string.donate_now))
+        }
+    }
+}
+
+fun customZapClick(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    context: Context,
+    onZappingProgress: (Float) -> Unit,
+    onMultipleChoices: (List<Long>) -> Unit,
+    onError: (String, String) -> Unit,
+    onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
+) {
+    if (baseNote.isDraft()) {
+        accountViewModel.toast(
+            R.string.draft_note,
+            R.string.it_s_not_possible_to_zap_to_a_draft_note,
+        )
+        return
+    }
+
+    if (accountViewModel.account.zapAmountChoices.isEmpty()) {
+        accountViewModel.toast(
+            context.getString(R.string.error_dialog_zap_error),
+            context.getString(R.string.no_zap_amount_setup_long_press_to_change),
+        )
+    } else if (!accountViewModel.isWriteable()) {
+        accountViewModel.toast(
+            context.getString(R.string.error_dialog_zap_error),
+            context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
+        )
+    } else if (accountViewModel.account.zapAmountChoices.size == 1) {
+        val amount = accountViewModel.account.zapAmountChoices.first()
+
+        if (amount > 600) {
+            accountViewModel.zap(
+                baseNote,
+                amount * 1000,
+                null,
+                "",
+                context,
+                onError = onError,
+                onProgress = { onZappingProgress(it) },
+                zapType = accountViewModel.account.defaultZapType,
+                onPayViaIntent = onPayViaIntent,
+            )
+        } else {
+            onMultipleChoices(listOf(1000L, 5_000L, 10_000L))
+            // recommends amounts for a monthly release.
+        }
+    } else if (accountViewModel.account.zapAmountChoices.size > 1) {
+        if (accountViewModel.account.zapAmountChoices.any { it > 600 }) {
+            onMultipleChoices(accountViewModel.account.zapAmountChoices)
+        } else {
+            onMultipleChoices(listOf(1000L, 5_000L, 10_000L))
         }
     }
 }

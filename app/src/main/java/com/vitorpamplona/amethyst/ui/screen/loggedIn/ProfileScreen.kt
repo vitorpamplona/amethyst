@@ -1193,7 +1193,7 @@ fun DisplayLNAddress(
                                 }
                             }
                         } else {
-                            payViaIntent(it, context) { showErrorMessageDialog = it }
+                            payViaIntent(it, context, { zapExpanded = false }, { showErrorMessageDialog = it })
                         }
                     },
                     onClose = { zapExpanded = false },
