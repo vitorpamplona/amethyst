@@ -2435,6 +2435,10 @@ class Account(
         return (activeRelays() ?: convertLocalRelays()).filter { it.write }
     }
 
+    fun activeAllRelays(): List<Relay> {
+        return ((activeRelays() ?: convertLocalRelays()).toList())
+    }
+
     fun isAllHidden(users: Set<HexKey>): Boolean {
         return users.all { isHidden(it) }
     }

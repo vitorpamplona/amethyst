@@ -449,6 +449,38 @@ class Relay(
         }
     }
 
+    // This function sends the event regardless of the relay being write or not.
+    fun sendOverride(signedEvent: EventInterface) {
+        checkNotInMainThread()
+
+        if (signedEvent is RelayAuthEvent) {
+            authResponse.put(signedEvent.id, false)
+            // specific protocol for this event.
+            val event = """["AUTH",${signedEvent.toJson()}]"""
+            socket?.send(event)
+            eventUploadCounterInBytes += event.bytesUsedInMemory()
+        } else {
+            val event = """["EVENT",${signedEvent.toJson()}]"""
+            if (isConnected()) {
+                if (isReady) {
+                    socket?.send(event)
+                    eventUploadCounterInBytes += event.bytesUsedInMemory()
+                }
+            } else {
+                // sends all filters after connection is successful.
+                connectAndRun {
+                    checkNotInMainThread()
+
+                    socket?.send(event)
+                    eventUploadCounterInBytes += event.bytesUsedInMemory()
+
+                    // Sends everything.
+                    renewFilters()
+                }
+            }
+        }
+    }
+
     fun send(signedEvent: EventInterface) {
         checkNotInMainThread()
 
