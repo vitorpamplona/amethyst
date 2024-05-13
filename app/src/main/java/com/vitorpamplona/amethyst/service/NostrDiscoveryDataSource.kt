@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
@@ -128,6 +129,25 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                         ),
                 )
             },
+        )
+    }
+
+    fun createNIP89Filter(kTags: List<String>): List<TypedFilter> {
+        return listOfNotNull(
+            TypedFilter(
+                types = setOf(FeedType.GLOBAL),
+                filter =
+                    JsonFilter(
+                        kinds = listOf(AppDefinitionEvent.KIND),
+                        limit = 300,
+                        tags = mapOf("k" to kTags),
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(account.defaultDiscoveryFollowList.value)
+                                ?.relayList,
+                    ),
+            ),
         )
     }
 
@@ -404,6 +424,7 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
     override fun updateChannelFilters() {
         discoveryFeedChannel.typedFilters =
             createLiveStreamFilter()
+                .plus(createNIP89Filter(listOf("5300")))
                 .plus(createPublicChatFilter())
                 .plus(createMarketplaceFilter())
                 .plus(

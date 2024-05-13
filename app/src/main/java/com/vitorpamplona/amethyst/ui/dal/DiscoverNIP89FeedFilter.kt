@@ -48,7 +48,7 @@ open class DiscoverNIP89FeedFilter(
         val params = buildFilterParams(account)
 
         val notes =
-            LocalCache.notes.filterIntoSet { _, it ->
+            LocalCache.addressables.filterIntoSet { _, it ->
                 val noteEvent = it.event
                 noteEvent is AppDefinitionEvent // && params.match(noteEvent)
             }
