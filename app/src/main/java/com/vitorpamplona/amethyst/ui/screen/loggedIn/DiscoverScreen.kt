@@ -103,6 +103,7 @@ fun DiscoverScreen(
 
     val tabs by
         remember(
+            discoveryContentNIP89FeedViewModel,
             discoveryLiveFeedViewModel,
             discoveryCommunityFeedViewModel,
             discoveryChatFeedViewModel,
