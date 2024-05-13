@@ -1513,14 +1513,18 @@ fun showCount(count: Int?): String {
     }
 }
 
+val TenGiga = BigDecimal(10000000000)
 val OneGiga = BigDecimal(1000000000)
+val TenMega = BigDecimal(10000000)
 val OneMega = BigDecimal(1000000)
 val TenKilo = BigDecimal(10000)
 val OneKilo = BigDecimal(1000)
 
-var dfG: DecimalFormat = DecimalFormat("#.0G")
-var dfM: DecimalFormat = DecimalFormat("#.0M")
-var dfK: DecimalFormat = DecimalFormat("#.0k")
+var dfGBig: DecimalFormat = DecimalFormat("#.#G")
+var dfGSmall: DecimalFormat = DecimalFormat("#.0G")
+var dfMBig: DecimalFormat = DecimalFormat("#.#M")
+var dfMSmall: DecimalFormat = DecimalFormat("#.0M")
+var dfK: DecimalFormat = DecimalFormat("#.#k")
 var dfN: DecimalFormat = DecimalFormat("#")
 
 fun showAmount(amount: BigDecimal?): String {
@@ -1528,8 +1532,10 @@ fun showAmount(amount: BigDecimal?): String {
     if (amount.abs() < BigDecimal(0.01)) return ""
 
     return when {
-        amount >= OneGiga -> dfG.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
-        amount >= OneMega -> dfM.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
+        amount >= TenGiga -> dfGBig.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
+        amount >= OneGiga -> dfGSmall.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
+        amount >= TenMega -> dfMBig.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
+        amount >= OneMega -> dfMSmall.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
         amount >= TenKilo -> dfK.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
         else -> dfN.format(amount)
     }
