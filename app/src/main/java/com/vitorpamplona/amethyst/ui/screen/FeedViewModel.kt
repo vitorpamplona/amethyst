@@ -112,7 +112,7 @@ class NostrDiscoverMarketplaceFeedViewModel(val account: Account) :
 
 class NostrDiscoverNIP89FeedViewModel(val account: Account) :
     FeedViewModel(
-        DiscoverNIP89FeedFilter(5003, account),
+        DiscoverNIP89FeedFilter(account),
     ) {
     class Factory(val account: Account) : ViewModelProvider.Factory {
         override fun <NostrDiscoverNIP89FeedViewModel : ViewModel> create(modelClass: Class<NostrDiscoverNIP89FeedViewModel>): NostrDiscoverNIP89FeedViewModel {

@@ -70,8 +70,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
+import com.vitorpamplona.quartz.events.AppMetadata
 import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -85,7 +85,7 @@ fun RenderAppDefinition(
 ) {
     val noteEvent = note.event as? AppDefinitionEvent ?: return
 
-    var metadata by remember { mutableStateOf<UserMetadata?>(null) }
+    var metadata by remember { mutableStateOf<AppMetadata?>(null) }
 
     LaunchedEffect(key1 = noteEvent) {
         withContext(Dispatchers.Default) { metadata = noteEvent.appMetaData() }

@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 
 open class DiscoverNIP89FeedFilter(
-    val ktag: Int,
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
