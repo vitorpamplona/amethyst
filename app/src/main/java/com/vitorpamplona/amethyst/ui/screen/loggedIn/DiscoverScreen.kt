@@ -112,7 +112,7 @@ fun DiscoverScreen(
                     TabItem(
                         R.string.discover_content,
                         discoveryContentNIP89FeedViewModel,
-                        Route.Discover.base + "Content",
+                        Route.Discover.base + "DiscoverContent",
                         ScrollStateKeys.DISCOVER_CONTENT,
                         AppDefinitionEvent.KIND,
                     ),
@@ -152,6 +152,7 @@ fun DiscoverScreen(
     val pagerState = rememberForeverPagerState(key = PagerStateKeys.DISCOVER_SCREEN) { tabs.size }
 
     WatchAccountForDiscoveryScreen(
+        discoverNIP89FeedViewModel = discoveryContentNIP89FeedViewModel,
         discoverMarketplaceFeedViewModel = discoveryMarketplaceFeedViewModel,
         discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
         discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
@@ -320,6 +321,7 @@ private fun RenderDiscoverFeed(
 
 @Composable
 fun WatchAccountForDiscoveryScreen(
+    discoverNIP89FeedViewModel: NostrDiscoverNIP89FeedViewModel,
     discoverMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel,
     discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
     discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
@@ -330,6 +332,7 @@ fun WatchAccountForDiscoveryScreen(
 
     LaunchedEffect(accountViewModel, listState) {
         NostrDiscoveryDataSource.resetFilters()
+        discoverNIP89FeedViewModel.checkKeysInvalidateDataAndSendToTop()
         discoverMarketplaceFeedViewModel.checkKeysInvalidateDataAndSendToTop()
         discoveryLiveFeedViewModel.checkKeysInvalidateDataAndSendToTop()
         discoveryCommunityFeedViewModel.checkKeysInvalidateDataAndSendToTop()
@@ -354,20 +357,30 @@ private fun DiscoverFeedLoaded(
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
             val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
 
-            Row(defaultModifier) {
-                ChannelCardCompose(
-                    baseNote = item,
-                    routeForLastRead = routeForLastRead,
-                    modifier = Modifier.fillMaxWidth(),
-                    forceEventKind = forceEventKind,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
+            // TODO For now we avoid subscription based DVMs, as we need logic for these first if a user is not subscribed already.
+            var avoid = false
+            if (item.event is AppDefinitionEvent) {
+                if ((item.event as AppDefinitionEvent).appMetaData()?.subscription == true) {
+                    avoid = true
+                }
+            }
+            // TODO End
+            if (!avoid) {
+                Row(defaultModifier) {
+                    ChannelCardCompose(
+                        baseNote = item,
+                        routeForLastRead = routeForLastRead,
+                        modifier = Modifier.fillMaxWidth(),
+                        forceEventKind = forceEventKind,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+
+                HorizontalDivider(
+                    thickness = DividerThickness,
                 )
             }
-
-            HorizontalDivider(
-                thickness = DividerThickness,
-            )
         }
     }
 }

@@ -528,7 +528,6 @@ data class DVMCard(
     val name: String,
     val description: String?,
     val cover: String?,
-    val moderators: ImmutableList<Participant>,
 )
 
 @Composable
@@ -749,7 +748,6 @@ fun RenderContentDVMThumb(
                     name = noteEvent?.appMetaData()?.name ?: "",
                     description = noteEvent?.appMetaData()?.about ?: "",
                     cover = noteEvent?.appMetaData()?.image?.ifBlank { null },
-                    moderators = persistentListOf(),
                 )
             }
             .distinctUntilChanged()
@@ -758,7 +756,6 @@ fun RenderContentDVMThumb(
                     name = noteEvent.appMetaData()?.name ?: "",
                     description = noteEvent.appMetaData()?.about ?: "",
                     cover = noteEvent.appMetaData()?.image?.ifBlank { null },
-                    moderators = persistentListOf(),
                 ),
             )
 
