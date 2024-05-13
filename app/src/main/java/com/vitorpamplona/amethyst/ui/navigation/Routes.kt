@@ -148,6 +148,14 @@ sealed class Route(
             contentDescriptor = R.string.route_home,
         )
 
+    object ContentDiscovery :
+        Route(
+            icon = R.drawable.ic_bookmarks,
+            contentDescriptor = R.string.discover_content,
+            route = "ContentDiscovery/{id}",
+            arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList(),
+        )
+
     object Drafts :
         Route(
             route = "Drafts",

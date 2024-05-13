@@ -188,6 +188,8 @@ private fun RenderTopRouteBar(
         Route.Settings.base -> TopBarWithBackButton(stringResource(id = R.string.application_preferences), navPopBack)
         Route.Bookmarks.base -> TopBarWithBackButton(stringResource(id = R.string.bookmarks), navPopBack)
         Route.Drafts.base -> TopBarWithBackButton(stringResource(id = R.string.drafts), navPopBack)
+        Route.ContentDiscovery.base -> TopBarWithBackButton(stringResource(id = R.string.discover_content), navPopBack)
+
         else -> {
             if (id != null) {
                 when (currentRoute) {

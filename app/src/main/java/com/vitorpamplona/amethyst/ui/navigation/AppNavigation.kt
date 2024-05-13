@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HiddenUsersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRedirectScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.NIP90ContentDiscoveryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchScreen
@@ -218,7 +219,22 @@ fun AppNavigation(
 
         composable(Route.BlockedUsers.route, content = { HiddenUsersScreen(accountViewModel, nav) })
         composable(Route.Bookmarks.route, content = { BookmarkListScreen(accountViewModel, nav) })
+
         composable(Route.Drafts.route, content = { DraftListScreen(accountViewModel, nav) })
+
+        Route.ContentDiscovery.let { route ->
+            composable(
+                route.route,
+                route.arguments,
+                content = {
+                    NIP90ContentDiscoveryScreen(
+                        DVMID = it.arguments?.getString("id"),
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                },
+            )
+        }
 
         Route.Profile.let { route ->
             composable(

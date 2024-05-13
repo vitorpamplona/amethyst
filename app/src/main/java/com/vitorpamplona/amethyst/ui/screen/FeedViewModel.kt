@@ -282,6 +282,16 @@ class NostrBookmarkPrivateFeedViewModel(val account: Account) :
 }
 
 @Stable
+class NostrNIP90ContentDiscoveryFeedViewModel(val account: Account) :
+    FeedViewModel(BookmarkPrivateFeedFilter(account)) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrNIP90ContentDiscoveryFeedViewModel : ViewModel> create(modelClass: Class<NostrNIP90ContentDiscoveryFeedViewModel>): NostrNIP90ContentDiscoveryFeedViewModel {
+            return NostrNIP90ContentDiscoveryFeedViewModel(account) as NostrNIP90ContentDiscoveryFeedViewModel
+        }
+    }
+}
+
+@Stable
 class NostrDraftEventsFeedViewModel(val account: Account) :
     FeedViewModel(DraftEventsFeedFilter(account)) {
     class Factory(val account: Account) : ViewModelProvider.Factory {

@@ -398,13 +398,18 @@ fun ClickableNote(
                 .combinedClickable(
                     onClick = {
                         scope.launch {
-                            val redirectToNote =
-                                if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
-                                    baseNote.replyTo?.lastOrNull() ?: baseNote
-                                } else {
-                                    baseNote
-                                }
-                            routeFor(redirectToNote, accountViewModel.userProfile())?.let { nav(it) }
+                            if (baseNote.event is AppDefinitionEvent) {
+                                // nav(Route.ContentDiscovery.route + "/${(baseNote.event as AppDefinitionEvent).pubKey()}")
+                                nav("ContentDiscovery/${(baseNote.event as AppDefinitionEvent).pubKey()}")
+                            } else {
+                                val redirectToNote =
+                                    if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
+                                        baseNote.replyTo?.lastOrNull() ?: baseNote
+                                    } else {
+                                        baseNote
+                                    }
+                                routeFor(redirectToNote, accountViewModel.userProfile())?.let { nav(it) }
+                            }
                         }
                     },
                     onLongClick = showPopup,
