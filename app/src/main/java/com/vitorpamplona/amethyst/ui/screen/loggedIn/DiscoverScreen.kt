@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverChatFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverCommunityFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverLiveFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverMarketplaceFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverNIP89FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.PagerStateKeys
 import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
@@ -78,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
+import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
@@ -89,6 +91,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DiscoverScreen(
+    discoveryContentNIP89FeedViewModel: NostrDiscoverNIP89FeedViewModel,
     discoveryMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel,
     discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
     discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
@@ -106,6 +109,13 @@ fun DiscoverScreen(
         ) {
             mutableStateOf(
                 listOf(
+                    TabItem(
+                        R.string.discover_content,
+                        discoveryContentNIP89FeedViewModel,
+                        Route.Discover.base + "Content",
+                        ScrollStateKeys.DISCOVER_CONTENT,
+                        AppDefinitionEvent.KIND,
+                    ),
                     TabItem(
                         R.string.discover_marketplace,
                         discoveryMarketplaceFeedViewModel,

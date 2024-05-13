@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverChatFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverCommunityFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverLiveFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverMarketplaceFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverNIP89FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
@@ -86,6 +87,7 @@ fun AppNavigation(
     newFeedViewModel: NostrChatroomListNewFeedViewModel,
     videoFeedViewModel: NostrVideoFeedViewModel,
     discoverMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel,
+    discoverNip89FeedViewModel: NostrDiscoverNIP89FeedViewModel,
     discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
     discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
     discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
@@ -173,6 +175,7 @@ fun AppNavigation(
                 route.arguments,
                 content = {
                     DiscoverScreen(
+                        discoveryContentNIP89FeedViewModel = discoverNip89FeedViewModel,
                         discoveryMarketplaceFeedViewModel = discoverMarketplaceFeedViewModel,
                         discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
                         discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,

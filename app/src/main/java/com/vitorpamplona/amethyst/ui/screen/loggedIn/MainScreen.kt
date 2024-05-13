@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverChatFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverCommunityFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverLiveFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverMarketplaceFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverNIP89FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
@@ -205,6 +206,12 @@ fun MainScreen(
         viewModel(
             key = "NostrDiscoveryMarketplaceFeedViewModel",
             factory = NostrDiscoverMarketplaceFeedViewModel.Factory(accountViewModel.account),
+        )
+
+    val discoverNIP89FeedViewModel: NostrDiscoverNIP89FeedViewModel =
+        viewModel(
+            key = "NostrDiscoveryNIP89FeedViewModel",
+            factory = NostrDiscoverNIP89FeedViewModel.Factory(accountViewModel.account),
         )
 
     val discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel =
@@ -411,6 +418,7 @@ fun MainScreen(
                         knownFeedViewModel = knownFeedViewModel,
                         newFeedViewModel = newFeedViewModel,
                         videoFeedViewModel = videoFeedViewModel,
+                        discoverNip89FeedViewModel = discoverNIP89FeedViewModel,
                         discoverMarketplaceFeedViewModel = discoverMarketplaceFeedViewModel,
                         discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
                         discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,

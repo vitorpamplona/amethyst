@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.dal.DiscoverChatFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverCommunityFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverLiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverMarketplaceFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.DiscoverNIP89FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DraftEventsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.GeoHashFeedFilter
@@ -105,6 +106,17 @@ class NostrDiscoverMarketplaceFeedViewModel(val account: Account) :
     class Factory(val account: Account) : ViewModelProvider.Factory {
         override fun <NostrDiscoverMarketplaceFeedViewModel : ViewModel> create(modelClass: Class<NostrDiscoverMarketplaceFeedViewModel>): NostrDiscoverMarketplaceFeedViewModel {
             return NostrDiscoverMarketplaceFeedViewModel(account) as NostrDiscoverMarketplaceFeedViewModel
+        }
+    }
+}
+
+class NostrDiscoverNIP89FeedViewModel(val account: Account) :
+    FeedViewModel(
+        DiscoverNIP89FeedFilter(5003, account),
+    ) {
+    class Factory(val account: Account) : ViewModelProvider.Factory {
+        override fun <NostrDiscoverNIP89FeedViewModel : ViewModel> create(modelClass: Class<NostrDiscoverNIP89FeedViewModel>): NostrDiscoverNIP89FeedViewModel {
+            return NostrDiscoverNIP89FeedViewModel(account) as NostrDiscoverNIP89FeedViewModel
         }
     }
 }

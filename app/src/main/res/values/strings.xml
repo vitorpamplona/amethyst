@@ -490,6 +490,7 @@
 
     <string name="relay_setup">Relays</string>
 
+    <string name="discover_content">Note Discovery</string>
     <string name="discover_marketplace">Marketplace</string>
     <string name="discover_live">Live</string>
     <string name="discover_community">Community</string>

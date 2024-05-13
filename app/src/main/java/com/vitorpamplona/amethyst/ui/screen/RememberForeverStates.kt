@@ -43,6 +43,7 @@ object ScrollStateKeys {
     val HOME_FOLLOWS = Route.Home.base + "Follows"
     val HOME_REPLIES = Route.Home.base + "FollowsReplies"
 
+    val DISCOVER_CONTENT = Route.Home.base + "Content"
     val DISCOVER_MARKETPLACE = Route.Home.base + "Marketplace"
     val DISCOVER_LIVE = Route.Home.base + "Live"
     val DISCOVER_COMMUNITY = Route.Home.base + "Communities"
