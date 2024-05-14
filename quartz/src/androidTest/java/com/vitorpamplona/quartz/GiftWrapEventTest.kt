@@ -167,6 +167,7 @@ class GiftWrapEventTest {
 
         ChatMessageEvent.create(
             msg = "Hi There!",
+            isDraft = false,
             to = listOf(receiver.pubKey),
             signer = sender,
         ) { senderMessage ->
@@ -307,6 +308,7 @@ class GiftWrapEventTest {
 
         ChatMessageEvent.create(
             msg = "Who is going to the party tonight?",
+            isDraft = false,
             to = listOf(receiverA.pubKey, receiverB.pubKey),
             signer = sender,
         ) { senderMessage ->
