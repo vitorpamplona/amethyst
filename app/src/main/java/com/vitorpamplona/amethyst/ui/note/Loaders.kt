@@ -234,25 +234,3 @@ fun LoadChannel(
 
     channel?.let { content(it) }
 }
-
-@Composable
-fun LoadDVMNip89(
-    baseChannelHex: String,
-    accountViewModel: AccountViewModel,
-    content: @Composable (Channel) -> Unit,
-) {
-    var channel by
-        remember(baseChannelHex) {
-            mutableStateOf<Channel?>(accountViewModel.getChannelIfExists(baseChannelHex))
-        }
-
-    if (channel == null) {
-        LaunchedEffect(key1 = baseChannelHex) {
-            accountViewModel.checkGetOrCreateChannel(baseChannelHex) { newChannel ->
-                launch(Dispatchers.Main) { channel = newChannel }
-            }
-        }
-    }
-
-    channel?.let { content(it) }
-}

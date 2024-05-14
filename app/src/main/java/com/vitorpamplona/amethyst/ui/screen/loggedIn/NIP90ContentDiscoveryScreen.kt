@@ -74,18 +74,18 @@ private fun RenderNostrNIP90ContentDiscoveryScreen(
         }
 
         if (DVMID != null) {
-            // TODO 1 Send KIND 5300 Event with p tag = DVMID (crashes)
+            // TODO 1 Send KIND 5300 Event with p tag = DVMID (crashes, because cant map to event)
 
-            /*
-            var signer = accountViewModel.account.signer
+            /*val signer: NostrSigner = NostrSignerInternal(accountViewModel.account.keyPair)
+            println(accountViewModel.account.keyPair.pubKey.toHexKey())
             NIP90ContentDiscoveryRequestEvent.create(DVMID, signer) {
-                // Client.send(it)
-                // LocalCache.justConsume(it, null)
-            }
+                Client.send(it)
+                LocalCache.justConsume(it, null)
+            } */
 
-             */
+            // var keyPair = accountViewModel.account.keyPair
 
-            // TODO 2 PARSE AND LOAD RESULTS FROM KIND 6300 REPLY to resultfeedmodel (RN this still is the bookmark list)
+            // TODO 2 PARSE AND LOAD RESULTS FROM KIND 6300 REPLY to resultfeedmodel (RN this doesnt show events)
 
             // TODO 3 Render Results (hopefully works when 2 is working)
 

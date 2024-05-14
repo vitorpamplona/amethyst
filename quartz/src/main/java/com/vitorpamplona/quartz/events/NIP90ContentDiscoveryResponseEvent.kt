@@ -21,14 +21,12 @@
 package com.vitorpamplona.quartz.events
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
-@Stable
 @Immutable
-class NIP90ContentDiscoveryRequestEvent(
+class NIP90ContentDiscoveryResponseEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -37,20 +35,19 @@ class NIP90ContentDiscoveryRequestEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
-        const val KIND = 5300
+        const val KIND = 6300
+        const val ALT = "NIP90 Content Discovery reply"
 
         fun create(
-            addressedDVM: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (NIP90ContentDiscoveryRequestEvent) -> Unit,
+            onReady: (AppRecommendationEvent) -> Unit,
         ) {
-            val content = ""
-            val tags = mutableListOf<Array<String>>()
-            tags.add(arrayOf("p", addressedDVM))
-            tags.add(arrayOf("alt", "NIP90 Content Discovery request"))
-            tags.add(arrayOf("client", "Amethyst"))
-            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            val tags =
+                arrayOf(
+                    arrayOf("alt", ALT),
+                )
+            signer.sign(createdAt, KIND, tags, "", onReady)
         }
     }
 }

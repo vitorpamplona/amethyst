@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderLongFormContent
+import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90ContentDiscoveryResponse
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
@@ -157,6 +158,7 @@ import com.vitorpamplona.quartz.events.HighlightEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
+import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
@@ -646,6 +648,19 @@ private fun RenderNoteRow(
                 nav,
             )
         }
+        is NIP90ContentDiscoveryResponseEvent ->
+            RenderNIP90ContentDiscoveryResponse(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                unPackReply,
+                backgroundColor,
+                editState,
+                accountViewModel,
+                nav,
+            )
+
         is PollNoteEvent -> {
             RenderPoll(
                 baseNote,

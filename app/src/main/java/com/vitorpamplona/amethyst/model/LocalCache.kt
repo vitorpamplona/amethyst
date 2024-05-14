@@ -89,6 +89,8 @@ import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
+import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.NNSEvent
 import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
@@ -370,6 +372,62 @@ object LocalCache {
             relay?.let { it.spamCounter++ }
             return
         }
+
+        val replyTo = computeReplyTo(event)
+
+        note.loadEvent(event, author, replyTo)
+
+        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()}
+        // ${note.event?.content()?.split("\n")?.take(100)} ${formattedDateTime(event.createdAt)}")
+
+        // Counts the replies
+        replyTo.forEach { it.addReply(note) }
+
+        refreshObservers(note)
+    }
+
+    fun consume(
+        event: NIP90ContentDiscoveryResponseEvent,
+        relay: Relay? = null,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        val replyTo = computeReplyTo(event)
+
+        note.loadEvent(event, author, replyTo)
+
+        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()}
+        // ${note.event?.content()?.split("\n")?.take(100)} ${formattedDateTime(event.createdAt)}")
+
+        // Counts the replies
+        replyTo.forEach { it.addReply(note) }
+
+        refreshObservers(note)
+    }
+
+    fun consume(
+        event: NIP90ContentDiscoveryRequestEvent,
+        relay: Relay? = null,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
 
         val replyTo = computeReplyTo(event)
 
@@ -2299,6 +2357,8 @@ object LocalCache {
                     }
                 }
                 is LnZapRequestEvent -> consume(event)
+                is NIP90ContentDiscoveryResponseEvent -> consume(event, relay)
+                is NIP90ContentDiscoveryRequestEvent -> consume(event, relay)
                 is LnZapPaymentRequestEvent -> consume(event)
                 is LnZapPaymentResponseEvent -> consume(event)
                 is LongTextNoteEvent -> consume(event, relay)

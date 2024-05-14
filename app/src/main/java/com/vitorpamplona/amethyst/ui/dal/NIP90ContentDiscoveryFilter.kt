@@ -23,24 +23,64 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.quartz.events.MuteListEvent
+import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.events.PeopleListEvent
 
-class NIP90ContentDiscoveryFilter(val account: Account) : FeedFilter<Note>() {
+open class NIP90ContentDiscoveryFilter(
+    val account: Account,
+) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
-        return account.userProfile().latestBookmarkList?.id ?: ""
+        return account.userProfile().pubkeyHex + "-" + followList()
     }
 
-    // TODO
+    open fun followList(): String {
+        return account.defaultDiscoveryFollowList.value
+    }
+
+    override fun showHiddenKey(): Boolean {
+        return followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+            followList() == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
+    }
+
     override fun feed(): List<Note> {
-        val bookmarks = account.userProfile().latestBookmarkList
+        val params = buildFilterParams(account)
 
         val notes =
-            bookmarks?.taggedEvents()?.mapNotNull { LocalCache.checkGetOrCreateNote(it) } ?: emptyList()
-        val addresses =
-            bookmarks?.taggedAddresses()?.map { LocalCache.getOrCreateAddressableNote(it) } ?: emptyList()
+            LocalCache.notes.filterIntoSet { _, it ->
+                val noteEvent = it.event
+                noteEvent is NIP90ContentDiscoveryResponseEvent // && params.match(noteEvent)
+            }
 
-        return notes
-            .plus(addresses)
-            .toSet()
-            .sortedWith(DefaultFeedOrder)
+        return sort(notes)
+    }
+
+    override fun applyFilter(collection: Set<Note>): Set<Note> {
+        var result = innerApplyFilter(collection)
+        println("Test World")
+        println(result)
+        return result
+    }
+
+    fun buildFilterParams(account: Account): FilterByListParams {
+        return FilterByListParams.create(
+            account.userProfile().pubkeyHex,
+            account.defaultDiscoveryFollowList.value,
+            account.liveDiscoveryFollowLists.value,
+            account.flowHiddenUsers.value,
+        )
+    }
+
+    protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
+        val params = buildFilterParams(account)
+
+        return collection.filterTo(HashSet()) {
+            val noteEvent = it.event
+            noteEvent is NIP90ContentDiscoveryResponseEvent // && params.match(noteEvent)
+        }
+    }
+
+    override fun sort(collection: Set<Note>): List<Note> {
+        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
     }
 }
