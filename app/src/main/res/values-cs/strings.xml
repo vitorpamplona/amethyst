@@ -471,9 +471,9 @@
     <string name="geohash_title">Zveřejnit polohu jako </string>
     <string name="geohash_explainer">Přidá Geohash vaší polohy do příspěvku. Veřejnost bude vědět, že se nacházíte do 5 km od aktuální polohy</string>
     <string name="add_sensitive_content_explainer">Přidat varování o citlivém obsahu před zobrazením vašeho obsahu. Toto je ideální pro obsah NSFW (nebezpečné pro práci) nebo obsah, který někteří lidé mohou považovat za urážlivý nebo znepokojující</string>
-    <string name="new_feature_nip24_might_not_be_available_title">Nová funkce</string>
-    <string name="new_feature_nip24_might_not_be_available_description">Aktivace tohoto režimu vyžaduje od Amethystu odeslání zprávy NIP-24 (GiftWrapped, Zapečetěné přímé a skupinové zprávy). NIP-24 je nový a většina klientů ho zatím neimplementovala. Ujistěte se, že příjemce používá kompatibilního klienta.</string>
-    <string name="new_feature_nip24_activate">Aktivovat</string>
+    <string name="new_feature_nip17_might_not_be_available_title">Nová funkce</string>
+    <string name="new_feature_nip17_might_not_be_available_description">Aktivace tohoto režimu vyžaduje od Amethystu odeslání zprávy NIP-17 (GiftWrapped, Zapečetěné přímé a skupinové zprávy). NIP-17 je nový a většina klientů ho zatím neimplementovala. Ujistěte se, že příjemce používá kompatibilního klienta.</string>
+    <string name="new_feature_nip17_activate">Aktivovat</string>
     <string name="messages_create_public_chat">Veřejné</string>
     <string name="messages_create_public_private_chat_desription">Nová veřejná nebo soukromá skupina</string>
     <string name="messages_new_message">Soukromé</string>

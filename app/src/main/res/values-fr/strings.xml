@@ -473,9 +473,9 @@
     <string name="geohash_title">Révéler la localisation comme </string>
     <string name="geohash_explainer">Ajoute un Geohash de votre emplacement au message. Le public saura que vous êtes à moins de 5km de l\'emplacement actuel</string>
     <string name="add_sensitive_content_explainer">Ajoute un avertissement de contenu sensible avant de montrer votre contenu. C\'est idéal pour tout contenu NSFW ou contenu que certaines personnes peuvent trouver offensant ou dérangeant</string>
-    <string name="new_feature_nip24_might_not_be_available_title">Nouvelle Fonctionnalité</string>
-    <string name="new_feature_nip24_might_not_be_available_description">Pour activer ce mode, Amethyst doit envoyer un message NIP-24 (GiftWrapped, Sealed Direct et Group Messages). Le protocole NIP-24 est nouveau et la plupart des clients ne l\'ont pas encore mis en oeuvre. Assurez-vous que le destinataire utilise un client compatible.</string>
-    <string name="new_feature_nip24_activate">Activer</string>
+    <string name="new_feature_nip17_might_not_be_available_title">Nouvelle Fonctionnalité</string>
+    <string name="new_feature_nip17_might_not_be_available_description">Pour activer ce mode, Amethyst doit envoyer un message NIP-17 (GiftWrapped, Sealed Direct et Group Messages). Le protocole NIP-17 est nouveau et la plupart des clients ne l\'ont pas encore mis en oeuvre. Assurez-vous que le destinataire utilise un client compatible.</string>
+    <string name="new_feature_nip17_activate">Activer</string>
     <string name="messages_create_public_chat">Public</string>
     <string name="messages_create_public_private_chat_desription">Nouveau Groupe Public ou Privé</string>
     <string name="messages_new_message">Privé</string>

@@ -412,9 +412,9 @@
     <string name="geohash_title">Paparkan Lokasi sebagai</string>
     <string name="geohash_explainer">Menambahkan Geohash lokasi Anda ke postingan. Publik akan mengetahui bahwa Anda berada dalam jarak 5 km (3 mil) dari lokasi saat ini</string>
     <string name="add_sensitive_content_explainer">Menambahkan peringatan konten sensitif sebelum menampilkan konten Anda. Ini ideal untuk konten NSFW apa pun atau konten yang mungkin dianggap menyinggung atau mengganggu oleh sebagian orang</string>
-    <string name="new_feature_nip24_might_not_be_available_title">Fitur Baru</string>
-    <string name="new_feature_nip24_might_not_be_available_description">Mengaktifkan mode ini mengharuskan Amethyst mengirim pesan NIP-24 (GiftWrapped, Sealed Direct, dan Group Messages). NIP-24 masih baru dan sebagian besar klien belum menerapkannya. Pastikan penerima menggunakan klien yang kompatibel.</string>
-    <string name="new_feature_nip24_activate">Aktifkan</string>
+    <string name="new_feature_nip17_might_not_be_available_title">Fitur Baru</string>
+    <string name="new_feature_nip17_might_not_be_available_description">Mengaktifkan mode ini mengharuskan Amethyst mengirim pesan NIP-17 (GiftWrapped, Sealed Direct, dan Group Messages). NIP-17 masih baru dan sebagian besar klien belum menerapkannya. Pastikan penerima menggunakan klien yang kompatibel.</string>
+    <string name="new_feature_nip17_activate">Aktifkan</string>
     <string name="messages_create_public_chat">Publik</string>
     <string name="messages_new_message">Pribadi</string>
     <string name="messages_new_message_to">Ke</string>

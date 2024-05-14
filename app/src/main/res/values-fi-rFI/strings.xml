@@ -434,9 +434,9 @@
     <string name="geohash_title">Näytä sijaintina </string>
     <string name="geohash_explainer">Lisää sijaintisi Geohashinä viestiin. On julkisesti nähtävänä, että olet 5 km (3 mailin) säteellä nykyisestä sijainnista</string>
     <string name="add_sensitive_content_explainer">Lisää herkkä sisältö -varoitus ennen sisällön näyttämistä. Tämä on suositeltua kaikelle aikuissisällölle tai sisällölle, jota jotkut saattavat pitää loukkaavana tai häiritsevänä</string>
-    <string name="new_feature_nip24_might_not_be_available_title">Uusi ominaisuus</string>
-    <string name="new_feature_nip24_might_not_be_available_description">Tämän tilan aktivoiminen vaatii Amethystin lähettämään NIP-24-viestin (Lahjapakatut, Suljetut suorat ja ryhmäviestit). NIP-24 on uusi, ja useimmat asiakkaat eivät ole vielä toteuttaneet sitä. Varmista, että vastaanottaja käyttää yhteensopivaa asiakasta.</string>
-    <string name="new_feature_nip24_activate">Aktivoi</string>
+    <string name="new_feature_nip17_might_not_be_available_title">Uusi ominaisuus</string>
+    <string name="new_feature_nip17_might_not_be_available_description">Tämän tilan aktivoiminen vaatii Amethystin lähettämään NIP-17-viestin (Lahjapakatut, Suljetut suorat ja ryhmäviestit). NIP-17 on uusi, ja useimmat asiakkaat eivät ole vielä toteuttaneet sitä. Varmista, että vastaanottaja käyttää yhteensopivaa asiakasta.</string>
+    <string name="new_feature_nip17_activate">Aktivoi</string>
     <string name="messages_create_public_chat">Julkinen</string>
     <string name="messages_new_message">Yksityinen</string>
     <string name="messages_new_message_to">Vastaanottaja</string>

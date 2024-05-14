@@ -473,9 +473,9 @@
     <string name="geohash_title">Locatie weergeven als</string>
     <string name="geohash_explainer">Voegt een Geohash van je locatie toe aan het bericht. Het publiek weet dat je binnen 5 km (3mi) van de huidige locatie bent.</string>
     <string name="add_sensitive_content_explainer">Voegt een waarschuwing voor gevoelige inhoud toe voordat je inhoud wordt weergegeven. Dit is ideaal voor NSFW-inhoud of inhoud die sommige mensen beledigend of verontrustend vinden.</string>
-    <string name="new_feature_nip24_might_not_be_available_title">Nieuwe functie</string>
-    <string name="new_feature_nip24_might_not_be_available_description">Voor het activeren van deze modus is Amethyst nodig om een NIP-24 bericht te versturen. NIP-24 is nieuw en de meeste clients hebben deze nog niet geïmplementeerd. Zorg ervoor dat de ontvanger een compatibele client gebruikt.</string>
-    <string name="new_feature_nip24_activate">Activeren</string>
+    <string name="new_feature_nip17_might_not_be_available_title">Nieuwe functie</string>
+    <string name="new_feature_nip17_might_not_be_available_description">Voor het activeren van deze modus is Amethyst nodig om een NIP-17 bericht te versturen. NIP-17 is nieuw en de meeste clients hebben deze nog niet geïmplementeerd. Zorg ervoor dat de ontvanger een compatibele client gebruikt.</string>
+    <string name="new_feature_nip17_activate">Activeren</string>
     <string name="messages_create_public_chat">Publiek</string>
     <string name="messages_create_public_private_chat_desription">Nieuwe openbare of besloten groep</string>
     <string name="messages_new_message">Privé</string>

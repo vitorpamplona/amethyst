@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
-import com.vitorpamplona.quartz.events.NIP24Factory
+import com.vitorpamplona.quartz.events.NIP17Factory
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import org.junit.Assert.assertEquals
@@ -44,7 +44,7 @@ import java.util.concurrent.TimeUnit
 @RunWith(AndroidJUnit4::class)
 class GiftWrapEventTest {
     @Test()
-    fun testNip24Utils() {
+    fun testNip17Utils() {
         val sender = NostrSignerInternal(KeyPair())
         val receiver = NostrSignerInternal(KeyPair())
         val message = "Hola, que tal?"
@@ -52,7 +52,7 @@ class GiftWrapEventTest {
         // Requires 3 tests
         val countDownLatch = CountDownLatch(3)
 
-        NIP24Factory().createMsgNIP24(
+        NIP17Factory().createMsgNIP17(
             message,
             listOf(receiver.pubKey),
             sender,
@@ -94,7 +94,7 @@ class GiftWrapEventTest {
     }
 
     @Test()
-    fun testNip24UtilsForGroups() {
+    fun testNip17UtilsForGroups() {
         val sender = NostrSignerInternal(KeyPair())
         val receiver1 = NostrSignerInternal(KeyPair())
         val receiver2 = NostrSignerInternal(KeyPair())
@@ -112,7 +112,7 @@ class GiftWrapEventTest {
 
         val countDownLatch = CountDownLatch(receivers.size + 2)
 
-        NIP24Factory().createMsgNIP24(
+        NIP17Factory().createMsgNIP17(
             message,
             receivers.map { it.pubKey },
             sender,

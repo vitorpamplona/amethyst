@@ -25,12 +25,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +47,7 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -74,7 +72,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.Participant
@@ -84,43 +82,22 @@ import kotlinx.collections.immutable.toImmutableList
 import java.util.Locale
 
 @Composable
-fun CommunityHeader(
-    baseNote: AddressableNote,
-    sendToCommunity: Boolean,
-    modifier: Modifier = StdPadding,
+fun RenderCommunity(
+    baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val expanded = remember { mutableStateOf(false) }
-
-    Column(Modifier.fillMaxWidth()) {
-        Column(
-            verticalArrangement = Arrangement.Center,
-            modifier =
-                Modifier.clickable {
-                    if (sendToCommunity) {
-                        routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) }
-                    } else {
-                        expanded.value = !expanded.value
-                    }
-                },
+    if (baseNote is AddressableNote) {
+        Row(
+            MaterialTheme.colorScheme.innerPostModifier.clickable {
+                routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) }
+            }.padding(Size10dp),
         ) {
             ShortCommunityHeader(
                 baseNote = baseNote,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
-
-            if (expanded.value) {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    LongCommunityHeader(
-                        baseNote = baseNote,
-                        lineModifier = modifier,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
-            }
         }
     }
 }

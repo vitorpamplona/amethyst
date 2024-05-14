@@ -410,11 +410,11 @@
     <string name="default_relays">الافتراضي</string>
     <string name="select_a_relay_to_continue">اختر مرحل للإستمرار</string>
     <string name="geohash_title">عرض الموقع كـ </string>
-    <string name="new_feature_nip24_might_not_be_available_title">ميزة جديدة</string>
-    <string name="new_feature_nip24_might_not_be_available_description">يتطلب تنشيط هذا الوضع من Amethyst إرسال رسالة خاصة من نوع NIP-24  
+    <string name="new_feature_nip17_might_not_be_available_title">ميزة جديدة</string>
+    <string name="new_feature_nip17_might_not_be_available_description">يتطلب تنشيط هذا الوضع من Amethyst إرسال رسالة خاصة من نوع NIP-17
 (GiftWrapped, Sealed Direct and group Messages) .
-إضافة NIP-24 لا تزال جديدة ومعظم العملاء لم يدعموها بعد. تأكد من أن المستلم يستخدم عميل متوافق.</string>
-    <string name="new_feature_nip24_activate">تفعيل</string>
+إضافة NIP-17 لا تزال جديدة ومعظم العملاء لم يدعموها بعد. تأكد من أن المستلم يستخدم عميل متوافق.</string>
+    <string name="new_feature_nip17_activate">تفعيل</string>
     <string name="messages_create_public_chat">عام</string>
     <string name="messages_new_message">خاص</string>
     <string name="messages_new_message_to">إلى</string>
@@ -440,7 +440,7 @@
     <string name="lightning_wallets_not_found">خطأ أثناء تحليل رسالة المشكل</string>
     <string name="error_dialog_talk_to_user">رسالة إلى المستخدم</string>
     <string name="error_dialog_button_ok">موافق</string>
-    <string name="relay_information_document_error_assemble_url">فشل الوصول إلى  
+    <string name="relay_information_document_error_assemble_url">فشل الوصول إلى
 %1$s: %2$s</string>
     <string name="active_for_home">الصفحة الرئيسية</string>
     <string name="active_for_search">البحث</string>

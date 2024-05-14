@@ -472,9 +472,9 @@
     <string name="geohash_title">เปิดเผยตําแหน่งที่ตั้ง </string>
     <string name="geohash_explainer">เพิ่ม Geohash ของตําแหน่งของคุณลงในโพสต์ สาธารณชนจะรู้ว่าคุณอยู่ภายใน 5 กม. (3 ไมล์) จากตําแหน่งปัจจุบัน</string>
     <string name="add_sensitive_content_explainer">เพิ่มคําเตือนเนื้อหาที่ละเอียดอ่อนก่อนแสดงเนื้อหาของคุณ สิ่งนี้เหมาะสําหรับเนื้อหา NSFW หรือเนื้อหาใด ๆ ที่บางคนอาจพบว่าไม่เหมาะสมหรือรบกวน</string>
-    <string name="new_feature_nip24_might_not_be_available_title">ฟีเจอร์ใหม่</string>
-    <string name="new_feature_nip24_might_not_be_available_description">การเปิดใช้งานโหมดนี้ต้องใช้ Amethyst เพื่อส่งข้อความ NIP-24 (GiftWrapped, Sealed Direct และ Group Messages) NIP-24 เป็นของใหม่และไคลเอ็นต์ส่วนใหญ่ยังไม่ได้รองรับ ตรวจสอบให้แน่ใจว่าเครื่องรับใช้ไคลเอ็นต์ที่รองรับ</string>
-    <string name="new_feature_nip24_activate">เปิดใช้งาน</string>
+    <string name="new_feature_nip17_might_not_be_available_title">ฟีเจอร์ใหม่</string>
+    <string name="new_feature_nip17_might_not_be_available_description">การเปิดใช้งานโหมดนี้ต้องใช้ Amethyst เพื่อส่งข้อความ NIP-17 (GiftWrapped, Sealed Direct และ Group Messages) NIP-17 เป็นของใหม่และไคลเอ็นต์ส่วนใหญ่ยังไม่ได้รองรับ ตรวจสอบให้แน่ใจว่าเครื่องรับใช้ไคลเอ็นต์ที่รองรับ</string>
+    <string name="new_feature_nip17_activate">เปิดใช้งาน</string>
     <string name="messages_create_public_chat">สาธรณะ</string>
     <string name="messages_create_public_private_chat_desription">สร้างกลุ่มสาธารณะ/ส่วนตัว</string>
     <string name="messages_new_message">ส่วนตัว</string>

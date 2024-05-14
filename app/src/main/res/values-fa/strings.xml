@@ -326,7 +326,7 @@
         \n\n1. نصب کنید [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. شروع Orbot
         \n3. در Orbot, پورت Socksرا علامت بزنید.مقدار پیش فرض 9050 است.
-        \n4. اگر لازم است پورت Orbot را تغییر دهید 
+        \n4. اگر لازم است پورت Orbot را تغییر دهید
         \n5. پورت Socks را در این صفحه پیکربندی کنید
         \n6. دکمه Activate را بفشارید تا از Orbot به عنوان پراکسی استفده نمایید
     </string>
@@ -443,9 +443,9 @@
     <string name="geohash_title">افشای مکان به عنوان </string>
     <string name="geohash_explainer">یک از مکان شما به این بادداشت می افزاید. دیگران خواهند دانست که شما در فاصله 5 کیلومتری (3 مایلی) این مکان هستید.</string>
     <string name="add_sensitive_content_explainer">پیش از نمایش محتوای شما، هشدار محتوای حساس به آن می افزاید. این برای هرگونه محتوای نامناسب برای محیط کار یا هر محتوای دیگری که برخی ممکن است توهین آمیز یا مشوش کننده بدانند خوب است.</string>
-    <string name="new_feature_nip24_might_not_be_available_title">ویژگی جدید</string>
-    <string name="new_feature_nip24_might_not_be_available_description">برای فعال سازی این حالت لازم است اماتیست یک پیغام NIP-24 بفرستد (پیغام های GiftWrapped, Sealed Direct and Group). مطمئن شوید که گیرنده از کلاینتی سازگاز استفاده می کند.</string>
-    <string name="new_feature_nip24_activate">فعال‌سازی</string>
+    <string name="new_feature_nip17_might_not_be_available_title">ویژگی جدید</string>
+    <string name="new_feature_nip17_might_not_be_available_description">برای فعال سازی این حالت لازم است اماتیست یک پیغام NIP-17 بفرستد (پیغام های GiftWrapped, Sealed Direct and Group). مطمئن شوید که گیرنده از کلاینتی سازگاز استفاده می کند.</string>
+    <string name="new_feature_nip17_activate">فعال‌سازی</string>
     <string name="messages_create_public_chat">عمومی</string>
     <string name="messages_new_message">خصوصی</string>
     <string name="messages_new_message_to">به</string>

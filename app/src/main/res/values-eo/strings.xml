@@ -419,9 +419,9 @@
     <string name="geohash_title">Montri Loko kiel </string>
     <string name="geohash_explainer">Aldonas Geohash de via loko al la afiŝo. La aŭdienco scios kiam vi estas je 5km (3mi) de la nuna loko</string>
     <string name="add_sensitive_content_explainer">Aldonas averton de delikata enhavo antaŭ ol montri vian enhavon. Ĉi tiu estas perfekta por NSFW enhavo aŭ enhavo kiun iu povas trovi ofensiva aŭ ĝena</string>
-    <string name="new_feature_nip24_might_not_be_available_title">Nova Trajto</string>
-    <string name="new_feature_nip24_might_not_be_available_description">Por aktivigi ĉi tiun reĝimon Amethyst devus sendi NIP-24 mesaĝon (GiftWrapped, Sealed Direct kaj Grupa Mesaĝojn). NIP-24 estas nova kaj la plejparto de klientoj ankoraŭ ne instalis ĝin. Konfirmu ke la ricevanto uzas kongruan klienton.</string>
-    <string name="new_feature_nip24_activate">Aktivigi</string>
+    <string name="new_feature_nip17_might_not_be_available_title">Nova Trajto</string>
+    <string name="new_feature_nip17_might_not_be_available_description">Por aktivigi ĉi tiun reĝimon Amethyst devus sendi NIP-17 mesaĝon (GiftWrapped, Sealed Direct kaj Grupa Mesaĝojn). NIP-17 estas nova kaj la plejparto de klientoj ankoraŭ ne instalis ĝin. Konfirmu ke la ricevanto uzas kongruan klienton.</string>
+    <string name="new_feature_nip17_activate">Aktivigi</string>
     <string name="messages_create_public_chat">Publika</string>
     <string name="messages_new_message">Privata</string>
     <string name="messages_new_message_to">Al</string>

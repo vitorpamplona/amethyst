@@ -54,6 +54,7 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.produceCachedStateAsync
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
@@ -75,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.DisplayPeopleList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayRelaySet
 import com.vitorpamplona.amethyst.ui.note.types.EditState
@@ -87,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderBadgeAward
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderClassifieds
+import com.vitorpamplona.amethyst.ui.note.types.RenderCommunity
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
@@ -108,7 +111,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.RenderChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
@@ -137,6 +140,7 @@ import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
+import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
@@ -240,13 +244,22 @@ fun AcceptableNote(
             is ChannelCreateEvent,
             is ChannelMetadataEvent,
             ->
-                ChannelHeader(
+                RenderChannelHeader(
                     channelNote = baseNote,
                     showVideo = !makeItShort,
                     sendToChannel = true,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
+            is CommunityDefinitionEvent ->
+                (baseNote as? AddressableNote)?.let {
+                    RenderCommunity(
+                        baseNote = it,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
             else ->
                 LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) {
                         showPopup,
@@ -273,13 +286,22 @@ fun AcceptableNote(
             is ChannelCreateEvent,
             is ChannelMetadataEvent,
             ->
-                ChannelHeader(
+                RenderChannelHeader(
                     channelNote = baseNote,
                     showVideo = !makeItShort,
                     sendToChannel = true,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
+            is CommunityDefinitionEvent ->
+                (baseNote as? AddressableNote)?.let {
+                    RenderCommunity(
+                        baseNote = it,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
             is FileHeaderEvent -> FileHeaderDisplay(baseNote, false, accountViewModel)
             is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, false, accountViewModel)
             else ->

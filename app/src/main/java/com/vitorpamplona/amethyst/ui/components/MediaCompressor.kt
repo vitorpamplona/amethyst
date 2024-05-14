@@ -64,7 +64,7 @@ class MediaCompressor {
                 appSpecificStorageConfiguration = AppSpecificStorageConfiguration(),
                 configureWith =
                     Configuration(
-                        quality = VideoQuality.LOW,
+                        quality = VideoQuality.MEDIUM,
                         // => required name
                         videoNames = listOf(UUID.randomUUID().toString()),
                     ),

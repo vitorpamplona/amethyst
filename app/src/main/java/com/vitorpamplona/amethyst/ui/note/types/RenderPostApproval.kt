@@ -58,9 +58,8 @@ fun RenderPostApproval(
         noteEvent.communities().forEach { tag ->
             LoadAddressableNote(tag, accountViewModel) { baseNote ->
                 baseNote?.let {
-                    CommunityHeader(
+                    RenderCommunity(
                         baseNote = it,
-                        sendToCommunity = true,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )

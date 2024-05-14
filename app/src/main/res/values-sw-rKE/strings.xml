@@ -418,9 +418,9 @@
     <string name="geohash_title">Tumia Mahali kama </string>
     <string name="geohash_explainer">Inaongeza Geohash ya eneo lako kwenye chapisho. Umma utajua kuwa uko ndani ya kilometa 5 (maili 3) ya eneo la sasa</string>
     <string name="add_sensitive_content_explainer">Inaongeza onyo la yaliyomo nyeti kabla ya kuonyesha yaliyomo yako. Hii ni nzuri kwa yaliyomo yoyote ya NSFW au yaliyomo ambayo baadhi ya watu wanaweza kuona kama ya kuchukiza au kusumbua</string>
-    <string name="new_feature_nip24_might_not_be_available_title">Kipengee Kipya</string>
-    <string name="new_feature_nip24_might_not_be_available_description">Kuwezesha hali hii kunahitaji Amethyst kutuma ujumbe wa NIP-24 (Ufungaji wa Zawadi, Ujumbe wa Moja kwa Moja Uliosajiliwa, na Ujumbe wa Kikundi). NIP-24 ni mpya na wateja wengi bado hawajaijumuisha. Hakikisha mpokeaji anatumia mteja unaokubaliana.</string>
-    <string name="new_feature_nip24_activate">Tumia</string>
+    <string name="new_feature_nip17_might_not_be_available_title">Kipengee Kipya</string>
+    <string name="new_feature_nip17_might_not_be_available_description">Kuwezesha hali hii kunahitaji Amethyst kutuma ujumbe wa NIP-17 (Ufungaji wa Zawadi, Ujumbe wa Moja kwa Moja Uliosajiliwa, na Ujumbe wa Kikundi). NIP-17 ni mpya na wateja wengi bado hawajaijumuisha. Hakikisha mpokeaji anatumia mteja unaokubaliana.</string>
+    <string name="new_feature_nip17_activate">Tumia</string>
     <string name="messages_create_public_chat">Umma</string>
     <string name="messages_new_message">Binafsi</string>
     <string name="messages_new_message_to">Kwa</string>

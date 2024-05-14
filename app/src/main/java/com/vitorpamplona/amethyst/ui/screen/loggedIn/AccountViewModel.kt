@@ -666,11 +666,11 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) { account.setHideDeleteRequestDialog() }
     }
 
-    val hideNIP24WarningDialog: Boolean
-        get() = account.hideNIP24WarningDialog
+    val hideNIP17WarningDialog: Boolean
+        get() = account.hideNIP17WarningDialog
 
-    fun dontShowNIP24WarningDialog() {
-        account.setHideNIP24WarningDialog()
+    fun dontShowNIP17WarningDialog() {
+        account.setHideNIP17WarningDialog()
     }
 
     val hideBlockAlertDialog: Boolean
