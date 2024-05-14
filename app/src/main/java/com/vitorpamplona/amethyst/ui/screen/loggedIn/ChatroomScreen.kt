@@ -122,7 +122,6 @@ import com.vitorpamplona.quartz.events.findURLs
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -210,7 +209,6 @@ fun LoadRoomByAuthor(
     content(room)
 }
 
-@OptIn(FlowPreview::class)
 @Composable
 fun PrepareChatroomViewModels(
     room: ChatroomKey,
@@ -231,23 +229,8 @@ fun PrepareChatroomViewModels(
     val newPostModel: NewPostViewModel = viewModel()
     newPostModel.accountViewModel = accountViewModel
     newPostModel.account = accountViewModel.account
-    newPostModel.requiresNIP24 = room.users.size > 1
-    if (newPostModel.requiresNIP24) {
-        newPostModel.nip24 = true
-    }
-
-    LaunchedEffect(key1 = newPostModel) {
-        launch(Dispatchers.IO) {
-            val hasNIP24 =
-                accountViewModel.userProfile().privateChatrooms[room]?.roomMessages?.any {
-                    it.event is ChatMessageEvent &&
-                        (it.event as ChatMessageEvent).pubKey != accountViewModel.userProfile().pubkeyHex
-                }
-            if (hasNIP24 == true && newPostModel.nip24 == false) {
-                newPostModel.nip24 = true
-            }
-        }
-    }
+    newPostModel.requiresNIP17 = room.users.size > 1
+    newPostModel.nip17 = true // defaults to the new GiftWrap
 
     if (draftMessage != null) {
         LaunchedEffect(key1 = draftMessage) { newPostModel.message = TextFieldValue(draftMessage) }
@@ -373,8 +356,8 @@ private fun innerSendPost(
     val urls = findURLs(newPostModel.message.text)
     val usedAttachments = newPostModel.nip94attachments.filter { it.urls().intersect(urls.toSet()).isNotEmpty() }
 
-    if (newPostModel.nip24 || room.users.size > 1 || replyTo.value?.event is ChatMessageEvent) {
-        accountViewModel.account.sendNIP24PrivateMessage(
+    if (newPostModel.nip17 || room.users.size > 1 || replyTo.value?.event is ChatMessageEvent) {
+        accountViewModel.account.sendNIP17PrivateMessage(
             message = newPostModel.message.text,
             toUsers = room.users.toList(),
             replyingTo = replyTo.value,
@@ -454,13 +437,13 @@ fun PrivateMessageEditFieldRow(
                         )
                     }
 
-                    var wantsToActivateNIP24 by remember { mutableStateOf(false) }
+                    var wantsToActivateNIP17 by remember { mutableStateOf(false) }
 
-                    if (wantsToActivateNIP24) {
-                        NewFeatureNIP24AlertDialog(
+                    if (wantsToActivateNIP17) {
+                        NewFeatureNIP17AlertDialog(
                             accountViewModel = accountViewModel,
                             onConfirm = { channelScreenModel.toggleNIP04And24() },
-                            onDismiss = { wantsToActivateNIP24 = false },
+                            onDismiss = { wantsToActivateNIP17 = false },
                         )
                     }
 
@@ -468,17 +451,17 @@ fun PrivateMessageEditFieldRow(
                         modifier = Size30Modifier,
                         onClick = {
                             if (
-                                !accountViewModel.hideNIP24WarningDialog &&
-                                !channelScreenModel.nip24 &&
-                                !channelScreenModel.requiresNIP24
+                                !accountViewModel.hideNIP17WarningDialog &&
+                                !channelScreenModel.nip17 &&
+                                !channelScreenModel.requiresNIP17
                             ) {
-                                wantsToActivateNIP24 = true
+                                wantsToActivateNIP17 = true
                             } else {
                                 channelScreenModel.toggleNIP04And24()
                             }
                         },
                     ) {
-                        if (channelScreenModel.nip24) {
+                        if (channelScreenModel.nip17) {
                             IncognitoIconOn(
                                 modifier =
                                     Modifier
@@ -537,7 +520,7 @@ fun ShowUserSuggestionList(
 }
 
 @Composable
-fun NewFeatureNIP24AlertDialog(
+fun NewFeatureNIP17AlertDialog(
     accountViewModel: AccountViewModel,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
@@ -545,10 +528,10 @@ fun NewFeatureNIP24AlertDialog(
     val scope = rememberCoroutineScope()
 
     QuickActionAlertDialog(
-        title = stringResource(R.string.new_feature_nip24_might_not_be_available_title),
-        textContent = stringResource(R.string.new_feature_nip24_might_not_be_available_description),
+        title = stringResource(R.string.new_feature_nip17_might_not_be_available_title),
+        textContent = stringResource(R.string.new_feature_nip17_might_not_be_available_description),
         buttonIconResource = R.drawable.incognito,
-        buttonText = stringResource(R.string.new_feature_nip24_activate),
+        buttonText = stringResource(R.string.new_feature_nip17_activate),
         onClickDoOnce = {
             scope.launch(Dispatchers.IO) { onConfirm() }
             onDismiss()
@@ -556,7 +539,7 @@ fun NewFeatureNIP24AlertDialog(
         onClickDontShowAgain = {
             scope.launch(Dispatchers.IO) {
                 onConfirm()
-                accountViewModel.dontShowNIP24WarningDialog()
+                accountViewModel.dontShowNIP17WarningDialog()
             }
             onDismiss()
         },
@@ -732,7 +715,7 @@ fun NewSubjectView(
                     PostButton(
                         onPost = {
                             scope.launch(Dispatchers.IO) {
-                                accountViewModel.account.sendNIP24PrivateMessage(
+                                accountViewModel.account.sendNIP17PrivateMessage(
                                     message = message.value,
                                     toUsers = room.users.toList(),
                                     subject = groupName.value.ifBlank { null },

@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
-import com.vitorpamplona.quartz.events.NIP24Factory
+import com.vitorpamplona.quartz.events.NIP17Factory
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import junit.framework.TestCase
@@ -56,10 +56,10 @@ class GiftWrapBenchmark {
         val sender = NostrSignerInternal(KeyPair())
         val receiver = NostrSignerInternal(KeyPair())
 
-        var events: NIP24Factory.Result? = null
+        var events: NIP17Factory.Result? = null
         val countDownLatch = CountDownLatch(1)
 
-        NIP24Factory().createMsgNIP24(
+        NIP17Factory().createMsgNIP17(
             message,
             listOf(receiver.pubKey),
             sender,
@@ -109,7 +109,7 @@ class GiftWrapBenchmark {
         var giftWrap: GiftWrapEvent? = null
         val countDownLatch = CountDownLatch(1)
 
-        NIP24Factory().createMsgNIP24(
+        NIP17Factory().createMsgNIP17(
             message,
             listOf(receiver.pubKey),
             sender,

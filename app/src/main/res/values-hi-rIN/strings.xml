@@ -473,9 +473,9 @@
     <string name="geohash_title">स्थान अनावृत करें ऐसे </string>
     <string name="geohash_explainer">आपका भूगोलिक स्थान विभेदक जोडता है पत्र में। जनता जान जाएगी कि आप वर्तमान स्थान से ५ कि॰मे॰ (३ मी॰) की दूरी के अन्दर हैं</string>
     <string name="add_sensitive_content_explainer">आपके विषयवस्तु दिखाने से पूर्व संवेदनशील विषयवस्तु चेतावनी जोडता है। यह आदर्श है किसी कार्यालय अनुचित विषयवस्तु के लिए अथवा जो कुछ लोगों के लिए आपत्तिजनक अथवा व्याकुल करनेवाला लग सकता है</string>
-    <string name="new_feature_nip24_might_not_be_available_title">नयी सुविधा</string>
-    <string name="new_feature_nip24_might_not_be_available_description">इस कार्यशैली सक्षम करने के लिए अमेथिस्ट के द्वारा NIP-24 संदेश (उपहारकोषयुक्त, आच्छादित सीधा तथा झुण्ड संदेश) भेजना पडेगा। यह NIP-24 नया है तथा अनेक ग्राहक इसे कार्यान्वित किया नहीं अब तक। सुनिश्चित करें कि प्राप्तकर्ता एक अनुकूल ग्राहक का प्रयोग कर रहे हैं।</string>
-    <string name="new_feature_nip24_activate">सक्रिय करें</string>
+    <string name="new_feature_nip17_might_not_be_available_title">नयी सुविधा</string>
+    <string name="new_feature_nip17_might_not_be_available_description">इस कार्यशैली सक्षम करने के लिए अमेथिस्ट के द्वारा NIP-17 संदेश (उपहारकोषयुक्त, आच्छादित सीधा तथा झुण्ड संदेश) भेजना पडेगा। यह NIP-17 नया है तथा अनेक ग्राहक इसे कार्यान्वित किया नहीं अब तक। सुनिश्चित करें कि प्राप्तकर्ता एक अनुकूल ग्राहक का प्रयोग कर रहे हैं।</string>
+    <string name="new_feature_nip17_activate">सक्रिय करें</string>
     <string name="messages_create_public_chat">सार्वजनिक</string>
     <string name="messages_create_public_private_chat_desription">नया निजी अथवा सार्वजनिक झुण्ड</string>
     <string name="messages_new_message">निजी</string>

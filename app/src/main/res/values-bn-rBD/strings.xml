@@ -436,9 +436,9 @@
     <string name="geohash_title">আপনার অবস্থান এভাবে প্রকাশ করুন </string>
     <string name="geohash_explainer">পোস্টে আপনার অবস্থানের একটি জিওহ্যাশ যোগ করে। জনসাধারণ জানবে যে আপনি বর্তমান অবস্থান থেকে ৫ কিলোমিটার (৩ মাইল) এর মধ্যে আছেন</string>
     <string name="add_sensitive_content_explainer">আপনার পেশকৃত আধেয় দেখানোর আগে সংবেদনশীল আধেয়-সতর্কতা জারি করে। এটি সেসকল আধেয়র জন্য আদর্শ যেখানে NSFW উপাদান কিংবা এমনকিছু থাকতে পারে যা কারো কারো জন্য আপত্তিকর কিংবা সমস্যাজনক মনে হতে পারে।</string>
-    <string name="new_feature_nip24_might_not_be_available_title">নতুন ফিচার</string>
-    <string name="new_feature_nip24_might_not_be_available_description">এই মোড সক্রিয় করার জন্য অ্যামেথিস্টকে একটি NIP-24 বার্তা পাঠাতে হবে। (GiftWrapped, সিল করা সরাসরি এবং দলগত বার্তা)। NIP-24 নতুন এবং বেশিরভাগ ক্লায়েন্ট এখনও এটি বাস্তবায়ন করেনি। নিশ্চিত করুন যে প্রাপক একটি সামঞ্জস্যপূর্ণ ক্লায়েন্ট ব্যবহার করছে।</string>
-    <string name="new_feature_nip24_activate">সক্রিয় করুন</string>
+    <string name="new_feature_nip17_might_not_be_available_title">নতুন ফিচার</string>
+    <string name="new_feature_nip17_might_not_be_available_description">এই মোড সক্রিয় করার জন্য অ্যামেথিস্টকে একটি NIP-17 বার্তা পাঠাতে হবে। (GiftWrapped, সিল করা সরাসরি এবং দলগত বার্তা)। NIP-17 নতুন এবং বেশিরভাগ ক্লায়েন্ট এখনও এটি বাস্তবায়ন করেনি। নিশ্চিত করুন যে প্রাপক একটি সামঞ্জস্যপূর্ণ ক্লায়েন্ট ব্যবহার করছে।</string>
+    <string name="new_feature_nip17_activate">সক্রিয় করুন</string>
     <string name="messages_create_public_chat">সর্বজনীন</string>
     <string name="messages_new_message">ব্যক্তিগত</string>
     <string name="messages_new_message_to">প্রতি</string>

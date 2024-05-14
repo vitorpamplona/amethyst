@@ -431,9 +431,9 @@ Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="geohash_title">Paparkan Lokasi sebagai </string>
     <string name="geohash_explainer">Menambahkan Geohash lokasi Anda ke postingan. Publik akan mengetahui bahwa Anda berada dalam jarak 5 km (3 mil) dari lokasi saat ini</string>
     <string name="add_sensitive_content_explainer">Menambahkan peringatan konten sensitif sebelum menampilkan konten Anda. Ini berguna untuk konten NSFW apa pun atau konten yang mungkin dianggap menyinggung atau mengganggu oleh sebagian orang</string>
-    <string name="new_feature_nip24_might_not_be_available_title">Fitur Baru</string>
-    <string name="new_feature_nip24_might_not_be_available_description">Mengaktifkan mode ini mengharuskan Amethyst mengirim pesan NIP-24 (GiftWrapped, Sealed Direct, dan Group Messages). NIP-24 masih baru dan sebagian besar klien belum menerapkannya. Pastikan penerima menggunakan klien yang didukung.</string>
-    <string name="new_feature_nip24_activate">Aktifkan</string>
+    <string name="new_feature_nip17_might_not_be_available_title">Fitur Baru</string>
+    <string name="new_feature_nip17_might_not_be_available_description">Mengaktifkan mode ini mengharuskan Amethyst mengirim pesan NIP-17 (GiftWrapped, Sealed Direct, dan Group Messages). NIP-17 masih baru dan sebagian besar klien belum menerapkannya. Pastikan penerima menggunakan klien yang didukung.</string>
+    <string name="new_feature_nip17_activate">Aktifkan</string>
     <string name="messages_create_public_chat">Publik</string>
     <string name="messages_new_message">Privat</string>
     <string name="messages_new_message_to">Ke</string>
@@ -516,7 +516,7 @@ Periksa pengaturan Lightning pengguna</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">URL panggilan balik tidak ditemukan dalam konfigurasi server alamat Lightning Pengguna</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Tidak dapat mengurai JSON dari faktur alamat Lightning.
 Periksa pengaturan Lightning pengguna</string>
-    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Jumlah faktur salah (%1$s sat) dari %2$s. 
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Jumlah faktur salah (%1$s sat) dari %2$s.
 Seharusnya %3$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Tidak dapat membuat faktur Lightning sebelum mengirim zap. Dompet Lightning penerima mengirimkan kesalahan berikut: %1$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Tidak dapat membuat faktur Lightning sebelum mengirim zap. Elemen pr tidak ditemukan di JSON yang dihasilkan.</string>

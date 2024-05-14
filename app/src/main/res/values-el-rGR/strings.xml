@@ -429,9 +429,9 @@
     <string name="geohash_title">Εμφάνιση τοποθεσίας ως </string>
     <string name="geohash_explainer">Προσθέτει ένα Geohash (γεωγραφικό στίγμα) της τοποθεσίας σας στη δημοσίευση. Το κοινό θα γνωρίζει ότι βρίσκεστε σε απόσταση 5km (3μίλια) από την τρέχουσα τοποθεσία</string>
     <string name="add_sensitive_content_explainer">Προσθέτει μια προειδοποίηση ευαίσθητου περιεχομένου πριν εμφανίσει τη δημοσίευσή σας. Ιδανικό για δημοσίευση με περιεχόμενο NSFW ή περιεχόμενο που κάποια άτομα μπορεί να βρουν προσβλητικό ή ενοχλητικό</string>
-    <string name="new_feature_nip24_might_not_be_available_title">Νέα Λειτουργία</string>
-    <string name="new_feature_nip24_might_not_be_available_description">Η ενεργοποίηση αυτής της λειτουργίας απαιτεί από το Amethyst να στείλει ένα μήνυμα NIP-24 (GiftWrapped, Sealed Direct και Group Messages). Το NIP-24 είναι νέο και οι περισσότεροι clients δεν το έχουν υιοθετήσει ακόμα. Βεβαιωθείτε ότι ο αποδέκτης χρησιμοποιεί έναν συμβατό client.</string>
-    <string name="new_feature_nip24_activate">Ενεργοποίηση</string>
+    <string name="new_feature_nip17_might_not_be_available_title">Νέα Λειτουργία</string>
+    <string name="new_feature_nip17_might_not_be_available_description">Η ενεργοποίηση αυτής της λειτουργίας απαιτεί από το Amethyst να στείλει ένα μήνυμα NIP-17 (GiftWrapped, Sealed Direct και Group Messages). Το NIP-17 είναι νέο και οι περισσότεροι clients δεν το έχουν υιοθετήσει ακόμα. Βεβαιωθείτε ότι ο αποδέκτης χρησιμοποιεί έναν συμβατό client.</string>
+    <string name="new_feature_nip17_activate">Ενεργοποίηση</string>
     <string name="messages_create_public_chat">Δημόσια</string>
     <string name="messages_new_message">Ιδιωτικό</string>
     <string name="messages_new_message_to">Προς</string>

@@ -472,9 +472,9 @@
     <string name="geohash_title">将位置显示为 </string>
     <string name="geohash_explainer">将你所在位置的地理位置添加到帖子。公众会知道你在当前位置的5公里之内（3英里）</string>
     <string name="add_sensitive_content_explainer">在显示你的内容之前添加敏感的内容警告。针对任何 NSFW 内容或一些人可能觉得有冒犯性或令人不安的内容。</string>
-    <string name="new_feature_nip24_might_not_be_available_title">新功能</string>
-    <string name="new_feature_nip24_might_not_be_available_description">启用此模式需要 Amethyst 发送一条 NIP-24 消息（包装的、密封的私信和群聊消息）。因为 NIP-24 是新的，大多数客户端尚未执行。请确保接收方正在使用兼容的客户端。</string>
-    <string name="new_feature_nip24_activate">启用</string>
+    <string name="new_feature_nip17_might_not_be_available_title">新功能</string>
+    <string name="new_feature_nip17_might_not_be_available_description">启用此模式需要 Amethyst 发送一条 NIP-17 消息（包装的、密封的私信和群聊消息）。因为 NIP-17 是新的，大多数客户端尚未执行。请确保接收方正在使用兼容的客户端。</string>
+    <string name="new_feature_nip17_activate">启用</string>
     <string name="messages_create_public_chat">公开</string>
     <string name="messages_create_public_private_chat_desription">新建公开或私人群组</string>
     <string name="messages_new_message">私人</string>

@@ -418,8 +418,8 @@
     <string name="zap_forward_title">Переслати Zaps до:</string>
     <string name="zap_forward_explainer">Підтримання клієнтів переведе його на LNAddress або профіль користувача нижче замість ваших</string>
     <string name="geohash_title">Надати місцеперебування як </string>
-    <string name="new_feature_nip24_might_not_be_available_title">Нова функція</string>
-    <string name="new_feature_nip24_activate">Активувати</string>
+    <string name="new_feature_nip17_might_not_be_available_title">Нова функція</string>
+    <string name="new_feature_nip17_activate">Активувати</string>
     <string name="messages_new_message_subject_caption">Тема бесіди</string>
     <string name="messages_new_message_to_caption">"\@User1, @User2, @User3"</string>
     <string name="messages_group_descriptor">Учасники цієї групи</string>

@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.events
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 
-class NIP24Factory {
+class NIP17Factory {
     data class Result(val msg: Event, val wraps: List<GiftWrapEvent>)
 
     private fun recursiveGiftWrapCreation(
@@ -65,7 +65,7 @@ class NIP24Factory {
         recursiveGiftWrapCreation(event, to.toList(), signer, wraps, onReady)
     }
 
-    fun createMsgNIP24(
+    fun createMsgNIP17(
         msg: String,
         to: List<HexKey>,
         signer: NostrSigner,

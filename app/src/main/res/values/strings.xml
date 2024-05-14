@@ -547,9 +547,9 @@
 
     <string name="add_sensitive_content_explainer">Adds sensitive content warning before showing your content. This is ideal for any NSFW content or content some people may find offensive or disturbing</string>
 
-    <string name="new_feature_nip24_might_not_be_available_title">New Feature</string>
-    <string name="new_feature_nip24_might_not_be_available_description">Activating this mode requires Amethyst to send a NIP-24 message (GiftWrapped, Sealed Direct and Group Messages). NIP-24 is new and most clients have not implemented it yet. Make sure the receiver is using a compatible client.</string>
-    <string name="new_feature_nip24_activate">Activate</string>
+    <string name="new_feature_nip17_might_not_be_available_title">New Feature</string>
+    <string name="new_feature_nip17_might_not_be_available_description">Activating this mode requires Amethyst to send a NIP-17 message (GiftWrapped, Sealed Direct and Group Messages). NIP-17 is new and most clients have not implemented it yet. Make sure the receiver is using a compatible client.</string>
+    <string name="new_feature_nip17_activate">Activate</string>
 
     <string name="messages_create_public_chat">Public</string>
     <string name="messages_create_public_private_chat_desription">New Public or Private Group</string>

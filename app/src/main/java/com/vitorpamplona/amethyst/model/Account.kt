@@ -78,7 +78,7 @@ import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
-import com.vitorpamplona.quartz.events.NIP24Factory
+import com.vitorpamplona.quartz.events.NIP17Factory
 import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
@@ -185,7 +185,7 @@ class Account(
     var zapPaymentRequest: Nip47WalletConnect.Nip47URI? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
-    var hideNIP24WarningDialog: Boolean = false,
+    var hideNIP17WarningDialog: Boolean = false,
     var backupContactList: ContactListEvent? = null,
     var proxy: Proxy? = null,
     var proxyPort: Int = 9050,
@@ -593,7 +593,7 @@ class Account(
                 val emojiUrl = EmojiUrl.decode(reaction)
                 if (emojiUrl != null) {
                     note.event?.let {
-                        NIP24Factory().createReactionWithinGroup(
+                        NIP17Factory().createReactionWithinGroup(
                             emojiUrl = emojiUrl,
                             originalNote = it,
                             to = users,
@@ -608,7 +608,7 @@ class Account(
             }
 
             note.event?.let {
-                NIP24Factory().createReactionWithinGroup(
+                NIP17Factory().createReactionWithinGroup(
                     content = reaction,
                     originalNote = it,
                     to = users,
@@ -1736,7 +1736,7 @@ class Account(
         }
     }
 
-    fun sendNIP24PrivateMessage(
+    fun sendNIP17PrivateMessage(
         message: String,
         toUsers: List<HexKey>,
         subject: String? = null,
@@ -1754,7 +1754,7 @@ class Account(
         val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
         val mentionsHex = mentions?.map { it.pubkeyHex }
 
-        NIP24Factory().createMsgNIP24(
+        NIP17Factory().createMsgNIP17(
             msg = message,
             to = toUsers,
             subject = subject,
@@ -1783,7 +1783,7 @@ class Account(
         }
     }
 
-    fun broadcastPrivately(signedEvents: NIP24Factory.Result) {
+    fun broadcastPrivately(signedEvents: NIP17Factory.Result) {
         val mine = signedEvents.wraps.filter { (it.recipientPubKey() == signer.pubKey) }
 
         mine.forEach { giftWrap ->
@@ -2538,8 +2538,8 @@ class Account(
         saveable.invalidateData()
     }
 
-    fun setHideNIP24WarningDialog() {
-        hideNIP24WarningDialog = true
+    fun setHideNIP17WarningDialog() {
+        hideNIP17WarningDialog = true
         saveable.invalidateData()
     }
 

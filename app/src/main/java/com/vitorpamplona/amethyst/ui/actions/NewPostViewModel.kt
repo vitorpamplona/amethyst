@@ -92,7 +92,7 @@ open class NewPostViewModel() : ViewModel() {
 
     var accountViewModel: AccountViewModel? = null
     var account: Account? = null
-    var requiresNIP24: Boolean = false
+    var requiresNIP17: Boolean = false
 
     var originalNote: Note? = null
     var forkedFromNote: Note? = null
@@ -169,8 +169,8 @@ open class NewPostViewModel() : ViewModel() {
     var wantsZapraiser by mutableStateOf(false)
     var zapRaiserAmount by mutableStateOf<Long?>(null)
 
-    // NIP24 Wrapped DMs / Group messages
-    var nip24 by mutableStateOf(false)
+    // NIP17 Wrapped DMs / Group messages
+    var nip17 by mutableStateOf(false)
 
     val draftTextChanges = Channel<String>(Channel.CONFLATED)
 
@@ -425,8 +425,8 @@ open class NewPostViewModel() : ViewModel() {
                 TextFieldValue(draftEvent.content())
             }
 
-        requiresNIP24 = draftEvent is ChatMessageEvent
-        nip24 = draftEvent is ChatMessageEvent
+        requiresNIP17 = draftEvent is ChatMessageEvent
+        nip17 = draftEvent is ChatMessageEvent
 
         if (draftEvent is ChatMessageEvent) {
             toUsers =
@@ -557,7 +557,7 @@ open class NewPostViewModel() : ViewModel() {
                     .toSet()
                     .toList()
 
-            account?.sendNIP24PrivateMessage(
+            account?.sendNIP17PrivateMessage(
                 message = tagger.message,
                 toUsers = receivers,
                 subject = subject.text.ifBlank { null },
@@ -571,8 +571,8 @@ open class NewPostViewModel() : ViewModel() {
                 draftTag = localDraft,
             )
         } else if (!dmUsers.isNullOrEmpty()) {
-            if (nip24 || dmUsers.size > 1) {
-                account?.sendNIP24PrivateMessage(
+            if (nip17 || dmUsers.size > 1) {
+                account?.sendNIP17PrivateMessage(
                     message = tagger.message,
                     toUsers = dmUsers.map { it.pubkeyHex },
                     subject = subject.text.ifBlank { null },
@@ -1131,10 +1131,10 @@ open class NewPostViewModel() : ViewModel() {
     }
 
     fun toggleNIP04And24() {
-        if (requiresNIP24) {
-            nip24 = true
+        if (requiresNIP17) {
+            nip17 = true
         } else {
-            nip24 = !nip24
+            nip17 = !nip17
         }
         if (message.text.isNotBlank()) {
             saveDraft()
