@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,12 +71,24 @@ private fun RenderNostrNIP90ContentDiscoveryScreen(
         val pagerState = rememberPagerState { 2 }
         val coroutineScope = rememberCoroutineScope()
 
-        if (DVMID != null) {
-            Text(text = "Debug: DVM KEY:\n " + DVMID)
-        }
+        // TODO Render a nice header with image and DVM name from the id
+
+       /* if (DVMID != null) {
+            LoadNote(baseNoteHex = DVMID, accountViewModel = accountViewModel) {
+                if (it != null) {
+                    NoteCompose(baseNote = it, quotesLeft = 0, accountViewModel = accountViewModel ) {
+
+                    }
+                }
+                if (it != null) {
+                    Text(text = (it.event as AppDefinitionEvent).content())
+                } else {
+                    Text(text = "yo")
+                }
+            }
+        } */
 
         if (DVMID != null) {
-            // TODO 1 Send KIND 5300 Event with p tag = DVMID (crashes, because cant map to event)
             val thread =
                 Thread {
                     try {
@@ -92,11 +103,6 @@ private fun RenderNostrNIP90ContentDiscoveryScreen(
 
             thread.start()
         }
-        // var keyPair = accountViewModel.account.keyPair
-
-        // TODO 2 PARSE AND LOAD RESULTS FROM KIND 6300 REPLY to resultfeedmodel (RN this doesnt show events)
-
-        // TODO 3 Render Results (hopefully works when 2 is working)
 
         HorizontalPager(state = pagerState) {
             RefresheableFeedView(
