@@ -148,7 +148,7 @@ val DefaultReactions =
         "\uD83D\uDE31",
     )
 
-val DefaultZapAmounts = listOf(500L, 1000L, 5000L)
+val DefaultZapAmounts = listOf(100L, 500L, 1000L)
 
 fun getLanguagesSpokenByUser(): Set<String> {
     val languageList = ConfigurationCompat.getLocales(Resources.getSystem().getConfiguration())
@@ -2433,6 +2433,10 @@ class Account(
 
     fun activeWriteRelays(): List<Relay> {
         return (activeRelays() ?: convertLocalRelays()).filter { it.write }
+    }
+
+    fun activeAllRelays(): List<Relay> {
+        return ((activeRelays() ?: convertLocalRelays()).toList())
     }
 
     fun isAllHidden(users: Set<HexKey>): Boolean {

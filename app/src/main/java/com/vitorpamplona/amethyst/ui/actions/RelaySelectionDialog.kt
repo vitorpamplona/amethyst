@@ -78,7 +78,7 @@ fun RelaySelectionDialog(
 
     var relays by remember {
         mutableStateOf(
-            accountViewModel.account.activeWriteRelays().map {
+            accountViewModel.account.activeAllRelays().map {
                 RelayList(
                     relay = it,
                     relayInfo = RelayBriefInfoCache.RelayBriefInfo(it.url),

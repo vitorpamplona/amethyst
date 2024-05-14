@@ -140,9 +140,6 @@ import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
-import java.math.RoundingMode
-import java.text.DecimalFormat
 import kotlin.math.roundToInt
 
 @Composable
@@ -985,7 +982,8 @@ fun ZapReaction(
         if (wantsToZap) {
             ZapAmountChoicePopup(
                 baseNote = baseNote,
-                iconSize = iconSize,
+                zapAmountChoices = accountViewModel.account.zapAmountChoices,
+                popupYOffset = iconSize,
                 accountViewModel = accountViewModel,
                 onDismiss = {
                     wantsToZap = false
@@ -1039,6 +1037,11 @@ fun ZapReaction(
                     wantsToPay = persistentListOf()
                     scope.launch {
                         zappingProgress = 0f
+                        showErrorMessageDialog = showErrorMessageDialog + it
+                    }
+                },
+                justShowError = {
+                    scope.launch {
                         showErrorMessageDialog = showErrorMessageDialog + it
                     }
                 },
@@ -1430,8 +1433,9 @@ private fun ActionableReactionButton(
 @Composable
 fun ZapAmountChoicePopup(
     baseNote: Note,
+    zapAmountChoices: List<Long>,
     accountViewModel: AccountViewModel,
-    iconSize: Dp,
+    popupYOffset: Dp,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
     onError: (title: String, text: String) -> Unit,
@@ -1441,15 +1445,15 @@ fun ZapAmountChoicePopup(
     val context = LocalContext.current
     val zapMessage = ""
 
-    val iconSizePx = with(LocalDensity.current) { -iconSize.toPx().toInt() }
+    val yOffset = with(LocalDensity.current) { -popupYOffset.toPx().toInt() }
 
     Popup(
         alignment = Alignment.BottomCenter,
-        offset = IntOffset(0, iconSizePx),
+        offset = IntOffset(0, yOffset),
         onDismissRequest = { onDismiss() },
     ) {
         FlowRow(horizontalArrangement = Arrangement.Center) {
-            accountViewModel.account.zapAmountChoices.forEach { amountInSats ->
+            zapAmountChoices.forEach { amountInSats ->
                 Button(
                     modifier = Modifier.padding(horizontal = 3.dp),
                     onClick = {
@@ -1510,27 +1514,5 @@ fun showCount(count: Int?): String {
         count >= 1000000 -> "${(count / 1000000f).roundToInt()}M"
         count >= 10000 -> "${(count / 1000f).roundToInt()}k"
         else -> "$count"
-    }
-}
-
-val OneGiga = BigDecimal(1000000000)
-val OneMega = BigDecimal(1000000)
-val TenKilo = BigDecimal(10000)
-val OneKilo = BigDecimal(1000)
-
-var dfG: DecimalFormat = DecimalFormat("#.0G")
-var dfM: DecimalFormat = DecimalFormat("#.0M")
-var dfK: DecimalFormat = DecimalFormat("#.0k")
-var dfN: DecimalFormat = DecimalFormat("#")
-
-fun showAmount(amount: BigDecimal?): String {
-    if (amount == null) return ""
-    if (amount.abs() < BigDecimal(0.01)) return ""
-
-    return when {
-        amount >= OneGiga -> dfG.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
-        amount >= OneMega -> dfM.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
-        amount >= TenKilo -> dfK.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
-        else -> dfN.format(amount)
     }
 }

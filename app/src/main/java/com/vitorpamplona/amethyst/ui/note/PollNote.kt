@@ -439,6 +439,15 @@ fun ZapVote(
                             )
                     }
                 },
+                justShowError = {
+                    scope.launch {
+                        showErrorMessageDialog =
+                            StringToastMsg(
+                                context.getString(R.string.error_dialog_zap_error),
+                                it,
+                            )
+                    }
+                },
             )
         }
 

@@ -347,12 +347,12 @@ fun PayViaIntentDialog(
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
     onError: (String) -> Unit,
+    justShowError: (String) -> Unit,
 ) {
     val context = LocalContext.current
 
     if (payingInvoices.size == 1) {
-        payViaIntent(payingInvoices.first().invoice, context, onError)
-        onClose()
+        payViaIntent(payingInvoices.first().invoice, context, onClose, onError)
     } else {
         Dialog(
             onDismissRequest = onClose,
@@ -422,9 +422,7 @@ fun PayViaIntentDialog(
                             Spacer(modifier = DoubleHorzSpacer)
 
                             PayButton(isActive = !paid.value) {
-                                paid.value = true
-
-                                payViaIntent(it.invoice, context, onError)
+                                payViaIntent(it.invoice, context, { paid.value = true }, justShowError)
                             }
                         }
                     }
@@ -437,6 +435,7 @@ fun PayViaIntentDialog(
 fun payViaIntent(
     invoice: String,
     context: Context,
+    onPaid: () -> Unit,
     onError: (String) -> Unit,
 ) {
     try {
@@ -444,6 +443,7 @@ fun payViaIntent(
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
 
         ContextCompat.startActivity(context, intent, null)
+        onPaid()
     } catch (e: Exception) {
         if (e is CancellationException) throw e
         // don't display ugly error messages

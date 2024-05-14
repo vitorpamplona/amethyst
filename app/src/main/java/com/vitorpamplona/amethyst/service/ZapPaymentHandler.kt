@@ -103,7 +103,7 @@ class ZapPaymentHandler(val account: Account) {
                 }
 
                 if (account.hasWalletConnectSetup()) {
-                    payViaNWC(it.values.map { it.second }, note, onError, onProgress = {
+                    payViaNWC(it.values.map { it.invoice }, note, onError, onProgress = {
                         onProgress(it * 0.25f + 0.75f) // keeps within range.
                     }, context) {
                         // onProgress(1f)
@@ -113,9 +113,9 @@ class ZapPaymentHandler(val account: Account) {
                         it.map {
                             Payable(
                                 info = it.key.first,
-                                user = null,
-                                amountMilliSats = it.value.first,
-                                invoice = it.value.second,
+                                user = it.key.second.user,
+                                amountMilliSats = it.value.zapValue,
+                                invoice = it.value.invoice,
                             )
                         }.toImmutableList(),
                     )
@@ -136,28 +136,33 @@ class ZapPaymentHandler(val account: Account) {
         return roundedZapValue
     }
 
+    class SignAllZapRequestsReturn(
+        val zapRequestJson: String,
+        val user: User? = null,
+    )
+
     suspend fun signAllZapRequests(
         note: Note,
         pollOption: Int?,
         message: String,
         zapType: LnZapEvent.ZapType,
         zapsToSend: List<ZapSplitSetup>,
-        onAllDone: suspend (MutableMap<ZapSplitSetup, String>) -> Unit,
+        onAllDone: suspend (MutableMap<ZapSplitSetup, SignAllZapRequestsReturn>) -> Unit,
     ) {
-        collectSuccessfulSigningOperations<ZapSplitSetup, String>(
+        collectSuccessfulSigningOperations<ZapSplitSetup, SignAllZapRequestsReturn>(
             operationsInput = zapsToSend,
             runRequestFor = { next: ZapSplitSetup, onReady ->
                 if (next.isLnAddress) {
                     prepareZapRequestIfNeeded(note, pollOption, message, zapType) { zapRequestJson ->
                         if (zapRequestJson != null) {
-                            onReady(zapRequestJson)
+                            onReady(SignAllZapRequestsReturn(zapRequestJson))
                         }
                     }
                 } else {
                     val user = LocalCache.getUserIfExists(next.lnAddressOrPubKeyHex)
                     prepareZapRequestIfNeeded(note, pollOption, message, zapType, user) { zapRequestJson ->
                         if (zapRequestJson != null) {
-                            onReady(zapRequestJson)
+                            onReady(SignAllZapRequestsReturn(zapRequestJson, user))
                         }
                     }
                 }
@@ -167,23 +172,23 @@ class ZapPaymentHandler(val account: Account) {
     }
 
     suspend fun assembleAllInvoices(
-        invoices: List<Pair<ZapSplitSetup, String>>,
+        invoices: List<Pair<ZapSplitSetup, SignAllZapRequestsReturn>>,
         totalAmountMilliSats: Long,
         message: String,
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         context: Context,
-        onAllDone: suspend (MutableMap<Pair<ZapSplitSetup, String>, Pair<Long, String>>) -> Unit,
+        onAllDone: suspend (MutableMap<Pair<ZapSplitSetup, SignAllZapRequestsReturn>, AssembleInvoiceReturn>) -> Unit,
     ) {
         var progressAllPayments = 0.00f
         val totalWeight = invoices.sumOf { it.first.weight }
 
-        collectSuccessfulSigningOperations<Pair<ZapSplitSetup, String>, Pair<Long, String>>(
+        collectSuccessfulSigningOperations<Pair<ZapSplitSetup, SignAllZapRequestsReturn>, AssembleInvoiceReturn>(
             operationsInput = invoices,
-            runRequestFor = { splitZapRequestPair: Pair<ZapSplitSetup, String>, onReady ->
+            runRequestFor = { splitZapRequestPair: Pair<ZapSplitSetup, SignAllZapRequestsReturn>, onReady ->
                 assembleInvoice(
                     splitSetup = splitZapRequestPair.first,
-                    nostrZapRequest = splitZapRequestPair.second,
+                    nostrZapRequest = splitZapRequestPair.second.zapRequestJson,
                     zapValue = calculateZapValue(totalAmountMilliSats, splitZapRequestPair.first.weight, totalWeight),
                     message = message,
                     onError = onError,
@@ -243,6 +248,11 @@ class ZapPaymentHandler(val account: Account) {
         )
     }
 
+    class AssembleInvoiceReturn(
+        val zapValue: Long,
+        val invoice: String,
+    )
+
     private fun assembleInvoice(
         splitSetup: ZapSplitSetup,
         nostrZapRequest: String,
@@ -251,7 +261,7 @@ class ZapPaymentHandler(val account: Account) {
         onError: (String, String) -> Unit,
         onProgressStep: (percent: Float) -> Unit,
         context: Context,
-        onReady: (Pair<Long, String>) -> Unit,
+        onReady: (AssembleInvoiceReturn) -> Unit,
     ) {
         var progressThisPayment = 0.00f
 
@@ -280,7 +290,7 @@ class ZapPaymentHandler(val account: Account) {
                     context = context,
                     onSuccess = {
                         onProgressStep(1 - progressThisPayment)
-                        onReady(Pair(zapValue, it))
+                        onReady(AssembleInvoiceReturn(zapValue, it))
                     },
                 )
         } else {

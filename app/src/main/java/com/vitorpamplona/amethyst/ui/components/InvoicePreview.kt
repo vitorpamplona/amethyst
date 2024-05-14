@@ -169,7 +169,7 @@ fun InvoicePreview(
                     Modifier
                         .fillMaxWidth()
                         .padding(vertical = 10.dp),
-                onClick = { payViaIntent(lnInvoice, context) { showErrorMessageDialog = it } },
+                onClick = { payViaIntent(lnInvoice, context, { }) { showErrorMessageDialog = it } },
                 shape = QuoteBorder,
                 colors =
                     ButtonDefaults.buttonColors(

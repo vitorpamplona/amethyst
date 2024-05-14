@@ -150,11 +150,15 @@ object RelayPool : Relay.Listener {
         list: List<Relay>,
         signedEvent: EventInterface,
     ) {
-        list.forEach { relay -> relays.filter { it.url == relay.url }.forEach { it.send(signedEvent) } }
+        list.forEach { relay -> relays.filter { it.url == relay.url }.forEach { it.sendOverride(signedEvent) } }
     }
 
     fun send(signedEvent: EventInterface) {
         relays.forEach { it.send(signedEvent) }
+    }
+
+    fun sendOverride(signedEvent: EventInterface) {
+        relays.forEach { it.sendOverride(signedEvent) }
     }
 
     fun close(subscriptionId: String) {
