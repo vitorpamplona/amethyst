@@ -117,6 +117,8 @@ class EventFactory {
             NIP90StatusEvent.KIND -> NIP90StatusEvent(id, pubKey, createdAt, tags, content, sig)
             NIP90ContentDiscoveryRequestEvent.KIND -> NIP90ContentDiscoveryRequestEvent(id, pubKey, createdAt, tags, content, sig)
             NIP90ContentDiscoveryResponseEvent.KIND -> NIP90ContentDiscoveryResponseEvent(id, pubKey, createdAt, tags, content, sig)
+            NIP90UserDiscoveryRequestEvent.KIND -> NIP90UserDiscoveryRequestEvent(id, pubKey, createdAt, tags, content, sig)
+            NIP90UserDiscoveryResponseEvent.KIND -> NIP90UserDiscoveryResponseEvent(id, pubKey, createdAt, tags, content, sig)
             OtsEvent.KIND -> OtsEvent(id, pubKey, createdAt, tags, content, sig)
             PeopleListEvent.KIND -> PeopleListEvent(id, pubKey, createdAt, tags, content, sig)
             PinListEvent.KIND -> PinListEvent(id, pubKey, createdAt, tags, content, sig)
