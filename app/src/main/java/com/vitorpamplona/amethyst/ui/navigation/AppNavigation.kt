@@ -227,11 +227,13 @@ fun AppNavigation(
                 route.route,
                 route.arguments,
                 content = {
-                    NIP90ContentDiscoveryScreen(
-                        DVMID = it.arguments?.getString("id"),
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+                    it.arguments?.getString("id")?.let { it1 ->
+                        NIP90ContentDiscoveryScreen(
+                            DVMID = it1,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
                 },
             )
         }

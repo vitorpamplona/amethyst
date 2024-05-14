@@ -20,15 +20,19 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 
 open class NIP90ContentDiscoveryFilter(
     val account: Account,
+    val dvmkey: String,
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
         return account.userProfile().pubkeyHex + "-" + followList()
@@ -49,15 +53,28 @@ open class NIP90ContentDiscoveryFilter(
         val notes =
             LocalCache.notes.filterIntoSet { _, it ->
                 val noteEvent = it.event
-                noteEvent is NIP90ContentDiscoveryResponseEvent // && params.match(noteEvent)
+                noteEvent is NIP90ContentDiscoveryResponseEvent && it.event?.pubKey() == dvmkey && it.event?.isTaggedUser(account.keyPair.pubKey.toHexKey()) == true // && params.match(noteEvent)
             }
+        var sorted = sort(notes)
+        var note = sorted.first()
 
-        return sort(notes)
+        var eventContent = note.event?.content()
+
+        var collection: Set<Note> = setOf()
+        val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        var json = mapper.readValue(eventContent, Array::class.java)
+        for (element in json) {
+            // var test = mapper.readValue(element.toString(), Array::class.java)
+            // TODO. This is ugly. how to Kotlin?
+            var id = element.toString().trimStart('[').trimStart('e').trimStart(',').trimEnd(']').trimStart().trimEnd()
+            collection + id
+        }
+
+        return sort(collection)
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
-        var result = innerApplyFilter(collection)
-        return result
+        return innerApplyFilter(collection)
     }
 
     fun buildFilterParams(account: Account): FilterByListParams {
@@ -70,12 +87,38 @@ open class NIP90ContentDiscoveryFilter(
     }
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val params = buildFilterParams(account)
+        // val params = buildFilterParams(account)
 
-        return collection.filterTo(HashSet()) {
-            val noteEvent = it.event
-            noteEvent is NIP90ContentDiscoveryResponseEvent // && params.match(noteEvent)
+        val notes =
+            collection.filterTo(HashSet()) {
+                val noteEvent = it.event
+                noteEvent is NIP90ContentDiscoveryResponseEvent && it.event?.isTaggedUser(account.keyPair.pubKey.toHexKey()) == true // && params.match(noteEvent)
+            }
+
+        // TODO. We want to parse the content of the latest event to ids and get the nodes from these ids
+
+        /* var sorted = sort(notes)
+        var note = sorted.first()
+
+        var eventContent = note.event?.content()
+
+        val collection: Set<Note> = setOf()
+        val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        var json = mapper.readValue(eventContent, Array::class.java)
+        for (element in json) {
+            // var test = mapper.readValue(element.toString(), Array::class.java)
+            // TODO. This is ugly. how to Kotlin?
+            var id = element.toString().trimStart('[').trimStart('e').trimStart(',').trimEnd(']').trimStart().trimEnd()
+
+            var note = LocalCache.getNoteIfExists(id)
+            if (note != null) {
+                collection + note
+            }
         }
+
+        return collection
+         */
+        return notes
     }
 
     override fun sort(collection: Set<Note>): List<Note> {

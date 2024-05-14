@@ -22,8 +22,6 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
@@ -32,7 +30,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -42,7 +39,6 @@ import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.EmptyTagList
@@ -65,20 +61,6 @@ fun RenderNIP90ContentDiscoveryResponse(
 ) {
     val noteEvent = note.event
     val modifier = remember(note) { Modifier.fillMaxWidth() }
-
-    if (noteEvent != null) {
-        TranslatableRichTextViewer(
-            content = noteEvent.content(),
-            canPreview = canPreview && !makeItShort,
-            quotesLeft = quotesLeft,
-            modifier = modifier,
-            tags = noteEvent.tags().toImmutableListOfLists(),
-            backgroundColor = backgroundColor,
-            id = note.idHex,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
 
     val showReply by
         remember(note) {
@@ -140,42 +122,33 @@ fun RenderNIP90ContentDiscoveryResponse(
         val isAuthorTheLoggedUser =
             remember(note.event) { accountViewModel.isLoggedUser(note.author) }
 
-        if (makeItShort && isAuthorTheLoggedUser) {
-            Text(
-                text = eventContent,
-                color = MaterialTheme.colorScheme.placeholderText,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        } else {
-            SensitivityWarning(
-                note = note,
+        SensitivityWarning(
+            note = note,
+            accountViewModel = accountViewModel,
+        ) {
+            val modifier = remember(note) { Modifier.fillMaxWidth() }
+            val tags =
+                remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+
+            TranslatableRichTextViewer(
+                content = eventContent,
+                canPreview = canPreview && !makeItShort,
+                quotesLeft = quotesLeft,
+                modifier = modifier,
+                tags = tags,
+                backgroundColor = backgroundColor,
+                id = note.idHex,
                 accountViewModel = accountViewModel,
-            ) {
-                val modifier = remember(note) { Modifier.fillMaxWidth() }
-                val tags =
-                    remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+                nav = nav,
+            )
+        }
 
-                TranslatableRichTextViewer(
-                    content = eventContent,
-                    canPreview = canPreview && !makeItShort,
-                    quotesLeft = quotesLeft,
-                    modifier = modifier,
-                    tags = tags,
-                    backgroundColor = backgroundColor,
-                    id = note.idHex,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-
-            if (note.event?.hasHashtags() == true) {
-                val hashtags =
-                    remember(note.event) {
-                        note.event?.hashtags()?.toImmutableList() ?: persistentListOf()
-                    }
-                DisplayUncitedHashtags(hashtags, eventContent, nav)
-            }
+        if (note.event?.hasHashtags() == true) {
+            val hashtags =
+                remember(note.event) {
+                    note.event?.hashtags()?.toImmutableList() ?: persistentListOf()
+                }
+            DisplayUncitedHashtags(hashtags, eventContent, nav)
         }
     }
 }

@@ -33,22 +33,25 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.screen.NostrNIP90ContentDiscoveryFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
+import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
 
 @Composable
 fun NIP90ContentDiscoveryScreen(
-    DVMID: String?,
+    DVMID: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     val resultFeedViewModel: NostrNIP90ContentDiscoveryFeedViewModel =
         viewModel(
             key = "NostrNIP90ContentDiscoveryFeedViewModel",
-            factory = NostrNIP90ContentDiscoveryFeedViewModel.Factory(accountViewModel.account),
+            factory = NostrNIP90ContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmkey = DVMID),
         )
 
-    val userState by accountViewModel.account.decryptBookmarks.observeAsState()
+    val userState by accountViewModel.account.decryptBookmarks.observeAsState() // TODO
 
     LaunchedEffect(userState) {
         resultFeedViewModel.invalidateData()
@@ -75,26 +78,33 @@ private fun RenderNostrNIP90ContentDiscoveryScreen(
 
         if (DVMID != null) {
             // TODO 1 Send KIND 5300 Event with p tag = DVMID (crashes, because cant map to event)
+            val thread =
+                Thread {
+                    try {
+                        NIP90ContentDiscoveryRequestEvent.create(DVMID, accountViewModel.account.signer) {
+                            Client.send(it)
+                            LocalCache.justConsume(it, null)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
 
-            /*NIP90ContentDiscoveryRequestEvent.create(DVMID, accountViewModel.account.signer) {
-                Client.send(it)
-                LocalCache.justConsume(it, null)
-            }*/
+            thread.start()
+        }
+        // var keyPair = accountViewModel.account.keyPair
 
-            // var keyPair = accountViewModel.account.keyPair
+        // TODO 2 PARSE AND LOAD RESULTS FROM KIND 6300 REPLY to resultfeedmodel (RN this doesnt show events)
 
-            // TODO 2 PARSE AND LOAD RESULTS FROM KIND 6300 REPLY to resultfeedmodel (RN this doesnt show events)
+        // TODO 3 Render Results (hopefully works when 2 is working)
 
-            // TODO 3 Render Results (hopefully works when 2 is working)
-
-            HorizontalPager(state = pagerState) {
-                RefresheableFeedView(
-                    resultFeedViewModel,
-                    null,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
+        HorizontalPager(state = pagerState) {
+            RefresheableFeedView(
+                resultFeedViewModel,
+                null,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
         }
     }
 }
