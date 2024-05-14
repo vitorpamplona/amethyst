@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
+import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
@@ -388,18 +389,21 @@ private fun MessageBubbleLines(
                 Spacer(modifier = DoubleHorzSpacer)
             },
             secondColumn = {
-                LikeReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
-                Spacer(modifier = StdHorzSpacer)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = RowColSpacing) {
+                    LikeReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
+                }
                 ZapReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
-                Spacer(modifier = DoubleHorzSpacer)
-                ReplyReaction(
-                    baseNote = baseNote,
-                    grayTint = MaterialTheme.colorScheme.placeholderText,
-                    accountViewModel = accountViewModel,
-                    showCounter = false,
-                    iconSizeModifier = Size15Modifier,
-                ) {
-                    onWantsToReply(baseNote)
+                Spacer(modifier = StdHorzSpacer)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = RowColSpacing) {
+                    ReplyReaction(
+                        baseNote = baseNote,
+                        grayTint = MaterialTheme.colorScheme.placeholderText,
+                        accountViewModel = accountViewModel,
+                        showCounter = false,
+                        iconSizeModifier = Size15Modifier,
+                    ) {
+                        onWantsToReply(baseNote)
+                    }
                 }
                 Spacer(modifier = StdHorzSpacer)
             },

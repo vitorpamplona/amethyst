@@ -34,6 +34,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -786,7 +787,6 @@ fun LikeReaction(
         contentAlignment = Center,
         modifier =
             Modifier
-                .size(iconSize)
                 .combinedClickable(
                     role = Role.Button,
                     interactionSource = remember { MutableInteractionSource() },
@@ -879,8 +879,8 @@ private fun RenderReactionType(
     } else {
         when (reactionType) {
             "+" -> LikedIcon(iconSizeModifier)
-            "-" -> Text(text = "\uD83D\uDC4E", fontSize = iconFontSize)
-            else -> Text(text = reactionType, fontSize = iconFontSize)
+            "-" -> Text(text = "\uD83D\uDC4E", maxLines = 1, fontSize = iconFontSize)
+            else -> Text(text = reactionType, maxLines = 1, fontSize = iconFontSize)
         }
     }
 }
