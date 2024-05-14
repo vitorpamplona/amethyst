@@ -71,6 +71,7 @@ class EventFactory {
                     ChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
                 }
             }
+            ChatMessageRelayListEvent.KIND -> ChatMessageRelayListEvent(id, pubKey, createdAt, tags, content, sig)
             ClassifiedsEvent.KIND -> ClassifiedsEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityDefinitionEvent.KIND ->
                 CommunityDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
@@ -79,7 +80,6 @@ class EventFactory {
                 CommunityPostApprovalEvent(id, pubKey, createdAt, tags, content, sig)
             ContactListEvent.KIND -> ContactListEvent(id, pubKey, createdAt, tags, content, sig)
             DeletionEvent.KIND -> DeletionEvent(id, pubKey, createdAt, tags, content, sig)
-            DirectMessageRelayListEvent.KIND -> DirectMessageRelayListEvent(id, pubKey, createdAt, tags, content, sig)
             DraftEvent.KIND -> DraftEvent(id, pubKey, createdAt, tags, content, sig)
             EmojiPackEvent.KIND -> EmojiPackEvent(id, pubKey, createdAt, tags, content, sig)
             EmojiPackSelectionEvent.KIND ->

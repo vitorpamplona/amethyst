@@ -39,8 +39,8 @@ import com.vitorpamplona.quartz.events.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.events.CalendarRSVPEvent
 import com.vitorpamplona.quartz.events.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
+import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
-import com.vitorpamplona.quartz.events.DirectMessageRelayListEvent
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.Event
@@ -102,7 +102,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
             types = COMMON_FEED_TYPES,
             filter =
                 JsonFilter(
-                    kinds = listOf(StatusEvent.KIND, AdvertisedRelayListEvent.KIND, DirectMessageRelayListEvent.KIND),
+                    kinds = listOf(StatusEvent.KIND, AdvertisedRelayListEvent.KIND, ChatMessageRelayListEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     limit = 5,
                 ),
@@ -120,7 +120,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                             MetadataEvent.KIND,
                             ContactListEvent.KIND,
                             AdvertisedRelayListEvent.KIND,
-                            DirectMessageRelayListEvent.KIND,
+                            ChatMessageRelayListEvent.KIND,
                             MuteListEvent.KIND,
                             PeopleListEvent.KIND,
                         ),

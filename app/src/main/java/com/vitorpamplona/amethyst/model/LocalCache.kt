@@ -56,6 +56,7 @@ import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChannelMuteUserEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
+import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
@@ -63,7 +64,6 @@ import com.vitorpamplona.quartz.events.CommunityListEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
-import com.vitorpamplona.quartz.events.DirectMessageRelayListEvent
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
@@ -701,7 +701,7 @@ object LocalCache {
     }
 
     private fun consume(
-        event: DirectMessageRelayListEvent,
+        event: ChatMessageRelayListEvent,
         relay: Relay?,
     ) {
         consumeBaseReplaceable(event, relay)
@@ -2273,7 +2273,7 @@ object LocalCache {
                 }
                 is ContactListEvent -> consume(event)
                 is DeletionEvent -> consume(event)
-                is DirectMessageRelayListEvent -> consume(event, relay)
+                is ChatMessageRelayListEvent -> consume(event, relay)
                 is DraftEvent -> consume(event, relay)
                 is EmojiPackEvent -> consume(event, relay)
                 is EmojiPackSelectionEvent -> consume(event, relay)

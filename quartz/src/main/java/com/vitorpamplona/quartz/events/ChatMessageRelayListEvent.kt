@@ -21,12 +21,13 @@
 package com.vitorpamplona.quartz.events
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class DirectMessageRelayListEvent(
+class ChatMessageRelayListEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -50,11 +51,15 @@ class DirectMessageRelayListEvent(
         const val KIND = 10050
         const val FIXED_D_TAG = ""
 
+        fun createAddressTag(pubKey: HexKey): String {
+            return ATag.assembleATag(KIND, pubKey, FIXED_D_TAG)
+        }
+
         fun create(
             relays: List<String>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (DirectMessageRelayListEvent) -> Unit,
+            onReady: (ChatMessageRelayListEvent) -> Unit,
         ) {
             val tags =
                 relays.map {
