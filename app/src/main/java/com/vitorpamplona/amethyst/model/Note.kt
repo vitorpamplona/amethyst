@@ -210,10 +210,12 @@ open class Note(val idHex: String) {
         }
     }
 
+    val levelFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd-HH:mm:ss")
+
     fun formattedDateTime(timestamp: Long): String {
         return Instant.ofEpochSecond(timestamp)
             .atZone(ZoneId.systemDefault())
-            .format(DateTimeFormatter.ofPattern("uuuu-MM-dd-HH:mm:ss"))
+            .format(levelFormatter)
     }
 
     data class LevelSignature(val signature: String, val createdAt: Long?, val author: User?)
