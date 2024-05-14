@@ -76,12 +76,10 @@ private fun RenderNostrNIP90ContentDiscoveryScreen(
         if (DVMID != null) {
             // TODO 1 Send KIND 5300 Event with p tag = DVMID (crashes, because cant map to event)
 
-            /*val signer: NostrSigner = NostrSignerInternal(accountViewModel.account.keyPair)
-            println(accountViewModel.account.keyPair.pubKey.toHexKey())
-            NIP90ContentDiscoveryRequestEvent.create(DVMID, signer) {
+            /*NIP90ContentDiscoveryRequestEvent.create(DVMID, accountViewModel.account.signer) {
                 Client.send(it)
                 LocalCache.justConsume(it, null)
-            } */
+            }*/
 
             // var keyPair = accountViewModel.account.keyPair
 

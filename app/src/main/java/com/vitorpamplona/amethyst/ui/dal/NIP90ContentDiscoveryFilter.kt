@@ -57,8 +57,6 @@ open class NIP90ContentDiscoveryFilter(
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
         var result = innerApplyFilter(collection)
-        println("Test World")
-        println(result)
         return result
     }
 
