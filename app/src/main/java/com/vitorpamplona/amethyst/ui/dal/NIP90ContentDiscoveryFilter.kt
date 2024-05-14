@@ -74,7 +74,7 @@ open class NIP90ContentDiscoveryFilter(
                 }
             }
 
-            return sort(collection)
+            return collection.toList()
         } else {
             return sort(notes)
         }
@@ -132,6 +132,6 @@ open class NIP90ContentDiscoveryFilter(
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+        return collection.toList() // collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
     }
 }
