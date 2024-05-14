@@ -61,14 +61,17 @@ open class NIP90ContentDiscoveryFilter(
 
             var eventContent = note.event?.content()
 
-            var collection: Set<Note> = setOf()
+            var collection: HashSet<Note> = hashSetOf()
             val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
             var json = mapper.readValue(eventContent, Array::class.java)
             for (element in json) {
                 // var test = mapper.readValue(element.toString(), Array::class.java)
                 // TODO. This is ugly. how to Kotlin?
                 var id = element.toString().trimStart('[').trimStart('e').trimStart(',').trimEnd(']').trimStart().trimEnd()
-                collection + id
+                var note = LocalCache.checkGetOrCreateNote(id)
+                if (note != null) {
+                    collection.add(note)
+                }
             }
 
             return sort(collection)
@@ -101,13 +104,13 @@ open class NIP90ContentDiscoveryFilter(
 
         // TODO. We want to parse the content of the latest event to ids and get the nodes from these ids
 
-        /* var sorted = sort(notes)
+        var sorted = sort(notes)
         if (sorted.isNotEmpty()) {
             var note = sorted.first()
 
             var eventContent = note.event?.content()
 
-            val collection: Set<Note> = setOf()
+            val collection: HashSet<Note> = hashSetOf()
             val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
             var json = mapper.readValue(eventContent, Array::class.java)
             for (element in json) {
@@ -115,17 +118,16 @@ open class NIP90ContentDiscoveryFilter(
                 // TODO. This is ugly. how to Kotlin?
                 var id = element.toString().trimStart('[').trimStart('e').trimStart(',').trimEnd(']').trimStart().trimEnd()
 
-                var note = LocalCache.getNoteIfExists(id)
+                var note = LocalCache.checkGetOrCreateNote(id)
                 if (note != null) {
-                    collection + note
+                    collection.add(note)
                 }
             }
             return collection
         } else {
-        return notes
+            return notes
         }
 
-         */
         return notes
     }
 
