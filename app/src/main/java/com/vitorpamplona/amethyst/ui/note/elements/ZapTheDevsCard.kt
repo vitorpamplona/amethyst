@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note
+package com.vitorpamplona.amethyst.ui.note.elements
 
 import android.content.Context
 import androidx.compose.animation.Crossfade
@@ -72,7 +72,13 @@ import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
-import com.vitorpamplona.amethyst.ui.note.elements.DisplayZapSplits
+import com.vitorpamplona.amethyst.ui.note.CloseIcon
+import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
+import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
+import com.vitorpamplona.amethyst.ui.note.PayViaIntentDialog
+import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
+import com.vitorpamplona.amethyst.ui.note.ZapIcon
+import com.vitorpamplona.amethyst.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp

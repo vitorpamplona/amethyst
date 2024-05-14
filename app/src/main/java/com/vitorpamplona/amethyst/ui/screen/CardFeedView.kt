@@ -37,7 +37,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,8 +46,8 @@ import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
 import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.ZapTheDevsCard
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
+import com.vitorpamplona.amethyst.ui.note.elements.ZapTheDevsCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
