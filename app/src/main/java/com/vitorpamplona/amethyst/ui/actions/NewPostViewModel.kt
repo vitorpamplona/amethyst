@@ -94,8 +94,8 @@ open class NewPostViewModel() : ViewModel() {
     var account: Account? = null
     var requiresNIP17: Boolean = false
 
-    var originalNote: Note? = null
-    var forkedFromNote: Note? = null
+    var originalNote: Note? by mutableStateOf<Note?>(null)
+    var forkedFromNote: Note? by mutableStateOf<Note?>(null)
 
     var pTags by mutableStateOf<List<User>?>(null)
     var eTags by mutableStateOf<List<Note>?>(null)
