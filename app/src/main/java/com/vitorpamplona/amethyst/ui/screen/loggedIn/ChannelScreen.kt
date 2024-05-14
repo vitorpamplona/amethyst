@@ -147,6 +147,7 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -154,6 +155,7 @@ import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
+import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.liveStreamTag
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.EmptyTagList
@@ -585,6 +587,25 @@ fun MyTextField(
                 },
         )
     }
+}
+
+@Composable
+fun RenderChannelHeader(
+    channelNote: Note,
+    showVideo: Boolean,
+    sendToChannel: Boolean,
+    modifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    ChannelHeader(
+        channelNote = channelNote,
+        showVideo = showVideo,
+        sendToChannel = sendToChannel,
+        modifier = MaterialTheme.colorScheme.innerPostModifier.padding(Size10dp),
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
 }
 
 @Composable
