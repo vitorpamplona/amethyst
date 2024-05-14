@@ -56,21 +56,25 @@ open class NIP90ContentDiscoveryFilter(
                 noteEvent is NIP90ContentDiscoveryResponseEvent && it.event?.pubKey() == dvmkey && it.event?.isTaggedUser(account.keyPair.pubKey.toHexKey()) == true // && params.match(noteEvent)
             }
         var sorted = sort(notes)
-        var note = sorted.first()
+        if (sorted.isNotEmpty()) {
+            var note = sorted.first()
 
-        var eventContent = note.event?.content()
+            var eventContent = note.event?.content()
 
-        var collection: Set<Note> = setOf()
-        val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        var json = mapper.readValue(eventContent, Array::class.java)
-        for (element in json) {
-            // var test = mapper.readValue(element.toString(), Array::class.java)
-            // TODO. This is ugly. how to Kotlin?
-            var id = element.toString().trimStart('[').trimStart('e').trimStart(',').trimEnd(']').trimStart().trimEnd()
-            collection + id
+            var collection: Set<Note> = setOf()
+            val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            var json = mapper.readValue(eventContent, Array::class.java)
+            for (element in json) {
+                // var test = mapper.readValue(element.toString(), Array::class.java)
+                // TODO. This is ugly. how to Kotlin?
+                var id = element.toString().trimStart('[').trimStart('e').trimStart(',').trimEnd(']').trimStart().trimEnd()
+                collection + id
+            }
+
+            return sort(collection)
+        } else {
+            return sort(notes)
         }
-
-        return sort(collection)
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
@@ -98,25 +102,29 @@ open class NIP90ContentDiscoveryFilter(
         // TODO. We want to parse the content of the latest event to ids and get the nodes from these ids
 
         /* var sorted = sort(notes)
-        var note = sorted.first()
+        if (sorted.isNotEmpty()) {
+            var note = sorted.first()
 
-        var eventContent = note.event?.content()
+            var eventContent = note.event?.content()
 
-        val collection: Set<Note> = setOf()
-        val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        var json = mapper.readValue(eventContent, Array::class.java)
-        for (element in json) {
-            // var test = mapper.readValue(element.toString(), Array::class.java)
-            // TODO. This is ugly. how to Kotlin?
-            var id = element.toString().trimStart('[').trimStart('e').trimStart(',').trimEnd(']').trimStart().trimEnd()
+            val collection: Set<Note> = setOf()
+            val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            var json = mapper.readValue(eventContent, Array::class.java)
+            for (element in json) {
+                // var test = mapper.readValue(element.toString(), Array::class.java)
+                // TODO. This is ugly. how to Kotlin?
+                var id = element.toString().trimStart('[').trimStart('e').trimStart(',').trimEnd(']').trimStart().trimEnd()
 
-            var note = LocalCache.getNoteIfExists(id)
-            if (note != null) {
-                collection + note
+                var note = LocalCache.getNoteIfExists(id)
+                if (note != null) {
+                    collection + note
+                }
             }
+            return collection
+        } else {
+        return notes
         }
 
-        return collection
          */
         return notes
     }
