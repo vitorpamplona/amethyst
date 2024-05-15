@@ -55,19 +55,19 @@ class ChatMessageRelayListEvent(
             return ATag.assembleATag(KIND, pubKey, FIXED_D_TAG)
         }
 
+        fun createTagArray(relays: List<String>): Array<Array<String>> {
+            return relays.map {
+                arrayOf("relay", it)
+            }.plusElement(arrayOf("alt", "Relay list for private messages")).toTypedArray()
+        }
+
         fun create(
             relays: List<String>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (ChatMessageRelayListEvent) -> Unit,
         ) {
-            val tags =
-                relays.map {
-                    arrayOf("relay", it)
-                }.plusElement(arrayOf("alt", "Relay list for private messages")).toTypedArray()
-            val msg = ""
-
-            signer.sign(createdAt, KIND, tags, msg, onReady)
+            signer.sign(createdAt, KIND, createTagArray(relays), "", onReady)
         }
     }
 }

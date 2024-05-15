@@ -798,6 +798,11 @@
     <string name="invalid_nip19_uri">Invalid address</string>
     <string name="invalid_nip19_uri_description">Amethyst received a URI to open but that uri was invalid: %1$s</string>
 
+    <string name="dm_relays_not_found">Set up your Private Inbox relays</string>
+    <string name="dm_relays_not_found_description">This setting informs everybody which relays to use when sending messages to you. Without them you might miss some messages.</string>
+    <string name="dm_relays_not_found_explanation">DM Inbox relays accept any message from anyone, but only allows you to download them. For example, inbox.nostr.wine operates in this way. </string>
+    <string name="dm_relays_not_found_create_now">Set up now</string>
+
     <string name="zap_the_devs_title">Zap the Devs!</string>
     <string name="zap_the_devs_description">Your donation helps us make a difference. Every sat counts!</string>
     <string name="donate_now">Donate Now</string>
