@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverChatFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverCommunityFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverLiveFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverMarketplaceFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverNIP89FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
@@ -67,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HiddenUsersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRedirectScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.NIP90ContentDiscoveryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchScreen
@@ -86,6 +88,7 @@ fun AppNavigation(
     newFeedViewModel: NostrChatroomListNewFeedViewModel,
     videoFeedViewModel: NostrVideoFeedViewModel,
     discoverMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel,
+    discoverNip89FeedViewModel: NostrDiscoverNIP89FeedViewModel,
     discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
     discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
     discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
@@ -173,6 +176,7 @@ fun AppNavigation(
                 route.arguments,
                 content = {
                     DiscoverScreen(
+                        discoveryContentNIP89FeedViewModel = discoverNip89FeedViewModel,
                         discoveryMarketplaceFeedViewModel = discoverMarketplaceFeedViewModel,
                         discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
                         discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
@@ -215,7 +219,24 @@ fun AppNavigation(
 
         composable(Route.BlockedUsers.route, content = { HiddenUsersScreen(accountViewModel, nav) })
         composable(Route.Bookmarks.route, content = { BookmarkListScreen(accountViewModel, nav) })
+
         composable(Route.Drafts.route, content = { DraftListScreen(accountViewModel, nav) })
+
+        Route.ContentDiscovery.let { route ->
+            composable(
+                route.route,
+                route.arguments,
+                content = {
+                    it.arguments?.getString("id")?.let { it1 ->
+                        NIP90ContentDiscoveryScreen(
+                            DVMID = it1,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
+                },
+            )
+        }
 
         Route.Profile.let { route ->
             composable(
