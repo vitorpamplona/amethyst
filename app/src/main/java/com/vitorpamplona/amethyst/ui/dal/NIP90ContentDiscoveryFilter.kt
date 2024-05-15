@@ -106,7 +106,6 @@ open class NIP90ContentDiscoveryFilter(
             }
 
         val sorted = sort(notes)
-        println("REQUEST: " + request)
         if (sorted.isNotEmpty()) {
             var note = sorted.first()
 

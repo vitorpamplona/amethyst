@@ -301,3 +301,19 @@ fun FeedEmpty(onRefresh: () -> Unit) {
         OutlinedButton(onClick = onRefresh) { Text(text = stringResource(R.string.refresh)) }
     }
 }
+
+@Composable
+fun FeedEmptywithStatus(
+    status: String,
+    onRefresh: () -> Unit,
+) {
+    Column(
+        Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(status)
+        // Spacer(modifier = StdVertSpacer)
+        // OutlinedButton(onClick = onRefresh) { Text(text = stringResource(R.string.refresh)) }
+    }
+}

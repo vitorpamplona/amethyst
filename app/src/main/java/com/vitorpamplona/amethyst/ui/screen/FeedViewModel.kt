@@ -288,7 +288,6 @@ class NostrNIP90ContentDiscoveryFeedViewModel(val account: Account, val dvmkey: 
     FeedViewModel(NIP90ContentDiscoveryFilter(account, dvmkey, requestid)) {
     class Factory(val account: Account, val dvmkey: String, val requestid: String) : ViewModelProvider.Factory {
         override fun <NostrNIP90ContentDiscoveryFeedViewModel : ViewModel> create(modelClass: Class<NostrNIP90ContentDiscoveryFeedViewModel>): NostrNIP90ContentDiscoveryFeedViewModel {
-            println("FILTERREQUEST " + requestid)
             return NostrNIP90ContentDiscoveryFeedViewModel(account, dvmkey, requestid) as NostrNIP90ContentDiscoveryFeedViewModel
         }
     }

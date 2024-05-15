@@ -56,10 +56,8 @@ open class NIP90StatusFilter(
                 //   &&  it.event?.isTaggedUser(account.keyPair.pubKey.toHexKey()) == true // && params.match(noteEvent)
             }
         if (status.isNotEmpty()) {
-            println("Found status")
             return listOf(status.first())
         } else {
-            println("Empty status")
             return listOf()
         }
     }
@@ -88,10 +86,8 @@ open class NIP90StatusFilter(
                 // && it.event?.isTaggedUser(account.keyPair.pubKey.toHexKey()) == true // && params.match(noteEvent)
             }
         if (status.isNotEmpty()) {
-            println("Found status")
             return setOf(status.first())
         } else {
-            println("Empty status")
             return setOf()
         }
     }
