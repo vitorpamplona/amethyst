@@ -26,10 +26,14 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 open class DiscoverNIP89FeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
+    val lastAnnounced = 90 * 24 * 60 * 60 // 90 Days ago
+    // TODO better than announced would be last active, as this requires the DVM provider to regularly update the NIP89 announcement
+
     override fun feedKey(): String {
         return account.userProfile().pubkeyHex + "-" + followList()
     }
@@ -49,7 +53,7 @@ open class DiscoverNIP89FeedFilter(
         val notes =
             LocalCache.addressables.filterIntoSet { _, it ->
                 val noteEvent = it.event
-                noteEvent is AppDefinitionEvent // && params.match(noteEvent)
+                noteEvent is AppDefinitionEvent && noteEvent.createdAt > TimeUtils.now() - lastAnnounced // && params.match(noteEvent)
             }
 
         return sort(notes)
@@ -73,7 +77,7 @@ open class DiscoverNIP89FeedFilter(
 
         return collection.filterTo(HashSet()) {
             val noteEvent = it.event
-            noteEvent is AppDefinitionEvent // && params.match(noteEvent)
+            noteEvent is AppDefinitionEvent && noteEvent.createdAt > TimeUtils.now() - lastAnnounced // && params.match(noteEvent)
         }
     }
 

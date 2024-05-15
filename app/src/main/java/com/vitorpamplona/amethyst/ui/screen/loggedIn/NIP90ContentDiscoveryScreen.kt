@@ -34,7 +34,9 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.amethyst.ui.screen.DVMStatusView
 import com.vitorpamplona.amethyst.ui.screen.NostrNIP90ContentDiscoveryFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrNIP90StatusFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
 
@@ -44,10 +46,34 @@ fun NIP90ContentDiscoveryScreen(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    var requestID = ""
+    val thread =
+        Thread {
+            try {
+                NIP90ContentDiscoveryRequestEvent.create(DVMID, accountViewModel.account.signer) {
+                    Client.send(it)
+                    requestID = it.id
+                    println("REQUESTID: " + requestID)
+                    LocalCache.justConsume(it, null)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+    thread.start()
+    thread.join()
+
     val resultFeedViewModel: NostrNIP90ContentDiscoveryFeedViewModel =
         viewModel(
             key = "NostrNIP90ContentDiscoveryFeedViewModel",
-            factory = NostrNIP90ContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmkey = DVMID),
+            factory = NostrNIP90ContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmkey = DVMID, requestid = requestID),
+        )
+
+    val statusFeedViewModel: NostrNIP90StatusFeedViewModel =
+        viewModel(
+            key = "NostrNIP90StatusFeedViewModel",
+            factory = NostrNIP90StatusFeedViewModel.Factory(accountViewModel.account, dvmkey = DVMID, requestid = requestID),
         )
 
     val userState by accountViewModel.account.decryptBookmarks.observeAsState() // TODO
@@ -56,7 +82,7 @@ fun NIP90ContentDiscoveryScreen(
         resultFeedViewModel.invalidateData()
     }
 
-    RenderNostrNIP90ContentDiscoveryScreen(DVMID, accountViewModel, nav, resultFeedViewModel)
+    RenderNostrNIP90ContentDiscoveryScreen(DVMID, accountViewModel, nav, resultFeedViewModel, statusFeedViewModel)
 }
 
 @Composable
@@ -66,11 +92,11 @@ private fun RenderNostrNIP90ContentDiscoveryScreen(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     resultFeedViewModel: NostrNIP90ContentDiscoveryFeedViewModel,
+    statusFeedViewModel: NostrNIP90StatusFeedViewModel,
 ) {
     Column(Modifier.fillMaxHeight()) {
         val pagerState = rememberPagerState { 2 }
         val coroutineScope = rememberCoroutineScope()
-
         // TODO Render a nice header with image and DVM name from the id
 
        /* if (DVMID != null) {
@@ -88,26 +114,22 @@ private fun RenderNostrNIP90ContentDiscoveryScreen(
             }
         } */
 
-        if (DVMID != null) {
-            val thread =
-                Thread {
-                    try {
-                        NIP90ContentDiscoveryRequestEvent.create(DVMID, accountViewModel.account.signer) {
-                            Client.send(it)
-                            LocalCache.justConsume(it, null)
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
+        // TODO only show this when the feed below hasnt loaded. I this possible?
+        // TODO render this more as a status label rather than a note
 
-            thread.start()
-        }
+        DVMStatusView(
+            statusFeedViewModel,
+            null,
+            enablePullRefresh = false,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
 
         HorizontalPager(state = pagerState) {
             RefresheableFeedView(
                 resultFeedViewModel,
                 null,
+                enablePullRefresh = false,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

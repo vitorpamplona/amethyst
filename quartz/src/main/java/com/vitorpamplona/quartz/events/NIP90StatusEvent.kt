@@ -36,7 +36,7 @@ class NIP90StatusEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = 7000
-        const val ALT = "NIP90 Content Discovery reply"
+        const val ALT = "NIP90 Status update"
 
         fun create(
             signer: NostrSigner,

@@ -159,7 +159,25 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                 types = setOf(FeedType.GLOBAL),
                 filter =
                     JsonFilter(
-                        kinds = listOf(NIP90ContentDiscoveryResponseEvent.KIND, NIP90StatusEvent.KIND),
+                        kinds = listOf(NIP90ContentDiscoveryResponseEvent.KIND),
+                        limit = 300,
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(account.defaultDiscoveryFollowList.value)
+                                ?.relayList,
+                    ),
+            ),
+        )
+    }
+
+    fun createNIP90StatusFilter(): List<TypedFilter> {
+        return listOfNotNull(
+            TypedFilter(
+                types = setOf(FeedType.GLOBAL),
+                filter =
+                    JsonFilter(
+                        kinds = listOf(NIP90StatusEvent.KIND),
                         limit = 300,
                         since =
                             latestEOSEs.users[account.userProfile()]
@@ -446,6 +464,7 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
             createLiveStreamFilter()
                 .plus(createNIP89Filter(listOf("5300")))
                 .plus(createNIP90ResponseFilter())
+                .plus(createNIP90StatusFilter())
                 .plus(createPublicChatFilter())
                 .plus(createMarketplaceFilter())
                 .plus(

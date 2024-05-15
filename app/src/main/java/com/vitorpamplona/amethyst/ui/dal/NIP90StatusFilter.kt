@@ -20,22 +20,20 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.events.MuteListEvent
-import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.events.NIP90StatusEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 
-open class NIP90ContentDiscoveryFilter(
+open class NIP90StatusFilter(
     val account: Account,
     val dvmkey: String,
     val request: String,
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + request
+        return account.userProfile().pubkeyHex + "-" + followList()
     }
 
     open fun followList(): String {
@@ -50,35 +48,19 @@ open class NIP90ContentDiscoveryFilter(
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
 
-        val notes =
+        val status =
             LocalCache.notes.filterIntoSet { _, it ->
                 val noteEvent = it.event
-                noteEvent is NIP90ContentDiscoveryResponseEvent && it.event!!.isTaggedEvent(request)
-                //  it.event?.pubKey() == dvmkey && it.event?.isTaggedUser(account.keyPair.pubKey.toHexKey()) == true // && params.match(noteEvent)
+                noteEvent is NIP90StatusEvent && it.event?.pubKey() == dvmkey &&
+                    it.event!!.isTaggedEvent(request)
+                //   &&  it.event?.isTaggedUser(account.keyPair.pubKey.toHexKey()) == true // && params.match(noteEvent)
             }
-
-        var sorted = sort(notes)
-        if (sorted.isNotEmpty()) {
-            var note = sorted.first()
-
-            var eventContent = note.event?.content()
-
-            var collection: HashSet<Note> = hashSetOf()
-            val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            var json = mapper.readValue(eventContent, Array::class.java)
-            for (element in json) {
-                // var test = mapper.readValue(element.toString(), Array::class.java)
-                // TODO. This is ugly. how to Kotlin?
-                var id = element.toString().trimStart('[').trimStart('e').trimStart(',').trimEnd(']').trimStart().trimEnd()
-                var note = LocalCache.checkGetOrCreateNote(id)
-                if (note != null) {
-                    collection.add(note)
-                }
-            }
-
-            return collection.toList()
+        if (status.isNotEmpty()) {
+            println("Found status")
+            return listOf(status.first())
         } else {
-            return sort(notes)
+            println("Empty status")
+            return listOf()
         }
     }
 
@@ -98,37 +80,19 @@ open class NIP90ContentDiscoveryFilter(
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         // val params = buildFilterParams(account)
 
-        val notes =
-            collection.filterTo(HashSet()) {
+        val status =
+            LocalCache.notes.filterIntoSet { _, it ->
                 val noteEvent = it.event
-                noteEvent is NIP90ContentDiscoveryResponseEvent && // &&
-                    it.event!!.isTaggedEvent(request) // && it.event?.isTaggedUser(account.keyPair.pubKey.toHexKey()) == true // && params.match(noteEvent)
+                noteEvent is NIP90StatusEvent && it.event?.pubKey() == dvmkey &&
+                    it.event!!.isTaggedEvent(request)
+                // && it.event?.isTaggedUser(account.keyPair.pubKey.toHexKey()) == true // && params.match(noteEvent)
             }
-
-        val sorted = sort(notes)
-        println("REQUEST: " + request)
-        if (sorted.isNotEmpty()) {
-            var note = sorted.first()
-
-            var eventContent = note.event?.content()
-            println(eventContent)
-
-            val collection: HashSet<Note> = hashSetOf()
-            val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            var json = mapper.readValue(eventContent, Array::class.java)
-            for (element in json) {
-                // var test = mapper.readValue(element.toString(), Array::class.java)
-                // TODO. This is ugly. how to Kotlin?
-                var id = element.toString().trimStart('[').trimStart('e').trimStart(',').trimEnd(']').trimStart().trimEnd()
-
-                val note = LocalCache.checkGetOrCreateNote(id)
-                if (note != null) {
-                    collection.add(note)
-                }
-            }
-            return collection
+        if (status.isNotEmpty()) {
+            println("Found status")
+            return setOf(status.first())
         } else {
-            return notes
+            println("Empty status")
+            return setOf()
         }
     }
 

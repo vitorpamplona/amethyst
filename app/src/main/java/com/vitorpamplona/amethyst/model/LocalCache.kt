@@ -91,6 +91,7 @@ import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.events.NIP90StatusEvent
 import com.vitorpamplona.quartz.events.NIP90UserDiscoveryRequestEvent
 import com.vitorpamplona.quartz.events.NIP90UserDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.NNSEvent
@@ -418,6 +419,34 @@ object LocalCache {
 
     fun consume(
         event: NIP90ContentDiscoveryRequestEvent,
+        relay: Relay? = null,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        val replyTo = computeReplyTo(event)
+
+        note.loadEvent(event, author, replyTo)
+
+        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()}
+        // ${note.event?.content()?.split("\n")?.take(100)} ${formattedDateTime(event.createdAt)}")
+
+        // Counts the replies
+        replyTo.forEach { it.addReply(note) }
+
+        refreshObservers(note)
+    }
+
+    fun consume(
+        event: NIP90StatusEvent,
         relay: Relay? = null,
     ) {
         val note = getOrCreateNote(event.id)
@@ -2415,6 +2444,7 @@ object LocalCache {
                     }
                 }
                 is LnZapRequestEvent -> consume(event)
+                is NIP90StatusEvent -> consume(event, relay)
                 is NIP90ContentDiscoveryResponseEvent -> consume(event, relay)
                 is NIP90ContentDiscoveryRequestEvent -> consume(event, relay)
                 is NIP90UserDiscoveryResponseEvent -> consume(event, relay)
