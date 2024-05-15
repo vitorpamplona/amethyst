@@ -843,11 +843,7 @@ open class NewPostViewModel() : ViewModel() {
     }
 
     open fun findUrlInMessage(): String? {
-        return message.text.split('\n').firstNotNullOfOrNull { paragraph ->
-            paragraph.split(' ').firstOrNull { word: String ->
-                RichTextParser.isValidURL(word) || RichTextParser.isUrlWithoutScheme(word)
-            }
-        }
+        return RichTextParser().parseValidUrls(message.text).firstOrNull()
     }
 
     open fun removeFromReplyList(userToRemove: User) {
