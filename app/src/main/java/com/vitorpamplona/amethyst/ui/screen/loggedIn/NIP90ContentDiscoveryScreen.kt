@@ -124,6 +124,7 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
 
         // TODO 2 Get the latest event from the statusFeedViewModel
         // TODO How do we extract the latest event.content (or event.status) from statusFeedViewModel
+        // TODO We want to update dvmStatus with the content of the latest Status event
         var dvmStatus = "DVM is processing..."
 
       /*  if (statusFeedViewModel.localFilter.feed().isNotEmpty()) {
