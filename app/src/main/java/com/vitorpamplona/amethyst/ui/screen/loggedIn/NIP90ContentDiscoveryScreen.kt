@@ -101,7 +101,7 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
         val pagerState = rememberPagerState { 2 }
         val coroutineScope = rememberCoroutineScope()
 
-        // TODO this now shows the first status update but there might be a better way
+        // TODO (Optional) this now shows the first status update but there might be a better way
         var dvmState = stringResource(R.string.dvm_waiting_status)
         var dvmNoState = stringResource(R.string.dvm_no_status)
 
@@ -128,14 +128,15 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
         thread.start()
         thread.join()
 
-        // TODO Maybe render a nice header with image and DVM name from the dvmID
-        // TODO How do we get the event information here?, LocalCache.checkGetOrCreateNote() returns note but event is empty
-        // TODO oterwise we have the NIP89 info in (note.event as AppDefinitionEvent).appMetaData()
+        // TODO (Optional) Maybe render a nice header with image and DVM name from the dvmID
+        // TODO (Optional) How do we get the event information here?, LocalCache.checkGetOrCreateNote() returns note but event is empty
+        // TODO (Optional) otherwise we have the NIP89 info in (note.event as AppDefinitionEvent).appMetaData()
         // Text(text = dvminfo)
 
         HorizontalPager(state = pagerState) {
             RefresheableBox(resultFeedViewModel, false) {
                 SaveableFeedState(resultFeedViewModel, null) { listState ->
+                    // TODO (Optional) Instead of a like reaction, do a Kind 31989 NIP89 App recommendation
                     RenderFeedState(
                         resultFeedViewModel,
                         accountViewModel,
@@ -143,7 +144,7 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
                         nav,
                         null,
                         onEmpty = {
-                            // TODO Maybe also show some dvm image/text while waiting for the notes in this custom component
+                            // TODO (Optional) Maybe also show some dvm image/text while waiting for the notes in this custom component
                             FeedEmptywithStatus(status = dvmState) {
                             }
                         },
