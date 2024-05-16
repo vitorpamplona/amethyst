@@ -38,11 +38,13 @@ import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.Nip01Serializer
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.math.BigDecimal
+import java.security.MessageDigest
 
 @Immutable
 open class Event(
@@ -273,6 +275,11 @@ open class Event(
         return id.equals(generateId())
     }
 
+    fun hasCorrectIDHash2(): Boolean {
+        if (id.isEmpty()) return false
+        return id.equals(generateId2())
+    }
+
     fun hasVerifiedSignature(): Boolean {
         if (id.isEmpty() || sig.isEmpty()) return false
         return CryptoUtils.verifySignature(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
@@ -311,6 +318,12 @@ open class Event(
 
     private fun generateId(): String {
         return CryptoUtils.sha256(makeJsonForId().toByteArray()).toHexKey()
+    }
+
+    fun generateId2(): String {
+        val sha256 = MessageDigest.getInstance("SHA-256")
+        Nip01Serializer().serializeEventInto(this, Nip01Serializer.BufferedDigestWriter(sha256))
+        return sha256.digest().toHexKey()
     }
 
     private class EventDeserializer : StdDeserializer<Event>(Event::class.java) {

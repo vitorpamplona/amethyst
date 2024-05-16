@@ -23,13 +23,16 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.encoders.Nip01Serializer
 import com.vitorpamplona.quartz.events.Event
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.security.MessageDigest
 
 /**
  * Benchmark, which will execute on an Android device.
@@ -163,16 +166,6 @@ class EventBenchmark {
     }
 
     @Test
-    fun checkIDHashPayload2() {
-        val event = Event.fromJson(payload2)
-
-        benchmarkRule.measureRepeated {
-            // Should pass
-            assertTrue(event.hasCorrectIDHash())
-        }
-    }
-
-    @Test
     fun toMakeJsonForID() {
         val event = Event.fromJson(payload2)
 
@@ -187,6 +180,70 @@ class EventBenchmark {
         benchmarkRule.measureRepeated {
             // Should pass
             assertNotNull(CryptoUtils.sha256(byteArray))
+        }
+    }
+
+    @Test
+    fun checkIDHashPayload2Slow() {
+        val event = Event.fromJson(payload2)
+        benchmarkRule.measureRepeated {
+            // Should pass
+            assertTrue(event.hasCorrectIDHash())
+        }
+    }
+
+    @Test
+    fun checkIDHashPayload2Fast() {
+        val event = Event.fromJson(payload2)
+        benchmarkRule.measureRepeated {
+            // Should pass
+            assertTrue(event.hasCorrectIDHash2())
+        }
+    }
+
+    @Test
+    fun eventSerializerTest() {
+        val event = Event.fromJson(payload2)
+
+        benchmarkRule.measureRepeated {
+            val mapper = Nip01Serializer.StringWriter()
+            Nip01Serializer().serializeEventInto(event, mapper)
+        }
+    }
+
+    val specialEncoders =
+        "Test\b\bTest\n\nTest\t\tTest\u000c\u000cTest\r\rTest\\Test\\\\Test\"Test/Test//Test"
+
+    @Test
+    fun jsonStringEncoderJackson() {
+        val jsonMapper = jacksonObjectMapper()
+        benchmarkRule.measureRepeated {
+            jsonMapper.writeValueAsString(specialEncoders)
+        }
+    }
+
+    @Test
+    fun jsonStringEncoderOurs() {
+        val serializer = Nip01Serializer()
+        benchmarkRule.measureRepeated {
+            serializer.escapeStringInto(specialEncoders, Nip01Serializer.StringWriter())
+        }
+    }
+
+    @Test
+    fun jsonStringEncoderSha256Jackson() {
+        val jsonMapper = jacksonObjectMapper()
+        benchmarkRule.measureRepeated {
+            val digest = MessageDigest.getInstance("SHA-256")
+            digest.update(jsonMapper.writeValueAsString(specialEncoders).toByteArray())
+        }
+    }
+
+    @Test
+    fun jsonStringEncoderSha256Ours() {
+        val serializer = Nip01Serializer()
+        benchmarkRule.measureRepeated {
+            serializer.escapeStringInto(specialEncoders, Nip01Serializer.BufferedDigestWriter(MessageDigest.getInstance("SHA-256")))
         }
     }
 }
