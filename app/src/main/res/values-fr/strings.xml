@@ -429,6 +429,7 @@
     <string name="are_you_sure_you_want_to_log_out">Se déconnecter supprime toutes vos informations locales. Assurez-vous d\'avoir vos clés privées sauvegardées pour éviter de perdre votre compte. Voulez-vous continuer ?</string>
     <string name="followed_tags">Tags suivis</string>
     <string name="relay_setup">Relais</string>
+    <string name="discover_content">Découverte de notes</string>
     <string name="discover_marketplace">Place de Marché</string>
     <string name="discover_live">Direct</string>
     <string name="discover_community">Communauté</string>
@@ -669,6 +670,10 @@
     <string name="show_npub_as_a_qr_code">Afficher npub en tant que QR code</string>
     <string name="invalid_nip19_uri">Adresse invalide</string>
     <string name="invalid_nip19_uri_description">Amethyst a reçu une URI à ouvrir mais cette URI était invalide : %1$s</string>
+    <string name="dm_relays_not_found">Configurer vos relais de messagerie privée</string>
+    <string name="dm_relays_not_found_description">Ce paramètre informe tout le monde les relais à utiliser pour vous envoyer des messages. Sans eux, vous risquez de manquer certains messages.</string>
+    <string name="dm_relays_not_found_explanation">Les relais de messagerie DM acceptent n\'importe quel message de n\'importe qui, mais vous permet seulement de les télécharger. Par exemple, inbox.nostr.wine fonctionne de cette façon. </string>
+    <string name="dm_relays_not_found_create_now">Configurer maintenant</string>
     <string name="zap_the_devs_title">Zap les Devs !</string>
     <string name="zap_the_devs_description">Votre don nous aide à faire la différence. Chaque sat compte !</string>
     <string name="donate_now">Faire un don maintenant</string>
