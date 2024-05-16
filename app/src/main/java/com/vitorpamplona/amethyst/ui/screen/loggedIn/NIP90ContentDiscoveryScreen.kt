@@ -122,26 +122,27 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
             thread.join()
         }
 
-        // TODO 2 Get the latest event from the statusFeedViewModel
-        // TODO How do we extract the latest event.content (or event.status) from statusFeedViewModel
-        // TODO We want to update dvmStatus with the content of the latest Status event
+        // TODO this shows the status but there might be a better way
         var dvmStatus = "DVM is processing..."
+        val thread =
+            Thread {
+                println(dvmStatus)
+                while (resultFeedViewModel.localFilter.feed().isEmpty()) {
+                    try {
+                        if (statusFeedViewModel.localFilter.feed().isNotEmpty()) {
+                            statusFeedViewModel.localFilter.feed()[0].event?.let { dvmStatus = it.content() }
+                            println(dvmStatus)
+                            break
+                        } else {
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
 
-      /*  if (statusFeedViewModel.localFilter.feed().isNotEmpty()) {
-            statusFeedViewModel.localFilter.feed()[0].event?.let { Text(text = it.content()) }
-        } else {
-            Text(text = "Nah")
-        }
-
-         DVMStatusView(
-            statusFeedViewModel,
-            null,
-            enablePullRefresh = false,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )*/
-
-        // Text(text = dvminfo)
+        thread.start()
+        thread.join()
 
         HorizontalPager(state = pagerState) {
             RefresheableBox(resultFeedViewModel, false) {
