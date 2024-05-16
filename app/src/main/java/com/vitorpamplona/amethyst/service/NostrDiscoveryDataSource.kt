@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
@@ -34,6 +35,8 @@ import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
+import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.events.NIP90StatusEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -128,6 +131,61 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                         ),
                 )
             },
+        )
+    }
+
+    fun createNIP89Filter(kTags: List<String>): List<TypedFilter> {
+        return listOfNotNull(
+            TypedFilter(
+                types = setOf(FeedType.GLOBAL),
+                filter =
+                    JsonFilter(
+                        kinds = listOf(AppDefinitionEvent.KIND),
+                        limit = 300,
+                        tags = mapOf("k" to kTags),
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(account.defaultDiscoveryFollowList.value)
+                                ?.relayList,
+                    ),
+            ),
+        )
+    }
+
+    fun createNIP90ResponseFilter(): List<TypedFilter> {
+        return listOfNotNull(
+            TypedFilter(
+                types = setOf(FeedType.GLOBAL),
+                filter =
+                    JsonFilter(
+                        kinds = listOf(NIP90ContentDiscoveryResponseEvent.KIND),
+                        limit = 300,
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(account.defaultDiscoveryFollowList.value)
+                                ?.relayList,
+                    ),
+            ),
+        )
+    }
+
+    fun createNIP90StatusFilter(): List<TypedFilter> {
+        return listOfNotNull(
+            TypedFilter(
+                types = setOf(FeedType.GLOBAL),
+                filter =
+                    JsonFilter(
+                        kinds = listOf(NIP90StatusEvent.KIND),
+                        limit = 300,
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(account.defaultDiscoveryFollowList.value)
+                                ?.relayList,
+                    ),
+            ),
         )
     }
 
@@ -404,6 +462,9 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
     override fun updateChannelFilters() {
         discoveryFeedChannel.typedFilters =
             createLiveStreamFilter()
+                .plus(createNIP89Filter(listOf("5300")))
+                .plus(createNIP90ResponseFilter())
+                .plus(createNIP90StatusFilter())
                 .plus(createPublicChatFilter())
                 .plus(createMarketplaceFilter())
                 .plus(
@@ -417,6 +478,7 @@ object NostrDiscoveryDataSource : NostrDataSource("DiscoveryFeed") {
                         createPublicChatsGeohashesFilter(),
                     ),
                 )
+                .toList()
                 .ifEmpty { null }
     }
 }

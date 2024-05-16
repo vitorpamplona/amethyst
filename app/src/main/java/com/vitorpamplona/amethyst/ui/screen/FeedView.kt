@@ -78,6 +78,21 @@ fun RefresheableFeedView(
 }
 
 @Composable
+fun DVMStatusView(
+    viewModel: FeedViewModel,
+    routeForLastRead: String?,
+    enablePullRefresh: Boolean = true,
+    scrollStateKey: String? = null,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    viewModel.invalidateData()
+    SaveableFeedState(viewModel, scrollStateKey) { listState ->
+        RenderFeedState(viewModel, accountViewModel, listState, nav, routeForLastRead)
+    }
+}
+
+@Composable
 fun RefresheableBox(
     viewModel: InvalidatableViewModel,
     enablePullRefresh: Boolean = true,
@@ -284,5 +299,21 @@ fun FeedEmpty(onRefresh: () -> Unit) {
         Text(stringResource(R.string.feed_is_empty))
         Spacer(modifier = StdVertSpacer)
         OutlinedButton(onClick = onRefresh) { Text(text = stringResource(R.string.refresh)) }
+    }
+}
+
+@Composable
+fun FeedEmptywithStatus(
+    status: String,
+    onRefresh: () -> Unit,
+) {
+    Column(
+        Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(status)
+        // Spacer(modifier = StdVertSpacer)
+        // OutlinedButton(onClick = onRefresh) { Text(text = stringResource(R.string.refresh)) }
     }
 }

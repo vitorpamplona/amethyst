@@ -54,6 +54,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
@@ -91,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.findHashtags
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -295,6 +298,15 @@ private fun SearchTextField(
     searchBarViewModel: SearchBarViewModel,
     onTextChanges: (String) -> Unit,
 ) {
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        launch {
+            delay(100)
+            focusRequester.requestFocus()
+        }
+    }
+
     Row(
         modifier = Modifier.padding(10.dp).fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -312,7 +324,11 @@ private fun SearchTextField(
                     capitalization = KeyboardCapitalization.Sentences,
                 ),
             leadingIcon = { SearchIcon(modifier = Size20Modifier, Color.Unspecified) },
-            modifier = Modifier.weight(1f, true).defaultMinSize(minHeight = 20.dp),
+            modifier =
+                Modifier
+                    .weight(1f, true)
+                    .defaultMinSize(minHeight = 20.dp)
+                    .focusRequester(focusRequester),
             placeholder = {
                 Text(
                     text = stringResource(R.string.npub_hex_username),

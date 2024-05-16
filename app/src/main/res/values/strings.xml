@@ -490,6 +490,7 @@
 
     <string name="relay_setup">Relays</string>
 
+    <string name="discover_content">Note Discovery</string>
     <string name="discover_marketplace">Marketplace</string>
     <string name="discover_live">Live</string>
     <string name="discover_community">Community</string>
@@ -845,4 +846,7 @@
     <string name="draft_note">Draft Note</string>
 
     <string name="load_from_text">From Msg</string>
+
+    <string name="dvm_waiting_status">Waiting for DVM to reply</string>
+    <string name="dvm_no_status">DVM seems not to reply</string>
 </resources>

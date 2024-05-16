@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
@@ -213,6 +214,9 @@ fun InnerChannelCardWithReactions(
         is ClassifiedsEvent -> {
             InnerCardBox(baseNote, accountViewModel, nav)
         }
+        is AppDefinitionEvent -> {
+            InnerCardRow(baseNote, accountViewModel, nav)
+        }
     }
 }
 
@@ -267,6 +271,9 @@ private fun RenderNoteRow(
         }
         is ChannelCreateEvent -> {
             RenderChannelThumb(baseNote, accountViewModel, nav)
+        }
+        is AppDefinitionEvent -> {
+            RenderContentDVMThumb(baseNote, accountViewModel, nav)
         }
     }
 }
@@ -516,6 +523,13 @@ data class CommunityCard(
     val moderators: ImmutableList<Participant>,
 )
 
+@Immutable
+data class DVMCard(
+    val name: String,
+    val description: String?,
+    val cover: String?,
+)
+
 @Composable
 fun RenderCommunitiesThumb(
     baseNote: Note,
@@ -713,6 +727,92 @@ private fun LoadParticipants(
     }
 
     inner(participantUsers)
+}
+
+@Composable
+fun RenderContentDVMThumb(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val noteEvent = baseNote.event as? AppDefinitionEvent ?: return
+
+    val card by
+        baseNote
+            .live()
+            .metadata
+            .map {
+                val noteEvent = it.note.event as? AppDefinitionEvent
+
+                DVMCard(
+                    name = noteEvent?.appMetaData()?.name ?: "",
+                    description = noteEvent?.appMetaData()?.about ?: "",
+                    cover = noteEvent?.appMetaData()?.image?.ifBlank { null },
+                )
+            }
+            .distinctUntilChanged()
+            .observeAsState(
+                DVMCard(
+                    name = noteEvent.appMetaData()?.name ?: "",
+                    description = noteEvent.appMetaData()?.about ?: "",
+                    cover = noteEvent.appMetaData()?.image?.ifBlank { null },
+                ),
+            )
+
+    LeftPictureLayout(
+        onImage = {
+            card.cover?.let {
+                Box(contentAlignment = BottomStart) {
+                    AsyncImage(
+                        model = it,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().clip(QuoteBorder),
+                    )
+                }
+            } ?: run { DisplayAuthorBanner(baseNote) }
+        },
+        onTitleRow = {
+            Text(
+                text = card.name,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+
+            Spacer(modifier = StdHorzSpacer)
+            LikeReaction(
+                baseNote = baseNote,
+                grayTint = MaterialTheme.colorScheme.onSurface,
+                accountViewModel = accountViewModel,
+                nav,
+            )
+            Spacer(modifier = StdHorzSpacer)
+            ZapReaction(
+                baseNote = baseNote,
+                grayTint = MaterialTheme.colorScheme.onSurface,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        },
+        onDescription = {
+            card.description?.let {
+                Spacer(modifier = StdVertSpacer)
+                Row {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.placeholderText,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        fontSize = 14.sp,
+                    )
+                }
+            }
+        },
+        onBottomRow = {
+        },
+    )
 }
 
 @Composable

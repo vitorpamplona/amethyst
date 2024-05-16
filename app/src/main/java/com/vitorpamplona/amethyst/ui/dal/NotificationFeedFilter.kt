@@ -37,6 +37,9 @@ import com.vitorpamplona.quartz.events.HighlightEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
+import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.events.NIP90StatusEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RepostEvent
@@ -111,6 +114,7 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
             it.event !is LnZapRequestEvent &&
             it.event !is BadgeDefinitionEvent &&
             it.event !is BadgeProfilesEvent &&
+            it.event !is NIP90ContentDiscoveryResponseEvent && it.event !is NIP90StatusEvent && it.event !is NIP90ContentDiscoveryRequestEvent &&
             it.event !is GiftWrapEvent &&
             (it.event is LnZapEvent || notifAuthor != loggedInUserHex) &&
             (filterParams.isGlobal || filterParams.followLists?.users?.contains(notifAuthor) == true) &&
