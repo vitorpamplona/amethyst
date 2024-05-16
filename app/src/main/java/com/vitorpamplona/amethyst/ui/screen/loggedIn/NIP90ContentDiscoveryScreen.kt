@@ -31,7 +31,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.screen.FeedEmptywithStatus
@@ -100,7 +102,8 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
         val coroutineScope = rememberCoroutineScope()
 
         // TODO this now shows the first status update but there might be a better way
-        var dvmStatus = "DVM is processing..."
+        var dvmStatus = stringResource(R.string.dvm_no_status)
+
         val thread =
             Thread {
                 var count = 0
@@ -112,7 +115,6 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
                             break
                         } else if (count > 1000) {
                             // Might not be the best way, but we want to avoid hanging in the loop forever
-                            break
                         } else {
                             count++
                         }
