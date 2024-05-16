@@ -111,7 +111,7 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
                 while (resultFeedViewModel.localFilter.feed().isEmpty()) {
                     try {
                         if (statusFeedViewModel.localFilter.feed().isNotEmpty()) {
-                            statusFeedViewModel.localFilter.feed()[0].event?.let { dvmStatus = it.content() }
+                            statusFeedViewModel.localFilter.feed()[0].event?.let { dvmState = it.content() }
                             println(dvmState)
                             break
                         } else if (count > 1000) {
