@@ -316,7 +316,7 @@ open class Event(
         return makeJsonForId(pubKey, createdAt, kind, tags, content)
     }
 
-    private fun generateId(): String {
+    fun generateId(): String {
         return CryptoUtils.sha256(makeJsonForId().toByteArray()).toHexKey()
     }
 
