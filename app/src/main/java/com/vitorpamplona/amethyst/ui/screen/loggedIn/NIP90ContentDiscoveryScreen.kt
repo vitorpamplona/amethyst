@@ -40,7 +40,6 @@ import com.vitorpamplona.amethyst.ui.screen.NostrNIP90StatusFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
-import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
 
 @Composable
@@ -90,7 +89,7 @@ fun NIP90ContentDiscoveryScreen(
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 fun RenderNostrNIP90ContentDiscoveryScreen(
-    DVMID: String?,
+    dvmID: String?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     resultFeedViewModel: NostrNIP90ContentDiscoveryFeedViewModel,
@@ -99,50 +98,36 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
     Column(Modifier.fillMaxHeight()) {
         val pagerState = rememberPagerState { 2 }
         val coroutineScope = rememberCoroutineScope()
-        // TODO 1 Render a nice header with image and DVM name from the id
-        // TODO How do we get the event information here?
 
-        var dvminfo = "DVM " + DVMID
-        if (DVMID != null) {
-            val thread =
-                Thread {
-                    try {
-                        var note = LocalCache.checkGetOrCreateNote(DVMID)
-                        if (note != null) {
-                            dvminfo = ((note.event as AppDefinitionEvent).appMetaData()?.name ?: "DVM from note")
-                        } else {
-                            dvminfo = "DVM from not found"
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-
-            thread.start()
-            thread.join()
-        }
-
-        // TODO this shows the status but there might be a better way
+        // TODO this now shows the first status update but there might be a better way
         var dvmStatus = "DVM is processing..."
         val thread =
             Thread {
-                println(dvmStatus)
+                var count = 0
                 while (resultFeedViewModel.localFilter.feed().isEmpty()) {
                     try {
                         if (statusFeedViewModel.localFilter.feed().isNotEmpty()) {
                             statusFeedViewModel.localFilter.feed()[0].event?.let { dvmStatus = it.content() }
                             println(dvmStatus)
                             break
+                        } else if (count > 1000) {
+                            // Might not be the best way, but we want to avoid hanging in the loop forever
+                            break
                         } else {
+                            count++
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
                 }
             }
-
         thread.start()
         thread.join()
+
+        // TODO Maybe render a nice header with image and DVM name from the dvmID
+        // TODO How do we get the event information here?, LocalCache.checkGetOrCreateNote() returns note but event is empty
+        // TODO oterwise we have the NIP89 info in (note.event as AppDefinitionEvent).appMetaData()
+        // Text(text = dvminfo)
 
         HorizontalPager(state = pagerState) {
             RefresheableBox(resultFeedViewModel, false) {
@@ -154,6 +139,7 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
                         nav,
                         null,
                         onEmpty = {
+                            // TODO Maybe also show some dvm image/text while waiting for the notes in this custom component
                             FeedEmptywithStatus(status = dvmStatus) {
                             }
                         },
