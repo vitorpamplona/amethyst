@@ -47,6 +47,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
@@ -63,11 +64,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
@@ -113,6 +114,13 @@ class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
     var walletConnectPubkey by mutableStateOf(TextFieldValue(""))
     var walletConnectSecret by mutableStateOf(TextFieldValue(""))
     var selectedZapType by mutableStateOf(LnZapEvent.ZapType.PRIVATE)
+
+    fun copyFromClipboard(text: String) {
+        if (text.isBlank()) {
+            return
+        }
+        updateNIP47(text)
+    }
 
     fun load() {
         this.amountSet = account.zapAmountChoices
@@ -224,7 +232,7 @@ fun UpdateZapAmountDialog(
     accountViewModel: AccountViewModel,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val clipboardManager = LocalClipboardManager.current
 
     val postViewModel: UpdateZapAmountViewModel =
         viewModel(
@@ -447,6 +455,19 @@ fun UpdateZapAmountDialog(
                                     contentDescription = stringResource(id = R.string.accessibility_navigate_to_alby),
                                     modifier = Modifier.size(24.dp),
                                     tint = Color.Unspecified,
+                                )
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    clipboardManager.getText()?.let { postViewModel.copyFromClipboard(it.text) }
+                                },
+                            ) {
+                                Icon(
+                                    Icons.Default.ContentPaste,
+                                    contentDescription = stringResource(id = R.string.paste_from_clipboard),
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.primary,
                                 )
                             }
 
