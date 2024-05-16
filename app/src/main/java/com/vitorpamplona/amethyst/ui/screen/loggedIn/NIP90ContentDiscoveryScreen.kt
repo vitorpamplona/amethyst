@@ -102,7 +102,8 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
         val coroutineScope = rememberCoroutineScope()
 
         // TODO this now shows the first status update but there might be a better way
-        var dvmStatus = stringResource(R.string.dvm_no_status)
+        var dvmState = stringResource(R.string.dvm_waiting_status)
+        var dvmNoState = stringResource(R.string.dvm_no_status)
 
         val thread =
             Thread {
@@ -111,9 +112,10 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
                     try {
                         if (statusFeedViewModel.localFilter.feed().isNotEmpty()) {
                             statusFeedViewModel.localFilter.feed()[0].event?.let { dvmStatus = it.content() }
-                            println(dvmStatus)
+                            println(dvmState)
                             break
                         } else if (count > 1000) {
+                            dvmState = dvmNoState
                             // Might not be the best way, but we want to avoid hanging in the loop forever
                         } else {
                             count++
@@ -142,7 +144,7 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
                         null,
                         onEmpty = {
                             // TODO Maybe also show some dvm image/text while waiting for the notes in this custom component
-                            FeedEmptywithStatus(status = dvmStatus) {
+                            FeedEmptywithStatus(status = dvmState) {
                             }
                         },
                     )

@@ -847,5 +847,6 @@
 
     <string name="load_from_text">From Msg</string>
 
+    <string name="dvm_waiting_status">Waiting for DVM to reply</string>
     <string name="dvm_no_status">DVM seems not to reply</string>
 </resources>
