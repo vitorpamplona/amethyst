@@ -31,7 +31,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.ui.screen.FeedEmptywithStatus
@@ -40,7 +42,6 @@ import com.vitorpamplona.amethyst.ui.screen.NostrNIP90StatusFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
-import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
 
 @Composable
@@ -90,7 +91,7 @@ fun NIP90ContentDiscoveryScreen(
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 fun RenderNostrNIP90ContentDiscoveryScreen(
-    DVMID: String?,
+    dvmID: String?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     resultFeedViewModel: NostrNIP90ContentDiscoveryFeedViewModel,
@@ -99,54 +100,43 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
     Column(Modifier.fillMaxHeight()) {
         val pagerState = rememberPagerState { 2 }
         val coroutineScope = rememberCoroutineScope()
-        // TODO 1 Render a nice header with image and DVM name from the id
-        // TODO How do we get the event information here?
 
-        var dvminfo = "DVM " + DVMID
-        if (DVMID != null) {
-            val thread =
-                Thread {
-                    try {
-                        var note = LocalCache.checkGetOrCreateNote(DVMID)
-                        if (note != null) {
-                            dvminfo = ((note.event as AppDefinitionEvent).appMetaData()?.name ?: "DVM from note")
-                        } else {
-                            dvminfo = "DVM from not found"
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
+        // TODO (Optional) this now shows the first status update but there might be a better way
+        var dvmState = stringResource(R.string.dvm_waiting_status)
+        var dvmNoState = stringResource(R.string.dvm_no_status)
 
-            thread.start()
-            thread.join()
-        }
-
-        // TODO this shows the status but there might be a better way
-        var dvmStatus = "DVM is processing..."
         val thread =
             Thread {
-                println(dvmStatus)
+                var count = 0
                 while (resultFeedViewModel.localFilter.feed().isEmpty()) {
                     try {
                         if (statusFeedViewModel.localFilter.feed().isNotEmpty()) {
-                            statusFeedViewModel.localFilter.feed()[0].event?.let { dvmStatus = it.content() }
-                            println(dvmStatus)
+                            statusFeedViewModel.localFilter.feed()[0].event?.let { dvmState = it.content() }
+                            println(dvmState)
                             break
+                        } else if (count > 1000) {
+                            dvmState = dvmNoState
+                            // Might not be the best way, but we want to avoid hanging in the loop forever
                         } else {
+                            count++
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
                 }
             }
-
         thread.start()
         thread.join()
+
+        // TODO (Optional) Maybe render a nice header with image and DVM name from the dvmID
+        // TODO (Optional) How do we get the event information here?, LocalCache.checkGetOrCreateNote() returns note but event is empty
+        // TODO (Optional) otherwise we have the NIP89 info in (note.event as AppDefinitionEvent).appMetaData()
+        // Text(text = dvminfo)
 
         HorizontalPager(state = pagerState) {
             RefresheableBox(resultFeedViewModel, false) {
                 SaveableFeedState(resultFeedViewModel, null) { listState ->
+                    // TODO (Optional) Instead of a like reaction, do a Kind 31989 NIP89 App recommendation
                     RenderFeedState(
                         resultFeedViewModel,
                         accountViewModel,
@@ -154,7 +144,8 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
                         nav,
                         null,
                         onEmpty = {
-                            FeedEmptywithStatus(status = dvmStatus) {
+                            // TODO (Optional) Maybe also show some dvm image/text while waiting for the notes in this custom component
+                            FeedEmptywithStatus(status = dvmState) {
                             }
                         },
                     )
