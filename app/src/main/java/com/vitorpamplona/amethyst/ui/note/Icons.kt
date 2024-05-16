@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import Following
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -67,6 +66,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.labels.Following
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
