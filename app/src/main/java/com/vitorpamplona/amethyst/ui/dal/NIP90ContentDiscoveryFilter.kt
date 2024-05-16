@@ -63,14 +63,12 @@ open class NIP90ContentDiscoveryFilter(
 
             var eventContent = note.event?.content()
 
-            var collection: HashSet<Note> = hashSetOf()
+            var collection: MutableSet<Note> = mutableSetOf()
             val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            var json = mapper.readValue(eventContent, Array::class.java)
-            for (element in json) {
-                // var test = mapper.readValue(element.toString(), Array::class.java)
-                // TODO. This is ugly. how to Kotlin?
-                var id = element.toString().trimStart('[').trimStart('e').trimStart(',').trimEnd(']').trimStart().trimEnd()
-                var note = LocalCache.checkGetOrCreateNote(id)
+            var etags = mapper.readValue(eventContent, List::class.java)
+            for (element in etags) {
+                var tag = mapper.readValue(mapper.writeValueAsString(element), Array::class.java)
+                val note = LocalCache.checkGetOrCreateNote(tag[1].toString())
                 if (note != null) {
                     collection.add(note)
                 }
@@ -78,7 +76,7 @@ open class NIP90ContentDiscoveryFilter(
 
             return collection.toList()
         } else {
-            return sort(notes)
+            return listOf()
         }
     }
 
@@ -110,24 +108,21 @@ open class NIP90ContentDiscoveryFilter(
             var note = sorted.first()
 
             var eventContent = note.event?.content()
-            println(eventContent)
+            // println(eventContent)
 
-            val collection: HashSet<Note> = hashSetOf()
+            val collection: MutableSet<Note> = mutableSetOf()
             val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            var json = mapper.readValue(eventContent, Array::class.java)
-            for (element in json) {
-                // var test = mapper.readValue(element.toString(), Array::class.java)
-                // TODO. This is ugly. how to Kotlin?
-                var id = element.toString().trimStart('[').trimStart('e').trimStart(',').trimEnd(']').trimStart().trimEnd()
-
-                val note = LocalCache.checkGetOrCreateNote(id)
+            var etags = mapper.readValue(eventContent, Array::class.java)
+            for (element in etags) {
+                var tag = mapper.readValue(mapper.writeValueAsString(element), Array::class.java)
+                val note = LocalCache.checkGetOrCreateNote(tag[1].toString())
                 if (note != null) {
                     collection.add(note)
                 }
             }
             return collection
         } else {
-            return notes
+            return hashSetOf()
         }
     }
 
