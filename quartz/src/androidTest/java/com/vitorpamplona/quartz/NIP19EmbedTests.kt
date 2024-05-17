@@ -52,7 +52,7 @@ class NIP19EmbedTests {
 
         val countDownLatch = CountDownLatch(1)
 
-        TextNoteEvent.create("I like this. It could solve the ninvite problem in #1062, and it seems like it could be applied very broadly to limit the spread of events that shouldn't stand on their own or need to be private. The one question I have is how long are these embeds? If it's 50 lines of text, that breaks the human readable (or at least parseable) requirement of kind 1s. Also, encoding json in a tlv is silly, we should at least use the tlv to reduce the payload size.", signer = signer) {
+        TextNoteEvent.create("I like this. It could solve the ninvite problem in #1062, and it seems like it could be applied very broadly to limit the spread of events that shouldn't stand on their own or need to be private. The one question I have is how long are these embeds? If it's 50 lines of text, that breaks the human readable (or at least parseable) requirement of kind 1s. Also, encoding json in a tlv is silly, we should at least use the tlv to reduce the payload size.", isDraft = false, signer = signer) {
             textNote = it
             countDownLatch.countDown()
         }
