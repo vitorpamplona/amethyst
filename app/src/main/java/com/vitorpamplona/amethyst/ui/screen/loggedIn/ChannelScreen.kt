@@ -1080,12 +1080,17 @@ private fun LiveChannelActionOptions(
             Spacer(modifier = StdHorzSpacer)
         }
 
-        LikeReaction(
-            baseNote = it,
-            grayTint = MaterialTheme.colorScheme.onSurface,
-            accountViewModel = accountViewModel,
-            nav,
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = RowColSpacing,
+        ) {
+            LikeReaction(
+                baseNote = it,
+                grayTint = MaterialTheme.colorScheme.onSurface,
+                accountViewModel = accountViewModel,
+                nav,
+            )
+        }
         Spacer(modifier = StdHorzSpacer)
         ZapReaction(
             baseNote = it,

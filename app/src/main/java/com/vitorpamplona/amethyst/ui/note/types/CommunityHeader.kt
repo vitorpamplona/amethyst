@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.LeaveCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.NormalTimeAgo
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
+import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -310,12 +311,17 @@ private fun ShortCommunityActionOptions(
     nav: (String) -> Unit,
 ) {
     Spacer(modifier = StdHorzSpacer)
-    LikeReaction(
-        baseNote = note,
-        grayTint = MaterialTheme.colorScheme.onSurface,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = RowColSpacing,
+    ) {
+        LikeReaction(
+            baseNote = note,
+            grayTint = MaterialTheme.colorScheme.onSurface,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
     Spacer(modifier = StdHorzSpacer)
     ZapReaction(
         baseNote = note,
@@ -323,7 +329,6 @@ private fun ShortCommunityActionOptions(
         accountViewModel = accountViewModel,
         nav = nav,
     )
-
     WatchAddressableNoteFollows(note, accountViewModel) { isFollowing ->
         if (!isFollowing) {
             Spacer(modifier = StdHorzSpacer)

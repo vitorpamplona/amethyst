@@ -47,6 +47,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterVertically
@@ -83,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -585,12 +587,17 @@ fun RenderCommunitiesThumb(
             )
 
             Spacer(modifier = StdHorzSpacer)
-            LikeReaction(
-                baseNote = baseNote,
-                grayTint = MaterialTheme.colorScheme.onSurface,
-                accountViewModel = accountViewModel,
-                nav,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = RowColSpacing,
+            ) {
+                LikeReaction(
+                    baseNote = baseNote,
+                    grayTint = MaterialTheme.colorScheme.onSurface,
+                    accountViewModel = accountViewModel,
+                    nav,
+                )
+            }
             Spacer(modifier = StdHorzSpacer)
             ZapReaction(
                 baseNote = baseNote,
@@ -782,12 +789,17 @@ fun RenderContentDVMThumb(
             )
 
             Spacer(modifier = StdHorzSpacer)
-            LikeReaction(
-                baseNote = baseNote,
-                grayTint = MaterialTheme.colorScheme.onSurface,
-                accountViewModel = accountViewModel,
-                nav,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = RowColSpacing,
+            ) {
+                LikeReaction(
+                    baseNote = baseNote,
+                    grayTint = MaterialTheme.colorScheme.onSurface,
+                    accountViewModel = accountViewModel,
+                    nav,
+                )
+            }
             Spacer(modifier = StdHorzSpacer)
             ZapReaction(
                 baseNote = baseNote,
@@ -895,14 +907,18 @@ fun RenderChannelThumb(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-
             Spacer(modifier = StdHorzSpacer)
-            LikeReaction(
-                baseNote = baseNote,
-                grayTint = MaterialTheme.colorScheme.onSurface,
-                accountViewModel = accountViewModel,
-                nav,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = RowColSpacing,
+            ) {
+                LikeReaction(
+                    baseNote = baseNote,
+                    grayTint = MaterialTheme.colorScheme.onSurface,
+                    accountViewModel = accountViewModel,
+                    nav,
+                )
+            }
             Spacer(modifier = StdHorzSpacer)
             ZapReaction(
                 baseNote = baseNote,
