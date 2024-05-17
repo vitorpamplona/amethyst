@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -36,16 +37,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.LoadUser
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
 import com.vitorpamplona.amethyst.ui.screen.NostrNIP90ContentDiscoveryFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size75dp
+import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.NIP90StatusEvent
 
@@ -84,7 +92,7 @@ fun NIP90ContentDiscoveryScreen(
             )
         } else {
             // TODO: Make a good splash screen with loading animation for this DVM.
-            FeedEmptywithStatus(stringResource(R.string.dvm_requesting_job))
+            FeedEmptywithStatus(dvmPublicKey, stringResource(R.string.dvm_requesting_job), accountViewModel, nav)
         }
     }
 }
@@ -141,11 +149,11 @@ fun ObserverDvmStatusResponse(
     if (latestStatus != null) {
         // TODO: Make a good splash screen with loading animation for this DVM.
         latestStatus?.let {
-            FeedEmptywithStatus(it.content())
+            FeedEmptywithStatus(dvmPublicKey, it.content(), accountViewModel, nav)
         }
     } else {
         // TODO: Make a good splash screen with loading animation for this DVM.
-        FeedEmptywithStatus(stringResource(R.string.dvm_waiting_status))
+        FeedEmptywithStatus(dvmPublicKey, stringResource(R.string.dvm_waiting_status), accountViewModel, nav)
     }
 }
 
@@ -201,7 +209,12 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
 }
 
 @Composable
-fun FeedEmptywithStatus(status: String) {
+fun FeedEmptywithStatus(
+    pubkey: HexKey,
+    status: String,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
     Column(
         Modifier
             .fillMaxSize()
@@ -209,6 +222,22 @@ fun FeedEmptywithStatus(status: String) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
+        LoadUser(baseUserHex = pubkey, accountViewModel = accountViewModel) { baseUser ->
+            if (baseUser != null) {
+                ClickableUserPicture(
+                    baseUser = baseUser,
+                    accountViewModel = accountViewModel,
+                    size = Size75dp,
+                )
+
+                Spacer(modifier = DoubleVertSpacer)
+
+                UsernameDisplay(baseUser, Modifier, fontWeight = FontWeight.Normal)
+
+                Spacer(modifier = DoubleVertSpacer)
+            }
+        }
+
         Text(status)
     }
 }

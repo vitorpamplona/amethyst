@@ -188,7 +188,6 @@ private fun RenderTopRouteBar(
         Route.Settings.base -> TopBarWithBackButton(stringResource(id = R.string.application_preferences), navPopBack)
         Route.Bookmarks.base -> TopBarWithBackButton(stringResource(id = R.string.bookmarks), navPopBack)
         Route.Drafts.base -> TopBarWithBackButton(stringResource(id = R.string.drafts), navPopBack)
-        Route.ContentDiscovery.base -> TopBarWithBackButton(stringResource(id = R.string.discover_content), navPopBack)
 
         else -> {
             if (id != null) {
@@ -200,6 +199,7 @@ private fun RenderTopRouteBar(
                     Route.Hashtag.base -> HashTagTopBar(id, accountViewModel, navPopBack)
                     Route.Geohash.base -> GeoHashTopBar(id, accountViewModel, navPopBack)
                     Route.Note.base -> ThreadTopBar(id, accountViewModel, navPopBack)
+                    Route.ContentDiscovery.base -> DvmTopBar(id, accountViewModel, nav, navPopBack)
                     else -> MainTopBar(drawerState, accountViewModel, nav)
                 }
             } else {
@@ -293,6 +293,35 @@ private fun RoomTopBar(
             Spacer(BottomTopHeight)
         }
     }
+}
+
+@Composable
+private fun DvmTopBar(
+    id: String,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+    navPopBack: () -> Unit,
+) {
+    FlexibleTopBarWithBackButton(
+        title = {
+            LoadUser(baseUserHex = id, accountViewModel) { baseUser ->
+                if (baseUser != null) {
+                    ClickableUserPicture(
+                        baseUser = baseUser,
+                        accountViewModel = accountViewModel,
+                        size = Size34dp,
+                    )
+
+                    Spacer(modifier = DoubleHorzSpacer)
+
+                    UsernameDisplay(baseUser, Modifier.weight(1f), fontWeight = FontWeight.Normal)
+                } else {
+                    Spacer(BottomTopHeight)
+                }
+            }
+        },
+        popBack = navPopBack,
+    )
 }
 
 @Composable
