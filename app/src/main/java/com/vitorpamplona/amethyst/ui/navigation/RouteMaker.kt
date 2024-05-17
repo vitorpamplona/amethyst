@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.AddressableEvent
+import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
@@ -75,6 +76,8 @@ fun routeFor(
         } else {
             return "Note/${URLEncoder.encode(noteEvent.id(), "utf-8")}"
         }
+    } else if (noteEvent is AppDefinitionEvent) {
+        return "ContentDiscovery/${noteEvent.id}"
     } else if (noteEvent is IsInPublicChatChannel) {
         noteEvent.channel()?.let {
             return "Channel/$it"
