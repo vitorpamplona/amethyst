@@ -20,137 +20,195 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relays.Client
-import com.vitorpamplona.amethyst.ui.screen.FeedEmptywithStatus
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
 import com.vitorpamplona.amethyst.ui.screen.NostrNIP90ContentDiscoveryFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrNIP90StatusFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
-import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.events.NIP90StatusEvent
 
 @Composable
 fun NIP90ContentDiscoveryScreen(
-    DVMID: String,
+    dvmPublicKey: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    var requestID = ""
-    val thread =
-        Thread {
-            try {
-                NIP90ContentDiscoveryRequestEvent.create(DVMID, accountViewModel.account.signer) {
-                    Client.send(it)
-                    requestID = it.id
-                    LocalCache.justConsume(it, null)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+    var requestEventID by
+        remember(dvmPublicKey) {
+            mutableStateOf<Note?>(null)
         }
 
-    thread.start()
-    thread.join()
-
-    val resultFeedViewModel: NostrNIP90ContentDiscoveryFeedViewModel =
-        viewModel(
-            key = "NostrNIP90ContentDiscoveryFeedViewModel",
-            factory = NostrNIP90ContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmkey = DVMID, requestid = requestID),
-        )
-
-    val statusFeedViewModel: NostrNIP90StatusFeedViewModel =
-        viewModel(
-            key = "NostrNIP90StatusFeedViewModel",
-            factory = NostrNIP90StatusFeedViewModel.Factory(accountViewModel.account, dvmkey = DVMID, requestid = requestID),
-        )
-
-    val userState by accountViewModel.account.decryptBookmarks.observeAsState() // TODO
-
-    LaunchedEffect(userState) {
-        resultFeedViewModel.invalidateData()
+    val onRefresh = {
+        accountViewModel.requestDVMContentDiscovery(dvmPublicKey) {
+            requestEventID = it
+        }
     }
 
-    RenderNostrNIP90ContentDiscoveryScreen(DVMID, accountViewModel, nav, resultFeedViewModel, statusFeedViewModel)
+    LaunchedEffect(key1 = dvmPublicKey) {
+        onRefresh()
+    }
+
+    RefresheableBox(
+        onRefresh = onRefresh,
+    ) {
+        val myRequestEventID = requestEventID
+        if (myRequestEventID != null) {
+            ObserverContentDiscoveryResponse(
+                dvmPublicKey,
+                myRequestEventID,
+                onRefresh,
+                accountViewModel,
+                nav,
+            )
+        } else {
+            // TODO: Make a good splash screen with loading animation for this DVM.
+            FeedEmptywithStatus(stringResource(R.string.dvm_requesting_job))
+        }
+    }
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
-fun RenderNostrNIP90ContentDiscoveryScreen(
-    dvmID: String?,
+fun ObserverContentDiscoveryResponse(
+    dvmPublicKey: String,
+    dvmRequestId: Note,
+    onRefresh: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
+) {
+    val updateFiltersFromRelays = dvmRequestId.live().metadata.observeAsState()
+
+    val resultFlow =
+        remember(dvmRequestId) {
+            accountViewModel.observeByETag(NIP90ContentDiscoveryResponseEvent.KIND, dvmRequestId.idHex)
+        }
+
+    val latestResponse by resultFlow.collectAsStateWithLifecycle()
+
+    if (latestResponse != null) {
+        PrepareViewContentDiscoveryModels(
+            dvmPublicKey,
+            dvmRequestId.idHex,
+            onRefresh,
+            accountViewModel,
+            nav,
+        )
+    } else {
+        ObserverDvmStatusResponse(
+            dvmPublicKey,
+            dvmRequestId.idHex,
+            accountViewModel,
+            nav,
+        )
+    }
+}
+
+@Composable
+fun ObserverDvmStatusResponse(
+    dvmPublicKey: String,
+    dvmRequestId: String,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val statusFlow =
+        remember(dvmRequestId) {
+            accountViewModel.observeByETag(NIP90StatusEvent.KIND, dvmRequestId)
+        }
+
+    val latestStatus by statusFlow.collectAsStateWithLifecycle()
+
+    if (latestStatus != null) {
+        // TODO: Make a good splash screen with loading animation for this DVM.
+        latestStatus?.let {
+            FeedEmptywithStatus(it.content())
+        }
+    } else {
+        // TODO: Make a good splash screen with loading animation for this DVM.
+        FeedEmptywithStatus(stringResource(R.string.dvm_waiting_status))
+    }
+}
+
+@Composable
+fun PrepareViewContentDiscoveryModels(
+    dvmPublicKey: String,
+    dvmRequestId: String,
+    onRefresh: () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val resultFeedViewModel: NostrNIP90ContentDiscoveryFeedViewModel =
+        viewModel(
+            key = "NostrNIP90ContentDiscoveryFeedViewModel$dvmPublicKey$dvmRequestId",
+            factory = NostrNIP90ContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmkey = dvmPublicKey, requestid = dvmRequestId),
+        )
+
+    LaunchedEffect(key1 = dvmRequestId) {
+        resultFeedViewModel.invalidateData()
+    }
+
+    RenderNostrNIP90ContentDiscoveryScreen(resultFeedViewModel, onRefresh, accountViewModel, nav)
+}
+
+@Composable
+fun RenderNostrNIP90ContentDiscoveryScreen(
     resultFeedViewModel: NostrNIP90ContentDiscoveryFeedViewModel,
-    statusFeedViewModel: NostrNIP90StatusFeedViewModel,
+    onRefresh: () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
     Column(Modifier.fillMaxHeight()) {
-        val pagerState = rememberPagerState { 2 }
-        val coroutineScope = rememberCoroutineScope()
-
-        // TODO (Optional) this now shows the first status update but there might be a better way
-        var dvmState = stringResource(R.string.dvm_waiting_status)
-        var dvmNoState = stringResource(R.string.dvm_no_status)
-
-        val thread =
-            Thread {
-                var count = 0
-                while (resultFeedViewModel.localFilter.feed().isEmpty()) {
-                    try {
-                        if (statusFeedViewModel.localFilter.feed().isNotEmpty()) {
-                            statusFeedViewModel.localFilter.feed()[0].event?.let { dvmState = it.content() }
-                            println(dvmState)
-                            break
-                        } else if (count > 1000) {
-                            dvmState = dvmNoState
-                            // Might not be the best way, but we want to avoid hanging in the loop forever
-                        } else {
-                            count++
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            }
-        thread.start()
-        thread.join()
-
         // TODO (Optional) Maybe render a nice header with image and DVM name from the dvmID
         // TODO (Optional) How do we get the event information here?, LocalCache.checkGetOrCreateNote() returns note but event is empty
         // TODO (Optional) otherwise we have the NIP89 info in (note.event as AppDefinitionEvent).appMetaData()
-        // Text(text = dvminfo)
-
-        HorizontalPager(state = pagerState) {
-            RefresheableBox(resultFeedViewModel, false) {
-                SaveableFeedState(resultFeedViewModel, null) { listState ->
-                    // TODO (Optional) Instead of a like reaction, do a Kind 31989 NIP89 App recommendation
-                    RenderFeedState(
-                        resultFeedViewModel,
-                        accountViewModel,
-                        listState,
-                        nav,
-                        null,
-                        onEmpty = {
-                            // TODO (Optional) Maybe also show some dvm image/text while waiting for the notes in this custom component
-                            FeedEmptywithStatus(status = dvmState) {
-                            }
-                        },
-                    )
-                }
-            }
+        SaveableFeedState(resultFeedViewModel, null) { listState ->
+            // TODO (Optional) Instead of a like reaction, do a Kind 31989 NIP89 App recommendation
+            RenderFeedState(
+                resultFeedViewModel,
+                accountViewModel,
+                listState,
+                nav,
+                null,
+                onEmpty = {
+                    // TODO (Optional) Maybe also show some dvm image/text while waiting for the notes in this custom component
+                    FeedEmpty {
+                        onRefresh()
+                    }
+                },
+            )
         }
+    }
+}
+
+@Composable
+fun FeedEmptywithStatus(status: String) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(status)
     }
 }

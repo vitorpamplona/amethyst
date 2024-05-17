@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -29,11 +27,13 @@ import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 
-open class NIP90ContentDiscoveryFilter(
+open class NIP90ContentDiscoveryResponseFilter(
     val account: Account,
     val dvmkey: String,
     val request: String,
 ) : AdditiveFeedFilter<Note>() {
+    var latestNote: Note? = null
+
     override fun feedKey(): String {
         return account.userProfile().pubkeyHex + "-" + request
     }
@@ -47,36 +47,41 @@ open class NIP90ContentDiscoveryFilter(
             followList() == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
     }
 
+    fun acceptableEvent(note: Note): Boolean {
+        val noteEvent = note.event
+        return noteEvent is NIP90ContentDiscoveryResponseEvent && noteEvent.isTaggedEvent(request)
+    }
+
+    val createAtComparator = { first: Note?, second: Note? ->
+        val firstEvent = first?.event
+        val secondEvent = second?.event
+
+        if (firstEvent == null && secondEvent == null) {
+            0
+        } else if (firstEvent == null) {
+            1
+        } else if (secondEvent == null) {
+            -1
+        } else {
+            firstEvent.createdAt().compareTo(secondEvent.createdAt())
+        }
+    }
+
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
 
-        val notes =
-            LocalCache.notes.filterIntoSet { _, it ->
-                val noteEvent = it.event
-                noteEvent is NIP90ContentDiscoveryResponseEvent && it.event!!.isTaggedEvent(request)
-                //  it.event?.pubKey() == dvmkey && it.event?.isTaggedUser(account.keyPair.pubKey.toHexKey()) == true // && params.match(noteEvent)
-            }
+        latestNote =
+            LocalCache.notes.maxOrNullOf(
+                filter = { idHex: String, note: Note ->
+                    acceptableEvent(note)
+                },
+                comparator = createAtComparator,
+            )
 
-        var sorted = sort(notes)
-        if (sorted.isNotEmpty()) {
-            var note = sorted.first()
+        val noteEvent = latestNote?.event as? NIP90ContentDiscoveryResponseEvent ?: return listOf()
 
-            var eventContent = note.event?.content()
-
-            var collection: MutableSet<Note> = mutableSetOf()
-            val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            var etags = mapper.readValue(eventContent, List::class.java)
-            for (element in etags) {
-                var tag = mapper.readValue(mapper.writeValueAsString(element), Array::class.java)
-                val note = LocalCache.checkGetOrCreateNote(tag[1].toString())
-                if (note != null) {
-                    collection.add(note)
-                }
-            }
-
-            return collection.toList()
-        } else {
-            return listOf()
+        return noteEvent.innerTags().mapNotNull {
+            LocalCache.checkGetOrCreateNote(it)
         }
     }
 
@@ -96,34 +101,17 @@ open class NIP90ContentDiscoveryFilter(
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         // val params = buildFilterParams(account)
 
-        val notes =
-            collection.filterTo(HashSet()) {
-                val noteEvent = it.event
-                noteEvent is NIP90ContentDiscoveryResponseEvent && // &&
-                    it.event!!.isTaggedEvent(request) // && it.event?.isTaggedUser(account.keyPair.pubKey.toHexKey()) == true // && params.match(noteEvent)
-            }
+        val maxNote = collection.filter { acceptableEvent(it) }.maxByOrNull { it.createdAt() ?: 0 } ?: return emptySet()
 
-        val sorted = sort(notes)
-        if (sorted.isNotEmpty()) {
-            var note = sorted.first()
-
-            var eventContent = note.event?.content()
-            // println(eventContent)
-
-            val collection: MutableSet<Note> = mutableSetOf()
-            val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            var etags = mapper.readValue(eventContent, Array::class.java)
-            for (element in etags) {
-                var tag = mapper.readValue(mapper.writeValueAsString(element), Array::class.java)
-                val note = LocalCache.checkGetOrCreateNote(tag[1].toString())
-                if (note != null) {
-                    collection.add(note)
-                }
-            }
-            return collection
-        } else {
-            return hashSetOf()
+        if ((maxNote.createdAt() ?: 0) > (latestNote?.createdAt() ?: 0)) {
+            latestNote = maxNote
         }
+
+        val noteEvent = latestNote?.event as? NIP90ContentDiscoveryResponseEvent ?: return setOf()
+
+        return noteEvent.innerTags().mapNotNull {
+            LocalCache.checkGetOrCreateNote(it)
+        }.toSet()
     }
 
     override fun sort(collection: Set<Note>): List<Note> {

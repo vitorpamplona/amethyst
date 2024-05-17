@@ -40,14 +40,14 @@ class NIP90ContentDiscoveryRequestEvent(
         const val KIND = 5300
 
         fun create(
-            addressedDVM: String,
+            dvmPublicKey: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (NIP90ContentDiscoveryRequestEvent) -> Unit,
         ) {
             val content = ""
             val tags = mutableListOf<Array<String>>()
-            tags.add(arrayOf("p", addressedDVM))
+            tags.add(arrayOf("p", dvmPublicKey))
             tags.add(arrayOf("alt", "NIP90 Content Discovery request"))
             tags.add(arrayOf("client", "Amethyst"))
             signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)

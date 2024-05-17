@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.quartz.events
 
+import android.util.Log
 import androidx.compose.runtime.Immutable
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -34,6 +36,33 @@ class NIP90ContentDiscoveryResponseEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    @Transient var events: List<HexKey>? = null
+
+    fun innerTags(): List<HexKey> {
+        if (content.isEmpty()) {
+            return listOf()
+        }
+
+        events?.let {
+            return it
+        }
+
+        try {
+            events =
+                mapper.readValue<Array<Array<String>>>(content).mapNotNull {
+                    if (it.size > 1 && it[0] == "e") {
+                        it[1]
+                    } else {
+                        null
+                    }
+                }
+        } catch (e: Throwable) {
+            Log.w("GeneralList", "Error parsing the JSON ${e.message}")
+        }
+
+        return events ?: listOf()
+    }
+
     companion object {
         const val KIND = 6300
         const val ALT = "NIP90 Content Discovery reply"

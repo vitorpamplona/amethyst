@@ -54,8 +54,7 @@ import com.vitorpamplona.amethyst.ui.dal.GeoHashFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.NIP90ContentDiscoveryFilter
-import com.vitorpamplona.amethyst.ui.dal.NIP90StatusFilter
+import com.vitorpamplona.amethyst.ui.dal.NIP90ContentDiscoveryResponseFilter
 import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileAppRecommendationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
@@ -285,20 +284,10 @@ class NostrBookmarkPrivateFeedViewModel(val account: Account) :
 
 @Stable
 class NostrNIP90ContentDiscoveryFeedViewModel(val account: Account, val dvmkey: String, val requestid: String) :
-    FeedViewModel(NIP90ContentDiscoveryFilter(account, dvmkey, requestid)) {
+    FeedViewModel(NIP90ContentDiscoveryResponseFilter(account, dvmkey, requestid)) {
     class Factory(val account: Account, val dvmkey: String, val requestid: String) : ViewModelProvider.Factory {
         override fun <NostrNIP90ContentDiscoveryFeedViewModel : ViewModel> create(modelClass: Class<NostrNIP90ContentDiscoveryFeedViewModel>): NostrNIP90ContentDiscoveryFeedViewModel {
             return NostrNIP90ContentDiscoveryFeedViewModel(account, dvmkey, requestid) as NostrNIP90ContentDiscoveryFeedViewModel
-        }
-    }
-}
-
-@Stable
-class NostrNIP90StatusFeedViewModel(val account: Account, val dvmkey: String, val requestid: String) :
-    FeedViewModel(NIP90StatusFilter(account, dvmkey, requestid)) {
-    class Factory(val account: Account, val dvmkey: String, val requestid: String) : ViewModelProvider.Factory {
-        override fun <NostrNIP90StatusFeedViewModel : ViewModel> create(modelClass: Class<NostrNIP90StatusFeedViewModel>): NostrNIP90StatusFeedViewModel {
-            return NostrNIP90StatusFeedViewModel(account, dvmkey, requestid) as NostrNIP90StatusFeedViewModel
         }
     }
 }

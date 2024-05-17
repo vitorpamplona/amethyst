@@ -87,6 +87,13 @@ open class Event(
 
     override fun hasTagWithContent(tagName: String) = tags.any { it.size > 1 && it[0] == tagName }
 
+    override fun forEachTaggedEvent(onEach: (eventId: HexKey) -> Unit) =
+        tags.forEach {
+            if (it.size > 1 && it[0] == "e") {
+                onEach(it[1])
+            }
+        }
+
     override fun taggedUsers() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
 
     override fun taggedEvents() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }

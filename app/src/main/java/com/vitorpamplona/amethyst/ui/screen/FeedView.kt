@@ -98,10 +98,23 @@ fun RefresheableBox(
     enablePullRefresh: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    RefresheableBox(
+        enablePullRefresh = enablePullRefresh,
+        onRefresh = { viewModel.invalidateData() },
+        content = content,
+    )
+}
+
+@Composable
+fun RefresheableBox(
+    enablePullRefresh: Boolean = true,
+    onRefresh: () -> Unit,
+    content: @Composable () -> Unit,
+) {
     var refreshing by remember { mutableStateOf(false) }
     val refresh = {
         refreshing = true
-        viewModel.invalidateData()
+        onRefresh()
         refreshing = false
     }
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
@@ -299,21 +312,5 @@ fun FeedEmpty(onRefresh: () -> Unit) {
         Text(stringResource(R.string.feed_is_empty))
         Spacer(modifier = StdVertSpacer)
         OutlinedButton(onClick = onRefresh) { Text(text = stringResource(R.string.refresh)) }
-    }
-}
-
-@Composable
-fun FeedEmptywithStatus(
-    status: String,
-    onRefresh: () -> Unit,
-) {
-    Column(
-        Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(status)
-        // Spacer(modifier = StdVertSpacer)
-        // OutlinedButton(onClick = onRefresh) { Text(text = stringResource(R.string.refresh)) }
     }
 }

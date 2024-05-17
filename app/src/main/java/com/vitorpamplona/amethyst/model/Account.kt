@@ -79,6 +79,7 @@ import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.NIP17Factory
+import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
@@ -2272,6 +2273,17 @@ class Account(
             LocalCache.justConsume(it, null)
 
             follow(channel)
+        }
+    }
+
+    fun requestDVMContentDiscovery(
+        dvmPublicKey: String,
+        onReady: (event: NIP90ContentDiscoveryRequestEvent) -> Unit,
+    ) {
+        NIP90ContentDiscoveryRequestEvent.create(dvmPublicKey, signer) {
+            Client.send(it)
+            LocalCache.justConsume(it, null)
+            onReady(it)
         }
     }
 

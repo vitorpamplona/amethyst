@@ -117,6 +117,8 @@ interface EventInterface {
 
     fun hasTagWithContent(tagName: String): Boolean
 
+    fun forEachTaggedEvent(onEach: (eventId: HexKey) -> Unit)
+
     fun taggedAddresses(): List<ATag>
 
     fun taggedUsers(): List<HexKey>

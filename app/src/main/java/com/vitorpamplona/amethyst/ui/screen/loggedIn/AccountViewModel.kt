@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
+import com.vitorpamplona.amethyst.model.observables.LatestByKindWithETag
 import com.vitorpamplona.amethyst.service.CashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
 import com.vitorpamplona.amethyst.service.HttpClientManager
@@ -98,6 +99,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -172,6 +174,25 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         reaction: String,
     ) {
         account.reactTo(note, reaction)
+    }
+
+    fun observeByETag(
+        kind: Int,
+        eTag: HexKey,
+    ): StateFlow<Event?> {
+        val observable =
+            LocalCache.observeETag(
+                kind = kind,
+                eventId = eTag,
+            ) {
+                LatestByKindWithETag(kind, eTag)
+            }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            observable.init()
+        }
+
+        return observable.latest
     }
 
     fun reactToOrDelete(
@@ -1319,6 +1340,17 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
             }
         note.loadEvent(innerEvent, author, LocalCache.computeReplyTo(innerEvent))
         return note
+    }
+
+    fun requestDVMContentDiscovery(
+        dvmPublicKey: String,
+        onReady: (event: Note) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.requestDVMContentDiscovery(dvmPublicKey) {
+                onReady(LocalCache.getOrCreateNote(it.id))
+            }
+        }
     }
 
     val draftNoteCache = CachedDraftNotes(this)

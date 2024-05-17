@@ -33,6 +33,8 @@ import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GitReplyEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.events.NIP90StatusEvent
 import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
@@ -171,6 +173,8 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                             kinds =
                                 listOf(
                                     DeletionEvent.KIND,
+                                    NIP90ContentDiscoveryResponseEvent.KIND,
+                                    NIP90StatusEvent.KIND,
                                 ),
                             tags = mapOf("e" to it.map { it.idHex }),
                             since = findMinimumEOSEs(it),

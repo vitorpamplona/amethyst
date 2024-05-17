@@ -103,6 +103,15 @@ class LargeCache<K, V> {
         return runner.results
     }
 
+    fun maxOrNullOf(
+        filter: BiFilter<K, V>,
+        comparator: Comparator<V>,
+    ): V? {
+        val runner = BiMaxOfCollector(filter, comparator)
+        innerForEach(runner)
+        return runner.maxV
+    }
+
     fun sumOf(consumer: BiSumOf<K, V>): Int {
         val runner = BiSumOfCollector(consumer)
         innerForEach(runner)
@@ -261,6 +270,23 @@ fun interface BiSumOf<K, V> {
         k: K,
         v: V,
     ): Int
+}
+
+class BiMaxOfCollector<K, V>(val filter: BiFilter<K, V>, val comparator: Comparator<V>) : BiConsumer<K, V> {
+    var maxK: K? = null
+    var maxV: V? = null
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        if (filter.filter(k, v)) {
+            if (maxK == null || comparator.compare(v, maxV) > 1) {
+                maxK = k
+                maxV = v
+            }
+        }
+    }
 }
 
 class BiSumOfCollector<K, V>(val mapper: BiSumOf<K, V>) : BiConsumer<K, V> {
