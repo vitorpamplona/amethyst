@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.EndedFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.OfflineFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.observeAppDefinition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
@@ -342,7 +343,9 @@ fun InnerRenderClassifiedsThumb(
     note: Note,
 ) {
     Box(
-        Modifier.fillMaxWidth().aspectRatio(1f),
+        Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f),
         contentAlignment = BottomStart,
     ) {
         card.image?.let {
@@ -355,7 +358,10 @@ fun InnerRenderClassifiedsThumb(
         } ?: run { DisplayAuthorBanner(note) }
 
         Row(
-            Modifier.fillMaxWidth().background(Color.Black.copy(0.6f)).padding(Size5dp),
+            Modifier
+                .fillMaxWidth()
+                .background(Color.Black.copy(0.6f))
+                .padding(Size5dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             card.title?.let {
@@ -451,14 +457,20 @@ fun RenderLiveActivityThumb(
     ) {
         Box(
             contentAlignment = TopEnd,
-            modifier = Modifier.aspectRatio(ratio = 16f / 9f).fillMaxWidth(),
+            modifier =
+                Modifier
+                    .aspectRatio(ratio = 16f / 9f)
+                    .fillMaxWidth(),
         ) {
             card.cover?.let {
                 AsyncImage(
                     model = it,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(QuoteBorder),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .clip(QuoteBorder),
                 )
             } ?: run { DisplayAuthorBanner(baseNote) }
 
@@ -494,7 +506,9 @@ fun RenderLiveActivityThumb(
 
             LoadParticipants(card.participants, baseNote, accountViewModel) { participantUsers ->
                 Box(
-                    Modifier.padding(10.dp).align(BottomStart),
+                    Modifier
+                        .padding(10.dp)
+                        .align(BottomStart),
                 ) {
                     if (participantUsers.isNotEmpty()) {
                         Gallery(participantUsers, accountViewModel)
@@ -572,7 +586,10 @@ fun RenderCommunitiesThumb(
                         model = it,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().clip(QuoteBorder),
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .clip(QuoteBorder),
                     )
                 }
             } ?: run { DisplayAuthorBanner(baseNote) }
@@ -742,29 +759,7 @@ fun RenderContentDVMThumb(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val noteEvent = baseNote.event as? AppDefinitionEvent ?: return
-
-    val card by
-        baseNote
-            .live()
-            .metadata
-            .map {
-                val noteEvent = it.note.event as? AppDefinitionEvent
-
-                DVMCard(
-                    name = noteEvent?.appMetaData()?.name ?: "",
-                    description = noteEvent?.appMetaData()?.about ?: "",
-                    cover = noteEvent?.appMetaData()?.image?.ifBlank { null },
-                )
-            }
-            .distinctUntilChanged()
-            .observeAsState(
-                DVMCard(
-                    name = noteEvent.appMetaData()?.name ?: "",
-                    description = noteEvent.appMetaData()?.about ?: "",
-                    cover = noteEvent.appMetaData()?.image?.ifBlank { null },
-                ),
-            )
+    val card = observeAppDefinition(appDefinitionNote = baseNote)
 
     LeftPictureLayout(
         onImage = {
@@ -774,7 +769,10 @@ fun RenderContentDVMThumb(
                         model = it,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().clip(QuoteBorder),
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .clip(QuoteBorder),
                     )
                 }
             } ?: run { DisplayAuthorBanner(baseNote) }
@@ -788,7 +786,7 @@ fun RenderContentDVMThumb(
                 modifier = Modifier.weight(1f),
             )
 
-            Spacer(modifier = StdHorzSpacer)
+            Spacer(modifier = StdVertSpacer)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = RowColSpacing,
@@ -895,7 +893,10 @@ fun RenderChannelThumb(
                     model = it,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(QuoteBorder),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .clip(QuoteBorder),
                 )
             } ?: run { DisplayAuthorBanner(baseNote) }
         },
@@ -970,6 +971,11 @@ fun Gallery(
 @Composable
 fun DisplayAuthorBanner(note: Note) {
     WatchAuthor(note) {
-        BannerImage(it, Modifier.fillMaxSize().clip(QuoteBorder))
+        BannerImage(
+            it,
+            Modifier
+                .fillMaxSize()
+                .clip(QuoteBorder),
+        )
     }
 }

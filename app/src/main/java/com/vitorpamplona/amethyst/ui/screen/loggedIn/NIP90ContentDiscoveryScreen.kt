@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,45 +37,77 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
-import com.vitorpamplona.amethyst.ui.note.LoadUser
-import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.note.DVMCard
+import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
+import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
 import com.vitorpamplona.amethyst.ui.screen.NostrNIP90ContentDiscoveryFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
-import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.NIP90StatusEvent
 
 @Composable
 fun NIP90ContentDiscoveryScreen(
-    dvmPublicKey: String,
+    appDefinitionEventId: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    LoadNote(baseNoteHex = appDefinitionEventId, accountViewModel = accountViewModel) {
+        it?.let { baseNote ->
+            WatchNoteEvent(
+                baseNote,
+                onNoteEventFound = {
+                    NIP90ContentDiscoveryScreen(baseNote, accountViewModel, nav)
+                },
+                onBlank = {
+                    FeedEmptywithStatus(baseNote, stringResource(R.string.dvm_looking_for_app), accountViewModel, nav)
+                },
+            )
+        }
+    }
+}
+
+@Composable
+fun NIP90ContentDiscoveryScreen(
+    appDefinition: Note,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val noteAuthor = appDefinition.author ?: return
+
     var requestEventID by
-        remember(dvmPublicKey) {
+        remember(appDefinition) {
             mutableStateOf<Note?>(null)
         }
 
     val onRefresh = {
-        accountViewModel.requestDVMContentDiscovery(dvmPublicKey) {
+        accountViewModel.requestDVMContentDiscovery(noteAuthor.pubkeyHex) {
             requestEventID = it
         }
     }
 
-    LaunchedEffect(key1 = dvmPublicKey) {
+    LaunchedEffect(key1 = appDefinition) {
         onRefresh()
     }
 
@@ -84,7 +117,7 @@ fun NIP90ContentDiscoveryScreen(
         val myRequestEventID = requestEventID
         if (myRequestEventID != null) {
             ObserverContentDiscoveryResponse(
-                dvmPublicKey,
+                appDefinition,
                 myRequestEventID,
                 onRefresh,
                 accountViewModel,
@@ -92,19 +125,20 @@ fun NIP90ContentDiscoveryScreen(
             )
         } else {
             // TODO: Make a good splash screen with loading animation for this DVM.
-            FeedEmptywithStatus(dvmPublicKey, stringResource(R.string.dvm_requesting_job), accountViewModel, nav)
+            FeedEmptywithStatus(appDefinition, stringResource(R.string.dvm_requesting_job), accountViewModel, nav)
         }
     }
 }
 
 @Composable
 fun ObserverContentDiscoveryResponse(
-    dvmPublicKey: String,
+    appDefinition: Note,
     dvmRequestId: Note,
     onRefresh: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    val noteAuthor = appDefinition.author ?: return
     val updateFiltersFromRelays = dvmRequestId.live().metadata.observeAsState()
 
     val resultFlow =
@@ -116,7 +150,7 @@ fun ObserverContentDiscoveryResponse(
 
     if (latestResponse != null) {
         PrepareViewContentDiscoveryModels(
-            dvmPublicKey,
+            noteAuthor,
             dvmRequestId.idHex,
             onRefresh,
             accountViewModel,
@@ -124,7 +158,7 @@ fun ObserverContentDiscoveryResponse(
         )
     } else {
         ObserverDvmStatusResponse(
-            dvmPublicKey,
+            appDefinition,
             dvmRequestId.idHex,
             accountViewModel,
             nav,
@@ -134,7 +168,7 @@ fun ObserverContentDiscoveryResponse(
 
 @Composable
 fun ObserverDvmStatusResponse(
-    dvmPublicKey: String,
+    appDefinition: Note,
     dvmRequestId: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -149,17 +183,17 @@ fun ObserverDvmStatusResponse(
     if (latestStatus != null) {
         // TODO: Make a good splash screen with loading animation for this DVM.
         latestStatus?.let {
-            FeedEmptywithStatus(dvmPublicKey, it.content(), accountViewModel, nav)
+            FeedEmptywithStatus(appDefinition, it.content(), accountViewModel, nav)
         }
     } else {
         // TODO: Make a good splash screen with loading animation for this DVM.
-        FeedEmptywithStatus(dvmPublicKey, stringResource(R.string.dvm_waiting_status), accountViewModel, nav)
+        FeedEmptywithStatus(appDefinition, stringResource(R.string.dvm_waiting_status), accountViewModel, nav)
     }
 }
 
 @Composable
 fun PrepareViewContentDiscoveryModels(
-    dvmPublicKey: String,
+    dvm: User,
     dvmRequestId: String,
     onRefresh: () -> Unit,
     accountViewModel: AccountViewModel,
@@ -167,8 +201,8 @@ fun PrepareViewContentDiscoveryModels(
 ) {
     val resultFeedViewModel: NostrNIP90ContentDiscoveryFeedViewModel =
         viewModel(
-            key = "NostrNIP90ContentDiscoveryFeedViewModel$dvmPublicKey$dvmRequestId",
-            factory = NostrNIP90ContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmkey = dvmPublicKey, requestid = dvmRequestId),
+            key = "NostrNIP90ContentDiscoveryFeedViewModel${dvm.pubkeyHex}$dvmRequestId",
+            factory = NostrNIP90ContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmkey = dvm.pubkeyHex, requestid = dvmRequestId),
         )
 
     LaunchedEffect(key1 = dvmRequestId) {
@@ -210,7 +244,7 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
 
 @Composable
 fun FeedEmptywithStatus(
-    pubkey: HexKey,
+    appDefinitionNote: Note,
     status: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -222,22 +256,62 @@ fun FeedEmptywithStatus(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        LoadUser(baseUserHex = pubkey, accountViewModel = accountViewModel) { baseUser ->
-            if (baseUser != null) {
-                ClickableUserPicture(
-                    baseUser = baseUser,
-                    accountViewModel = accountViewModel,
-                    size = Size75dp,
-                )
+        val card = observeAppDefinition(appDefinitionNote)
 
-                Spacer(modifier = DoubleVertSpacer)
+        card.cover?.let {
+            AsyncImage(
+                model = it,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(Size75dp).clip(QuoteBorder),
+            )
+        } ?: run { NoteAuthorPicture(appDefinitionNote, nav, accountViewModel, Size75dp) }
 
-                UsernameDisplay(baseUser, Modifier, fontWeight = FontWeight.Normal)
+        Spacer(modifier = DoubleVertSpacer)
 
-                Spacer(modifier = DoubleVertSpacer)
-            }
-        }
+        Text(
+            text = card.name,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+
+        Spacer(modifier = DoubleVertSpacer)
 
         Text(status)
     }
+}
+
+@Composable
+fun observeAppDefinition(appDefinitionNote: Note): DVMCard {
+    val noteEvent =
+        appDefinitionNote.event as? AppDefinitionEvent ?: return DVMCard(
+            name = "",
+            description = "",
+            cover = null,
+        )
+
+    val card by
+        appDefinitionNote
+            .live()
+            .metadata
+            .map {
+                val noteEvent = it.note.event as? AppDefinitionEvent
+
+                DVMCard(
+                    name = noteEvent?.appMetaData()?.name ?: "",
+                    description = noteEvent?.appMetaData()?.about ?: "",
+                    cover = noteEvent?.appMetaData()?.image?.ifBlank { null },
+                )
+            }
+            .distinctUntilChanged()
+            .observeAsState(
+                DVMCard(
+                    name = noteEvent.appMetaData()?.name ?: "",
+                    description = noteEvent.appMetaData()?.about ?: "",
+                    cover = noteEvent.appMetaData()?.image?.ifBlank { null },
+                ),
+            )
+
+    return card
 }

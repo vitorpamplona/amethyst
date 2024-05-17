@@ -229,7 +229,7 @@ fun AppNavigation(
                 content = {
                     it.arguments?.getString("id")?.let { id ->
                         NIP90ContentDiscoveryScreen(
-                            dvmPublicKey = id,
+                            appDefinitionEventId = id,
                             accountViewModel = accountViewModel,
                             nav = nav,
                         )

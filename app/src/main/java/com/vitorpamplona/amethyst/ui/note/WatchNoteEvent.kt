@@ -39,6 +39,33 @@ fun WatchNoteEvent(
     modifier: Modifier = Modifier,
     onNoteEventFound: @Composable () -> Unit,
 ) {
+    WatchNoteEvent(
+        baseNote,
+        onNoteEventFound,
+        onBlank = {
+            LongPressToQuickAction(
+                baseNote = baseNote,
+                accountViewModel = accountViewModel,
+            ) { showPopup ->
+                BlankNote(
+                    remember {
+                        modifier.combinedClickable(
+                            onClick = {},
+                            onLongClick = showPopup,
+                        )
+                    },
+                )
+            }
+        },
+    )
+}
+
+@Composable
+fun WatchNoteEvent(
+    baseNote: Note,
+    onNoteEventFound: @Composable () -> Unit,
+    onBlank: @Composable () -> Unit,
+) {
     if (baseNote.event != null) {
         onNoteEventFound()
     } else {
@@ -49,19 +76,7 @@ fun WatchNoteEvent(
             if (it) {
                 onNoteEventFound()
             } else {
-                LongPressToQuickAction(
-                    baseNote = baseNote,
-                    accountViewModel = accountViewModel,
-                ) { showPopup ->
-                    BlankNote(
-                        remember {
-                            modifier.combinedClickable(
-                                onClick = {},
-                                onLongClick = showPopup,
-                            )
-                        },
-                    )
-                }
+                onBlank()
             }
         }
     }
