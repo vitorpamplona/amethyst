@@ -26,6 +26,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.data.DeletionIndex
 import com.vitorpamplona.amethyst.commons.data.LargeCache
+import com.vitorpamplona.amethyst.model.observables.LatestByKindWithETag
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
@@ -141,6 +142,38 @@ object LocalCache {
     val awaitingPaymentRequests = ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
 
     val deletionIndex = DeletionIndex()
+
+    val observablesByKindAndETag = ConcurrentHashMap<Int, ConcurrentHashMap<HexKey, LatestByKindWithETag>>(10)
+
+    fun observeETag(
+        kind: Int,
+        eventId: HexKey,
+        onCreate: () -> LatestByKindWithETag,
+    ): LatestByKindWithETag {
+        var eTagList = observablesByKindAndETag.get(kind)
+
+        if (eTagList == null) {
+            eTagList = ConcurrentHashMap<HexKey, LatestByKindWithETag>(1)
+            observablesByKindAndETag.put(kind, eTagList)
+        }
+
+        val value = eTagList.get(eventId)
+
+        return if (value != null) {
+            value
+        } else {
+            val newObject = onCreate()
+            val obj = eTagList.putIfAbsent(eventId, newObject) ?: newObject
+            obj
+        }
+    }
+
+    fun updateObservables(event: Event) {
+        val observablesOfKind = observablesByKindAndETag[event.kind()] ?: return
+        event.forEachTaggedEvent {
+            observablesOfKind[it]?.updateIfMatches(event)
+        }
+    }
 
     fun checkGetOrCreateUser(key: String): User? {
         // checkNotInMainThread()
@@ -2239,6 +2272,7 @@ object LocalCache {
     val live: LocalCacheLiveData = LocalCacheLiveData()
 
     private fun refreshObservers(newNote: Note) {
+        updateObservables(newNote.event as Event)
         live.invalidateData(newNote)
     }
 
