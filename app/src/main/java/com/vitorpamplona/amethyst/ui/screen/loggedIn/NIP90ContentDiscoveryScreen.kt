@@ -20,28 +20,43 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.distinctUntilChanged
@@ -51,21 +66,41 @@ import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.DVMCard
+import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
+import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
+import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
+import com.vitorpamplona.amethyst.ui.note.PayViaIntentDialog
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
+import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
+import com.vitorpamplona.amethyst.ui.note.ZapIcon
+import com.vitorpamplona.amethyst.ui.note.ZappedIcon
+import com.vitorpamplona.amethyst.ui.note.elements.customZapClick
+import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
 import com.vitorpamplona.amethyst.ui.screen.NostrNIP90ContentDiscoveryFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
+import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.NIP90StatusEvent
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun NIP90ContentDiscoveryScreen(
@@ -81,7 +116,7 @@ fun NIP90ContentDiscoveryScreen(
                     NIP90ContentDiscoveryScreen(baseNote, accountViewModel, nav)
                 },
                 onBlank = {
-                    FeedEmptywithStatus(baseNote, stringResource(R.string.dvm_looking_for_app), accountViewModel, nav)
+                    FeedDVM(baseNote, null, accountViewModel, nav)
                 },
             )
         }
@@ -125,7 +160,7 @@ fun NIP90ContentDiscoveryScreen(
             )
         } else {
             // TODO: Make a good splash screen with loading animation for this DVM.
-            FeedEmptywithStatus(appDefinition, stringResource(R.string.dvm_requesting_job), accountViewModel, nav)
+            FeedDVM(appDefinition, null, accountViewModel, nav)
         }
     }
 }
@@ -179,16 +214,8 @@ fun ObserverDvmStatusResponse(
         }
 
     val latestStatus by statusFlow.collectAsStateWithLifecycle()
-
-    if (latestStatus != null) {
-        // TODO: Make a good splash screen with loading animation for this DVM.
-        latestStatus?.let {
-            FeedEmptywithStatus(appDefinition, it.content(), accountViewModel, nav)
-        }
-    } else {
-        // TODO: Make a good splash screen with loading animation for this DVM.
-        FeedEmptywithStatus(appDefinition, stringResource(R.string.dvm_waiting_status), accountViewModel, nav)
-    }
+    // TODO: Make a good splash screen with loading animation for this DVM.
+    FeedDVM(appDefinition, latestStatus, accountViewModel, nav)
 }
 
 @Composable
@@ -220,9 +247,6 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
     nav: (String) -> Unit,
 ) {
     Column(Modifier.fillMaxHeight()) {
-        // TODO (Optional) Maybe render a nice header with image and DVM name from the dvmID
-        // TODO (Optional) How do we get the event information here?, LocalCache.checkGetOrCreateNote() returns note but event is empty
-        // TODO (Optional) otherwise we have the NIP89 info in (note.event as AppDefinitionEvent).appMetaData()
         SaveableFeedState(resultFeedViewModel, null) { listState ->
             // TODO (Optional) Instead of a like reaction, do a Kind 31989 NIP89 App recommendation
             RenderFeedState(
@@ -232,7 +256,6 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
                 nav,
                 null,
                 onEmpty = {
-                    // TODO (Optional) Maybe also show some dvm image/text while waiting for the notes in this custom component
                     FeedEmpty {
                         onRefresh()
                     }
@@ -242,13 +265,58 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun FeedEmptywithStatus(
+fun FeedDVM(
     appDefinitionNote: Note,
-    status: String,
+    latestStatus: Event?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    var status = "waiting"
+    var content = ""
+    var lninvoice = ""
+    var amount: Long = 0
+    var statusNote: Note? = null
+    var dvmUser: User? = null
+
+    if (latestStatus == null) {
+        content = stringResource(R.string.dvm_waiting_status)
+    } else {
+        latestStatus.let {
+            LoadNote(baseNoteHex = it.id, accountViewModel = accountViewModel) { stateNote ->
+                if (stateNote != null) {
+                    statusNote = stateNote
+                }
+            }
+            content = it.content()
+
+            val statusTag =
+                it.tags().first { it2 ->
+                    it2.size > 1 && (it2[0] == "status")
+                }
+            status = statusTag[1]
+
+            if (statusTag.size > 2 && content == "") {
+                // Some DVMs *might* send a the content in the second status tag (even though the NIP says otherwise)
+                content = statusTag[2]
+            }
+
+            if (status == "payment-required") {
+                val amountTag =
+                    it.tags().first { it2 ->
+                        it2.size > 1 && (it2[0] == "amount")
+                    }
+                amount = amountTag[1].toLong()
+
+                if (amountTag.size > 2) {
+                    // DVM *might* send a lninvoice in the second tag
+                    lninvoice = amountTag[2]
+                }
+            }
+        }
+    }
+
     Column(
         Modifier
             .fillMaxSize()
@@ -263,7 +331,10 @@ fun FeedEmptywithStatus(
                 model = it,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.size(Size75dp).clip(QuoteBorder),
+                modifier =
+                    Modifier
+                        .size(Size75dp)
+                        .clip(QuoteBorder),
             )
         } ?: run { NoteAuthorPicture(appDefinitionNote, nav, accountViewModel, Size75dp) }
 
@@ -277,8 +348,203 @@ fun FeedEmptywithStatus(
         )
 
         Spacer(modifier = DoubleVertSpacer)
+        Text(content, textAlign = TextAlign.Center)
 
-        Text(status)
+        if (status == "payment-required") {
+            if (lninvoice != "") {
+                val context = LocalContext.current
+                // TODO is there a better function?
+                Button(onClick = {
+                    payViaIntent(
+                        lninvoice,
+                        context,
+                        onPaid = { println("paid") },
+                        onError = { println("error") },
+                    )
+                }) {
+                    Text(text = "Pay     " + (amount / 1000).toString() + " Sats to the DVM")
+                }
+            } else {
+                statusNote?.let {
+                    ZapDVMButton(
+                        baseNote = it,
+                        amount = amount,
+                        grayTint = MaterialTheme.colorScheme.onPrimary,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ZapDVMButton(
+    baseNote: Note,
+    amount: Long,
+    grayTint: Color,
+    accountViewModel: AccountViewModel,
+    iconSize: Dp = Size35dp,
+    iconSizeModifier: Modifier = Size20Modifier,
+    animationSize: Dp = 14.dp,
+    nav: (String) -> Unit,
+) {
+    var wantsToZap by remember { mutableStateOf<List<Long>?>(null) }
+    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
+    var wantsToPay by
+        remember(baseNote) {
+            mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
+                persistentListOf(),
+            )
+        }
+    baseNote.author?.let {
+        LoadUser(baseUserHex = it.pubkeyHex, accountViewModel = accountViewModel) { author ->
+            if (author != null) {
+                author.live().metadata.observeAsState()
+                println(author.info?.lnAddress())
+                println(author.info?.name)
+            }
+        }
+    }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var zappingProgress by remember { mutableFloatStateOf(0f) }
+    var hasZapped by remember { mutableStateOf(false) }
+
+    Button(
+        onClick = {
+            customZapClick(
+                baseNote,
+                accountViewModel,
+                context,
+                onZappingProgress = { progress: Float ->
+                    scope.launch { zappingProgress = progress }
+                },
+                onMultipleChoices = { options -> wantsToZap = options },
+                onError = { _, message ->
+                    scope.launch {
+                        zappingProgress = 0f
+                        showErrorMessageDialog = message
+                    }
+                },
+                onPayViaIntent = { wantsToPay = it },
+            )
+        },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        if (wantsToZap != null) {
+            ZapAmountChoicePopup(
+                baseNote = baseNote,
+                zapAmountChoices = listOf(amount / 1000),
+                popupYOffset = iconSize,
+                accountViewModel = accountViewModel,
+                onDismiss = {
+                    wantsToZap = null
+                    zappingProgress = 0f
+                },
+                onChangeAmount = {
+                    wantsToZap = null
+                },
+                onError = { _, message ->
+                    scope.launch {
+                        zappingProgress = 0f
+                        showErrorMessageDialog = message
+                    }
+                },
+                onProgress = {
+                    scope.launch(Dispatchers.Main) { zappingProgress = it }
+                },
+                onPayViaIntent = { wantsToPay = it },
+            )
+        }
+
+        if (showErrorMessageDialog != null) {
+            ErrorMessageDialog(
+                title = stringResource(id = R.string.error_dialog_zap_error),
+                textContent = showErrorMessageDialog ?: "",
+                onClickStartMessage = {
+                    baseNote.author?.let {
+                        scope.launch(Dispatchers.IO) {
+                            val route = routeToMessage(it, showErrorMessageDialog, accountViewModel)
+                            nav(route)
+                        }
+                    }
+                },
+                onDismiss = { showErrorMessageDialog = null },
+            )
+        }
+
+        if (wantsToPay.isNotEmpty()) {
+            PayViaIntentDialog(
+                payingInvoices = wantsToPay,
+                accountViewModel = accountViewModel,
+                onClose = { wantsToPay = persistentListOf() },
+                onError = {
+                    wantsToPay = persistentListOf()
+                    scope.launch {
+                        zappingProgress = 0f
+                        showErrorMessageDialog = it
+                    }
+                },
+                justShowError = {
+                    scope.launch {
+                        showErrorMessageDialog = it
+                    }
+                },
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = iconSizeModifier,
+        ) {
+            if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
+                Spacer(ModifierWidth3dp)
+
+                CircularProgressIndicator(
+                    progress =
+                        animateFloatAsState(
+                            targetValue = zappingProgress,
+                            animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
+                            label = "ZapIconIndicator",
+                        )
+                            .value,
+                    modifier = remember { Modifier.size(animationSize) },
+                    strokeWidth = 2.dp,
+                    color = grayTint,
+                )
+            } else {
+                ObserveZapIcon(
+                    baseNote,
+                    accountViewModel,
+                ) { wasZappedByLoggedInUser ->
+                    LaunchedEffect(wasZappedByLoggedInUser.value) {
+                        hasZapped = wasZappedByLoggedInUser.value
+                        if (wasZappedByLoggedInUser.value && !accountViewModel.account.hasDonatedInThisVersion()) {
+                            delay(1000)
+                            accountViewModel.markDonatedInThisVersion()
+                        }
+                    }
+
+                    Crossfade(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon") {
+                        if (it) {
+                            ZappedIcon(iconSizeModifier)
+                        } else {
+                            ZapIcon(iconSizeModifier, grayTint)
+                        }
+                    }
+                }
+            }
+        }
+
+        if (hasZapped) {
+            Text(text = stringResource(id = R.string.thank_you))
+        } else {
+            Text(text = "Zap " + (amount / 1000).toString() + " Sats to the DVM") // stringResource(id = R.string.donate_now))
+        }
     }
 }
 
