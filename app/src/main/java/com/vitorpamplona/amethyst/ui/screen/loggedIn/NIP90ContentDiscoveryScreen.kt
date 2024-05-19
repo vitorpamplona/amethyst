@@ -278,7 +278,6 @@ fun FeedDVM(
     var lninvoice = ""
     var amount: Long = 0
     var statusNote: Note? = null
-    var dvmUser: User? = null
 
     if (latestStatus == null) {
         content = stringResource(R.string.dvm_waiting_status)
@@ -353,14 +352,25 @@ fun FeedDVM(
         if (status == "payment-required") {
             if (lninvoice != "") {
                 val context = LocalContext.current
-                // TODO is there a better function?
                 Button(onClick = {
-                    payViaIntent(
-                        lninvoice,
-                        context,
-                        onPaid = { println("paid") },
-                        onError = { println("error") },
-                    )
+                    if (accountViewModel.account.hasWalletConnectSetup()) {
+                        // ZapPaymentHandler.payViaNWC(lninvoice, statusNote ...)
+                        // TODO is there a way to use payViaNWC instead of this? It's suspended.
+
+                        payViaIntent(
+                            lninvoice,
+                            context,
+                            onPaid = { println("paid") },
+                            onError = { println("error") },
+                        )
+                    } else {
+                        payViaIntent(
+                            lninvoice,
+                            context,
+                            onPaid = { println("paid") },
+                            onError = { println("error") },
+                        )
+                    }
                 }) {
                     Text(text = "Pay     " + (amount / 1000).toString() + " Sats to the DVM")
                 }
