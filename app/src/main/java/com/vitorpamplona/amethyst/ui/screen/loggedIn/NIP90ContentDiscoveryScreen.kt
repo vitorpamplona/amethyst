@@ -372,7 +372,7 @@ fun FeedDVM(
                         )
                     }
                 }) {
-                    Text(text = "Pay     " + (amount / 1000).toString() + " Sats to the DVM")
+                    Text(text = "Pay " + (amount / 1000).toString() + " Sats to the DVM")
                 }
             } else {
                 statusNote?.let {
