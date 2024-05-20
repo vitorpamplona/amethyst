@@ -282,7 +282,9 @@ fun FeedDVM(
 ) {
     val status = latestStatus.status() ?: return
 
-    var currentStatus = status.description
+    var currentStatus by remember {
+        mutableStateOf(status.description)
+    }
 
     Column(
         Modifier
@@ -370,7 +372,7 @@ fun FeedDVM(
                         }
 
                     if (amountInInvoice != null) {
-                        Text(text = "Pay " + (amountInInvoice / 1000).toString() + " sats to the DVM")
+                        Text(text = "Pay $amountInInvoice sats to the DVM")
                     } else {
                         Text(text = "Pay Invoice from the DVM")
                     }
