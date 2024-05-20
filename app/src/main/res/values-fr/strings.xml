@@ -711,4 +711,9 @@
     <string name="it_s_not_possible_to_zap_to_a_draft_note">Il n\'est pas possible de zapper un brouillon</string>
     <string name="draft_note">Brouillon</string>
     <string name="load_from_text">Depuis message</string>
+    <string name="dvm_looking_for_app">Recherche d\'application</string>
+    <string name="dvm_waiting_status">Tâche demandée, en attente d\'une réponse</string>
+    <string name="dvm_requesting_job">Tâche demandée par DVM</string>
+    <string name="nwc_payment_request">Demande de paiement envoyée, en attente de confirmation depuis votre portefeuille</string>
+    <string name="dvm_waiting_to_confim_payment">En attente que DVM confirme le paiement ou envoie les résultats</string>
 </resources>
