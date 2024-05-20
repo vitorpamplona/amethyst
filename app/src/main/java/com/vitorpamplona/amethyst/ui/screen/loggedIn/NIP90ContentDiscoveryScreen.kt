@@ -263,7 +263,10 @@ fun FeedEmptywithStatus(
                 model = it,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.size(Size75dp).clip(QuoteBorder),
+                modifier =
+                    Modifier
+                        .size(Size75dp)
+                        .clip(QuoteBorder),
             )
         } ?: run { NoteAuthorPicture(appDefinitionNote, nav, accountViewModel, Size75dp) }
 
