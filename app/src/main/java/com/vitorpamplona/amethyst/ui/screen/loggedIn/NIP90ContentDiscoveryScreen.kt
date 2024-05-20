@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -71,7 +70,6 @@ import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.DVMCard
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
-import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
 import com.vitorpamplona.amethyst.ui.note.PayViaIntentDialog
@@ -92,10 +90,11 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
+import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
-import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.NIP90StatusEvent
+import com.vitorpamplona.quartz.events.PayInvoiceErrorResponse
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -116,7 +115,7 @@ fun NIP90ContentDiscoveryScreen(
                     NIP90ContentDiscoveryScreen(baseNote, accountViewModel, nav)
                 },
                 onBlank = {
-                    FeedDVM(baseNote, null, accountViewModel, nav)
+                    FeedEmptyWithStatus(baseNote, stringResource(R.string.dvm_looking_for_app), accountViewModel, nav)
                 },
             )
         }
@@ -160,7 +159,8 @@ fun NIP90ContentDiscoveryScreen(
             )
         } else {
             // TODO: Make a good splash screen with loading animation for this DVM.
-            FeedDVM(appDefinition, null, accountViewModel, nav)
+            // FeedDVM(appDefinition, null, accountViewModel, nav)
+            FeedEmptyWithStatus(appDefinition, stringResource(R.string.dvm_requesting_job), accountViewModel, nav)
         }
     }
 }
@@ -178,7 +178,7 @@ fun ObserverContentDiscoveryResponse(
 
     val resultFlow =
         remember(dvmRequestId) {
-            accountViewModel.observeByETag(NIP90ContentDiscoveryResponseEvent.KIND, dvmRequestId.idHex)
+            accountViewModel.observeByETag<NIP90ContentDiscoveryResponseEvent>(NIP90ContentDiscoveryResponseEvent.KIND, dvmRequestId.idHex)
         }
 
     val latestResponse by resultFlow.collectAsStateWithLifecycle()
@@ -210,12 +210,20 @@ fun ObserverDvmStatusResponse(
 ) {
     val statusFlow =
         remember(dvmRequestId) {
-            accountViewModel.observeByETag(NIP90StatusEvent.KIND, dvmRequestId)
+            accountViewModel.observeByETag<NIP90StatusEvent>(NIP90StatusEvent.KIND, dvmRequestId)
         }
 
     val latestStatus by statusFlow.collectAsStateWithLifecycle()
     // TODO: Make a good splash screen with loading animation for this DVM.
-    FeedDVM(appDefinition, latestStatus, accountViewModel, nav)
+    if (latestStatus != null) {
+        // TODO: Make a good splash screen with loading animation for this DVM.
+        latestStatus?.let {
+            FeedDVM(appDefinition, it, accountViewModel, nav)
+        }
+    } else {
+        // TODO: Make a good splash screen with loading animation for this DVM.
+        FeedEmptyWithStatus(appDefinition, stringResource(R.string.dvm_waiting_status), accountViewModel, nav)
+    }
 }
 
 @Composable
@@ -265,56 +273,16 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FeedDVM(
     appDefinitionNote: Note,
-    latestStatus: Event?,
+    latestStatus: NIP90StatusEvent,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    var status = "waiting"
-    var content = ""
-    var lninvoice = ""
-    var amount: Long = 0
-    var statusNote: Note? = null
+    val status = latestStatus.status() ?: return
 
-    if (latestStatus == null) {
-        content = stringResource(R.string.dvm_waiting_status)
-    } else {
-        latestStatus.let {
-            LoadNote(baseNoteHex = it.id, accountViewModel = accountViewModel) { stateNote ->
-                if (stateNote != null) {
-                    statusNote = stateNote
-                }
-            }
-            content = it.content()
-
-            val statusTag =
-                it.tags().first { it2 ->
-                    it2.size > 1 && (it2[0] == "status")
-                }
-            status = statusTag[1]
-
-            if (statusTag.size > 2 && content == "") {
-                // Some DVMs *might* send a the content in the second status tag (even though the NIP says otherwise)
-                content = statusTag[2]
-            }
-
-            if (status == "payment-required") {
-                val amountTag =
-                    it.tags().first { it2 ->
-                        it2.size > 1 && (it2[0] == "amount")
-                    }
-                amount = amountTag[1].toLong()
-
-                if (amountTag.size > 2) {
-                    // DVM *might* send a lninvoice in the second tag
-                    lninvoice = amountTag[2]
-                }
-            }
-        }
-    }
+    var currentStatus = status.description
 
     Column(
         Modifier
@@ -347,42 +315,77 @@ fun FeedDVM(
         )
 
         Spacer(modifier = DoubleVertSpacer)
-        Text(content, textAlign = TextAlign.Center)
+        Text(currentStatus, textAlign = TextAlign.Center)
 
-        if (status == "payment-required") {
-            if (lninvoice != "") {
+        if (status.code == "payment-required") {
+            val amountTag = latestStatus.firstAmount()
+            val amount = amountTag?.amount
+
+            val invoice = amountTag?.lnInvoice
+
+            val thankYou = stringResource(id = R.string.dvm_waiting_to_confim_payment)
+            val nwcPaymentRequest = stringResource(id = R.string.nwc_payment_request)
+
+            if (invoice != null) {
                 val context = LocalContext.current
                 Button(onClick = {
                     if (accountViewModel.account.hasWalletConnectSetup()) {
-                        // ZapPaymentHandler.payViaNWC(lninvoice, statusNote ...)
-                        // TODO is there a way to use payViaNWC instead of this? It's suspended.
-
-                        payViaIntent(
-                            lninvoice,
-                            context,
-                            onPaid = { println("paid") },
-                            onError = { println("error") },
+                        accountViewModel.account.sendZapPaymentRequestFor(
+                            bolt11 = invoice,
+                            zappedNote = null,
+                            onSent = {
+                                currentStatus = nwcPaymentRequest
+                            },
+                            onResponse = { response ->
+                                currentStatus =
+                                    if (response is PayInvoiceErrorResponse) {
+                                        context.getString(
+                                            R.string.wallet_connect_pay_invoice_error_error,
+                                            response.error?.message
+                                                ?: response.error?.code?.toString() ?: "Error parsing error message",
+                                        )
+                                    } else {
+                                        thankYou
+                                    }
+                            },
                         )
                     } else {
                         payViaIntent(
-                            lninvoice,
+                            invoice,
                             context,
-                            onPaid = { println("paid") },
-                            onError = { println("error") },
+                            onPaid = {
+                                currentStatus = thankYou
+                            },
+                            onError = {
+                                currentStatus = it
+                            },
                         )
                     }
                 }) {
-                    Text(text = "Pay " + (amount / 1000).toString() + " Sats to the DVM")
+                    val amountInInvoice =
+                        try {
+                            LnInvoiceUtil.getAmountInSats(invoice).toLong()
+                        } catch (e: Exception) {
+                            null
+                        }
+
+                    if (amountInInvoice != null) {
+                        Text(text = "Pay " + (amountInInvoice / 1000).toString() + " sats to the DVM")
+                    } else {
+                        Text(text = "Pay Invoice from the DVM")
+                    }
                 }
-            } else {
-                statusNote?.let {
-                    ZapDVMButton(
-                        baseNote = it,
-                        amount = amount,
-                        grayTint = MaterialTheme.colorScheme.onPrimary,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+            } else if (amount != null) {
+                LoadNote(baseNoteHex = latestStatus.id, accountViewModel = accountViewModel) { stateNote ->
+                    stateNote?.let {
+                        ZapDVMButton(
+                            baseNote = it,
+                            amount = amount,
+                            grayTint = MaterialTheme.colorScheme.onPrimary,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
                 }
             }
         }
@@ -400,6 +403,8 @@ fun ZapDVMButton(
     animationSize: Dp = 14.dp,
     nav: (String) -> Unit,
 ) {
+    val noteAuthor = baseNote.author ?: return
+
     var wantsToZap by remember { mutableStateOf<List<Long>?>(null) }
     var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
     var wantsToPay by
@@ -408,15 +413,9 @@ fun ZapDVMButton(
                 persistentListOf(),
             )
         }
-    baseNote.author?.let {
-        LoadUser(baseUserHex = it.pubkeyHex, accountViewModel = accountViewModel) { author ->
-            if (author != null) {
-                author.live().metadata.observeAsState()
-                println(author.info?.lnAddress())
-                println(author.info?.name)
-            }
-        }
-    }
+
+    // Makes sure the user is loaded to get his ln address
+    val userState = noteAuthor.live().metadata.observeAsState()
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -553,8 +552,51 @@ fun ZapDVMButton(
         if (hasZapped) {
             Text(text = stringResource(id = R.string.thank_you))
         } else {
-            Text(text = "Zap " + (amount / 1000).toString() + " Sats to the DVM") // stringResource(id = R.string.donate_now))
+            Text(text = "Zap " + (amount / 1000).toString() + " sats to the DVM") // stringResource(id = R.string.donate_now))
         }
+    }
+}
+
+@Composable
+fun FeedEmptyWithStatus(
+    appDefinitionNote: Note,
+    status: String,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        val card = observeAppDefinition(appDefinitionNote)
+
+        card.cover?.let {
+            AsyncImage(
+                model = it,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier =
+                    Modifier
+                        .size(Size75dp)
+                        .clip(QuoteBorder),
+            )
+        } ?: run { NoteAuthorPicture(appDefinitionNote, nav, accountViewModel, Size75dp) }
+
+        Spacer(modifier = DoubleVertSpacer)
+
+        Text(
+            text = card.name,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+
+        Spacer(modifier = DoubleVertSpacer)
+
+        Text(status)
     }
 }
 

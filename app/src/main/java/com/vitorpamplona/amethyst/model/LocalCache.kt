@@ -143,17 +143,17 @@ object LocalCache {
 
     val deletionIndex = DeletionIndex()
 
-    val observablesByKindAndETag = ConcurrentHashMap<Int, ConcurrentHashMap<HexKey, LatestByKindWithETag>>(10)
+    val observablesByKindAndETag = ConcurrentHashMap<Int, ConcurrentHashMap<HexKey, LatestByKindWithETag<Event>>>(10)
 
-    fun observeETag(
+    fun <T : Event> observeETag(
         kind: Int,
         eventId: HexKey,
-        onCreate: () -> LatestByKindWithETag,
-    ): LatestByKindWithETag {
+        onCreate: () -> LatestByKindWithETag<T>,
+    ): LatestByKindWithETag<T> {
         var eTagList = observablesByKindAndETag.get(kind)
 
         if (eTagList == null) {
-            eTagList = ConcurrentHashMap<HexKey, LatestByKindWithETag>(1)
+            eTagList = ConcurrentHashMap<HexKey, LatestByKindWithETag<T>>(1) as ConcurrentHashMap<HexKey, LatestByKindWithETag<Event>>
             observablesByKindAndETag.put(kind, eTagList)
         }
 
@@ -162,10 +162,10 @@ object LocalCache {
         return if (value != null) {
             value
         } else {
-            val newObject = onCreate()
+            val newObject = onCreate() as LatestByKindWithETag<Event>
             val obj = eTagList.putIfAbsent(eventId, newObject) ?: newObject
             obj
-        }
+        } as LatestByKindWithETag<T>
     }
 
     fun updateObservables(event: Event) {

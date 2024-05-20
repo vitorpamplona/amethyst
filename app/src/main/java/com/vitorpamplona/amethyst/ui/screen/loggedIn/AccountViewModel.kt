@@ -176,16 +176,16 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         account.reactTo(note, reaction)
     }
 
-    fun observeByETag(
+    fun <T : Event> observeByETag(
         kind: Int,
         eTag: HexKey,
-    ): StateFlow<Event?> {
+    ): StateFlow<T?> {
         val observable =
-            LocalCache.observeETag(
+            LocalCache.observeETag<T>(
                 kind = kind,
                 eventId = eTag,
             ) {
-                LatestByKindWithETag(kind, eTag)
+                LatestByKindWithETag<T>(kind, eTag)
             }
 
         viewModelScope.launch(Dispatchers.IO) {
