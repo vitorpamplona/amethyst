@@ -83,6 +83,7 @@ import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.Participant
 import com.vitorpamplona.quartz.events.ReportEvent
+import com.vitorpamplona.quartz.events.Response
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -1350,6 +1351,17 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
             account.requestDVMContentDiscovery(dvmPublicKey) {
                 onReady(LocalCache.getOrCreateNote(it.id))
             }
+        }
+    }
+
+    fun sendZapPaymentRequestFor(
+        bolt11: String,
+        zappedNote: Note?,
+        onSent: () -> Unit,
+        onResponse: (Response?) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.sendZapPaymentRequestFor(bolt11, zappedNote, onSent, onResponse)
         }
     }
 

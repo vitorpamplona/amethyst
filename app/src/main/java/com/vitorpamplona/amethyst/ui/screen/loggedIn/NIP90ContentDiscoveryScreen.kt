@@ -332,7 +332,7 @@ fun FeedDVM(
                 val context = LocalContext.current
                 Button(onClick = {
                     if (accountViewModel.account.hasWalletConnectSetup()) {
-                        accountViewModel.account.sendZapPaymentRequestFor(
+                        accountViewModel.sendZapPaymentRequestFor(
                             bolt11 = invoice,
                             zappedNote = null,
                             onSent = {
