@@ -45,6 +45,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size23dp
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.quartz.events.ChatroomKeyable
+import com.vitorpamplona.quartz.events.GenericRepostEvent
+import com.vitorpamplona.quartz.events.RepostEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -319,6 +321,14 @@ object HomeLatestItem : LatestItem() {
         val newestItem = updateNewestItem(newNotes, account, HomeNewThreadFeedFilter(account))
 
         return (newestItem?.createdAt() ?: 0) > lastTime
+    }
+
+    override fun filterMore(
+        newItems: Set<Note>,
+        account: Account,
+    ): Set<Note> {
+        // removes reposts from the dot notifications.
+        return newItems.filter { it.event !is GenericRepostEvent && it.event !is RepostEvent }.toSet()
     }
 }
 
