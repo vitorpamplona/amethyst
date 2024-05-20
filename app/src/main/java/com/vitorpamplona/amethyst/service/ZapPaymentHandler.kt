@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.collectSuccessfulSigningOperations
+import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.PayInvoiceErrorResponse
@@ -67,6 +68,25 @@ class ZapPaymentHandler(val account: Account) {
                 zapSplitSetup
             } else if (noteEvent is LiveActivitiesEvent && noteEvent.hasHost()) {
                 noteEvent.hosts().map { ZapSplitSetup(it, null, weight = 1.0, false) }
+            } else if (noteEvent is AppDefinitionEvent) {
+                val appLud16 = noteEvent.appMetaData()?.lnAddress()
+                if (appLud16 != null) {
+                    listOf(ZapSplitSetup(appLud16, null, weight = 1.0, true))
+                } else {
+                    val lud16 = note.author?.info?.lnAddress()
+
+                    if (lud16.isNullOrBlank()) {
+                        onError(
+                            context.getString(R.string.missing_lud16),
+                            context.getString(
+                                R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats,
+                            ),
+                        )
+                        return@withContext
+                    }
+
+                    listOf(ZapSplitSetup(lud16, null, weight = 1.0, true))
+                }
             } else {
                 val lud16 = note.author?.info?.lnAddress()
 
