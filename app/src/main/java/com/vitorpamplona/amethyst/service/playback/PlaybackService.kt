@@ -32,6 +32,7 @@ import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.HttpClientManager
 import okhttp3.OkHttpClient
 
@@ -80,7 +81,7 @@ class PlaybackService : MediaSessionService() {
     fun newAllInOneDataSource(): MediaSource.Factory {
         // This might be needed for live kit.
         // return WssOrHttpFactory(HttpClientManager.getHttpClient())
-        return DefaultMediaSourceFactory(OkHttpDataSource.Factory(HttpClientManager.getHttpClient()))
+        return DefaultMediaSourceFactory(Amethyst.instance.videoCache.get(HttpClientManager.getHttpClient()))
     }
 
     fun lazyDS(): MultiPlayerPlaybackManager {
