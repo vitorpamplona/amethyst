@@ -24,15 +24,15 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 
 fun TextFieldValue.insertUrlAtCursor(url: String): TextFieldValue {
-    var toInsert = url
-    if (selection.start > 0 && text[selection.start - 1] != ' ') {
+    var toInsert = url.trim()
+    if (selection.start > 0 && text[selection.start - 1] != ' ' && text[selection.start - 1] != '\n') {
         toInsert = " $toInsert"
     }
 
     // takes the position before adding an empty char after the url
     val endOfUrlIndex = selection.start + toInsert.length
 
-    if (selection.end < text.length && text[selection.end] != ' ') {
+    if (selection.end < text.length && text[selection.end] != ' ' && text[selection.end] != '\n') {
         toInsert = "$toInsert "
     }
 

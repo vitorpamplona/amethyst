@@ -118,4 +118,13 @@ class TextFieldValueExtensionTest {
         assertEquals("a  http://a.b b", next.text)
         assertEquals(TextRange(13, 13), next.selection)
     }
+
+    @Test
+    fun testInsertAfterNewLine() {
+        val current = TextFieldValue("ab\n\n", selection = TextRange(4, 4))
+        val next = current.insertUrlAtCursor("https://i.nostr.build/zdMW4.jpg")
+
+        assertEquals("ab\n\nhttps://i.nostr.build/zdMW4.jpg", next.text)
+        assertEquals(TextRange(35, 35), next.selection)
+    }
 }
