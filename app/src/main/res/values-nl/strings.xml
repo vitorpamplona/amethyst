@@ -429,6 +429,7 @@
     <string name="are_you_sure_you_want_to_log_out">Uitloggen verwijdert al je lokale informatie. Zorg ervoor dat je een back-up hebt van je geheime sleutels om te voorkomen dat je je account kwijtraakt. Wilt u doorgaan?</string>
     <string name="followed_tags">Gevolgde tags</string>
     <string name="relay_setup">Relays</string>
+    <string name="discover_content">Note ontdekking</string>
     <string name="discover_marketplace">Marktplaats</string>
     <string name="discover_live">Live</string>
     <string name="discover_community">Community</string>
@@ -669,6 +670,10 @@
     <string name="show_npub_as_a_qr_code">Toon npub als een QR-code</string>
     <string name="invalid_nip19_uri">Ongeldig adres</string>
     <string name="invalid_nip19_uri_description">Amethist ontving een URI om te openen, maar die uri was ongeldig: %1$s</string>
+    <string name="dm_relays_not_found">Stel uw Privé Postvak relays in</string>
+    <string name="dm_relays_not_found_description">Deze instelling geeft iedereen informatie over de relays die gebruikt worden bij het verzenden van berichten. Zonder hen mis je mogelijk een bericht.</string>
+    <string name="dm_relays_not_found_explanation">DM postvak relays accepteren berichten van iedereen, maar kunnen ze alleen downloaden. Bijvoorbeeld, inbox.nostr.wine werkt op deze manier. </string>
+    <string name="dm_relays_not_found_create_now">Nu instellen</string>
     <string name="zap_the_devs_title">Zap de devs!</string>
     <string name="zap_the_devs_description">Jouw donatie helpt ons om een verschil te maken. Elke sat telt!</string>
     <string name="donate_now">Nu doneren</string>
@@ -706,4 +711,9 @@
     <string name="it_s_not_possible_to_zap_to_a_draft_note">Het is niet mogelijk om een concept op te zappen</string>
     <string name="draft_note">Concept notitie</string>
     <string name="load_from_text">Van Msg</string>
+    <string name="dvm_looking_for_app">Zoeken naar applicatie</string>
+    <string name="dvm_waiting_status">Taak aangevraagd, wachten op een antwoord</string>
+    <string name="dvm_requesting_job">Taak aanvragen bij DVM</string>
+    <string name="nwc_payment_request">Betalingsverzoek verzonden, wachten op bevestiging van uw wallet</string>
+    <string name="dvm_waiting_to_confim_payment">Wachten op DVM-betaling te bevestigen of resultaten te verzenden</string>
 </resources>
