@@ -43,6 +43,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun LoadDecryptedContent(
@@ -116,10 +117,12 @@ fun LoadAddressableNote(
 
     if (note == null) {
         LaunchedEffect(key1 = aTag) {
-            accountViewModel.getOrCreateAddressableNote(aTag) { newNote ->
-                if (newNote != note) {
-                    note = newNote
+            val newNote =
+                withContext(Dispatchers.IO) {
+                    accountViewModel.getOrCreateAddressableNote(aTag)
                 }
+            if (note != newNote) {
+                note = newNote
             }
         }
     }

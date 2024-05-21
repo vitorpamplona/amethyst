@@ -946,7 +946,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreateAddressableNote(key)) }
     }
 
-    private suspend fun getOrCreateAddressableNote(key: ATag): AddressableNote? {
+    suspend fun getOrCreateAddressableNote(key: ATag): AddressableNote? {
         return LocalCache.getOrCreateAddressableNote(key)
     }
 

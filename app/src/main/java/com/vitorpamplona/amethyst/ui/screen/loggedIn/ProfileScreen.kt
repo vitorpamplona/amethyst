@@ -48,6 +48,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -163,7 +164,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
@@ -1289,14 +1289,8 @@ private fun DisplayBadges(
         }
 
     LoadAddressableNote(
-        aTag =
-            ATag(
-                BadgeProfilesEvent.KIND,
-                baseUser.pubkeyHex,
-                BadgeProfilesEvent.STANDARD_D_TAG,
-                null,
-            ),
-        accountViewModel,
+        aTag = BadgeProfilesEvent.createAddressTag(baseUser.pubkeyHex),
+        accountViewModel = accountViewModel,
     ) { note ->
         if (note != null) {
             WatchAndRenderBadgeList(note, automaticallyShowProfilePicture, nav)
@@ -1342,7 +1336,7 @@ private fun LoadAndRenderBadge(
     loadProfilePicture: Boolean,
     nav: (String) -> Unit,
 ) {
-    var baseNote by remember { mutableStateOf(LocalCache.getNoteIfExists(badgeAwardEventHex)) }
+    var baseNote by remember(badgeAwardEventHex) { mutableStateOf(LocalCache.getNoteIfExists(badgeAwardEventHex)) }
 
     LaunchedEffect(key1 = badgeAwardEventHex) {
         if (baseNote == null) {
@@ -1440,7 +1434,7 @@ private fun WatchAndRenderBadgeImage(
                     pictureModifier
                         .width(size)
                         .height(size)
-                        .clip(shape = CircleShape)
+                        .clip(shape = CutCornerShape(20))
                         .background(bgColor)
                         .run {
                             if (onClick != null) {
