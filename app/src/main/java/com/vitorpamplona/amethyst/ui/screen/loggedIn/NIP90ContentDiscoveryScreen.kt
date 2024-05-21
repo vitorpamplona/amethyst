@@ -390,6 +390,8 @@ fun FeedDVM(
                     }
                 }
             }
+        } else if (status.code == "processing") {
+            currentStatus = status.description
         }
     }
 }
