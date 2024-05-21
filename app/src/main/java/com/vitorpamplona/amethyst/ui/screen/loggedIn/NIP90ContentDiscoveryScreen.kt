@@ -142,7 +142,12 @@ fun NIP90ContentDiscoveryScreen(
     }
 
     LaunchedEffect(key1 = appDefinition) {
-        onRefresh()
+        val existingResult = accountViewModel.cachedDVMContentDiscovery(noteAuthor.pubkeyHex)
+        if (existingResult == null) {
+            onRefresh()
+        } else {
+            requestEventID = existingResult
+        }
     }
 
     RefresheableBox(
