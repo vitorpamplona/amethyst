@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
@@ -52,21 +53,6 @@ open class NIP90ContentDiscoveryResponseFilter(
         return noteEvent is NIP90ContentDiscoveryResponseEvent && noteEvent.isTaggedEvent(request)
     }
 
-    val createAtComparator = { first: Note?, second: Note? ->
-        val firstEvent = first?.event
-        val secondEvent = second?.event
-
-        if (firstEvent == null && secondEvent == null) {
-            0
-        } else if (firstEvent == null) {
-            1
-        } else if (secondEvent == null) {
-            -1
-        } else {
-            firstEvent.createdAt().compareTo(secondEvent.createdAt())
-        }
-    }
-
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
 
@@ -75,7 +61,7 @@ open class NIP90ContentDiscoveryResponseFilter(
                 filter = { idHex: String, note: Note ->
                     acceptableEvent(note)
                 },
-                comparator = createAtComparator,
+                comparator = CreatedAtComparator,
             )
 
         val noteEvent = latestNote?.event as? NIP90ContentDiscoveryResponseEvent ?: return listOf()

@@ -20,39 +20,24 @@
  */
 package com.vitorpamplona.amethyst.model.observables
 
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.quartz.events.Event
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 
-class LatestByKindWithETag<T : Event>(private val kind: Int, private val eTag: String) {
-    private val _latest = MutableStateFlow<T?>(null)
-    val latest = _latest.asStateFlow()
+object CreatedAtComparator : Comparator<Note> {
+    override fun compare(
+        first: Note?,
+        second: Note?,
+    ): Int {
+        val firstEvent = first?.event
+        val secondEvent = second?.event
 
-    fun updateIfMatches(event: T) {
-        if (event.kind == kind && event.isTaggedEvent(eTag)) {
-            if (event.createdAt > (_latest.value?.createdAt ?: 0)) {
-                _latest.tryEmit(event)
-            }
+        return if (firstEvent == null && secondEvent == null) {
+            0
+        } else if (firstEvent == null) {
+            1
+        } else if (secondEvent == null) {
+            -1
+        } else {
+            firstEvent.createdAt().compareTo(secondEvent.createdAt())
         }
-    }
-
-    fun canDelete(): Boolean {
-        return _latest.subscriptionCount.value == 0
-    }
-
-    suspend fun init() {
-        val latestNote =
-            LocalCache.notes.maxOrNullOf(
-                filter = { idHex: String, note: Note ->
-                    note.event?.let {
-                        it.kind() == kind && it.isTaggedEvent(eTag)
-                    } == true
-                },
-                comparator = CreatedAtComparator,
-            )?.event as? T
-
-        _latest.tryEmit(latestNote)
     }
 }
