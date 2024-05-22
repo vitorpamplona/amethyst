@@ -672,7 +672,6 @@
     <string name="invalid_nip19_uri_description">Amethist ontving een URI om te openen, maar die uri was ongeldig: %1$s</string>
     <string name="dm_relays_not_found">Stel uw Privé Postvak relays in</string>
     <string name="dm_relays_not_found_description">Deze instelling geeft iedereen informatie over de relays die gebruikt worden bij het verzenden van berichten. Zonder hen mis je mogelijk een bericht.</string>
-    <string name="dm_relays_not_found_explanation">DM postvak relays accepteren berichten van iedereen, maar kunnen ze alleen downloaden. Bijvoorbeeld, inbox.nostr.wine werkt op deze manier. </string>
     <string name="dm_relays_not_found_create_now">Nu instellen</string>
     <string name="zap_the_devs_title">Zap de devs!</string>
     <string name="zap_the_devs_description">Jouw donatie helpt ons om een verschil te maken. Elke sat telt!</string>

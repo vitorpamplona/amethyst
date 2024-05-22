@@ -672,7 +672,6 @@
     <string name="invalid_nip19_uri_description">Amethyst a reçu une URI à ouvrir mais cette URI était invalide : %1$s</string>
     <string name="dm_relays_not_found">Configurer vos relais de messagerie privée</string>
     <string name="dm_relays_not_found_description">Ce paramètre informe tout le monde les relais à utiliser pour vous envoyer des messages. Sans eux, vous risquez de manquer certains messages.</string>
-    <string name="dm_relays_not_found_explanation">Les relais de messagerie DM acceptent n\'importe quel message de n\'importe qui, mais vous permet seulement de les télécharger. Par exemple, inbox.nostr.wine fonctionne de cette façon. </string>
     <string name="dm_relays_not_found_create_now">Configurer maintenant</string>
     <string name="zap_the_devs_title">Zap les Devs !</string>
     <string name="zap_the_devs_description">Votre don nous aide à faire la différence. Chaque sat compte !</string>

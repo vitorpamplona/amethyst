@@ -104,6 +104,8 @@ import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForDMs
+import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForDMsAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -116,6 +118,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.findURLs
@@ -295,8 +298,14 @@ fun ChatroomScreen(
 
     Column(Modifier.fillMaxHeight()) {
         val replyTo = remember { mutableStateOf<Note?>(null) }
+        ObserveRelayListForDMsAndDisplayIfNotFound(accountViewModel, nav)
+
         Column(
-            modifier = Modifier.fillMaxHeight().padding(vertical = 0.dp).weight(1f, true),
+            modifier =
+                Modifier
+                    .fillMaxHeight()
+                    .padding(vertical = 0.dp)
+                    .weight(1f, true),
         ) {
             RefreshingChatroomFeedView(
                 viewModel = feedViewModel,
@@ -425,7 +434,10 @@ fun PrivateMessageEditFieldRow(
                     UploadFromGallery(
                         isUploading = channelScreenModel.isUploadingImage,
                         tint = MaterialTheme.colorScheme.placeholderText,
-                        modifier = Modifier.size(30.dp).padding(start = 2.dp),
+                        modifier =
+                            Modifier
+                                .size(30.dp)
+                                .padding(start = 2.dp),
                     ) {
                         channelScreenModel.upload(
                             galleryUri = it,
@@ -603,7 +615,8 @@ fun ChatroomHeader(
 ) {
     Column(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .clickable(
                     onClick = onClick,
                 ),
@@ -635,7 +648,10 @@ fun GroupChatroomHeader(
     onClick: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
     ) {
         Column(
             verticalArrangement = Arrangement.Center,
@@ -669,7 +685,10 @@ private fun EditRoomSubjectButton(
     }
 
     Button(
-        modifier = Modifier.padding(horizontal = 3.dp).width(50.dp),
+        modifier =
+            Modifier
+                .padding(horizontal = 3.dp)
+                .width(50.dp),
         onClick = { wantsToPost = true },
         contentPadding = ZeroPadding,
     ) {
@@ -703,7 +722,10 @@ fun NewSubjectView(
             val scope = rememberCoroutineScope()
 
             Column(
-                modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState()),
+                modifier =
+                    Modifier
+                        .padding(10.dp)
+                        .verticalScroll(rememberScrollState()),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -755,7 +777,10 @@ fun NewSubjectView(
 
                 OutlinedTextField(
                     label = { Text(text = stringResource(R.string.messages_new_subject_message)) },
-                    modifier = Modifier.fillMaxWidth().height(100.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(100.dp),
                     value = message.value,
                     onValueChange = { message.value = it },
                     placeholder = {
@@ -820,6 +845,31 @@ fun LongRoomHeader(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun DMRelayLine(
+    baseUser: User,
+    accountViewModel: AccountViewModel,
+) {
+    ObserveRelayListForDMs(pubkey = baseUser.pubkeyHex, accountViewModel = accountViewModel) {
+        val relayList = it?.relays()
+        if (relayList.isNullOrEmpty()) {
+            Text(
+                text = stringResource(id = R.string.dm_relays_regular),
+                color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        } else {
+            Text(
+                text = stringResource(id = R.string.dm_relays_through, relayList.joinToString(", ") { RelayUrlFormatter.displayUrl(it) }),
+                color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

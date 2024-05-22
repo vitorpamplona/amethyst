@@ -51,6 +51,10 @@ class ChatMessageRelayListEvent(
         const val KIND = 10050
         const val FIXED_D_TAG = ""
 
+        fun createAddressATag(pubKey: HexKey): ATag {
+            return ATag(KIND, pubKey, FIXED_D_TAG, null)
+        }
+
         fun createAddressTag(pubKey: HexKey): String {
             return ATag.assembleATag(KIND, pubKey, FIXED_D_TAG)
         }
@@ -58,7 +62,33 @@ class ChatMessageRelayListEvent(
         fun createTagArray(relays: List<String>): Array<Array<String>> {
             return relays.map {
                 arrayOf("relay", it)
-            }.plusElement(arrayOf("alt", "Relay list for private messages")).toTypedArray()
+            }.plusElement(arrayOf("alt", "Relay list to receive private messages")).toTypedArray()
+        }
+
+        fun updateRelayList(
+            earlierVersion: ChatMessageRelayListEvent,
+            relays: List<String>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ChatMessageRelayListEvent) -> Unit,
+        ) {
+            val tags =
+                earlierVersion.tags.filter { it[0] != "relay" }.plus(
+                    relays.map {
+                        arrayOf("relay", it)
+                    },
+                ).toTypedArray()
+
+            signer.sign(createdAt, KIND, tags, earlierVersion.content, onReady)
+        }
+
+        fun createFromScratch(
+            relays: List<String>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (ChatMessageRelayListEvent) -> Unit,
+        ) {
+            create(relays, signer, createdAt, onReady)
         }
 
         fun create(

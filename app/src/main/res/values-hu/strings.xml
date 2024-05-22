@@ -671,7 +671,6 @@
     <string name="invalid_nip19_uri_description">Az Amethyst kapott egy URI-t a megnyitáshoz, de az érvénytelen volt: %1$s</string>
     <string name="dm_relays_not_found">Állítsd be a Privát postafiókod közvetítőit</string>
     <string name="dm_relays_not_found_description">Ez a beállítás mindenkit tájékoztat, hogy melyik közvetítőt használod, amikor üzeneteket küldenek neked. Nélkülük néhány üzenetről lemaradhatsz.</string>
-    <string name="dm_relays_not_found_explanation">A DM Inbox csomópontok bárkitől bármilyen üzenetet elfogadnak, de csak a letöltésüket teszik lehetővé. Például az inbox.nostr.wine így működik. </string>
     <string name="dm_relays_not_found_create_now">Állítsd be most</string>
     <string name="zap_the_devs_title">Zap a fejlesztőknek!</string>
     <string name="zap_the_devs_description">Az adományod hozzájárul ahhoz, hogy változást érjünk el. Minden sat számít!</string>

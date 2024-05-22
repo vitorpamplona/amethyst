@@ -20,52 +20,45 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ThemeType
-import com.vitorpamplona.amethyst.ui.note.CloseIcon
+import com.vitorpamplona.amethyst.ui.actions.DMRelayListView
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.BigPadding
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.runBlocking
 
 @Preview
 @Composable
@@ -89,85 +82,93 @@ fun AddInboxRelayForDMCardPreview() {
             scope = myCoroutineScope,
         )
 
-    runBlocking(Dispatchers.IO) {
-        val createAt = TimeUtils.now()
-        val list = listOf("wss://inbox.nostr.wine", "wss://vitor.nostr1.com")
-        val tags = ChatMessageRelayListEvent.createTagArray(list)
-        val id = "ab"
-
-        LocalCache.justConsume(
-            ChatMessageRelayListEvent(
-                id = id,
-                pubKey = pubkey,
-                createdAt = createAt,
-                tags = tags,
-                content = "",
-                sig = "",
-            ),
-            null,
-        )
-    }
-
     val accountViewModel =
         AccountViewModel(
             myAccount,
             sharedPreferencesViewModel.sharedPrefs,
         )
 
+    ThemeComparisonColumn {
+        AddInboxRelayForDMCard(
+            accountViewModel = accountViewModel,
+            nav = {},
+        )
+    }
+}
+
+@Composable
+fun ObserveRelayListForDMsAndDisplayIfNotFound(
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    ObserveRelayListForDMs(
+        accountViewModel = accountViewModel,
+    ) { relayListEvent ->
+        if (relayListEvent == null) {
+            AddInboxRelayForDMCard(
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+    }
+}
+
+@Composable
+fun ObserveRelayListForDMs(
+    accountViewModel: AccountViewModel,
+    inner: @Composable (relayListEvent: ChatMessageRelayListEvent?) -> Unit,
+) {
+    ObserveRelayListForDMs(
+        pubkey = accountViewModel.account.userProfile().pubkeyHex,
+        accountViewModel = accountViewModel,
+    ) { relayListEvent ->
+        inner(relayListEvent)
+    }
+}
+
+@Composable
+fun ObserveRelayListForDMs(
+    pubkey: HexKey,
+    accountViewModel: AccountViewModel,
+    inner: @Composable (relayListEvent: ChatMessageRelayListEvent?) -> Unit,
+) {
+    println("AABBCC ObserveRelayListForDMs $pubkey")
     LoadAddressableNote(
-        ChatMessageRelayListEvent.createAddressTag("989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"),
+        ChatMessageRelayListEvent.createAddressTag(pubkey),
         accountViewModel,
     ) { relayList ->
-        Text("Test" + relayList)
         if (relayList != null) {
-            ThemeComparisonColumn {
-                AddInboxRelayForDMCard(
-                    relayList,
-                    accountViewModel,
-                    nav = {},
-                )
-            }
+            val relayListNoteState by relayList.live().metadata.observeAsState()
+            val relayListEvent = relayListNoteState?.note?.event as? ChatMessageRelayListEvent
+
+            println("AABBCC ObserveRelayListForDMs Event $relayListEvent ${relayListNoteState?.note?.idHex}")
+
+            inner(relayListEvent)
         }
     }
 }
 
 @Composable
 fun AddInboxRelayForDMCard(
-    baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val releaseNoteState by baseNote.live().metadata.observeAsState()
-    val releaseNote = releaseNoteState?.note ?: return
-
-    Column(modifier = Modifier.padding(horizontal = Size10dp)) {
+    Column(modifier = StdPadding) {
         Card(
             modifier = MaterialTheme.colorScheme.imageModifier,
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
+                modifier = BigPadding,
             ) {
                 // Title
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = stringResource(id = R.string.dm_relays_not_found),
-                        style =
-                            TextStyle(
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                            ),
-                    )
-
-                    IconButton(
-                        modifier = Size20Modifier,
-                        onClick = { accountViewModel.markDonatedInThisVersion() },
-                    ) {
-                        CloseIcon()
-                    }
-                }
+                Text(
+                    text = stringResource(id = R.string.dm_relays_not_found),
+                    style =
+                        TextStyle(
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
+                )
 
                 Spacer(modifier = StdVertSpacer)
 
@@ -177,8 +178,20 @@ fun AddInboxRelayForDMCard(
 
                 Spacer(modifier = StdVertSpacer)
 
+                Text(
+                    text = stringResource(id = R.string.dm_relays_not_found_examples),
+                )
+
+                Spacer(modifier = StdVertSpacer)
+
+                var wantsToEditRelays by remember { mutableStateOf(false) }
+                if (wantsToEditRelays) {
+                    DMRelayListView({ wantsToEditRelays = false }, accountViewModel, nav = nav)
+                }
+
                 Button(
                     onClick = {
+                        wantsToEditRelays = true
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -186,7 +199,5 @@ fun AddInboxRelayForDMCard(
                 }
             }
         }
-
-        Spacer(modifier = DoubleVertSpacer)
     }
 }

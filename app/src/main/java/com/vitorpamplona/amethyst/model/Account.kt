@@ -52,6 +52,7 @@ import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
+import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.Contact
 import com.vitorpamplona.quartz.events.ContactListEvent
@@ -2542,6 +2543,40 @@ class Account(
             )
         } finally {
             saveable.invalidateData()
+        }
+    }
+
+    fun getDMRelayList(): ChatMessageRelayListEvent? {
+        return LocalCache.getOrCreateAddressableNote(
+            ChatMessageRelayListEvent.createAddressATag(signer.pubKey),
+        ).event as? ChatMessageRelayListEvent
+    }
+
+    fun saveDMRelayList(dmRelays: List<String>) {
+        if (!isWriteable()) return
+
+        val relayListForDMs =
+            LocalCache.getOrCreateAddressableNote(
+                ChatMessageRelayListEvent.createAddressATag(signer.pubKey),
+            ).event as? ChatMessageRelayListEvent
+
+        if (relayListForDMs != null && relayListForDMs.tags.isNotEmpty()) {
+            ChatMessageRelayListEvent.updateRelayList(
+                earlierVersion = relayListForDMs,
+                relays = dmRelays,
+                signer = signer,
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
+            }
+        } else {
+            ChatMessageRelayListEvent.createFromScratch(
+                relays = dmRelays,
+                signer = signer,
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
+            }
         }
     }
 

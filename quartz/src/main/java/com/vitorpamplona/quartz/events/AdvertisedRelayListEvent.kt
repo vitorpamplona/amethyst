@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.events
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -56,6 +57,10 @@ class AdvertisedRelayListEvent(
     companion object {
         const val KIND = 10002
         const val FIXED_D_TAG = ""
+
+        fun createAddressTag(pubKey: HexKey): ATag {
+            return ATag(KIND, pubKey, FIXED_D_TAG, null)
+        }
 
         fun create(
             list: List<AdvertisedRelayInfo>,
