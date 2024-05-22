@@ -82,7 +82,7 @@ fun ChannelNamePreview() {
                 }
             },
             supportingContent = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row {
                     Text("This is a message from this person", Modifier.weight(1f))
                     NewItemsBubble()
                 }
@@ -96,6 +96,8 @@ fun ChannelNamePreview() {
                 )
             },
         )
+
+        HorizontalDivider(thickness = DividerThickness)
     }
 }
 

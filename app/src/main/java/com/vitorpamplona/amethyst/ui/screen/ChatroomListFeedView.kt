@@ -38,7 +38,6 @@ import com.vitorpamplona.amethyst.ui.note.ChatroomHeaderCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 
 @Composable
 fun ChatroomListFeedView(
@@ -112,7 +111,6 @@ private fun FeedLoaded(
             }
 
             HorizontalDivider(
-                modifier = StdTopPadding,
                 thickness = DividerThickness,
             )
         }

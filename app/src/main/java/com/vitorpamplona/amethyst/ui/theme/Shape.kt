@@ -169,7 +169,7 @@ val NotificationIconModifier = Modifier.width(55.dp).padding(end = 5.dp)
 val NotificationIconModifierSmaller = Modifier.width(55.dp).padding(end = 4.dp)
 
 val ZapPictureCommentModifier = Modifier.height(35.dp).widthIn(min = 35.dp)
-val ChatHeadlineBorders = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)
+val ChatHeadlineBorders = StdPadding
 
 val VolumeBottomIconSize = Modifier.size(70.dp).padding(10.dp)
 val PinBottomIconSize = Modifier.size(70.dp).padding(10.dp)
