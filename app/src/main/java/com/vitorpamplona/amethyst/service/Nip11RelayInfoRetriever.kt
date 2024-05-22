@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service
 import android.util.Log
 import android.util.LruCache
 import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import okhttp3.Call
@@ -42,7 +43,7 @@ object Nip11CachedRetriever {
     val retriever = Nip11Retriever()
 
     fun getFromCache(dirtyUrl: String): Nip11RelayInformation? {
-        val result = relayInformationDocumentCache.get(retriever.cleanUrl(dirtyUrl)) ?: return null
+        val result = relayInformationDocumentCache.get(RelayUrlFormatter.getHttpsUrl(dirtyUrl)) ?: return null
         if (result is RetrieveResultSuccess) return result.data
         return null
     }
@@ -52,7 +53,7 @@ object Nip11CachedRetriever {
         onInfo: (Nip11RelayInformation) -> Unit,
         onError: (String, Nip11Retriever.ErrorCode, String?) -> Unit,
     ) {
-        val url = retriever.cleanUrl(dirtyUrl)
+        val url = RelayUrlFormatter.getHttpsUrl(dirtyUrl)
         val doc = relayInformationDocumentCache.get(url)
 
         if (doc != null) {
@@ -62,35 +63,33 @@ object Nip11CachedRetriever {
                 if (TimeUtils.now() - doc.time < TimeUtils.ONE_HOUR) {
                     onError(dirtyUrl, doc.error, null)
                 } else {
-                    Nip11Retriever()
-                        .loadRelayInfo(
-                            url = url,
-                            dirtyUrl = dirtyUrl,
-                            onInfo = {
-                                relayInformationDocumentCache.put(url, RetrieveResultSuccess(it))
-                                onInfo(it)
-                            },
-                            onError = { dirtyUrl, code, errorMsg ->
-                                relayInformationDocumentCache.put(url, RetrieveResultError(code, errorMsg))
-                                onError(url, code, errorMsg)
-                            },
-                        )
+                    retriever.loadRelayInfo(
+                        url = url,
+                        dirtyUrl = dirtyUrl,
+                        onInfo = {
+                            relayInformationDocumentCache.put(url, RetrieveResultSuccess(it))
+                            onInfo(it)
+                        },
+                        onError = { dirtyUrl, code, errorMsg ->
+                            relayInformationDocumentCache.put(url, RetrieveResultError(code, errorMsg))
+                            onError(url, code, errorMsg)
+                        },
+                    )
                 }
             }
         } else {
-            Nip11Retriever()
-                .loadRelayInfo(
-                    url = url,
-                    dirtyUrl = dirtyUrl,
-                    onInfo = {
-                        relayInformationDocumentCache.put(url, RetrieveResultSuccess(it))
-                        onInfo(it)
-                    },
-                    onError = { dirtyUrl, code, errorMsg ->
-                        relayInformationDocumentCache.put(url, RetrieveResultError(code, errorMsg))
-                        onError(url, code, errorMsg)
-                    },
-                )
+            retriever.loadRelayInfo(
+                url = url,
+                dirtyUrl = dirtyUrl,
+                onInfo = {
+                    relayInformationDocumentCache.put(url, RetrieveResultSuccess(it))
+                    onInfo(it)
+                },
+                onError = { dirtyUrl, code, errorMsg ->
+                    relayInformationDocumentCache.put(url, RetrieveResultError(code, errorMsg))
+                    onError(url, code, errorMsg)
+                },
+            )
         }
     }
 }
@@ -101,14 +100,6 @@ class Nip11Retriever {
         FAIL_TO_REACH_SERVER,
         FAIL_TO_PARSE_RESULT,
         FAIL_WITH_HTTP_STATUS,
-    }
-
-    fun cleanUrl(dirtyUrl: String): String {
-        return if (dirtyUrl.contains("://")) {
-            dirtyUrl.replace("wss://", "https://").replace("ws://", "http://")
-        } else {
-            "https://$dirtyUrl"
-        }
     }
 
     suspend fun loadRelayInfo(

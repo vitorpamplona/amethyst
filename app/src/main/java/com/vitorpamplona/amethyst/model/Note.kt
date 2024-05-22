@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.encoders.toNote
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
@@ -1122,8 +1123,7 @@ object RelayBriefInfoCache {
     @Immutable
     data class RelayBriefInfo(
         val url: String,
-        val displayUrl: String =
-            url.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/").intern(),
+        val displayUrl: String = RelayUrlFormatter.displayUrl(url).intern(),
         val favIcon: String = "https://$displayUrl/favicon.ico".intern(),
     )
 

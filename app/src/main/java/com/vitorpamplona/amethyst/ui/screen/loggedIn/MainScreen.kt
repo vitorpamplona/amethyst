@@ -110,6 +110,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -521,7 +522,7 @@ private fun DisplayNotifyMessages(
             title =
                 stringResource(
                     id = R.string.payment_required_title,
-                    request.relayUrl.removePrefix("wss://").removeSuffix("/"),
+                    RelayUrlFormatter.displayUrl(request.relayUrl),
                 ),
             textContent = request.description,
             accountViewModel = accountViewModel,

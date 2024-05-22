@@ -102,6 +102,7 @@ import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.largeRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.warningColor
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import kotlinx.coroutines.launch
 import java.lang.Math.round
 
@@ -899,17 +900,7 @@ fun EditableServerConfig(
         Button(
             onClick = {
                 if (url.isNotBlank() && url != "/") {
-                    var addedWSS =
-                        if (!url.startsWith("wss://") && !url.startsWith("ws://")) {
-                            if (url.endsWith(".onion") || url.endsWith(".onion/")) {
-                                "ws://$url"
-                            } else {
-                                "wss://$url"
-                            }
-                        } else {
-                            url
-                        }
-                    if (url.endsWith("/")) addedWSS = addedWSS.dropLast(1)
+                    val addedWSS = RelayUrlFormatter.normalize(url)
                     onNewRelay(RelaySetupInfo(addedWSS, read, write, feedTypes = FeedType.values().toSet()))
                     url = ""
                     write = true
