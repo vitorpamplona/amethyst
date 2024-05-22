@@ -57,9 +57,53 @@ class AdvertisedRelayListEvent(
     companion object {
         const val KIND = 10002
         const val FIXED_D_TAG = ""
+        const val ALT = "Relay list to discover the user's content"
 
-        fun createAddressTag(pubKey: HexKey): ATag {
+        fun createAddressATag(pubKey: HexKey): ATag {
             return ATag(KIND, pubKey, FIXED_D_TAG, null)
+        }
+
+        fun createAddressTag(pubKey: HexKey): String {
+            return ATag.assembleATag(KIND, pubKey, FIXED_D_TAG)
+        }
+
+        fun updateRelayList(
+            earlierVersion: AdvertisedRelayListEvent,
+            relays: List<AdvertisedRelayInfo>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (AdvertisedRelayListEvent) -> Unit,
+        ) {
+            val tags =
+                earlierVersion.tags.filter { it[0] != "r" }.plus(
+                    relays.map(::createRelayTag),
+                ).toTypedArray()
+
+            signer.sign(createdAt, KIND, tags, earlierVersion.content, onReady)
+        }
+
+        fun createFromScratch(
+            relays: List<AdvertisedRelayInfo>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (AdvertisedRelayListEvent) -> Unit,
+        ) {
+            create(relays, signer, createdAt, onReady)
+        }
+
+        fun createRelayTag(relay: AdvertisedRelayInfo): Array<String> {
+            return if (relay.type == AdvertisedRelayType.BOTH) {
+                arrayOf("r", relay.relayUrl)
+            } else {
+                arrayOf("r", relay.relayUrl, relay.type.code)
+            }
+        }
+
+        fun createTagArray(relays: List<AdvertisedRelayInfo>): Array<Array<String>> {
+            return relays
+                .map(::createRelayTag)
+                .plusElement(arrayOf("alt", ALT))
+                .toTypedArray()
         }
 
         fun create(
@@ -68,17 +112,7 @@ class AdvertisedRelayListEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (AdvertisedRelayListEvent) -> Unit,
         ) {
-            val tags =
-                list
-                    .map {
-                        if (it.type == AdvertisedRelayType.BOTH) {
-                            arrayOf(it.relayUrl)
-                        } else {
-                            arrayOf(it.relayUrl, it.type.code)
-                        }
-                    }
-                    .plusElement(arrayOf("alt", "Relay list event with ${list.size} relays"))
-                    .toTypedArray()
+            val tags = createTagArray(list)
             val msg = ""
 
             signer.sign(createdAt, KIND, tags, msg, onReady)
