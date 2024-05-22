@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
@@ -154,7 +155,7 @@ fun NewRelayListView(
                         }
                     },
                     navigationIcon = {
-                        Spacer(modifier = StdHorzSpacer)
+                        Spacer(modifier = DoubleHorzSpacer)
                         CloseButton(
                             onPress = {
                                 postViewModel.clear()
