@@ -1037,7 +1037,7 @@ open class NewPostViewModel() : ViewModel() {
             onReady = { header: FileHeader ->
                 account?.createHeader(imageUrl, magnet, header, alt, sensitiveContent, originalHash) { event ->
                     isUploadingImage = false
-                    nip94attachments = nip94attachments + event
+                    nip94attachments = nip94attachments.filter { it.url() != event.url() } + event
 
                     message = message.insertUrlAtCursor(imageUrl)
                     urlPreview = findUrlInMessage()
