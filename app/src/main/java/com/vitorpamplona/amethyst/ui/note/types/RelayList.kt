@@ -45,7 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
-import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
+import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.note.AddRelayButton
 import com.vitorpamplona.amethyst.ui.note.RemoveRelayButton
@@ -167,7 +167,7 @@ private fun RelayOptionsAction(
     var wantsToAddRelay by remember { mutableStateOf("") }
 
     if (wantsToAddRelay.isNotEmpty()) {
-        NewRelayListView({ wantsToAddRelay = "" }, accountViewModel, wantsToAddRelay, nav = nav)
+        AllRelayListView({ wantsToAddRelay = "" }, wantsToAddRelay, accountViewModel, nav = nav)
     }
 
     if (isCurrentlyOnTheUsersList) {

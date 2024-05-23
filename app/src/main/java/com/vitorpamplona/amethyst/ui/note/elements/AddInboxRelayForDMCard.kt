@@ -43,7 +43,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.ThemeType
-import com.vitorpamplona.amethyst.ui.actions.DMRelayListView
+import com.vitorpamplona.amethyst.ui.actions.relays.AddDMRelayListDialog
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -186,7 +186,7 @@ fun AddInboxRelayForDMCard(
 
                 var wantsToEditRelays by remember { mutableStateOf(false) }
                 if (wantsToEditRelays) {
-                    DMRelayListView({ wantsToEditRelays = false }, accountViewModel, nav = nav)
+                    AddDMRelayListDialog({ wantsToEditRelays = false }, accountViewModel, nav = nav)
                 }
 
                 Button(

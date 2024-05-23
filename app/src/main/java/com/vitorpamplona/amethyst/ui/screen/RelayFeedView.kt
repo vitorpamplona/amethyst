@@ -37,7 +37,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
-import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
+import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -132,7 +132,7 @@ fun RelayFeedView(
     var wantsToAddRelay by remember { mutableStateOf("") }
 
     if (wantsToAddRelay.isNotEmpty()) {
-        NewRelayListView({ wantsToAddRelay = "" }, accountViewModel, wantsToAddRelay, nav = nav)
+        AllRelayListView({ wantsToAddRelay = "" }, wantsToAddRelay, accountViewModel, nav = nav)
     }
 
     RefresheableBox(viewModel, enablePullRefresh) {

@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.actions.updated
+import com.vitorpamplona.amethyst.ui.actions.relays.updated
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
 import com.vitorpamplona.quartz.events.PrivateDmEvent

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions
+package com.vitorpamplona.amethyst.ui.actions.relays
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -36,7 +36,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class NewRelayListViewModel : ViewModel() {
+class Kind3RelayListViewModel : ViewModel() {
     private lateinit var account: Account
 
     private val _relays = MutableStateFlow<List<RelaySetupInfo>>(emptyList())

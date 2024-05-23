@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions
+package com.vitorpamplona.amethyst.ui.actions.relays
 
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -42,19 +42,13 @@ import androidx.compose.material.icons.filled.SyncProblem
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,14 +62,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
+import com.vitorpamplona.amethyst.ui.actions.RelayInfoDialog
+import com.vitorpamplona.amethyst.ui.actions.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -85,118 +78,44 @@ import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
-import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.largeRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.warningColor
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DMRelayListView(
-    onClose: () -> Unit,
+fun DMRelayList(
+    postViewModel: DMRelayListViewModel,
     accountViewModel: AccountViewModel,
-    relayToAdd: String = "",
+    onClose: () -> Unit,
     nav: (String) -> Unit,
 ) {
-    val postViewModel: DMRelayListViewModel = viewModel()
     val feedState by postViewModel.relays.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) { postViewModel.load(accountViewModel.account) }
-
-    Dialog(
-        onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Spacer(modifier = StdHorzSpacer)
-
-                            Text(stringResource(R.string.dm_relays_title))
-
-                            SaveButton(
-                                onPost = {
-                                    postViewModel.create()
-                                    onClose()
-                                },
-                                true,
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        Spacer(modifier = StdHorzSpacer)
-                        CloseButton(
-                            onPress = {
-                                postViewModel.clear()
-                                onClose()
-                            },
-                        )
-                    },
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                        ),
-                )
-            },
-        ) { pad ->
-            Column(
-                modifier =
-                    Modifier.padding(
-                        16.dp,
-                        pad.calculateTopPadding(),
-                        16.dp,
-                        pad.calculateBottomPadding(),
-                    ),
-                verticalArrangement = Arrangement.SpaceAround,
-            ) {
-                Card(modifier = MaterialTheme.colorScheme.imageModifier) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = stringResource(id = R.string.dm_relays_not_found_editing),
-                        )
-
-                        Spacer(modifier = StdVertSpacer)
-
-                        Text(
-                            text = stringResource(id = R.string.dm_relays_not_found_examples),
-                        )
-                    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        LazyColumn(
+            contentPadding = FeedPadding,
+        ) {
+            itemsIndexed(feedState, key = { _, item -> item.url }) { index, item ->
+                DMServerConfig(
+                    item,
+                    onDelete = { postViewModel.deleteRelay(item) },
+                    accountViewModel = accountViewModel,
+                ) {
+                    onClose()
+                    nav(it)
                 }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    LazyColumn(
-                        contentPadding = FeedPadding,
-                    ) {
-                        itemsIndexed(feedState, key = { _, item -> item.url }) { index, item ->
-                            DMServerConfig(
-                                item,
-                                onDelete = { postViewModel.deleteRelay(item) },
-                                accountViewModel = accountViewModel,
-                            ) {
-                                onClose()
-                                nav(it)
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = StdVertSpacer)
-
-                DMEditableServerConfig(relayToAdd) { postViewModel.addRelay(it) }
             }
         }
     }
+
+    Spacer(modifier = StdVertSpacer)
+
+    DMEditableServerConfig { postViewModel.addRelay(it) }
 }
 
 @Composable
@@ -308,7 +227,7 @@ fun DMServerConfigClickableLine(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = ReactionRowHeightChat.fillMaxWidth(),
                 ) {
-                    RenderStatusRow(
+                    StatusRow(
                         item = item,
                         modifier = HalfStartPadding.weight(1f),
                         accountViewModel = accountViewModel,
@@ -323,7 +242,7 @@ fun DMServerConfigClickableLine(
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun RenderStatusRow(
+private fun StatusRow(
     item: DMRelayListViewModel.DMRelaySetupInfo,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
@@ -502,11 +421,8 @@ private fun FirstLine(
 }
 
 @Composable
-fun DMEditableServerConfig(
-    relayToAdd: String,
-    onNewRelay: (DMRelayListViewModel.DMRelaySetupInfo) -> Unit,
-) {
-    var url by remember { mutableStateOf<String>(relayToAdd) }
+fun DMEditableServerConfig(onNewRelay: (DMRelayListViewModel.DMRelaySetupInfo) -> Unit) {
+    var url by remember { mutableStateOf("") }
 
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Size10dp)) {
         OutlinedTextField(
@@ -527,17 +443,7 @@ fun DMEditableServerConfig(
         Button(
             onClick = {
                 if (url.isNotBlank() && url != "/") {
-                    var addedWSS =
-                        if (!url.startsWith("wss://") && !url.startsWith("ws://")) {
-                            if (url.endsWith(".onion") || url.endsWith(".onion/")) {
-                                "ws://$url"
-                            } else {
-                                "wss://$url"
-                            }
-                        } else {
-                            url
-                        }
-                    if (url.endsWith("/")) addedWSS = addedWSS.dropLast(1)
+                    val addedWSS = RelayUrlFormatter.normalize(url)
                     onNewRelay(DMRelayListViewModel.DMRelaySetupInfo(addedWSS))
                     url = ""
                 }

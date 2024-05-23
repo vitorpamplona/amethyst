@@ -88,7 +88,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.service.relays.RelayPoolStatus
-import com.vitorpamplona.amethyst.ui.actions.NewRelayListView
+import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
 import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -566,7 +566,7 @@ fun ListContent(
     }
 
     if (wantsToEditRelays) {
-        NewRelayListView({ wantsToEditRelays = false }, accountViewModel, nav = nav)
+        AllRelayListView({ wantsToEditRelays = false }, accountViewModel = accountViewModel, nav = nav)
     }
     if (backupDialogOpen) {
         AccountBackupDialog(accountViewModel, onClose = { backupDialogOpen = false })

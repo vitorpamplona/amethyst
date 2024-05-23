@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.ui.actions.updated
+import com.vitorpamplona.amethyst.ui.actions.relays.updated
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.combineWith
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
