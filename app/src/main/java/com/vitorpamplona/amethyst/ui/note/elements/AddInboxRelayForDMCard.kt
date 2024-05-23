@@ -132,7 +132,6 @@ fun ObserveRelayListForDMs(
     accountViewModel: AccountViewModel,
     inner: @Composable (relayListEvent: ChatMessageRelayListEvent?) -> Unit,
 ) {
-    println("AABBCC ObserveRelayListForDMs $pubkey")
     LoadAddressableNote(
         ChatMessageRelayListEvent.createAddressTag(pubkey),
         accountViewModel,
@@ -140,8 +139,6 @@ fun ObserveRelayListForDMs(
         if (relayList != null) {
             val relayListNoteState by relayList.live().metadata.observeAsState()
             val relayListEvent = relayListNoteState?.note?.event as? ChatMessageRelayListEvent
-
-            println("AABBCC ObserveRelayListForDMs Event $relayListEvent ${relayListNoteState?.note?.idHex}")
 
             inner(relayListEvent)
         }
