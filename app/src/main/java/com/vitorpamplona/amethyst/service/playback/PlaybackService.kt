@@ -72,12 +72,12 @@ class WssOrHttpFactory(httpClient: OkHttpClient) : MediaSource.Factory {
     }
 }
 
-@UnstableApi // Extend MediaSessionService
 class PlaybackService : MediaSessionService() {
     private var videoViewedPositionCache = VideoViewedPositionCache()
 
     private var managerAllInOne: MultiPlayerPlaybackManager? = null
 
+    @OptIn(UnstableApi::class)
     fun newAllInOneDataSource(): MediaSource.Factory {
         // This might be needed for live kit.
         // return WssOrHttpFactory(HttpClientManager.getHttpClient())

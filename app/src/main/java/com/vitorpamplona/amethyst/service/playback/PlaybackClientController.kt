@@ -34,7 +34,6 @@ object PlaybackClientController {
     var executorService = Executors.newCachedThreadPool()
     val cache = LruCache<Int, SessionToken>(1)
 
-    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     fun prepareController(
         controllerID: String,
         videoUri: String,
