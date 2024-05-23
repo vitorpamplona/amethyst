@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.WikiNoteEvent
 
 class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
@@ -98,6 +99,7 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
                 noteEvent is RepostEvent ||
                 noteEvent is GenericRepostEvent ||
                 noteEvent is LongTextNoteEvent ||
+                noteEvent is WikiNoteEvent ||
                 noteEvent is PollNoteEvent ||
                 noteEvent is HighlightEvent ||
                 noteEvent is AudioTrackEvent ||

@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.WikiNoteEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -94,6 +95,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                             PinListEvent.KIND,
                             LiveActivitiesChatMessageEvent.KIND,
                             LiveActivitiesEvent.KIND,
+                            WikiNoteEvent.KIND,
                         ),
                     authors = followSet,
                     limit = 400,
@@ -124,6 +126,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                             AudioHeaderEvent.KIND,
                             AudioTrackEvent.KIND,
                             PinListEvent.KIND,
+                            WikiNoteEvent.KIND,
                         ),
                     tags =
                         mapOf(
@@ -160,6 +163,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                             AudioHeaderEvent.KIND,
                             AudioTrackEvent.KIND,
                             PinListEvent.KIND,
+                            WikiNoteEvent.KIND,
                         ),
                     tags =
                         mapOf(
@@ -196,6 +200,7 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                             AudioHeaderEvent.KIND,
                             AudioTrackEvent.KIND,
                             PinListEvent.KIND,
+                            WikiNoteEvent.KIND,
                             CommunityPostApprovalEvent.KIND,
                         ),
                     tags =

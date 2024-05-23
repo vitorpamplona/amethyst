@@ -194,7 +194,8 @@ open class BaseTextNoteEvent(
         val tagAddresses =
             taggedAddresses().filter {
                 it.kind != CommunityDefinitionEvent.KIND &&
-                    it.kind != WikiNoteEvent.KIND
+                    (kind != WikiNoteEvent.KIND || it.kind != WikiNoteEvent.KIND)
+                // removes forks from itself.
             }.map { it.toTag() }
         if (repliesTo.isEmpty() && tagAddresses.isEmpty()) return emptyList()
 

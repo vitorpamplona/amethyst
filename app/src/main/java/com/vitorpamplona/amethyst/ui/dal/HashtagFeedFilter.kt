@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.WikiNoteEvent
 
 class HashtagFeedFilter(val tag: String, val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
@@ -59,6 +60,7 @@ class HashtagFeedFilter(val tag: String, val account: Account) : AdditiveFeedFil
         return (
             it.event is TextNoteEvent ||
                 it.event is LongTextNoteEvent ||
+                it.event is WikiNoteEvent ||
                 it.event is ChannelMessageEvent ||
                 it.event is PrivateDmEvent ||
                 it.event is PollNoteEvent ||

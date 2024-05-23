@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.WikiNoteEvent
 
 object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
     var user: User? = null
@@ -79,6 +80,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
                                 PinListEvent.KIND,
                                 PollNoteEvent.KIND,
                                 HighlightEvent.KIND,
+                                WikiNoteEvent.KIND,
                             ),
                         authors = listOf(it.pubkeyHex),
                         limit = 200,

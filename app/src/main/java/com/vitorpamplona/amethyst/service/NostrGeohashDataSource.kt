@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.WikiNoteEvent
 
 object NostrGeohashDataSource : NostrDataSource("SingleGeoHashFeed") {
     private var geohashToWatch: String? = null
@@ -61,6 +62,7 @@ object NostrGeohashDataSource : NostrDataSource("SingleGeoHashFeed") {
                             HighlightEvent.KIND,
                             AudioTrackEvent.KIND,
                             AudioHeaderEvent.KIND,
+                            WikiNoteEvent.KIND,
                         ),
                     limit = 200,
                 ),

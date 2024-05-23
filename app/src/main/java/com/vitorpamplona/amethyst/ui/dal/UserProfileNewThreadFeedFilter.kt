@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.WikiNoteEvent
 
 class UserProfileNewThreadFeedFilter(val user: User, val account: Account) :
     AdditiveFeedFilter<Note>() {
@@ -72,6 +73,7 @@ class UserProfileNewThreadFeedFilter(val user: User, val account: Account) :
                     it.event is RepostEvent ||
                     it.event is GenericRepostEvent ||
                     it.event is LongTextNoteEvent ||
+                    it.event is WikiNoteEvent ||
                     it.event is PollNoteEvent ||
                     it.event is HighlightEvent ||
                     it.event is AudioTrackEvent ||

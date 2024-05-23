@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.WikiNoteEvent
 
 object NostrHashtagDataSource : NostrDataSource("SingleHashtagFeed") {
     private var hashtagToWatch: String? = null
@@ -64,6 +65,7 @@ object NostrHashtagDataSource : NostrDataSource("SingleHashtagFeed") {
                             HighlightEvent.KIND,
                             AudioTrackEvent.KIND,
                             AudioHeaderEvent.KIND,
+                            WikiNoteEvent.KIND,
                         ),
                     limit = 200,
                 ),

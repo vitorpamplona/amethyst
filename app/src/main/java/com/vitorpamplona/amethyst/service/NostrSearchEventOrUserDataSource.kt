@@ -49,6 +49,7 @@ import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.WikiNoteEvent
 import kotlin.coroutines.cancellation.CancellationException
 
 object NostrSearchEventOrUserDataSource : NostrDataSource("SearchEventFeed") {
@@ -175,6 +176,7 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SearchEventFeed") {
                                     LiveActivitiesEvent.KIND,
                                     PollNoteEvent.KIND,
                                     NNSEvent.KIND,
+                                    WikiNoteEvent.KIND,
                                 ),
                             search = mySearchString,
                             limit = 100,

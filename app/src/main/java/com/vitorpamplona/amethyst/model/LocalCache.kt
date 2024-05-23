@@ -707,6 +707,8 @@ object LocalCache {
 
         val replyTo = computeReplyTo(event)
 
+        println("AABBCC new Wiki ${replyTo.size}")
+
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, replyTo)
 
