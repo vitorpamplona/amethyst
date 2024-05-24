@@ -990,6 +990,8 @@ fun debugState(context: Context) {
         "Notes: " +
             LocalCache.notes.filter { _, it -> it.liveSet != null }.size +
             " / " +
+            LocalCache.notes.filter { _, it -> it.flowSet != null }.size +
+            " / " +
             LocalCache.notes.filter { _, it -> it.event != null }.size +
             " / " +
             LocalCache.notes.size(),
@@ -999,6 +1001,8 @@ fun debugState(context: Context) {
         "Addressables: " +
             LocalCache.addressables.filter { _, it -> it.liveSet != null }.size +
             " / " +
+            LocalCache.addressables.filter { _, it -> it.flowSet != null }.size +
+            " / " +
             LocalCache.addressables.filter { _, it -> it.event != null }.size +
             " / " +
             LocalCache.addressables.size(),
@@ -1007,6 +1011,8 @@ fun debugState(context: Context) {
         "STATE DUMP",
         "Users: " +
             LocalCache.users.filter { _, it -> it.liveSet != null }.size +
+            " / " +
+            LocalCache.users.filter { _, it -> it.flowSet != null }.size +
             " / " +
             LocalCache.users.filter { _, it -> it.latestMetadata != null }.size +
             " / " +
@@ -1020,12 +1026,22 @@ fun debugState(context: Context) {
             " MB",
     )
 
-    LocalCache.notes
-        .countByGroup { _, it -> it.event?.kind() }
-        .forEach { Log.d("STATE DUMP", "Kind ${it.key}: \t${it.value} elements ") }
-    LocalCache.addressables
-        .countByGroup { _, it -> it.event?.kind() }
-        .forEach { Log.d("STATE DUMP", "Kind ${it.key}: \t${it.value} elements ") }
+    val qttNotes = LocalCache.notes.countByGroup { _, it -> it.event?.kind() }
+    val qttAddressables = LocalCache.addressables.countByGroup { _, it -> it.event?.kind() }
+
+    val bytesNotes =
+        LocalCache.notes
+            .sumByGroup(groupMap = { _, it -> it.event?.kind() }, sumOf = { _, it -> it.event?.countMemory() ?: 0L })
+    val bytesAddressables =
+        LocalCache.addressables
+            .sumByGroup(groupMap = { _, it -> it.event?.kind() }, sumOf = { _, it -> it.event?.countMemory() ?: 0L })
+
+    qttNotes.forEach { kind, qtt ->
+        Log.d("STATE DUMP", "Kind $kind:\t$qtt elements\t${bytesNotes.get(kind)?.div((1024 * 1024))}MB ")
+    }
+    qttAddressables.forEach { kind, qtt ->
+        Log.d("STATE DUMP", "Kind $kind:\t$qtt elements\t${bytesAddressables.get(kind)?.div((1024 * 1024))}MB ")
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

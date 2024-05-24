@@ -136,6 +136,15 @@ class LargeCache<K, V> {
         return runner.results
     }
 
+    fun <R> sumByGroup(
+        groupMap: BiNotNullMapper<K, V, R>,
+        sumOf: BiNotNullMapper<K, V, Long>,
+    ): Map<R, Long> {
+        val runner = BiSumByGroupCollector(groupMap, sumOf)
+        innerForEach(runner)
+        return runner.results
+    }
+
     fun count(consumer: BiFilter<K, V>): Int {
         val runner = BiCountIfCollector(consumer)
         innerForEach(runner)
@@ -352,6 +361,24 @@ class BiCountByGroupCollector<K, V, R>(val mapper: BiNotNullMapper<K, V, R>) : B
             results[group] = 1
         } else {
             results[group] = count + 1
+        }
+    }
+}
+
+class BiSumByGroupCollector<K, V, R>(val mapper: BiNotNullMapper<K, V, R>, val sumOf: BiNotNullMapper<K, V, Long>) : BiConsumer<K, V> {
+    var results = HashMap<R, Long>()
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        val group = mapper.map(k, v)
+
+        val sum = results[group]
+        if (sum == null) {
+            results[group] = sumOf.map(k, v)
+        } else {
+            results[group] = sum + sumOf.map(k, v)
         }
     }
 }
