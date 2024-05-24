@@ -137,7 +137,7 @@ class Gossip(
     val content: String?,
 ) {
     fun mergeWith(event: SealedGossipEvent): Event {
-        val newPubKey = pubKey?.ifBlank { null } ?: event.pubKey
+        val newPubKey = event.pubKey // forces to be the pubkey of the seal to make sure impersonators don't impersonate
         val newCreatedAt = if (createdAt != null && createdAt > 1000) createdAt else event.createdAt
         val newKind = kind ?: -1
         val newTags = (tags ?: emptyArray()).plus(event.tags)
