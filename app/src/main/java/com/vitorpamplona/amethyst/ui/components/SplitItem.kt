@@ -80,16 +80,12 @@ class Split<T>() {
         } else {
             splitItem.percentage = percentage
 
-            println("Update ${items[index].key} to $percentage")
-
             val othersMustShare = 1.0f - splitItem.percentage
 
             val othersHave =
                 items.sumOf { if (it == splitItem) 0.0 else it.percentage.toDouble() }.toFloat()
 
             if (abs(othersHave - othersMustShare) < 0.01) return // nothing to do
-
-            println("Others Must Share $othersMustShare but have $othersHave")
 
             bottomUpAdjustment(othersMustShare, othersHave, index)
         }
@@ -109,14 +105,10 @@ class Split<T>() {
                     val oldValue = items[i].percentage
                     items[i].percentage -= needToRemove
                     needToRemove = 0f
-                    println(
-                        "- Updating ${items[i].key} from $oldValue to ${items[i].percentage - needToRemove}. $needToRemove left",
-                    )
                 } else {
                     val oldValue = items[i].percentage
                     needToRemove -= items[i].percentage
                     items[i].percentage = 0f
-                    println("- Updating ${items[i].key} from $oldValue to ${0}. $needToRemove left")
                 }
 
                 if (needToRemove < 0.01) {

@@ -18,13 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz
+package com.vitorpamplona.quartz.crypto
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.vitorpamplona.quartz.crypto.Nip44v2
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import fr.acinq.secp256k1.Secp256k1
@@ -70,7 +69,7 @@ class NIP44v2Test {
     @Test
     fun encryptDecryptTest() {
         for (v in vectors.v2?.valid?.encryptDecrypt!!) {
-            val pub2 = com.vitorpamplona.quartz.crypto.KeyPair(v.sec2!!.hexToByteArray())
+            val pub2 = KeyPair(v.sec2!!.hexToByteArray())
             val conversationKey1 = nip44v2.getConversationKey(v.sec1!!.hexToByteArray(), pub2.pubKey)
             assertEquals(v.conversationKey, conversationKey1.toHexKey())
 
@@ -85,7 +84,7 @@ class NIP44v2Test {
 
             assertEquals(v.payload, ciphertext)
 
-            val pub1 = com.vitorpamplona.quartz.crypto.KeyPair(v.sec1.hexToByteArray())
+            val pub1 = KeyPair(v.sec1.hexToByteArray())
             val conversationKey2 = nip44v2.getConversationKey(v.sec2.hexToByteArray(), pub1.pubKey)
             assertEquals(v.conversationKey, conversationKey2.toHexKey())
 

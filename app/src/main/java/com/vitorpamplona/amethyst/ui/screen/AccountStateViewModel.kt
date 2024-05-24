@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.crypto.nip06.Nip06
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.bechToBytes
@@ -127,6 +128,14 @@ class AccountStateViewModel() : ViewModel() {
                     proxyPort = proxyPort,
                     signer = NostrSignerInternal(keyPair),
                 )
+            } else if (key.contains(" ") && Nip06().isValidMnemonic(key)) {
+                val keyPair = KeyPair(privKey = Nip06().privateKeyFromMnemonic(key))
+                Account(
+                    keyPair,
+                    proxy = proxy,
+                    proxyPort = proxyPort,
+                    signer = NostrSignerInternal(keyPair),
+                )
             } else if (pubKeyParsed != null) {
                 val keyPair = KeyPair(pubKey = pubKeyParsed)
                 Account(
@@ -137,7 +146,7 @@ class AccountStateViewModel() : ViewModel() {
                 )
             } else if (EMAIL_PATTERN.matcher(key).matches()) {
                 val keyPair = KeyPair()
-                // Evaluate NIP-5
+                // TODO: Evaluate NIP-5
                 Account(
                     keyPair,
                     proxy = proxy,

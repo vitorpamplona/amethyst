@@ -56,7 +56,13 @@ object CryptoUtils {
         return bytes
     }
 
+    fun pubkeyCreateBitcoin(privKey: ByteArray) = secp256k1.pubKeyCompress(secp256k1.pubkeyCreate(privKey))
+
     fun pubkeyCreate(privKey: ByteArray) = secp256k1.pubKeyCompress(secp256k1.pubkeyCreate(privKey)).copyOfRange(1, 33)
+
+    fun isPrivKeyValid(il: ByteArray): Boolean {
+        return secp256k1.secKeyVerify(il)
+    }
 
     fun sign(
         data: ByteArray,
@@ -350,5 +356,12 @@ object CryptoUtils {
             e.printStackTrace()
             null
         }
+    }
+
+    fun sum(
+        first: ByteArray,
+        second: ByteArray,
+    ): ByteArray {
+        return secp256k1.privKeyTweakAdd(first, second)
     }
 }
