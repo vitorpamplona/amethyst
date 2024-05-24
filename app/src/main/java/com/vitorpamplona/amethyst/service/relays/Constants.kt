@@ -39,7 +39,6 @@ object Constants {
             RelaySetupInfo("wss://nostr.bitcoiner.social", read = true, write = true, feedTypes = activeTypesChats),
             RelaySetupInfo("wss://relay.nostr.bg", read = true, write = true, feedTypes = activeTypesChats),
             RelaySetupInfo("wss://nostr.oxtr.dev", read = true, write = true, feedTypes = activeTypesChats),
-            RelaySetupInfo("wss://nostr.orangepill.dev", read = true, write = true, feedTypes = activeTypes),
             RelaySetupInfo("wss://nostr.fmt.wiz.biz", read = true, write = false, feedTypes = activeTypesChats),
             RelaySetupInfo("wss://relay.damus.io", read = true, write = true, feedTypes = activeTypes),
             // Global
