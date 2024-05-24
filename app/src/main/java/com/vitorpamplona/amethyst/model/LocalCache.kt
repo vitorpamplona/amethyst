@@ -2045,6 +2045,10 @@ object LocalCache {
         notes.forEach { _, it -> it.clearLive() }
         addressables.forEach { _, it -> it.clearLive() }
         users.forEach { _, it -> it.clearLive() }
+
+        notes.forEach { _, it -> it.clearFlow() }
+        addressables.forEach { _, it -> it.clearFlow() }
+        users.forEach { _, it -> it.clearFlow() }
     }
 
     fun pruneOldAndHiddenMessages(account: Account) {
