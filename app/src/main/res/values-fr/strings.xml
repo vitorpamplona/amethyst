@@ -15,6 +15,7 @@
     <string name="group_picture">Image de groupe</string>
     <string name="explicit_content">Contenu choquant</string>
     <string name="spam">Spam</string>
+    <string name="spam_description">Le nombre d\'événements spam provenant de ce relais</string>
     <string name="impersonation">Falsification d\'identité</string>
     <string name="illegal_behavior">Comportement illégal</string>
     <string name="other">Autre</string>
@@ -93,6 +94,7 @@
     <string name="posts">Publications</string>
     <string name="bytes">Octets</string>
     <string name="errors">Erreurs</string>
+    <string name="errors_description">Le nombre d\'erreurs de connexion dans cette session</string>
     <string name="home_feed">Vos notifications</string>
     <string name="private_message_feed">Flux de messages privés</string>
     <string name="public_chat_feed">Flux de chat public</string>
@@ -390,6 +392,8 @@
     <string name="sats_to_complete">Zapraiser à %1$s. %2$s sats pour objectif</string>
     <string name="read_from_relay">Lire depuis le Relay</string>
     <string name="write_to_relay">Écrire sur le Relay</string>
+    <string name="write_to_relay_description">Le nombre d\'octets qui ont été envoyés à ce relais, y compris les filtres et les événements</string>
+    <string name="read_from_relay_description">Le nombre d\'octets qui ont été reçus depuis ce relais, y compris les filtres et les événements</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Une erreur s\'est produite en récupérant les informations du relay depuis %1$s</string>
     <string name="owner">Propriétaire</string>
     <string name="version">Version</string>
@@ -670,8 +674,13 @@
     <string name="show_npub_as_a_qr_code">Afficher npub en tant que QR code</string>
     <string name="invalid_nip19_uri">Adresse invalide</string>
     <string name="invalid_nip19_uri_description">Amethyst a reçu une URI à ouvrir mais cette URI était invalide : %1$s</string>
+    <string name="dm_relays_title">Relais de boîte de réception MP</string>
+    <string name="dm_relays_through">Relais: %1$s</string>
+    <string name="dm_relays_regular">Utilisation des relais réguliers</string>
     <string name="dm_relays_not_found">Configurer vos relais de messagerie privée</string>
     <string name="dm_relays_not_found_description">Ce paramètre informe tout le monde les relais à utiliser pour vous envoyer des messages. Sans eux, vous risquez de manquer certains messages.</string>
+    <string name="dm_relays_not_found_examples">Les bonnes options sont:\n - inbox.nostr.wine (payant)\n - you.nostr1.com (relais personnels - payant)</string>
+    <string name="dm_relays_not_found_editing">Insérez entre 1-3 relais pour utiliser de boîte de réception privée. Les relais de boîte de réception MP doivent accepter les messages de tout le monde, mais ne vous permet que de les télécharger.</string>
     <string name="dm_relays_not_found_create_now">Configurer maintenant</string>
     <string name="zap_the_devs_title">Zap les Devs !</string>
     <string name="zap_the_devs_description">Votre don nous aide à faire la différence. Chaque sat compte !</string>
