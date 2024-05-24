@@ -79,6 +79,7 @@ import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.ThreadLevelCalculator
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InlineCarrousel
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -247,7 +248,7 @@ fun RenderThreadFeed(
                         item,
                         modifier =
                             Modifier.drawReplyLevel(
-                                item.replyLevel(),
+                                ThreadLevelCalculator.replyLevel(item),
                                 MaterialTheme.colorScheme.placeholderText,
                                 if (item.idHex == noteId) {
                                     MaterialTheme.colorScheme.lessImportantLink
@@ -270,7 +271,7 @@ fun RenderThreadFeed(
                     item,
                     modifier =
                         Modifier.drawReplyLevel(
-                            item.replyLevel(),
+                            ThreadLevelCalculator.replyLevel(item),
                             MaterialTheme.colorScheme.placeholderText,
                             if (item.idHex == noteId) {
                                 MaterialTheme.colorScheme.lessImportantLink
