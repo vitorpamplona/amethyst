@@ -124,12 +124,13 @@ fun Kind3RelayListView(
                     nav(it)
                 }
             }
+
+            item {
+                Spacer(modifier = StdVertSpacer)
+                Kind3RelayEditBox(relayToAdd) { postViewModel.addRelay(it) }
+            }
         }
     }
-
-    Spacer(modifier = StdVertSpacer)
-
-    Kind3RelayEditBox(relayToAdd) { postViewModel.addRelay(it) }
 }
 
 @Preview
