@@ -122,6 +122,7 @@
     <string name="refresh">Odśwież</string>
     <string name="and_picture">i zdjęcie</string>
     <string name="changed_chat_name_to">zmieniono nazwę czatu na</string>
+    <string name="and_picture_to">i zdjęcie do</string>
     <string name="leave">Wyjdź</string>
     <string name="unfollow">Przestań obserwować</string>
     <string name="public_chat">Czat Publiczny</string>
@@ -131,6 +132,8 @@
     <string name="never">nigdy</string>
     <string name="now">teraz</string>
     <string name="h">godz.</string>
+    <string name="m">m</string>
+    <string name="d">d</string>
     <string name="nudity">Nagość</string>
     <string name="profanity_hateful_speech">Wulgaryzmy / Mowa nienawiści</string>
     <string name="report_hateful_speech">Zgłoś nienawistną mowę</string>
@@ -185,6 +188,7 @@
     <string name="remove_from_public_bookmarks">Usuń z publicznych zakładek</string>
     <string name="wallet_connect_service_show_secret">Pokaż tajny klucz</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_time_days">dni</string>
     <string name="custom_zaps_add_a_message">Dodaj wiadomość publiczną</string>
     <string name="custom_zaps_add_a_message_private">Dodaj prywatną wiadomość</string>
     <string name="custom_zaps_add_a_message_example">Dziękujemy za całą twoją pracę!</string>
@@ -294,4 +298,5 @@
     <string name="dm_relays_not_found_create_now">Skonfiguruj teraz</string>
     <string name="thank_you">Dziękuję!</string>
     <string name="max_limit">Maksymalny Limit</string>
+    <string name="accessibility_send">Wyślij</string>
 </resources>
