@@ -64,10 +64,19 @@ object CryptoUtils {
         return secp256k1.secKeyVerify(il)
     }
 
+    fun signString(
+        message: String,
+        privKey: ByteArray,
+        auxrand32: ByteArray = random(32),
+    ): ByteArray {
+        return sign(sha256(message.toByteArray()), privKey, auxrand32)
+    }
+
     fun sign(
         data: ByteArray,
         privKey: ByteArray,
-    ): ByteArray = secp256k1.signSchnorr(data, privKey, null)
+        auxrand32: ByteArray? = null,
+    ): ByteArray = secp256k1.signSchnorr(data, privKey, auxrand32)
 
     fun verifySignature(
         signature: ByteArray,
