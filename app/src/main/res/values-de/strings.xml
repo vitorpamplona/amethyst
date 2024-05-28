@@ -709,4 +709,24 @@ anz der Bedingungen ist erforderlich</string>
     <string name="it_s_not_possible_to_zap_to_a_draft_note">Es ist nicht möglich, zap Zahlung an einen Entwurf senden</string>
     <string name="draft_note">Entwurf</string>
     <string name="load_from_text">Aus Nachricht laden</string>
+
+    <string name="dm_relays_title">DM Posteingangs-Relais</string>
+    <string name="dm_relays_through">Relais: %1$s</string>
+    <string name="dm_relays_regular">Verwendung regulärer Relais</string>
+    <string name="dm_relays_not_found">Richten Sie Ihre privaten Posteingangs-Relais ein</string>
+    <string name="dm_relays_not_found_description">Diese Einstellung lässt alle wissen, welche Relais verwendet werden sollen, wenn sie Nachrichten an Sie senden. Ohne diese könnten Sie einige Nachrichten verpassen.</string>
+    <string name="dm_relays_not_found_examples">Gute Optionen sind:\n - inbox.nostr.wine (bezahlt)\n - you.nostr1.com (persönliche Relais - bezahlt)</string>
+    <string name="dm_relays_not_found_editing">Fügen Sie 1-3 Relais ein, die als Ihr privater Posteingang dienen sollen. DM Posteingangs-Relais sollten Nachrichten von jedem akzeptieren, aber nur Ihnen erlauben, sie herunterzuladen.</string>
+    <string name="dm_relays_not_found_create_now">Jetzt einrichten</string>
+    <string name="spam_description">Anzahl der Spam-Ereignisse von diesem Relais</string>
+    <string name="errors_description">Anzahl der Verbindungsfehler in dieser Sitzung</string>
+    <string name="write_to_relay_description">Die Menge in Bytes, die an dieses Relais gesendet wurde, einschließlich Filter und Ereignisse</string>
+    <string name="read_from_relay_description">Die Menge in Bytes, die von diesem Relais empfangen wurde, einschließlich Filter und Ereignisse</string>
+    <string name="discover_content">Notizen Entdeckung</string>
+    <string name="dvm_looking_for_app">Suche nach Anwendung</string>
+    <string name="dvm_waiting_status">Job angefordert, wartet auf Antwort</string>
+    <string name="dvm_requesting_job">Anforderung eines Jobs von DVM</string>
+    <string name="nwc_payment_request">Zahlungsanforderung gesendet, wartet auf Bestätigung Ihrer Geldbörse</string>
+    <string name="dvm_waiting_to_confim_payment">Warten auf Bestätigung der Zahlung durch DVM oder auf die Ergebnisse</string>
+
 </resources>

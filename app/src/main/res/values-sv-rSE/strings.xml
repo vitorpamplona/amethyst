@@ -703,4 +703,24 @@
     <string name="it_s_not_possible_to_zap_to_a_draft_note">Det går inte att zappa ett utkast</string>
     <string name="draft_note">Utkast</string>
     <string name="load_from_text">Från meddelande</string>
+
+    <string name="dm_relays_title">DM Inkorg Reläer</string>
+    <string name="dm_relays_through">Reläer: %1$s</string>
+    <string name="dm_relays_regular">Använder vanliga reläer</string>
+    <string name="dm_relays_not_found">Ställ in dina privata inkorgsreläer</string>
+    <string name="dm_relays_not_found_description">Denna inställning låter alla veta vilka reläer som ska användas när de skickar meddelanden till dig. Utan dem kan du missa vissa meddelanden.</string>
+    <string name="dm_relays_not_found_examples">Bra alternativ är:\n - inbox.nostr.wine (betald)\n - you.nostr1.com (personliga reläer - betald)</string>
+    <string name="dm_relays_not_found_editing">Sätt in mellan 1-3 reläer för att fungera som din privata inkorg. DM Inkorg reläer bör acceptera alla meddelanden från vem som helst, men endast tillåta dig att ladda ner dem.</string>
+    <string name="dm_relays_not_found_create_now">Ställ in nu</string>
+    <string name="spam_description">Antal skräpposthändelser från detta relä</string>
+    <string name="errors_description">Antal anslutningsfel under denna session</string>
+    <string name="write_to_relay_description">Mängden data i byte som skickades till detta relä, inklusive filter och händelser</string>
+    <string name="read_from_relay_description">Mängden data i byte som mottogs från detta relä, inklusive filter och händelser</string>
+    <string name="discover_content">Upptäckt av anteckningar</string>
+    <string name="dvm_looking_for_app">Letar efter applikation</string>
+    <string name="dvm_waiting_status">Jobb begärt, väntar på svar</string>
+    <string name="dvm_requesting_job">Begär jobb från DVM</string>
+    <string name="nwc_payment_request">Betalningsbegäran skickad, väntar på bekräftelse från din plånbok</string>
+    <string name="dvm_waiting_to_confim_payment">Väntar på att DVM ska bekräfta betalningen eller skicka resultaten</string>
+
 </resources>
