@@ -704,4 +704,24 @@
     <string name="it_s_not_possible_to_zap_to_a_draft_note">Não é possível fazer um zap em uma nota em rascunho</string>
     <string name="draft_note">Nota de rascunho</string>
     <string name="load_from_text">Carregar do texto</string>
+
+    <string name="dm_relays_title">Relés da Caixa de Entrada de DM</string>
+    <string name="dm_relays_through">Relés: %1$s</string>
+    <string name="dm_relays_regular">Usando Relés Regulares</string>
+    <string name="dm_relays_not_found">Configurar seus relés de Caixa de Entrada Privada</string>
+    <string name="dm_relays_not_found_description">Esta configuração permite que todos saibam quais relés usar ao enviar mensagens para você. Sem eles, você pode perder algumas mensagens.</string>
+    <string name="dm_relays_not_found_examples">Boas opções são:\n - inbox.nostr.wine (pago)\n - you.nostr1.com (relés pessoais - pago)</string>
+    <string name="dm_relays_not_found_editing">Insira entre 1-3 relés para servir como sua caixa de entrada privada. Relés de Caixa de Entrada de DM devem aceitar qualquer mensagem de qualquer pessoa, mas permitir apenas você a baixá-las.</string>
+    <string name="dm_relays_not_found_create_now">Configurar agora</string>
+    <string name="spam_description">O número de eventos de spam vindo deste relé</string>
+    <string name="errors_description">O número de erros de conexão nesta sessão</string>
+    <string name="write_to_relay_description">A quantidade em bytes que foi enviada para este relé, incluindo filtros e eventos</string>
+    <string name="read_from_relay_description">A quantidade em bytes que foi recebida deste relé, incluindo filtros e eventos</string>
+    <string name="discover_content">Descoberta de Notas</string>
+    <string name="dvm_looking_for_app">Procurando Aplicativo</string>
+    <string name="dvm_waiting_status">Trabalho Solicitado, aguardando resposta</string>
+    <string name="dvm_requesting_job">Solicitando Trabalho ao DVM</string>
+    <string name="nwc_payment_request">Pedido de pagamento enviado, aguardando confirmação da sua carteira</string>
+    <string name="dvm_waiting_to_confim_payment">Aguardando o DVM confirmar o pagamento ou enviar resultados</string>
+
 </resources>
