@@ -20,12 +20,33 @@
  */
 package com.vitorpamplona.amethyst.model.observables
 
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 
 object CreatedAtComparator : Comparator<Note> {
     override fun compare(
         first: Note?,
         second: Note?,
+    ): Int {
+        val firstEvent = first?.event
+        val secondEvent = second?.event
+
+        return if (firstEvent == null && secondEvent == null) {
+            0
+        } else if (firstEvent == null) {
+            1
+        } else if (secondEvent == null) {
+            -1
+        } else {
+            firstEvent.createdAt().compareTo(secondEvent.createdAt())
+        }
+    }
+}
+
+object CreatedAtComparatorAddresses : Comparator<AddressableNote> {
+    override fun compare(
+        first: AddressableNote?,
+        second: AddressableNote?,
     ): Int {
         val firstEvent = first?.event
         val secondEvent = second?.event

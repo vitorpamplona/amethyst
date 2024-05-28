@@ -49,7 +49,6 @@ import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
-import com.vitorpamplona.amethyst.model.observables.LatestByKindWithETag
 import com.vitorpamplona.amethyst.service.CashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
 import com.vitorpamplona.amethyst.service.HttpClientManager
@@ -74,8 +73,10 @@ import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.events.AddressableEvent
+import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
+import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
@@ -131,6 +132,9 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     val userFollows: LiveData<UserState> = account.userProfile().live().follows.map { it }
     val userRelays: LiveData<UserState> = account.userProfile().live().relays.map { it }
 
+    val kind3Relays: StateFlow<ContactListEvent?> = observeByAuthor(ContactListEvent.KIND, account.signer.pubKey)
+    val dmRelays: StateFlow<ChatMessageRelayListEvent?> = observeByAuthor(ChatMessageRelayListEvent.KIND, account.signer.pubKey)
+
     val toasts = MutableSharedFlow<ToastMsg?>(0, 3, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     var serviceManager: ServiceManager? = null
@@ -183,19 +187,14 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         kind: Int,
         eTag: HexKey,
     ): StateFlow<T?> {
-        val observable =
-            LocalCache.observeETag<T>(
-                kind = kind,
-                eventId = eTag,
-            ) {
-                LatestByKindWithETag<T>(kind, eTag)
-            }
+        return LocalCache.observeETag<T>(kind = kind, eventId = eTag, viewModelScope).latest
+    }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            observable.init()
-        }
-
-        return observable.latest
+    fun <T : Event> observeByAuthor(
+        kind: Int,
+        pubkeyHex: HexKey,
+    ): StateFlow<T?> {
+        return LocalCache.observeAuthor<T>(kind = kind, pubkey = pubkeyHex, viewModelScope).latest
     }
 
     fun reactToOrDelete(

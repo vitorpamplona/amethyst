@@ -158,6 +158,19 @@ object Client : RelayPool.Listener {
         }
     }
 
+    fun sendPrivately(
+        signedEvent: EventInterface,
+        relayList: List<String>,
+    ) {
+        checkNotInMainThread()
+
+        relayList.forEach { relayUrl ->
+            RelayPool.getOrCreateRelay(relayUrl, setOf(FeedType.PRIVATE_DMS), { }) {
+                it.sendOverride(signedEvent)
+            }
+        }
+    }
+
     fun close(subscriptionId: String) {
         RelayPool.close(subscriptionId)
         subscriptions = subscriptions.minus(subscriptionId)

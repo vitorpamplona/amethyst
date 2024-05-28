@@ -104,7 +104,7 @@ class ServiceManager {
         }
 
         if (myAccount != null) {
-            val relaySet = myAccount.activeRelays() ?: myAccount.convertLocalRelays()
+            val relaySet = myAccount.connectToRelays.value
             Log.d("Relay", "Service Manager Connect Connecting ${relaySet.size}")
             Client.reconnect(relaySet)
 
@@ -112,10 +112,9 @@ class ServiceManager {
             collectorJob = null
             collectorJob =
                 scope.launch {
-                    myAccount.userProfile().flow().relays.stateFlow.collect {
+                    myAccount.connectToRelaysFlow.collect {
                         if (isStarted) {
-                            val newRelaySet = myAccount.activeRelays() ?: myAccount.convertLocalRelays()
-                            Client.reconnect(newRelaySet, onlyIfChanged = true)
+                            Client.reconnect(it, onlyIfChanged = true)
                         }
                     }
                 }

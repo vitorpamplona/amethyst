@@ -26,6 +26,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.data.DeletionIndex
 import com.vitorpamplona.amethyst.commons.data.LargeCache
+import com.vitorpamplona.amethyst.model.observables.LatestByKindAndAuthor
 import com.vitorpamplona.amethyst.model.observables.LatestByKindWithETag
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Relay
@@ -120,10 +121,12 @@ import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -143,12 +146,13 @@ object LocalCache {
 
     val deletionIndex = DeletionIndex()
 
-    val observablesByKindAndETag = ConcurrentHashMap<Int, ConcurrentHashMap<HexKey, LatestByKindWithETag<Event>>>(10)
+    private val observablesByKindAndETag = ConcurrentHashMap<Int, ConcurrentHashMap<HexKey, LatestByKindWithETag<Event>>>(10)
+    private val observablesByKindAndAuthor = ConcurrentHashMap<Int, ConcurrentHashMap<HexKey, LatestByKindAndAuthor<Event>>>(10)
 
     fun <T : Event> observeETag(
         kind: Int,
         eventId: HexKey,
-        onCreate: () -> LatestByKindWithETag<T>,
+        scope: CoroutineScope,
     ): LatestByKindWithETag<T> {
         var eTagList = observablesByKindAndETag.get(kind)
 
@@ -162,10 +166,45 @@ object LocalCache {
         return if (value != null) {
             value
         } else {
-            val newObject = onCreate() as LatestByKindWithETag<Event>
+            val newObject = LatestByKindWithETag<T>(kind, eventId) as LatestByKindWithETag<Event>
             val obj = eTagList.putIfAbsent(eventId, newObject) ?: newObject
+            if (obj == newObject) {
+                // initialize
+                scope.launch(Dispatchers.IO) {
+                    obj.init()
+                }
+            }
             obj
         } as LatestByKindWithETag<T>
+    }
+
+    fun <T : Event> observeAuthor(
+        kind: Int,
+        pubkey: HexKey,
+        scope: CoroutineScope,
+    ): LatestByKindAndAuthor<T> {
+        var authorObsList = observablesByKindAndAuthor.get(kind)
+
+        if (authorObsList == null) {
+            authorObsList = ConcurrentHashMap<HexKey, LatestByKindAndAuthor<T>>(1) as ConcurrentHashMap<HexKey, LatestByKindAndAuthor<Event>>
+            observablesByKindAndAuthor.put(kind, authorObsList)
+        }
+
+        val value = authorObsList.get(pubkey)
+
+        return if (value != null) {
+            value
+        } else {
+            val newObject = LatestByKindAndAuthor<T>(kind, pubkey) as LatestByKindAndAuthor<Event>
+            val obj = authorObsList.putIfAbsent(pubkey, newObject) ?: newObject
+            if (obj == newObject) {
+                // initialize
+                scope.launch(Dispatchers.IO) {
+                    obj.init()
+                }
+            }
+            obj
+        } as LatestByKindAndAuthor<T>
     }
 
     fun updateObservables(event: Event) {
@@ -173,6 +212,8 @@ object LocalCache {
         event.forEachTaggedEvent {
             observablesOfKind[it]?.updateIfMatches(event)
         }
+
+        observablesByKindAndAuthor[event.kind()]?.get(event.pubKey)?.updateIfMatches(event)
     }
 
     fun checkGetOrCreateUser(key: String): User? {
@@ -367,6 +408,8 @@ object LocalCache {
         if (event.createdAt > (user.latestContactList?.createdAt ?: 0) && !event.tags.isEmpty()) {
             user.updateContactList(event)
             // Log.d("CL", "Consumed contact list ${user.toNostrUri()} ${event.relays()?.size}")
+
+            updateObservables(event)
         }
     }
 
@@ -2049,6 +2092,22 @@ object LocalCache {
         notes.forEach { _, it -> it.clearFlow() }
         addressables.forEach { _, it -> it.clearFlow() }
         users.forEach { _, it -> it.clearFlow() }
+
+        observablesByKindAndETag.forEach { _, list ->
+            list.forEach { key, value ->
+                if (value.canDelete()) {
+                    list.remove(key)
+                }
+            }
+        }
+
+        observablesByKindAndAuthor.forEach { _, list ->
+            list.forEach { key, value ->
+                if (value.canDelete()) {
+                    list.remove(key)
+                }
+            }
+        }
     }
 
     fun pruneOldAndHiddenMessages(account: Account) {

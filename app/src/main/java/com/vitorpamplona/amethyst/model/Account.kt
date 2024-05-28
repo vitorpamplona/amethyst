@@ -120,7 +120,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flattenMerge
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
@@ -226,6 +225,38 @@ class Account(
     )
 
     class ListNameNotePair(val listName: String, val event: GeneralListEvent?)
+
+    val connectToRelaysFlow =
+        combineTransform(
+            getDMRelayListFlow(),
+            userProfile().flow().relays.stateFlow,
+        ) { dmRelayList, userProfile ->
+            val newRelaySet = activeRelays() ?: convertLocalRelays()
+            val newDMRelaySet = (dmRelayList.note.event as? ChatMessageRelayListEvent)?.relays()
+
+            if (newDMRelaySet == null) {
+                emit(newRelaySet)
+            } else {
+                var mappedRelaySet =
+                    newRelaySet.map {
+                        if (newDMRelaySet?.contains(it.url) == true) {
+                            Relay(it.url, true, true, it.activeTypes + FeedType.PRIVATE_DMS)
+                        } else {
+                            it
+                        }
+                    }
+
+                newDMRelaySet.forEach { newUrl ->
+                    if (mappedRelaySet.filter { it.url == newUrl }.isEmpty()) {
+                        mappedRelaySet = mappedRelaySet + Relay(newUrl, true, true, setOf(FeedType.PRIVATE_DMS))
+                    }
+                }
+
+                emit(mappedRelaySet.toTypedArray())
+            }
+        }
+
+    val connectToRelays = connectToRelaysFlow.stateIn(scope, SharingStarted.Eagerly, activeRelays() ?: convertLocalRelays())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveKind3FollowsFlow: Flow<LiveFollowLists> =
@@ -1821,13 +1852,28 @@ class Account(
         val id = mine.firstOrNull()?.id
         val mineNote = if (id == null) null else LocalCache.getNoteIfExists(id)
 
-        signedEvents.wraps.forEach {
+        signedEvents.wraps.forEach { wrap ->
             // Creates an alias
-            if (mineNote != null && it.recipientPubKey() != keyPair.pubKey.toHexKey()) {
-                LocalCache.getOrAddAliasNote(it.id, mineNote)
+            if (mineNote != null && wrap.recipientPubKey() != keyPair.pubKey.toHexKey()) {
+                LocalCache.getOrAddAliasNote(wrap.id, mineNote)
             }
 
-            Client.send(it)
+            val receiver = wrap.recipientPubKey()
+            if (receiver != null) {
+                val relayList =
+                    (
+                        LocalCache.getAddressableNoteIfExists(ChatMessageRelayListEvent.createAddressTag(receiver))
+                            ?.event as? ChatMessageRelayListEvent
+                    )?.relays()?.ifEmpty { null }
+
+                if (relayList != null) {
+                    Client.sendPrivately(signedEvent = wrap, relayList = relayList)
+                } else {
+                    Client.send(wrap)
+                }
+            } else {
+                Client.send(wrap)
+            }
         }
     }
 
@@ -2427,8 +2473,7 @@ class Account(
                         ?: FeedType.values().toSet()
 
                 Relay(it.key, it.value.read, it.value.write, localFeedTypes)
-            }
-                ?: return null
+            } ?: return null
 
         // Ugly, but forces nostr.band as the only search-supporting relay today.
         // TODO: Remove when search becomes more available.
@@ -2564,10 +2609,18 @@ class Account(
         }
     }
 
-    fun getDMRelayList(): ChatMessageRelayListEvent? {
+    fun getDMRelayListNote(): AddressableNote {
         return LocalCache.getOrCreateAddressableNote(
             ChatMessageRelayListEvent.createAddressATag(signer.pubKey),
-        ).event as? ChatMessageRelayListEvent
+        )
+    }
+
+    fun getDMRelayListFlow(): StateFlow<NoteState> {
+        return getDMRelayListNote().flow().metadata.stateFlow
+    }
+
+    fun getDMRelayList(): ChatMessageRelayListEvent? {
+        return getDMRelayListNote().event as? ChatMessageRelayListEvent
     }
 
     fun saveDMRelayList(dmRelays: List<String>) {
