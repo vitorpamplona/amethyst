@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -46,12 +47,13 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.relays.Constants.defaultRelays
+import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,11 +63,15 @@ fun AllRelayListView(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val postViewModel: Kind3RelayListViewModel = viewModel()
+    val kind3ViewModel: Kind3RelayListViewModel = viewModel()
     val dmViewModel: DMRelayListViewModel = viewModel()
-    val feedState by postViewModel.relays.collectAsStateWithLifecycle()
+    val kind3FeedState by kind3ViewModel.relays.collectAsStateWithLifecycle()
+    val dmFeedState by dmViewModel.relays.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) { postViewModel.load(accountViewModel.account) }
+    LaunchedEffect(Unit) {
+        kind3ViewModel.load(accountViewModel.account)
+        dmViewModel.load(accountViewModel.account)
+    }
 
     Dialog(
         onDismissRequest = onClose,
@@ -77,24 +83,12 @@ fun AllRelayListView(
                     title = {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Spacer(modifier = StdHorzSpacer)
-
-                            Button(
-                                onClick = {
-                                    postViewModel.deleteAll()
-                                    defaultRelays.forEach { postViewModel.addRelay(it) }
-                                    postViewModel.loadRelayDocuments()
-                                },
-                            ) {
-                                Text(stringResource(R.string.default_relays))
-                            }
-
                             SaveButton(
                                 onPost = {
-                                    postViewModel.create()
+                                    kind3ViewModel.create()
                                     onClose()
                                 },
                                 true,
@@ -105,7 +99,7 @@ fun AllRelayListView(
                         Spacer(modifier = DoubleHorzSpacer)
                         CloseButton(
                             onPress = {
-                                postViewModel.clear()
+                                kind3ViewModel.clear()
                                 onClose()
                             },
                         )
@@ -119,16 +113,100 @@ fun AllRelayListView(
         ) { pad ->
             Column(
                 modifier =
-                    Modifier.fillMaxSize().padding(
-                        16.dp,
-                        pad.calculateTopPadding(),
-                        16.dp,
-                        pad.calculateBottomPadding(),
-                    ),
+                    Modifier
+                        .fillMaxSize()
+                        .padding(
+                            16.dp,
+                            pad.calculateTopPadding(),
+                            16.dp,
+                            pad.calculateBottomPadding(),
+                        ),
                 verticalArrangement = Arrangement.SpaceAround,
             ) {
-                Kind3RelayListView(feedState, postViewModel, accountViewModel, onClose, nav, relayToAdd)
+                LazyColumn(contentPadding = FeedPadding) {
+                    item {
+                        SettingsCategory(
+                            stringResource(R.string.private_inbox_section),
+                            stringResource(R.string.private_inbox_section_explainer),
+                            Modifier.padding(bottom = 8.dp),
+                        )
+                    }
+                    renderDMItems(dmFeedState, dmViewModel, accountViewModel, onClose, nav)
+
+                    item {
+                        SettingsCategoryWithButton(
+                            stringResource(R.string.kind_3_section),
+                            stringResource(R.string.kind_3_section_description),
+                            action = {
+                                ResetKind3Relays(kind3ViewModel)
+                            },
+                        )
+                    }
+                    renderKind3Items(kind3FeedState, kind3ViewModel, accountViewModel, onClose, nav, relayToAdd)
+                }
             }
         }
+    }
+}
+
+@Composable
+fun ResetKind3Relays(postViewModel: Kind3RelayListViewModel) {
+    Button(
+        onClick = {
+            postViewModel.deleteAll()
+            Constants.defaultRelays.forEach { postViewModel.addRelay(it) }
+            postViewModel.loadRelayDocuments()
+        },
+    ) {
+        Text(stringResource(R.string.default_relays))
+    }
+}
+
+@Composable
+fun SettingsCategory(
+    title: String,
+    description: String? = null,
+    modifier: Modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
+) {
+    Column(modifier) {
+        Text(
+            text = title,
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.titleSmall,
+        )
+        if (description != null) {
+            Text(
+                description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.grayText,
+            )
+        }
+    }
+}
+
+@Composable
+fun SettingsCategoryWithButton(
+    title: String,
+    description: String? = null,
+    action: @Composable () -> Unit,
+    modifier: Modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
+) {
+    Row(modifier) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.titleSmall,
+            )
+            if (description != null) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.grayText,
+                )
+            }
+        }
+
+        action()
     }
 }

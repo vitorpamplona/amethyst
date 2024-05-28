@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
@@ -68,7 +69,6 @@ import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.actions.RelayInfoDialog
-import com.vitorpamplona.amethyst.ui.actions.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -100,22 +100,33 @@ fun DMRelayList(
         LazyColumn(
             contentPadding = FeedPadding,
         ) {
-            itemsIndexed(feedState, key = { _, item -> item.url }) { index, item ->
-                DMServerConfig(
-                    item,
-                    onDelete = { postViewModel.deleteRelay(item) },
-                    accountViewModel = accountViewModel,
-                ) {
-                    onClose()
-                    nav(it)
-                }
-            }
+            renderDMItems(feedState, postViewModel, accountViewModel, onClose, nav)
+        }
+    }
+}
+
+fun LazyListScope.renderDMItems(
+    feedState: List<DMRelayListViewModel.DMRelaySetupInfo>,
+    postViewModel: DMRelayListViewModel,
+    accountViewModel: AccountViewModel,
+    onClose: () -> Unit,
+    nav: (String) -> Unit,
+) {
+    itemsIndexed(feedState, key = { _, item -> item.url }) { index, item ->
+        DMServerConfig(
+            item,
+            onDelete = { postViewModel.deleteRelay(item) },
+            accountViewModel = accountViewModel,
+        ) {
+            onClose()
+            nav(it)
         }
     }
 
-    Spacer(modifier = StdVertSpacer)
-
-    DMEditableServerConfig { postViewModel.addRelay(it) }
+    item {
+        Spacer(modifier = StdVertSpacer)
+        DMEditableServerConfig { postViewModel.addRelay(it) }
+    }
 }
 
 @Composable

@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
@@ -74,7 +75,6 @@ import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.ui.actions.RelayInfoDialog
-import com.vitorpamplona.amethyst.ui.actions.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -104,32 +104,41 @@ fun Kind3RelayListView(
     relayToAdd: String,
 ) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        LazyColumn(
-            contentPadding = FeedPadding,
-        ) {
-            itemsIndexed(feedState, key = { _, item -> item.url }) { index, item ->
-                LoadRelayInfo(
-                    item,
-                    onToggleDownload = { postViewModel.toggleDownload(it) },
-                    onToggleUpload = { postViewModel.toggleUpload(it) },
-                    onToggleFollows = { postViewModel.toggleFollows(it) },
-                    onTogglePrivateDMs = { postViewModel.toggleMessages(it) },
-                    onTogglePublicChats = { postViewModel.togglePublicChats(it) },
-                    onToggleGlobal = { postViewModel.toggleGlobal(it) },
-                    onToggleSearch = { postViewModel.toggleSearch(it) },
-                    onDelete = { postViewModel.deleteRelay(it) },
-                    accountViewModel = accountViewModel,
-                ) {
-                    onClose()
-                    nav(it)
-                }
-            }
-
-            item {
-                Spacer(modifier = StdVertSpacer)
-                Kind3RelayEditBox(relayToAdd) { postViewModel.addRelay(it) }
-            }
+        LazyColumn(contentPadding = FeedPadding) {
+            renderKind3Items(feedState, postViewModel, accountViewModel, onClose, nav, relayToAdd)
         }
+    }
+}
+
+fun LazyListScope.renderKind3Items(
+    feedState: List<RelaySetupInfo>,
+    postViewModel: Kind3RelayListViewModel,
+    accountViewModel: AccountViewModel,
+    onClose: () -> Unit,
+    nav: (String) -> Unit,
+    relayToAdd: String,
+) {
+    itemsIndexed(feedState, key = { _, item -> item.url }) { index, item ->
+        LoadRelayInfo(
+            item,
+            onToggleDownload = { postViewModel.toggleDownload(it) },
+            onToggleUpload = { postViewModel.toggleUpload(it) },
+            onToggleFollows = { postViewModel.toggleFollows(it) },
+            onTogglePrivateDMs = { postViewModel.toggleMessages(it) },
+            onTogglePublicChats = { postViewModel.togglePublicChats(it) },
+            onToggleGlobal = { postViewModel.toggleGlobal(it) },
+            onToggleSearch = { postViewModel.toggleSearch(it) },
+            onDelete = { postViewModel.deleteRelay(it) },
+            accountViewModel = accountViewModel,
+        ) {
+            onClose()
+            nav(it)
+        }
+    }
+
+    item {
+        Spacer(modifier = StdVertSpacer)
+        Kind3RelayEditBox(relayToAdd) { postViewModel.addRelay(it) }
     }
 }
 

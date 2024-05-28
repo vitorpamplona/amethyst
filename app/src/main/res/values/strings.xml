@@ -812,6 +812,11 @@
     <string name="dm_relays_not_found_editing">Insert between 1-3 relays to serve as your private inbox. DM Inbox relays should accept any message from anyone, but only allow you to download them.</string>
     <string name="dm_relays_not_found_create_now">Set up now</string>
 
+    <string name="private_inbox_section">DM Inbox Relays</string>
+    <string name="private_inbox_section_explainer">Insert between 1-3 relays to serve as your private inbox. Others will use these relays to send DMs to you. DM Inbox relays should accept any message from anyone, but only allow you to download them. Good options are:\n - inbox.nostr.wine (paid)\n - you.nostr1.com (personal relays - paid)</string>
+    <string name="kind_3_section">General Relays</string>
+    <string name="kind_3_section_description">Amethyst uses these relays to download posts for you.</string>
+
     <string name="zap_the_devs_title">Zap the Devs!</string>
     <string name="zap_the_devs_description">Your donation helps us make a difference. Every sat counts!</string>
     <string name="donate_now">Donate Now</string>
