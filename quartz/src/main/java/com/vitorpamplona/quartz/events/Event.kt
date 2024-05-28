@@ -526,8 +526,14 @@ open class WrappedEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
-    @Transient var host: Event? = null // host event to broadcast when needed
+    @Transient var host: HostStub? = null // host event to broadcast when needed
 }
+
+class HostStub(
+    val id: HexKey,
+    val pubKey: HexKey,
+    val kind: Int,
+)
 
 @Immutable
 interface AddressableEvent {

@@ -38,6 +38,22 @@ class GiftWrapEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
 
+    fun copyNoContent(): GiftWrapEvent {
+        val copy =
+            GiftWrapEvent(
+                id,
+                pubKey,
+                createdAt,
+                tags,
+                "",
+                sig,
+            )
+
+        copy.cachedInnerEvent = cachedInnerEvent
+
+        return copy
+    }
+
     override fun isContentEncoded() = true
 
     fun preCachedGift(signer: NostrSigner): Event? {
@@ -61,7 +77,7 @@ class GiftWrapEvent(
         }
         unwrap(signer) { gift ->
             if (gift is WrappedEvent) {
-                gift.host = this
+                gift.host = HostStub(this.id, this.pubKey, this.kind)
             }
             addToCache(signer.pubKey, gift)
 

@@ -39,7 +39,9 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.Relay
+import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
@@ -856,7 +858,22 @@ class Account(
     fun broadcast(note: Note) {
         note.event?.let {
             if (it is WrappedEvent && it.host != null) {
-                it.host?.let { hostEvent -> Client.send(hostEvent) }
+                it.host?.let {
+                    Client.sendFilterAndStopOnFirstResponse(
+                        filters =
+                            listOf(
+                                TypedFilter(
+                                    setOf(FeedType.FOLLOWS, FeedType.PRIVATE_DMS, FeedType.GLOBAL),
+                                    JsonFilter(
+                                        ids = listOf(it.id),
+                                    ),
+                                ),
+                            ),
+                        onResponse = {
+                            Client.send(it)
+                        },
+                    )
+                }
             } else {
                 Client.send(it)
             }

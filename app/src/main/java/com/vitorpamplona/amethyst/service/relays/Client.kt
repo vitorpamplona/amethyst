@@ -100,6 +100,34 @@ object Client : RelayPool.Listener {
         RelayPool.sendFilter(subscriptionId, filters)
     }
 
+    fun sendFilterAndStopOnFirstResponse(
+        subscriptionId: String = UUID.randomUUID().toString().substring(0..10),
+        filters: List<TypedFilter> = listOf(),
+        onResponse: (Event) -> Unit,
+    ) {
+        checkNotInMainThread()
+
+        subscribe(
+            object : Listener() {
+                override fun onEvent(
+                    event: Event,
+                    subId: String,
+                    relay: Relay,
+                    afterEOSE: Boolean,
+                ) {
+                    if (subId == subscriptionId) {
+                        onResponse(event)
+                        unsubscribe(this)
+                        close(subscriptionId)
+                    }
+                }
+            },
+        )
+
+        subscriptions = subscriptions + Pair(subscriptionId, filters)
+        RelayPool.sendFilter(subscriptionId, filters)
+    }
+
     fun sendFilterOnlyIfDisconnected(
         subscriptionId: String = UUID.randomUUID().toString().substring(0..10),
         filters: List<TypedFilter> = listOf(),

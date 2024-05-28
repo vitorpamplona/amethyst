@@ -152,7 +152,7 @@ open class Note(val idHex: String) {
                 Nip19Bech32.createNEvent(
                     host.id,
                     host.pubKey,
-                    host.kind(),
+                    host.kind,
                     relays.firstOrNull()?.url,
                 )
             } else {

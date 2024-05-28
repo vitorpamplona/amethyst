@@ -39,6 +39,23 @@ class SealedGossipEvent(
 ) : WrappedEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
 
+    fun copyNoContent(): SealedGossipEvent {
+        val copy =
+            SealedGossipEvent(
+                id,
+                pubKey,
+                createdAt,
+                tags,
+                "",
+                sig,
+            )
+
+        copy.cachedInnerEvent = cachedInnerEvent
+        copy.host = host
+
+        return copy
+    }
+
     override fun isContentEncoded() = true
 
     fun preCachedGossip(signer: NostrSigner): Event? {
@@ -64,7 +81,7 @@ class SealedGossipEvent(
         unseal(signer) { gossip ->
             val event = gossip.mergeWith(this)
             if (event is WrappedEvent) {
-                event.host = host ?: this
+                event.host = host ?: HostStub(this.id, this.pubKey, this.kind)
             }
             addToCache(signer.pubKey, event)
 

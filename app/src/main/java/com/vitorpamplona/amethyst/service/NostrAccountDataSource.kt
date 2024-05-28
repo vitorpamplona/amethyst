@@ -239,6 +239,14 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 JsonFilter(
                     kinds = listOf(GiftWrapEvent.KIND),
                     tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
+                    since =
+                        latestEOSEs.users[account.userProfile()]
+                            ?.followList
+                            ?.get("&&((GIFTWRAPS_EOSE))&&")
+                            ?.relayList
+                            ?.mapValues {
+                                EOSETime(it.value.time - TimeUtils.twoDays())
+                            },
                 ),
         )
 
@@ -248,6 +256,13 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 latestEOSEs.addOrUpdate(
                     account.userProfile(),
                     account.defaultNotificationFollowList.value,
+                    relayUrl,
+                    time,
+                )
+
+                latestEOSEs.addOrUpdate(
+                    account.userProfile(),
+                    "&&((GIFTWRAPS_EOSE))&&",
                     relayUrl,
                     time,
                 )
