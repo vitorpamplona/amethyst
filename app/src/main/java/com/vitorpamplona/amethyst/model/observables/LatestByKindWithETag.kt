@@ -30,8 +30,10 @@ class LatestByKindWithETag<T : Event>(private val kind: Int, private val eTag: S
     private val _latest = MutableStateFlow<T?>(null)
     val latest = _latest.asStateFlow()
 
+    fun matches(event: T) = event.kind == kind && event.isTaggedEvent(eTag)
+
     fun updateIfMatches(event: T) {
-        if (event.kind == kind && event.isTaggedEvent(eTag)) {
+        if (matches(event)) {
             if (event.createdAt > (_latest.value?.createdAt ?: 0)) {
                 _latest.tryEmit(event)
             }
