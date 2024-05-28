@@ -89,6 +89,7 @@ fun AllRelayListView(
                             SaveButton(
                                 onPost = {
                                     kind3ViewModel.create()
+                                    dmViewModel.create()
                                     onClose()
                                 },
                                 true,
