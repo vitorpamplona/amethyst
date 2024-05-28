@@ -118,7 +118,7 @@ fun LazyListScope.renderKind3Items(
     nav: (String) -> Unit,
     relayToAdd: String,
 ) {
-    itemsIndexed(feedState, key = { _, item -> item.url }) { index, item ->
+    itemsIndexed(feedState, key = { _, item -> "kind3" + item.url }) { index, item ->
         LoadRelayInfo(
             item,
             onToggleDownload = { postViewModel.toggleDownload(it) },

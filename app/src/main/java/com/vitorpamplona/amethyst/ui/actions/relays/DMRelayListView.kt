@@ -112,7 +112,7 @@ fun LazyListScope.renderDMItems(
     onClose: () -> Unit,
     nav: (String) -> Unit,
 ) {
-    itemsIndexed(feedState, key = { _, item -> item.url }) { index, item ->
+    itemsIndexed(feedState, key = { _, item -> "DM" + item.url }) { index, item ->
         DMServerConfig(
             item,
             onDelete = { postViewModel.deleteRelay(item) },
