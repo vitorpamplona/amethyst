@@ -29,7 +29,7 @@ public class VerifyResult implements Comparable<VerifyResult> {
             return "";
         }
 
-        String pattern = "YYYY-MM-dd z";
+        String pattern = "yyyy-MM-dd z";
         Locale locale = new Locale("en", "UK");
         DateFormatSymbols dateFormatSymbols = new DateFormatSymbols(locale);
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern, dateFormatSymbols);
