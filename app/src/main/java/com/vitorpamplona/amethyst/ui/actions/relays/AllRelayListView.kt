@@ -64,13 +64,19 @@ fun AllRelayListView(
     nav: (String) -> Unit,
 ) {
     val kind3ViewModel: Kind3RelayListViewModel = viewModel()
-    val dmViewModel: DMRelayListViewModel = viewModel()
     val kind3FeedState by kind3ViewModel.relays.collectAsStateWithLifecycle()
+
+    val dmViewModel: DMRelayListViewModel = viewModel()
     val dmFeedState by dmViewModel.relays.collectAsStateWithLifecycle()
+
+    val nip65ViewModel: Nip65RelayListViewModel = viewModel()
+    val homeFeedState by nip65ViewModel.homeRelays.collectAsStateWithLifecycle()
+    val notifFeedState by nip65ViewModel.notificationRelays.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         kind3ViewModel.load(accountViewModel.account)
         dmViewModel.load(accountViewModel.account)
+        nip65ViewModel.load(accountViewModel.account)
     }
 
     Dialog(
@@ -90,6 +96,7 @@ fun AllRelayListView(
                                 onPost = {
                                     kind3ViewModel.create()
                                     dmViewModel.create()
+                                    nip65ViewModel.create()
                                     onClose()
                                 },
                                 true,
@@ -127,9 +134,25 @@ fun AllRelayListView(
                 LazyColumn(contentPadding = FeedPadding) {
                     item {
                         SettingsCategory(
+                            stringResource(R.string.public_home_section),
+                            stringResource(R.string.public_home_section_explainer),
+                            Modifier.padding(bottom = 8.dp),
+                        )
+                    }
+                    renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, onClose, nav)
+
+                    item {
+                        SettingsCategory(
+                            stringResource(R.string.public_notif_section),
+                            stringResource(R.string.public_notif_section_explainer),
+                        )
+                    }
+                    renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, onClose, nav)
+
+                    item {
+                        SettingsCategory(
                             stringResource(R.string.private_inbox_section),
                             stringResource(R.string.private_inbox_section_explainer),
-                            Modifier.padding(bottom = 8.dp),
                         )
                     }
                     renderDMItems(dmFeedState, dmViewModel, accountViewModel, onClose, nav)

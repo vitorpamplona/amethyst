@@ -2651,6 +2651,20 @@ class Account(
         }
     }
 
+    fun getNIP65RelayListNote(): AddressableNote {
+        return LocalCache.getOrCreateAddressableNote(
+            AdvertisedRelayListEvent.createAddressATag(signer.pubKey),
+        )
+    }
+
+    fun getNIP65RelayListFlow(): StateFlow<NoteState> {
+        return getNIP65RelayListNote().flow().metadata.stateFlow
+    }
+
+    fun getNIP65RelayList(): AdvertisedRelayListEvent? {
+        return getNIP65RelayListNote().event as? AdvertisedRelayListEvent
+    }
+
     fun sendNip65RelayList(relays: List<AdvertisedRelayListEvent.AdvertisedRelayInfo>) {
         if (!isWriteable()) return
 
