@@ -35,36 +35,34 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
-fun Nip65RelayList(
-    postViewModel: Nip65RelayListViewModel,
+fun SearchRelayList(
+    postViewModel: SearchRelayListViewModel,
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
     nav: (String) -> Unit,
 ) {
-    val homeFeedState by postViewModel.homeRelays.collectAsStateWithLifecycle()
-    val notifFeedState by postViewModel.notificationRelays.collectAsStateWithLifecycle()
+    val feedState by postViewModel.relays.collectAsStateWithLifecycle()
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
         ) {
-            renderNip65HomeItems(homeFeedState, postViewModel, accountViewModel, onClose, nav)
-            renderNip65NotifItems(notifFeedState, postViewModel, accountViewModel, onClose, nav)
+            renderSearchItems(feedState, postViewModel, accountViewModel, onClose, nav)
         }
     }
 }
 
-fun LazyListScope.renderNip65HomeItems(
+fun LazyListScope.renderSearchItems(
     feedState: List<BasicRelaySetupInfo>,
-    postViewModel: Nip65RelayListViewModel,
+    postViewModel: SearchRelayListViewModel,
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
     nav: (String) -> Unit,
 ) {
-    itemsIndexed(feedState, key = { _, item -> "Nip65Home" + item.url }) { index, item ->
+    itemsIndexed(feedState, key = { _, item -> "Search" + item.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
-            onDelete = { postViewModel.deleteHomeRelay(item) },
+            onDelete = { postViewModel.deleteRelay(item) },
             accountViewModel = accountViewModel,
         ) {
             onClose()
@@ -74,30 +72,6 @@ fun LazyListScope.renderNip65HomeItems(
 
     item {
         Spacer(modifier = StdVertSpacer)
-        RelayUrlEditField { postViewModel.addHomeRelay(it) }
-    }
-}
-
-fun LazyListScope.renderNip65NotifItems(
-    feedState: List<BasicRelaySetupInfo>,
-    postViewModel: Nip65RelayListViewModel,
-    accountViewModel: AccountViewModel,
-    onClose: () -> Unit,
-    nav: (String) -> Unit,
-) {
-    itemsIndexed(feedState, key = { _, item -> "Nip65Notif" + item.url }) { index, item ->
-        BasicRelaySetupInfoDialog(
-            item,
-            onDelete = { postViewModel.deleteNotifRelay(item) },
-            accountViewModel = accountViewModel,
-        ) {
-            onClose()
-            nav(it)
-        }
-    }
-
-    item {
-        Spacer(modifier = StdVertSpacer)
-        RelayUrlEditField { postViewModel.addNotifRelay(it) }
+        RelayUrlEditField { postViewModel.addRelay(it) }
     }
 }

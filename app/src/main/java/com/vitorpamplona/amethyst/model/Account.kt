@@ -95,6 +95,7 @@ import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.Response
 import com.vitorpamplona.quartz.events.SealedGossipEvent
+import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteModificationEvent
@@ -2643,6 +2644,48 @@ class Account(
         } else {
             ChatMessageRelayListEvent.createFromScratch(
                 relays = dmRelays,
+                signer = signer,
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
+            }
+        }
+    }
+
+    fun getSearchRelayListNote(): AddressableNote {
+        return LocalCache.getOrCreateAddressableNote(
+            SearchRelayListEvent.createAddressATag(signer.pubKey),
+        )
+    }
+
+    fun getSearchRelayListFlow(): StateFlow<NoteState> {
+        return getSearchRelayListNote().flow().metadata.stateFlow
+    }
+
+    fun getSearchRelayList(): SearchRelayListEvent? {
+        return getSearchRelayListNote().event as? SearchRelayListEvent
+    }
+
+    fun saveSearchRelayList(searchRelays: List<String>) {
+        if (!isWriteable()) return
+
+        val relayListForSearch =
+            LocalCache.getOrCreateAddressableNote(
+                SearchRelayListEvent.createAddressATag(signer.pubKey),
+            ).event as? SearchRelayListEvent
+
+        if (relayListForSearch != null && relayListForSearch.tags.isNotEmpty()) {
+            SearchRelayListEvent.updateRelayList(
+                earlierVersion = relayListForSearch,
+                relays = searchRelays,
+                signer = signer,
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
+            }
+        } else {
+            SearchRelayListEvent.createFromScratch(
+                relays = searchRelays,
                 signer = signer,
             ) {
                 Client.send(it)

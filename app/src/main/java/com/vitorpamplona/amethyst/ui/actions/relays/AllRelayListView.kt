@@ -73,10 +73,14 @@ fun AllRelayListView(
     val homeFeedState by nip65ViewModel.homeRelays.collectAsStateWithLifecycle()
     val notifFeedState by nip65ViewModel.notificationRelays.collectAsStateWithLifecycle()
 
+    val searchViewModel: SearchRelayListViewModel = viewModel()
+    val searchFeedState by searchViewModel.relays.collectAsStateWithLifecycle()
+
     LaunchedEffect(Unit) {
         kind3ViewModel.load(accountViewModel.account)
         dmViewModel.load(accountViewModel.account)
         nip65ViewModel.load(accountViewModel.account)
+        searchViewModel.load(accountViewModel.account)
     }
 
     Dialog(
@@ -97,6 +101,7 @@ fun AllRelayListView(
                                     kind3ViewModel.create()
                                     dmViewModel.create()
                                     nip65ViewModel.create()
+                                    searchViewModel.create()
                                     onClose()
                                 },
                                 true,
@@ -159,6 +164,17 @@ fun AllRelayListView(
 
                     item {
                         SettingsCategoryWithButton(
+                            stringResource(R.string.search_section),
+                            stringResource(R.string.search_section_explainer),
+                            action = {
+                                ResetSearchRelays(searchViewModel)
+                            },
+                        )
+                    }
+                    renderSearchItems(searchFeedState, searchViewModel, accountViewModel, onClose, nav)
+
+                    item {
+                        SettingsCategoryWithButton(
                             stringResource(R.string.kind_3_section),
                             stringResource(R.string.kind_3_section_description),
                             action = {
@@ -179,6 +195,19 @@ fun ResetKind3Relays(postViewModel: Kind3RelayListViewModel) {
         onClick = {
             postViewModel.deleteAll()
             Constants.defaultRelays.forEach { postViewModel.addRelay(it) }
+            postViewModel.loadRelayDocuments()
+        },
+    ) {
+        Text(stringResource(R.string.default_relays))
+    }
+}
+
+@Composable
+fun ResetSearchRelays(postViewModel: SearchRelayListViewModel) {
+    Button(
+        onClick = {
+            postViewModel.deleteAll()
+            Constants.forcedRelayForSearch.forEach { postViewModel.addRelay(BasicRelaySetupInfo(it.url)) }
             postViewModel.loadRelayDocuments()
         },
     ) {

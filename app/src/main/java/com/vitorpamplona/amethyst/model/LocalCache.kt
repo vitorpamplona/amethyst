@@ -108,6 +108,7 @@ import com.vitorpamplona.quartz.events.RelaySetEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
+import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteModificationEvent
@@ -923,6 +924,13 @@ object LocalCache {
 
     private fun consume(
         event: ChatMessageRelayListEvent,
+        relay: Relay?,
+    ) {
+        consumeBaseReplaceable(event, relay)
+    }
+
+    private fun consume(
+        event: SearchRelayListEvent,
         relay: Relay?,
     ) {
         consumeBaseReplaceable(event, relay)
@@ -2506,6 +2514,7 @@ object LocalCache {
                 is ChannelMetadataEvent -> consume(event)
                 is ChannelMuteUserEvent -> consume(event)
                 is ChatMessageEvent -> consume(event, relay)
+                is ChatMessageRelayListEvent -> consume(event, relay)
                 is ClassifiedsEvent -> consume(event, relay)
                 is CommunityDefinitionEvent -> consume(event, relay)
                 is CommunityListEvent -> consume(event, relay)
@@ -2515,11 +2524,13 @@ object LocalCache {
                 }
                 is ContactListEvent -> consume(event)
                 is DeletionEvent -> consume(event)
-                is ChatMessageRelayListEvent -> consume(event, relay)
                 is DraftEvent -> consume(event, relay)
                 is EmojiPackEvent -> consume(event, relay)
                 is EmojiPackSelectionEvent -> consume(event, relay)
-                is SealedGossipEvent -> consume(event, relay)
+                is GenericRepostEvent -> {
+                    event.containedPost()?.let { verifyAndConsume(it, relay) }
+                    consume(event)
+                }
                 is FhirResourceEvent -> consume(event, relay)
                 is FileHeaderEvent -> consume(event, relay)
                 is FileServersEvent -> consume(event, relay)
@@ -2565,10 +2576,8 @@ object LocalCache {
                     event.containedPost()?.let { verifyAndConsume(it, relay) }
                     consume(event)
                 }
-                is GenericRepostEvent -> {
-                    event.containedPost()?.let { verifyAndConsume(it, relay) }
-                    consume(event)
-                }
+                is SealedGossipEvent -> consume(event, relay)
+                is SearchRelayListEvent -> consume(event, relay)
                 is StatusEvent -> consume(event, relay)
                 is TextNoteEvent -> consume(event, relay)
                 is TextNoteModificationEvent -> consume(event, relay)

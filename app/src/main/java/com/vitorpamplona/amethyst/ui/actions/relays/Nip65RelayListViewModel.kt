@@ -20,11 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.relays
 
-import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
@@ -37,10 +35,10 @@ import kotlinx.coroutines.launch
 class Nip65RelayListViewModel : ViewModel() {
     private lateinit var account: Account
 
-    private val _homeRelays = MutableStateFlow<List<Nip65RelaySetupInfo>>(emptyList())
+    private val _homeRelays = MutableStateFlow<List<BasicRelaySetupInfo>>(emptyList())
     val homeRelays = _homeRelays.asStateFlow()
 
-    private val _notificationRelays = MutableStateFlow<List<Nip65RelaySetupInfo>>(emptyList())
+    private val _notificationRelays = MutableStateFlow<List<BasicRelaySetupInfo>>(emptyList())
     val notificationRelays = _notificationRelays.asStateFlow()
 
     fun load(account: Account) {
@@ -97,18 +95,6 @@ class Nip65RelayListViewModel : ViewModel() {
         }
     }
 
-    @Immutable
-    data class Nip65RelaySetupInfo(
-        val url: String,
-        val errorCount: Int = 0,
-        val downloadCountInBytes: Int = 0,
-        val uploadCountInBytes: Int = 0,
-        val spamCount: Int = 0,
-        val paidRelay: Boolean = false,
-    ) {
-        val briefInfo: RelayBriefInfoCache.RelayBriefInfo = RelayBriefInfoCache.RelayBriefInfo(url)
-    }
-
     fun clear() {
         _homeRelays.update {
             val relayList = account.getNIP65RelayList()?.relays() ?: emptyList()
@@ -120,7 +106,7 @@ class Nip65RelayListViewModel : ViewModel() {
                 val eventUploadCounter = liveRelay?.eventUploadCounterInBytes ?: 0
                 val spamCounter = liveRelay?.spamCounter ?: 0
 
-                Nip65RelaySetupInfo(
+                BasicRelaySetupInfo(
                     relayUrl.relayUrl,
                     errorCounter,
                     eventDownloadCounter,
@@ -140,7 +126,7 @@ class Nip65RelayListViewModel : ViewModel() {
                 val eventUploadCounter = liveRelay?.eventUploadCounterInBytes ?: 0
                 val spamCounter = liveRelay?.spamCounter ?: 0
 
-                Nip65RelaySetupInfo(
+                BasicRelaySetupInfo(
                     relayUrl.relayUrl,
                     errorCounter,
                     eventDownloadCounter,
@@ -151,13 +137,13 @@ class Nip65RelayListViewModel : ViewModel() {
         }
     }
 
-    fun addHomeRelay(relay: Nip65RelaySetupInfo) {
+    fun addHomeRelay(relay: BasicRelaySetupInfo) {
         if (_homeRelays.value.any { it.url == relay.url }) return
 
         _homeRelays.update { it.plus(relay) }
     }
 
-    fun deleteHomeRelay(relay: Nip65RelaySetupInfo) {
+    fun deleteHomeRelay(relay: BasicRelaySetupInfo) {
         _homeRelays.update { it.minus(relay) }
     }
 
@@ -166,19 +152,19 @@ class Nip65RelayListViewModel : ViewModel() {
     }
 
     fun toggleHomePaidRelay(
-        relay: Nip65RelaySetupInfo,
+        relay: BasicRelaySetupInfo,
         paid: Boolean,
     ) {
         _homeRelays.update { it.updated(relay, relay.copy(paidRelay = paid)) }
     }
 
-    fun addNotifRelay(relay: Nip65RelaySetupInfo) {
+    fun addNotifRelay(relay: BasicRelaySetupInfo) {
         if (_notificationRelays.value.any { it.url == relay.url }) return
 
         _notificationRelays.update { it.plus(relay) }
     }
 
-    fun deleteNotifRelay(relay: Nip65RelaySetupInfo) {
+    fun deleteNotifRelay(relay: BasicRelaySetupInfo) {
         _notificationRelays.update { it.minus(relay) }
     }
 
@@ -187,7 +173,7 @@ class Nip65RelayListViewModel : ViewModel() {
     }
 
     fun toggleNotifPaidRelay(
-        relay: Nip65RelaySetupInfo,
+        relay: BasicRelaySetupInfo,
         paid: Boolean,
     ) {
         _notificationRelays.update { it.updated(relay, relay.copy(paidRelay = paid)) }

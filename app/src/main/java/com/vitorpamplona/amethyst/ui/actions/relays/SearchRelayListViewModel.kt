@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class DMRelayListViewModel : ViewModel() {
+class SearchRelayListViewModel : ViewModel() {
     private lateinit var account: Account
 
     private val _relays = MutableStateFlow<List<BasicRelaySetupInfo>>(emptyList())
@@ -45,7 +45,7 @@ class DMRelayListViewModel : ViewModel() {
 
     fun create() {
         viewModelScope.launch(Dispatchers.IO) {
-            account.saveDMRelayList(_relays.value.map { it.url })
+            account.saveSearchRelayList(_relays.value.map { it.url })
             clear()
         }
     }
@@ -66,7 +66,7 @@ class DMRelayListViewModel : ViewModel() {
 
     fun clear() {
         _relays.update {
-            val relayList = account.getDMRelayList()?.relays() ?: emptyList()
+            val relayList = account.getSearchRelayList()?.relays() ?: emptyList()
 
             relayList.map { relayUrl ->
                 val liveRelay = RelayPool.getRelay(relayUrl)

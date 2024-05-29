@@ -131,6 +131,7 @@ class EventFactory {
             ReportEvent.KIND -> ReportEvent(id, pubKey, createdAt, tags, content, sig)
             RepostEvent.KIND -> RepostEvent(id, pubKey, createdAt, tags, content, sig)
             SealedGossipEvent.KIND -> SealedGossipEvent(id, pubKey, createdAt, tags, content, sig)
+            SearchRelayListEvent.KIND -> SearchRelayListEvent(id, pubKey, createdAt, tags, content, sig)
             StatusEvent.KIND -> StatusEvent(id, pubKey, createdAt, tags, content, sig)
             TextNoteEvent.KIND -> TextNoteEvent(id, pubKey, createdAt, tags, content, sig)
             TextNoteModificationEvent.KIND -> TextNoteModificationEvent(id, pubKey, createdAt, tags, content, sig)
