@@ -690,7 +690,7 @@ class RichTextParserTest {
             RichTextParser()
                 .parseText(textToParse, EmptyTagList)
         org.junit.Assert.assertEquals(
-            "relay.shitforce.one, relayable.org, universe.nostrich.land, nos.lol, universe.nostrich.land?lang=zh, universe.nostrich.land?lang=en, relay.damus.io, relay.nostr.wirednet.jp, offchain.pub, nostr.rocks, relay.wellorder.net, nostr.oxtr.dev, universe.nostrich.land?lang=ja, relay.mostr.pub, nostr.bitcoiner.social, Nostr-Check.com, MR.Rabbit, Ancap.su, zapper.lol, smies.me, baller.hodl",
+            "relay.shitforce.one, relayable.org, universe.nostrich.land, nos.lol, universe.nostrich.land?lang=zh, universe.nostrich.land?lang=en, relay.damus.io, relay.nostr.wirednet.jp, offchain.pub, nostr.rocks, relay.wellorder.net, nostr.oxtr.dev, universe.nostrich.land?lang=ja, relay.mostr.pub, nostr.bitcoiner.social, Nostr-Check.com, MR.Rabbit, Ancap.su, ⚡\uFE0Fsatscoinsv@getalby.com, miceliomad@miceliomad.github.io/nostr/, zapper.lol, smies.me, baller.hodl",
             state.urlSet.joinToString(", "),
         )
 
@@ -2258,7 +2258,7 @@ class RichTextParserTest {
                 "HashTag(#214)",
                 "RegularText(2%)",
                 "RegularText(Satscoinsv,)",
-                "RegularText(⚡️satscoinsv@getalby.com)",
+                "Link(⚡️satscoinsv@getalby.com)",
                 "RegularText(-)",
                 "RegularText(80db64657ea0358c5332c5cca01565eeddd4b8799688b1c46d3cb2d7c966671f)",
                 "HashTag(#215)",
@@ -2468,7 +2468,7 @@ class RichTextParserTest {
                 "HashTag(#249)",
                 "RegularText(2%)",
                 "RegularText(micmad,)",
-                "RegularText(miceliomad@miceliomad.github.io/nostr/)",
+                "Link(miceliomad@miceliomad.github.io/nostr/)",
                 "RegularText(-)",
                 "RegularText(cd806edcf8ff40ea94fa574ea9cd97da16e5beb2b85aac6e1d648b8388504343)",
                 "HashTag(#250)",

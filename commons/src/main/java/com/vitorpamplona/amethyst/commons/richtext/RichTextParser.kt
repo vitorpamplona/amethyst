@@ -214,13 +214,13 @@ class RichTextParser() {
 
         if (word.startsWith("cashuA", true)) return CashuSegment(word)
 
-        if (startsWithNIP19Scheme(word)) return BechSegment(word)
-
         if (word.startsWith("#")) return parseHash(word, tags)
 
         if (word.contains("@")) {
             if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) return EmailSegment(word)
         }
+
+        if (startsWithNIP19Scheme(word)) return BechSegment(word)
 
         if (isPotentialPhoneNumber(word) && !isDate(word)) {
             if (Patterns.PHONE.matcher(word).matches()) return PhoneSegment(word)
