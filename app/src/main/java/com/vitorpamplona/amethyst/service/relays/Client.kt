@@ -44,7 +44,7 @@ object Client : RelayPool.Listener {
         relays: Array<Relay>?,
         onlyIfChanged: Boolean = false,
     ) {
-        Log.d("Relay", "Relay Pool Reconnecting to ${relays?.size} relays")
+        Log.d("Relay", "Relay Pool Reconnecting to ${relays?.size} relays: \n${relays?.joinToString("\n") { it.url + " " + it.read + " " + it.write + " " + it.activeTypes.joinToString(",") { it.name } }}")
         checkNotInMainThread()
 
         if (onlyIfChanged) {

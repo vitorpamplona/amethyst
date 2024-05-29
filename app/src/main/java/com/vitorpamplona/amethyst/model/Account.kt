@@ -236,8 +236,8 @@ class Account(
         ) { nip65RelayList, dmRelayList, searchRelayList, userProfile ->
             val baseRelaySet = activeRelays() ?: convertLocalRelays()
             val newDMRelaySet = (dmRelayList.note.event as? ChatMessageRelayListEvent)?.relays()?.toSet() ?: emptySet()
-            val searchRelaySet = (dmRelayList.note.event as? SearchRelayListEvent)?.relays()?.toSet() ?: Constants.defaultSearchRelaySet
-            val nip65RelaySet = (dmRelayList.note.event as? AdvertisedRelayListEvent)?.relays()
+            val searchRelaySet = (searchRelayList.note.event as? SearchRelayListEvent)?.relays()?.toSet() ?: Constants.defaultSearchRelaySet
+            val nip65RelaySet = (nip65RelayList.note.event as? AdvertisedRelayListEvent)?.relays()
 
             var mappedRelaySet =
                 baseRelaySet.map {
@@ -276,7 +276,7 @@ class Account(
                         val read = nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
                         val write = nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
 
-                        Relay(relay.url, read, write, relay.activeTypes)
+                        Relay(relay.url, read, write, relay.activeTypes + setOf(FeedType.FOLLOWS, FeedType.GLOBAL, FeedType.PUBLIC_CHATS))
                     } else {
                         relay
                     }
