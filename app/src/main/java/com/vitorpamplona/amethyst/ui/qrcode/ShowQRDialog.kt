@@ -123,8 +123,7 @@ fun ShowQRDialog(
                                         Modifier.width(100.dp)
                                             .height(100.dp)
                                             .clip(shape = CircleShape)
-                                            .border(3.dp, MaterialTheme.colorScheme.background, CircleShape)
-                                            .background(MaterialTheme.colorScheme.background),
+                                            .border(3.dp, MaterialTheme.colorScheme.background, CircleShape),
                                     loadProfilePicture = loadProfilePicture,
                                 )
                             }

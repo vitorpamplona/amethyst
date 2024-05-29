@@ -183,51 +183,43 @@ val DarkChannelNotePictureModifier =
     Modifier
         .size(30.dp)
         .clip(shape = CircleShape)
-        .background(DarkColorPalette.background)
         .border(2.dp, DarkColorPalette.background, CircleShape)
 
 val LightChannelNotePictureModifier =
     Modifier
         .size(30.dp)
         .clip(shape = CircleShape)
-        .background(LightColorPalette.background)
         .border(2.dp, LightColorPalette.background, CircleShape)
 
 val LightRelayIconModifier =
     Modifier
         .size(Size13dp)
         .clip(shape = CircleShape)
-        .background(LightColorPalette.background)
 
 val DarkRelayIconModifier =
     Modifier
         .size(Size13dp)
         .clip(shape = CircleShape)
-        .background(DarkColorPalette.background)
 
 val LightLargeRelayIconModifier =
     Modifier
         .size(Size55dp)
         .clip(shape = CircleShape)
-        .background(LightColorPalette.background)
 
 val DarkLargeRelayIconModifier =
     Modifier
         .size(Size55dp)
         .clip(shape = CircleShape)
-        .background(DarkColorPalette.background)
 
 val LightBottomIconModifier =
     Modifier
         .size(Size10dp)
         .clip(shape = CircleShape)
-        .background(LightColorPalette.primary)
 
 val DarkBottomIconModifier =
     Modifier
         .size(Size10dp)
         .clip(shape = CircleShape)
-        .background(DarkColorPalette.primary)
 
 val RichTextDefaults = RichTextStyle().resolveDefaults()
 

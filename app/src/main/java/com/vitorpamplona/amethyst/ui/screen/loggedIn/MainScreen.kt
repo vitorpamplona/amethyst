@@ -32,7 +32,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
@@ -40,7 +39,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
@@ -353,8 +351,9 @@ fun MainScreen(
         },
         content = {
             Scaffold(
+                // containerColor = Color.Unspecified,
                 modifier =
-                    Modifier.background(MaterialTheme.colorScheme.secondary)
+                    Modifier
                         .statusBarsPadding()
                         .nestedScroll(nestedScrollConnection),
                 bottomBar = {

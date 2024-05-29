@@ -45,6 +45,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -174,7 +175,7 @@ private fun HomePages(
     nav: (String) -> Unit,
 ) {
     TabRow(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onBackground,
         modifier = TabRowHeight,
         selectedTabIndex = pagerState.currentPage,

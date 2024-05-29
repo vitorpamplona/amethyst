@@ -20,14 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui
 
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.adaptive.calculateDisplayFeatures
 import com.vitorpamplona.amethyst.ServiceManager
@@ -62,19 +58,13 @@ fun AppScreen(
     serviceManager: ServiceManager,
 ) {
     AmethystTheme(sharedPreferencesViewModel) {
-        // A surface container using the 'background' color from the theme
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background,
-        ) {
-            val accountStateViewModel: AccountStateViewModel = viewModel()
-            accountStateViewModel.serviceManager = serviceManager
+        val accountStateViewModel: AccountStateViewModel = viewModel()
+        accountStateViewModel.serviceManager = serviceManager
 
-            LaunchedEffect(key1 = Unit) {
-                accountStateViewModel.tryLoginExistingAccountAsync()
-            }
-
-            AccountScreen(accountStateViewModel, sharedPreferencesViewModel)
+        LaunchedEffect(key1 = Unit) {
+            accountStateViewModel.tryLoginExistingAccountAsync()
         }
+
+        AccountScreen(accountStateViewModel, sharedPreferencesViewModel)
     }
 }

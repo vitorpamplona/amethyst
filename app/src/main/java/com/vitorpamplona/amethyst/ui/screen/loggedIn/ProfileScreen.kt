@@ -473,7 +473,7 @@ private fun RenderScreen(
     Column {
         ProfileHeader(baseUser, appRecommendations, nav, accountViewModel)
         ScrollableTabRow(
-            containerColor = MaterialTheme.colorScheme.background,
+            containerColor = Color.Transparent,
             contentColor = MaterialTheme.colorScheme.onBackground,
             selectedTabIndex = pagerState.currentPage,
             edgePadding = 8.dp,
@@ -1410,8 +1410,6 @@ private fun WatchAndRenderBadgeImage(
             }
         }
 
-    val bgColor = MaterialTheme.colorScheme.background
-
     if (image == null) {
         RobohashAsyncImage(
             robot = "authornotfound",
@@ -1421,7 +1419,6 @@ private fun WatchAndRenderBadgeImage(
                     pictureModifier
                         .width(size)
                         .height(size)
-                        .background(bgColor)
                 },
         )
     } else {
@@ -1435,7 +1432,6 @@ private fun WatchAndRenderBadgeImage(
                         .width(size)
                         .height(size)
                         .clip(shape = CutCornerShape(20))
-                        .background(bgColor)
                         .run {
                             if (onClick != null) {
                                 this.clickable(onClick = { onClick(eventId) })

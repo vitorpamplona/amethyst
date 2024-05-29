@@ -135,7 +135,6 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.normalWithTopMarginNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.theme.replyBackground
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
@@ -349,10 +348,10 @@ fun calculateBackgroundColor(
                         newItemColor.compositeOver(defaultBackgroundColor)
                     }
                 } else {
-                    parentBackgroundColor?.value ?: defaultBackgroundColor
+                    parentBackgroundColor?.value ?: Color.Transparent
                 }
             } else {
-                parentBackgroundColor?.value ?: defaultBackgroundColor
+                parentBackgroundColor?.value ?: Color.Transparent
             },
         )
     }
@@ -855,15 +854,6 @@ fun ReplyNoteComposition(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val defaultReplyBackground = MaterialTheme.colorScheme.replyBackground
-
-    val replyBackgroundColor =
-        remember {
-            mutableStateOf(
-                defaultReplyBackground.compositeOver(backgroundColor.value),
-            )
-        }
-
     NoteCompose(
         baseNote = replyingDirectlyTo,
         isQuotedNote = true,
@@ -871,7 +861,7 @@ fun ReplyNoteComposition(
         modifier = MaterialTheme.colorScheme.replyModifier,
         unPackReply = false,
         makeItShort = true,
-        parentBackgroundColor = replyBackgroundColor,
+        parentBackgroundColor = backgroundColor,
         accountViewModel = accountViewModel,
         nav = nav,
     )

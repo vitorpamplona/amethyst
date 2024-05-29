@@ -24,13 +24,11 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -90,11 +88,9 @@ fun DisplayBlankAuthor(
     size: Dp,
     modifier: Modifier = Modifier,
 ) {
-    val backgroundColor = MaterialTheme.colorScheme.background
-
     val nullModifier =
         remember {
-            modifier.size(size).clip(shape = CircleShape).background(backgroundColor)
+            modifier.size(size).clip(shape = CircleShape)
         }
 
     RobohashAsyncImage(
@@ -345,10 +341,9 @@ fun InnerUserPicture(
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
-    val backgroundColor = MaterialTheme.colorScheme.background
     val myImageModifier =
         remember {
-            modifier.size(size).clip(shape = CircleShape).background(backgroundColor)
+            modifier.size(size).clip(shape = CircleShape)
         }
 
     val automaticallyShowProfilePicture =

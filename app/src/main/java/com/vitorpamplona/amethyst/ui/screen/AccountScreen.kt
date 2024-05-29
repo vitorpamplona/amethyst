@@ -29,7 +29,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -71,10 +74,21 @@ fun AccountScreen(
     ) { state ->
         when (state) {
             is AccountState.Loading -> {
-                LoadingAccounts()
+                // A surface container using the 'background' color from the theme
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background,
+                ) {
+                    LoadingAccounts()
+                }
             }
-            is AccountState.LoggedOff -> {
-                LoginOrSignupScreen(accountStateViewModel, isFirstLogin = true)
+            is AccountState.LoggedOff -> { // A surface container using the 'background' color from the theme
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background,
+                ) {
+                    LoginOrSignupScreen(accountStateViewModel, isFirstLogin = true)
+                }
             }
             is AccountState.LoggedIn -> {
                 CompositionLocalProvider(

@@ -239,7 +239,6 @@ fun ProfileContentTemplate(
                         .height(100.dp)
                         .clip(shape = CircleShape)
                         .border(3.dp, MaterialTheme.colorScheme.background, CircleShape)
-                        .background(MaterialTheme.colorScheme.background)
                         .clickable(onClick = onClick),
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
             )

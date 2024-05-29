@@ -135,7 +135,7 @@ private fun RenderBottomMenu(
         HorizontalDivider(
             thickness = DividerThickness,
         )
-        NavigationBar(tonalElevation = Size0dp) {
+        NavigationBar(tonalElevation = Size0dp, containerColor = Color.Transparent) {
             bottomNavigationItems.forEach { item ->
                 HasNewItemsIcon(item, accountViewModel, navEntryState, nav)
             }
