@@ -104,7 +104,7 @@ fun ObserveRelayListForDMsAndDisplayIfNotFound(
     ObserveRelayListForDMs(
         accountViewModel = accountViewModel,
     ) { relayListEvent ->
-        if (relayListEvent == null) {
+        if (relayListEvent == null || relayListEvent.relays().isEmpty()) {
             AddInboxRelayForDMCard(
                 accountViewModel = accountViewModel,
                 nav = nav,
