@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForSearchAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -154,6 +155,7 @@ fun SearchScreen(
 
     Column(Modifier.fillMaxSize()) {
         SearchBar(searchBarViewModel, listState)
+        ObserveRelayListForSearchAndDisplayIfNotFound(accountViewModel, nav)
         DisplaySearchResults(searchBarViewModel, listState, nav, accountViewModel)
     }
 }

@@ -229,32 +229,69 @@ class Account(
 
     val connectToRelaysFlow =
         combineTransform(
+            getNIP65RelayListFlow(),
             getDMRelayListFlow(),
+            getSearchRelayListFlow(),
             userProfile().flow().relays.stateFlow,
-        ) { dmRelayList, userProfile ->
-            val newRelaySet = activeRelays() ?: convertLocalRelays()
-            val newDMRelaySet = (dmRelayList.note.event as? ChatMessageRelayListEvent)?.relays()
+        ) { nip65RelayList, dmRelayList, searchRelayList, userProfile ->
+            val baseRelaySet = activeRelays() ?: convertLocalRelays()
+            val newDMRelaySet = (dmRelayList.note.event as? ChatMessageRelayListEvent)?.relays()?.toSet() ?: emptySet()
+            val searchRelaySet = (dmRelayList.note.event as? SearchRelayListEvent)?.relays()?.toSet() ?: Constants.defaultSearchRelaySet
+            val nip65RelaySet = (dmRelayList.note.event as? AdvertisedRelayListEvent)?.relays()
 
-            if (newDMRelaySet == null) {
-                emit(newRelaySet)
-            } else {
-                var mappedRelaySet =
-                    newRelaySet.map {
-                        if (newDMRelaySet?.contains(it.url) == true) {
-                            Relay(it.url, true, true, it.activeTypes + FeedType.PRIVATE_DMS)
-                        } else {
-                            it
-                        }
-                    }
-
-                newDMRelaySet.forEach { newUrl ->
-                    if (mappedRelaySet.filter { it.url == newUrl }.isEmpty()) {
-                        mappedRelaySet = mappedRelaySet + Relay(newUrl, true, true, setOf(FeedType.PRIVATE_DMS))
+            var mappedRelaySet =
+                baseRelaySet.map {
+                    if (newDMRelaySet.contains(it.url) == true) {
+                        Relay(it.url, true, true, it.activeTypes + FeedType.PRIVATE_DMS)
+                    } else {
+                        it
                     }
                 }
 
-                emit(mappedRelaySet.toTypedArray())
+            newDMRelaySet.forEach { newUrl ->
+                if (mappedRelaySet.filter { it.url == newUrl }.isEmpty()) {
+                    mappedRelaySet = mappedRelaySet + Relay(newUrl, true, true, setOf(FeedType.PRIVATE_DMS))
+                }
             }
+
+            mappedRelaySet =
+                mappedRelaySet.map {
+                    if (searchRelaySet.contains(it.url) == true) {
+                        Relay(it.url, true, true, it.activeTypes + FeedType.PRIVATE_DMS)
+                    } else {
+                        it
+                    }
+                }
+
+            searchRelaySet.forEach { newUrl ->
+                if (mappedRelaySet.filter { it.url == newUrl }.isEmpty()) {
+                    mappedRelaySet = mappedRelaySet + Relay(newUrl, true, true, setOf(FeedType.SEARCH))
+                }
+            }
+
+            mappedRelaySet =
+                mappedRelaySet.map { relay ->
+                    val nip65setup = nip65RelaySet?.firstOrNull { relay.url == it.relayUrl }
+                    if (nip65setup != null) {
+                        val read = nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
+                        val write = nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
+
+                        Relay(relay.url, read, write, relay.activeTypes)
+                    } else {
+                        relay
+                    }
+                }
+
+            nip65RelaySet?.forEach { newNip65Setup ->
+                if (mappedRelaySet.filter { it.url == newNip65Setup.relayUrl }.isEmpty()) {
+                    val read = newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
+                    val write = newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
+
+                    mappedRelaySet = mappedRelaySet + Relay(newNip65Setup.relayUrl, read, write, setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS))
+                }
+            }
+
+            emit(mappedRelaySet.toTypedArray())
         }
 
     val connectToRelays = connectToRelaysFlow.stateIn(scope, SharingStarted.Eagerly, activeRelays() ?: convertLocalRelays())
@@ -2463,7 +2500,7 @@ class Account(
 
     // Takes a User's relay list and adds the types of feeds they are active for.
     fun activeRelays(): Array<Relay>? {
-        var usersRelayList =
+        val usersRelayList =
             userProfile().latestContactList?.relays()?.map {
                 val localFeedTypes =
                     localRelays.firstOrNull { localRelay -> localRelay.url == it.key }?.feedTypes
@@ -2475,24 +2512,6 @@ class Account(
 
                 Relay(it.key, it.value.read, it.value.write, localFeedTypes)
             } ?: return null
-
-        // Ugly, but forces nostr.band as the only search-supporting relay today.
-        // TODO: Remove when search becomes more available.
-        val searchRelays =
-            usersRelayList.filter { it.url.removeSuffix("/") in Constants.forcedRelaysForSearchSet }
-        val hasSearchRelay = usersRelayList.any { it.activeTypes.contains(FeedType.SEARCH) }
-        if (!hasSearchRelay && searchRelays.isEmpty()) {
-            usersRelayList =
-                usersRelayList +
-                Constants.forcedRelayForSearch.map {
-                    Relay(
-                        it.url,
-                        it.read,
-                        it.write,
-                        it.feedTypes,
-                    )
-                }
-        }
 
         return usersRelayList.toTypedArray()
     }

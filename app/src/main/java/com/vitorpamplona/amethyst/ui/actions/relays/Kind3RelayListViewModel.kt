@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.RelayPool
-import com.vitorpamplona.quartz.events.ContactListEvent
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,31 +75,6 @@ class Kind3RelayListViewModel : ViewModel() {
             var relayFile = account.userProfile().latestContactList?.relays()
 
             if (relayFile != null) {
-                // Ugly, but forces nostr.band as the only search-supporting relay today.
-                // TODO: Remove when search becomes more available.
-
-                val needsSearchRelay =
-                    relayFile.none { it.key.removeSuffix("/") in Constants.forcedRelaysForSearchSet } &&
-                        relayFile.none {
-                            account.localRelays
-                                .filter { localRelay -> localRelay.url == it.key }
-                                .firstOrNull()
-                                ?.feedTypes
-                                ?.contains(FeedType.SEARCH)
-                                ?: false
-                        }
-
-                if (needsSearchRelay) {
-                    relayFile =
-                        relayFile +
-                        Constants.forcedRelayForSearch.map {
-                            Pair(
-                                it.url,
-                                ContactListEvent.ReadWrite(it.read, it.write),
-                            )
-                        }
-                }
-
                 relayFile
                     .map {
                         val liveRelay = RelayPool.getRelay(it.key)

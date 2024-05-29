@@ -52,11 +52,5 @@ object Constants {
             RelaySetupInfo("wss://relay.noswhere.com", read = true, write = false, feedTypes = activeTypesSearch),
         )
 
-    val forcedRelayForSearch =
-        arrayOf(
-            RelaySetupInfo("wss://relay.nostr.band", read = true, write = false, feedTypes = activeTypesSearch),
-            RelaySetupInfo("wss://nostr.wine", read = true, write = false, feedTypes = activeTypesSearch),
-            RelaySetupInfo("wss://relay.noswhere.com", read = true, write = false, feedTypes = activeTypesSearch),
-        )
-    val forcedRelaysForSearchSet = forcedRelayForSearch.map { it.url }
+    val defaultSearchRelaySet = setOf("wss://relay.nostr.band", "wss://nostr.wine", "wss://relay.noswhere.com")
 }

@@ -40,7 +40,6 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Paid
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SyncProblem
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Button
@@ -310,7 +309,6 @@ fun ClickableRelayItem(
                         onTogglePrivateDMs = onTogglePrivateDMs,
                         onTogglePublicChats = onTogglePublicChats,
                         onToggleGlobal = onToggleGlobal,
-                        onToggleSearch = onToggleSearch,
                     )
                 }
 
@@ -492,7 +490,6 @@ private fun ActiveToggles(
     onTogglePrivateDMs: (RelaySetupInfo) -> Unit,
     onTogglePublicChats: (RelaySetupInfo) -> Unit,
     onToggleGlobal: (RelaySetupInfo) -> Unit,
-    onToggleSearch: (RelaySetupInfo) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -630,40 +627,6 @@ private fun ActiveToggles(
                     ),
             tint =
                 if (item.feedTypes.contains(FeedType.GLOBAL)) {
-                    MaterialTheme.colorScheme.allGoodColor
-                } else {
-                    MaterialTheme.colorScheme.onSurface.copy(
-                        alpha = 0.32f,
-                    )
-                },
-        )
-    }
-
-    IconButton(
-        modifier = Size30Modifier,
-        onClick = { onToggleSearch(item) },
-    ) {
-        Icon(
-            imageVector = Icons.Default.Search,
-            stringResource(R.string.search_feed),
-            modifier =
-                Modifier.padding(horizontal = 5.dp)
-                    .size(15.dp)
-                    .combinedClickable(
-                        onClick = { onToggleSearch(item) },
-                        onLongClick = {
-                            scope.launch {
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.search_feed),
-                                    Toast.LENGTH_SHORT,
-                                )
-                                    .show()
-                            }
-                        },
-                    ),
-            tint =
-                if (item.feedTypes.contains(FeedType.SEARCH)) {
                     MaterialTheme.colorScheme.allGoodColor
                 } else {
                     MaterialTheme.colorScheme.onSurface.copy(

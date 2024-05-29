@@ -207,7 +207,7 @@ fun ResetSearchRelays(postViewModel: SearchRelayListViewModel) {
     Button(
         onClick = {
             postViewModel.deleteAll()
-            Constants.forcedRelayForSearch.forEach { postViewModel.addRelay(BasicRelaySetupInfo(it.url)) }
+            Constants.defaultSearchRelaySet.forEach { postViewModel.addRelay(BasicRelaySetupInfo(it)) }
             postViewModel.loadRelayDocuments()
         },
     ) {
