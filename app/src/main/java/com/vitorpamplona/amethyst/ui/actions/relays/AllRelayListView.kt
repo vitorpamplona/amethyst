@@ -28,9 +28,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.MinHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
@@ -232,7 +233,7 @@ fun AllRelayListView(
 
 @Composable
 fun ResetKind3Relays(postViewModel: Kind3RelayListViewModel) {
-    Button(
+    OutlinedButton(
         onClick = {
             postViewModel.deleteAll()
             Constants.defaultRelays.forEach { postViewModel.addRelay(it) }
@@ -245,7 +246,7 @@ fun ResetKind3Relays(postViewModel: Kind3RelayListViewModel) {
 
 @Composable
 fun ResetSearchRelays(postViewModel: SearchRelayListViewModel) {
-    Button(
+    OutlinedButton(
         onClick = {
             postViewModel.deleteAll()
             Constants.defaultSearchRelaySet.forEach { postViewModel.addRelay(BasicRelaySetupInfo(it)) }
@@ -285,7 +286,7 @@ fun SettingsCategoryWithButton(
     action: @Composable () -> Unit,
     modifier: Modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
 ) {
-    Row(modifier) {
+    Row(modifier, horizontalArrangement = RowColSpacing) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
