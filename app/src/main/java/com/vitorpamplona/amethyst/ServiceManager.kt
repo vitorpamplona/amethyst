@@ -58,6 +58,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @Stable
@@ -112,7 +113,8 @@ class ServiceManager {
             collectorJob = null
             collectorJob =
                 scope.launch {
-                    myAccount.connectToRelaysFlow.collect {
+                    myAccount.connectToRelaysFlow.collectLatest {
+                        delay(500)
                         if (isStarted) {
                             Client.reconnect(it, onlyIfChanged = true)
                         }
