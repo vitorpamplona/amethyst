@@ -687,6 +687,7 @@
     <string name="search_relays_not_found_description">La création d\'une liste de relais spécialement conçue pour la recherche et l\'étiquetage utilisateur améliorera ces résultats.</string>
     <string name="search_relays_not_found_editing">Insérez de 1 à 3 relais à utiliser lors de la recherche de contenu ou de l\'étiquetage utilisateur. Assurez-vous que les relais que vous avez choisis implémentent le NIP-50</string>
     <string name="search_relays_not_found_examples">De bonnes options sont:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="relay_settings">Paramètres du relais</string>
     <string name="public_home_section">Relais publics d\'accueil</string>
     <string name="public_home_section_explainer">Ce type de relais stocke tout votre contenu. Amethyst enverra vos messages ici et d\'autres utiliseront ces relais pour trouver votre contenu. Insérez entre 1 et 3 relais : il peut s\'agir de relais personnels, de relais payants ou de relais publics.</string>
     <string name="public_notif_section">Relais de messagerie publique</string>
@@ -697,6 +698,8 @@
     <string name="kind_3_section_description">Amethyst utilise ces relais pour télécharger des messages pour vous.</string>
     <string name="search_section">Relais de recherche</string>
     <string name="search_section_explainer">Liste des relais à utiliser pour la recherche et l\'étiquetage des utilisateurs. L\'étiquetage et la recherche ne fonctionneront pas si aucune option n\'est disponible.</string>
+    <string name="local_section">Relais locaux</string>
+    <string name="local_section_explainer">Liste des relais qui sont en cours d\'exécution sur cet appareil.</string>
     <string name="zap_the_devs_title">Zap les Devs !</string>
     <string name="zap_the_devs_description">Votre don nous aide à faire la différence. Chaque sat compte !</string>
     <string name="donate_now">Faire un don maintenant</string>
