@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
+import com.vitorpamplona.quartz.events.FileServersEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.GitIssueEvent
@@ -123,6 +124,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                             AdvertisedRelayListEvent.KIND,
                             ChatMessageRelayListEvent.KIND,
                             SearchRelayListEvent.KIND,
+                            FileServersEvent.KIND,
                             MuteListEvent.KIND,
                             PeopleListEvent.KIND,
                         ),
