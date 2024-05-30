@@ -271,6 +271,21 @@ class Account(
             }
 
             mappedRelaySet =
+                mappedRelaySet.map {
+                    if (localRelayServers.contains(it.url) == true) {
+                        Relay(it.url, true, true, it.activeTypes + setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
+                    } else {
+                        it
+                    }
+                }
+
+            localRelayServers.forEach { newUrl ->
+                if (mappedRelaySet.filter { it.url == newUrl }.isEmpty()) {
+                    mappedRelaySet = mappedRelaySet + Relay(newUrl, true, true, setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
+                }
+            }
+
+            mappedRelaySet =
                 mappedRelaySet.map { relay ->
                     val nip65setup = nip65RelaySet?.firstOrNull { relay.url == it.relayUrl }
                     if (nip65setup != null) {
