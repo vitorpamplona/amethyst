@@ -102,6 +102,7 @@ import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
+import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RecommendRelayEvent
 import com.vitorpamplona.quartz.events.RelaySetEvent
@@ -924,6 +925,13 @@ object LocalCache {
 
     private fun consume(
         event: ChatMessageRelayListEvent,
+        relay: Relay?,
+    ) {
+        consumeBaseReplaceable(event, relay)
+    }
+
+    private fun consume(
+        event: PrivateOutboxRelayListEvent,
         relay: Relay?,
     ) {
         consumeBaseReplaceable(event, relay)
@@ -2565,6 +2573,7 @@ object LocalCache {
                 is NNSEvent -> comsume(event, relay)
                 is OtsEvent -> consume(event, relay)
                 is PrivateDmEvent -> consume(event, relay)
+                is PrivateOutboxRelayListEvent -> consume(event, relay)
                 is PinListEvent -> consume(event, relay)
                 is PeopleListEvent -> consume(event, relay)
                 is PollNoteEvent -> consume(event, relay)

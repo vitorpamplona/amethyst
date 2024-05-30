@@ -124,6 +124,7 @@ class EventFactory {
             PinListEvent.KIND -> PinListEvent(id, pubKey, createdAt, tags, content, sig)
             PollNoteEvent.KIND -> PollNoteEvent(id, pubKey, createdAt, tags, content, sig)
             PrivateDmEvent.KIND -> PrivateDmEvent(id, pubKey, createdAt, tags, content, sig)
+            PrivateOutboxRelayListEvent.KIND -> PrivateOutboxRelayListEvent(id, pubKey, createdAt, tags, content, sig)
             ReactionEvent.KIND -> ReactionEvent(id, pubKey, createdAt, tags, content, sig)
             RecommendRelayEvent.KIND -> RecommendRelayEvent(id, pubKey, createdAt, tags, content, sig)
             RelayAuthEvent.KIND -> RelayAuthEvent(id, pubKey, createdAt, tags, content, sig)

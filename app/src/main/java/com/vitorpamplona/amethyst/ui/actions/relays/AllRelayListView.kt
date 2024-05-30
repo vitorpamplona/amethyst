@@ -74,6 +74,9 @@ fun AllRelayListView(
     val homeFeedState by nip65ViewModel.homeRelays.collectAsStateWithLifecycle()
     val notifFeedState by nip65ViewModel.notificationRelays.collectAsStateWithLifecycle()
 
+    val privateOutboxViewModel: PrivateOutboxRelayListViewModel = viewModel()
+    val privateOutboxFeedState by privateOutboxViewModel.relays.collectAsStateWithLifecycle()
+
     val searchViewModel: SearchRelayListViewModel = viewModel()
     val searchFeedState by searchViewModel.relays.collectAsStateWithLifecycle()
 
@@ -86,6 +89,7 @@ fun AllRelayListView(
         nip65ViewModel.load(accountViewModel.account)
         searchViewModel.load(accountViewModel.account)
         localViewModel.load(accountViewModel.account)
+        privateOutboxViewModel.load(accountViewModel.account)
     }
 
     Dialog(
@@ -115,6 +119,7 @@ fun AllRelayListView(
                                     nip65ViewModel.create()
                                     searchViewModel.create()
                                     localViewModel.create()
+                                    privateOutboxViewModel.create()
                                     onClose()
                                 },
                                 true,
@@ -127,6 +132,11 @@ fun AllRelayListView(
                             CloseButton(
                                 onPress = {
                                     kind3ViewModel.clear()
+                                    dmViewModel.clear()
+                                    nip65ViewModel.clear()
+                                    searchViewModel.clear()
+                                    localViewModel.clear()
+                                    privateOutboxViewModel.clear()
                                     onClose()
                                 },
                             )
@@ -176,6 +186,14 @@ fun AllRelayListView(
                         )
                     }
                     renderDMItems(dmFeedState, dmViewModel, accountViewModel, onClose, nav)
+
+                    item {
+                        SettingsCategory(
+                            stringResource(R.string.private_outbox_section),
+                            stringResource(R.string.private_outbox_section_explainer),
+                        )
+                    }
+                    renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, onClose, nav)
 
                     item {
                         SettingsCategoryWithButton(

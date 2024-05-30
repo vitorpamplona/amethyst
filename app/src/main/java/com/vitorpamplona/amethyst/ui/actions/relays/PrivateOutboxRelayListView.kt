@@ -35,8 +35,8 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
-fun LocalRelayList(
-    postViewModel: LocalRelayListViewModel,
+fun PrivateOutboxRelayList(
+    postViewModel: PrivateOutboxRelayListViewModel,
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
     nav: (String) -> Unit,
@@ -47,19 +47,19 @@ fun LocalRelayList(
         LazyColumn(
             contentPadding = FeedPadding,
         ) {
-            renderLocalItems(feedState, postViewModel, accountViewModel, onClose, nav)
+            renderPrivateOutboxItems(feedState, postViewModel, accountViewModel, onClose, nav)
         }
     }
 }
 
-fun LazyListScope.renderLocalItems(
+fun LazyListScope.renderPrivateOutboxItems(
     feedState: List<BasicRelaySetupInfo>,
-    postViewModel: LocalRelayListViewModel,
+    postViewModel: PrivateOutboxRelayListViewModel,
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
     nav: (String) -> Unit,
 ) {
-    itemsIndexed(feedState, key = { _, item -> "Local" + item.url }) { index, item ->
+    itemsIndexed(feedState, key = { _, item -> "Outbox" + item.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteRelay(item) },
