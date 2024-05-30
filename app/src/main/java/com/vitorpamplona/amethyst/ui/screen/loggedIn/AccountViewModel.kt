@@ -1358,26 +1358,27 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
-    suspend fun cachedDVMContentDiscovery(pubkeyHex: String): Note? {
-        val fifteenMinsAgo = TimeUtils.fifteenMinutesAgo()
-        // First check if we have an actual response from the DVM in LocalCache
-        val response =
-            LocalCache.notes.maxOrNullOf(
-                filter = { key, note ->
-                    val noteEvent = note.event
-                    noteEvent is NIP90ContentDiscoveryResponseEvent &&
-                        noteEvent.pubKey == pubkeyHex &&
-                        noteEvent.isTaggedUser(account.keyPair.pubKey.toHexKey()) &&
-                        noteEvent.createdAt > fifteenMinsAgo
-                },
-                comparator = CreatedAtComparator,
-            )
+    suspend fun cachedDVMContentDiscovery(pubkeyHex: String): Note? =
+        withContext(Dispatchers.IO) {
+            val fifteenMinsAgo = TimeUtils.fifteenMinutesAgo()
+            // First check if we have an actual response from the DVM in LocalCache
+            val response =
+                LocalCache.notes.maxOrNullOf(
+                    filter = { key, note ->
+                        val noteEvent = note.event
+                        noteEvent is NIP90ContentDiscoveryResponseEvent &&
+                            noteEvent.pubKey == pubkeyHex &&
+                            noteEvent.isTaggedUser(account.keyPair.pubKey.toHexKey()) &&
+                            noteEvent.createdAt > fifteenMinsAgo
+                    },
+                    comparator = CreatedAtComparator,
+                )
 
-        // If we have a response, get the tagged Request Event otherwise null
-        return response?.event?.tags()?.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)?.let {
-            LocalCache.getOrCreateNote(it)
+            // If we have a response, get the tagged Request Event otherwise null
+            return@withContext response?.event?.tags()?.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)?.let {
+                LocalCache.getOrCreateNote(it)
+            }
         }
-    }
 
     fun sendZapPaymentRequestFor(
         bolt11: String,
