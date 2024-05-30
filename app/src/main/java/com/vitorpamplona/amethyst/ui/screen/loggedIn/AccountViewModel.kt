@@ -72,6 +72,7 @@ import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
+import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
@@ -84,6 +85,7 @@ import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.Participant
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.Response
@@ -1359,15 +1361,36 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
 
     suspend fun cachedDVMContentDiscovery(pubkeyHex: String): Note? {
         val fifteenMinsAgo = TimeUtils.fifteenMinutesAgo()
-        return LocalCache.notes.maxOrNullOf(
-            filter = { key, note ->
-                val noteEvent = note.event
-                noteEvent is NIP90ContentDiscoveryRequestEvent &&
-                    noteEvent.isTaggedUser(pubkeyHex) &&
-                    noteEvent.createdAt > fifteenMinsAgo
-            },
-            comparator = CreatedAtComparator,
-        )
+        // First check if we have an actual response from the DVM in LocalCache
+        var response =
+            LocalCache.notes.maxOrNullOf(
+                filter = { key, note ->
+                    val noteEvent = note.event
+                    noteEvent is NIP90ContentDiscoveryResponseEvent &&
+                        noteEvent.pubKey == pubkeyHex &&
+                        noteEvent.isTaggedUser(account.keyPair.pubKey.toHexKey()) &&
+                        noteEvent.createdAt > fifteenMinsAgo
+                },
+                comparator = CreatedAtComparator,
+            )
+
+        if (response == null) {
+            // If we don't have a cached NIP90 response, return null
+            return null
+        } else {
+            // If we have a response, get the tagged Request Event
+            var requestid = response.event?.tags()?.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+            // Find and return the original Request Event on localCache, or null if not found
+            return LocalCache.notes.maxOrNullOf(
+                filter = { key, note ->
+                    val noteEvent = note.event
+                    noteEvent is NIP90ContentDiscoveryRequestEvent &&
+                        noteEvent.isTaggedUser(pubkeyHex)
+                    note.idHex == requestid
+                },
+                comparator = CreatedAtComparator,
+            )
+        }
     }
 
     fun sendZapPaymentRequestFor(
