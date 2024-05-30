@@ -828,6 +828,8 @@
     <string name="kind_3_section_description">Amethyst uses these relays to download posts for you.</string>
     <string name="search_section">Search Relays</string>
     <string name="search_section_explainer">List of relays to use for search and tagging users. Tagging and search will not work if no options are available.</string>
+    <string name="local_section">Local Relays</string>
+    <string name="local_section_explainer">List of relays that are running in this device.</string>
 
     <string name="zap_the_devs_title">Zap the Devs!</string>
     <string name="zap_the_devs_description">Your donation helps us make a difference. Every sat counts!</string>

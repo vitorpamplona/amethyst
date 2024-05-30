@@ -176,6 +176,7 @@ class Account(
     val keyPair: KeyPair,
     val signer: NostrSigner = NostrSignerInternal(keyPair),
     var localRelays: Set<RelaySetupInfo> = Constants.defaultRelays.toSet(),
+    var localRelayServers: Set<String> = setOf(),
     var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
     var languagePreferences: Map<String, String> = mapOf(),
     var translateTo: String = Locale.getDefault().language,
@@ -2441,6 +2442,12 @@ class Account(
                 onReady(event)
             }
         }
+    }
+
+    fun updateLocalRelayServers(servers: Set<String>) {
+        localRelayServers = servers
+        liveLanguages.invalidateData()
+        saveable.invalidateData()
     }
 
     fun addDontTranslateFrom(languageCode: String) {

@@ -76,11 +76,15 @@ fun AllRelayListView(
     val searchViewModel: SearchRelayListViewModel = viewModel()
     val searchFeedState by searchViewModel.relays.collectAsStateWithLifecycle()
 
+    val localViewModel: LocalRelayListViewModel = viewModel()
+    val localFeedState by localViewModel.relays.collectAsStateWithLifecycle()
+
     LaunchedEffect(Unit) {
         kind3ViewModel.load(accountViewModel.account)
         dmViewModel.load(accountViewModel.account)
         nip65ViewModel.load(accountViewModel.account)
         searchViewModel.load(accountViewModel.account)
+        localViewModel.load(accountViewModel.account)
     }
 
     Dialog(
@@ -102,6 +106,7 @@ fun AllRelayListView(
                                     dmViewModel.create()
                                     nip65ViewModel.create()
                                     searchViewModel.create()
+                                    localViewModel.create()
                                     onClose()
                                 },
                                 true,
@@ -172,6 +177,14 @@ fun AllRelayListView(
                         )
                     }
                     renderSearchItems(searchFeedState, searchViewModel, accountViewModel, onClose, nav)
+
+                    item {
+                        SettingsCategory(
+                            stringResource(R.string.local_section),
+                            stringResource(R.string.local_section_explainer),
+                        )
+                    }
+                    renderLocalItems(localFeedState, localViewModel, accountViewModel, onClose, nav)
 
                     item {
                         SettingsCategoryWithButton(

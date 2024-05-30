@@ -77,6 +77,7 @@ private object PrefKeys {
     const val NOSTR_PUBKEY = "nostr_pubkey"
     const val RELAYS = "relays"
     const val DONT_TRANSLATE_FROM = "dontTranslateFrom"
+    const val LOCAL_RELAY_SERVERS = "localRelayServers"
     const val LANGUAGE_PREFS = "languagePreferences"
     const val TRANSLATE_TO = "translateTo"
     const val ZAP_AMOUNTS = "zapAmounts"
@@ -284,6 +285,7 @@ object LocalPreferences {
                     account.keyPair.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHexKey()) }
                     putString(PrefKeys.RELAYS, Event.mapper.writeValueAsString(account.localRelays))
                     putStringSet(PrefKeys.DONT_TRANSLATE_FROM, account.dontTranslateFrom)
+                    putStringSet(PrefKeys.LOCAL_RELAY_SERVERS, account.localRelayServers)
                     putString(
                         PrefKeys.LANGUAGE_PREFS,
                         Event.mapper.writeValueAsString(account.languagePreferences),
@@ -410,6 +412,7 @@ object LocalPreferences {
                         ?: setOf<RelaySetupInfo>()
 
                 val dontTranslateFrom = getStringSet(PrefKeys.DONT_TRANSLATE_FROM, null) ?: setOf()
+                val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
                 val translateTo = getString(PrefKeys.TRANSLATE_TO, null) ?: Locale.getDefault().language
                 val defaultHomeFollowList =
                     getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null) ?: KIND3_FOLLOWS
@@ -577,6 +580,7 @@ object LocalPreferences {
                         keyPair = keyPair,
                         signer = signer,
                         localRelays = localRelays,
+                        localRelayServers = localRelayServers,
                         dontTranslateFrom = dontTranslateFrom,
                         languagePreferences = languagePreferences,
                         translateTo = translateTo,
