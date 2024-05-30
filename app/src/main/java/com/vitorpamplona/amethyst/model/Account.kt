@@ -261,7 +261,7 @@ class Account(
             mappedRelaySet =
                 mappedRelaySet.map {
                     if (searchRelaySet.contains(it.url) == true) {
-                        Relay(it.url, true, true, it.activeTypes + FeedType.PRIVATE_DMS)
+                        Relay(it.url, true, false, it.activeTypes + FeedType.PRIVATE_DMS)
                     } else {
                         it
                     }
@@ -269,7 +269,7 @@ class Account(
 
             searchRelaySet.forEach { newUrl ->
                 if (mappedRelaySet.filter { it.url == newUrl }.isEmpty()) {
-                    mappedRelaySet = mappedRelaySet + Relay(newUrl, true, true, setOf(FeedType.SEARCH))
+                    mappedRelaySet = mappedRelaySet + Relay(newUrl, true, false, setOf(FeedType.SEARCH))
                 }
             }
 
