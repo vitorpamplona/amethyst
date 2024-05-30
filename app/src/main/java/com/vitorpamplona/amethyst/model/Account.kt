@@ -592,7 +592,7 @@ class Account(
         return keyPair.privKey != null || signer is NostrSignerExternal
     }
 
-    fun sendNewRelayList(relays: Map<String, ContactListEvent.ReadWrite>) {
+    fun sendKind3RelayList(relays: Map<String, ContactListEvent.ReadWrite>) {
         if (!isWriteable()) return
 
         val contactList = userProfile().latestContactList
@@ -2685,10 +2685,10 @@ class Account(
             .toSet()
     }
 
-    fun saveRelayList(value: List<RelaySetupInfo>) {
+    fun saveKind3RelayList(value: List<RelaySetupInfo>) {
         try {
             localRelays = value.toSet()
-            return sendNewRelayList(
+            return sendKind3RelayList(
                 value.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
             )
         } finally {

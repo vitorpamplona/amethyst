@@ -41,6 +41,8 @@ class Nip65RelayListViewModel : ViewModel() {
     private val _notificationRelays = MutableStateFlow<List<BasicRelaySetupInfo>>(emptyList())
     val notificationRelays = _notificationRelays.asStateFlow()
 
+    var hasModified = false
+
     fun load(account: Account) {
         this.account = account
         clear()
@@ -48,26 +50,28 @@ class Nip65RelayListViewModel : ViewModel() {
     }
 
     fun create() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val writes = _homeRelays.value.map { it.url }.toSet()
-            val reads = _notificationRelays.value.map { it.url }.toSet()
+        if (hasModified) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val writes = _homeRelays.value.map { it.url }.toSet()
+                val reads = _notificationRelays.value.map { it.url }.toSet()
 
-            val urls = writes.union(reads)
+                val urls = writes.union(reads)
 
-            account.sendNip65RelayList(
-                urls.map {
-                    val type =
-                        if (writes.contains(it) && reads.contains(it)) {
-                            AdvertisedRelayListEvent.AdvertisedRelayType.BOTH
-                        } else if (writes.contains(it)) {
-                            AdvertisedRelayListEvent.AdvertisedRelayType.WRITE
-                        } else {
-                            AdvertisedRelayListEvent.AdvertisedRelayType.READ
-                        }
-                    AdvertisedRelayListEvent.AdvertisedRelayInfo(it, type)
-                },
-            )
-            clear()
+                account.sendNip65RelayList(
+                    urls.map {
+                        val type =
+                            if (writes.contains(it) && reads.contains(it)) {
+                                AdvertisedRelayListEvent.AdvertisedRelayType.BOTH
+                            } else if (writes.contains(it)) {
+                                AdvertisedRelayListEvent.AdvertisedRelayType.WRITE
+                            } else {
+                                AdvertisedRelayListEvent.AdvertisedRelayType.READ
+                            }
+                        AdvertisedRelayListEvent.AdvertisedRelayInfo(it, type)
+                    },
+                )
+                clear()
+            }
         }
     }
 
@@ -96,18 +100,19 @@ class Nip65RelayListViewModel : ViewModel() {
     }
 
     fun clear() {
+        hasModified = false
         _homeRelays.update {
-            val relayList = account.getNIP65RelayList()?.relays() ?: emptyList()
+            val relayList = account.getNIP65RelayList()?.writeRelays() ?: emptyList()
 
-            relayList.filter { it.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || it.type == AdvertisedRelayListEvent.AdvertisedRelayType.WRITE }.map { relayUrl ->
-                val liveRelay = RelayPool.getRelay(relayUrl.relayUrl)
+            relayList.map { relayUrl ->
+                val liveRelay = RelayPool.getRelay(relayUrl)
                 val errorCounter = liveRelay?.errorCounter ?: 0
                 val eventDownloadCounter = liveRelay?.eventDownloadCounterInBytes ?: 0
                 val eventUploadCounter = liveRelay?.eventUploadCounterInBytes ?: 0
                 val spamCounter = liveRelay?.spamCounter ?: 0
 
                 BasicRelaySetupInfo(
-                    relayUrl.relayUrl,
+                    relayUrl,
                     errorCounter,
                     eventDownloadCounter,
                     eventUploadCounter,
@@ -117,17 +122,17 @@ class Nip65RelayListViewModel : ViewModel() {
         }
 
         _notificationRelays.update {
-            val relayList = account.getNIP65RelayList()?.relays() ?: emptyList()
+            val relayList = account.getNIP65RelayList()?.readRelays() ?: emptyList()
 
-            relayList.filter { it.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || it.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ }.map { relayUrl ->
-                val liveRelay = RelayPool.getRelay(relayUrl.relayUrl)
+            relayList.map { relayUrl ->
+                val liveRelay = RelayPool.getRelay(relayUrl)
                 val errorCounter = liveRelay?.errorCounter ?: 0
                 val eventDownloadCounter = liveRelay?.eventDownloadCounterInBytes ?: 0
                 val eventUploadCounter = liveRelay?.eventUploadCounterInBytes ?: 0
                 val spamCounter = liveRelay?.spamCounter ?: 0
 
                 BasicRelaySetupInfo(
-                    relayUrl.relayUrl,
+                    relayUrl,
                     errorCounter,
                     eventDownloadCounter,
                     eventUploadCounter,
@@ -141,14 +146,17 @@ class Nip65RelayListViewModel : ViewModel() {
         if (_homeRelays.value.any { it.url == relay.url }) return
 
         _homeRelays.update { it.plus(relay) }
+        hasModified = true
     }
 
     fun deleteHomeRelay(relay: BasicRelaySetupInfo) {
         _homeRelays.update { it.minus(relay) }
+        hasModified = true
     }
 
     fun deleteHomeAll() {
         _homeRelays.update { relays -> emptyList() }
+        hasModified = true
     }
 
     fun toggleHomePaidRelay(
@@ -162,14 +170,17 @@ class Nip65RelayListViewModel : ViewModel() {
         if (_notificationRelays.value.any { it.url == relay.url }) return
 
         _notificationRelays.update { it.plus(relay) }
+        hasModified = true
     }
 
     fun deleteNotifRelay(relay: BasicRelaySetupInfo) {
         _notificationRelays.update { it.minus(relay) }
+        hasModified = true
     }
 
     fun deleteNotifAll() {
         _notificationRelays.update { relays -> emptyList() }
+        hasModified = true
     }
 
     fun toggleNotifPaidRelay(

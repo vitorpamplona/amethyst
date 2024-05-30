@@ -41,6 +41,8 @@ class Kind3RelayListViewModel : ViewModel() {
     private val _relays = MutableStateFlow<List<RelaySetupInfo>>(emptyList())
     val relays = _relays.asStateFlow()
 
+    var hasModified = false
+
     fun load(account: Account) {
         this.account = account
         clear()
@@ -48,9 +50,9 @@ class Kind3RelayListViewModel : ViewModel() {
     }
 
     fun create() {
-        relays.let {
+        if (hasModified) {
             viewModelScope.launch(Dispatchers.IO) {
-                account.saveRelayList(it.value)
+                account.saveKind3RelayList(relays.value)
                 clear()
             }
         }
@@ -71,6 +73,7 @@ class Kind3RelayListViewModel : ViewModel() {
     }
 
     fun clear() {
+        hasModified = false
         _relays.update {
             var relayFile = account.userProfile().latestContactList?.relays()
 
@@ -140,47 +143,58 @@ class Kind3RelayListViewModel : ViewModel() {
         if (relays.value.any { it.url == relay.url }) return
 
         _relays.update { it.plus(relay) }
+
+        hasModified = true
     }
 
     fun deleteRelay(relay: RelaySetupInfo) {
         _relays.update { it.minus(relay) }
+        hasModified = true
     }
 
     fun deleteAll() {
         _relays.update { relays -> emptyList() }
+        hasModified = true
     }
 
     fun toggleDownload(relay: RelaySetupInfo) {
         _relays.update { it.updated(relay, relay.copy(read = !relay.read)) }
+        hasModified = true
     }
 
     fun toggleUpload(relay: RelaySetupInfo) {
         _relays.update { it.updated(relay, relay.copy(write = !relay.write)) }
+        hasModified = true
     }
 
     fun toggleFollows(relay: RelaySetupInfo) {
         val newTypes = togglePresenceInSet(relay.feedTypes, FeedType.FOLLOWS)
         _relays.update { it.updated(relay, relay.copy(feedTypes = newTypes)) }
+        hasModified = true
     }
 
     fun toggleMessages(relay: RelaySetupInfo) {
         val newTypes = togglePresenceInSet(relay.feedTypes, FeedType.PRIVATE_DMS)
         _relays.update { it.updated(relay, relay.copy(feedTypes = newTypes)) }
+        hasModified = true
     }
 
     fun togglePublicChats(relay: RelaySetupInfo) {
         val newTypes = togglePresenceInSet(relay.feedTypes, FeedType.PUBLIC_CHATS)
         _relays.update { it.updated(relay, relay.copy(feedTypes = newTypes)) }
+        hasModified = true
     }
 
     fun toggleGlobal(relay: RelaySetupInfo) {
         val newTypes = togglePresenceInSet(relay.feedTypes, FeedType.GLOBAL)
         _relays.update { it.updated(relay, relay.copy(feedTypes = newTypes)) }
+        hasModified = true
     }
 
     fun toggleSearch(relay: RelaySetupInfo) {
         val newTypes = togglePresenceInSet(relay.feedTypes, FeedType.SEARCH)
         _relays.update { it.updated(relay, relay.copy(feedTypes = newTypes)) }
+        hasModified = true
     }
 
     fun togglePaidRelay(

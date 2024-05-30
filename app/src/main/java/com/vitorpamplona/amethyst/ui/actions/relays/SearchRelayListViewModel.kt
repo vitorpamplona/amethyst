@@ -20,90 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.relays
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
-import com.vitorpamplona.amethyst.service.relays.RelayPool
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-
-class SearchRelayListViewModel : ViewModel() {
-    private lateinit var account: Account
-
-    private val _relays = MutableStateFlow<List<BasicRelaySetupInfo>>(emptyList())
-    val relays = _relays.asStateFlow()
-
-    fun load(account: Account) {
-        this.account = account
-        clear()
-        loadRelayDocuments()
+class SearchRelayListViewModel : BasicRelaySetupInfoModel() {
+    override fun getRelayList(): List<String>? {
+        return account.getSearchRelayList()?.relays()
     }
 
-    fun create() {
-        viewModelScope.launch(Dispatchers.IO) {
-            account.saveSearchRelayList(_relays.value.map { it.url })
-            clear()
-        }
-    }
-
-    fun loadRelayDocuments() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _relays.value.forEach { item ->
-                Nip11CachedRetriever.loadRelayInfo(
-                    dirtyUrl = item.url,
-                    onInfo = {
-                        togglePaidRelay(item, it.limitation?.payment_required ?: false)
-                    },
-                    onError = { url, errorCode, exceptionMessage -> },
-                )
-            }
-        }
-    }
-
-    fun clear() {
-        _relays.update {
-            val relayList = account.getSearchRelayList()?.relays() ?: emptyList()
-
-            relayList.map { relayUrl ->
-                val liveRelay = RelayPool.getRelay(relayUrl)
-                val errorCounter = liveRelay?.errorCounter ?: 0
-                val eventDownloadCounter = liveRelay?.eventDownloadCounterInBytes ?: 0
-                val eventUploadCounter = liveRelay?.eventUploadCounterInBytes ?: 0
-                val spamCounter = liveRelay?.spamCounter ?: 0
-
-                BasicRelaySetupInfo(
-                    relayUrl,
-                    errorCounter,
-                    eventDownloadCounter,
-                    eventUploadCounter,
-                    spamCounter,
-                )
-            }.distinctBy { it.url }.sortedBy { it.downloadCountInBytes }.reversed()
-        }
-    }
-
-    fun addRelay(relay: BasicRelaySetupInfo) {
-        if (relays.value.any { it.url == relay.url }) return
-
-        _relays.update { it.plus(relay) }
-    }
-
-    fun deleteRelay(relay: BasicRelaySetupInfo) {
-        _relays.update { it.minus(relay) }
-    }
-
-    fun deleteAll() {
-        _relays.update { relays -> emptyList() }
-    }
-
-    fun togglePaidRelay(
-        relay: BasicRelaySetupInfo,
-        paid: Boolean,
-    ) {
-        _relays.update { it.updated(relay, relay.copy(paidRelay = paid)) }
+    override fun saveRelayList(urlList: List<String>) {
+        account.saveSearchRelayList(urlList)
     }
 }
