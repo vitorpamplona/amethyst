@@ -56,7 +56,7 @@ object PushDistributorHandler : PushDistributorActions {
     }
 
     override fun getSavedDistributor(): String {
-        return unifiedPush.getDistributor(appContext)
+        return unifiedPush.getSavedDistributor(appContext) ?: ""
     }
 
     fun savedDistributorExists(): Boolean = getSavedDistributor().isNotEmpty()
