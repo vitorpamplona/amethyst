@@ -84,7 +84,6 @@ import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
-import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.Participant
 import com.vitorpamplona.quartz.events.ReportEvent
@@ -1362,7 +1361,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     suspend fun cachedDVMContentDiscovery(pubkeyHex: String): Note? {
         val fifteenMinsAgo = TimeUtils.fifteenMinutesAgo()
         // First check if we have an actual response from the DVM in LocalCache
-        var response =
+        val response =
             LocalCache.notes.maxOrNullOf(
                 filter = { key, note ->
                     val noteEvent = note.event
@@ -1374,22 +1373,9 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
                 comparator = CreatedAtComparator,
             )
 
-        if (response == null) {
-            // If we don't have a cached NIP90 response, return null
-            return null
-        } else {
-            // If we have a response, get the tagged Request Event
-            var requestid = response.event?.tags()?.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
-            // Find and return the original Request Event on localCache, or null if not found
-            return LocalCache.notes.maxOrNullOf(
-                filter = { key, note ->
-                    val noteEvent = note.event
-                    noteEvent is NIP90ContentDiscoveryRequestEvent &&
-                        noteEvent.isTaggedUser(pubkeyHex)
-                    note.idHex == requestid
-                },
-                comparator = CreatedAtComparator,
-            )
+        // If we have a response, get the tagged Request Event otherwise null
+        return response?.event?.tags()?.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)?.let {
+            LocalCache.getOrCreateNote(it)
         }
     }
 
