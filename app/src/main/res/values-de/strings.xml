@@ -727,4 +727,20 @@ anz der Bedingungen ist erforderlich</string>
     <string name="dvm_requesting_job">Anforderung eines Jobs von DVM</string>
     <string name="nwc_payment_request">Zahlungsanforderung gesendet, wartet auf Bestätigung Ihrer Geldbörse</string>
     <string name="dvm_waiting_to_confim_payment">Warten auf Bestätigung der Zahlung durch DVM oder auf die Ergebnisse</string>
+
+    <string name="search_relays_title">Suchrelais</string>
+    <string name="search_relays_not_found">Richten Sie Ihre Suchrelais ein</string>
+    <string name="search_relays_not_found_description">Das Erstellen einer Relaisliste, die speziell für die Suche und Benutzerkennzeichnung entwickelt wurde, wird diese Ergebnisse verbessern.</string>
+    <string name="search_relays_not_found_editing">Fügen Sie 1–3 Relais ein, die beim Suchen nach Inhalten oder beim Taggen von Benutzern verwendet werden sollen. Stellen Sie sicher, dass Ihre ausgewählten Relais NIP-50 implementieren</string>
+    <string name="search_relays_not_found_examples">Gute Optionen sind:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="public_home_section">Öffentliche Heimrelais</string>
+    <string name="public_home_section_explainer">Dieser Relais-Typ speichert alle Ihre Inhalte. Amethyst sendet Ihre Beiträge hierher und andere werden diese Relais verwenden, um Ihre Inhalte zu finden. Fügen Sie 1–3 Relais ein. Sie können persönliche Relais, bezahlte Relais oder öffentliche Relais sein.</string>
+    <string name="public_notif_section">Öffentliche Posteingangsrelais</string>
+    <string name="public_notif_section_explainer">Dieser Relais-Typ empfängt alle Antworten, Kommentare, Likes und Zaps auf Ihre Beiträge. Fügen Sie 1–3 Relais ein und stellen Sie sicher, dass sie Beiträge von jedem akzeptieren.</string>
+    <string name="private_inbox_section">DM-Posteingangsrelais</string>
+    <string name="private_inbox_section_explainer">Fügen Sie 1–3 Relais ein, die als Ihr privater Posteingang dienen sollen. Andere werden diese Relais verwenden, um Ihnen DMs zu senden. DM-Posteingangsrelais sollten Nachrichten von jedem akzeptieren, aber nur Ihnen erlauben, sie herunterzuladen. Gute Optionen sind:\n - inbox.nostr.wine (bezahlt)\n - you.nostr1.com (persönliche Relais - bezahlt)</string>
+    <string name="kind_3_section">Allgemeine Relais</string>
+    <string name="kind_3_section_description">Amethyst verwendet diese Relais, um Beiträge für Sie herunterzuladen.</string>
+    <string name="search_section">Suchrelais</string>
+    <string name="search_section_explainer">Liste der Relais, die für die Suche und das Taggen von Benutzern verwendet werden. Das Taggen und die Suche funktionieren nicht, wenn keine Optionen verfügbar sind.</string>
 </resources>
