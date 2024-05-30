@@ -51,8 +51,8 @@ import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.MinHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
@@ -101,7 +101,7 @@ fun AllRelayListView(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Spacer(modifier = StdHorzSpacer)
+                            Spacer(modifier = MinHorzSpacer)
 
                             Text(
                                 text = stringResource(R.string.relay_settings),
@@ -122,13 +122,15 @@ fun AllRelayListView(
                         }
                     },
                     navigationIcon = {
-                        Spacer(modifier = DoubleHorzSpacer)
-                        CloseButton(
-                            onPress = {
-                                kind3ViewModel.clear()
-                                onClose()
-                            },
-                        )
+                        Row {
+                            Spacer(modifier = StdHorzSpacer)
+                            CloseButton(
+                                onPress = {
+                                    kind3ViewModel.clear()
+                                    onClose()
+                                },
+                            )
+                        }
                     },
                     colors =
                         TopAppBarDefaults.topAppBarColors(
