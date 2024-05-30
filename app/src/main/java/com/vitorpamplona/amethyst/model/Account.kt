@@ -2161,27 +2161,12 @@ class Account(
         return LocalCache.getOrCreateAddressableNote(aTag)
     }
 
-    fun getFileServersNote(): AddressableNote {
-        val aTag =
-            ATag(
-                FileServersEvent.KIND,
-                userProfile().pubkeyHex,
-                "",
-                null,
-            )
-        return LocalCache.getOrCreateAddressableNote(aTag)
-    }
-
     fun getBlockList(): PeopleListEvent? {
         return getBlockListNote().event as? PeopleListEvent
     }
 
     fun getMuteList(): MuteListEvent? {
         return getMuteListNote().event as? MuteListEvent
-    }
-
-    fun getFileServersList(): FileServersEvent? {
-        return getFileServersNote().event as? FileServersEvent
     }
 
     fun hideWord(word: String) {
@@ -2688,10 +2673,7 @@ class Account(
     fun saveSearchRelayList(searchRelays: List<String>) {
         if (!isWriteable()) return
 
-        val relayListForSearch =
-            LocalCache.getOrCreateAddressableNote(
-                SearchRelayListEvent.createAddressATag(signer.pubKey),
-            ).event as? SearchRelayListEvent
+        val relayListForSearch = getSearchRelayList()
 
         if (relayListForSearch != null && relayListForSearch.tags.isNotEmpty()) {
             SearchRelayListEvent.updateRelayList(
@@ -2730,10 +2712,7 @@ class Account(
     fun sendNip65RelayList(relays: List<AdvertisedRelayListEvent.AdvertisedRelayInfo>) {
         if (!isWriteable()) return
 
-        val nip65RelayList =
-            LocalCache.getOrCreateAddressableNote(
-                AdvertisedRelayListEvent.createAddressATag(signer.pubKey),
-            ).event as? AdvertisedRelayListEvent
+        val nip65RelayList = getNIP65RelayList()
 
         if (nip65RelayList != null) {
             AdvertisedRelayListEvent.updateRelayList(
@@ -2747,6 +2726,43 @@ class Account(
         } else {
             AdvertisedRelayListEvent.createFromScratch(
                 relays = relays,
+                signer = signer,
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
+            }
+        }
+    }
+
+    fun getFileServersList(): FileServersEvent? {
+        return getFileServersNote().event as? FileServersEvent
+    }
+
+    fun getFileServersListFlow(): StateFlow<NoteState> {
+        return getFileServersNote().flow().metadata.stateFlow
+    }
+
+    fun getFileServersNote(): AddressableNote {
+        return LocalCache.getOrCreateAddressableNote(FileServersEvent.createAddressATag(userProfile().pubkeyHex))
+    }
+
+    fun sendFileServersList(servers: List<String>) {
+        if (!isWriteable()) return
+
+        val serverList = getFileServersList()
+
+        if (serverList != null && serverList.tags.isNotEmpty()) {
+            FileServersEvent.updateRelayList(
+                earlierVersion = serverList,
+                relays = servers,
+                signer = signer,
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
+            }
+        } else {
+            FileServersEvent.createFromScratch(
+                relays = servers,
                 signer = signer,
             ) {
                 Client.send(it)
