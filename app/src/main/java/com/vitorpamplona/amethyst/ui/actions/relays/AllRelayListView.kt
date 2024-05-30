@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -97,9 +98,16 @@ fun AllRelayListView(
                     title = {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End,
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            Spacer(modifier = StdHorzSpacer)
+
+                            Text(
+                                text = stringResource(R.string.relay_settings),
+                                style = MaterialTheme.typography.titleLarge,
+                            )
+
                             SaveButton(
                                 onPost = {
                                     kind3ViewModel.create()
