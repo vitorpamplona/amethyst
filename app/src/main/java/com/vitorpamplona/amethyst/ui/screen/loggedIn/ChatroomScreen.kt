@@ -233,7 +233,20 @@ fun PrepareChatroomViewModels(
     newPostModel.accountViewModel = accountViewModel
     newPostModel.account = accountViewModel.account
     newPostModel.requiresNIP17 = room.users.size > 1
-    newPostModel.nip17 = true // defaults to the new GiftWrap
+
+    if (newPostModel.requiresNIP17) {
+        newPostModel.nip17 = true
+    } else {
+        if (room.users.size == 1) {
+            ObserveRelayListForDMs(pubkey = room.users.first(), accountViewModel = accountViewModel) {
+                if (it?.relays().isNullOrEmpty()) {
+                    newPostModel.nip17 = false
+                } else {
+                    newPostModel.nip17 = true
+                }
+            }
+        }
+    }
 
     if (draftMessage != null) {
         LaunchedEffect(key1 = draftMessage) { newPostModel.message = TextFieldValue(draftMessage) }
