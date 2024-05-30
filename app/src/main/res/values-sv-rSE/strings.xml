@@ -679,6 +679,21 @@
     <string name="dm_relays_not_found_examples">Bra alternativ är:\n - inbox.nostr.wine (betald)\n - you.nostr1.com (personliga reläer - betald)</string>
     <string name="dm_relays_not_found_editing">Sätt in mellan 1-3 reläer för att fungera som din privata inkorg. DM Inkorg reläer bör acceptera alla meddelanden från vem som helst, men endast tillåta dig att ladda ner dem.</string>
     <string name="dm_relays_not_found_create_now">Ställ in nu</string>
+    <string name="search_relays_title">Sökreläer</string>
+    <string name="search_relays_not_found">Ställ in dina sökreläer</string>
+    <string name="search_relays_not_found_description">Att skapa en relälista speciellt utformad för sökning och användartaggning kommer att förbättra dessa resultat.</string>
+    <string name="search_relays_not_found_editing">Sätt in mellan 1–3 reläer att använda när du söker efter innehåll eller taggar användare. Se till att dina valda reläer implementerar NIP-50</string>
+    <string name="search_relays_not_found_examples">Bra alternativ är:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="public_home_section">Offentliga hemreläer</string>
+    <string name="public_home_section_explainer">Denna typ av relä lagrar allt ditt innehåll. Amethyst skickar dina inlägg hit och andra kommer att använda dessa reläer för att hitta ditt innehåll. Sätt in mellan 1–3 reläer. De kan vara personliga reläer, betalda reläer eller offentliga reläer.</string>
+    <string name="public_notif_section">Offentliga inkorgsreläer</string>
+    <string name="public_notif_section_explainer">Denna typ av relä tar emot alla svar, kommentarer, gillanden och zaps till dina inlägg. Sätt in mellan 1–3 reläer och se till att de accepterar inlägg från vem som helst.</string>
+    <string name="private_inbox_section">DM inkorgsreläer</string>
+    <string name="private_inbox_section_explainer">Sätt in mellan 1–3 reläer som ska fungera som din privata inkorg. Andra kommer att använda dessa reläer för att skicka DM till dig. DM inkorgsreläer bör acceptera alla meddelanden från vem som helst, men endast tillåta dig att ladda ner dem. Bra alternativ är:\n - inbox.nostr.wine (betald)\n - you.nostr1.com (personliga reläer - betald)</string>
+    <string name="kind_3_section">Allmänna reläer</string>
+    <string name="kind_3_section_description">Amethyst använder dessa reläer för att ladda ner inlägg åt dig.</string>
+    <string name="search_section">Sökreläer</string>
+    <string name="search_section_explainer">Lista över reläer som används för sökning och taggning av användare. Taggning och sökning kommer inte att fungera om inga alternativ är tillgängliga.</string>
     <string name="zap_the_devs_title">Zappa utvecklarna!</string>
     <string name="zap_the_devs_description">Din donation hjälper oss att göra skillnad. Varje sat räknas!</string>
     <string name="donate_now">Donera nu</string>
@@ -721,20 +736,4 @@
     <string name="dvm_requesting_job">Begär jobb från DVM</string>
     <string name="nwc_payment_request">Betalningsbegäran skickad, väntar på bekräftelse från din plånbok</string>
     <string name="dvm_waiting_to_confim_payment">Väntar på att DVM ska bekräfta betalningen eller skicka resultaten</string>
-
-    <string name="search_relays_title">Sökreläer</string>
-    <string name="search_relays_not_found">Ställ in dina sökreläer</string>
-    <string name="search_relays_not_found_description">Att skapa en relälista speciellt utformad för sökning och användartaggning kommer att förbättra dessa resultat.</string>
-    <string name="search_relays_not_found_editing">Sätt in mellan 1–3 reläer att använda när du söker efter innehåll eller taggar användare. Se till att dina valda reläer implementerar NIP-50</string>
-    <string name="search_relays_not_found_examples">Bra alternativ är:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
-    <string name="public_home_section">Offentliga hemreläer</string>
-    <string name="public_home_section_explainer">Denna typ av relä lagrar allt ditt innehåll. Amethyst skickar dina inlägg hit och andra kommer att använda dessa reläer för att hitta ditt innehåll. Sätt in mellan 1–3 reläer. De kan vara personliga reläer, betalda reläer eller offentliga reläer.</string>
-    <string name="public_notif_section">Offentliga inkorgsreläer</string>
-    <string name="public_notif_section_explainer">Denna typ av relä tar emot alla svar, kommentarer, gillanden och zaps till dina inlägg. Sätt in mellan 1–3 reläer och se till att de accepterar inlägg från vem som helst.</string>
-    <string name="private_inbox_section">DM inkorgsreläer</string>
-    <string name="private_inbox_section_explainer">Sätt in mellan 1–3 reläer som ska fungera som din privata inkorg. Andra kommer att använda dessa reläer för att skicka DM till dig. DM inkorgsreläer bör acceptera alla meddelanden från vem som helst, men endast tillåta dig att ladda ner dem. Bra alternativ är:\n - inbox.nostr.wine (betald)\n - you.nostr1.com (personliga reläer - betald)</string>
-    <string name="kind_3_section">Allmänna reläer</string>
-    <string name="kind_3_section_description">Amethyst använder dessa reläer för att ladda ner inlägg åt dig.</string>
-    <string name="search_section">Sökreläer</string>
-    <string name="search_section_explainer">Lista över reläer som används för sökning och taggning av användare. Taggning och sökning kommer inte att fungera om inga alternativ är tillgängliga.</string>
 </resources>
