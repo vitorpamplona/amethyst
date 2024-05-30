@@ -730,8 +730,10 @@ class Account(
         note.event?.let { event ->
             LnZapRequestEvent.create(
                 event,
-                userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
-                    ?: localRelays.map { it.url }.toSet(),
+                relays =
+                    getNIP65RelayList()?.readRelays()?.toSet()
+                        ?: userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
+                        ?: localRelays.map { it.url }.toSet(),
                 signer,
                 pollOption,
                 message,

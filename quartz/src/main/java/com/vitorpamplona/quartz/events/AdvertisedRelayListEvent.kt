@@ -54,6 +54,34 @@ class AdvertisedRelayListEvent(
         }
     }
 
+    fun readRelays(): List<String>? {
+        return tags.mapNotNull {
+            if (it.size > 1 && it[0] == "r") {
+                when (it.getOrNull(2)) {
+                    "read" -> it[1]
+                    "write" -> null
+                    else -> it[1]
+                }
+            } else {
+                null
+            }
+        }.ifEmpty { null }
+    }
+
+    fun writeRelays(): List<String> {
+        return tags.mapNotNull {
+            if (it.size > 1 && it[0] == "r") {
+                when (it.getOrNull(2)) {
+                    "read" -> null
+                    "write" -> it[1]
+                    else -> it[1]
+                }
+            } else {
+                null
+            }
+        }
+    }
+
     companion object {
         const val KIND = 10002
         const val FIXED_D_TAG = ""
