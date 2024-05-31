@@ -18,12 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.commons.preview
 
 import android.graphics.Bitmap
 import android.graphics.Color
 import kotlin.math.cos
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.withSign
 
 object BlurHashDecoder {
@@ -49,7 +50,7 @@ object BlurHashDecoder {
         if (blurHash == null || blurHash.length < 6) {
             return null
         }
-        val numCompEnc = decode83(blurHash, 0, 1)
+        val numCompEnc = decode83At(blurHash, 0)
         val numCompX = (numCompEnc % 9) + 1
         val numCompY = (numCompEnc / 9) + 1
         if (blurHash.length != 4 + 2 * numCompX * numCompY) {
@@ -66,38 +67,46 @@ object BlurHashDecoder {
      *   if the cache does not exist yet it will be created and populated with new calculations. By
      *   default it is true.
      */
-    fun decode(
+    fun decodeKeepAspectRatio(
         blurHash: String?,
         width: Int,
-        height: Int,
-        punch: Float = 1f,
         useCache: Boolean = true,
     ): Bitmap? {
-        checkNotInMainThread()
-
         if (blurHash == null || blurHash.length < 6) {
             return null
         }
-        val numCompEnc = decode83(blurHash, 0, 1)
+        val numCompEnc = decode83At(blurHash, 0)
         val numCompX = (numCompEnc % 9) + 1
         val numCompY = (numCompEnc / 9) + 1
         if (blurHash.length != 4 + 2 * numCompX * numCompY) {
             return null
         }
-        val maxAcEnc = decode83(blurHash, 1, 2)
-        val maxAc = (maxAcEnc + 1) / 166f
+        val height = (100 * (1 / (numCompX.toFloat() / numCompY.toFloat()))).roundToInt()
+        val maxAc = (decode83At(blurHash, 1) + 1) / 166f
+
         val colors =
             Array(numCompX * numCompY) { i ->
                 if (i == 0) {
-                    val colorEnc = decode83(blurHash, 2, 6)
-                    decodeDc(colorEnc)
+                    decodeDc(decode83(blurHash, 2, 6))
                 } else {
-                    val from = 4 + i * 2
-                    val colorEnc = decode83(blurHash, from, from + 2)
-                    decodeAc(colorEnc, maxAc * punch)
+                    decodeAc(decode83Fixed2(blurHash, 4 + i * 2), maxAc)
                 }
             }
         return composeBitmap(width, height, numCompX, numCompY, colors, useCache)
+    }
+
+    private fun decode83At(
+        str: String,
+        at: Int = 0,
+    ): Int {
+        return charMap[str[at].code]
+    }
+
+    private fun decode83Fixed2(
+        str: String,
+        from: Int = 0,
+    ): Int {
+        return charMap[str[from].code] * 83 + charMap[str[from + 1].code]
     }
 
     private fun decode83(
@@ -107,10 +116,7 @@ object BlurHashDecoder {
     ): Int {
         var result = 0
         for (i in from until to) {
-            val index = charMap[str[i]] ?: -1
-            if (index != -1) {
-                result = result * 83 + index
-            }
+            result = result * 83 + charMap[str[i].code]
         }
         return result
     }
@@ -161,15 +167,20 @@ object BlurHashDecoder {
         val cosinesX = getArrayForCosinesX(calculateCosX, width, numCompX)
         val calculateCosY = !useCache || !cacheCosinesY.containsKey(height * numCompY)
         val cosinesY = getArrayForCosinesY(calculateCosY, height, numCompY)
+
+        var r = 0.0f
+        var g = 0.0f
+        var b = 0.0f
+
         for (y in 0 until height) {
             for (x in 0 until width) {
-                var r = 0f
-                var g = 0f
-                var b = 0f
+                r = 0.0f
+                g = 0.0f
+                b = 0.0f
                 for (j in 0 until numCompY) {
                     for (i in 0 until numCompX) {
-                        val cosX = cosinesX.getCos(calculateCosX, i, numCompX, x, width)
-                        val cosY = cosinesY.getCos(calculateCosY, j, numCompY, y, height)
+                        val cosY = cosinesY[j + numCompY * y]
+                        val cosX = cosinesX[i + numCompX * x]
                         val basis = (cosX * cosY).toFloat()
                         val color = colors[j * numCompX + i]
                         r += color[0] * basis
@@ -177,6 +188,7 @@ object BlurHashDecoder {
                         b += color[2] * basis
                     }
                 }
+
                 imageArray[x + width * y] = Color.rgb(linearToSrgb(r), linearToSrgb(g), linearToSrgb(b))
             }
         }
@@ -189,7 +201,13 @@ object BlurHashDecoder {
         numCompY: Int,
     ) = when {
         calculate -> {
-            DoubleArray(height * numCompY).also { cacheCosinesY[height * numCompY] = it }
+            DoubleArray(height * numCompY) {
+                val y = it / numCompY
+                val j = it % numCompY
+                cos(Math.PI * y * j / height)
+            }.also {
+                cacheCosinesY[height * numCompY] = it
+            }
         }
         else -> {
             cacheCosinesY[height * numCompY]!!
@@ -202,22 +220,13 @@ object BlurHashDecoder {
         numCompX: Int,
     ) = when {
         calculate -> {
-            DoubleArray(width * numCompX).also { cacheCosinesX[width * numCompX] = it }
+            DoubleArray(width * numCompX) {
+                val x = it / numCompX
+                val i = it % numCompX
+                cos(Math.PI * x * i / width)
+            }.also { cacheCosinesX[width * numCompX] = it }
         }
         else -> cacheCosinesX[width * numCompX]!!
-    }
-
-    private fun DoubleArray.getCos(
-        calculate: Boolean,
-        x: Int,
-        numComp: Int,
-        y: Int,
-        size: Int,
-    ): Double {
-        if (calculate) {
-            this[x + numComp * y] = cos(Math.PI * y * x / size)
-        }
-        return this[x + numComp * y]
     }
 
     private fun linearToSrgb(value: Float): Int {
@@ -228,6 +237,11 @@ object BlurHashDecoder {
             ((1.055f * v.pow(1 / 2.4f) - 0.055f) * 255 + 0.5f).toInt()
         }
     }
+
+    private val linToSrgbApproximation =
+        Array(255) {
+            linearToSrgb(it / 255f)
+        }
 
     private val charMap =
         listOf(
@@ -315,6 +329,10 @@ object BlurHashDecoder {
             '}',
             '~',
         )
-            .mapIndexed { i, c -> c to i }
-            .toMap()
+            .mapIndexed { i, c -> c.code to i }
+            .toMap().let { charMap ->
+                Array(255) {
+                    charMap[it] ?: 0
+                }
+            }
 }

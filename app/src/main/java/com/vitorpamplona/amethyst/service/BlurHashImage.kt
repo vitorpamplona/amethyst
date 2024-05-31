@@ -31,9 +31,9 @@ import coil.fetch.FetchResult
 import coil.fetch.Fetcher
 import coil.request.ImageRequest
 import coil.request.Options
+import com.vitorpamplona.amethyst.commons.preview.BlurHashDecoder
 import java.net.URLDecoder
 import java.net.URLEncoder
-import kotlin.math.roundToInt
 
 @Stable
 class BlurHashFetcher(
@@ -43,23 +43,9 @@ class BlurHashFetcher(
     override suspend fun fetch(): FetchResult {
         checkNotInMainThread()
 
-        val encodedHash = data.toString().removePrefix("bluehash:")
-        val hash = URLDecoder.decode(encodedHash, "utf-8")
+        val hash = URLDecoder.decode(data.toString().removePrefix("bluehash:"), "utf-8")
 
-        val aspectRatio = BlurHashDecoder.aspectRatio(hash) ?: 1.0f
-
-        val preferredWidth = 100
-
-        val bitmap =
-            BlurHashDecoder.decode(
-                hash,
-                preferredWidth,
-                (preferredWidth * (1 / aspectRatio)).roundToInt(),
-            )
-
-        if (bitmap == null) {
-            throw Exception("Unable to convert Bluehash $hash")
-        }
+        val bitmap = BlurHashDecoder.decodeKeepAspectRatio(hash, 25) ?: throw Exception("Unable to convert Bluehash $data")
 
         return DrawableResult(
             drawable = bitmap.toDrawable(options.context.resources),

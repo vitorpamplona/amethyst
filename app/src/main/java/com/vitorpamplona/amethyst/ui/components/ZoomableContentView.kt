@@ -665,14 +665,16 @@ fun DisplayBlurHash(
     if (blurhash == null) return
 
     val context = LocalContext.current
+    val model =
+        remember {
+            BlurHashRequester.imageRequest(
+                context,
+                blurhash,
+            )
+        }
+
     AsyncImage(
-        model =
-            remember {
-                BlurHashRequester.imageRequest(
-                    context,
-                    blurhash,
-                )
-            },
+        model = model,
         contentDescription = description,
         contentScale = contentScale,
         modifier = modifier,
