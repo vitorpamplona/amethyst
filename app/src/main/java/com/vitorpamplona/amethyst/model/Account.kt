@@ -243,9 +243,13 @@ class Account(
             val nip65RelaySet = (nip65RelayList.note.event as? AdvertisedRelayListEvent)?.relays()
             val privateOutboxRelaySet = (privateOutBox.note.event as? PrivateOutboxRelayListEvent)?.relays() ?: emptySet()
 
+            // ------
+            // DMs
+            // ------
+
             var mappedRelaySet =
                 baseRelaySet.map {
-                    if (newDMRelaySet.contains(it.url) == true) {
+                    if (newDMRelaySet.contains(it.url)) {
                         Relay(it.url, true, true, it.activeTypes + FeedType.PRIVATE_DMS)
                     } else {
                         it
@@ -253,29 +257,37 @@ class Account(
                 }
 
             newDMRelaySet.forEach { newUrl ->
-                if (mappedRelaySet.filter { it.url == newUrl }.isEmpty()) {
+                if (mappedRelaySet.none { it.url == newUrl }) {
                     mappedRelaySet = mappedRelaySet + Relay(newUrl, true, true, setOf(FeedType.PRIVATE_DMS))
                 }
             }
 
+            // ------
+            // SEARCH
+            // ------
+
             mappedRelaySet =
                 mappedRelaySet.map {
-                    if (searchRelaySet.contains(it.url) == true) {
-                        Relay(it.url, true, false, it.activeTypes + FeedType.PRIVATE_DMS)
+                    if (searchRelaySet.contains(it.url)) {
+                        Relay(it.url, true, false, it.activeTypes + FeedType.SEARCH)
                     } else {
                         it
                     }
                 }
 
             searchRelaySet.forEach { newUrl ->
-                if (mappedRelaySet.filter { it.url == newUrl }.isEmpty()) {
+                if (mappedRelaySet.none { it.url == newUrl }) {
                     mappedRelaySet = mappedRelaySet + Relay(newUrl, true, false, setOf(FeedType.SEARCH))
                 }
             }
 
+            // --------------
+            // PRIVATE OUTBOX
+            // --------------
+
             mappedRelaySet =
                 mappedRelaySet.map {
-                    if (privateOutboxRelaySet.contains(it.url) == true) {
+                    if (privateOutboxRelaySet.contains(it.url)) {
                         Relay(it.url, true, true, it.activeTypes + setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
                     } else {
                         it
@@ -283,14 +295,18 @@ class Account(
                 }
 
             privateOutboxRelaySet.forEach { newUrl ->
-                if (mappedRelaySet.filter { it.url == newUrl }.isEmpty()) {
+                if (mappedRelaySet.none { it.url == newUrl }) {
                     mappedRelaySet = mappedRelaySet + Relay(newUrl, true, true, setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
                 }
             }
 
+            // --------------
+            // PRIVATE OUTBOX
+            // --------------
+
             mappedRelaySet =
                 mappedRelaySet.map {
-                    if (localRelayServers.contains(it.url) == true) {
+                    if (localRelayServers.contains(it.url)) {
                         Relay(it.url, true, true, it.activeTypes + setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
                     } else {
                         it
@@ -298,30 +314,32 @@ class Account(
                 }
 
             localRelayServers.forEach { newUrl ->
-                if (mappedRelaySet.filter { it.url == newUrl }.isEmpty()) {
+                if (mappedRelaySet.none { it.url == newUrl }) {
                     mappedRelaySet = mappedRelaySet + Relay(newUrl, true, true, setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
                 }
             }
+
+            // --------------
+            // NIP-65 Public Inbox/Outbox
+            // --------------
 
             mappedRelaySet =
                 mappedRelaySet.map { relay ->
                     val nip65setup = nip65RelaySet?.firstOrNull { relay.url == it.relayUrl }
                     if (nip65setup != null) {
-                        val read = nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
                         val write = nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
 
-                        Relay(relay.url, read, write, relay.activeTypes + setOf(FeedType.FOLLOWS, FeedType.GLOBAL, FeedType.PUBLIC_CHATS))
+                        Relay(relay.url, true, relay.write || write, relay.activeTypes + setOf(FeedType.FOLLOWS, FeedType.GLOBAL, FeedType.PUBLIC_CHATS))
                     } else {
                         relay
                     }
                 }
 
             nip65RelaySet?.forEach { newNip65Setup ->
-                if (mappedRelaySet.filter { it.url == newNip65Setup.relayUrl }.isEmpty()) {
-                    val read = newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
+                if (mappedRelaySet.none { it.url == newNip65Setup.relayUrl }) {
                     val write = newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
 
-                    mappedRelaySet = mappedRelaySet + Relay(newNip65Setup.relayUrl, read, write, setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS))
+                    mappedRelaySet = mappedRelaySet + Relay(newNip65Setup.relayUrl, true, write, setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS))
                 }
             }
 
