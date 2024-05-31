@@ -269,7 +269,7 @@ class Account(
             mappedRelaySet =
                 mappedRelaySet.map {
                     if (searchRelaySet.contains(it.url)) {
-                        Relay(it.url, true, false, it.activeTypes + FeedType.SEARCH)
+                        Relay(it.url, true, it.write || false, it.activeTypes + FeedType.SEARCH)
                     } else {
                         it
                     }
@@ -2606,18 +2606,14 @@ class Account(
     }
 
     fun activeGlobalRelays(): Array<String> {
-        return (activeRelays() ?: convertLocalRelays())
+        return connectToRelays.value
             .filter { it.activeTypes.contains(FeedType.GLOBAL) }
             .map { it.url }
             .toTypedArray()
     }
 
     fun activeWriteRelays(): List<Relay> {
-        return (activeRelays() ?: convertLocalRelays()).filter { it.write }
-    }
-
-    fun activeAllRelays(): List<Relay> {
-        return ((activeRelays() ?: convertLocalRelays()).toList())
+        return connectToRelays.value.filter { it.write }
     }
 
     fun isAllHidden(users: Set<HexKey>): Boolean {

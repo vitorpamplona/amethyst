@@ -114,7 +114,7 @@ private fun RelayOptions(
 
     val isNotUsingRelay =
         remember(userState) {
-            accountViewModel.account.activeRelays()?.none { it.url == relay.url } == true
+            accountViewModel.account.connectToRelays.value.none { it.url == relay.url }
         }
 
     if (isNotUsingRelay) {

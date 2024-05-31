@@ -79,7 +79,7 @@ fun RelaySelectionDialog(
 
     var relays by remember {
         mutableStateOf(
-            accountViewModel.account.activeAllRelays().map {
+            accountViewModel.account.connectToRelays.value.map {
                 RelayList(
                     relay = it,
                     relayInfo = RelayBriefInfoCache.RelayBriefInfo(it.url),

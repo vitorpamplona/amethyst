@@ -181,8 +181,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 ?.followList
                 ?.get(account.defaultNotificationFollowList.value)
                 ?.relayList
-                ?: account.activeRelays()?.associate { it.url to EOSETime(TimeUtils.oneWeekAgo()) }
-                ?: account.convertLocalRelays().associate { it.url to EOSETime(TimeUtils.oneWeekAgo()) }
+                ?: account.connectToRelays.value.associate { it.url to EOSETime(TimeUtils.oneWeekAgo()) }
 
         return TypedFilter(
             types = COMMON_FEED_TYPES,
@@ -214,7 +213,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                 ?.followList
                 ?.get(account.defaultNotificationFollowList.value)
                 ?.relayList
-                ?: account.activeRelays()?.associate { it.url to EOSETime(TimeUtils.oneWeekAgo()) }
+                ?: account.connectToRelays.value.associate { it.url to EOSETime(TimeUtils.oneWeekAgo()) }
                 ?: account.convertLocalRelays().associate { it.url to EOSETime(TimeUtils.oneWeekAgo()) }
 
         return TypedFilter(
