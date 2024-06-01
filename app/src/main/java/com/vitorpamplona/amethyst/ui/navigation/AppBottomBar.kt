@@ -23,16 +23,15 @@ package com.vitorpamplona.amethyst.ui.navigation
 import android.graphics.Rect
 import android.view.View
 import android.view.ViewTreeObserver
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
@@ -46,16 +45,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.bottomIconModifier
+import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
 import kotlinx.collections.immutable.persistentListOf
 
 val bottomNavigationItems =
@@ -190,7 +186,7 @@ private fun NotifiableIcon(
 fun AddNotifIconIfNeeded(
     route: Route,
     accountViewModel: AccountViewModel,
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
 ) {
     val flow = accountViewModel.notificationDots.hasNewItems[route] ?: return
     val hasNewItems by flow.collectAsStateWithLifecycle()
@@ -201,18 +197,8 @@ fun AddNotifIconIfNeeded(
 
 @Composable
 private fun NotificationDotIcon(modifier: Modifier) {
-    Box(modifier.size(Size10dp)) {
-        Box(
-            modifier = MaterialTheme.colorScheme.bottomIconModifier,
-            contentAlignment = Alignment.TopEnd,
-        ) {
-            Text(
-                "",
-                color = Color.White,
-                textAlign = TextAlign.Center,
-                fontSize = Font12SP,
-                // modifier = Modifier.wrapContentHeight().align(Alignment.TopEnd),
-            )
-        }
-    }
+    val color = MaterialTheme.colorScheme.primary
+    Canvas(modifier = Size10Modifier.then(modifier), onDraw = {
+        drawCircle(color = color)
+    })
 }
