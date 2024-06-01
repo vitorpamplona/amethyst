@@ -116,7 +116,7 @@ class Relay(
     private var connectingBlock = AtomicBoolean()
 
     fun connectAndRun(onConnected: (Relay) -> Unit) {
-        Log.d("Relay", "Relay.connect $url hasProxy: ${this.httpClient.proxy != null}")
+        Log.d("Relay", "Relay.connect $url connecting: ${connectingBlock.get()} hasProxy: ${this.httpClient.proxy != null}")
         // BRB is crashing OkHttp Deflater object :(
         if (url.contains("brb.io")) return
 
@@ -125,13 +125,16 @@ class Relay(
             return
         }
 
-        checkNotInMainThread()
-
-        if (socket != null) return
-
-        lastConnectTentative = TimeUtils.now()
-
         try {
+            checkNotInMainThread()
+
+            if (socket != null) {
+                connectingBlock.set(false)
+                return
+            }
+
+            lastConnectTentative = TimeUtils.now()
+
             val request =
                 Request.Builder()
                     .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
