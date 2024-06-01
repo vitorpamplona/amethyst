@@ -15,6 +15,7 @@
     <string name="group_picture">समूह चित्र</string>
     <string name="explicit_content">अभद्र विषयवस्तु</string>
     <string name="spam">कचरालेख</string>
+    <string name="spam_description">इस पुनःप्रसारक से कचरालेख घटनाओं की संख्या</string>
     <string name="impersonation">पररूपण</string>
     <string name="illegal_behavior">अवैध बरताव</string>
     <string name="other">अन्य</string>
@@ -93,6 +94,7 @@
     <string name="posts">पत्र</string>
     <string name="bytes">अष्टक</string>
     <string name="errors">अपक्रम</string>
+    <string name="errors_description">संयोजन अपक्रमों की संख्या इस सत्र में</string>
     <string name="home_feed">मुख्य सूचनावली</string>
     <string name="private_message_feed">निजी संदेश सूचनावली</string>
     <string name="public_chat_feed">सार्वजनिक चर्चा सूचनावली</string>
@@ -390,6 +392,8 @@
     <string name="sats_to_complete">ज्सापोपार्जन योजना %1$s पर। %2$s साट्स का लक्ष्य</string>
     <string name="read_from_relay">पुनःप्रसारक से पढें</string>
     <string name="write_to_relay">पुनःप्रसारक को लिखकर भेजें</string>
+    <string name="write_to_relay_description">अष्टकों में मात्रा जो इस पुनःप्रसारक को भेजा गया था छलनियाँ तथा घटनाएँ समेत</string>
+    <string name="read_from_relay_description">अष्टकों में मात्रा जो इस पुनःप्रसारक से प्राप्त हुआ था छलनियाँ तथा घटनाएँ समेत</string>
     <string name="an_error_occurred_trying_to_get_relay_information">%1$s से पुनःप्रसारक जानकारी प्राप्त करने के प्रयास में अपक्रम हुआ</string>
     <string name="owner">अधिपति</string>
     <string name="version">संस्करण</string>
@@ -429,6 +433,7 @@
     <string name="are_you_sure_you_want_to_log_out">निर्गमनांकन करने पर आपकी सारी स्थानीय जानकारी मिट जाएगी। सुनिश्चित करें कि आपके निजी कुंचिकाएँ सुरक्षित रखें हैं अपनी लेखा नहीं खोना चाहते हैं तो। क्या आप आगे बढना चाहते हैं?</string>
     <string name="followed_tags">अनुचरण किये हुए विषयसूचक</string>
     <string name="relay_setup">पुनःप्रसारक</string>
+    <string name="discover_content">लेख आविष्करण</string>
     <string name="discover_marketplace">पण्यक्षेत्र</string>
     <string name="discover_live">तत्क्षणप्रसार</string>
     <string name="discover_community">समुदाय</string>
@@ -669,6 +674,22 @@
     <string name="show_npub_as_a_qr_code">क्यूआर क्रमचित्र के रूप में npub को दिखाएँ</string>
     <string name="invalid_nip19_uri">अमान्य पता</string>
     <string name="invalid_nip19_uri_description">अमेथिस्ट को एक वैश्विक वस्तु विभेदक प्राप्त हुआ खोलने के लिए परन्तु वह विभेदक अमान्य था : %1$s</string>
+    <string name="dm_relays_title">सी॰सं॰ आगतपेटिका पुनःप्रसारक</string>
+    <string name="dm_relays_through">पुनःप्रसारक : %1$s</string>
+    <string name="dm_relays_regular">साधारण पुनःप्रसारक प्रयुक्त</string>
+    <string name="dm_relays_not_found">आपके निजी आगतपेटिका पुनःप्रसारकों की स्थापना करें</string>
+    <string name="dm_relays_not_found_create_now">अभी स्थापना करें</string>
+    <string name="search_relays_title">खोज पुनःप्रसारक</string>
+    <string name="search_relays_not_found">आपके खोज पुनःप्रसारकों की स्थापना करें</string>
+    <string name="relay_settings">पुनःप्रसारक स्थापना विकल्प</string>
+    <string name="public_home_section">सार्वजनिक मुख्य पुनःप्रसारक</string>
+    <string name="public_notif_section">सार्वजनिक आगतपेटिका पुनःप्रसारक</string>
+    <string name="private_inbox_section">सी॰सं॰ आगतपेटिका पुनःप्रसारक</string>
+    <string name="private_outbox_section">निजी पुनःप्रसारक</string>
+    <string name="kind_3_section">सामान्य पुनःप्रसारक</string>
+    <string name="search_section">खोज पुनःप्रसारक</string>
+    <string name="local_section">स्थानीय पुनःप्रसारक</string>
+    <string name="local_section_explainer">पुनःप्रसारकों की सूची जो इस यन्त्र पर चल रहे हैं।</string>
     <string name="zap_the_devs_title">क्रमलखकों को ज्साप करें!</string>
     <string name="zap_the_devs_description">आपका दान हमारा सहायक है परिवर्तन लाने में। प्रत्येक साट गणनीय है!</string>
     <string name="donate_now">दान करें अभी</string>

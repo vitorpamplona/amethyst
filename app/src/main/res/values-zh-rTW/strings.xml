@@ -668,6 +668,14 @@
     <string name="show_npub_as_a_qr_code">將 npub 顯示爲二維碼</string>
     <string name="invalid_nip19_uri">地址無效</string>
     <string name="invalid_nip19_uri_description">Amethyst 收到了要打開的 URI，但該 URI 無效：%1$s</string>
+    <string name="dm_relays_through">中繼器 %1$s</string>
+    <string name="dm_relays_not_found_create_now">立即設定</string>
+    <string name="search_relays_title">搜索中繼器</string>
+    <string name="search_relays_not_found">設置你的搜索中繼器</string>
+    <string name="relay_settings">中繼器設置</string>
+    <string name="kind_3_section">一般中繼器</string>
+    <string name="search_section">搜索中繼器</string>
+    <string name="local_section">本地中繼器</string>
     <string name="zap_the_devs_title">打閃開發人員</string>
     <string name="zap_the_devs_description">你的捐贈幫助我們做出不同的貢獻。 每個聰都很重要！</string>
     <string name="donate_now">立即捐款</string>
