@@ -48,12 +48,12 @@ open class DiscoverNIP89FeedFilter(
     }
 
     override fun feed(): List<Note> {
-        val params = buildFilterParams(account)
+        val filterParams = buildFilterParams(account)
 
         val notes =
             LocalCache.addressables.filterIntoSet { _, it ->
                 val noteEvent = it.event
-                noteEvent is AppDefinitionEvent && noteEvent.createdAt > TimeUtils.now() - lastAnnounced // && params.match(noteEvent)
+                noteEvent is AppDefinitionEvent && filterParams.match(noteEvent) && noteEvent.supportedKinds().contains(5300) && noteEvent.createdAt > TimeUtils.now() - lastAnnounced // && params.match(noteEvent)
             }
 
         return sort(notes)
@@ -73,11 +73,11 @@ open class DiscoverNIP89FeedFilter(
     }
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val params = buildFilterParams(account)
+        val filterParams = buildFilterParams(account)
 
         return collection.filterTo(HashSet()) {
             val noteEvent = it.event
-            noteEvent is AppDefinitionEvent && noteEvent.createdAt > TimeUtils.now() - lastAnnounced // && params.match(noteEvent)
+            noteEvent is AppDefinitionEvent && filterParams.match(noteEvent) && noteEvent.supportedKinds().contains(5300) && noteEvent.createdAt > TimeUtils.now() - lastAnnounced // && params.match(noteEvent)
         }
     }
 
