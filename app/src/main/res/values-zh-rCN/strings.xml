@@ -15,6 +15,7 @@
     <string name="group_picture">群聊图片</string>
     <string name="explicit_content">明确内容</string>
     <string name="spam">垃圾信息</string>
+    <string name="spam_description">来自该中继的垃圾事件数量</string>
     <string name="impersonation">冒充</string>
     <string name="illegal_behavior">非法行为</string>
     <string name="other">其它</string>
@@ -92,6 +93,7 @@
     <string name="posts">帖文</string>
     <string name="bytes">字节</string>
     <string name="errors">错误</string>
+    <string name="errors_description">该会话中产生的连接错误数量</string>
     <string name="home_feed">主页</string>
     <string name="private_message_feed">私信</string>
     <string name="public_chat_feed">公开聊天</string>
@@ -389,6 +391,8 @@
     <string name="sats_to_complete">Zapraiser 位于 %1$s。距离目标%2$s聪</string>
     <string name="read_from_relay">从中继器读取</string>
     <string name="write_to_relay">写入到继电器</string>
+    <string name="write_to_relay_description">向该中继发送事件和过滤请求所使用的数据量</string>
+    <string name="read_from_relay_description">从该中继接收事件和过滤响应所使用的数据量</string>
     <string name="an_error_occurred_trying_to_get_relay_information">尝试从 %1$s 获取中继器信息时出错</string>
     <string name="owner">机主</string>
     <string name="version">版本</string>
@@ -701,4 +705,6 @@
     <string name="it_s_not_possible_to_zap_to_a_draft_note">无法打闪笔记草稿</string>
     <string name="draft_note">笔记草稿</string>
     <string name="load_from_text">来自消息</string>
+    <string name="nwc_payment_request">付款请求已发送，正在等待您的钱包的确认</string>
+    <string name="dvm_waiting_to_confim_payment">等待 DVM 确认付款或返回结果</string>
 </resources>
