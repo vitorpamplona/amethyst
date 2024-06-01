@@ -359,30 +359,20 @@ private fun DiscoverFeedLoaded(
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
             val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
 
-            // TODO For now we avoid subscription based DVMs, as we need logic for these first if a user is not subscribed already.
-            var avoid = false
-            if (item.event is AppDefinitionEvent) {
-                if ((item.event as AppDefinitionEvent).appMetaData()?.subscription == true) {
-                    avoid = true
-                }
-            }
-            // TODO End
-            if (!avoid) {
-                Row(defaultModifier) {
-                    ChannelCardCompose(
-                        baseNote = item,
-                        routeForLastRead = routeForLastRead,
-                        modifier = Modifier.fillMaxWidth(),
-                        forceEventKind = forceEventKind,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
-
-                HorizontalDivider(
-                    thickness = DividerThickness,
+            Row(defaultModifier) {
+                ChannelCardCompose(
+                    baseNote = item,
+                    routeForLastRead = routeForLastRead,
+                    modifier = Modifier.fillMaxWidth(),
+                    forceEventKind = forceEventKind,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
             }
+
+            HorizontalDivider(
+                thickness = DividerThickness,
+            )
         }
     }
 }

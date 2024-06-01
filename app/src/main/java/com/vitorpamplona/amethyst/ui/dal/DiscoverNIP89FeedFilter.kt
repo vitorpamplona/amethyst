@@ -52,8 +52,7 @@ open class DiscoverNIP89FeedFilter(
 
         val notes =
             LocalCache.addressables.filterIntoSet { _, it ->
-                val noteEvent = it.event
-                noteEvent is AppDefinitionEvent && filterParams.match(noteEvent) && noteEvent.includeKind("5300") && noteEvent.createdAt > TimeUtils.now() - lastAnnounced // && params.match(noteEvent)
+                acceptDVM(it)
             }
 
         return sort(notes)
@@ -72,12 +71,26 @@ open class DiscoverNIP89FeedFilter(
         )
     }
 
-    protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val filterParams = buildFilterParams(account)
+    fun acceptDVM(note: Note): Boolean {
+        val noteEvent = note.event
+        return if (noteEvent is AppDefinitionEvent) {
+            acceptDVM(noteEvent)
+        } else {
+            false
+        }
+    }
 
+    fun acceptDVM(noteEvent: AppDefinitionEvent): Boolean {
+        val filterParams = buildFilterParams(account)
+        return noteEvent.appMetaData()?.subscription != true &&
+            filterParams.match(noteEvent) &&
+            noteEvent.includeKind("5300") &&
+            noteEvent.createdAt > TimeUtils.now() - lastAnnounced // && params.match(noteEvent)
+    }
+
+    protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         return collection.filterTo(HashSet()) {
-            val noteEvent = it.event
-            noteEvent is AppDefinitionEvent && filterParams.match(noteEvent) && noteEvent.includeKind("5300") && noteEvent.createdAt > TimeUtils.now() - lastAnnounced // && params.match(noteEvent)
+            acceptDVM(it)
         }
     }
 
