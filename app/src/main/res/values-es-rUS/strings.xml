@@ -15,6 +15,7 @@
     <string name="group_picture">Imagen del grupo</string>
     <string name="explicit_content">Contenido explícito</string>
     <string name="spam">Spam</string>
+    <string name="spam_description">El número de eventos de spam procedentes de este relé</string>
     <string name="impersonation">Suplantación de identidad</string>
     <string name="illegal_behavior">Comportamiento ilegal</string>
     <string name="other">Otro</string>
@@ -93,6 +94,7 @@
     <string name="posts">Publicaciones</string>
     <string name="bytes">Bytes</string>
     <string name="errors">Errores</string>
+    <string name="errors_description">El número de errores de conexión en esta sesión</string>
     <string name="home_feed">Tus noticias</string>
     <string name="private_message_feed">Feed de mensajes privados</string>
     <string name="public_chat_feed">Feed del chat público</string>
@@ -390,6 +392,8 @@
     <string name="sats_to_complete">Zapraiser en %1$s. %2$s sats hasta la meta</string>
     <string name="read_from_relay">Relé de lectura</string>
     <string name="write_to_relay">Relé de escritura</string>
+    <string name="write_to_relay_description">La cantidad en bytes que se enviaron a este relé, incluyendo filtros y eventos</string>
+    <string name="read_from_relay_description">La cantidad en bytes que se recibieron de este relé, incluyendo filtros y eventos</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Se produjo un error al intentar obtener información sobre el relé de %1$s</string>
     <string name="owner">Propietario</string>
     <string name="version">Versión</string>
@@ -429,6 +433,7 @@
     <string name="are_you_sure_you_want_to_log_out">Al cerrar la sesión se borra toda tu información local. Asegúrate de tener una copia de seguridad de tus claves privadas para que no pierdas la cuenta. ¿Quieres continuar?</string>
     <string name="followed_tags">Etiquetas seguidas</string>
     <string name="relay_setup">Relés</string>
+    <string name="discover_content">Descubrimiento de notas</string>
     <string name="discover_marketplace">Mercado</string>
     <string name="discover_live">En vivo</string>
     <string name="discover_community">Comunidad</string>
@@ -669,6 +674,34 @@
     <string name="show_npub_as_a_qr_code">Mostrar npub como código QR</string>
     <string name="invalid_nip19_uri">Dirección inválida</string>
     <string name="invalid_nip19_uri_description">Amethyst recibió un URI para abrir pero era inválido: %1$s</string>
+    <string name="dm_relays_title">Relés de buzón de entrada para mensajes directos</string>
+    <string name="dm_relays_through">Relés: %1$s</string>
+    <string name="dm_relays_regular">Usando relés normales</string>
+    <string name="dm_relays_not_found">Configura tus relés de buzón de entrada privados</string>
+    <string name="dm_relays_not_found_description">Esta configuración permite que todo el mundo sepa qué relés usar cuando te envíen mensajes. Sin ellos, es posible que no recibas algunos mensajes.</string>
+    <string name="dm_relays_not_found_examples">Algunas buenas opciones son:\n - inbox.nostr.wine (de pago)\n - you.nostr1.com (relés personales; de pago)</string>
+    <string name="dm_relays_not_found_editing">Inserta entre 1 y 3 relés para que te sirvan de buzón de entrada privado. Los relés del buzón de entrada para mensajes directos deberían aceptar cualquier mensaje de cualquier persona, pero solo te permiten descargarlos.</string>
+    <string name="dm_relays_not_found_create_now">Configurar ahora</string>
+    <string name="search_relays_title">Relés de búsqueda</string>
+    <string name="search_relays_not_found">Configura tus relés de búsqueda</string>
+    <string name="search_relays_not_found_description">La creación de una lista de relés específicamente diseñada para la búsqueda y el etiquetado de usuarios mejorará estos resultados.</string>
+    <string name="search_relays_not_found_editing">Inserta entre 1 y 3 relés para usarlos al buscar contenido o etiquetar usuarios. Asegúrate de que los relés que elijas implementen NIP-50.</string>
+    <string name="search_relays_not_found_examples">Algunas buenas opciones son: \n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="relay_settings">Configuración de relés</string>
+    <string name="public_home_section">Relés de inicio públicos</string>
+    <string name="public_home_section_explainer">Este tipo de relé almacena todo tu contenido. Amethyst enviará tus publicaciones aquí y otros usarán estos relés para encontrar tu contenido. Inserta entre 1 y 3 relés. Pueden ser personales, de pago o públicos.</string>
+    <string name="public_notif_section">Relés de buzón de entrada públicos</string>
+    <string name="public_notif_section_explainer">Este tipo de relé recibe todas las respuestas, comentarios, me gusta y zaps de tus publicaciones. Inserta entre 1 y 3 relés y asegúrate de que acepten publicaciones de cualquier persona.</string>
+    <string name="private_inbox_section">Relés de buzón de entrada para mensajes directos</string>
+    <string name="private_inbox_section_explainer">Inserta entre 1 y 3 relés para que te sirvan de buzón de entrada privado. Otros usarán estos relés para enviarte mensajes directos. Los relés del buzón de entrada para mensajes directos deberían aceptar cualquier mensaje de cualquier persona, pero solo te permiten descargarlos. Algunas buenas opciones son:\n - inbox.nostr.wine (de pago)\n - you.nostr1.com (relés personales; de pago)</string>
+    <string name="private_outbox_section">Relés privados</string>
+    <string name="private_outbox_section_explainer">Inserta entre 1 y 3 relés para almacenar eventos que nadie más pueda ver, como los borradores o la configuración de la app. Lo ideal es que estos relés sean locales o requieran autenticación antes de descargar el contenido de cada usuario.</string>
+    <string name="kind_3_section">Relés generales</string>
+    <string name="kind_3_section_description">Amethyst usa estos relés para descargar publicaciones por ti.</string>
+    <string name="search_section">Relés de búsqueda</string>
+    <string name="search_section_explainer">Lista de relés que se usarán al buscar contenido o usuarios. El etiquetado y la búsqueda no funcionarán si no hay opciones disponibles. Asegúrate de que implementen NIP-50.</string>
+    <string name="local_section">Relés locales</string>
+    <string name="local_section_explainer">Lista de relés que se utilizan en este dispositivo.</string>
     <string name="zap_the_devs_title">¡Zapea a los desarrolladores!</string>
     <string name="zap_the_devs_description">Tu donación nos ayuda a marcar la diferencia. ¡Cada sat cuenta!</string>
     <string name="donate_now">Donar ahora</string>
@@ -706,4 +739,9 @@
     <string name="it_s_not_possible_to_zap_to_a_draft_note">No es posible zapear un borrador de nota</string>
     <string name="draft_note">Borrador de nota</string>
     <string name="load_from_text">Del msj</string>
+    <string name="dvm_looking_for_app">Buscando aplicación</string>
+    <string name="dvm_waiting_status">Trabajo solicitado, esperando respuesta</string>
+    <string name="dvm_requesting_job">Solicitando trabajo a DVM</string>
+    <string name="nwc_payment_request">Solicitud de pago enviada, esperando confirmación de tu billetera</string>
+    <string name="dvm_waiting_to_confim_payment">Esperando a que DVM confirme el pago o envíe resultados</string>
 </resources>
