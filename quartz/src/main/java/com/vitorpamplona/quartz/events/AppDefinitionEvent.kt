@@ -147,6 +147,8 @@ class AppDefinitionEvent(
             .filter { it.size > 1 && it[0] == "k" }
             .mapNotNull { runCatching { it[1].toInt() }.getOrNull() }
 
+    fun includeKind(kind: String) = tags.any { it.size > 1 && it[0] == "k" && it[1] == kind }
+
     fun publishedAt() = tags.firstOrNull { it.size > 1 && it[0] == "published_at" }?.get(1)
 
     companion object {
