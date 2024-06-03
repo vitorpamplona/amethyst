@@ -562,11 +562,13 @@ fun NoteBody(
         nav = nav,
     )
 
-    val noteEvent = baseNote.event
-    val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
-    if (zapSplits && noteEvent != null) {
-        Spacer(modifier = HalfDoubleVertSpacer)
-        DisplayZapSplits(noteEvent, false, accountViewModel, nav)
+    if (!makeItShort) {
+        val noteEvent = baseNote.event
+        val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
+        if (zapSplits && noteEvent != null) {
+            Spacer(modifier = HalfDoubleVertSpacer)
+            DisplayZapSplits(noteEvent, false, accountViewModel, nav)
+        }
     }
 }
 
