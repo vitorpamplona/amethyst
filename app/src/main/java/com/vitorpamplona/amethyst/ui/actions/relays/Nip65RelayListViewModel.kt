@@ -24,7 +24,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
-import com.vitorpamplona.amethyst.service.relays.RelayPool
+import com.vitorpamplona.amethyst.service.relays.RelayStats
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -105,40 +105,22 @@ class Nip65RelayListViewModel : ViewModel() {
             val relayList = account.getNIP65RelayList()?.writeRelays() ?: emptyList()
 
             relayList.map { relayUrl ->
-                val liveRelay = RelayPool.getRelay(relayUrl)
-                val errorCounter = liveRelay?.errorCounter ?: 0
-                val eventDownloadCounter = liveRelay?.eventDownloadCounterInBytes ?: 0
-                val eventUploadCounter = liveRelay?.eventUploadCounterInBytes ?: 0
-                val spamCounter = liveRelay?.spamCounter ?: 0
-
                 BasicRelaySetupInfo(
                     relayUrl,
-                    errorCounter,
-                    eventDownloadCounter,
-                    eventUploadCounter,
-                    spamCounter,
+                    RelayStats.get(relayUrl),
                 )
-            }.distinctBy { it.url }.sortedBy { it.downloadCountInBytes }.reversed()
+            }.distinctBy { it.url }.sortedBy { it.relayStat.receivedBytes }.reversed()
         }
 
         _notificationRelays.update {
             val relayList = account.getNIP65RelayList()?.readRelays() ?: emptyList()
 
             relayList.map { relayUrl ->
-                val liveRelay = RelayPool.getRelay(relayUrl)
-                val errorCounter = liveRelay?.errorCounter ?: 0
-                val eventDownloadCounter = liveRelay?.eventDownloadCounterInBytes ?: 0
-                val eventUploadCounter = liveRelay?.eventUploadCounterInBytes ?: 0
-                val spamCounter = liveRelay?.spamCounter ?: 0
-
                 BasicRelaySetupInfo(
                     relayUrl,
-                    errorCounter,
-                    eventDownloadCounter,
-                    eventUploadCounter,
-                    spamCounter,
+                    RelayStats.get(relayUrl),
                 )
-            }.distinctBy { it.url }.sortedBy { it.downloadCountInBytes }.reversed()
+            }.distinctBy { it.url }.sortedBy { it.relayStat.receivedBytes }.reversed()
         }
     }
 

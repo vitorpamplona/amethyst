@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.RelayStat
 import com.vitorpamplona.amethyst.ui.actions.RelayInfoDialog
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -151,10 +152,13 @@ fun ServerConfigPreview() {
                 url = "nostr.mom",
                 read = true,
                 write = true,
-                errorCount = 23,
-                downloadCountInBytes = 10000,
-                uploadCountInBytes = 10000000,
-                spamCount = 10,
+                relayStat =
+                    RelayStat(
+                        errorCounter = 23,
+                        receivedBytes = 10000,
+                        sentBytes = 10000000,
+                        spamCounter = 10,
+                    ),
                 feedTypes = Constants.activeTypesGlobalChats,
                 paidRelay = true,
             ),
@@ -370,7 +374,7 @@ private fun StatusRow(
     )
 
     Text(
-        text = countToHumanReadableBytes(item.downloadCountInBytes),
+        text = countToHumanReadableBytes(item.relayStat.receivedBytes),
         maxLines = 1,
         fontSize = 12.sp,
         modifier = modifier,
@@ -406,7 +410,7 @@ private fun StatusRow(
     )
 
     Text(
-        text = countToHumanReadableBytes(item.uploadCountInBytes),
+        text = countToHumanReadableBytes(item.relayStat.sentBytes),
         maxLines = 1,
         fontSize = 12.sp,
         modifier = modifier,
@@ -432,7 +436,7 @@ private fun StatusRow(
                     },
                 ),
         tint =
-            if (item.errorCount > 0) {
+            if (item.relayStat.errorCounter > 0) {
                 MaterialTheme.colorScheme.warningColor
             } else {
                 MaterialTheme.colorScheme.allGoodColor
@@ -440,7 +444,7 @@ private fun StatusRow(
     )
 
     Text(
-        text = countToHumanReadable(item.errorCount, "errors"),
+        text = countToHumanReadable(item.relayStat.errorCounter, "errors"),
         maxLines = 1,
         fontSize = 12.sp,
         modifier = modifier,
@@ -466,7 +470,7 @@ private fun StatusRow(
                     },
                 ),
         tint =
-            if (item.spamCount > 0) {
+            if (item.relayStat.spamCounter > 0) {
                 MaterialTheme.colorScheme.warningColor
             } else {
                 MaterialTheme.colorScheme.allGoodColor
@@ -474,7 +478,7 @@ private fun StatusRow(
     )
 
     Text(
-        text = countToHumanReadable(item.spamCount, "spam"),
+        text = countToHumanReadable(item.relayStat.spamCounter, "spam"),
         maxLines = 1,
         fontSize = 12.sp,
         modifier = modifier,
@@ -739,7 +743,7 @@ fun Kind3RelayEditBox(
                             addedWSS,
                             read,
                             write,
-                            feedTypes = FeedType.values().toSet(),
+                            feedTypes = FeedType.entries.toSet(),
                         ),
                     )
                     url = ""

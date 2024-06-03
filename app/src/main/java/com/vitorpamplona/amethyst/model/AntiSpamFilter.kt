@@ -26,6 +26,7 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Relay
+import com.vitorpamplona.amethyst.service.relays.RelayStats
 import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
@@ -70,16 +71,16 @@ class AntiSpamFilter {
             (recentMessages[hash] != null && recentMessages[hash] != idHex) || spamMessages[hash] != null
         ) {
             Log.w(
-                "Potential SPAM Message for sharing",
-                "${Nip19Bech32.createNEvent(event.id, event.pubKey, event.kind, null)}",
-            )
-            Log.w(
                 "Potential SPAM Message",
                 "${event.id} ${recentMessages[hash]} ${spamMessages[hash] != null} ${relay?.url} ${event.content.replace("\n", " | ")}",
             )
 
             // Log down offenders
             logOffender(hash, event)
+
+            if (relay != null) {
+                RelayStats.newSpam(relay.url, "Potential SPAM Message ${event.id} nostr:${Nip19Bech32.createNEvent(event.id, event.pubKey, event.kind, relay.url)}")
+            }
 
             liveSpam.invalidateData()
 
@@ -100,7 +101,7 @@ class AntiSpamFilter {
             spamMessages.put(hashCode, Spammer(event.pubKey, setOf(recentMessages[hashCode], event.id)))
         } else {
             val spammer = spamMessages.get(hashCode)
-            spammer.duplicatedMessages = spammer.duplicatedMessages + event.id
+            spammer.duplicatedMessages += event.id
         }
     }
 

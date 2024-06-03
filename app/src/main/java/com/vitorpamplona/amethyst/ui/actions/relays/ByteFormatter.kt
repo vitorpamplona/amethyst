@@ -28,8 +28,26 @@ fun countToHumanReadableBytes(counter: Int) =
         else -> "$counter"
     }
 
+fun countToHumanReadableBytes(counter: Long) =
+    when {
+        counter >= 1000000000 -> "${Math.round(counter / 1000000000f)} GB"
+        counter >= 1000000 -> "${Math.round(counter / 1000000f)} MB"
+        counter >= 1000 -> "${Math.round(counter / 1000f)} KB"
+        else -> "$counter"
+    }
+
 fun countToHumanReadable(
     counter: Int,
+    str: String,
+) = when {
+    counter >= 1000000000 -> "${Math.round(counter / 1000000000f)}G $str"
+    counter >= 1000000 -> "${Math.round(counter / 1000000f)}M $str"
+    counter >= 1000 -> "${Math.round(counter / 1000f)}K $str"
+    else -> "$counter $str"
+}
+
+fun countToHumanReadable(
+    counter: Long,
     str: String,
 ) = when {
     counter >= 1000000000 -> "${Math.round(counter / 1000000000f)}G $str"

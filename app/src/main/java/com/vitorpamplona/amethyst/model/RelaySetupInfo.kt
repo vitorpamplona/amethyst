@@ -22,16 +22,14 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.service.relays.FeedType
+import com.vitorpamplona.amethyst.service.relays.RelayStat
 
 @Immutable
 data class RelaySetupInfo(
     val url: String,
     val read: Boolean,
     val write: Boolean,
-    val errorCount: Int = 0,
-    val downloadCountInBytes: Int = 0,
-    val uploadCountInBytes: Int = 0,
-    val spamCount: Int = 0,
+    val relayStat: RelayStat = RelayStat(),
     val feedTypes: Set<FeedType>,
     val paidRelay: Boolean = false,
 ) {

@@ -197,12 +197,6 @@ object RelayPool : Relay.Listener {
             afterEOSE: Boolean,
         )
 
-        fun onError(
-            error: Error,
-            subscriptionId: String,
-            relay: Relay,
-        )
-
         fun onRelayStateChange(
             type: Relay.StateType,
             relay: Relay,
@@ -241,7 +235,6 @@ object RelayPool : Relay.Listener {
         subscriptionId: String,
         error: Error,
     ) {
-        listeners.forEach { it.onError(error, subscriptionId, relay) }
         updateStatus()
     }
 

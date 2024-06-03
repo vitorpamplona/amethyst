@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
-import com.vitorpamplona.amethyst.service.relays.RelayPool
+import com.vitorpamplona.amethyst.service.relays.RelayStats
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -80,7 +80,6 @@ class Kind3RelayListViewModel : ViewModel() {
             if (relayFile != null) {
                 relayFile
                     .map {
-                        val liveRelay = RelayPool.getRelay(it.key)
                         val localInfoFeedTypes =
                             account.localRelays
                                 .filter { localRelay -> localRelay.url == it.key }
@@ -92,48 +91,30 @@ class Kind3RelayListViewModel : ViewModel() {
                                     ?.feedTypes
                                 ?: FeedType.values().toSet().toImmutableSet()
 
-                        val errorCounter = liveRelay?.errorCounter ?: 0
-                        val eventDownloadCounter = liveRelay?.eventDownloadCounterInBytes ?: 0
-                        val eventUploadCounter = liveRelay?.eventUploadCounterInBytes ?: 0
-                        val spamCounter = liveRelay?.spamCounter ?: 0
-
                         RelaySetupInfo(
                             it.key,
                             it.value.read,
                             it.value.write,
-                            errorCounter,
-                            eventDownloadCounter,
-                            eventUploadCounter,
-                            spamCounter,
+                            RelayStats.get(it.key),
                             localInfoFeedTypes,
                         )
                     }
                     .distinctBy { it.url }
-                    .sortedBy { it.downloadCountInBytes }
+                    .sortedBy { it.relayStat.receivedBytes }
                     .reversed()
             } else {
                 account.localRelays
                     .map {
-                        val liveRelay = RelayPool.getRelay(it.url)
-
-                        val errorCounter = liveRelay?.errorCounter ?: 0
-                        val eventDownloadCounter = liveRelay?.eventDownloadCounterInBytes ?: 0
-                        val eventUploadCounter = liveRelay?.eventUploadCounterInBytes ?: 0
-                        val spamCounter = liveRelay?.spamCounter ?: 0
-
                         RelaySetupInfo(
                             it.url,
                             it.read,
                             it.write,
-                            errorCounter,
-                            eventDownloadCounter,
-                            eventUploadCounter,
-                            spamCounter,
+                            RelayStats.get(it.url),
                             it.feedTypes,
                         )
                     }
                     .distinctBy { it.url }
-                    .sortedBy { it.downloadCountInBytes }
+                    .sortedBy { it.relayStat.receivedBytes }
                     .reversed()
             }
         }

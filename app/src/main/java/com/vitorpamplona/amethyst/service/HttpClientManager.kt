@@ -103,6 +103,16 @@ object HttpClientManager {
         }
     }
 
+    fun getHttpClientForUrl(url: String): OkHttpClient {
+        // TODO: How to identify relays on the local network?
+        val isLocalHost = url.startsWith("ws://127.0.0.1") || url.startsWith("ws://localhost")
+        return if (isLocalHost) {
+            getHttpClient(false)
+        } else {
+            getHttpClient()
+        }
+    }
+
     fun getHttpClient(useProxy: Boolean = true): OkHttpClient {
         return if (useProxy) {
             if (this.defaultHttpClient == null) {

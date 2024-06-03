@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.relays.RelayStat
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -65,8 +66,7 @@ fun RelayUrlEditField(onNewRelay: (BasicRelaySetupInfo) -> Unit) {
         Button(
             onClick = {
                 if (url.isNotBlank() && url != "/") {
-                    val addedWSS = RelayUrlFormatter.normalize(url)
-                    onNewRelay(BasicRelaySetupInfo(addedWSS))
+                    onNewRelay(BasicRelaySetupInfo(RelayUrlFormatter.normalize(url), RelayStat()))
                     url = ""
                 }
             },

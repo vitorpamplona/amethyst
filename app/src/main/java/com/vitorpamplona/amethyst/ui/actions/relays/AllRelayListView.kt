@@ -48,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relays.Constants
+import com.vitorpamplona.amethyst.service.relays.RelayStat
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -249,7 +250,7 @@ fun ResetSearchRelays(postViewModel: SearchRelayListViewModel) {
     OutlinedButton(
         onClick = {
             postViewModel.deleteAll()
-            Constants.defaultSearchRelaySet.forEach { postViewModel.addRelay(BasicRelaySetupInfo(it)) }
+            Constants.defaultSearchRelaySet.forEach { postViewModel.addRelay(BasicRelaySetupInfo(it, RelayStat())) }
             postViewModel.loadRelayDocuments()
         },
     ) {

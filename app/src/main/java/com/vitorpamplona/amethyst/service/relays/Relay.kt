@@ -59,38 +59,24 @@ class Relay(
     val write: Boolean = true,
     val activeTypes: Set<FeedType> = FeedType.values().toSet(),
 ) {
-    val brief = RelayBriefInfoCache.get(url)
-
     companion object {
         // waits 3 minutes to reconnect once things fail
         const val RECONNECTING_IN_SECONDS = 60 * 3
     }
 
-    private val httpClient =
-        if (url.startsWith("ws://127.0.0.1") || url.startsWith("ws://localhost")) {
-            HttpClientManager.getHttpClient(false)
-        } else {
-            HttpClientManager.getHttpClient()
-        }
+    val brief = RelayBriefInfoCache.get(url)
 
     private var listeners = setOf<Listener>()
     private var socket: WebSocket? = null
     private var isReady: Boolean = false
     private var usingCompression: Boolean = false
 
-    var eventDownloadCounterInBytes = 0
-    var eventUploadCounterInBytes = 0
+    private var lastConnectTentative: Long = 0L
 
-    var spamCounter = 0
-    var errorCounter = 0
-    var pingInMs: Long? = null
+    private var afterEOSEPerSubscription = mutableMapOf<String, Boolean>()
 
-    var lastConnectTentative: Long = 0L
-
-    var afterEOSEPerSubscription = mutableMapOf<String, Boolean>()
-
-    val authResponse = mutableMapOf<HexKey, Boolean>()
-    val sendWhenReady = mutableListOf<EventInterface>()
+    private val authResponse = mutableMapOf<HexKey, Boolean>()
+    private val sendWhenReady = mutableListOf<EventInterface>()
 
     fun register(listener: Listener) {
         listeners = listeners.plus(listener)
@@ -116,7 +102,7 @@ class Relay(
     private var connectingBlock = AtomicBoolean()
 
     fun connectAndRun(onConnected: (Relay) -> Unit) {
-        Log.d("Relay", "Relay.connect $url connecting: ${connectingBlock.get()} hasProxy: ${this.httpClient.proxy != null}")
+        Log.d("Relay", "Relay.connect $url isAlreadyConnecting: ${connectingBlock.get()}")
         // BRB is crashing OkHttp Deflater object :(
         if (url.contains("brb.io")) return
 
@@ -141,13 +127,13 @@ class Relay(
                     .url(url.trim())
                     .build()
 
-            socket = httpClient.newWebSocket(request, RelayListener(onConnected))
+            socket = HttpClientManager.getHttpClientForUrl(url).newWebSocket(request, RelayListener(onConnected))
         } catch (e: Exception) {
             if (e is CancellationException) throw e
 
-            errorCounter++
+            RelayStats.newError(url, e.message)
+
             markConnectionAsClosed()
-            Log.e("Relay", "Relay Invalid $url")
             e.printStackTrace()
         } finally {
             connectingBlock.set(false)
@@ -187,7 +173,7 @@ class Relay(
         ) {
             checkNotInMainThread()
 
-            eventDownloadCounterInBytes += text.bytesUsedInMemory()
+            RelayStats.addBytesReceived(url, text.bytesUsedInMemory())
 
             try {
                 processNewRelayMessage(text)
@@ -239,20 +225,23 @@ class Relay(
         ) {
             checkNotInMainThread()
 
-            errorCounter++
-
             socket?.cancel() // 1000, "Normal close"
             // Failures disconnect the relay.
             markConnectionAsClosed()
 
-            Log.w("Relay", "Relay onFailure $url, ${response?.message} $response")
-            t.printStackTrace()
-            listeners.forEach {
-                it.onError(
-                    this@Relay,
-                    "",
-                    Error("WebSocket Failure. Response: $response. Exception: ${t.message}", t),
-                )
+            // checks if this is an actual failure. Closing the socket generates an onFailure as well.
+            if (!(socket == null && t.message == "Socket closed")) {
+                RelayStats.newError(url, response?.message ?: t.message)
+
+                Log.w("Relay", "Relay onFailure $url, ${response?.message} $response ${t.message} $socket")
+                t.printStackTrace()
+                listeners.forEach {
+                    it.onError(
+                        this@Relay,
+                        "",
+                        Error("WebSocket Failure. Response: $response. Exception: ${t.message}", t),
+                    )
+                }
             }
         }
     }
@@ -263,8 +252,9 @@ class Relay(
     ) {
         this.resetEOSEStatuses()
         this.isReady = true
-        this.pingInMs = pingInMs
         this.usingCompression = usingCompression
+
+        RelayStats.setPing(url, pingInMs)
     }
 
     fun markConnectionAsClosed() {
@@ -306,6 +296,8 @@ class Relay(
                     val message = msgArray.get(1).asText()
                     Log.w("Relay", "Relay onNotice $url, $message")
 
+                    RelayStats.newNotice(url, message)
+
                     it.onError(this@Relay, message, Error("Relay sent notice: $message"))
                 }
             "OK" ->
@@ -336,7 +328,9 @@ class Relay(
                     it.onNotify(this@Relay, msgArray[1].asText())
                 }
             "CLOSED" -> listeners.forEach { Log.w("Relay", "Relay onClosed $url, $newMessage") }
-            else ->
+            else -> {
+                RelayStats.newError(url, "Unsupported message: $newMessage")
+
                 listeners.forEach {
                     Log.w("Relay", "Unsupported message: $newMessage")
                     it.onError(
@@ -345,6 +339,7 @@ class Relay(
                         Error("Unknown type $type on channel. Msg was $newMessage"),
                     )
                 }
+            }
         }
     }
 
@@ -389,10 +384,8 @@ class Relay(
                                 it.filter.toJson(url)
                             }
 
-                        // Log.d("Relay", "onFilterSent $url $requestId $request")
+                        writeToSocket(request)
 
-                        socket?.send(request)
-                        eventUploadCounterInBytes += request.bytesUsedInMemory()
                         resetEOSEStatuses()
                     }
                 }
@@ -457,30 +450,9 @@ class Relay(
         checkNotInMainThread()
 
         if (signedEvent is RelayAuthEvent) {
-            authResponse.put(signedEvent.id, false)
-            // specific protocol for this event.
-            val event = """["AUTH",${signedEvent.toJson()}]"""
-            socket?.send(event)
-            eventUploadCounterInBytes += event.bytesUsedInMemory()
+            sendAuth(signedEvent)
         } else {
-            val event = """["EVENT",${signedEvent.toJson()}]"""
-            if (isConnected()) {
-                if (isReady) {
-                    socket?.send(event)
-                    eventUploadCounterInBytes += event.bytesUsedInMemory()
-                }
-            } else {
-                // sends all filters after connection is successful.
-                connectAndRun {
-                    checkNotInMainThread()
-
-                    socket?.send(event)
-                    eventUploadCounterInBytes += event.bytesUsedInMemory()
-
-                    // Sends everything.
-                    renewFilters()
-                }
-            }
+            sendEvent(signedEvent)
         }
     }
 
@@ -488,18 +460,12 @@ class Relay(
         checkNotInMainThread()
 
         if (signedEvent is RelayAuthEvent) {
-            authResponse.put(signedEvent.id, false)
-            // specific protocol for this event.
-            val event = """["AUTH",${signedEvent.toJson()}]"""
-            socket?.send(event)
-            eventUploadCounterInBytes += event.bytesUsedInMemory()
+            sendAuth(signedEvent)
         } else {
             if (write) {
-                val event = """["EVENT",${signedEvent.toJson()}]"""
                 if (isConnected()) {
                     if (isReady) {
-                        socket?.send(event)
-                        eventUploadCounterInBytes += event.bytesUsedInMemory()
+                        writeToSocket("""["EVENT",${signedEvent.toJson()}]""")
                     } else {
                         synchronized(sendWhenReady) {
                             sendWhenReady.add(signedEvent)
@@ -508,10 +474,7 @@ class Relay(
                 } else {
                     // sends all filters after connection is successful.
                     connectAndRun {
-                        checkNotInMainThread()
-
-                        socket?.send(event)
-                        eventUploadCounterInBytes += event.bytesUsedInMemory()
+                        writeToSocket("""["EVENT",${signedEvent.toJson()}]""")
 
                         // Sends everything.
                         renewFilters()
@@ -521,12 +484,40 @@ class Relay(
         }
     }
 
-    fun close(subscriptionId: String) {
-        checkNotInMainThread()
+    private fun sendAuth(signedEvent: RelayAuthEvent) {
+        authResponse.put(signedEvent.id, false)
+        writeToSocket("""["AUTH",${signedEvent.toJson()}]""")
+    }
 
-        val msg = """["CLOSE","$subscriptionId"]"""
-        // Log.d("Relay", "Close Subscription $url $msg")
-        socket?.send(msg)
+    private fun sendEvent(signedEvent: EventInterface) {
+        if (isConnected()) {
+            if (isReady) {
+                writeToSocket("""["EVENT",${signedEvent.toJson()}]""")
+            }
+        } else {
+            // sends all filters after connection is successful.
+            connectAndRun {
+                writeToSocket("""["EVENT",${signedEvent.toJson()}]""")
+
+                // Sends everything.
+                renewFilters()
+            }
+        }
+    }
+
+    private fun writeToSocket(str: String) {
+        socket?.let {
+            checkNotInMainThread()
+
+            it.send(str)
+            RelayStats.addBytesSent(url, str.bytesUsedInMemory())
+
+            Log.d("Relay", "Relay send $url $str")
+        }
+    }
+
+    fun close(subscriptionId: String) {
+        writeToSocket("""["CLOSE","$subscriptionId"]""")
     }
 
     fun isSameRelayConfig(other: Relay): Boolean {

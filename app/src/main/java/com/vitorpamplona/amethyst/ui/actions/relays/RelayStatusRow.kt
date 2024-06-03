@@ -75,7 +75,7 @@ fun RelayStatusRow(
     )
 
     Text(
-        text = countToHumanReadableBytes(item.downloadCountInBytes),
+        text = countToHumanReadableBytes(item.relayStat.receivedBytes),
         maxLines = 1,
         fontSize = 12.sp,
         modifier = modifier,
@@ -101,7 +101,7 @@ fun RelayStatusRow(
     )
 
     Text(
-        text = countToHumanReadableBytes(item.uploadCountInBytes),
+        text = countToHumanReadableBytes(item.relayStat.sentBytes),
         maxLines = 1,
         fontSize = 12.sp,
         modifier = modifier,
@@ -124,7 +124,7 @@ fun RelayStatusRow(
                     },
                 ),
         tint =
-            if (item.errorCount > 0) {
+            if (item.relayStat.errorCounter > 0) {
                 MaterialTheme.colorScheme.warningColor
             } else {
                 MaterialTheme.colorScheme.allGoodColor
@@ -132,7 +132,7 @@ fun RelayStatusRow(
     )
 
     Text(
-        text = countToHumanReadable(item.errorCount, "errors"),
+        text = countToHumanReadable(item.relayStat.errorCounter, "errors"),
         maxLines = 1,
         fontSize = 12.sp,
         modifier = modifier,
@@ -163,7 +163,7 @@ fun RelayStatusRow(
                     },
                 ),
         tint =
-            if (item.spamCount > 0) {
+            if (item.relayStat.spamCounter > 0) {
                 MaterialTheme.colorScheme.warningColor
             } else {
                 MaterialTheme.colorScheme.allGoodColor
@@ -171,7 +171,7 @@ fun RelayStatusRow(
     )
 
     Text(
-        text = countToHumanReadable(item.spamCount, "spam"),
+        text = countToHumanReadable(item.relayStat.spamCounter, "spam"),
         maxLines = 1,
         fontSize = 12.sp,
         modifier = modifier,

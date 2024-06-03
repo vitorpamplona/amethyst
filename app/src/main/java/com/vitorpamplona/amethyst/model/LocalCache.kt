@@ -450,7 +450,6 @@ object LocalCache {
         if (note.event != null) return
 
         if (antiSpam.isSpam(event, relay)) {
-            relay?.let { it.spamCounter++ }
             return
         }
 
@@ -473,6 +472,8 @@ object LocalCache {
     ) {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
+
+        // Log.d("TN", "New Response ${event.taggedEvents().joinToString(", ") { it }}}")
 
         if (relay != null) {
             author.addRelayBeingUsed(relay, event.createdAt)
@@ -623,7 +624,6 @@ object LocalCache {
         if (note.event != null) return
 
         if (antiSpam.isSpam(event, relay)) {
-            relay?.let { it.spamCounter++ }
             return
         }
 
@@ -648,7 +648,6 @@ object LocalCache {
         if (note.event != null) return
 
         if (antiSpam.isSpam(event, relay)) {
-            relay?.let { it.spamCounter++ }
             return
         }
 
@@ -673,7 +672,6 @@ object LocalCache {
         if (note.event != null) return
 
         if (antiSpam.isSpam(event, relay)) {
-            relay?.let { it.spamCounter++ }
             return
         }
 
@@ -711,7 +709,6 @@ object LocalCache {
         if (note.event?.id() == event.id()) return
 
         if (antiSpam.isSpam(event, relay)) {
-            relay?.let { it.spamCounter++ }
             return
         }
 
@@ -746,7 +743,6 @@ object LocalCache {
         if (note.event?.id() == event.id()) return
 
         if (antiSpam.isSpam(event, relay)) {
-            relay?.let { it.spamCounter++ }
             return
         }
 
@@ -827,7 +823,6 @@ object LocalCache {
         if (note.event != null) return
 
         if (antiSpam.isSpam(event, relay)) {
-            relay?.let { it.spamCounter++ }
             return
         }
 
@@ -1533,7 +1528,6 @@ object LocalCache {
         if (note.event != null) return
 
         if (antiSpam.isSpam(event, relay)) {
-            relay?.let { it.spamCounter++ }
             return
         }
 
@@ -1572,7 +1566,6 @@ object LocalCache {
         if (note.event != null) return
 
         if (antiSpam.isSpam(event, relay)) {
-            relay?.let { it.spamCounter++ }
             return
         }
 

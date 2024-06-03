@@ -92,19 +92,6 @@ abstract class NostrDataSource(val debugName: String) {
                 }
             }
 
-            override fun onError(
-                error: Error,
-                subscriptionId: String,
-                relay: Relay,
-            ) {
-                // if (subscriptions.containsKey(subscriptionId)) {
-                // Log.e(
-                //    this@NostrDataSource.javaClass.simpleName,
-                //    "Relay OnError ${relay.url}: ${error.message}"
-                // )
-                // }
-            }
-
             override fun onRelayStateChange(
                 type: Relay.StateType,
                 relay: Relay,
