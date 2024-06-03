@@ -347,7 +347,7 @@
     <string name="yes">हाँ</string>
     <string name="no">नहीं</string>
     <string name="follow_list_selection">अनुचरण सूची</string>
-    <string name="follow_list_kind3follows">सभी अनुचरण</string>
+    <string name="follow_list_kind3follows">सभी अनुचरित</string>
     <string name="follow_list_global">वैश्विक</string>
     <string name="follow_list_mute_list">मौन सूची</string>
     <string name="connect_through_your_orbot_setup_markdown">## टोर द्वारा संयोजन करें ओर्बोट के साथ
