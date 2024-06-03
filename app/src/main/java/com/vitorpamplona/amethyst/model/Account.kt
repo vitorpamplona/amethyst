@@ -2462,8 +2462,14 @@ class Account(
         dvmPublicKey: String,
         onReady: (event: NIP90ContentDiscoveryRequestEvent) -> Unit,
     ) {
-        NIP90ContentDiscoveryRequestEvent.create(dvmPublicKey, signer) {
-            Client.send(it)
+        NIP90ContentDiscoveryRequestEvent.create(dvmPublicKey, signer.pubKey, signer) {
+            val relayList = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(dvmPublicKey))?.event as? AdvertisedRelayListEvent)?.readRelays()
+
+            if (relayList != null) {
+                Client.sendPrivately(it, relayList)
+            } else {
+                Client.send(it)
+            }
             LocalCache.justConsume(it, null)
             onReady(it)
         }
