@@ -34,41 +34,38 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.HttpClientManager
-import okhttp3.OkHttpClient
 
-class WssOrHttpFactory(httpClient: OkHttpClient) : MediaSource.Factory {
-    @UnstableApi
-    val http = DefaultMediaSourceFactory(OkHttpDataSource.Factory(httpClient))
+/**
+ * HLS LiveStreams cannot use cache.
+ */
+@UnstableApi
+class CustomMediaSourceFactory() : MediaSource.Factory {
+    private var cachingFactory: MediaSource.Factory =
+        DefaultMediaSourceFactory(Amethyst.instance.videoCache.get(HttpClientManager.getHttpClient()))
+    private var nonCachingFactory: MediaSource.Factory =
+        DefaultMediaSourceFactory(OkHttpDataSource.Factory(HttpClientManager.getHttpClient()))
 
-    @UnstableApi
-    val wss = DefaultMediaSourceFactory(WssStreamDataSource.Factory(httpClient))
-
-    @OptIn(UnstableApi::class)
     override fun setDrmSessionManagerProvider(drmSessionManagerProvider: DrmSessionManagerProvider): MediaSource.Factory {
-        http.setDrmSessionManagerProvider(drmSessionManagerProvider)
-        wss.setDrmSessionManagerProvider(drmSessionManagerProvider)
+        cachingFactory.setDrmSessionManagerProvider(drmSessionManagerProvider)
+        nonCachingFactory.setDrmSessionManagerProvider(drmSessionManagerProvider)
         return this
     }
 
-    @OptIn(UnstableApi::class)
     override fun setLoadErrorHandlingPolicy(loadErrorHandlingPolicy: LoadErrorHandlingPolicy): MediaSource.Factory {
-        http.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
-        wss.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+        cachingFactory.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+        nonCachingFactory.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
         return this
     }
 
-    @OptIn(UnstableApi::class)
     override fun getSupportedTypes(): IntArray {
-        return http.supportedTypes
+        return nonCachingFactory.supportedTypes
     }
 
-    @OptIn(UnstableApi::class)
     override fun createMediaSource(mediaItem: MediaItem): MediaSource {
-        return if (mediaItem.mediaId.startsWith("wss")) {
-            wss.createMediaSource(mediaItem)
-        } else {
-            http.createMediaSource(mediaItem)
+        if (mediaItem.mediaId.contains(".m3u8", true)) {
+            return nonCachingFactory.createMediaSource(mediaItem)
         }
+        return cachingFactory.createMediaSource(mediaItem)
     }
 }
 
@@ -81,7 +78,7 @@ class PlaybackService : MediaSessionService() {
     fun newAllInOneDataSource(): MediaSource.Factory {
         // This might be needed for live kit.
         // return WssOrHttpFactory(HttpClientManager.getHttpClient())
-        return DefaultMediaSourceFactory(Amethyst.instance.videoCache.get(HttpClientManager.getHttpClient()))
+        return CustomMediaSourceFactory()
     }
 
     fun lazyDS(): MultiPlayerPlaybackManager {
