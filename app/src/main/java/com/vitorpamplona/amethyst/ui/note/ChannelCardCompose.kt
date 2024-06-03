@@ -778,7 +778,16 @@ fun RenderContentDVMThumb(
                                 .clip(QuoteBorder),
                     )
                 }
-            } ?: run { DisplayAuthorBanner(baseNote) }
+            } ?: run {
+                user?.value?.user?.let {
+                    BannerImage(
+                        it,
+                        Modifier
+                            .fillMaxSize()
+                            .clip(QuoteBorder),
+                    )
+                }
+            }
         },
         onTitleRow = {
             Text(
