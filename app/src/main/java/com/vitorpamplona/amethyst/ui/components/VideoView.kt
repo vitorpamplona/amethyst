@@ -542,15 +542,13 @@ fun GetVideoController(
                     }
                 }
                 if (event == Lifecycle.Event.ON_PAUSE) {
-                    GlobalScope.launch(Dispatchers.Main) {
-                        if (!keepPlaying.value) {
-                            // Stops and releases the media.
-                            controller.value?.let {
-                                Log.d("PlaybackService", "Releasing Video from Pause $videoUri ")
-                                it.stop()
-                                it.release()
-                                controller.value = null
-                            }
+                    if (!keepPlaying.value) {
+                        // Stops and releases the media.
+                        controller.value?.let {
+                            Log.d("PlaybackService", "Releasing Video from Pause $videoUri ")
+                            it.stop()
+                            it.release()
+                            controller.value = null
                         }
                     }
                 }

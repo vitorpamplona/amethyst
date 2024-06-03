@@ -31,11 +31,12 @@ object CachedRichTextParser {
     fun parseText(
         content: String,
         tags: ImmutableListOfLists<String>,
+        callbackUri: String? = null,
     ): RichTextViewerState {
         return if (richTextCache[content] != null) {
             richTextCache[content]
         } else {
-            val newUrls = RichTextParser().parseText(content, tags)
+            val newUrls = RichTextParser().parseText(content, tags, callbackUri)
             richTextCache.put(content, newUrls)
             newUrls
         }

@@ -642,6 +642,7 @@ private fun RenderRegularTextNote(
                     tags = tags,
                     backgroundColor = backgroundBubbleColor,
                     id = note.idHex,
+                    callbackUri = note.toNostrUri(),
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -655,6 +656,7 @@ private fun RenderRegularTextNote(
                 tags = EmptyTagList,
                 backgroundColor = backgroundBubbleColor,
                 id = note.idHex,
+                callbackUri = note.toNostrUri(),
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

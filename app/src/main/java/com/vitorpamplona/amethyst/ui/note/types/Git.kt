@@ -188,6 +188,7 @@ private fun RenderGitPatchEvent(
                     tags = tags,
                     backgroundColor = backgroundColor,
                     id = note.idHex,
+                    callbackUri = note.toNostrUri(),
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -291,6 +292,7 @@ private fun RenderGitIssueEvent(
                     tags = tags,
                     backgroundColor = backgroundColor,
                     id = note.idHex,
+                    callbackUri = note.toNostrUri(),
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

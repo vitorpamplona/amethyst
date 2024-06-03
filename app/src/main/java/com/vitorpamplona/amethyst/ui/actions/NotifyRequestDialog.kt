@@ -63,15 +63,16 @@ fun NotifyRequestDialog(
             val background = remember { mutableStateOf(defaultBackground) }
 
             TranslatableRichTextViewer(
-                textContent,
+                content = textContent,
                 canPreview = true,
                 quotesLeft = 1,
-                Modifier.fillMaxWidth(),
-                EmptyTagList,
-                background,
-                textContent,
-                accountViewModel,
-                nav,
+                modifier = Modifier.fillMaxWidth(),
+                tags = EmptyTagList,
+                backgroundColor = background,
+                id = textContent,
+                callbackUri = null,
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         },
         confirmButton = {

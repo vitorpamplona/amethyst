@@ -100,15 +100,16 @@ fun DisplayHighlight(
         }
 
     TranslatableRichTextViewer(
-        quote,
+        content = quote,
         canPreview = canPreview && !makeItShort,
-        quotesLeft,
-        Modifier.fillMaxWidth(),
-        EmptyTagList,
-        backgroundColor,
+        quotesLeft = quotesLeft,
+        modifier = Modifier.fillMaxWidth(),
+        tags = EmptyTagList,
+        backgroundColor = backgroundColor,
         id = quote,
-        accountViewModel,
-        nav,
+        callbackUri = null,
+        accountViewModel = accountViewModel,
+        nav = nav,
     )
 
     DisplayQuoteAuthor(authorHex ?: "", url, postAddress, accountViewModel, nav)

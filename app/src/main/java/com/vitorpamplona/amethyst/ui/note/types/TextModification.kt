@@ -119,6 +119,7 @@ fun RenderTextModificationEvent(
                     tags = EmptyTagList,
                     backgroundColor = backgroundColor,
                     id = note.idHex,
+                    callbackUri = note.toNostrUri(),
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

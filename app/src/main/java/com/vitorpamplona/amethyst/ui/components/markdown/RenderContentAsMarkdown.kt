@@ -44,6 +44,7 @@ fun RenderContentAsMarkdown(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
+    callbackUri: String? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -70,13 +71,14 @@ fun RenderContentAsMarkdown(
         val renderer =
             remember(content) {
                 MarkdownMediaRenderer(
-                    content.take(100),
-                    tags,
-                    canPreview,
-                    quotesLeft,
-                    backgroundColor,
-                    accountViewModel,
-                    nav,
+                    startOfText = content.take(100),
+                    tags = tags,
+                    canPreview = canPreview,
+                    quotesLeft = quotesLeft,
+                    backgroundColor = backgroundColor,
+                    callbackUri = callbackUri,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
             }
 

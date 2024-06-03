@@ -220,6 +220,7 @@ fun AudioHeader(
                         tags = tags,
                         backgroundColor = background,
                         id = note.idHex,
+                        callbackUri = note.toNostrUri(),
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )

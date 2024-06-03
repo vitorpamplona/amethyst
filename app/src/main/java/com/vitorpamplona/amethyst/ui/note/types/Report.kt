@@ -76,6 +76,7 @@ fun RenderReport(
         tags = EmptyTagList,
         backgroundColor = backgroundColor,
         id = note.idHex,
+        callbackUri = note.toNostrUri(),
         quotesLeft = 1,
         accountViewModel = accountViewModel,
         nav = nav,

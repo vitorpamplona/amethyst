@@ -429,7 +429,7 @@ fun NewPostView(
                                                     accountViewModel = accountViewModel,
                                                 )
                                             } else {
-                                                LoadUrlPreview(myUrlPreview, myUrlPreview, accountViewModel)
+                                                LoadUrlPreview(myUrlPreview, myUrlPreview, null, accountViewModel)
                                             }
                                         } else if (RichTextParser.startsWithNIP19Scheme(myUrlPreview)) {
                                             val bgColor = MaterialTheme.colorScheme.background
@@ -444,7 +444,7 @@ fun NewPostView(
                                                 nav = nav,
                                             )
                                         } else if (RichTextParser.isUrlWithoutScheme(myUrlPreview)) {
-                                            LoadUrlPreview("https://$myUrlPreview", myUrlPreview, accountViewModel)
+                                            LoadUrlPreview("https://$myUrlPreview", myUrlPreview, null, accountViewModel)
                                         }
                                     }
                                 }

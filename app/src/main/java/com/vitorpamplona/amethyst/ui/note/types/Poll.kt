@@ -41,7 +41,6 @@ import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.PollNoteEvent
@@ -65,22 +64,18 @@ fun RenderPoll(
     val showReply by
         remember(note) {
             derivedStateOf {
-                noteEvent is BaseTextNoteEvent && !makeItShort && unPackReply && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
+                !makeItShort && unPackReply && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
             }
         }
 
     if (showReply) {
         val replyingDirectlyTo =
             remember(note) {
-                if (noteEvent is BaseTextNoteEvent) {
-                    val replyingTo = noteEvent.replyingToAddressOrEvent()
-                    if (replyingTo != null) {
-                        val newNote = accountViewModel.getNoteIfExists(replyingTo)
-                        if (newNote != null && newNote.channelHex() == null && newNote.event?.kind() != CommunityDefinitionEvent.KIND) {
-                            newNote
-                        } else {
-                            note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.KIND }
-                        }
+                val replyingTo = noteEvent.replyingToAddressOrEvent()
+                if (replyingTo != null) {
+                    val newNote = accountViewModel.getNoteIfExists(replyingTo)
+                    if (newNote != null && newNote.channelHex() == null && newNote.event?.kind() != CommunityDefinitionEvent.KIND) {
+                        newNote
                     } else {
                         note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.KIND }
                     }
@@ -116,6 +111,7 @@ fun RenderPoll(
                 tags = tags,
                 backgroundColor = backgroundColor,
                 id = note.idHex,
+                callbackUri = note.toNostrUri(),
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

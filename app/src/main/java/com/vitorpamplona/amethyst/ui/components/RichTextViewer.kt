@@ -121,14 +121,15 @@ fun RichTextViewer(
     modifier: Modifier,
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
+    callbackUri: String? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     Column(modifier = modifier) {
         if (remember(content) { isMarkdown(content) }) {
-            RenderContentAsMarkdown(content, tags, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+            RenderContentAsMarkdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
         } else {
-            RenderRegular(content, tags, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+            RenderRegular(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
         }
     }
 }
@@ -267,7 +268,7 @@ fun RenderRegularPreview3() {
     ) { word, state ->
         when (word) {
             // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
-            is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
+            is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, null, accountViewModel)
             is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
             is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
             is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
@@ -291,16 +292,18 @@ private fun RenderRegular(
     canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
+    callbackUri: String? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    RenderRegular(content, tags) { word, state ->
+    RenderRegular(content, tags, callbackUri) { word, state ->
         if (canPreview) {
             RenderWordWithPreview(
                 word,
                 state,
                 backgroundColor,
                 quotesLeft,
+                callbackUri,
                 accountViewModel,
                 nav,
             )
@@ -321,9 +324,10 @@ private fun RenderRegular(
 fun RenderRegular(
     content: String,
     tags: ImmutableListOfLists<String>,
+    callbackUri: String? = null,
     wordRenderer: @Composable (Segment, RichTextViewerState) -> Unit,
 ) {
-    val state by remember(content, tags) { mutableStateOf(CachedRichTextParser.parseText(content, tags)) }
+    val state by remember(content, tags) { mutableStateOf(CachedRichTextParser.parseText(content, tags, callbackUri)) }
 
     val spaceWidth = measureSpaceWidth(LocalTextStyle.current)
 
@@ -412,12 +416,13 @@ private fun RenderWordWithPreview(
     state: RichTextViewerState,
     backgroundColor: MutableState<Color>,
     quotesLeft: Int,
+    callbackUri: String? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     when (word) {
         is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
-        is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
+        is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, callbackUri, accountViewModel)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
         is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
         is WithdrawSegment -> MayBeWithdrawal(word.segmentText)

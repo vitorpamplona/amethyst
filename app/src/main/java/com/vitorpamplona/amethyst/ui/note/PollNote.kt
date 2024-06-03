@@ -179,6 +179,7 @@ private fun OptionNote(
                 pollViewModel = pollViewModel,
                 nonClickablePrepend = {
                     RenderOptionAfterVote(
+                        baseNote,
                         poolOption,
                         color,
                         canPreview,
@@ -217,6 +218,7 @@ private fun OptionNote(
 
 @Composable
 private fun RenderOptionAfterVote(
+    baseNote: Note,
     poolOption: PollOption,
     color: Color,
     canPreview: Boolean,
@@ -276,7 +278,8 @@ private fun RenderOptionAfterVote(
                     Modifier,
                     tags,
                     backgroundColor,
-                    poolOption.descriptor,
+                    baseNote.idHex + poolOption.descriptor,
+                    baseNote.toNostrUri(),
                     accountViewModel,
                     nav,
                 )

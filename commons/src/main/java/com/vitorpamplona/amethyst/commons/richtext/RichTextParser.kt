@@ -46,6 +46,7 @@ class RichTextParser() {
         fullUrl: String,
         eventTags: ImmutableListOfLists<String>,
         description: String?,
+        callbackUri: String? = null,
     ): MediaUrlContent? {
         val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
         return if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
@@ -59,6 +60,7 @@ class RichTextParser() {
                 blurhash = frags[FileHeaderEvent.BLUR_HASH] ?: tags[FileHeaderEvent.BLUR_HASH],
                 dim = frags[FileHeaderEvent.DIMENSION] ?: tags[FileHeaderEvent.DIMENSION],
                 contentWarning = frags["content-warning"] ?: tags["content-warning"],
+                uri = callbackUri,
             )
         } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
             val frags = Nip54InlineMetadata().parse(fullUrl)
@@ -70,6 +72,7 @@ class RichTextParser() {
                 blurhash = frags[FileHeaderEvent.BLUR_HASH] ?: tags[FileHeaderEvent.BLUR_HASH],
                 dim = frags[FileHeaderEvent.DIMENSION] ?: tags[FileHeaderEvent.DIMENSION],
                 contentWarning = frags["content-warning"] ?: tags["content-warning"],
+                uri = callbackUri,
             )
         } else {
             null
@@ -103,11 +106,12 @@ class RichTextParser() {
     fun parseText(
         content: String,
         tags: ImmutableListOfLists<String>,
+        callbackUri: String?,
     ): RichTextViewerState {
         val urlSet = parseValidUrls(content)
 
         val imagesForPager =
-            urlSet.mapNotNull { fullUrl -> parseMediaUrl(fullUrl, tags, content) }.associateBy { it.url }
+            urlSet.mapNotNull { fullUrl -> parseMediaUrl(fullUrl, tags, content, callbackUri) }.associateBy { it.url }
         val imageList = imagesForPager.values.toList()
 
         val emojiMap = Nip30CustomEmoji.createEmojiMap(tags)

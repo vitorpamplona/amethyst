@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 fun LoadUrlPreview(
     url: String,
     urlText: String,
+    callbackUri: String? = null,
     accountViewModel: AccountViewModel,
 ) {
     val automaticallyShowUrlPreview = remember { accountViewModel.settings.showUrlPreview.value }
@@ -61,7 +62,7 @@ fun LoadUrlPreview(
         ) { state ->
             when (state) {
                 is UrlPreviewState.Loaded -> {
-                    RenderLoaded(state, url, accountViewModel)
+                    RenderLoaded(state, url, callbackUri, accountViewModel)
                 }
                 else -> {
                     ClickableUrl(urlText, url)
@@ -75,12 +76,13 @@ fun LoadUrlPreview(
 fun RenderLoaded(
     state: UrlPreviewState.Loaded,
     url: String,
+    callbackUri: String? = null,
     accountViewModel: AccountViewModel,
 ) {
     if (state.previewInfo.mimeType.type == "image") {
         Box(modifier = HalfVertPadding) {
             ZoomableContentView(
-                content = MediaUrlImage(url),
+                content = MediaUrlImage(url, uri = callbackUri),
                 roundedCorner = true,
                 accountViewModel = accountViewModel,
             )
@@ -88,7 +90,7 @@ fun RenderLoaded(
     } else if (state.previewInfo.mimeType.type == "video") {
         Box(modifier = HalfVertPadding) {
             ZoomableContentView(
-                content = MediaUrlVideo(url),
+                content = MediaUrlVideo(url, uri = callbackUri),
                 roundedCorner = true,
                 accountViewModel = accountViewModel,
             )

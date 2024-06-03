@@ -396,9 +396,12 @@ fun AppNavigation(
         LaunchedEffect(intentNextPage) {
             if (actionableNextPage != null) {
                 actionableNextPage?.let {
-                    navController.navigate(it) {
-                        popUpTo(Route.Home.route)
-                        launchSingleTop = true
+                    val currentRoute = getRouteWithArguments(navController)
+                    if (!isSameRoute(currentRoute, it)) {
+                        navController.navigate(it) {
+                            popUpTo(Route.Home.route)
+                            launchSingleTop = true
+                        }
                     }
                     actionableNextPage = null
                 }

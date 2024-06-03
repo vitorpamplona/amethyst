@@ -77,6 +77,7 @@ fun TranslatableRichTextViewer(
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
     id: String,
+    callbackUri: String? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -103,6 +104,7 @@ fun TranslatableRichTextViewer(
             tags = tags,
             backgroundColor = backgroundColor,
             id = id,
+            callbackUri = callbackUri,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -119,6 +121,7 @@ private fun RenderText(
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
     id: String,
+    callbackUri: String? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -139,6 +142,7 @@ private fun RenderText(
             tags,
             backgroundColor,
             id,
+            callbackUri,
             accountViewModel,
             nav,
         )

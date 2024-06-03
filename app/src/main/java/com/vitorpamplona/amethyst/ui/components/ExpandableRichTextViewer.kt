@@ -64,6 +64,7 @@ fun ExpandableRichTextViewer(
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
     id: String,
+    callbackUri: String? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -99,6 +100,7 @@ fun ExpandableRichTextViewer(
             modifier.align(Alignment.TopStart),
             tags,
             backgroundColor,
+            callbackUri,
             accountViewModel,
             nav,
         )

@@ -57,6 +57,7 @@ class MarkdownMediaRenderer(
     val canPreview: Boolean,
     val quotesLeft: Int,
     val backgroundColor: MutableState<Color>,
+    val callbackUri: String? = null,
     val accountViewModel: AccountViewModel,
     val nav: (String) -> Unit,
 ) : MediaRenderer {
@@ -107,7 +108,7 @@ class MarkdownMediaRenderer(
         uri: String,
         richTextStringBuilder: RichTextString.Builder,
     ) {
-        val content = parser.parseMediaUrl(uri, eventTags = tags ?: EmptyTagList, startOfText)
+        val content = parser.parseMediaUrl(uri, eventTags = tags ?: EmptyTagList, startOfText, callbackUri)
 
         if (canPreview) {
             if (content != null) {
@@ -123,7 +124,7 @@ class MarkdownMediaRenderer(
                     renderAsCompleteLink(title ?: uri, uri, richTextStringBuilder)
                 } else {
                     renderInlineFullWidth(richTextStringBuilder) {
-                        LoadUrlPreview(uri, title ?: uri, accountViewModel)
+                        LoadUrlPreview(uri, title ?: uri, callbackUri, accountViewModel)
                     }
                 }
             }
