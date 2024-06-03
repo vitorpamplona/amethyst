@@ -22,16 +22,11 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.service.relays.FeedType
-import com.vitorpamplona.amethyst.service.relays.RelayStat
 
 @Immutable
 data class RelaySetupInfo(
     val url: String,
     val read: Boolean,
     val write: Boolean,
-    val relayStat: RelayStat = RelayStat(),
     val feedTypes: Set<FeedType>,
-    val paidRelay: Boolean = false,
-) {
-    val briefInfo: RelayBriefInfoCache.RelayBriefInfo = RelayBriefInfoCache.RelayBriefInfo(url)
-}
+)

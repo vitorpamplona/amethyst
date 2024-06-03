@@ -68,7 +68,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
-import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.relays.Constants
@@ -96,7 +95,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun Kind3RelayListView(
-    feedState: List<RelaySetupInfo>,
+    feedState: List<Kind3BasicRelaySetupInfo>,
     postViewModel: Kind3RelayListViewModel,
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
@@ -111,7 +110,7 @@ fun Kind3RelayListView(
 }
 
 fun LazyListScope.renderKind3Items(
-    feedState: List<RelaySetupInfo>,
+    feedState: List<Kind3BasicRelaySetupInfo>,
     postViewModel: Kind3RelayListViewModel,
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
@@ -148,7 +147,7 @@ fun ServerConfigPreview() {
     ClickableRelayItem(
         loadProfilePicture = true,
         item =
-            RelaySetupInfo(
+            Kind3BasicRelaySetupInfo(
                 url = "nostr.mom",
                 read = true,
                 write = true,
@@ -176,15 +175,15 @@ fun ServerConfigPreview() {
 
 @Composable
 fun LoadRelayInfo(
-    item: RelaySetupInfo,
-    onToggleDownload: (RelaySetupInfo) -> Unit,
-    onToggleUpload: (RelaySetupInfo) -> Unit,
-    onToggleFollows: (RelaySetupInfo) -> Unit,
-    onTogglePrivateDMs: (RelaySetupInfo) -> Unit,
-    onTogglePublicChats: (RelaySetupInfo) -> Unit,
-    onToggleGlobal: (RelaySetupInfo) -> Unit,
-    onToggleSearch: (RelaySetupInfo) -> Unit,
-    onDelete: (RelaySetupInfo) -> Unit,
+    item: Kind3BasicRelaySetupInfo,
+    onToggleDownload: (Kind3BasicRelaySetupInfo) -> Unit,
+    onToggleUpload: (Kind3BasicRelaySetupInfo) -> Unit,
+    onToggleFollows: (Kind3BasicRelaySetupInfo) -> Unit,
+    onTogglePrivateDMs: (Kind3BasicRelaySetupInfo) -> Unit,
+    onTogglePublicChats: (Kind3BasicRelaySetupInfo) -> Unit,
+    onToggleGlobal: (Kind3BasicRelaySetupInfo) -> Unit,
+    onToggleSearch: (Kind3BasicRelaySetupInfo) -> Unit,
+    onDelete: (Kind3BasicRelaySetupInfo) -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -267,16 +266,16 @@ fun LoadRelayInfo(
 
 @Composable
 fun ClickableRelayItem(
-    item: RelaySetupInfo,
+    item: Kind3BasicRelaySetupInfo,
     loadProfilePicture: Boolean,
-    onToggleDownload: (RelaySetupInfo) -> Unit,
-    onToggleUpload: (RelaySetupInfo) -> Unit,
-    onToggleFollows: (RelaySetupInfo) -> Unit,
-    onTogglePrivateDMs: (RelaySetupInfo) -> Unit,
-    onTogglePublicChats: (RelaySetupInfo) -> Unit,
-    onToggleGlobal: (RelaySetupInfo) -> Unit,
-    onToggleSearch: (RelaySetupInfo) -> Unit,
-    onDelete: (RelaySetupInfo) -> Unit,
+    onToggleDownload: (Kind3BasicRelaySetupInfo) -> Unit,
+    onToggleUpload: (Kind3BasicRelaySetupInfo) -> Unit,
+    onToggleFollows: (Kind3BasicRelaySetupInfo) -> Unit,
+    onTogglePrivateDMs: (Kind3BasicRelaySetupInfo) -> Unit,
+    onTogglePublicChats: (Kind3BasicRelaySetupInfo) -> Unit,
+    onToggleGlobal: (Kind3BasicRelaySetupInfo) -> Unit,
+    onToggleSearch: (Kind3BasicRelaySetupInfo) -> Unit,
+    onDelete: (Kind3BasicRelaySetupInfo) -> Unit,
     onClick: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth()) {
@@ -337,9 +336,9 @@ fun ClickableRelayItem(
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun StatusRow(
-    item: RelaySetupInfo,
-    onToggleDownload: (RelaySetupInfo) -> Unit,
-    onToggleUpload: (RelaySetupInfo) -> Unit,
+    item: Kind3BasicRelaySetupInfo,
+    onToggleDownload: (Kind3BasicRelaySetupInfo) -> Unit,
+    onToggleUpload: (Kind3BasicRelaySetupInfo) -> Unit,
     modifier: Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -489,11 +488,11 @@ private fun StatusRow(
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun ActiveToggles(
-    item: RelaySetupInfo,
-    onToggleFollows: (RelaySetupInfo) -> Unit,
-    onTogglePrivateDMs: (RelaySetupInfo) -> Unit,
-    onTogglePublicChats: (RelaySetupInfo) -> Unit,
-    onToggleGlobal: (RelaySetupInfo) -> Unit,
+    item: Kind3BasicRelaySetupInfo,
+    onToggleFollows: (Kind3BasicRelaySetupInfo) -> Unit,
+    onTogglePrivateDMs: (Kind3BasicRelaySetupInfo) -> Unit,
+    onTogglePublicChats: (Kind3BasicRelaySetupInfo) -> Unit,
+    onToggleGlobal: (Kind3BasicRelaySetupInfo) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -643,9 +642,9 @@ private fun ActiveToggles(
 
 @Composable
 private fun FirstLine(
-    item: RelaySetupInfo,
+    item: Kind3BasicRelaySetupInfo,
     onClick: () -> Unit,
-    onDelete: (RelaySetupInfo) -> Unit,
+    onDelete: (Kind3BasicRelaySetupInfo) -> Unit,
     modifier: Modifier,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
@@ -684,7 +683,7 @@ private fun FirstLine(
 @Composable
 fun Kind3RelayEditBox(
     relayToAdd: String,
-    onNewRelay: (RelaySetupInfo) -> Unit,
+    onNewRelay: (Kind3BasicRelaySetupInfo) -> Unit,
 ) {
     var url by remember { mutableStateOf<String>(relayToAdd) }
     var read by remember { mutableStateOf(true) }
@@ -739,11 +738,12 @@ fun Kind3RelayEditBox(
                 if (url.isNotBlank() && url != "/") {
                     val addedWSS = RelayUrlFormatter.normalize(url)
                     onNewRelay(
-                        RelaySetupInfo(
-                            addedWSS,
-                            read,
-                            write,
+                        Kind3BasicRelaySetupInfo(
+                            url = addedWSS,
+                            read = read,
+                            write = write,
                             feedTypes = FeedType.entries.toSet(),
+                            relayStat = RelayStat(),
                         ),
                     )
                     url = ""

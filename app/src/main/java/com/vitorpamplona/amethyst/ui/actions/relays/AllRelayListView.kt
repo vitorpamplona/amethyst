@@ -237,7 +237,7 @@ fun ResetKind3Relays(postViewModel: Kind3RelayListViewModel) {
     OutlinedButton(
         onClick = {
             postViewModel.deleteAll()
-            Constants.defaultRelays.forEach { postViewModel.addRelay(it) }
+            postViewModel.addAll(Constants.defaultRelays)
             postViewModel.loadRelayDocuments()
         },
     ) {
