@@ -45,7 +45,7 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
                 types = EVENT_FINDER_TYPES,
                 filter =
                     JsonFilter(
-                        kinds = listOf(MetadataEvent.KIND),
+                        kinds = listOf(MetadataEvent.KIND, AdvertisedRelayListEvent.KIND),
                         authors = firstTimers,
                     ),
             ),
