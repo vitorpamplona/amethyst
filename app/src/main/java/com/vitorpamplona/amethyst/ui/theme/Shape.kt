@@ -242,3 +242,8 @@ val inlinePlaceholder =
         height = Font17SP,
         placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
     )
+
+val incognitoIconModifier =
+    Modifier
+        .padding(top = 1.dp)
+        .size(14.dp)

@@ -581,10 +581,7 @@ fun IncognitoBadge(baseNote: Note) {
         Icon(
             painter = painterResource(id = R.drawable.incognito),
             null,
-            modifier =
-                Modifier
-                    .padding(top = 1.dp)
-                    .size(14.dp),
+            modifier = incognitoIconModifier,
             tint = MaterialTheme.colorScheme.placeholderText,
         )
         Spacer(modifier = StdHorzSpacer)
@@ -592,10 +589,7 @@ fun IncognitoBadge(baseNote: Note) {
         Icon(
             painter = painterResource(id = R.drawable.incognito_off),
             null,
-            modifier =
-                Modifier
-                    .padding(top = 1.dp)
-                    .size(14.dp),
+            modifier = incognitoIconModifier,
             tint = MaterialTheme.colorScheme.placeholderText,
         )
         Spacer(modifier = StdHorzSpacer)
