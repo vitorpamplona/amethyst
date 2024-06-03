@@ -760,7 +760,7 @@ fun RenderContentDVMThumb(
     nav: (String) -> Unit,
 ) {
     // downloads user metadata to pre-load the NIP-65 relays.
-    val user = baseNote.author?.live()?.metadata
+    val user = baseNote.author?.live()?.metadata?.observeAsState()
 
     val card = observeAppDefinition(appDefinitionNote = baseNote)
 
