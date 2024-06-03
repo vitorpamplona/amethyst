@@ -79,7 +79,7 @@ class AntiSpamFilter {
             logOffender(hash, event)
 
             if (relay != null) {
-                RelayStats.newSpam(relay.url, "Potential SPAM Message ${event.id} nostr:${Nip19Bech32.createNEvent(event.id, event.pubKey, event.kind, relay.url)}")
+                RelayStats.newSpam(relay.url, "https://njump.me/${Nip19Bech32.createNEvent(event.id, event.pubKey, event.kind, relay.url)}")
             }
 
             liveSpam.invalidateData()

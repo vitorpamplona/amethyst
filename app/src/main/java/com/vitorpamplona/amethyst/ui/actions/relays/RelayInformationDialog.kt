@@ -31,15 +31,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -48,18 +51,24 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
+import com.vitorpamplona.amethyst.service.relays.RelayStats
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.components.ClickableEmail
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
+import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.largeRelayIconModifier
 import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
+import com.vitorpamplona.quartz.events.EmptyTagList
+import kotlinx.collections.immutable.toImmutableList
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -70,6 +79,11 @@ fun RelayInformationDialog(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    val messages =
+        remember(relayBriefInfo) {
+            RelayStats.get(url = relayBriefInfo.url).messages.snapshot().values.sortedByDescending { it.time }.toImmutableList()
+        }
+
     val automaticallyShowProfilePicture =
         remember {
             accountViewModel.settings.showProfilePictures.value
@@ -84,162 +98,204 @@ fun RelayInformationDialog(
             ),
     ) {
         Surface {
-            val scrollState = rememberScrollState()
+            val color = mutableStateOf(Color.Transparent)
+            val context = LocalContext.current
 
-            Column(
-                modifier = Modifier.padding(10.dp).fillMaxSize().verticalScroll(scrollState),
+            LazyColumn(
+                modifier =
+                    Modifier
+                        .padding(10.dp)
+                        .fillMaxSize(),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CloseButton(onPress = { onClose() })
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = StdPadding.fillMaxWidth(),
-                ) {
-                    Column {
-                        RenderRelayIcon(
-                            relayBriefInfo.displayUrl,
-                            relayInfo.icon ?: relayBriefInfo.favIcon,
-                            automaticallyShowProfilePicture,
-                            MaterialTheme.colorScheme.largeRelayIconModifier,
-                        )
-                    }
-
-                    Spacer(modifier = DoubleHorzSpacer)
-
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Row { Title(relayInfo.name?.trim() ?: "") }
-
-                        Row { SubtitleContent(relayInfo.description?.trim() ?: "") }
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CloseButton(onPress = { onClose() })
                     }
                 }
+                item {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = StdPadding.fillMaxWidth(),
+                    ) {
+                        Column {
+                            RenderRelayIcon(
+                                relayBriefInfo.displayUrl,
+                                relayInfo.icon ?: relayBriefInfo.favIcon,
+                                automaticallyShowProfilePicture,
+                                MaterialTheme.colorScheme.largeRelayIconModifier,
+                            )
+                        }
 
-                Section(stringResource(R.string.owner))
+                        Spacer(modifier = DoubleHorzSpacer)
 
-                relayInfo.pubkey?.let {
-                    DisplayOwnerInformation(it, accountViewModel) {
-                        onClose()
-                        nav(it)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Row { Title(relayInfo.name?.trim() ?: "") }
+
+                            Row { SubtitleContent(relayInfo.description?.trim() ?: "") }
+                        }
                     }
                 }
+                item {
+                    Section(stringResource(R.string.owner))
 
-                Section(stringResource(R.string.software))
+                    relayInfo.pubkey?.let {
+                        DisplayOwnerInformation(it, accountViewModel) {
+                            onClose()
+                            nav(it)
+                        }
+                    }
+                }
+                item {
+                    Section(stringResource(R.string.software))
 
-                DisplaySoftwareInformation(relayInfo)
+                    DisplaySoftwareInformation(relayInfo)
 
-                Section(stringResource(R.string.version))
+                    Section(stringResource(R.string.version))
 
-                SectionContent(relayInfo.version ?: "")
+                    SectionContent(relayInfo.version ?: "")
+                }
+                item {
+                    Section(stringResource(R.string.contact))
 
-                Section(stringResource(R.string.contact))
+                    Box(modifier = Modifier.padding(start = 10.dp)) {
+                        relayInfo.contact?.let {
+                            if (it.startsWith("https:")) {
+                                ClickableUrl(urlText = it, url = it)
+                            } else if (it.startsWith("mailto:") || it.contains('@')) {
+                                ClickableEmail(it)
+                            } else {
+                                SectionContent(it)
+                            }
+                        }
+                    }
+                }
+                item {
+                    Section(stringResource(R.string.supports))
 
-                Box(modifier = Modifier.padding(start = 10.dp)) {
-                    relayInfo.contact?.let {
-                        if (it.startsWith("https:")) {
-                            ClickableUrl(urlText = it, url = it)
-                        } else if (it.startsWith("mailto:") || it.contains('@')) {
-                            ClickableEmail(it)
-                        } else {
-                            SectionContent(it)
+                    DisplaySupportedNips(relayInfo)
+                }
+                item {
+                    relayInfo.fees?.admission?.let {
+                        if (it.isNotEmpty()) {
+                            Section(stringResource(R.string.admission_fees))
+
+                            it.forEach { item -> SectionContent("${item.amount?.div(1000) ?: 0} sats") }
+                        }
+                    }
+
+                    relayInfo.payments_url?.let {
+                        Section(stringResource(R.string.payments_url))
+
+                        Box(modifier = Modifier.padding(start = 10.dp)) {
+                            ClickableUrl(
+                                urlText = it,
+                                url = it,
+                            )
+                        }
+                    }
+                }
+                item {
+                    relayInfo.limitation?.let {
+                        Section(stringResource(R.string.limitations))
+                        val authRequiredText =
+                            if (it.auth_required ?: false) stringResource(R.string.yes) else stringResource(R.string.no)
+
+                        val paymentRequiredText =
+                            if (it.payment_required ?: false) stringResource(R.string.yes) else stringResource(R.string.no)
+
+                        val restrictedWritesText =
+                            if (it.restricted_writes ?: false) stringResource(R.string.yes) else stringResource(R.string.no)
+
+                        Column {
+                            SectionContent(
+                                "${stringResource(R.string.message_length)}: ${it.max_message_length ?: 0}",
+                            )
+                            SectionContent(
+                                "${stringResource(R.string.subscriptions)}: ${it.max_subscriptions ?: 0}",
+                            )
+                            SectionContent("${stringResource(R.string.filters)}: ${it.max_filters ?: 0}")
+                            SectionContent(
+                                "${stringResource(R.string.subscription_id_length)}: ${it.max_subid_length ?: 0}",
+                            )
+                            SectionContent("${stringResource(R.string.minimum_prefix)}: ${it.min_prefix ?: 0}")
+                            SectionContent(
+                                "${stringResource(R.string.maximum_event_tags)}: ${it.max_event_tags ?: 0}",
+                            )
+                            SectionContent(
+                                "${stringResource(R.string.content_length)}: ${it.max_content_length ?: 0}",
+                            )
+                            SectionContent(
+                                "${stringResource(R.string.max_limit)}: ${it.max_limit ?: 0}",
+                            )
+                            SectionContent("${stringResource(R.string.minimum_pow)}: ${it.min_pow_difficulty ?: 0}")
+                            SectionContent("${stringResource(R.string.auth)}: $authRequiredText")
+                            SectionContent("${stringResource(R.string.payment)}: $paymentRequiredText")
+                            SectionContent("${stringResource(R.string.restricted_writes)}: $restrictedWritesText")
+                        }
+                    }
+                }
+                item {
+                    relayInfo.relay_countries?.let {
+                        Section(stringResource(R.string.countries))
+
+                        FlowRow { it.forEach { item -> SectionContent(item) } }
+                    }
+                }
+                item {
+                    relayInfo.language_tags?.let {
+                        Section(stringResource(R.string.languages))
+
+                        FlowRow { it.forEach { item -> SectionContent(item) } }
+                    }
+                }
+                item {
+                    relayInfo.tags?.let {
+                        Section(stringResource(R.string.tags))
+
+                        FlowRow { it.forEach { item -> SectionContent(item) } }
+                    }
+                }
+                item {
+                    relayInfo.posting_policy?.let {
+                        Section(stringResource(R.string.posting_policy))
+
+                        Box(Modifier.padding(10.dp)) {
+                            ClickableUrl(
+                                it,
+                                it,
+                            )
                         }
                     }
                 }
 
-                Section(stringResource(R.string.supports))
-
-                DisplaySupportedNips(relayInfo)
-
-                relayInfo.fees?.admission?.let {
-                    if (it.isNotEmpty()) {
-                        Section(stringResource(R.string.admission_fees))
-
-                        it.forEach { item -> SectionContent("${item.amount?.div(1000) ?: 0} sats") }
-                    }
+                item {
+                    Section(stringResource(R.string.relay_error_messages))
                 }
 
-                relayInfo.payments_url?.let {
-                    Section(stringResource(R.string.payments_url))
-
-                    Box(modifier = Modifier.padding(start = 10.dp)) {
-                        ClickableUrl(
-                            urlText = it,
-                            url = it,
-                        )
-                    }
-                }
-
-                relayInfo.limitation?.let {
-                    Section(stringResource(R.string.limitations))
-                    val authRequiredText =
-                        if (it.auth_required ?: false) stringResource(R.string.yes) else stringResource(R.string.no)
-
-                    val paymentRequiredText =
-                        if (it.payment_required ?: false) stringResource(R.string.yes) else stringResource(R.string.no)
-
-                    val restrictedWritesText =
-                        if (it.restricted_writes ?: false) stringResource(R.string.yes) else stringResource(R.string.no)
-
-                    Column {
-                        SectionContent(
-                            "${stringResource(R.string.message_length)}: ${it.max_message_length ?: 0}",
-                        )
-                        SectionContent(
-                            "${stringResource(R.string.subscriptions)}: ${it.max_subscriptions ?: 0}",
-                        )
-                        SectionContent("${stringResource(R.string.filters)}: ${it.max_filters ?: 0}")
-                        SectionContent(
-                            "${stringResource(R.string.subscription_id_length)}: ${it.max_subid_length ?: 0}",
-                        )
-                        SectionContent("${stringResource(R.string.minimum_prefix)}: ${it.min_prefix ?: 0}")
-                        SectionContent(
-                            "${stringResource(R.string.maximum_event_tags)}: ${it.max_event_tags ?: 0}",
-                        )
-                        SectionContent(
-                            "${stringResource(R.string.content_length)}: ${it.max_content_length ?: 0}",
-                        )
-                        SectionContent(
-                            "${stringResource(R.string.max_limit)}: ${it.max_limit ?: 0}",
-                        )
-                        SectionContent("${stringResource(R.string.minimum_pow)}: ${it.min_pow_difficulty ?: 0}")
-                        SectionContent("${stringResource(R.string.auth)}: $authRequiredText")
-                        SectionContent("${stringResource(R.string.payment)}: $paymentRequiredText")
-                        SectionContent("${stringResource(R.string.restricted_writes)}: $restrictedWritesText")
-                    }
-                }
-
-                relayInfo.relay_countries?.let {
-                    Section(stringResource(R.string.countries))
-
-                    FlowRow { it.forEach { item -> SectionContent(item) } }
-                }
-
-                relayInfo.language_tags?.let {
-                    Section(stringResource(R.string.languages))
-
-                    FlowRow { it.forEach { item -> SectionContent(item) } }
-                }
-
-                relayInfo.tags?.let {
-                    Section(stringResource(R.string.tags))
-
-                    FlowRow { it.forEach { item -> SectionContent(item) } }
-                }
-
-                relayInfo.posting_policy?.let {
-                    Section(stringResource(R.string.posting_policy))
-
-                    Box(Modifier.padding(10.dp)) {
-                        ClickableUrl(
-                            it,
-                            it,
+                items(messages) { msg ->
+                    Row {
+                        TranslatableRichTextViewer(
+                            content =
+                                remember {
+                                    "${timeAgo(msg.time, context)}, ${msg.type.name}: ${msg.message}"
+                                },
+                            canPreview = false,
+                            quotesLeft = 0,
+                            modifier = Modifier.fillMaxWidth(),
+                            tags = EmptyTagList,
+                            backgroundColor = color,
+                            id = msg.hashCode().toString(),
+                            accountViewModel = accountViewModel,
+                            nav = nav,
                         )
                     }
+
+                    Spacer(modifier = StdVertSpacer)
                 }
             }
         }

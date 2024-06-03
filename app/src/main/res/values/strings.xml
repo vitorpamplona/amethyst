@@ -463,6 +463,7 @@
     <string name="languages">Languages</string>
     <string name="tags">Tags</string>
     <string name="posting_policy">Posting policy</string>
+    <string name="relay_error_messages">Errors and Notices from this Relay</string>
     <string name="message_length">Message length</string>
     <string name="subscriptions">Subscriptions</string>
     <string name="filters">Filters</string>
