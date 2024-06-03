@@ -40,6 +40,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.io.File
 import kotlin.time.measureTimedValue
 
@@ -53,7 +54,9 @@ class Amethyst : Application() {
 
     val videoCache: VideoCache by lazy {
         val newCache = VideoCache()
-        newCache.initFileCache(this)
+        runBlocking {
+            newCache.initFileCache(this@Amethyst)
+        }
         newCache
     }
 

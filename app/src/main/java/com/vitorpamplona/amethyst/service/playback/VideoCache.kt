@@ -27,6 +27,8 @@ import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import java.io.File
 
@@ -41,16 +43,17 @@ class VideoCache {
 
     lateinit var cacheDataSourceFactory: CacheDataSource.Factory
 
-    @Synchronized
-    fun initFileCache(context: Context) {
+    suspend fun initFileCache(context: Context) {
         exoDatabaseProvider = StandaloneDatabaseProvider(context)
 
-        simpleCache =
-            SimpleCache(
-                File(context.cacheDir, "exoplayer"),
-                leastRecentlyUsedCacheEvictor,
-                exoDatabaseProvider,
-            )
+        withContext(Dispatchers.IO) {
+            simpleCache =
+                SimpleCache(
+                    File(context.cacheDir, "exoplayer"),
+                    leastRecentlyUsedCacheEvictor,
+                    exoDatabaseProvider,
+                )
+        }
     }
 
     // This method should be called when proxy setting changes.
