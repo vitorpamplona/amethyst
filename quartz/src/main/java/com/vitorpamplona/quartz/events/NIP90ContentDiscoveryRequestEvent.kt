@@ -40,7 +40,8 @@ class NIP90ContentDiscoveryRequestEvent(
         const val KIND = 5300
 
         fun create(
-            dvmPublicKey: String,
+            dvmPublicKey: HexKey,
+            forUser: HexKey,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (NIP90ContentDiscoveryRequestEvent) -> Unit,
@@ -50,6 +51,9 @@ class NIP90ContentDiscoveryRequestEvent(
             tags.add(arrayOf("p", dvmPublicKey))
             tags.add(arrayOf("alt", "NIP90 Content Discovery request"))
             tags.add(arrayOf("client", "Amethyst"))
+            tags.add(arrayOf("client", "Amethyst"))
+            tags.add(arrayOf("param", "max_results", "200"))
+            tags.add(arrayOf("param", "user", forUser))
             signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
         }
     }
