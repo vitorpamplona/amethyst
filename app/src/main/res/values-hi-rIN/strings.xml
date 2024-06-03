@@ -211,7 +211,7 @@
     <string name="mark_all_as_read">सब को पढ लिया चिह्नित करें</string>
     <string name="backup_keys">कुंचिकाएँ सुरक्षित रखें</string>
     <string name="account_backup_tips2_md" tools:ignore="Typos">## कुंचिका सुरक्षार्थ अनुकृति तथा सुरक्षा सुझाव
-        \n\nआपकी लेखा एक गुप्त कुंचिका से सुरक्षित किया गया है। कुंचिका अक्षरों की एक लम्बी श्रृंखला है जो **nsec1** से आरम्भ होता है। जिस किसी के पास यह कुंचिका है वह पत्र प्रकाशन कर सकेगा तथा आपका परिचय परिवर्तित कर सकेगा।
+        \n\nआपकी लेखा एक गुप्त कुंचिका से सुरक्षित किया गया है। कुंचिका अक्षरों की एक लम्बी श्रृंखला है जो **nsec1** से आरम्भ होता है। जिस किसी के पास यह कुंचिका है वह पत्र प्रकाशित कर सकेगा तथा आपका परिचय परिवर्तित कर सकेगा।
         \n\n- आपकी गुप्त कुंचिका किसी भी जालस्थान अथवा क्रमक में **ना** डालें जिसपर आपका विश्वास ना हो।
         \n- अमेथिस्ट क्रमलेख विकासकर्ता आपकी गुप्त कुंचिका **कभी नहीं** पूछेंगे।
         \n- आपकी गुप्त कुंचिका की एक सुरक्षित अनुकृति **अवश्य** रखें अपनी लेखा पुनः प्राप्त करने के लिए। पारणशब्ध प्रबंधन क्रमक की पुनः प्रशंसा करते हैं।
@@ -220,7 +220,7 @@
         \n\n यदि आप अपना पारणशब्द खो देते हैं, तो आप अपनी कुंचिका को पुनः प्राप्त नहीं कर सकते।
     </string>
     <string name="failed_to_encrypt_key">आपकी निजी कुंचिका का रहस्यीकरण असफल</string>
-    <string name="secret_key_copied_to_clipboard">गुप्त कुंचिका (nsec) का अनुकरण टाँकाफलक में डाला गया।</string>
+    <string name="secret_key_copied_to_clipboard">गुप्त कुंचिका (एनसेक॰) की अनुकृति टाँकाफलक में किया गया।</string>
     <string name="copy_my_secret_key">मेरी गुप्त कुंचिका की अनुकृति करें</string>
     <string name="encrypt_and_copy_my_secret_key">मेरी गुप्त कुंचिका का रहस्यीकरण तथा अनुकृति करें</string>
     <string name="biometric_authentication_failed">प्रमाणीकरण असफल</string>
@@ -277,21 +277,21 @@
     <string name="report_dialog_post_report_btn">सूचना प्रकाशित करें</string>
     <string name="report_dialog_title">बाधित करें तथा सूचना दें</string>
     <string name="block_only">बाधित करें</string>
-    <string name="bookmarks">स्मारकचिह्न</string>
+    <string name="bookmarks">स्मर्तव्य</string>
     <string name="drafts">पाण्डुलिपियाँ</string>
-    <string name="private_bookmarks">निजी स्मारकचिह्नित वस्तु</string>
-    <string name="public_bookmarks">सार्वजनिक स्मारकचिह्नित वस्तु</string>
-    <string name="add_to_private_bookmarks">निजी स्मारकचिह्नित वस्तु सूची में जोडें</string>
-    <string name="add_to_public_bookmarks">सार्वजनिक स्मारकचिह्नित वस्तु सूची में जोडें</string>
-    <string name="remove_from_private_bookmarks">निजी स्मारकचिह्नित वस्तु सूची से हटाएँ</string>
-    <string name="remove_from_public_bookmarks">सार्वजनिक स्मारकचिह्नित वस्तु सूची से हटाएँ</string>
+    <string name="private_bookmarks">निजी स्मर्तव्य</string>
+    <string name="public_bookmarks">सार्वजनिक स्मर्तव्य</string>
+    <string name="add_to_private_bookmarks">निजी स्मर्तव्य सूची में जोडें</string>
+    <string name="add_to_public_bookmarks">सार्वजनिक स्मर्तव्य सूची में जोडें</string>
+    <string name="remove_from_private_bookmarks">निजी स्मर्तव्य सूची से हटाएँ</string>
+    <string name="remove_from_public_bookmarks">सार्वजनिक स्मर्तव्य सूची से हटाएँ</string>
     <string name="wallet_connect_service">धनकोष संयोजन सेवा</string>
     <string name="wallet_connect_service_explainer">एक नोस्ट्र रहस्य को अधिकृत करता है ज्साप भुगतान करने के लिए क्रमक से बाहर चले बिना। रहस्य को सुरक्षित रखें तथा एक निजी पुनःप्रसारक का प्रयोग करें हो सके तो।</string>
     <string name="wallet_connect_service_pubkey">धनकोष संयोजन ख्याप्यकुंचिका</string>
     <string name="wallet_connect_service_relay">धनकोष संयोजन पुनःप्रसारक</string>
     <string name="wallet_connect_service_secret">धनकोष संयोजन रहस्य</string>
     <string name="wallet_connect_service_show_secret">गुप्त कुंचिका दिखाएँ</string>
-    <string name="wallet_connect_service_secret_placeholder">nsec / षोडशांकरूप निजी कुंचिका</string>
+    <string name="wallet_connect_service_secret_placeholder">एनसेक॰ / षोडशांकरूप निजी कुंचिका</string>
     <string name="pledge_amount_in_sats">प्रतिज्ञा मात्रा साट्स में</string>
     <string name="post_poll">मतदान प्रकाशित करें</string>
     <string name="poll_heading_required">अनिवार्य प्रपत्रस्थान :</string>
