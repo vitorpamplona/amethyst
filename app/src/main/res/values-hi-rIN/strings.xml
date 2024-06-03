@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="point_to_the_qr_code">क्यूआर क्रमचित्र के अभिमुख करें</string>
-    <string name="show_qr">क्यूआर क्रमचित्र दिखाएँ</string>
+    <string name="point_to_the_qr_code">क्यूआर॰ क्रमचित्र के अभिमुख करें</string>
+    <string name="show_qr">क्यूआर॰ क्रमचित्र दिखाएँ</string>
     <string name="profile_image">परिचय चित्र</string>
     <string name="your_profile_image">आपका परिचय चित्र</string>
-    <string name="scan_qr">क्यूआर क्रमचित्र को परखें</string>
+    <string name="scan_qr">क्यूआर॰ क्रमचित्र को परखें</string>
     <string name="show_anyway">फिर भी दिखाएँ</string>
     <string name="post_was_hidden">इस प्रकाशित पत्र को छिपाया गया क्योंकि इसमें आपके आच्छाद्य उपयोगकर्ता अथवा शब्द उल्लेखित हैं</string>
     <string name="post_was_flagged_as_inappropriate_by">प्रकाशित पत्र को मौन किया गया अथवा सूचित किया गया इनके द्वारा</string>
-    <string name="post_not_found">घटना पुष्ट किया जा रहा है अथवा आपके पुनःप्रसारक सूची में से प्राप्त नहीं</string>
+    <string name="post_not_found">घटना उपलब्ध किया जा रहा है अथवा आपके पुनःप्रसारक सूची में से प्राप्त नहीं</string>
     <string name="channel_image">प्रणाली चित्र</string>
     <string name="referenced_event_not_found">उद्धृत घटना अप्राप्त</string>
     <string name="could_not_decrypt_the_message">सन्देश का अरहस्यीकरण असफल</string>
@@ -48,7 +48,7 @@
     <string name="zaps">ज्साप</string>
     <string name="view_count">दृष्ट संख्या</string>
     <string name="boost">उद्धृत करें</string>
-    <string name="boosted">उद्धृत किया गया</string>
+    <string name="boosted">उद्धृत</string>
     <string name="edited">सम्पादित</string>
     <string name="edited_number">सम्पादन #%1$s</string>
     <string name="original">मूल</string>
@@ -86,12 +86,12 @@
     <string name="about_us">"हमारा परिचय.. "</string>
     <string name="what_s_on_your_mind">आपके मन में क्या है?</string>
     <string name="post">पत्र प्रकाशन</string>
-    <string name="save">अभिलेखित करें</string>
+    <string name="save">अभिलेखन करें</string>
     <string name="create">बनाएँ</string>
     <string name="cancel">निरस्त करें</string>
     <string name="failed_to_upload_the_image">चित्र आरोहण असफल</string>
     <string name="relay_address">पुनःप्रसारक पता</string>
-    <string name="posts">पत्र</string>
+    <string name="posts">प्रकाशित पत्र</string>
     <string name="bytes">अष्टक</string>
     <string name="errors">अपक्रम</string>
     <string name="errors_description">संयोजन अपक्रमों की संख्या इस सत्र में</string>
@@ -104,7 +104,7 @@
     <string name="display_name">प्रदर्शन नाम</string>
     <string name="my_display_name">मेरा प्रदर्शन नाम</string>
     <string name="my_awesome_name">उष्ट्रपक्षी मक्बढिया</string>
-    <string name="welcome">स्वागतम उष्ट्रपक्षी</string>
+    <string name="welcome">स्वागतम उष्ट्रपक्षी!</string>
     <string name="username">उपयोगकर्ता नाम</string>
     <string name="my_username">मेरा उपयोगकर्ता नाम</string>
     <string name="about_me">मेरा परिचय</string>
@@ -113,8 +113,8 @@
     <string name="website_url">जालस्थान पता</string>
     <string name="ln_address">लै॰जाल पता</string>
     <string name="ln_url_outdated">लै॰जाल पता (पुराना)</string>
-    <string name="image_saved_to_the_gallery">चित्र को चित्रालय क्रमक में रख दिया गया</string>
-    <string name="failed_to_save_the_image">चित्र को रखने में असफल</string>
+    <string name="image_saved_to_the_gallery">चित्र का अभिलेखन किया गया चित्रालय क्रमक में</string>
+    <string name="failed_to_save_the_image">चित्र का अभिलेखन असफल</string>
     <string name="upload_image">चित्र आरोहण</string>
     <string name="uploading">आरोहण चल रहा है…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">उपयोगकर्ता का कोई लैटनिंग पता स्थापित नहीं जिसपर साट्स प्राप्त कर सके</string>
@@ -127,19 +127,19 @@
     <string name="new_requests">नये अनुरोध</string>
     <string name="blocked_users">बाधित उपयोगकर्ता</string>
     <string name="new_threads">नये सूत्र</string>
-    <string name="conversations">संवाद</string>
+    <string name="conversations">सम्वाद</string>
     <string name="notes">टीकाएँ</string>
     <string name="replies">प्रतिवचन</string>
-    <string name="follows">"का अनुचरण करते हैं"</string>
+    <string name="follows">"का अनुचरण"</string>
     <string name="reports">"सूचनाएँ"</string>
     <string name="more_options">अधिक विकल्प</string>
     <string name="relays">" पुनःप्रसारक"</string>
     <string name="website">जालस्थान</string>
     <string name="lightning_address">लैटनिंग पता</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">NSEC विभेदक (आपका गुप्त पारणशब्द) का अनुकरण करता है टाँकाफलक में सुरक्षित रखने के लिए</string>
+    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">एनसेक॰ विभेदक (आपका गुप्त पारणशब्द) की अनुकृति करता है टाँकाफलक में सुरक्षित रखने के लिए</string>
     <string name="copy_private_key_to_the_clipboard">गुप्त कुंचिका की अनुकृति करें टाँकाफलक में</string>
     <string name="copies_the_public_key_to_the_clipboard_for_sharing">ख्याप्य कुंचिका की अनुकृति करता है टाँकाफलक में बाँटने के लिए</string>
-    <string name="copy_public_key_npub_to_the_clipboard">ख्याप्य कुंचिका (NPub) का अनुकरण करें टाँकाफलक में</string>
+    <string name="copy_public_key_npub_to_the_clipboard">ख्याप्य कुंचिका (एनपुब॰) की अनुकृति करें टाँकाफलक में</string>
     <string name="send_a_direct_message">सीधा संदेश भेजें</string>
     <string name="edits_the_user_s_metadata">उपयोगकर्ता के उपतथ्य का सम्पादन करता है</string>
     <string name="follow">अनुचरण करें</string>
@@ -147,10 +147,10 @@
     <string name="unblock">बाधा हटाएँ</string>
     <string name="copy_user_id">उपयोगकर्ता विभेदक की अनुकृति करें</string>
     <string name="unblock_user">उपयोगकर्ता बाधा हटाएँ</string>
-    <string name="npub_hex_username">"npub, उपयोगकर्ता नाम, लेख"</string>
+    <string name="npub_hex_username">"एनपुब॰, उपयोगकर्ता नाम, लेख"</string>
     <string name="clear">रिक्त करें</string>
     <string name="app_logo">क्रमक चिह्न</string>
-    <string name="nsec_npub_hex_private_key">nsec.. अथवा npub..</string>
+    <string name="nsec_npub_hex_private_key">एनसेक॰.. अथवा एनपुब॰..</string>
     <string name="ncryptsec_password">कुंचिका को खोलने के लिए पारणशब्द</string>
     <string name="show_password">पारणशब्द दिखाएँ</string>
     <string name="hide_password">पारणशब्द छिपाएँ</string>
@@ -170,9 +170,9 @@
     <string name="already_have_an_account">क्या नोस्ट्र लेखा पहले से है?</string>
     <string name="create_a_new_account">नया लेखा बनाएँ</string>
     <string name="generate_a_new_key">नयी कुंचिका बनाएँ</string>
-    <string name="loading_feed">सूचनावली प्राप्त किया जा रहा है</string>
-    <string name="loading_account">लेखा प्राप्त किया जा रहा है</string>
-    <string name="error_loading_replies">"उत्तरों को प्राप्त करने में अपक्रम "</string>
+    <string name="loading_feed">सूचनावली प्राप्त की जा रही है</string>
+    <string name="loading_account">लेखा जानकारी प्राप्त की जा रही है</string>
+    <string name="error_loading_replies">"प्रतिवचनों को प्राप्त करने में अपक्रम : "</string>
     <string name="try_again">पुनः प्रयास करें</string>
     <string name="feed_is_empty">सूचनावली रिक्त है।</string>
     <string name="refresh">नवीकरण</string>
@@ -185,7 +185,7 @@
     <string name="leave">निर्गमन</string>
     <string name="unfollow">अनुचरण ना करें</string>
     <string name="channel_created">प्रणाली बनायी गयी</string>
-    <string name="channel_information_changed_to">"प्रणाली सूचना बना दिया किया गया इसे"</string>
+    <string name="channel_information_changed_to">"प्रणाली जानकारी परिवर्तित की गयी"</string>
     <string name="public_chat">सार्वजनिक चर्चा</string>
     <string name="posts_received">पत्र प्राप्त</string>
     <string name="remove">हटाएँ</string>
@@ -208,7 +208,7 @@
     <string name="others">अन्य</string>
     <string name="mark_all_known_as_read">सब ज्ञात को पढ लिया चिह्नित करें</string>
     <string name="mark_all_new_as_read">सब नये को पढ लिया चिह्नित करें</string>
-    <string name="mark_all_as_read">सब पढ लिया चिह्नित करें</string>
+    <string name="mark_all_as_read">सब को पढ लिया चिह्नित करें</string>
     <string name="backup_keys">कुंचिकाएँ सुरक्षित रखें</string>
     <string name="account_backup_tips2_md" tools:ignore="Typos">## कुंचिका सुरक्षार्थ अनुकृति तथा सुरक्षा सुझाव
         \n\nआपकी लेखा एक गुप्त कुंचिका से सुरक्षित किया गया है। कुंचिका अक्षरों की एक लम्बी श्रृंखला है जो **nsec1** से आरम्भ होता है। जिस किसी के पास यह कुंचिका है वह पत्र प्रकाशन कर सकेगा तथा आपका परिचय परिवर्तित कर सकेगा।
