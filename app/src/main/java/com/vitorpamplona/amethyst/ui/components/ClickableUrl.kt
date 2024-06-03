@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
 fun ClickableUrl(
@@ -39,6 +40,8 @@ fun ClickableUrl(
 
     ClickableText(
         text = text,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         onClick = {
             runCatching {
                 val doubleCheckedUrl = if (url.contains("://")) url else "https://$url"
