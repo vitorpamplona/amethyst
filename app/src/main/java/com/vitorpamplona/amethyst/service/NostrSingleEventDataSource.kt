@@ -178,8 +178,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
                                 ),
                             tags = mapOf("e" to it.map { it.idHex }),
                             since = findMinimumEOSEs(it),
-                            // Max amount of "replies" to download on a specific event.
-                            limit = 10,
+                            limit = 100,
                         ),
                 ),
             )
