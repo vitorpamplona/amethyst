@@ -512,7 +512,9 @@ class Relay(
             it.send(str)
             RelayStats.addBytesSent(url, str.bytesUsedInMemory())
 
-            Log.d("Relay", "Relay send $url $str")
+            if (BuildConfig.DEBUG) {
+                Log.d("Relay", "Relay send $url $str")
+            }
         }
     }
 
