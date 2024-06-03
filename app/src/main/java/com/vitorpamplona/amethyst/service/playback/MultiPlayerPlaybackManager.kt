@@ -86,6 +86,8 @@ class MultiPlayerPlaybackManager(
         applicationContext: Context,
     ): MediaSession {
         val existingSession = playingMap.get(id) ?: cache.get(id)
+        // avoids saving positions for live streams otherwise caching goes crazy
+        val mustCachePositions = !uri.contains(".m3u8", true)
         if (existingSession != null) return existingSession
 
         val player =
@@ -115,7 +117,9 @@ class MultiPlayerPlaybackManager(
                         playingMap.put(id, mediaSession)
                     } else {
                         player.setWakeMode(C.WAKE_MODE_NONE)
-                        cachedPositions.add(uri, player.currentPosition)
+                        if (mustCachePositions) {
+                            cachedPositions.add(uri, player.currentPosition)
+                        }
                         cache.put(id, mediaSession)
                         playingMap.remove(id, mediaSession)
                     }
@@ -125,20 +129,22 @@ class MultiPlayerPlaybackManager(
                     when (playbackState) {
                         STATE_IDLE -> {
                             // only saves if it wqs playing
-                            if (abs(player.currentPosition) > 1) {
+                            if (mustCachePositions && abs(player.currentPosition) > 1) {
                                 cachedPositions.add(uri, player.currentPosition)
                             }
                         }
                         STATE_READY -> {
-                            cachedPositions.get(uri)?.let { lastPosition ->
-                                if (abs(player.currentPosition - lastPosition) > 5 * 60) {
-                                    player.seekTo(lastPosition)
+                            if (mustCachePositions) {
+                                cachedPositions.get(uri)?.let { lastPosition ->
+                                    if (abs(player.currentPosition - lastPosition) > 5 * 60) {
+                                        player.seekTo(lastPosition)
+                                    }
                                 }
                             }
                         }
                         else -> {
                             // only saves if it wqs playing
-                            if (abs(player.currentPosition) > 1) {
+                            if (mustCachePositions && abs(player.currentPosition) > 1) {
                                 cachedPositions.add(uri, player.currentPosition)
                             }
                         }
@@ -150,7 +156,9 @@ class MultiPlayerPlaybackManager(
                     newPosition: PositionInfo,
                     reason: Int,
                 ) {
-                    cachedPositions.add(uri, newPosition.positionMs)
+                    if (mustCachePositions) {
+                        cachedPositions.add(uri, newPosition.positionMs)
+                    }
                 }
             },
         )
