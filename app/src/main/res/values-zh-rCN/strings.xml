@@ -407,6 +407,7 @@
     <string name="languages">语言</string>
     <string name="tags">标签</string>
     <string name="posting_policy">发布政策</string>
+    <string name="relay_error_messages">该中继的错误和通知</string>
     <string name="message_length">消息长度</string>
     <string name="subscriptions">订阅</string>
     <string name="filters">筛选器</string>
