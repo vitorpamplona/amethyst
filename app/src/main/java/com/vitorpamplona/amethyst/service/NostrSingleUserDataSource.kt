@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.service.relays.EOSETime
 import com.vitorpamplona.amethyst.service.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.StatusEvent
@@ -67,7 +68,7 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
                         types = EVENT_FINDER_TYPES,
                         filter =
                             JsonFilter(
-                                kinds = listOf(MetadataEvent.KIND, StatusEvent.KIND),
+                                kinds = listOf(MetadataEvent.KIND, StatusEvent.KIND, AdvertisedRelayListEvent.KIND),
                                 authors = groupIds,
                                 since = minEOSEs,
                             ),
