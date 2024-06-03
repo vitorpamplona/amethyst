@@ -759,6 +759,9 @@ fun RenderContentDVMThumb(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    // downloads user metadata to pre-load the NIP-65 relays.
+    val user = baseNote.author?.live()?.metadata
+
     val card = observeAppDefinition(appDefinitionNote = baseNote)
 
     LeftPictureLayout(
