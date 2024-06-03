@@ -781,10 +781,7 @@ class Account(
         note.event?.let { event ->
             LnZapRequestEvent.create(
                 event,
-                relays =
-                    getNIP65RelayList()?.readRelays()?.toSet()
-                        ?: userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
-                        ?: localRelays.map { it.url }.toSet(),
+                relays = getReceivingRelays(),
                 signer,
                 pollOption,
                 message,
@@ -793,6 +790,12 @@ class Account(
                 onReady = onReady,
             )
         }
+    }
+
+    fun getReceivingRelays(): Set<String> {
+        return getNIP65RelayList()?.readRelays()?.toSet()
+            ?: userProfile().latestContactList?.relays()?.filter { it.value.read }?.keys?.ifEmpty { null }
+            ?: localRelays.filter { it.read }.map { it.url }.toSet()
     }
 
     fun hasWalletConnectSetup(): Boolean {
@@ -2462,7 +2465,7 @@ class Account(
         dvmPublicKey: String,
         onReady: (event: NIP90ContentDiscoveryRequestEvent) -> Unit,
     ) {
-        NIP90ContentDiscoveryRequestEvent.create(dvmPublicKey, signer.pubKey, signer) {
+        NIP90ContentDiscoveryRequestEvent.create(dvmPublicKey, signer.pubKey, getReceivingRelays(), signer) {
             val relayList = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(dvmPublicKey))?.event as? AdvertisedRelayListEvent)?.readRelays()
 
             if (relayList != null) {
