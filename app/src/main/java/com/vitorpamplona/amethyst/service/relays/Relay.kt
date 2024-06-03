@@ -226,11 +226,9 @@ class Relay(
             checkNotInMainThread()
 
             socket?.cancel() // 1000, "Normal close"
-            // Failures disconnect the relay.
-            markConnectionAsClosed()
 
             // checks if this is an actual failure. Closing the socket generates an onFailure as well.
-            if (!(socket == null && t.message == "Socket closed")) {
+            if (!(socket == null && (t.message == "Socket is closed" || t.message == "Socket closed"))) {
                 RelayStats.newError(url, response?.message ?: t.message)
 
                 Log.w("Relay", "Relay onFailure $url, ${response?.message} $response ${t.message} $socket")
@@ -243,6 +241,9 @@ class Relay(
                     )
                 }
             }
+
+            // Failures disconnect the relay.
+            markConnectionAsClosed()
         }
     }
 
