@@ -404,6 +404,7 @@
     <string name="languages">Språk</string>
     <string name="tags">Taggar</string>
     <string name="posting_policy">Publiceringspolicy</string>
+    <string name="relay_error_messages">Fel och meddelanden från detta relä</string>
     <string name="message_length">Meddelandelängd</string>
     <string name="subscriptions">Prenumerationer</string>
     <string name="filters">Filter</string>
