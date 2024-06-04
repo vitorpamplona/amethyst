@@ -54,7 +54,7 @@ class VideoHorizontalEvent(
             sensitiveContent: Boolean? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (FileHeaderEvent) -> Unit,
+            onReady: (VideoHorizontalEvent) -> Unit,
         ) {
             create(
                 KIND,

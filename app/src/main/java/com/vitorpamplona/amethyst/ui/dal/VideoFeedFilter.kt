@@ -23,10 +23,13 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.SUPPORTED_VIDEO_FEED_MIME_TYPES_SET
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.VideoHorizontalEvent
+import com.vitorpamplona.quartz.events.VideoVerticalEvent
 
 class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String {
@@ -65,7 +68,12 @@ class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
     ): Boolean {
         val noteEvent = it.event
 
-        return ((noteEvent is FileHeaderEvent && noteEvent.hasUrl() && noteEvent.isImageOrVideo()) || (noteEvent is FileStorageHeaderEvent && noteEvent.isImageOrVideo())) &&
+        return (
+            (noteEvent is FileHeaderEvent && noteEvent.hasUrl() && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET)) ||
+                (noteEvent is VideoVerticalEvent && noteEvent.hasUrl() && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET)) ||
+                (noteEvent is VideoHorizontalEvent && noteEvent.hasUrl() && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET)) ||
+                (noteEvent is FileStorageHeaderEvent && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET))
+        ) &&
             params.match(noteEvent) &&
             account.isAcceptable(it)
     }

@@ -54,11 +54,7 @@ class FileStorageHeaderEvent(
 
     fun blurhash() = tags.firstOrNull { it.size > 1 && it[0] == BLUR_HASH }?.get(1)
 
-    fun isImageOrVideo(): Boolean {
-        val mimeType = mimeType() ?: return false
-
-        return mimeType.startsWith("image/") || mimeType.startsWith("video/")
-    }
+    fun isOneOf(mimeTypes: Set<String>) = tags.any { it.size > 1 && it[0] == FileHeaderEvent.MIME_TYPE && mimeTypes.contains(it[1]) }
 
     companion object {
         const val KIND = 1065

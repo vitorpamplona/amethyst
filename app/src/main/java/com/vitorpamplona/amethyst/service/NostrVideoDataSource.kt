@@ -28,9 +28,14 @@ import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.events.VideoHorizontalEvent
+import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+
+val SUPPORTED_VIDEO_FEED_MIME_TYPES = listOf("image/jpeg", "image/gif", "image/png", "image/webp", "video/mp4", "video/mpeg", "video/webm", "audio/aac", "audio/mpeg", "audio/webm", "audio/wav")
+val SUPPORTED_VIDEO_FEED_MIME_TYPES_SET = SUPPORTED_VIDEO_FEED_MIME_TYPES.toSet()
 
 object NostrVideoDataSource : NostrDataSource("VideoFeed") {
     lateinit var account: Account
@@ -39,8 +44,6 @@ object NostrVideoDataSource : NostrDataSource("VideoFeed") {
     val latestEOSEs = EOSEAccount()
 
     var job: Job? = null
-
-    val SUPPORTED_VIDEO_MIME_TYPES = listOf("image/jpeg", "image/gif", "image/png", "image/webp", "video/mp4", "video/mpeg", "video/webm", "audio/aac", "audio/mpeg", "audio/webm", "audio/wav")
 
     override fun start() {
         job?.cancel()
@@ -68,9 +71,9 @@ object NostrVideoDataSource : NostrDataSource("VideoFeed") {
             filter =
                 JsonFilter(
                     authors = follows,
-                    kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND),
+                    kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
                     limit = 200,
-                    tags = mapOf("m" to SUPPORTED_VIDEO_MIME_TYPES),
+                    tags = mapOf("m" to SUPPORTED_VIDEO_FEED_MIME_TYPES),
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
@@ -89,14 +92,14 @@ object NostrVideoDataSource : NostrDataSource("VideoFeed") {
             types = setOf(FeedType.GLOBAL),
             filter =
                 JsonFilter(
-                    kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND),
+                    kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
                     tags =
                         mapOf(
                             "t" to
                                 hashToLoad
                                     .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
                                     .flatten(),
-                            "m" to SUPPORTED_VIDEO_MIME_TYPES,
+                            "m" to SUPPORTED_VIDEO_FEED_MIME_TYPES,
                         ),
                     limit = 100,
                     since =
@@ -117,14 +120,14 @@ object NostrVideoDataSource : NostrDataSource("VideoFeed") {
             types = setOf(FeedType.GLOBAL),
             filter =
                 JsonFilter(
-                    kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND),
+                    kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
                     tags =
                         mapOf(
                             "g" to
                                 hashToLoad
                                     .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
                                     .flatten(),
-                            "m" to SUPPORTED_VIDEO_MIME_TYPES,
+                            "m" to SUPPORTED_VIDEO_FEED_MIME_TYPES,
                         ),
                     limit = 100,
                     since =

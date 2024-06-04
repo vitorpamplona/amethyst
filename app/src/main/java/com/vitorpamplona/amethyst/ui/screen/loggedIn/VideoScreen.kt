@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
+import com.vitorpamplona.amethyst.ui.note.types.JustVideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
 import com.vitorpamplona.amethyst.ui.screen.FeedError
 import com.vitorpamplona.amethyst.ui.screen.FeedState
@@ -104,6 +105,7 @@ import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.events.VideoEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -331,6 +333,8 @@ private fun RenderVideoOrPictureNote(
                 FileHeaderDisplay(note, false, true, accountViewModel)
             } else if (noteEvent is FileStorageHeaderEvent) {
                 FileStorageHeaderDisplay(note, false, true, accountViewModel)
+            } else if (noteEvent is VideoEvent) {
+                JustVideoDisplay(note, false, true, accountViewModel)
             }
         }
     }

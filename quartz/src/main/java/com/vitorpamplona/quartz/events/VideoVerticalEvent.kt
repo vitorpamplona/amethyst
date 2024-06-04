@@ -54,7 +54,7 @@ class VideoVerticalEvent(
             sensitiveContent: Boolean? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (FileHeaderEvent) -> Unit,
+            onReady: (VideoVerticalEvent) -> Unit,
         ) {
             create(
                 KIND,

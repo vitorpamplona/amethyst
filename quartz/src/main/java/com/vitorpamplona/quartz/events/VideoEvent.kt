@@ -65,6 +65,8 @@ abstract class VideoEvent(
 
     fun hasUrl() = tags.any { it.size > 1 && it[0] == URL }
 
+    fun isOneOf(mimeTypes: Set<String>) = tags.any { it.size > 1 && it[0] == FileHeaderEvent.MIME_TYPE && mimeTypes.contains(it[1]) }
+
     companion object {
         private const val URL = "url"
         private const val ENCRYPTION_KEY = "aes-256-gcm"
@@ -84,7 +86,7 @@ abstract class VideoEvent(
         private const val IMAGE = "image"
         private const val THUMB = "thumb"
 
-        fun create(
+        fun <T : VideoEvent> create(
             kind: Int,
             url: String,
             magnetUri: String? = null,
@@ -102,7 +104,7 @@ abstract class VideoEvent(
             altDescription: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (FileHeaderEvent) -> Unit,
+            onReady: (T) -> Unit,
         ) {
             val tags =
                 listOfNotNull(
@@ -128,7 +130,7 @@ abstract class VideoEvent(
                 )
 
             val content = alt ?: ""
-            signer.sign(createdAt, kind, tags.toTypedArray(), content, onReady)
+            signer.sign<T>(createdAt, kind, tags.toTypedArray(), content, onReady)
         }
     }
 }
