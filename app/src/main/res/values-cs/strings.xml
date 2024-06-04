@@ -405,6 +405,7 @@
     <string name="languages">Jazyky</string>
     <string name="tags">Tagy</string>
     <string name="posting_policy">Politika příspěvků</string>
+    <string name="relay_error_messages">Chyby a upozornění z tohoto relé</string>
     <string name="message_length">Délka zprávy</string>
     <string name="subscriptions">Předplatné</string>
     <string name="filters">Filtry</string>

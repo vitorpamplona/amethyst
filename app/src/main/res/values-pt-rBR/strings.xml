@@ -405,6 +405,7 @@
     <string name="languages">Línguas</string>
     <string name="tags">Cerquilhas</string>
     <string name="posting_policy">Política de postagem</string>
+    <string name="relay_error_messages">Erros e Avisos deste Relé</string>
     <string name="message_length">Tamanho da mensagem</string>
     <string name="subscriptions">Assinaturas</string>
     <string name="filters">Filtros</string>

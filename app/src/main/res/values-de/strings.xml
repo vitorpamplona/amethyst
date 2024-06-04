@@ -410,6 +410,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="languages">Sprachen</string>
     <string name="tags">Tags</string>
     <string name="posting_policy">Veröffentlichungsrichtlinie</string>
+    <string name="relay_error_messages">Fehler und Hinweise von diesem Relais</string>
     <string name="message_length">Nachrichtenlänge</string>
     <string name="subscriptions">Abonnements</string>
     <string name="filters">Filter</string>
