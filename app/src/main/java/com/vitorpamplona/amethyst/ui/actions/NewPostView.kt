@@ -426,6 +426,7 @@ fun NewPostView(
                                                 VideoView(
                                                     myUrlPreview,
                                                     roundedCorner = true,
+                                                    isFiniteHeight = false,
                                                     accountViewModel = accountViewModel,
                                                 )
                                             } else {
@@ -1736,7 +1737,7 @@ fun ImageVideoDescription(
                         )
                     }
                 } else {
-                    VideoView(uri.toString(), roundedCorner = true, accountViewModel = accountViewModel)
+                    VideoView(uri.toString(), roundedCorner = true, isFiniteHeight = false, accountViewModel = accountViewModel)
                 }
             }
 

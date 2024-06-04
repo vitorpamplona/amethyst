@@ -29,10 +29,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -40,32 +40,28 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
-import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -79,14 +75,16 @@ import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.chatAuthorBox
-import com.vitorpamplona.amethyst.ui.theme.chatAuthorImage
+import com.vitorpamplona.amethyst.ui.theme.incognitoIconModifier
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
+import com.vitorpamplona.amethyst.ui.theme.messageBubbleLimits
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
@@ -132,7 +130,6 @@ fun ChatroomMessageCompose(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NormalChatNote(
     note: Note,
@@ -145,6 +142,17 @@ fun NormalChatNote(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
 ) {
+    val isLoggedInUser =
+        remember(note.author) {
+            accountViewModel.isLoggedUser(note.author)
+        }
+
+    if (routeForLastRead != null) {
+        LaunchedEffect(key1 = routeForLastRead) {
+            accountViewModel.loadAndMarkAsRead(routeForLastRead, note.createdAt())
+        }
+    }
+
     val drawAuthorInfo by
         remember(note) {
             derivedStateOf {
@@ -162,13 +170,104 @@ fun NormalChatNote(
             }
         }
 
+    ChatBubbleLayout(
+        isLoggedInUser = isLoggedInUser,
+        innerQuote = innerQuote,
+        isSimplified = accountViewModel.settings.featureSet == FeatureSetType.SIMPLIFIED,
+        hasDetailsToShow = note.zaps.isNotEmpty() || note.zapPayments.isNotEmpty() || note.reactions.isNotEmpty(),
+        drawAuthorInfo = drawAuthorInfo,
+        parentBackgroundColor = parentBackgroundColor,
+        onClick = {
+            if (note.event is ChannelCreateEvent) {
+                nav("Channel/${note.idHex}")
+                true
+            } else {
+                false
+            }
+        },
+        onAuthorClick = {
+            note.author?.let {
+                nav("User/${it.pubkeyHex}")
+            }
+        },
+        actionMenu = { popupExpanded, onDismiss ->
+            NoteQuickActionMenu(
+                note = note,
+                popupExpanded = popupExpanded,
+                onDismiss = onDismiss,
+                onWantsToEditDraft = { onWantsToEditDraft(note) },
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        },
+        drawAuthorLine = {
+            DrawAuthorInfo(
+                note,
+                accountViewModel,
+                nav,
+            )
+        },
+        detailRow = {
+            if (note.isDraft()) {
+                DisplayDraftChat()
+            }
+            IncognitoBadge(note)
+            ChatTimeAgo(note)
+            RelayBadgesHorizontal(note, accountViewModel, nav = nav)
+            Spacer(modifier = DoubleHorzSpacer)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = RowColSpacing) {
+                ReplyReaction(
+                    baseNote = note,
+                    grayTint = MaterialTheme.colorScheme.placeholderText,
+                    accountViewModel = accountViewModel,
+                    showCounter = false,
+                    iconSizeModifier = Size15Modifier,
+                ) {
+                    onWantsToReply(note)
+                }
+                Spacer(modifier = StdHorzSpacer)
+                LikeReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
+
+                ZapReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
+            }
+        },
+    ) { backgroundBubbleColor ->
+        MessageBubbleLines(
+            note,
+            innerQuote,
+            backgroundBubbleColor,
+            onWantsToReply,
+            onWantsToEditDraft,
+            canPreview,
+            accountViewModel,
+            nav,
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ChatBubbleLayout(
+    isLoggedInUser: Boolean,
+    innerQuote: Boolean,
+    isSimplified: Boolean,
+    hasDetailsToShow: Boolean,
+    drawAuthorInfo: Boolean,
+    parentBackgroundColor: MutableState<Color>? = null,
+    onClick: () -> Boolean,
+    onAuthorClick: () -> Unit,
+    actionMenu: @Composable (popupExpanded: Boolean, onDismiss: () -> Unit) -> Unit,
+    detailRow: @Composable () -> Unit,
+    drawAuthorLine: @Composable () -> Unit,
+    inner: @Composable (MutableState<Color>) -> Unit,
+) {
     val loggedInColors = MaterialTheme.colorScheme.mediumImportanceLink
     val otherColors = MaterialTheme.colorScheme.subtleBorder
     val defaultBackground = MaterialTheme.colorScheme.background
 
     val backgroundBubbleColor =
         remember {
-            if (accountViewModel.isLoggedUser(note.author)) {
+            if (isLoggedInUser) {
                 mutableStateOf(
                     loggedInColors.compositeOver(parentBackgroundColor?.value ?: defaultBackground),
                 )
@@ -176,182 +275,176 @@ fun NormalChatNote(
                 mutableStateOf(otherColors.compositeOver(parentBackgroundColor?.value ?: defaultBackground))
             }
         }
+
     val alignment: Arrangement.Horizontal =
-        remember {
-            if (accountViewModel.isLoggedUser(note.author)) {
-                Arrangement.End
-            } else {
-                Arrangement.Start
-            }
+        if (isLoggedInUser) {
+            Arrangement.End
+        } else {
+            Arrangement.Start
         }
+
     val shape: Shape =
-        remember {
-            if (accountViewModel.isLoggedUser(note.author)) {
-                ChatBubbleShapeMe
-            } else {
-                ChatBubbleShapeThem
+        if (isLoggedInUser) {
+            ChatBubbleShapeMe
+        } else {
+            ChatBubbleShapeThem
+        }
+
+    Row(
+        modifier = if (innerQuote) ChatPaddingInnerQuoteModifier else ChatPaddingModifier,
+        horizontalArrangement = alignment,
+    ) {
+        var popupExpanded by remember { mutableStateOf(false) }
+
+        val modif2 = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier
+
+        val showDetails =
+            remember {
+                mutableStateOf(
+                    if (isSimplified) {
+                        hasDetailsToShow
+                    } else {
+                        true
+                    },
+                )
             }
-        }
 
-    if (routeForLastRead != null) {
-        LaunchedEffect(key1 = routeForLastRead) {
-            accountViewModel.loadAndMarkAsRead(routeForLastRead, note.createdAt())
-        }
-    }
-
-    Column {
-        Row(
-            modifier = if (innerQuote) ChatPaddingInnerQuoteModifier else ChatPaddingModifier,
-            horizontalArrangement = alignment,
-        ) {
-            val availableBubbleSize = remember { mutableIntStateOf(0) }
-            var popupExpanded by remember { mutableStateOf(false) }
-
-            val modif2 = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier
-
-            val showDetails =
-                remember {
-                    mutableStateOf(
-                        if (accountViewModel.settings.featureSet == FeatureSetType.SIMPLIFIED) {
-                            note.zaps.isNotEmpty() || note.zapPayments.isNotEmpty() || note.reactions.isNotEmpty()
-                        } else {
-                            true
-                        },
-                    )
-                }
-
-            val clickableModifier =
-                remember {
-                    Modifier.combinedClickable(
-                        onClick = {
-                            if (note.event is ChannelCreateEvent) {
-                                nav("Channel/${note.idHex}")
-                            } else {
-                                if (accountViewModel.settings.featureSet == FeatureSetType.SIMPLIFIED) {
-                                    showDetails.value = !showDetails.value
-                                }
+        val clickableModifier =
+            remember {
+                Modifier.combinedClickable(
+                    onClick = {
+                        if (!onClick()) {
+                            if (isSimplified) {
+                                showDetails.value = !showDetails.value
                             }
-                        },
-                        onLongClick = { popupExpanded = true },
-                    )
-                }
-
-            Row(
-                horizontalArrangement = alignment,
-                modifier =
-                    modif2.onSizeChanged {
-                        if (availableBubbleSize.intValue != it.width) {
-                            availableBubbleSize.intValue = it.width
                         }
                     },
-            ) {
-                Surface(
-                    color = backgroundBubbleColor.value,
-                    shape = shape,
-                    modifier = clickableModifier,
-                ) {
-                    RenderBubble(
-                        note,
-                        drawAuthorInfo,
-                        alignment,
-                        innerQuote,
-                        backgroundBubbleColor,
-                        onWantsToReply,
-                        onWantsToEditDraft,
-                        canPreview,
-                        availableBubbleSize,
-                        showDetails,
-                        accountViewModel,
-                        nav,
-                    )
-                }
+                    onLongClick = { popupExpanded = true },
+                )
             }
 
-            NoteQuickActionMenu(
-                note = note,
-                popupExpanded = popupExpanded,
-                onDismiss = { popupExpanded = false },
-                onWantsToEditDraft = { onWantsToEditDraft(note) },
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+        Row(
+            horizontalArrangement = alignment,
+            modifier = modif2,
+        ) {
+            Surface(
+                color = backgroundBubbleColor.value,
+                shape = shape,
+                modifier = clickableModifier,
+            ) {
+                Column(modifier = messageBubbleLimits, verticalArrangement = RowColSpacing5dp) {
+                    if (drawAuthorInfo) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = alignment,
+                            modifier = StdTopPadding.then(Modifier.clickable(onClick = onAuthorClick)),
+                        ) {
+                            drawAuthorLine()
+                        }
+                    }
+
+                    inner(backgroundBubbleColor)
+
+                    if (showDetails.value) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = ReactionRowHeightChat,
+                        ) {
+                            detailRow()
+                        }
+                    }
+                }
+            }
+        }
+
+        actionMenu(popupExpanded) {
+            popupExpanded = false
         }
     }
 }
 
+@Preview
 @Composable
-private fun RenderBubble(
-    baseNote: Note,
-    drawAuthorInfo: Boolean,
-    alignment: Arrangement.Horizontal,
-    innerQuote: Boolean,
-    backgroundBubbleColor: MutableState<Color>,
-    onWantsToReply: (Note) -> Unit,
-    onWantsToEditDraft: (Note) -> Unit,
-    canPreview: Boolean,
-    availableBubbleSize: MutableState<Int>,
-    showDetails: State<Boolean>,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    val bubbleSize = remember { mutableIntStateOf(0) }
-
-    val bubbleModifier =
+private fun BubblePreview() {
+    val backgroundBubbleColor =
         remember {
-            Modifier
-                .padding(start = 10.dp, end = 10.dp, bottom = 5.dp)
-                .onSizeChanged {
-                    if (bubbleSize.intValue != it.width) {
-                        bubbleSize.intValue = it.width
-                    }
-                }
+            mutableStateOf<Color>(Color.Transparent)
         }
 
-    Column(modifier = bubbleModifier) {
-        MessageBubbleLines(
-            drawAuthorInfo,
-            baseNote,
-            alignment,
-            availableBubbleSize,
-            innerQuote,
-            backgroundBubbleColor,
-            bubbleSize,
-            onWantsToReply,
-            onWantsToEditDraft,
-            canPreview,
-            showDetails,
-            accountViewModel,
-            nav,
-        )
+    Column {
+        ChatBubbleLayout(
+            isLoggedInUser = false,
+            innerQuote = false,
+            isSimplified = false,
+            hasDetailsToShow = true,
+            drawAuthorInfo = true,
+            parentBackgroundColor = backgroundBubbleColor,
+            onClick = { false },
+            onAuthorClick = {},
+            actionMenu = { popupExpanded, onDismiss ->
+            },
+            drawAuthorLine = {
+                UserDisplayNameLayout(
+                    picture = {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(Size20dp).clip(CircleShape),
+                        )
+                    },
+                    name = {
+                        Text("Me", fontWeight = FontWeight.Bold)
+                    },
+                )
+            },
+            detailRow = { Text("Relays and Actions") },
+        ) { backgroundBubbleColor ->
+            Text("This is my note")
+        }
+
+        ChatBubbleLayout(
+            isLoggedInUser = true,
+            innerQuote = false,
+            isSimplified = false,
+            hasDetailsToShow = true,
+            drawAuthorInfo = true,
+            parentBackgroundColor = backgroundBubbleColor,
+            onClick = { false },
+            onAuthorClick = {},
+            actionMenu = { popupExpanded, onDismiss ->
+            },
+            drawAuthorLine = {
+                UserDisplayNameLayout(
+                    picture = {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(Size20dp).clip(CircleShape),
+                        )
+                    },
+                    name = {
+                        Text("Me", fontWeight = FontWeight.Bold)
+                    },
+                )
+            },
+            detailRow = { Text("Relays and Actions") },
+        ) { backgroundBubbleColor ->
+            Text("This is a very long long loong note")
+        }
     }
 }
 
 @Composable
 private fun MessageBubbleLines(
-    drawAuthorInfo: Boolean,
     baseNote: Note,
-    alignment: Arrangement.Horizontal,
-    availableBubbleSize: MutableState<Int>,
     innerQuote: Boolean,
     backgroundBubbleColor: MutableState<Color>,
-    bubbleSize: MutableState<Int>,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     canPreview: Boolean,
-    showDetails: State<Boolean>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    if (drawAuthorInfo) {
-        DrawAuthorInfo(
-            baseNote,
-            alignment,
-            accountViewModel.settings.showProfilePictures.value,
-            accountViewModel,
-            nav,
-        )
-    }
-
     if (baseNote.event !is DraftEvent) {
         RenderReplyRow(
             note = baseNote,
@@ -374,41 +467,6 @@ private fun MessageBubbleLines(
         accountViewModel = accountViewModel,
         nav = nav,
     )
-
-    if (showDetails.value) {
-        ConstrainedStatusRow(
-            bubbleSize = bubbleSize,
-            availableBubbleSize = availableBubbleSize,
-            firstColumn = {
-                if (baseNote.isDraft()) {
-                    DisplayDraftChat()
-                }
-                IncognitoBadge(baseNote)
-                ChatTimeAgo(baseNote)
-                RelayBadgesHorizontal(baseNote, accountViewModel, nav = nav)
-                Spacer(modifier = DoubleHorzSpacer)
-            },
-            secondColumn = {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = RowColSpacing) {
-                    LikeReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
-                }
-                ZapReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
-                Spacer(modifier = StdHorzSpacer)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = RowColSpacing) {
-                    ReplyReaction(
-                        baseNote = baseNote,
-                        grayTint = MaterialTheme.colorScheme.placeholderText,
-                        accountViewModel = accountViewModel,
-                        showCounter = false,
-                        iconSizeModifier = Size15Modifier,
-                    ) {
-                        onWantsToReply(baseNote)
-                    }
-                }
-                Spacer(modifier = StdHorzSpacer)
-            },
-        )
-    }
 }
 
 @Composable
@@ -536,43 +594,9 @@ private fun RenderDraftEvent(
 
 @Composable
 private fun ConstrainedStatusRow(
-    bubbleSize: MutableState<Int>,
-    availableBubbleSize: MutableState<Int>,
     firstColumn: @Composable () -> Unit,
     secondColumn: @Composable () -> Unit,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        modifier =
-            with(LocalDensity.current) {
-                Modifier
-                    .padding(top = Size5dp)
-                    .height(Size20dp)
-                    .widthIn(
-                        bubbleSize.value.toDp(),
-                        availableBubbleSize.value.toDp(),
-                    )
-            },
-    ) {
-        Column(modifier = ReactionRowHeightChat) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = ReactionRowHeightChat,
-            ) {
-                firstColumn()
-            }
-        }
-
-        Column(modifier = ReactionRowHeightChat) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = ReactionRowHeightChat,
-            ) {
-                secondColumn()
-            }
-        }
-    }
 }
 
 @Composable
@@ -703,68 +727,56 @@ private fun RenderCreateChannelNote(note: Note) {
 @Composable
 private fun DrawAuthorInfo(
     baseNote: Note,
-    alignment: Arrangement.Horizontal,
-    loadProfilePicture: Boolean,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     baseNote.author?.let {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = alignment,
-            modifier =
-                Modifier
-                    .padding(top = Size10dp)
-                    .clickable {
-                        nav("User/${baseNote.author?.pubkeyHex}")
-                    },
-        ) {
-            WatchAndDisplayUser(it, loadProfilePicture, accountViewModel, nav)
-        }
+        WatchAndDisplayUser(it, accountViewModel, nav)
     }
+}
+
+@Composable
+fun UserDisplayNameLayout(
+    picture: @Composable () -> Unit,
+    name: @Composable () -> Unit,
+) {
+    Box(chatAuthorBox, contentAlignment = Alignment.TopEnd) {
+        picture()
+    }
+
+    Spacer(modifier = StdHorzSpacer)
+
+    name()
 }
 
 @Composable
 private fun WatchAndDisplayUser(
     author: User,
-    loadProfilePicture: Boolean,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     val userState by author.live().userMetadataInfo.observeAsState()
 
-    Box(chatAuthorBox, contentAlignment = Alignment.TopEnd) {
-        InnerUserPicture(
-            userHex = author.pubkeyHex,
-            userPicture = userState?.picture,
-            userName = userState?.bestName(),
-            size = Size20dp,
-            modifier = Modifier,
-            accountViewModel = accountViewModel,
-        )
+    UserDisplayNameLayout(
+        picture = {
+            InnerUserPicture(
+                userHex = author.pubkeyHex,
+                userPicture = userState?.picture,
+                userName = userState?.bestName(),
+                size = Size20dp,
+                modifier = Modifier,
+                accountViewModel = accountViewModel,
+            )
 
-        ObserveAndDisplayFollowingMark(author.pubkeyHex, Size5dp, accountViewModel)
-    }
-
-    if (userState != null) {
-        DisplayMessageUsername(userState?.bestName() ?: author.pubkeyDisplayHex(), userState?.tags ?: EmptyTagList)
-    } else {
-        DisplayMessageUsername(author.pubkeyDisplayHex(), EmptyTagList)
-    }
-}
-
-@Composable
-private fun UserIcon(
-    pubkeyHex: String,
-    userProfilePicture: String?,
-    loadProfilePicture: Boolean,
-) {
-    RobohashFallbackAsyncImage(
-        robot = pubkeyHex,
-        model = userProfilePicture,
-        contentDescription = stringResource(id = R.string.profile_image),
-        loadProfilePicture = loadProfilePicture,
-        modifier = chatAuthorImage,
+            ObserveAndDisplayFollowingMark(author.pubkeyHex, Size5dp, accountViewModel)
+        },
+        name = {
+            if (userState != null) {
+                DisplayMessageUsername(userState?.bestName() ?: author.pubkeyDisplayHex(), userState?.tags ?: EmptyTagList)
+            } else {
+                DisplayMessageUsername(author.pubkeyDisplayHex(), EmptyTagList)
+            }
+        },
     )
 }
 
@@ -773,7 +785,6 @@ private fun DisplayMessageUsername(
     userDisplayName: String,
     userTags: ImmutableListOfLists<String>,
 ) {
-    Spacer(modifier = StdHorzSpacer)
     CreateTextWithEmoji(
         text = userDisplayName,
         tags = userTags,

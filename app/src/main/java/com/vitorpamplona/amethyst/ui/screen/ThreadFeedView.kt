@@ -504,17 +504,17 @@ fun NoteMaster(
                             nav = nav,
                         )
                     } else if (noteEvent is VideoEvent) {
-                        VideoDisplay(baseNote, false, true, backgroundColor, accountViewModel, nav)
+                        VideoDisplay(baseNote, false, true, backgroundColor, false, accountViewModel, nav)
                     } else if (noteEvent is FileHeaderEvent) {
-                        FileHeaderDisplay(baseNote, true, accountViewModel)
+                        FileHeaderDisplay(baseNote, true, false, accountViewModel)
                     } else if (noteEvent is FileStorageHeaderEvent) {
-                        FileStorageHeaderDisplay(baseNote, true, accountViewModel)
+                        FileStorageHeaderDisplay(baseNote, true, false, accountViewModel)
                     } else if (noteEvent is PeopleListEvent) {
                         DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                     } else if (noteEvent is AudioTrackEvent) {
-                        AudioTrackHeader(noteEvent, baseNote, accountViewModel, nav)
+                        AudioTrackHeader(noteEvent, baseNote, false, accountViewModel, nav)
                     } else if (noteEvent is AudioHeaderEvent) {
-                        AudioHeader(noteEvent, baseNote, accountViewModel, nav)
+                        AudioHeader(noteEvent, baseNote, false, accountViewModel, nav)
                     } else if (noteEvent is CommunityPostApprovalEvent) {
                         RenderPostApproval(
                             baseNote,

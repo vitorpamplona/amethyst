@@ -66,6 +66,7 @@ fun VideoDisplay(
     makeItShort: Boolean,
     canPreview: Boolean,
     backgroundColor: MutableState<Color>,
+    isFiniteHeight: Boolean,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -143,6 +144,7 @@ fun VideoDisplay(
                 ZoomableContentView(
                     content = content,
                     roundedCorner = true,
+                    isFiniteHeight = isFiniteHeight,
                     accountViewModel = accountViewModel,
                 )
             }

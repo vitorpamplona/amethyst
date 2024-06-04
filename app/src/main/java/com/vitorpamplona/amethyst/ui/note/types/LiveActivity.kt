@@ -156,6 +156,7 @@ fun RenderLiveActivityEventInner(
                             artworkUri = cover,
                             authorName = baseNote.author?.toBestDisplayName(),
                             roundedCorner = true,
+                            isFiniteHeight = false,
                             accountViewModel = accountViewModel,
                             nostrUriCallback = "nostr:${baseNote.toNEvent()}",
                         )

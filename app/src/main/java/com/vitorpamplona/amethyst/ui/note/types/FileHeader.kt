@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.events.FileHeaderEvent
 fun FileHeaderDisplay(
     note: Note,
     roundedCorner: Boolean,
+    isFiniteHeight: Boolean,
     accountViewModel: AccountViewModel,
 ) {
     val event = (note.event as? FileHeaderEvent) ?: return
@@ -80,6 +81,7 @@ fun FileHeaderDisplay(
         ZoomableContentView(
             content = content,
             roundedCorner = roundedCorner,
+            isFiniteHeight = isFiniteHeight,
             accountViewModel = accountViewModel,
         )
     }

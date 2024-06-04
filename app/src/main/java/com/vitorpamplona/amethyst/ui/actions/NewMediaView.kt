@@ -252,6 +252,7 @@ fun ImageVideoPost(
                 VideoView(
                     videoUri = it.toString(),
                     roundedCorner = false,
+                    isFiniteHeight = false,
                     accountViewModel = accountViewModel,
                 )
             }

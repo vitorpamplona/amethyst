@@ -84,6 +84,7 @@ fun RenderLoaded(
             ZoomableContentView(
                 content = MediaUrlImage(url, uri = callbackUri),
                 roundedCorner = true,
+                isFiniteHeight = false,
                 accountViewModel = accountViewModel,
             )
         }
@@ -92,6 +93,7 @@ fun RenderLoaded(
             ZoomableContentView(
                 content = MediaUrlVideo(url, uri = callbackUri),
                 roundedCorner = true,
+                isFiniteHeight = false,
                 accountViewModel = accountViewModel,
             )
         }

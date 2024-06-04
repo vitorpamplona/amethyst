@@ -108,6 +108,7 @@ val StdPadding = Modifier.padding(10.dp)
 val BigPadding = Modifier.padding(15.dp)
 
 val RowColSpacing = Arrangement.spacedBy(3.dp)
+val RowColSpacing5dp = Arrangement.spacedBy(5.dp)
 
 val HalfHorzPadding = Modifier.padding(horizontal = 5.dp)
 val HalfVertPadding = Modifier.padding(vertical = 5.dp)
@@ -236,6 +237,9 @@ val chatAuthorBox = Modifier.size(20.dp)
 val chatAuthorImage = Modifier.size(20.dp).clip(shape = CircleShape)
 val AuthorInfoVideoFeed = Modifier.width(75.dp).padding(end = 15.dp)
 
+val messageDetailsModifier = Modifier.height(Size25dp)
+val messageBubbleLimits = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 5.dp)
+
 val inlinePlaceholder =
     Placeholder(
         width = Font17SP,
@@ -247,3 +251,5 @@ val incognitoIconModifier =
     Modifier
         .padding(top = 1.dp)
         .size(14.dp)
+
+val hashVerifierMark = Modifier.width(40.dp).height(40.dp).padding(10.dp)

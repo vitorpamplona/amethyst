@@ -325,12 +325,12 @@ private fun RenderVideoOrPictureNote(
     nav: (String) -> Unit,
 ) {
     Column(Modifier.fillMaxSize(1f), verticalArrangement = Arrangement.Center) {
-        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             val noteEvent = remember { note.event }
             if (noteEvent is FileHeaderEvent) {
-                FileHeaderDisplay(note, false, accountViewModel)
+                FileHeaderDisplay(note, false, true, accountViewModel)
             } else if (noteEvent is FileStorageHeaderEvent) {
-                FileStorageHeaderDisplay(note, false, accountViewModel)
+                FileStorageHeaderDisplay(note, false, true, accountViewModel)
             }
         }
     }

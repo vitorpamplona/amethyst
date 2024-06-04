@@ -86,7 +86,7 @@ fun ChatroomListScreen(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val windowSizeClass = accountViewModel.settings.windowSizeClass.value
+    val windowSizeClass by accountViewModel.settings.windowSizeClass
 
     val twoPane by remember {
         derivedStateOf {
@@ -104,7 +104,7 @@ fun ChatroomListScreen(
         ChatroomListTwoPane(
             knownFeedViewModel = knownFeedViewModel,
             newFeedViewModel = newFeedViewModel,
-            widthSizeClass = windowSizeClass.widthSizeClass,
+            widthSizeClass = windowSizeClass!!.widthSizeClass,
             accountViewModel = accountViewModel,
             nav = nav,
         )

@@ -305,6 +305,7 @@ fun EditPostView(
                                                 VideoView(
                                                     myUrlPreview,
                                                     roundedCorner = true,
+                                                    isFiniteHeight = false,
                                                     accountViewModel = accountViewModel,
                                                 )
                                             } else {

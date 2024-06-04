@@ -36,7 +36,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,7 +52,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -72,13 +70,10 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.isFinite
-import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -100,7 +95,6 @@ import com.vitorpamplona.amethyst.ui.note.MuteIcon
 import com.vitorpamplona.amethyst.ui.note.MutedIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
-import com.vitorpamplona.amethyst.ui.theme.Size0dp
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
@@ -127,6 +121,7 @@ fun LoadThumbAndThenVideoView(
     thumbUri: String,
     authorName: String? = null,
     roundedCorner: Boolean,
+    isFiniteHeight: Boolean,
     nostrUriCallback: String? = null,
     accountViewModel: AccountViewModel,
     onDialog: ((Boolean) -> Unit)? = null,
@@ -156,6 +151,7 @@ fun LoadThumbAndThenVideoView(
                 title = title,
                 thumb = VideoThumb(loadingFinished.second),
                 roundedCorner = roundedCorner,
+                isFiniteHeight = isFiniteHeight,
                 artworkUri = thumbUri,
                 authorName = authorName,
                 nostrUriCallback = nostrUriCallback,
@@ -168,6 +164,7 @@ fun LoadThumbAndThenVideoView(
                 title = title,
                 thumb = null,
                 roundedCorner = roundedCorner,
+                isFiniteHeight = isFiniteHeight,
                 artworkUri = thumbUri,
                 authorName = authorName,
                 nostrUriCallback = nostrUriCallback,
@@ -184,6 +181,7 @@ fun VideoView(
     title: String? = null,
     thumb: VideoThumb? = null,
     roundedCorner: Boolean,
+    isFiniteHeight: Boolean,
     topPaddingForControllers: Dp = Dp.Unspecified,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
@@ -208,7 +206,7 @@ fun VideoView(
     if (blurhash == null) {
         val ratio = aspectRatio(dimensions)
         val modifier =
-            if (ratio != null && roundedCorner && automaticallyStartPlayback.value) {
+            if (ratio != null && automaticallyStartPlayback.value) {
                 Modifier.aspectRatio(ratio)
             } else {
                 Modifier
@@ -224,6 +222,7 @@ fun VideoView(
                     title = title,
                     thumb = thumb,
                     roundedCorner = roundedCorner,
+                    isFiniteHeight = isFiniteHeight,
                     topPaddingForControllers = topPaddingForControllers,
                     waveform = waveform,
                     artworkUri = artworkUri,
@@ -239,21 +238,31 @@ fun VideoView(
         }
     } else {
         val ratio = aspectRatio(dimensions)
+
         val modifier =
-            if (ratio != null && roundedCorner) {
+            if (ratio != null) {
                 Modifier.aspectRatio(ratio)
             } else {
                 Modifier
             }
 
         Box(modifier, contentAlignment = Alignment.Center) {
+            val image =
+                if (roundedCorner) {
+                    MaterialTheme.colorScheme.imageModifier
+                } else {
+                    Modifier.fillMaxWidth()
+                }
+
+            // Always displays Blurharh to avoid size flickering
+            DisplayBlurHash(
+                blurhash,
+                null,
+                if (isFiniteHeight) ContentScale.FillWidth else ContentScale.FillWidth,
+                if (ratio != null) image.aspectRatio(ratio) else modifier,
+            )
+
             if (!automaticallyStartPlayback.value) {
-                DisplayBlurHash(
-                    blurhash,
-                    null,
-                    ContentScale.Crop,
-                    MaterialTheme.colorScheme.imageModifier,
-                )
                 IconButton(
                     modifier = Modifier.size(Size75dp),
                     onClick = { automaticallyStartPlayback.value = true },
@@ -267,6 +276,7 @@ fun VideoView(
                     title = title,
                     thumb = thumb,
                     roundedCorner = roundedCorner,
+                    isFiniteHeight = isFiniteHeight,
                     topPaddingForControllers = topPaddingForControllers,
                     waveform = waveform,
                     artworkUri = artworkUri,
@@ -291,6 +301,7 @@ fun VideoViewInner(
     title: String? = null,
     thumb: VideoThumb? = null,
     roundedCorner: Boolean,
+    isFiniteHeight: Boolean,
     topPaddingForControllers: Dp = Dp.Unspecified,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
@@ -314,6 +325,7 @@ fun VideoViewInner(
                     controller = controller,
                     thumbData = thumb,
                     roundedCorner = roundedCorner,
+                    isFiniteHeight = isFiniteHeight,
                     dimensions = dimensions,
                     blurhash = blurhash,
                     topPaddingForControllers = topPaddingForControllers,
@@ -638,6 +650,7 @@ private fun RenderVideoPlayer(
     controller: MediaController,
     thumbData: VideoThumb?,
     roundedCorner: Boolean,
+    isFiniteHeight: Boolean,
     dimensions: String? = null,
     blurhash: String? = null,
     topPaddingForControllers: Dp = Dp.Unspecified,
@@ -653,20 +666,11 @@ private fun RenderVideoPlayer(
 
     val controllerVisible = remember(controller) { mutableStateOf(false) }
 
-    val videoPlaybackHeight = remember { mutableStateOf<Dp>(Dp.Unspecified) }
-
-    val localDensity = LocalDensity.current
-
-    BoxWithConstraints(
-        modifier =
-            Modifier.onGloballyPositioned { coordinates ->
-                videoPlaybackHeight.value = with(localDensity) { coordinates.size.height.toDp() }
-            },
-    ) {
+    Box {
         val borders = MaterialTheme.colorScheme.imageModifier
 
         val myModifier =
-            remember {
+            remember(controller) {
                 if (roundedCorner) {
                     modifier.then(
                         borders.defaultMinSize(minHeight = 75.dp).align(Alignment.Center),
@@ -675,17 +679,6 @@ private fun RenderVideoPlayer(
                     modifier.fillMaxWidth().defaultMinSize(minHeight = 75.dp).align(Alignment.Center)
                 }
             }
-
-        val ratio = remember { aspectRatio(dimensions) }
-
-        if (ratio != null) {
-            DisplayBlurHash(
-                blurhash,
-                null,
-                ContentScale.Crop,
-                myModifier.aspectRatio(ratio),
-            )
-        }
 
         AndroidView(
             modifier = myModifier,
@@ -703,7 +696,7 @@ private fun RenderVideoPlayer(
                     thumbData?.thumb?.let { defaultArtwork = it }
                     hideController()
                     resizeMode =
-                        if (maxHeight.isFinite) {
+                        if (isFiniteHeight) {
                             AspectRatioFrameLayout.RESIZE_MODE_FIT
                         } else {
                             AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
@@ -728,26 +721,9 @@ private fun RenderVideoPlayer(
 
         val startingMuteState = remember(controller) { controller.volume < 0.001 }
 
-        val topPadding =
-            remember {
-                derivedStateOf {
-                    if (topPaddingForControllers.isSpecified && videoPlaybackHeight.value.value > 0) {
-                        val space = (abs(this.maxHeight.value - videoPlaybackHeight.value.value) / 2).dp
-                        if (space > topPaddingForControllers) {
-                            Size0dp
-                        } else {
-                            topPaddingForControllers - space
-                        }
-                    } else {
-                        Size0dp
-                    }
-                }
-            }
-
         MuteButton(
             controllerVisible,
             startingMuteState,
-            topPadding,
         ) { mute: Boolean ->
             // makes the new setting the default for new creations.
             DEFAULT_MUTED_SETTING.value = mute
@@ -765,7 +741,6 @@ private fun RenderVideoPlayer(
         KeepPlayingButton(
             keepPlaying,
             controllerVisible,
-            topPadding,
             Modifier.align(Alignment.TopEnd),
         ) { newKeepPlaying: Boolean ->
             // If something else is playing and the user marks this video to keep playing, stops the other
@@ -951,7 +926,6 @@ fun LayoutCoordinates.getDistanceToVertCenterIfVisible(view: View): Float? {
 private fun MuteButton(
     controllerVisible: MutableState<Boolean>,
     startingMuteState: Boolean,
-    topPadding: State<Dp>,
     toggle: (Boolean) -> Unit,
 ) {
     val holdOn =
@@ -972,7 +946,6 @@ private fun MuteButton(
 
     AnimatedVisibility(
         visible = holdOn.value || controllerVisible.value,
-        modifier = Modifier.padding(top = topPadding.value),
         enter = remember { fadeIn() },
         exit = remember { fadeOut() },
     ) {
@@ -1005,7 +978,6 @@ private fun MuteButton(
 private fun KeepPlayingButton(
     keepPlayingStart: MutableState<Boolean>,
     controllerVisible: MutableState<Boolean>,
-    topPadding: State<Dp>,
     alignment: Modifier,
     toggle: (Boolean) -> Unit,
 ) {
@@ -1013,7 +985,7 @@ private fun KeepPlayingButton(
 
     AnimatedVisibility(
         visible = controllerVisible.value,
-        modifier = alignment.padding(top = topPadding.value),
+        modifier = alignment,
         enter = remember { fadeIn() },
         exit = remember { fadeOut() },
     ) {

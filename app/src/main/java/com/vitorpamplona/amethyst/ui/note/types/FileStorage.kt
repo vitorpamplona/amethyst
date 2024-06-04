@@ -42,6 +42,7 @@ import java.io.File
 fun FileStorageHeaderDisplay(
     baseNote: Note,
     roundedCorner: Boolean,
+    isFiniteHeight: Boolean,
     accountViewModel: AccountViewModel,
 ) {
     val eventHeader = (baseNote.event as? FileStorageHeaderEvent) ?: return
@@ -49,7 +50,7 @@ fun FileStorageHeaderDisplay(
 
     LoadNote(baseNoteHex = dataEventId, accountViewModel) { contentNote ->
         if (contentNote != null) {
-            ObserverAndRenderNIP95(baseNote, contentNote, roundedCorner, accountViewModel)
+            ObserverAndRenderNIP95(baseNote, contentNote, roundedCorner, isFiniteHeight, accountViewModel)
         }
     }
 }
@@ -59,6 +60,7 @@ private fun ObserverAndRenderNIP95(
     header: Note,
     content: Note,
     roundedCorner: Boolean,
+    isFiniteHeight: Boolean,
     accountViewModel: AccountViewModel,
 ) {
     val eventHeader = (header.event as? FileStorageHeaderEvent) ?: return
@@ -110,6 +112,7 @@ private fun ObserverAndRenderNIP95(
                 ZoomableContentView(
                     content = it,
                     roundedCorner = roundedCorner,
+                    isFiniteHeight = isFiniteHeight,
                     accountViewModel = accountViewModel,
                 )
             }

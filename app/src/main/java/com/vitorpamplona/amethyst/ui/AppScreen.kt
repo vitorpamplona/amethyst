@@ -45,6 +45,10 @@ fun prepareSharedViewModel(act: MainActivity): SharedPreferencesViewModel {
         sharedPreferencesViewModel.updateDisplaySettings(windowSizeClass, displayFeatures)
     }
 
+    LaunchedEffect(key1 = displayFeatures, key2 = windowSizeClass) {
+        sharedPreferencesViewModel.updateDisplaySettings(windowSizeClass, displayFeatures)
+    }
+
     LaunchedEffect(act.isOnMobileDataState) {
         sharedPreferencesViewModel.updateConnectivityStatusState(act.isOnMobileDataState)
     }

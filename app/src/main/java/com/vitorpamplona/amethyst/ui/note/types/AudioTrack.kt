@@ -60,18 +60,20 @@ import java.util.Locale
 @Composable
 fun RenderAudioTrack(
     note: Note,
+    isFiniteHeight: Boolean,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     val noteEvent = note.event as? AudioTrackEvent ?: return
 
-    AudioTrackHeader(noteEvent, note, accountViewModel, nav)
+    AudioTrackHeader(noteEvent, note, isFiniteHeight, accountViewModel, nav)
 }
 
 @Composable
 fun AudioTrackHeader(
     noteEvent: AudioTrackEvent,
     note: Note,
+    isFiniteHeight: Boolean,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -144,17 +146,20 @@ fun AudioTrackHeader(
                             thumbUri = cover,
                             authorName = note.author?.toBestDisplayName(),
                             roundedCorner = true,
+                            isFiniteHeight = isFiniteHeight,
                             nostrUriCallback = "nostr:${note.toNEvent()}",
                             accountViewModel = accountViewModel,
                         )
-                    }
-                        ?: VideoView(
+                    } ?: run {
+                        VideoView(
                             videoUri = media,
                             title = noteEvent.subject(),
                             authorName = note.author?.toBestDisplayName(),
                             roundedCorner = true,
+                            isFiniteHeight = isFiniteHeight,
                             accountViewModel = accountViewModel,
                         )
+                    }
                 }
             }
         }
@@ -164,18 +169,20 @@ fun AudioTrackHeader(
 @Composable
 fun RenderAudioHeader(
     note: Note,
+    isFiniteHeight: Boolean,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     val noteEvent = note.event as? AudioHeaderEvent ?: return
 
-    AudioHeader(noteEvent, note, accountViewModel, nav)
+    AudioHeader(noteEvent, note, isFiniteHeight, accountViewModel, nav)
 }
 
 @Composable
 fun AudioHeader(
     noteEvent: AudioHeaderEvent,
     note: Note,
+    isFiniteHeight: Boolean,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -199,6 +206,7 @@ fun AudioHeader(
                         title = noteEvent.subject(),
                         authorName = note.author?.toBestDisplayName(),
                         roundedCorner = true,
+                        isFiniteHeight = isFiniteHeight,
                         accountViewModel = accountViewModel,
                         nostrUriCallback = note.toNostrUri(),
                     )

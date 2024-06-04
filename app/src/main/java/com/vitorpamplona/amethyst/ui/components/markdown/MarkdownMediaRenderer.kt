@@ -95,6 +95,7 @@ class MarkdownMediaRenderer(
                 ZoomableContentView(
                     content = content,
                     roundedCorner = true,
+                    isFiniteHeight = false,
                     accountViewModel = accountViewModel,
                 )
             }
@@ -116,6 +117,7 @@ class MarkdownMediaRenderer(
                     ZoomableContentView(
                         content = content,
                         roundedCorner = true,
+                        isFiniteHeight = false,
                         accountViewModel = accountViewModel,
                     )
                 }
