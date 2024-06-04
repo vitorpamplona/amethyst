@@ -3,6 +3,6 @@
     <style name="Theme.Amethyst" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:statusBarColor">@color/purple_700</item>
         <item name="android:windowBackground">@color/black</item>
-        <item name="android:windowLayoutInDisplayCutoutMode" tools:ignore="NewApi">shortEdges</item>\
+        <item name="android:windowLayoutInDisplayCutoutMode" tools:ignore="NewApi">shortEdges</item>
     </style>
 </resources>
