@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.encoders
 
+import org.czeal.rfc3986.URIReference
+
 class RelayUrlFormatter {
     companion object {
         fun displayUrl(url: String): String {
@@ -27,20 +29,22 @@ class RelayUrlFormatter {
         }
 
         fun normalize(url: String): String {
-            var newUrl =
+            val newUrl =
                 if (!url.startsWith("wss://") && !url.startsWith("ws://")) {
                     if (url.endsWith(".onion") || url.endsWith(".onion/")) {
-                        "ws://$url"
+                        "ws://${url.trim()}"
                     } else {
-                        "wss://$url"
+                        "wss://${url.trim()}"
                     }
                 } else {
-                    url
+                    url.trim()
                 }
 
-            if (url.endsWith("/")) newUrl = newUrl.dropLast(1)
-
-            return newUrl
+            return try {
+                URIReference.parse(newUrl).normalize().toString()
+            } catch (e: Exception) {
+                newUrl
+            }
         }
 
         fun getHttpsUrl(dirtyUrl: String): String {

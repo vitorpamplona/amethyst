@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.relays.Constants
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.RelayStats
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -101,7 +102,7 @@ class Kind3RelayListViewModel : ViewModel() {
                                 ?: FeedType.values().toSet().toImmutableSet()
 
                         Kind3BasicRelaySetupInfo(
-                            url = it.key,
+                            url = RelayUrlFormatter.normalize(it.key),
                             read = it.value.read,
                             write = it.value.write,
                             feedTypes = localInfoFeedTypes,
@@ -115,7 +116,7 @@ class Kind3RelayListViewModel : ViewModel() {
                 account.localRelays
                     .map {
                         Kind3BasicRelaySetupInfo(
-                            url = it.url,
+                            url = RelayUrlFormatter.normalize(it.url),
                             read = it.read,
                             write = it.write,
                             feedTypes = it.feedTypes,
@@ -135,7 +136,7 @@ class Kind3RelayListViewModel : ViewModel() {
         _relays.update {
             defaultRelays.map {
                 Kind3BasicRelaySetupInfo(
-                    url = it.url,
+                    url = RelayUrlFormatter.normalize(it.url),
                     read = it.read,
                     write = it.write,
                     feedTypes = it.feedTypes,

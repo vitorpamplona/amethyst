@@ -32,6 +32,7 @@ mockk = "1.13.11"
 navigationCompose = "2.7.7"
 okhttp = "5.0.0-alpha.14"
 runner = "1.5.2"
+rfc3986 = "0.1.0"
 secp256k1KmpJniAndroid = "0.15.0"
 securityCryptoKtx = "1.1.0-alpha06"
 spotless = "6.25.0"
@@ -100,6 +101,7 @@ markdown-ui = { group = "com.github.vitorpamplona.compose-richtext", name = "ric
 markdown-ui-material3 = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui-material3", version.ref = "markdown" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+rfc3986-normalizer = { group = "org.czeal", name = "rfc3986", version.ref = "rfc3986" }
 secp256k1-kmp-jni-android = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-android", version.ref = "secp256k1KmpJniAndroid" }
 trbl-blurhash = { group = "io.trbl", name = "blurhash", version.ref = "blurhash" }
 unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", version.ref = "unifiedpush" }

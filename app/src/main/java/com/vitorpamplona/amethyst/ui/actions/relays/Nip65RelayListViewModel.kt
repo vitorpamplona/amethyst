@@ -25,6 +25,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.relays.RelayStats
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -106,7 +107,7 @@ class Nip65RelayListViewModel : ViewModel() {
 
             relayList.map { relayUrl ->
                 BasicRelaySetupInfo(
-                    relayUrl,
+                    RelayUrlFormatter.normalize(relayUrl),
                     RelayStats.get(relayUrl),
                 )
             }.distinctBy { it.url }.sortedBy { it.relayStat.receivedBytes }.reversed()
@@ -117,7 +118,7 @@ class Nip65RelayListViewModel : ViewModel() {
 
             relayList.map { relayUrl ->
                 BasicRelaySetupInfo(
-                    relayUrl,
+                    RelayUrlFormatter.normalize(relayUrl),
                     RelayStats.get(relayUrl),
                 )
             }.distinctBy { it.url }.sortedBy { it.relayStat.receivedBytes }.reversed()

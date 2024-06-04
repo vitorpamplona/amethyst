@@ -47,6 +47,7 @@ import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
@@ -238,10 +239,16 @@ class Account(
             userProfile().flow().relays.stateFlow,
         ) { nip65RelayList, dmRelayList, searchRelayList, privateOutBox, userProfile ->
             val baseRelaySet = activeRelays() ?: convertLocalRelays()
-            val newDMRelaySet = (dmRelayList.note.event as? ChatMessageRelayListEvent)?.relays()?.toSet() ?: emptySet()
-            val searchRelaySet = (searchRelayList.note.event as? SearchRelayListEvent)?.relays()?.toSet() ?: Constants.defaultSearchRelaySet
-            val nip65RelaySet = (nip65RelayList.note.event as? AdvertisedRelayListEvent)?.relays()
-            val privateOutboxRelaySet = (privateOutBox.note.event as? PrivateOutboxRelayListEvent)?.relays() ?: emptySet()
+            val newDMRelaySet = (dmRelayList.note.event as? ChatMessageRelayListEvent)?.relays()?.map { RelayUrlFormatter.normalize(it) }?.toSet() ?: emptySet()
+            val searchRelaySet = (searchRelayList.note.event as? SearchRelayListEvent)?.relays()?.map { RelayUrlFormatter.normalize(it) }?.toSet() ?: Constants.defaultSearchRelaySet
+            val nip65RelaySet =
+                (nip65RelayList.note.event as? AdvertisedRelayListEvent)?.relays()?.map {
+                    AdvertisedRelayListEvent.AdvertisedRelayInfo(
+                        RelayUrlFormatter.normalize(it.relayUrl),
+                        it.type,
+                    )
+                }
+            val privateOutboxRelaySet = (privateOutBox.note.event as? PrivateOutboxRelayListEvent)?.relays()?.map { RelayUrlFormatter.normalize(it) }?.toSet() ?: emptySet()
 
             // ------
             // DMs
@@ -2596,22 +2603,24 @@ class Account(
     fun activeRelays(): Array<Relay>? {
         val usersRelayList =
             userProfile().latestContactList?.relays()?.map {
+                val url = RelayUrlFormatter.normalize(it.key)
+
                 val localFeedTypes =
-                    localRelays.firstOrNull { localRelay -> localRelay.url == it.key }?.feedTypes
+                    localRelays.firstOrNull { localRelay -> RelayUrlFormatter.normalize(localRelay.url) == url }?.feedTypes
                         ?: Constants.defaultRelays
-                            .filter { defaultRelay -> defaultRelay.url == it.key }
+                            .filter { defaultRelay -> defaultRelay.url == url }
                             .firstOrNull()
                             ?.feedTypes
                         ?: FeedType.values().toSet()
 
-                Relay(it.key, it.value.read, it.value.write, localFeedTypes)
+                Relay(url, it.value.read, it.value.write, localFeedTypes)
             } ?: return null
 
         return usersRelayList.toTypedArray()
     }
 
     fun convertLocalRelays(): Array<Relay> {
-        return localRelays.map { Relay(it.url, it.read, it.write, it.feedTypes) }.toTypedArray()
+        return localRelays.map { Relay(RelayUrlFormatter.normalize(it.url), it.read, it.write, it.feedTypes) }.toTypedArray()
     }
 
     fun activeGlobalRelays(): Array<String> {

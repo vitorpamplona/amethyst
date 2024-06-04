@@ -100,6 +100,7 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.encoders.decodePrivateKeyAsHexOrNull
 import com.vitorpamplona.quartz.encoders.decodePublicKey
 import com.vitorpamplona.quartz.encoders.toHexKey
@@ -166,18 +167,12 @@ class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
             val relayUrl =
                 walletConnectRelay.text
                     .ifBlank { null }
-                    ?.let {
-                        var addedWSS =
-                            if (!it.startsWith("wss://") && !it.startsWith("ws://")) "wss://$it" else it
-                        if (addedWSS.endsWith("/")) addedWSS = addedWSS.dropLast(1)
-
-                        addedWSS
-                    }
+                    ?.let { RelayUrlFormatter.normalize(it) }
 
             val privKeyHex = walletConnectSecret.text.ifBlank { null }?.let { decodePrivateKeyAsHexOrNull(it) }
 
             if (pubkeyHex != null) {
-                account?.changeZapPaymentRequest(
+                account.changeZapPaymentRequest(
                     Nip47WalletConnect.Nip47URI(
                         pubkeyHex,
                         relayUrl,

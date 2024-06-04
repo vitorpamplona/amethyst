@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 
 object Constants {
     val activeTypes = setOf(FeedType.FOLLOWS, FeedType.PRIVATE_DMS)
@@ -36,21 +37,26 @@ object Constants {
     val defaultRelays =
         arrayOf(
             // Free relays for only DMs, Chats and Follows due to the amount of spam
-            RelaySetupInfo("wss://nostr.bitcoiner.social", read = true, write = true, feedTypes = activeTypesChats),
-            RelaySetupInfo("wss://relay.nostr.bg", read = true, write = true, feedTypes = activeTypesChats),
-            RelaySetupInfo("wss://nostr.oxtr.dev", read = true, write = true, feedTypes = activeTypesChats),
-            RelaySetupInfo("wss://nostr.fmt.wiz.biz", read = true, write = false, feedTypes = activeTypesChats),
-            RelaySetupInfo("wss://relay.damus.io", read = true, write = true, feedTypes = activeTypes),
+            RelaySetupInfo(RelayUrlFormatter.normalize("wss://nostr.bitcoiner.social"), read = true, write = true, feedTypes = activeTypesChats),
+            RelaySetupInfo(RelayUrlFormatter.normalize("wss://relay.nostr.bg"), read = true, write = true, feedTypes = activeTypesChats),
+            RelaySetupInfo(RelayUrlFormatter.normalize("wss://nostr.oxtr.dev"), read = true, write = true, feedTypes = activeTypesChats),
+            RelaySetupInfo(RelayUrlFormatter.normalize("wss://nostr.fmt.wiz.biz"), read = true, write = false, feedTypes = activeTypesChats),
+            RelaySetupInfo(RelayUrlFormatter.normalize("wss://relay.damus.io"), read = true, write = true, feedTypes = activeTypes),
             // Global
-            RelaySetupInfo("wss://nostr.mom", read = true, write = true, feedTypes = activeTypesGlobalChats),
-            RelaySetupInfo("wss://nos.lol", read = true, write = true, feedTypes = activeTypesGlobalChats),
+            RelaySetupInfo(RelayUrlFormatter.normalize("wss://nostr.mom"), read = true, write = true, feedTypes = activeTypesGlobalChats),
+            RelaySetupInfo(RelayUrlFormatter.normalize("wss://nos.lol"), read = true, write = true, feedTypes = activeTypesGlobalChats),
             // Paid relays
-            RelaySetupInfo("wss://nostr.wine", read = true, write = false, feedTypes = activeTypesGlobalChats),
+            RelaySetupInfo(RelayUrlFormatter.normalize("wss://nostr.wine"), read = true, write = false, feedTypes = activeTypesGlobalChats),
             // Supporting NIP-50
-            RelaySetupInfo("wss://relay.nostr.band", read = true, write = false, feedTypes = activeTypesSearch),
-            RelaySetupInfo("wss://nostr.wine", read = true, write = false, feedTypes = activeTypesSearch),
-            RelaySetupInfo("wss://relay.noswhere.com", read = true, write = false, feedTypes = activeTypesSearch),
+            RelaySetupInfo(RelayUrlFormatter.normalize("wss://relay.nostr.band"), read = true, write = false, feedTypes = activeTypesSearch),
+            RelaySetupInfo(RelayUrlFormatter.normalize("wss://nostr.wine"), read = true, write = false, feedTypes = activeTypesSearch),
+            RelaySetupInfo(RelayUrlFormatter.normalize("wss://relay.noswhere.com"), read = true, write = false, feedTypes = activeTypesSearch),
         )
 
-    val defaultSearchRelaySet = setOf("wss://relay.nostr.band", "wss://nostr.wine", "wss://relay.noswhere.com")
+    val defaultSearchRelaySet =
+        setOf(
+            RelayUrlFormatter.normalize("wss://relay.nostr.band"),
+            RelayUrlFormatter.normalize("wss://nostr.wine"),
+            RelayUrlFormatter.normalize("wss://relay.noswhere.com"),
+        )
 }

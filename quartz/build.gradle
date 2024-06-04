@@ -67,6 +67,9 @@ dependencies {
     // Parses URLs from Text:
     api libs.url.detector
 
+    // Parses URLs from Text:
+    api libs.rfc3986.normalizer
+
     testImplementation libs.junit
     androidTestImplementation platform(libs.androidx.compose.bom)
     androidTestImplementation libs.androidx.junit
