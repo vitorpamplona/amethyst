@@ -736,10 +736,9 @@ fun Kind3RelayEditBox(
         Button(
             onClick = {
                 if (url.isNotBlank() && url != "/") {
-                    val addedWSS = RelayUrlFormatter.normalize(url)
                     onNewRelay(
                         Kind3BasicRelaySetupInfo(
-                            url = addedWSS,
+                            url = RelayUrlFormatter.normalize(url),
                             read = read,
                             write = write,
                             feedTypes = FeedType.entries.toSet(),
