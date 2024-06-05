@@ -29,6 +29,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
@@ -176,8 +177,10 @@ fun LoadOts(
     (earliestDate as? GenericLoadable.Loaded)?.let {
         whenConfirmed(it.loaded)
     } ?: run {
-        val account = accountViewModel.account.saveable.observeAsState()
-        if (account.value?.account?.hasPendingAttestations(note) == true) {
+        val pendingAttestations by accountViewModel.account.pendingAttestations.collectAsStateWithLifecycle()
+        val id = note.event?.id() ?: note.idHex
+
+        if (pendingAttestations[id] != null) {
             whenPending()
         }
     }

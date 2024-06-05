@@ -340,7 +340,7 @@ object LocalPreferences {
 
                     putString(
                         PrefKeys.PENDING_ATTESTATIONS,
-                        Event.mapper.writeValueAsString(account.pendingAttestations),
+                        Event.mapper.writeValueAsString(account.pendingAttestations.value),
                     )
                 }
                 .apply()
@@ -604,7 +604,7 @@ object LocalPreferences {
                         filterSpamFromStrangers = filterSpam,
                         lastReadPerRoute = lastReadPerRoute,
                         hasDonatedInVersion = hasDonatedInVersion,
-                        pendingAttestations = pendingAttestations ?: emptyMap(),
+                        pendingAttestations = MutableStateFlow(pendingAttestations ?: emptyMap()),
                     )
 
                 // Loads from DB

@@ -126,6 +126,7 @@ import kotlinx.coroutines.flow.flattenMerge
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -202,7 +203,7 @@ class Account(
     var filterSpamFromStrangers: Boolean = true,
     var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>(),
     var hasDonatedInVersion: Set<String> = setOf<String>(),
-    var pendingAttestations: Map<HexKey, String> = mapOf<HexKey, String>(),
+    var pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
     val scope: CoroutineScope = Amethyst.instance.applicationIOScope,
 ) {
     var transientHiddenUsers: ImmutableSet<String> = persistentSetOf()
@@ -1014,9 +1015,9 @@ class Account(
     }
 
     suspend fun updateAttestations() {
-        Log.d("Pending Attestations", "Updating ${pendingAttestations.size} pending attestations")
+        Log.d("Pending Attestations", "Updating ${pendingAttestations.value.size} pending attestations")
 
-        pendingAttestations.toMap().forEach { pair ->
+        pendingAttestations.value.forEach { pair ->
             val newAttestation = OtsEvent.upgrade(pair.value, pair.key)
 
             if (pair.value != newAttestation) {
@@ -1024,7 +1025,9 @@ class Account(
                     LocalCache.justConsume(it, null)
                     Client.send(it)
 
-                    pendingAttestations = pendingAttestations - pair.key
+                    pendingAttestations.update {
+                        it - pair.key
+                    }
                 }
             }
         }
@@ -1032,7 +1035,7 @@ class Account(
 
     fun hasPendingAttestations(note: Note): Boolean {
         val id = note.event?.id() ?: note.idHex
-        return pendingAttestations.get(id) != null
+        return pendingAttestations.value[id] != null
     }
 
     fun timestamp(note: Note) {
@@ -1041,7 +1044,9 @@ class Account(
 
         val id = note.event?.id() ?: note.idHex
 
-        pendingAttestations = pendingAttestations + Pair(id, OtsEvent.stamp(id))
+        pendingAttestations.update {
+            it + Pair(id, OtsEvent.stamp(id))
+        }
 
         saveable.invalidateData()
     }
