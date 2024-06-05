@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
+import com.vitorpamplona.amethyst.service.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.amethyst.service.relays.FeedType
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
@@ -80,7 +80,7 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
 
         return TypedFilter(
             // Metadata comes from any relay
-            types = COMMON_FEED_TYPES,
+            types = EVENT_FINDER_TYPES,
             filter =
                 JsonFilter(
                     kinds = listOf(ChannelCreateEvent.KIND),
@@ -99,7 +99,7 @@ object NostrChatroomListDataSource : NostrDataSource("MailBoxFeed") {
         return followingEvents.map {
             TypedFilter(
                 // Metadata comes from any relay
-                types = COMMON_FEED_TYPES,
+                types = EVENT_FINDER_TYPES,
                 filter =
                     JsonFilter(
                         kinds = listOf(ChannelMetadataEvent.KIND),
