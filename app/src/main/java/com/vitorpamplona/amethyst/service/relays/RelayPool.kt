@@ -91,6 +91,7 @@ object RelayPool : Relay.Listener {
         feedTypes: Set<FeedType>?,
         onConnected: (Relay) -> Unit,
         onDone: (() -> Unit)?,
+        timeout: Long = 60000,
     ) {
         val relay = Relay(url, true, true, feedTypes ?: emptySet())
         addRelay(relay)
@@ -103,7 +104,7 @@ object RelayPool : Relay.Listener {
             onConnected(relay)
 
             GlobalScope.launch(Dispatchers.IO) {
-                delay(60000) // waits for a reply
+                delay(timeout) // waits for a reply
                 relay.disconnect()
                 removeRelay(relay)
 

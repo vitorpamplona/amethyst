@@ -165,7 +165,7 @@ object Client : RelayPool.Listener {
         checkNotInMainThread()
 
         relayList.forEach { relayUrl ->
-            RelayPool.getOrCreateRelay(relayUrl, setOf(FeedType.PRIVATE_DMS), { }) {
+            RelayPool.getOrCreateRelay(relayUrl, emptySet(), { }) {
                 it.sendOverride(signedEvent)
             }
         }
