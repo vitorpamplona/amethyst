@@ -34,7 +34,6 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.encoders.decodePublicKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.math.roundToInt
 
 data class RangesChanges(val original: TextRange, val modified: TextRange)
 
@@ -55,71 +54,69 @@ fun buildAnnotatedStringWithUrlHighlighting(
             val builderBefore = StringBuilder() // important to correctly measure Tag start and end
             val builderAfter = StringBuilder() // important to correctly measure Tag start and end
             append(
-                text
-                    .split('\n').joinToString("\n") { paragraph: String ->
-                        paragraph
-                            .split(' ').joinToString(" ") { word: String ->
-                                try {
-                                    if (word.startsWith("@npub") && word.length >= 64) {
-                                        val keyB32 = word.substring(0, 64)
-                                        val restOfWord = word.substring(64)
+                text.text.split('\n').joinToString("\n") { paragraph: String ->
+                    paragraph.split(' ').joinToString(" ") { word: String ->
+                        try {
+                            if (word.startsWith("@npub") && word.length >= 64) {
+                                val keyB32 = word.substring(0, 64)
+                                val restOfWord = word.substring(64)
 
-                                        val startIndex = builderBefore.toString().length
+                                val startIndex = builderBefore.toString().length
 
-                                        builderBefore.append(
-                                            "$keyB32$restOfWord ",
-                                        ) // accounts for the \n at the end of each paragraph
+                                builderBefore.append(
+                                    "$keyB32$restOfWord ",
+                                ) // accounts for the \n at the end of each paragraph
 
-                                        val endIndex = startIndex + keyB32.length
+                                val endIndex = startIndex + keyB32.length
 
-                                        val key = decodePublicKey(keyB32.removePrefix("@"))
-                                        val user = LocalCache.getOrCreateUser(key.toHexKey())
+                                val key = decodePublicKey(keyB32.removePrefix("@"))
+                                val user = LocalCache.getOrCreateUser(key.toHexKey())
 
-                                        val newWord = "@${user.toBestDisplayName()}"
-                                        val startNew = builderAfter.toString().length
+                                val newWord = "@${user.toBestDisplayName()}"
+                                val startNew = builderAfter.toString().length
 
-                                        builderAfter.append(
-                                            "$newWord$restOfWord ",
-                                        ) // accounts for the \n at the end of each paragraph
+                                builderAfter.append(
+                                    "$newWord$restOfWord ",
+                                ) // accounts for the \n at the end of each paragraph
 
-                                        substitutions.add(
-                                            RangesChanges(
-                                                TextRange(startIndex, endIndex),
-                                                TextRange(startNew, startNew + newWord.length),
-                                            ),
-                                        )
-                                        newWord + restOfWord
-                                    } else if (Patterns.WEB_URL.matcher(word).matches()) {
-                                        val startIndex = builderBefore.toString().length
-                                        val endIndex = startIndex + word.length
+                                substitutions.add(
+                                    RangesChanges(
+                                        TextRange(startIndex, endIndex),
+                                        TextRange(startNew, startNew + newWord.length),
+                                    ),
+                                )
+                                newWord + restOfWord
+                            } else if (Patterns.WEB_URL.matcher(word).matches()) {
+                                val startIndex = builderBefore.toString().length
+                                val endIndex = startIndex + word.length
 
-                                        val startNew = builderAfter.toString().length
-                                        val endNew = startNew + word.length
+                                val startNew = builderAfter.toString().length
+                                val endNew = startNew + word.length
 
-                                        substitutions.add(
-                                            RangesChanges(
-                                                TextRange(startIndex, endIndex),
-                                                TextRange(startNew, endNew),
-                                            ),
-                                        )
+                                substitutions.add(
+                                    RangesChanges(
+                                        TextRange(startIndex, endIndex),
+                                        TextRange(startNew, endNew),
+                                    ),
+                                )
 
-                                        builderBefore.append("$word ")
-                                        builderAfter.append("$word ")
-                                        word
-                                    } else {
-                                        builderBefore.append("$word ")
-                                        builderAfter.append("$word ")
-                                        word
-                                    }
-                                } catch (e: Exception) {
-                                    if (e is CancellationException) throw e
-                                    // if it can't parse the key, don't try to change.
-                                    builderBefore.append("$word ")
-                                    builderAfter.append("$word ")
-                                    word
-                                }
+                                builderBefore.append("$word ")
+                                builderAfter.append("$word ")
+                                word
+                            } else {
+                                builderBefore.append("$word ")
+                                builderAfter.append("$word ")
+                                word
                             }
-                    },
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            // if it can't parse the key, don't try to change.
+                            builderBefore.append("$word ")
+                            builderAfter.append("$word ")
+                            word
+                        }
+                    }
+                },
             )
 
             substitutions.forEach {
@@ -144,16 +141,15 @@ fun buildAnnotatedStringWithUrlHighlighting(
                 if (inInsideRange != null) {
                     val percentInRange =
                         (offset - inInsideRange.original.start) / (inInsideRange.original.length.toFloat())
-                    return (inInsideRange.modified.start + inInsideRange.modified.length * percentInRange)
-                        .roundToInt()
+                    return (inInsideRange.modified.start + inInsideRange.modified.length * percentInRange).toInt()
                 }
 
                 val lastRangeThrough = substitutions.lastOrNull { offset >= it.original.end }
 
-                if (lastRangeThrough != null) {
-                    return lastRangeThrough.modified.end + (offset - lastRangeThrough.original.end)
+                return if (lastRangeThrough != null) {
+                    lastRangeThrough.modified.end + (offset - lastRangeThrough.original.end)
                 } else {
-                    return offset
+                    offset
                 }
             }
 
@@ -164,16 +160,15 @@ fun buildAnnotatedStringWithUrlHighlighting(
                 if (inInsideRange != null) {
                     val percentInRange =
                         (offset - inInsideRange.modified.start) / (inInsideRange.modified.length.toFloat())
-                    return (inInsideRange.original.start + inInsideRange.original.length * percentInRange)
-                        .roundToInt()
+                    return (inInsideRange.original.start + inInsideRange.original.length * percentInRange).toInt()
                 }
 
                 val lastRangeThrough = substitutions.lastOrNull { offset >= it.modified.end }
 
-                if (lastRangeThrough != null) {
-                    return lastRangeThrough.original.end + (offset - lastRangeThrough.modified.end)
+                return if (lastRangeThrough != null) {
+                    lastRangeThrough.original.end + (offset - lastRangeThrough.modified.end)
                 } else {
-                    return offset
+                    offset
                 }
             }
         }
