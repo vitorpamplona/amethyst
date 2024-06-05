@@ -244,7 +244,8 @@ object LocalPreferences {
      * deleted
      */
     @SuppressLint("ApplySharedPref")
-    suspend fun updatePrefsForLogout(accountInfo: AccountInfo) =
+    suspend fun updatePrefsForLogout(accountInfo: AccountInfo) {
+        Log.d("LocalPreferences", "Saving to encrypted storage updatePrefsForLogout")
         withContext(Dispatchers.IO) {
             val userPrefs = encryptedPreferences(accountInfo.npub)
             userPrefs.edit().clear().commit()
@@ -257,6 +258,7 @@ object LocalPreferences {
                 updateCurrentAccount(savedAccounts().elementAt(0).npub)
             }
         }
+    }
 
     suspend fun updatePrefsForLogin(account: Account) {
         setCurrentAccount(account)
@@ -267,7 +269,8 @@ object LocalPreferences {
         return savedAccounts()
     }
 
-    suspend fun saveToEncryptedStorage(account: Account) =
+    suspend fun saveToEncryptedStorage(account: Account) {
+        Log.d("LocalPreferences", "Saving to encrypted storage")
         withContext(Dispatchers.IO) {
             checkNotInMainThread()
 
@@ -345,6 +348,7 @@ object LocalPreferences {
                 }
                 .apply()
         }
+    }
 
     suspend fun loadCurrentAccountFromEncryptedStorage(): Account? {
         return currentAccount()?.let { loadCurrentAccountFromEncryptedStorage(it) }
@@ -354,6 +358,7 @@ object LocalPreferences {
         sharedSettings: Settings,
         prefs: SharedPreferences = encryptedPreferences(),
     ) {
+        Log.d("LocalPreferences", "Saving to shared settings")
         with(prefs.edit()) {
             putString(PrefKeys.SHARED_SETTINGS, Event.mapper.writeValueAsString(sharedSettings))
             apply()
@@ -361,6 +366,7 @@ object LocalPreferences {
     }
 
     suspend fun loadSharedSettings(prefs: SharedPreferences = encryptedPreferences()): Settings? {
+        Log.d("LocalPreferences", "Load shared settings")
         with(prefs) {
             return try {
                 getString(PrefKeys.SHARED_SETTINGS, "{}")?.let { Event.mapper.readValue<Settings>(it) }
@@ -395,8 +401,10 @@ object LocalPreferences {
             }
         }
 
-    suspend fun innerLoadCurrentAccountFromEncryptedStorage(npub: String?): Account? =
-        withContext(Dispatchers.IO) {
+    suspend fun innerLoadCurrentAccountFromEncryptedStorage(npub: String?): Account? {
+        Log.d("LocalPreferences", "Load account from file")
+
+        return withContext(Dispatchers.IO) {
             checkNotInMainThread()
 
             return@withContext with(encryptedPreferences(npub)) {
@@ -618,4 +626,5 @@ object LocalPreferences {
                 return@with account
             }
         }
+    }
 }
