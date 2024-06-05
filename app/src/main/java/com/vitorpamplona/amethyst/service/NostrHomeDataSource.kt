@@ -120,6 +120,8 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                     kinds =
                         listOf(
                             TextNoteEvent.KIND,
+                            RepostEvent.KIND,
+                            GenericRepostEvent.KIND,
                             LongTextNoteEvent.KIND,
                             ClassifiedsEvent.KIND,
                             HighlightEvent.KIND,
@@ -157,6 +159,8 @@ object NostrHomeDataSource : NostrDataSource("HomeFeed") {
                     kinds =
                         listOf(
                             TextNoteEvent.KIND,
+                            RepostEvent.KIND,
+                            GenericRepostEvent.KIND,
                             LongTextNoteEvent.KIND,
                             ClassifiedsEvent.KIND,
                             HighlightEvent.KIND,

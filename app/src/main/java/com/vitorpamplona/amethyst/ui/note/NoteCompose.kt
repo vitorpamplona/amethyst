@@ -980,12 +980,14 @@ fun FirstUserInfoRow(
             NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor)
         }
 
-        if (isRepost) {
-            BoostedMark()
-        } else if (isCommunityPost) {
+        if (isCommunityPost) {
             DisplayFollowingCommunityInPost(baseNote, accountViewModel, nav)
         } else {
             DisplayFollowingHashtagsInPost(baseNote, accountViewModel, nav)
+        }
+
+        if (isRepost) {
+            BoostedMark()
         }
 
         if (editState.value is GenericLoadable.Loaded) {

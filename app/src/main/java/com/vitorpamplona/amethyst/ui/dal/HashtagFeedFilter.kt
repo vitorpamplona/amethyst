@@ -25,9 +25,11 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
+import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
+import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 
@@ -59,6 +61,8 @@ class HashtagFeedFilter(val tag: String, val account: Account) : AdditiveFeedFil
     ): Boolean {
         return (
             it.event is TextNoteEvent ||
+                it.event is RepostEvent ||
+                it.event is GenericRepostEvent ||
                 it.event is LongTextNoteEvent ||
                 it.event is WikiNoteEvent ||
                 it.event is ChannelMessageEvent ||
