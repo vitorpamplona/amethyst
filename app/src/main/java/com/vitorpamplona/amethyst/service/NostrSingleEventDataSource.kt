@@ -244,7 +244,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
             eventsToWatch.forEach {
                 val eose = it.lastReactionsDownloadTime[relayUrl]
                 if (eose == null) {
-                    it.lastReactionsDownloadTime = it.lastReactionsDownloadTime + Pair(relayUrl, EOSETime(time))
+                    it.lastReactionsDownloadTime += Pair(relayUrl, EOSETime(time))
                 } else {
                     eose.time = time
                 }
@@ -253,7 +253,7 @@ object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
             addressesToWatch.forEach {
                 val eose = it.lastReactionsDownloadTime[relayUrl]
                 if (eose == null) {
-                    it.lastReactionsDownloadTime = it.lastReactionsDownloadTime + Pair(relayUrl, EOSETime(time))
+                    it.lastReactionsDownloadTime += Pair(relayUrl, EOSETime(time))
                 } else {
                     eose.time = time
                 }
