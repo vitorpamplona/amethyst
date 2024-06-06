@@ -30,7 +30,6 @@ import android.view.Window
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -65,7 +64,6 @@ import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.net.toFile
 import androidx.core.net.toUri
@@ -325,7 +323,7 @@ fun UrlImageView(
                 model = content.url,
                 contentDescription = content.description,
                 contentScale = contentScale,
-                modifier = mainImageModifier.border(10.dp, Color.Red),
+                modifier = mainImageModifier,
             ) {
                 when (painter.state) {
                     is AsyncImagePainter.State.Loading,
