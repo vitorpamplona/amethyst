@@ -152,6 +152,7 @@ fun RenderLiveActivityEventInner(
                     ) {
                         VideoView(
                             videoUri = media,
+                            mimeType = null,
                             title = subject,
                             artworkUri = cover,
                             authorName = baseNote.author?.toBestDisplayName(),

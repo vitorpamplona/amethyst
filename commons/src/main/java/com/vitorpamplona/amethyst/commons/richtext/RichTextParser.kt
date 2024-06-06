@@ -61,6 +61,7 @@ class RichTextParser() {
                 dim = frags[FileHeaderEvent.DIMENSION] ?: tags[FileHeaderEvent.DIMENSION],
                 contentWarning = frags["content-warning"] ?: tags["content-warning"],
                 uri = callbackUri,
+                mimeType = frags[FileHeaderEvent.MIME_TYPE] ?: tags[FileHeaderEvent.MIME_TYPE],
             )
         } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
             val frags = Nip54InlineMetadata().parse(fullUrl)
@@ -73,6 +74,7 @@ class RichTextParser() {
                 dim = frags[FileHeaderEvent.DIMENSION] ?: tags[FileHeaderEvent.DIMENSION],
                 contentWarning = frags["content-warning"] ?: tags["content-warning"],
                 uri = callbackUri,
+                mimeType = frags[FileHeaderEvent.MIME_TYPE] ?: tags[FileHeaderEvent.MIME_TYPE],
             )
         } else {
             null

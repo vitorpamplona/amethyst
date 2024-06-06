@@ -52,6 +52,7 @@ fun FileHeaderDisplay(
             val description = event.content.ifEmpty { null } ?: event.alt()
             val isImage = event.mimeType()?.startsWith("image/") == true || RichTextParser.isImageUrl(fullUrl)
             val uri = note.toNostrUri()
+            val mimeType = event.mimeType()
 
             mutableStateOf<BaseMediaContent>(
                 if (isImage) {
@@ -62,6 +63,7 @@ fun FileHeaderDisplay(
                         blurhash = blurHash,
                         dim = dimensions,
                         uri = uri,
+                        mimeType = mimeType,
                     )
                 } else {
                     MediaUrlVideo(
@@ -72,6 +74,7 @@ fun FileHeaderDisplay(
                         dim = dimensions,
                         uri = uri,
                         authorName = note.author?.toBestDisplayName(),
+                        mimeType = mimeType,
                     )
                 },
             )

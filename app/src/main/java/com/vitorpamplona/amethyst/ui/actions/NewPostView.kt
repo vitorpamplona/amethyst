@@ -425,6 +425,7 @@ fun NewPostView(
                                             } else if (RichTextParser.isVideoUrl(myUrlPreview)) {
                                                 VideoView(
                                                     myUrlPreview,
+                                                    mimeType = null,
                                                     roundedCorner = true,
                                                     isFiniteHeight = false,
                                                     accountViewModel = accountViewModel,
@@ -1737,7 +1738,7 @@ fun ImageVideoDescription(
                         )
                     }
                 } else {
-                    VideoView(uri.toString(), roundedCorner = true, isFiniteHeight = false, accountViewModel = accountViewModel)
+                    VideoView(uri.toString(), roundedCorner = true, isFiniteHeight = false, mimeType = mediaType, accountViewModel = accountViewModel)
                 }
             }
 

@@ -304,6 +304,7 @@ fun EditPostView(
                                             } else if (RichTextParser.isVideoUrl(myUrlPreview)) {
                                                 VideoView(
                                                     myUrlPreview,
+                                                    mimeType = null,
                                                     roundedCorner = true,
                                                     isFiniteHeight = false,
                                                     accountViewModel = accountViewModel,

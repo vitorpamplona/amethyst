@@ -43,16 +43,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,7 +77,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -85,8 +90,10 @@ import androidx.media3.session.MediaController
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.linc.audiowaveform.infiniteLinearGradient
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.produceCachedState
+import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.service.playback.PlaybackClientController
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.LyricsIcon
@@ -95,8 +102,11 @@ import com.vitorpamplona.amethyst.ui.note.MuteIcon
 import com.vitorpamplona.amethyst.ui.note.MutedIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
+import com.vitorpamplona.amethyst.ui.theme.Size110dp
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
@@ -117,6 +127,7 @@ public val DEFAULT_MUTED_SETTING = mutableStateOf(true)
 @Composable
 fun LoadThumbAndThenVideoView(
     videoUri: String,
+    mimeType: String?,
     title: String? = null,
     thumbUri: String,
     authorName: String? = null,
@@ -134,11 +145,12 @@ fun LoadThumbAndThenVideoView(
             context,
             thumbUri,
             onReady = {
-                if (it != null) {
-                    loadingFinished = Pair(true, it)
-                } else {
-                    loadingFinished = Pair(true, null)
-                }
+                loadingFinished =
+                    if (it != null) {
+                        Pair(true, it)
+                    } else {
+                        Pair(true, null)
+                    }
             },
             onError = { loadingFinished = Pair(true, null) },
         )
@@ -148,6 +160,7 @@ fun LoadThumbAndThenVideoView(
         if (loadingFinished.second != null) {
             VideoView(
                 videoUri = videoUri,
+                mimeType = mimeType,
                 title = title,
                 thumb = VideoThumb(loadingFinished.second),
                 roundedCorner = roundedCorner,
@@ -161,6 +174,7 @@ fun LoadThumbAndThenVideoView(
         } else {
             VideoView(
                 videoUri = videoUri,
+                mimeType = mimeType,
                 title = title,
                 thumb = null,
                 roundedCorner = roundedCorner,
@@ -178,11 +192,11 @@ fun LoadThumbAndThenVideoView(
 @Composable
 fun VideoView(
     videoUri: String,
+    mimeType: String?,
     title: String? = null,
     thumb: VideoThumb? = null,
     roundedCorner: Boolean,
     isFiniteHeight: Boolean,
-    topPaddingForControllers: Dp = Dp.Unspecified,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
@@ -218,21 +232,20 @@ fun VideoView(
             } else {
                 VideoViewInner(
                     videoUri = videoUri,
+                    mimeType = mimeType,
                     defaultToStart = defaultToStart,
                     title = title,
                     thumb = thumb,
                     roundedCorner = roundedCorner,
                     isFiniteHeight = isFiniteHeight,
-                    topPaddingForControllers = topPaddingForControllers,
                     waveform = waveform,
                     artworkUri = artworkUri,
                     authorName = authorName,
-                    dimensions = dimensions,
-                    blurhash = blurhash,
                     nostrUriCallback = nostrUriCallback,
                     automaticallyStartPlayback = automaticallyStartPlayback,
                     onControllerVisibilityChanged = onControllerVisibilityChanged,
                     onDialog = onDialog,
+                    accountViewModel = accountViewModel,
                 )
             }
         }
@@ -272,21 +285,20 @@ fun VideoView(
             } else {
                 VideoViewInner(
                     videoUri = videoUri,
+                    mimeType = mimeType,
                     defaultToStart = defaultToStart,
                     title = title,
                     thumb = thumb,
                     roundedCorner = roundedCorner,
                     isFiniteHeight = isFiniteHeight,
-                    topPaddingForControllers = topPaddingForControllers,
                     waveform = waveform,
                     artworkUri = artworkUri,
                     authorName = authorName,
-                    dimensions = dimensions,
-                    blurhash = blurhash,
                     nostrUriCallback = nostrUriCallback,
                     automaticallyStartPlayback = automaticallyStartPlayback,
                     onControllerVisibilityChanged = onControllerVisibilityChanged,
                     onDialog = onDialog,
+                    accountViewModel = accountViewModel,
                 )
             }
         }
@@ -297,21 +309,20 @@ fun VideoView(
 @OptIn(androidx.media3.common.util.UnstableApi::class)
 fun VideoViewInner(
     videoUri: String,
+    mimeType: String?,
     defaultToStart: Boolean = false,
     title: String? = null,
     thumb: VideoThumb? = null,
     roundedCorner: Boolean,
     isFiniteHeight: Boolean,
-    topPaddingForControllers: Dp = Dp.Unspecified,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
-    dimensions: String? = null,
-    blurhash: String? = null,
     nostrUriCallback: String? = null,
     automaticallyStartPlayback: State<Boolean>,
     onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
     onDialog: ((Boolean) -> Unit)? = null,
+    accountViewModel: AccountViewModel,
 ) {
     VideoPlayerActiveMutex(videoUri) { modifier, activeOnScreen ->
         GetMediaItem(videoUri, title, artworkUri, authorName) { mediaItem ->
@@ -322,13 +333,13 @@ fun VideoViewInner(
                 nostrUriCallback = nostrUriCallback,
             ) { controller, keepPlaying ->
                 RenderVideoPlayer(
+                    videoUri = videoUri,
+                    mimeType = mimeType,
                     controller = controller,
                     thumbData = thumb,
                     roundedCorner = roundedCorner,
                     isFiniteHeight = isFiniteHeight,
-                    dimensions = dimensions,
-                    blurhash = blurhash,
-                    topPaddingForControllers = topPaddingForControllers,
+                    nostrUriCallback = nostrUriCallback,
                     waveform = waveform,
                     keepPlaying = keepPlaying,
                     automaticallyStartPlayback = automaticallyStartPlayback,
@@ -336,6 +347,7 @@ fun VideoViewInner(
                     modifier = modifier,
                     onControllerVisibilityChanged = onControllerVisibilityChanged,
                     onDialog = onDialog,
+                    accountViewModel = accountViewModel,
                 )
             }
         }
@@ -353,18 +365,18 @@ data class MediaItemData(
 )
 
 class MediaItemCache() : GenericBaseCache<MediaItemData, MediaItem>(20) {
-    override suspend fun compute(data: MediaItemData): MediaItem? {
+    override suspend fun compute(key: MediaItemData): MediaItem {
         return MediaItem.Builder()
-            .setMediaId(data.videoUri)
-            .setUri(data.videoUri)
+            .setMediaId(key.videoUri)
+            .setUri(key.videoUri)
             .setMediaMetadata(
                 MediaMetadata.Builder()
-                    .setArtist(data.authorName?.ifBlank { null })
-                    .setTitle(data.title?.ifBlank { null } ?: data.videoUri)
+                    .setArtist(key.authorName?.ifBlank { null })
+                    .setTitle(key.title?.ifBlank { null } ?: key.videoUri)
                     .setArtworkUri(
                         try {
-                            if (data.artworkUri != null) {
-                                Uri.parse(data.artworkUri)
+                            if (key.artworkUri != null) {
+                                Uri.parse(key.artworkUri)
                             } else {
                                 null
                             }
@@ -647,13 +659,13 @@ data class VideoThumb(
 @Composable
 @OptIn(UnstableApi::class)
 private fun RenderVideoPlayer(
+    videoUri: String,
+    mimeType: String?,
     controller: MediaController,
     thumbData: VideoThumb?,
     roundedCorner: Boolean,
     isFiniteHeight: Boolean,
-    dimensions: String? = null,
-    blurhash: String? = null,
-    topPaddingForControllers: Dp = Dp.Unspecified,
+    nostrUriCallback: String?,
     waveform: ImmutableList<Int>? = null,
     keepPlaying: MutableState<Boolean>,
     automaticallyStartPlayback: State<Boolean>,
@@ -661,6 +673,7 @@ private fun RenderVideoPlayer(
     modifier: Modifier,
     onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
     onDialog: ((Boolean) -> Unit)?,
+    accountViewModel: AccountViewModel,
 ) {
     ControlWhenPlayerIsActive(controller, keepPlaying, automaticallyStartPlayback, activeOnScreen)
 
@@ -724,6 +737,7 @@ private fun RenderVideoPlayer(
         MuteButton(
             controllerVisible,
             startingMuteState,
+            Modifier.align(Alignment.TopEnd),
         ) { mute: Boolean ->
             // makes the new setting the default for new creations.
             DEFAULT_MUTED_SETTING.value = mute
@@ -741,7 +755,7 @@ private fun RenderVideoPlayer(
         KeepPlayingButton(
             keepPlaying,
             controllerVisible,
-            Modifier.align(Alignment.TopEnd),
+            Modifier.align(Alignment.TopEnd).padding(end = Size55dp),
         ) { newKeepPlaying: Boolean ->
             // If something else is playing and the user marks this video to keep playing, stops the other
             // one.
@@ -759,6 +773,15 @@ private fun RenderVideoPlayer(
 
             keepPlaying.value = newKeepPlaying
         }
+
+        AnimatedSaveAndShareButton(
+            videoUri = videoUri,
+            mimeType = mimeType,
+            nostrUriCallback = nostrUriCallback,
+            controllerVisible = controllerVisible,
+            modifier = Modifier.align(Alignment.TopEnd).padding(end = Size110dp),
+            accountViewModel = accountViewModel,
+        )
     }
 }
 
@@ -777,7 +800,7 @@ fun Waveform(
     controller: MediaController,
     modifier: Modifier,
 ) {
-    val waveformProgress = remember { mutableStateOf(0F) }
+    val waveformProgress = remember { mutableFloatStateOf(0F) }
 
     DrawWaveform(waveform, waveformProgress, modifier)
 
@@ -791,7 +814,7 @@ fun Waveform(
                     // doesn't consider the mutex because the screen can turn off if the video
                     // being played in the mutex is not visible.
                     if (isPlaying) {
-                        restartFlow.value += 1
+                        restartFlow.intValue += 1
                     }
                 }
             }
@@ -800,28 +823,28 @@ fun Waveform(
         onDispose { controller.removeListener(listener) }
     }
 
-    LaunchedEffect(key1 = restartFlow.value) {
-        pollCurrentDuration(controller).collect { value -> waveformProgress.value = value }
+    LaunchedEffect(key1 = restartFlow.intValue) {
+        pollCurrentDuration(controller).collect { value -> waveformProgress.floatValue = value }
     }
 }
 
 @Composable
 fun DrawWaveform(
     waveform: ImmutableList<Int>,
-    waveformProgress: MutableState<Float>,
+    waveformProgress: MutableFloatState,
     modifier: Modifier,
 ) {
     AudioWaveformReadOnly(
         modifier = modifier.padding(start = 10.dp, end = 10.dp),
         amplitudes = waveform,
-        progress = waveformProgress.value,
+        progress = waveformProgress.floatValue,
         progressBrush =
             Brush.infiniteLinearGradient(
                 colors = listOf(Color(0xff2598cf), Color(0xff652d80)),
                 animation = tween(durationMillis = 6000, easing = LinearEasing),
                 width = 128F,
             ),
-        onProgressChange = { waveformProgress.value = it },
+        onProgressChange = { waveformProgress.floatValue = it },
     )
 }
 
@@ -926,6 +949,7 @@ fun LayoutCoordinates.getDistanceToVertCenterIfVisible(view: View): Float? {
 private fun MuteButton(
     controllerVisible: MutableState<Boolean>,
     startingMuteState: Boolean,
+    modifier: Modifier,
     toggle: (Boolean) -> Unit,
 ) {
     val holdOn =
@@ -946,6 +970,7 @@ private fun MuteButton(
 
     AnimatedVisibility(
         visible = holdOn.value || controllerVisible.value,
+        modifier = modifier,
         enter = remember { fadeIn() },
         exit = remember { fadeOut() },
     ) {
@@ -978,14 +1003,14 @@ private fun MuteButton(
 private fun KeepPlayingButton(
     keepPlayingStart: MutableState<Boolean>,
     controllerVisible: MutableState<Boolean>,
-    alignment: Modifier,
+    modifier: Modifier,
     toggle: (Boolean) -> Unit,
 ) {
     val keepPlaying = remember(keepPlayingStart.value) { mutableStateOf(keepPlayingStart.value) }
 
     AnimatedVisibility(
         visible = controllerVisible.value,
-        modifier = alignment,
+        modifier = modifier,
         enter = remember { fadeIn() },
         exit = remember { fadeOut() },
     ) {
@@ -1010,6 +1035,75 @@ private fun KeepPlayingButton(
                     LyricsOffIcon(Size22Modifier, MaterialTheme.colorScheme.onBackground)
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun AnimatedSaveAndShareButton(
+    videoUri: String,
+    mimeType: String?,
+    nostrUriCallback: String?,
+    controllerVisible: State<Boolean>,
+    modifier: Modifier,
+    accountViewModel: AccountViewModel,
+) {
+    AnimatedSaveAndShareButton(controllerVisible, modifier) { popupExpanded, toggle ->
+        ShareImageAction(popupExpanded, videoUri, nostrUriCallback, mimeType, toggle, accountViewModel)
+    }
+}
+
+@Composable
+fun SaveAndShareButton(
+    content: BaseMediaContent,
+    accountViewModel: AccountViewModel,
+) {
+    SaveAndShareButton { popupExpanded, toggle ->
+        ShareImageAction(popupExpanded, content, toggle, accountViewModel)
+    }
+}
+
+@Composable
+fun AnimatedSaveAndShareButton(
+    controllerVisible: State<Boolean>,
+    modifier: Modifier,
+    innerAction: @Composable (MutableState<Boolean>, () -> Unit) -> Unit,
+) {
+    AnimatedVisibility(
+        visible = controllerVisible.value,
+        modifier = modifier,
+        enter = remember { fadeIn() },
+        exit = remember { fadeOut() },
+    ) {
+        SaveAndShareButton(innerAction)
+    }
+}
+
+@Composable
+fun SaveAndShareButton(innerAction: @Composable (MutableState<Boolean>, () -> Unit) -> Unit) {
+    Box(modifier = PinBottomIconSize) {
+        Box(
+            Modifier.clip(CircleShape)
+                .fillMaxSize(0.6f)
+                .align(Alignment.Center)
+                .background(MaterialTheme.colorScheme.background),
+        )
+
+        val popupExpanded = remember { mutableStateOf(false) }
+
+        IconButton(
+            onClick = {
+                popupExpanded.value = true
+            },
+            modifier = Size50Modifier,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Share,
+                modifier = Size20Modifier,
+                contentDescription = stringResource(R.string.share_or_save),
+            )
+
+            innerAction(popupExpanded) { popupExpanded.value = false }
         }
     }
 }

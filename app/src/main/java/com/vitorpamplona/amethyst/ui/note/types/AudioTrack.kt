@@ -142,6 +142,7 @@ fun AudioTrackHeader(
                     cover?.let { cover ->
                         LoadThumbAndThenVideoView(
                             videoUri = media,
+                            mimeType = null,
                             title = noteEvent.subject(),
                             thumbUri = cover,
                             authorName = note.author?.toBestDisplayName(),
@@ -153,6 +154,7 @@ fun AudioTrackHeader(
                     } ?: run {
                         VideoView(
                             videoUri = media,
+                            mimeType = null,
                             title = noteEvent.subject(),
                             authorName = note.author?.toBestDisplayName(),
                             roundedCorner = true,
@@ -202,6 +204,7 @@ fun AudioHeader(
                 ) {
                     VideoView(
                         videoUri = media,
+                        mimeType = null,
                         waveform = waveform,
                         title = noteEvent.subject(),
                         authorName = note.author?.toBestDisplayName(),

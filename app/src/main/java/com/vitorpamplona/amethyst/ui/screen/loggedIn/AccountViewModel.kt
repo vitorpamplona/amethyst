@@ -125,6 +125,8 @@ import kotlin.time.measureTimedValue
     val params: Array<out String>? = null,
 ) : ToastMsg()
 
+@Immutable class ThrowableToastMsg(val titleResId: Int, val msg: String? = null, val throwable: Throwable) : ToastMsg()
+
 @Stable
 class AccountViewModel(val account: Account, val settings: SettingsState) : ViewModel(), Dao {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
@@ -161,6 +163,14 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         resourceId: Int,
     ) {
         viewModelScope.launch { toasts.emit(ResourceToastMsg(titleResId, resourceId)) }
+    }
+
+    fun toast(
+        titleResId: Int,
+        message: String?,
+        throwable: Throwable,
+    ) {
+        viewModelScope.launch { toasts.emit(ThrowableToastMsg(titleResId, message, throwable)) }
     }
 
     fun toast(

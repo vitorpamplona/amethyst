@@ -38,6 +38,7 @@ abstract class MediaUrlContent(
     dim: String? = null,
     blurhash: String? = null,
     val uri: String? = null,
+    val mimeType: String? = null,
 ) : BaseMediaContent(description, dim, blurhash)
 
 @Immutable
@@ -49,7 +50,8 @@ class MediaUrlImage(
     dim: String? = null,
     uri: String? = null,
     val contentWarning: String? = null,
-) : MediaUrlContent(url, description, hash, dim, blurhash, uri)
+    mimeType: String? = null,
+) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType)
 
 @Immutable
 class MediaUrlVideo(
@@ -62,7 +64,8 @@ class MediaUrlVideo(
     val authorName: String? = null,
     blurhash: String? = null,
     val contentWarning: String? = null,
-) : MediaUrlContent(url, description, hash, dim, blurhash, uri)
+    mimeType: String? = null,
+) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType)
 
 @Immutable
 abstract class MediaPreloadedContent(
