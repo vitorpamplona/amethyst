@@ -138,7 +138,7 @@ object NostrSearchEventOrUserDataSource : NostrDataSource("SearchEventFeed") {
                         JsonFilter(
                             kinds = listOf(MetadataEvent.KIND),
                             search = mySearchString,
-                            limit = 100,
+                            limit = 1000,
                         ),
                 ),
                 TypedFilter(
