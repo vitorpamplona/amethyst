@@ -43,6 +43,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -621,17 +623,11 @@ private fun ReportsTabHeader(baseUser: User) {
 
 @Composable
 private fun FollowedTagsTabHeader(baseUser: User) {
-    var usertags by remember { mutableIntStateOf(0) }
+    val userState by baseUser.live().follows.observeAsState()
 
-    LaunchedEffect(key1 = baseUser) {
-        launch(Dispatchers.IO) {
-            val contactList = baseUser.latestContactList
-
-            val newTags = (contactList?.verifiedFollowTagSet?.count() ?: 0)
-
-            if (newTags != usertags) {
-                usertags = newTags
-            }
+    val usertags by remember(baseUser) {
+        derivedStateOf {
+            userState?.user?.latestContactList?.countFollowTags() ?: 0
         }
     }
 
@@ -1540,17 +1536,24 @@ fun TabFollowedTags(
     account: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    val items =
+        remember(baseUser) {
+            baseUser.latestContactList?.unverifiedFollowTagSet()
+        }
+
     Column(Modifier.fillMaxHeight().padding(vertical = 0.dp)) {
-        baseUser.latestContactList?.let {
-            it.unverifiedFollowTagSet().forEach { hashtag ->
-                HashtagHeader(
-                    tag = hashtag,
-                    account = account,
-                    onClick = { nav("Hashtag/$hashtag") },
-                )
-                HorizontalDivider(
-                    thickness = DividerThickness,
-                )
+        items?.let {
+            LazyColumn {
+                itemsIndexed(items) { index, hashtag ->
+                    HashtagHeader(
+                        tag = hashtag,
+                        account = account,
+                        onClick = { nav("Hashtag/$hashtag") },
+                    )
+                    HorizontalDivider(
+                        thickness = DividerThickness,
+                    )
+                }
             }
         }
     }
