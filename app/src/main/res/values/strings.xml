@@ -825,7 +825,7 @@
     <string name="public_home_section">Public Home Relays</string>
     <string name="public_home_section_explainer">This relay type stores all your content. Amethyst will send your posts here and others will use these relays to find your content. Insert between 1–3 relays. They can be personal relays, paid relays or public relays.</string>
     <string name="public_notif_section">Public Inbox Relays</string>
-    <string name="public_notif_section_explainer">This relay type receives all replies, comments, likes and zaps to your posts. Insert between 1–3 relays and make sure they accept posts from anyone.</string>
+    <string name="public_notif_section_explainer">This relay type receives all replies, comments, likes and zaps to your posts. They can be paid or free relays. Limits set by the relay operator can limit the notifications you receive for the good and for the bad. For example, if you are being attacked by comment spam, paid relays can filter the spam out. Insert between 1–3 relays.</string>
     <string name="private_inbox_section">DM Inbox Relays</string>
     <string name="private_inbox_section_explainer">Insert between 1–3 relays to serve as your private inbox. Others will use these relays to send DMs to you. DM Inbox relays should accept any message from anyone, but only allow you to download them. Good options are:\n - inbox.nostr.wine (paid)\n - you.nostr1.com (personal relays - paid)</string>
     <string name="private_outbox_section">Private Relays</string>
