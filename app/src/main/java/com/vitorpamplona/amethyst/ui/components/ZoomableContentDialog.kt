@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -72,7 +73,6 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
-import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -228,9 +228,12 @@ private fun DialogContent(
             OutlinedButton(
                 onClick = onDismiss,
                 contentPadding = PaddingValues(horizontal = Size5dp),
-                colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
             ) {
-                ArrowBackIcon()
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back),
+                )
             }
 
             val popupExpanded = remember { mutableStateOf(false) }
