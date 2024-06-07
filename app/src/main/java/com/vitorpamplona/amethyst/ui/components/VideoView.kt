@@ -568,11 +568,20 @@ fun GetVideoController(
                 if (event == Lifecycle.Event.ON_PAUSE) {
                     if (!keepPlaying.value) {
                         // Stops and releases the media.
-                        controller.value?.let {
-                            Log.d("PlaybackService", "Releasing Video from Pause $videoUri ")
-                            it.stop()
-                            it.release()
-                            controller.value = null
+                        // Makes sure the variable is cleared before the task is launched
+                        // to avoid the ON_RELEASE running before ON_PAUSE's coroutine
+                        val toRelease = controller.value
+                        controller.value = null
+
+                        toRelease?.let {
+                            it.pause()
+
+                            scope.launch(Dispatchers.Main) {
+                                Log.d("PlaybackService", "Releasing Video from Pause $videoUri ")
+                                it.stop()
+                                it.release()
+                                Log.d("PlaybackService", "Released Video from Pause $videoUri ")
+                            }
                         }
                     }
                 }
