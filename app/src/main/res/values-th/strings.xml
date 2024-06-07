@@ -113,6 +113,7 @@
     <string name="website_url">ที่อยู่ URL เว็บไซต์</string>
     <string name="ln_address">Lightning Address</string>
     <string name="ln_url_outdated">LN URL (หมดอายุ)</string>
+    <string name="save_to_gallery">บันทึกรูปภาพ</string>
     <string name="image_saved_to_the_gallery">บันทึกรูปภาพลงแกลเลอรี</string>
     <string name="failed_to_save_the_image">เกิดข้อผิดพลาดในการบันทึกรูปภาพ</string>
     <string name="upload_image">อัพโหลดรูปภาพ</string>
@@ -406,6 +407,7 @@
     <string name="languages">ภาษา</string>
     <string name="tags">แท็ก</string>
     <string name="posting_policy">นโยบายการโพสต์</string>
+    <string name="relay_error_messages">ประกาศจากทางรีเลย์</string>
     <string name="message_length">ความยาวข้อความ</string>
     <string name="subscriptions">การสมัครสมาชิก</string>
     <string name="filters">ฟิลเตอร์</string>
@@ -499,6 +501,7 @@
     <string name="load_image_description">ควรโหลดรูปภาพเมื่อใด</string>
     <string name="copy_to_clipboard">คัดลอก</string>
     <string name="copy_npub_to_clipboard">คัดลอก npub ไปยังคลิปบอร์ด</string>
+    <string name="share_or_save">แชร์ หรือเก็บไว้</string>
     <string name="copy_url_to_clipboard">คัดลอก URL ลงคลิปบอร์ด</string>
     <string name="copy_the_note_id_to_the_clipboard">คัดลอก โน้ต ID ลงคลิปบอร์ดd</string>
     <string name="created_at">สร้างโดย</string>
