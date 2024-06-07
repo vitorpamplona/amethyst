@@ -508,14 +508,20 @@ fun GetVideoController(
         }
 
         onDispose {
-            GlobalScope.launch(Dispatchers.Main) {
-                if (!keepPlaying.value) {
-                    // Stops and releases the media.
-                    controller.value?.let {
+            if (!keepPlaying.value) {
+                // Makes sure the variable is cleared before the task is launched
+                // to avoid the ON_RELEASE running before ON_PAUSE's coroutine
+                val toRelease = controller.value
+                controller.value = null
+
+                toRelease?.let {
+                    it.pause()
+
+                    GlobalScope.launch(Dispatchers.Main) {
+                        // Stops and releases the media.
                         it.stop()
                         it.release()
                         Log.d("PlaybackService", "Releasing Video $videoUri ")
-                        controller.value = null
                     }
                 }
             }

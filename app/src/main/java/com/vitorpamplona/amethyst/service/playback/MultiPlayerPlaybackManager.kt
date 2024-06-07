@@ -156,7 +156,7 @@ class MultiPlayerPlaybackManager(
                     newPosition: PositionInfo,
                     reason: Int,
                 ) {
-                    if (mustCachePositions) {
+                    if (mustCachePositions && player.playbackState != STATE_IDLE) {
                         cachedPositions.add(uri, newPosition.positionMs)
                     }
                 }
