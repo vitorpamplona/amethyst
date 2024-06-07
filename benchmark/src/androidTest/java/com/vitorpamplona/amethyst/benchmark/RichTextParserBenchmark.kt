@@ -62,6 +62,7 @@ class RichTextParserBenchmark {
                 RichTextParser().parseText(
                     "first https://m.primal.net/HeKw.jpg second",
                     EmptyTagList,
+                    null,
                 ).paragraphs[0].words[1] is ImageSegment,
             )
         }
@@ -74,6 +75,7 @@ class RichTextParserBenchmark {
                 RichTextParser().parseText(
                     "first amethyst.social second",
                     EmptyTagList,
+                    null,
                 ).paragraphs[0].words[1] is LinkSegment,
             )
         }
@@ -86,6 +88,7 @@ class RichTextParserBenchmark {
                 RichTextParser().parseText(
                     "first #amethyst second",
                     EmptyTagList,
+                    null,
                 ).paragraphs[0].words[1] is HashTagSegment,
             )
         }
@@ -94,14 +97,14 @@ class RichTextParserBenchmark {
     @Test
     fun computeTestCase1All() {
         benchmarkRule.measureRepeated {
-            RichTextParser().parseText(testCase1, EmptyTagList)
+            RichTextParser().parseText(testCase1, EmptyTagList, null)
         }
     }
 
     @Test
     fun computeTestCase2All() {
         benchmarkRule.measureRepeated {
-            RichTextParser().parseText(testCase2, EmptyTagList)
+            RichTextParser().parseText(testCase2, EmptyTagList, null)
         }
     }
 
@@ -129,14 +132,14 @@ class RichTextParserBenchmark {
     @Test
     fun computeTestCase3All() {
         benchmarkRule.measureRepeated {
-            RichTextParser().parseText(testCase3, EmptyTagList)
+            RichTextParser().parseText(testCase3, EmptyTagList, null)
         }
     }
 
     @Test
     fun computeTestCaseJapanese() {
         benchmarkRule.measureRepeated {
-            RichTextParser().parseText(testCaseJapanese, testCaseJapaneseTags)
+            RichTextParser().parseText(testCaseJapanese, testCaseJapaneseTags, null)
         }
     }
 
