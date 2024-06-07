@@ -406,6 +406,7 @@
     <string name="languages">Nyelvek</string>
     <string name="tags">Címkék</string>
     <string name="posting_policy">Szabályzat</string>
+    <string name="relay_error_messages">Hibák és megjegyzések ettől a csomóponttól</string>
     <string name="message_length">Üzenet hossza</string>
     <string name="subscriptions">Feliratkozások</string>
     <string name="filters">Filterek</string>

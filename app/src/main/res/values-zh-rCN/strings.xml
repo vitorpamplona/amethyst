@@ -113,6 +113,7 @@
     <string name="website_url">网站链接</string>
     <string name="ln_address">闪电地址</string>
     <string name="ln_url_outdated">LN链接（过期）</string>
+    <string name="save_to_gallery">保存到相册</string>
     <string name="image_saved_to_the_gallery">图片已保存到相册</string>
     <string name="failed_to_save_the_image">保存图片失败</string>
     <string name="upload_image">上传图片</string>
@@ -501,6 +502,7 @@
     <string name="load_image_description">何时加载图像</string>
     <string name="copy_to_clipboard">复制到剪贴板</string>
     <string name="copy_npub_to_clipboard">复制 npub 到剪贴板</string>
+    <string name="share_or_save">分享或保存</string>
     <string name="copy_url_to_clipboard">复制链接到剪贴板</string>
     <string name="copy_the_note_id_to_the_clipboard">复制笔记 ID 到剪贴板</string>
     <string name="created_at">创建于</string>
