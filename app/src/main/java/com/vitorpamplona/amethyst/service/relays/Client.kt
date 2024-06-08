@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import android.util.Log
+import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
@@ -41,10 +42,10 @@ object Client : RelayPool.Listener {
 
     @Synchronized
     fun reconnect(
-        relays: Array<Relay>?,
+        relays: Array<RelaySetupInfo>?,
         onlyIfChanged: Boolean = false,
     ) {
-        Log.d("Relay", "Relay Pool Reconnecting to ${relays?.size} relays: \n${relays?.joinToString("\n") { it.url + " " + it.read + " " + it.write + " " + it.activeTypes.joinToString(",") { it.name } }}")
+        Log.d("Relay", "Relay Pool Reconnecting to ${relays?.size} relays: \n${relays?.joinToString("\n") { it.url + " " + it.read + " " + it.write + " " + it.feedTypes.joinToString(",") { it.name } }}")
         checkNotInMainThread()
 
         if (onlyIfChanged) {
@@ -56,10 +57,11 @@ object Client : RelayPool.Listener {
                 }
 
                 if (relays != null) {
+                    val newRelays = relays.map { Relay(it.url, it.read, it.write, it.feedTypes) }
                     RelayPool.register(this)
-                    RelayPool.loadRelays(relays.toList())
+                    RelayPool.loadRelays(newRelays)
                     RelayPool.requestAndWatch()
-                    this.relays = relays
+                    this.relays = newRelays.toTypedArray()
                 }
             }
         } else {
@@ -70,15 +72,16 @@ object Client : RelayPool.Listener {
             }
 
             if (relays != null) {
+                val newRelays = relays.map { Relay(it.url, it.read, it.write, it.feedTypes) }
                 RelayPool.register(this)
-                RelayPool.loadRelays(relays.toList())
+                RelayPool.loadRelays(newRelays)
                 RelayPool.requestAndWatch()
-                this.relays = relays
+                this.relays = newRelays.toTypedArray()
             }
         }
     }
 
-    fun isSameRelaySetConfig(newRelayConfig: Array<Relay>?): Boolean {
+    fun isSameRelaySetConfig(newRelayConfig: Array<RelaySetupInfo>?): Boolean {
         if (relays.size != newRelayConfig?.size) return false
 
         relays.forEach { oldRelayInfo ->
@@ -142,7 +145,7 @@ object Client : RelayPool.Listener {
         signedEvent: EventInterface,
         relay: String? = null,
         feedTypes: Set<FeedType>? = null,
-        relayList: List<Relay>? = null,
+        relayList: List<RelaySetupInfo>? = null,
         onDone: (() -> Unit)? = null,
     ) {
         checkNotInMainThread()

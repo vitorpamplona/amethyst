@@ -258,7 +258,7 @@ class Account(
             var mappedRelaySet =
                 baseRelaySet.map {
                     if (newDMRelaySet.contains(it.url)) {
-                        Relay(it.url, true, true, it.activeTypes + FeedType.PRIVATE_DMS)
+                        RelaySetupInfo(it.url, true, true, it.feedTypes + FeedType.PRIVATE_DMS)
                     } else {
                         it
                     }
@@ -266,7 +266,7 @@ class Account(
 
             newDMRelaySet.forEach { newUrl ->
                 if (mappedRelaySet.none { it.url == newUrl }) {
-                    mappedRelaySet = mappedRelaySet + Relay(newUrl, true, true, setOf(FeedType.PRIVATE_DMS))
+                    mappedRelaySet = mappedRelaySet + RelaySetupInfo(newUrl, true, true, setOf(FeedType.PRIVATE_DMS))
                 }
             }
 
@@ -277,7 +277,7 @@ class Account(
             mappedRelaySet =
                 mappedRelaySet.map {
                     if (searchRelaySet.contains(it.url)) {
-                        Relay(it.url, true, it.write || false, it.activeTypes + FeedType.SEARCH)
+                        RelaySetupInfo(it.url, true, it.write || false, it.feedTypes + FeedType.SEARCH)
                     } else {
                         it
                     }
@@ -285,7 +285,7 @@ class Account(
 
             searchRelaySet.forEach { newUrl ->
                 if (mappedRelaySet.none { it.url == newUrl }) {
-                    mappedRelaySet = mappedRelaySet + Relay(newUrl, true, false, setOf(FeedType.SEARCH))
+                    mappedRelaySet = mappedRelaySet + RelaySetupInfo(newUrl, true, false, setOf(FeedType.SEARCH))
                 }
             }
 
@@ -296,7 +296,7 @@ class Account(
             mappedRelaySet =
                 mappedRelaySet.map {
                     if (privateOutboxRelaySet.contains(it.url)) {
-                        Relay(it.url, true, true, it.activeTypes + setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
+                        RelaySetupInfo(it.url, true, true, it.feedTypes + setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
                     } else {
                         it
                     }
@@ -304,7 +304,7 @@ class Account(
 
             privateOutboxRelaySet.forEach { newUrl ->
                 if (mappedRelaySet.none { it.url == newUrl }) {
-                    mappedRelaySet = mappedRelaySet + Relay(newUrl, true, true, setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
+                    mappedRelaySet = mappedRelaySet + RelaySetupInfo(newUrl, true, true, setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
                 }
             }
 
@@ -315,7 +315,7 @@ class Account(
             mappedRelaySet =
                 mappedRelaySet.map {
                     if (localRelayServers.contains(it.url)) {
-                        Relay(it.url, true, true, it.activeTypes + setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
+                        RelaySetupInfo(it.url, true, true, it.feedTypes + setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
                     } else {
                         it
                     }
@@ -323,7 +323,7 @@ class Account(
 
             localRelayServers.forEach { newUrl ->
                 if (mappedRelaySet.none { it.url == newUrl }) {
-                    mappedRelaySet = mappedRelaySet + Relay(newUrl, true, true, setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
+                    mappedRelaySet = mappedRelaySet + RelaySetupInfo(newUrl, true, true, setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
                 }
             }
 
@@ -337,7 +337,7 @@ class Account(
                     if (nip65setup != null) {
                         val write = nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
 
-                        Relay(relay.url, true, relay.write || write, relay.activeTypes + setOf(FeedType.FOLLOWS, FeedType.GLOBAL, FeedType.PUBLIC_CHATS))
+                        RelaySetupInfo(relay.url, true, relay.write || write, relay.feedTypes + setOf(FeedType.FOLLOWS, FeedType.GLOBAL, FeedType.PUBLIC_CHATS))
                     } else {
                         relay
                     }
@@ -347,7 +347,7 @@ class Account(
                 if (mappedRelaySet.none { it.url == newNip65Setup.relayUrl }) {
                     val write = newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
 
-                    mappedRelaySet = mappedRelaySet + Relay(newNip65Setup.relayUrl, true, write, setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS))
+                    mappedRelaySet = mappedRelaySet + RelaySetupInfo(newNip65Setup.relayUrl, true, write, setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS))
                 }
             }
 
@@ -1316,7 +1316,7 @@ class Account(
     fun consumeAndSendNip95(
         data: FileStorageEvent,
         signedEvent: FileStorageHeaderEvent,
-        relayList: List<Relay>? = null,
+        relayList: List<RelaySetupInfo>? = null,
     ): Note? {
         if (!isWriteable()) return null
 
@@ -1342,7 +1342,7 @@ class Account(
     fun sendNip95(
         data: FileStorageEvent,
         signedEvent: FileStorageHeaderEvent,
-        relayList: List<Relay>? = null,
+        relayList: List<RelaySetupInfo>? = null,
     ) {
         Client.send(data, relayList = relayList)
         Client.send(signedEvent, relayList = relayList)
@@ -1350,7 +1350,7 @@ class Account(
 
     fun sendHeader(
         signedEvent: FileHeaderEvent,
-        relayList: List<Relay>? = null,
+        relayList: List<RelaySetupInfo>? = null,
         onReady: (Note) -> Unit,
     ) {
         Client.send(signedEvent, relayList = relayList)
@@ -1394,7 +1394,7 @@ class Account(
         alt: String?,
         sensitiveContent: Boolean,
         originalHash: String? = null,
-        relayList: List<Relay>? = null,
+        relayList: List<RelaySetupInfo>? = null,
         onReady: (Note) -> Unit,
     ) {
         if (!isWriteable()) return
@@ -1429,7 +1429,7 @@ class Account(
         zapReceiver: List<ZapSplitSetup>? = null,
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
-        relayList: List<Relay>? = null,
+        relayList: List<RelaySetupInfo>? = null,
         geohash: String? = null,
         nip94attachments: List<Event>? = null,
         draftTag: String?,
@@ -1502,7 +1502,7 @@ class Account(
         root: String?,
         directMentions: Set<HexKey>,
         forkedFrom: Event?,
-        relayList: List<Relay>? = null,
+        relayList: List<RelaySetupInfo>? = null,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
         draftTag: String?,
@@ -1591,7 +1591,7 @@ class Account(
         root: String?,
         directMentions: Set<HexKey>,
         forkedFrom: Event?,
-        relayList: List<Relay>? = null,
+        relayList: List<RelaySetupInfo>? = null,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
         draftTag: String?,
@@ -1659,7 +1659,7 @@ class Account(
         originalNote: Note,
         notify: HexKey?,
         summary: String? = null,
-        relayList: List<Relay>? = null,
+        relayList: List<RelaySetupInfo>? = null,
     ) {
         if (!isWriteable()) return
 
@@ -1689,7 +1689,7 @@ class Account(
         zapReceiver: List<ZapSplitSetup>? = null,
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
-        relayList: List<Relay>? = null,
+        relayList: List<RelaySetupInfo>? = null,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
         draftTag: String?,
@@ -2605,7 +2605,7 @@ class Account(
     }
 
     // Takes a User's relay list and adds the types of feeds they are active for.
-    fun activeRelays(): Array<Relay>? {
+    fun activeRelays(): Array<RelaySetupInfo>? {
         val usersRelayList =
             userProfile().latestContactList?.relays()?.map {
                 val url = RelayUrlFormatter.normalize(it.key)
@@ -2618,24 +2618,24 @@ class Account(
                             ?.feedTypes
                         ?: FeedType.values().toSet()
 
-                Relay(url, it.value.read, it.value.write, localFeedTypes)
+                RelaySetupInfo(url, it.value.read, it.value.write, localFeedTypes)
             } ?: return null
 
         return usersRelayList.toTypedArray()
     }
 
-    fun convertLocalRelays(): Array<Relay> {
-        return localRelays.map { Relay(RelayUrlFormatter.normalize(it.url), it.read, it.write, it.feedTypes) }.toTypedArray()
+    fun convertLocalRelays(): Array<RelaySetupInfo> {
+        return localRelays.map { RelaySetupInfo(RelayUrlFormatter.normalize(it.url), it.read, it.write, it.feedTypes) }.toTypedArray()
     }
 
     fun activeGlobalRelays(): Array<String> {
         return connectToRelays.value
-            .filter { it.activeTypes.contains(FeedType.GLOBAL) }
+            .filter { it.feedTypes.contains(FeedType.GLOBAL) }
             .map { it.url }
             .toTypedArray()
     }
 
-    fun activeWriteRelays(): List<Relay> {
+    fun activeWriteRelays(): List<RelaySetupInfo> {
         return connectToRelays.value.filter { it.write }
     }
 

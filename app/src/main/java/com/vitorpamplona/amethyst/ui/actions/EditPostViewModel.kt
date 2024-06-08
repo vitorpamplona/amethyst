@@ -36,11 +36,11 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
-import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.events.FileHeaderEvent
@@ -109,11 +109,11 @@ open class EditPostViewModel() : ViewModel() {
         editedFromNote = edit
     }
 
-    fun sendPost(relayList: List<Relay>? = null) {
+    fun sendPost(relayList: List<RelaySetupInfo>? = null) {
         viewModelScope.launch(Dispatchers.IO) { innerSendPost(relayList) }
     }
 
-    suspend fun innerSendPost(relayList: List<Relay>? = null) {
+    suspend fun innerSendPost(relayList: List<RelaySetupInfo>? = null) {
         if (accountViewModel == null) {
             cancel()
             return

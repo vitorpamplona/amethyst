@@ -40,12 +40,12 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.LocationUtil
 import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
-import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.Split
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -438,7 +438,7 @@ open class NewPostViewModel() : ViewModel() {
         urlPreview = findUrlInMessage()
     }
 
-    fun sendPost(relayList: List<Relay>? = null) {
+    fun sendPost(relayList: List<RelaySetupInfo>? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             innerSendPost(relayList, null)
             accountViewModel?.deleteDraft(draftTag)
@@ -446,18 +446,18 @@ open class NewPostViewModel() : ViewModel() {
         }
     }
 
-    fun sendDraft(relayList: List<Relay>? = null) {
+    fun sendDraft(relayList: List<RelaySetupInfo>? = null) {
         viewModelScope.launch {
             sendDraftSync(relayList)
         }
     }
 
-    suspend fun sendDraftSync(relayList: List<Relay>? = null) {
+    suspend fun sendDraftSync(relayList: List<RelaySetupInfo>? = null) {
         innerSendPost(relayList, draftTag)
     }
 
     private suspend fun innerSendPost(
-        relayList: List<Relay>? = null,
+        relayList: List<RelaySetupInfo>? = null,
         localDraft: String?,
     ) = withContext(Dispatchers.IO) {
         if (accountViewModel == null) {

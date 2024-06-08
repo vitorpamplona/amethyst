@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.relays
 import android.util.Log
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
+import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -523,11 +524,11 @@ class Relay(
         writeToSocket("""["CLOSE","$subscriptionId"]""")
     }
 
-    fun isSameRelayConfig(other: Relay): Boolean {
+    fun isSameRelayConfig(other: RelaySetupInfo): Boolean {
         return url == other.url &&
             write == other.write &&
             read == other.read &&
-            activeTypes == other.activeTypes
+            activeTypes == other.feedTypes
     }
 
     enum class StateType {

@@ -47,8 +47,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
+import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.Nip11Retriever
-import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.actions.relays.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -57,7 +57,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
 data class RelayList(
-    val relay: Relay,
+    val relay: RelaySetupInfo,
     val relayInfo: RelayBriefInfoCache.RelayBriefInfo,
     val isSelected: Boolean,
 )
@@ -69,9 +69,9 @@ data class RelayInfoDialog(
 
 @Composable
 fun RelaySelectionDialog(
-    preSelectedList: ImmutableList<Relay>,
+    preSelectedList: ImmutableList<RelaySetupInfo>,
     onClose: () -> Unit,
-    onPost: (list: ImmutableList<Relay>) -> Unit,
+    onPost: (list: ImmutableList<RelaySetupInfo>) -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
