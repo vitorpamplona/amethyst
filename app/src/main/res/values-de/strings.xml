@@ -113,6 +113,7 @@
     <string name="website_url">Website-URL</string>
     <string name="ln_address">LN-Adresse</string>
     <string name="ln_url_outdated">LN-URL (veraltet)</string>
+    <string name="save_to_gallery">In die Galerie abspeichern</string>
     <string name="image_saved_to_the_gallery">Bild in der Gal
 
 erie gespeichert</string>
@@ -504,6 +505,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="load_image_description">Wann Bilder geladen werden sollen</string>
     <string name="copy_to_clipboard">In Zwischenablage kopieren</string>
     <string name="copy_npub_to_clipboard">Npub in Zwischenablage kopieren</string>
+    <string name="share_or_save">Teilen oder Speichern</string>
     <string name="copy_url_to_clipboard">URL in die Zwischenablage kopieren</string>
     <string name="copy_the_note_id_to_the_clipboard">Notiz-ID in die Zwischenablage kopieren</string>
     <string name="created_at">Erstellt am</string>

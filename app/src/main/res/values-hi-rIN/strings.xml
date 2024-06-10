@@ -113,6 +113,7 @@
     <string name="website_url">जालस्थान पता</string>
     <string name="ln_address">लै॰जाल पता</string>
     <string name="ln_url_outdated">लै॰जाल पता (पुराना)</string>
+    <string name="save_to_gallery">चित्रालय में अभिलेखन करें</string>
     <string name="image_saved_to_the_gallery">चित्र का अभिलेखन किया गया चित्रालय क्रमक में</string>
     <string name="failed_to_save_the_image">चित्र का अभिलेखन असफल</string>
     <string name="upload_image">चित्र आरोहण</string>
@@ -407,6 +408,7 @@
     <string name="languages">भाषाएँ</string>
     <string name="tags">विषयसूचक</string>
     <string name="posting_policy">पत्र प्रकाशन नीति</string>
+    <string name="relay_error_messages">अपक्रम तथा सूचनाएँ इस पुनःप्रसारक से</string>
     <string name="message_length">संदेश लम्बाई</string>
     <string name="subscriptions">ग्राहकताएँ</string>
     <string name="filters">छलनियाँ</string>
@@ -500,6 +502,7 @@
     <string name="load_image_description">चित्रों का अवरोहण कब करें</string>
     <string name="copy_to_clipboard">टाँकाफलक में अनुकृति करें</string>
     <string name="copy_npub_to_clipboard">टाँकाफलक में एनपुब॰ की अनुकृति करें</string>
+    <string name="share_or_save">बाँटें अथवा अभिलेखन करें</string>
     <string name="copy_url_to_clipboard">टाँकाफलक में जालपता की अनुकृति करें</string>
     <string name="copy_the_note_id_to_the_clipboard">टाँकाफलक में टीका विभेदक की अनुकृति करें</string>
     <string name="created_at">तब बनाया गया</string>

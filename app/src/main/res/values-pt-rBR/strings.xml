@@ -113,6 +113,7 @@
     <string name="website_url">URL do Site</string>
     <string name="ln_address">Endereço LN</string>
     <string name="ln_url_outdated">LN URL (desatualizado)</string>
+    <string name="save_to_gallery">Salvar na Galeria</string>
     <string name="image_saved_to_the_gallery">Imagem salva para a galeria</string>
     <string name="failed_to_save_the_image">Falha ao salvar a imagem</string>
     <string name="upload_image">Enviar Imagem</string>
@@ -499,6 +500,7 @@
     <string name="load_image_description">Quando carregar imagens</string>
     <string name="copy_to_clipboard">Copiar para a Área de Transferência</string>
     <string name="copy_npub_to_clipboard">Copiar npub para a área de transferência</string>
+    <string name="share_or_save">Compartilhar ou Salvar</string>
     <string name="copy_url_to_clipboard">Copiar URL para a área de transferência</string>
     <string name="copy_the_note_id_to_the_clipboard">Copiar ID da nota para a área de transferência</string>
     <string name="created_at">Criado em</string>

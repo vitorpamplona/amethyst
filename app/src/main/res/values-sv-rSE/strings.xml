@@ -113,6 +113,7 @@
     <string name="website_url">Websida URL</string>
     <string name="ln_address">LN Adress</string>
     <string name="ln_url_outdated">LN URL (Utdaterad)</string>
+    <string name="save_to_gallery">Spara i Galleri</string>
     <string name="image_saved_to_the_gallery">Bild sparad till galleriet</string>
     <string name="failed_to_save_the_image">Misslyckades att spara bilden</string>
     <string name="upload_image">Ladda upp bilden</string>
@@ -498,6 +499,7 @@
     <string name="load_image_description">När bilder ska laddas</string>
     <string name="copy_to_clipboard">Kopiera till Urklipp</string>
     <string name="copy_npub_to_clipboard">Kopiera npub till urklipp</string>
+    <string name="share_or_save">Dela eller Spara</string>
     <string name="copy_url_to_clipboard">Kopiera URL till urklipp</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopiera anteckningens ID till urklipp</string>
     <string name="created_at">Skapad den</string>
