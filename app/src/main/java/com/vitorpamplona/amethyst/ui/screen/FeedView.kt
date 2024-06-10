@@ -254,7 +254,7 @@ private fun FeedLoaded(
                 NoteCompose(
                     item,
                     routeForLastRead = routeForLastRead,
-                    modifier = Modifier,
+                    modifier = Modifier.fillMaxWidth(),
                     isBoostedNote = false,
                     isHiddenFeed = state.showHidden.value,
                     quotesLeft = 3,
