@@ -29,6 +29,8 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
+import androidx.core.net.toFile
+import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.HttpClientManager
 import kotlinx.coroutines.CancellationException
@@ -45,6 +47,33 @@ import java.io.File
 import java.util.UUID
 
 object ImageSaver {
+    fun saveImage(
+        videoUri: String?,
+        mimeType: String?,
+        localContext: Context,
+        onSuccess: () -> Any?,
+        onError: (Throwable) -> Any?,
+    ) {
+        if (videoUri != null) {
+            if (!videoUri.startsWith("file")) {
+                saveImage(
+                    context = localContext,
+                    url = videoUri,
+                    onSuccess = onSuccess,
+                    onError = onError,
+                )
+            } else {
+                saveImage(
+                    context = localContext,
+                    localFile = videoUri.toUri().toFile(),
+                    mimeType = mimeType,
+                    onSuccess = onSuccess,
+                    onError = onError,
+                )
+            }
+        }
+    }
+
     /**
      * Saves the image to the gallery. May require a storage permission.
      *

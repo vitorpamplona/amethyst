@@ -20,16 +20,15 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
-import android.os.Build
 import android.util.Log
 import android.view.Window
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -73,8 +72,6 @@ import coil.compose.AsyncImagePainter
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
@@ -85,7 +82,6 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.service.BlurHashRequester
-import com.vitorpamplona.amethyst.ui.actions.ImageSaver
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.note.BlankNote
@@ -142,12 +138,12 @@ fun ZoomableContentView(
         mainImageModifier = mainImageModifier.clickable { dialogOpen = true }
     }
 
-    val controllerVisible = remember { mutableStateOf(true) }
-
     when (content) {
         is MediaUrlImage ->
             SensitivityWarning(content.contentWarning != null, accountViewModel) {
-                UrlImageView(content, mainImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
+                TwoSecondController(content) { controllerVisible ->
+                    UrlImageView(content, mainImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
+                }
             }
         is MediaUrlVideo ->
             SensitivityWarning(content.contentWarning != null, accountViewModel) {
@@ -169,7 +165,9 @@ fun ZoomableContentView(
                 }
             }
         is MediaLocalImage ->
-            LocalImageView(content, mainImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
+            TwoSecondController(content) { controllerVisible ->
+                LocalImageView(content, mainImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
+            }
         is MediaLocalVideo ->
             content.localFile?.let {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -192,6 +190,25 @@ fun ZoomableContentView(
     if (dialogOpen) {
         ZoomableImageDialog(content, images, onDismiss = { dialogOpen = false }, accountViewModel)
     }
+}
+
+@Composable
+fun TwoSecondController(
+    content: BaseMediaContent,
+    inner: @Composable (controllerVisible: MutableState<Boolean>) -> Unit,
+) {
+    val controllerVisible = remember { mutableStateOf(true) }
+
+    LaunchedEffect(content) {
+        launch(Dispatchers.Default) {
+            delay(2000)
+            withContext(Dispatchers.Main) {
+                controllerVisible.value = false
+            }
+        }
+    }
+
+    inner(controllerVisible)
 }
 
 @Composable
@@ -600,25 +617,20 @@ fun ShareImageAction(
     popupExpanded: MutableState<Boolean>,
     content: BaseMediaContent,
     onDismiss: () -> Unit,
-    accountViewModel: AccountViewModel,
 ) {
     if (content is MediaUrlContent) {
         ShareImageAction(
             popupExpanded = popupExpanded,
             videoUri = content.url,
             postNostrUri = content.uri,
-            mimeType = content.mimeType,
             onDismiss = onDismiss,
-            accountViewModel = accountViewModel,
         )
     } else if (content is MediaPreloadedContent) {
         ShareImageAction(
             popupExpanded = popupExpanded,
             videoUri = content.localFile?.toUri().toString(),
             postNostrUri = content.uri,
-            mimeType = content.mimeType,
             onDismiss = onDismiss,
-            accountViewModel = accountViewModel,
         )
     }
 }
@@ -629,9 +641,7 @@ fun ShareImageAction(
     popupExpanded: MutableState<Boolean>,
     videoUri: String?,
     postNostrUri: String?,
-    mimeType: String?,
     onDismiss: () -> Unit,
-    accountViewModel: AccountViewModel,
 ) {
     DropdownMenu(
         expanded = popupExpanded.value,
@@ -657,85 +667,6 @@ fun ShareImageAction(
                     onDismiss()
                 },
             )
-        }
-
-        if (videoUri != null) {
-            if (!videoUri.startsWith("file")) {
-                val localContext = LocalContext.current
-
-                fun saveImage() {
-                    ImageSaver.saveImage(
-                        context = localContext,
-                        url = videoUri,
-                        onSuccess = {
-                            accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
-                        },
-                        onError = {
-                            accountViewModel.toast(R.string.failed_to_save_the_image, null, it)
-                        },
-                    )
-                }
-
-                val writeStoragePermissionState =
-                    rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
-                        if (isGranted) {
-                            saveImage()
-                        }
-                    }
-
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.save_to_gallery)) },
-                    onClick = {
-                        if (
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
-                            writeStoragePermissionState.status.isGranted
-                        ) {
-                            saveImage()
-                        } else {
-                            writeStoragePermissionState.launchPermissionRequest()
-                        }
-                        onDismiss()
-                    },
-                )
-            } else {
-                val localContext = LocalContext.current
-
-                fun saveImage() {
-                    ImageSaver.saveImage(
-                        context = localContext,
-                        localFile = videoUri.toUri().toFile(),
-                        mimeType = mimeType,
-                        onSuccess = {
-                            accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
-                        },
-                        onError = {
-                            accountViewModel.toast(R.string.failed_to_save_the_image, null, it)
-                        },
-                    )
-                }
-
-                val writeStoragePermissionState =
-                    rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
-                        if (isGranted) {
-                            saveImage()
-                        }
-                    }
-
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.save_to_gallery)) },
-                    onClick = {
-                        if (
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
-                            writeStoragePermissionState.status.isGranted
-                        ) {
-                            saveImage()
-                        } else {
-                            writeStoragePermissionState.launchPermissionRequest()
-                        }
-                        onDismiss()
-                    },
-                )
-            }
         }
     }
 }

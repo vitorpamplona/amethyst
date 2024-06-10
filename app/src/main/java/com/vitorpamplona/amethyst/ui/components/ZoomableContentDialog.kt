@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import android.Manifest
+import android.content.Context
 import android.os.Build
 import android.view.View
 import android.view.WindowInsets
@@ -29,11 +31,13 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -43,6 +47,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -60,6 +65,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
@@ -67,14 +73,21 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import coil.compose.AsyncImage
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
+import com.vitorpamplona.amethyst.commons.richtext.MediaPreloadedContent
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.ui.actions.ImageSaver
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import kotlinx.collections.immutable.ImmutableList
@@ -156,7 +169,7 @@ fun ZoomableImageDialog(
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalPermissionsApi::class)
 private fun DialogContent(
     allImages: ImmutableList<BaseMediaContent>,
     imageUrl: BaseMediaContent,
@@ -221,7 +234,7 @@ private fun DialogContent(
         exit = remember { fadeOut() },
     ) {
         Row(
-            modifier = Modifier.padding(Size10dp).statusBarsPadding().systemBarsPadding().fillMaxWidth(),
+            modifier = Modifier.padding(horizontal = Size15dp, vertical = Size10dp).statusBarsPadding().systemBarsPadding().fillMaxWidth(),
             horizontalArrangement = spacedBy(Size10dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -236,23 +249,88 @@ private fun DialogContent(
                 )
             }
 
-            val popupExpanded = remember { mutableStateOf(false) }
+            Spacer(modifier = Modifier.weight(1f))
 
-            OutlinedButton(
-                onClick = { popupExpanded.value = true },
-                contentPadding = PaddingValues(horizontal = Size5dp),
-                colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    modifier = Size20Modifier,
-                    contentDescription = stringResource(R.string.share_or_save),
-                )
+            allImages.getOrNull(pagerState.currentPage)?.let { myContent ->
+                val popupExpanded = remember { mutableStateOf(false) }
 
-                allImages.getOrNull(pagerState.currentPage)?.let { myContent ->
-                    ShareImageAction(popupExpanded = popupExpanded, myContent, onDismiss = { popupExpanded.value = false }, accountViewModel = accountViewModel)
+                OutlinedButton(
+                    onClick = { popupExpanded.value = true },
+                    contentPadding = PaddingValues(horizontal = Size5dp),
+                    colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        modifier = Size20Modifier,
+                        contentDescription = stringResource(R.string.quick_action_share),
+                    )
+
+                    ShareImageAction(popupExpanded = popupExpanded, myContent, onDismiss = { popupExpanded.value = false })
+                }
+
+                val localContext = LocalContext.current
+
+                val writeStoragePermissionState =
+                    rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
+                        if (isGranted) {
+                            saveImage(myContent, localContext, accountViewModel)
+                        }
+                    }
+
+                OutlinedButton(
+                    onClick = {
+                        if (
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
+                            writeStoragePermissionState.status.isGranted
+                        ) {
+                            saveImage(myContent, localContext, accountViewModel)
+                        } else {
+                            writeStoragePermissionState.launchPermissionRequest()
+                        }
+                    },
+                    contentPadding = PaddingValues(horizontal = Size5dp),
+                    colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        modifier = Size20Modifier,
+                        contentDescription = stringResource(R.string.save_to_gallery),
+                    )
                 }
             }
+        }
+    }
+}
+
+private fun saveImage(
+    content: BaseMediaContent,
+    localContext: Context,
+    accountViewModel: AccountViewModel,
+) {
+    if (content is MediaUrlContent) {
+        ImageSaver.saveImage(
+            content.url,
+            localContext,
+            onSuccess = {
+                accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
+            },
+            onError = {
+                accountViewModel.toast(R.string.failed_to_save_the_image, null, it)
+            },
+        )
+    } else if (content is MediaPreloadedContent) {
+        content.localFile?.let {
+            ImageSaver.saveImage(
+                it,
+                content.mimeType,
+                localContext,
+                onSuccess = {
+                    accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
+                },
+                onError = {
+                    accountViewModel.toast(R.string.failed_to_save_the_image, null, it)
+                },
+            )
         }
     }
 }
