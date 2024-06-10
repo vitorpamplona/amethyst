@@ -42,6 +42,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.AlertDialog
@@ -139,7 +140,9 @@ fun DrawerContent(
         drawerContainerColor = MaterialTheme.colorScheme.background,
         drawerTonalElevation = 0.dp,
     ) {
-        Column {
+        Column(
+            Modifier.fillMaxHeight().verticalScroll(rememberScrollState()),
+        ) {
             ProfileContent(
                 baseAccountUser = accountViewModel.account.userProfile(),
                 modifier = profileContentHeaderModifier,
@@ -159,15 +162,14 @@ fun DrawerContent(
             )
 
             ListContent(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 drawerState,
                 openSheet,
                 accountViewModel,
                 nav,
             )
+
+            Spacer(modifier = Modifier.weight(1f))
 
             BottomContent(
                 accountViewModel.account.userProfile(),
@@ -348,7 +350,7 @@ fun SendButton(onClick: () -> Unit) {
         onClick = onClick,
     ) {
         Icon(
-            imageVector = Icons.Default.Send,
+            imageVector = Icons.AutoMirrored.Filled.Send,
             null,
             modifier = Size20Modifier,
             tint = MaterialTheme.colorScheme.placeholderText,
@@ -460,12 +462,7 @@ fun ListContent(
     val proxyPort = remember { mutableStateOf(accountViewModel.account.proxyPort.toString()) }
     val context = LocalContext.current
 
-    Column(
-        modifier =
-            modifier
-                .fillMaxHeight()
-                .verticalScroll(rememberScrollState()),
-    ) {
+    Column(modifier) {
         NavigationRow(
             title = stringResource(R.string.profile),
             icon = Route.Profile.icon,
