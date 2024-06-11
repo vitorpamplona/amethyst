@@ -503,6 +503,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         pollOption: Int?,
         message: String,
         context: Context,
+        showErrorIfNoLnAddress: Boolean = true,
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
@@ -516,6 +517,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
                     pollOption,
                     message,
                     context,
+                    showErrorIfNoLnAddress,
                     onError,
                     onProgress = {
                         onProgress(it)

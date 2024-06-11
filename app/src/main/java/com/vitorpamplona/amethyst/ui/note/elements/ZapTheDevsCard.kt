@@ -499,6 +499,7 @@ fun customZapClick(
                 null,
                 "",
                 context,
+                showErrorIfNoLnAddress = false,
                 onError = onError,
                 onProgress = { onZappingProgress(it) },
                 zapType = accountViewModel.account.defaultZapType,

@@ -55,6 +55,7 @@ class ZapPaymentHandler(val account: Account) {
         pollOption: Int?,
         message: String,
         context: Context,
+        showErrorIfNoLnAddress: Boolean,
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<Payable>) -> Unit,
@@ -112,7 +113,7 @@ class ZapPaymentHandler(val account: Account) {
                 onProgress(0.05f)
             }
 
-            assembleAllInvoices(splitZapRequestPairs.toList(), amountMilliSats, message, onError, onProgress = {
+            assembleAllInvoices(splitZapRequestPairs.toList(), amountMilliSats, message, showErrorIfNoLnAddress, onError, onProgress = {
                 onProgress(it * 0.7f + 0.05f) // keeps within range.
             }, context) {
                 if (it.isEmpty()) {
@@ -195,6 +196,7 @@ class ZapPaymentHandler(val account: Account) {
         invoices: List<Pair<ZapSplitSetup, SignAllZapRequestsReturn>>,
         totalAmountMilliSats: Long,
         message: String,
+        showErrorIfNoLnAddress: Boolean,
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         context: Context,
@@ -211,6 +213,7 @@ class ZapPaymentHandler(val account: Account) {
                     nostrZapRequest = splitZapRequestPair.second.zapRequestJson,
                     zapValue = calculateZapValue(totalAmountMilliSats, splitZapRequestPair.first.weight, totalWeight),
                     message = message,
+                    showErrorIfNoLnAddress = showErrorIfNoLnAddress,
                     onError = onError,
                     onProgressStep = { percentStepForThisPayment ->
                         progressAllPayments += percentStepForThisPayment / invoices.size
@@ -278,6 +281,7 @@ class ZapPaymentHandler(val account: Account) {
         nostrZapRequest: String,
         zapValue: Long,
         message: String,
+        showErrorIfNoLnAddress: Boolean = true,
         onError: (String, String) -> Unit,
         onProgressStep: (percent: Float) -> Unit,
         context: Context,
@@ -314,15 +318,17 @@ class ZapPaymentHandler(val account: Account) {
                     },
                 )
         } else {
-            onError(
-                context.getString(
-                    R.string.missing_lud16,
-                ),
-                context.getString(
-                    R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
-                    user?.toBestDisplayName() ?: splitSetup.lnAddressOrPubKeyHex,
-                ),
-            )
+            if (showErrorIfNoLnAddress) {
+                onError(
+                    context.getString(
+                        R.string.missing_lud16,
+                    ),
+                    context.getString(
+                        R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
+                        user?.toBestDisplayName() ?: splitSetup.lnAddressOrPubKeyHex,
+                    ),
+                )
+            }
         }
     }
 
