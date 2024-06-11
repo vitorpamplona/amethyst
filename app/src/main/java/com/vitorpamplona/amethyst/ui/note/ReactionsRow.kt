@@ -116,9 +116,10 @@ import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.NoSoTinyBorders
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowExpandButton
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeight
-import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiserSize
+import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightWithPadding
+import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiser
+import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiserWithPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
-import com.vitorpamplona.amethyst.ui.theme.Size0dp
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size17Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
@@ -126,7 +127,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
-import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.TinyBorders
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -229,28 +229,26 @@ private fun GenericInnerReactionRow(
     Row(
         verticalAlignment = CenterVertically,
         horizontalArrangement = RowColSpacing,
-        modifier = ReactionRowHeight,
+        modifier = if (showReactionDetail) ReactionRowHeightWithPadding else ReactionRowHeight,
     ) {
-        val fullWeight = remember { Modifier.weight(1f) }
-
         if (showReactionDetail) {
             Row(
                 verticalAlignment = CenterVertically,
-                modifier = remember { ReactionRowExpandButton.then(fullWeight) },
+                modifier = ReactionRowExpandButton,
             ) {
                 one()
             }
         }
 
-        Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = fullWeight) { two() }
+        Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = Modifier.weight(1f)) { two() }
 
-        Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = fullWeight) { three() }
+        Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = Modifier.weight(1f)) { three() }
 
-        Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = fullWeight) { four() }
+        Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = Modifier.weight(1f)) { four() }
 
-        Row(verticalAlignment = CenterVertically, modifier = fullWeight) { five() }
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) { five() }
 
-        Row(verticalAlignment = CenterVertically, modifier = fullWeight) { six() }
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) { six() }
     }
 }
 
@@ -261,15 +259,10 @@ private fun LoadAndDisplayZapraiser(
     wantsToSeeReactions: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
 ) {
-    val zapraiserAmount by
-        remember(baseNote) { derivedStateOf { baseNote.event?.zapraiserAmount() ?: 0 } }
-
+    val zapraiserAmount = baseNote.event?.zapraiserAmount() ?: 0
     if (zapraiserAmount > 0) {
         Box(
-            modifier =
-                remember {
-                    ReactionRowZapraiserSize.padding(start = if (showReactionDetail) Size75dp else Size0dp)
-                },
+            modifier = if (showReactionDetail) ReactionRowZapraiserWithPadding else ReactionRowZapraiser,
             contentAlignment = CenterStart,
         ) {
             RenderZapRaiser(baseNote, zapraiserAmount, wantsToSeeReactions.value, accountViewModel)

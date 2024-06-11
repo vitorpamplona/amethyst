@@ -141,7 +141,9 @@ val Size55Modifier = Modifier.size(55.dp)
 
 val TinyBorders = Modifier.padding(2.dp)
 val NoSoTinyBorders = Modifier.padding(start = 5.dp, end = 5.dp, top = 2.dp, bottom = 2.dp)
-val ReactionRowZapraiserSize = Modifier.defaultMinSize(minHeight = 4.dp).fillMaxWidth()
+val ReactionRowZapraiserWithPadding = Modifier.defaultMinSize(minHeight = 4.dp).padding(Size75dp).fillMaxWidth()
+val ReactionRowZapraiser = Modifier.defaultMinSize(minHeight = 4.dp).fillMaxWidth()
+
 val ReactionRowExpandButton = Modifier.width(65.dp).padding(start = 31.dp)
 
 val WidthAuthorPictureModifier = Modifier.width(55.dp)
@@ -151,7 +153,8 @@ val VideoReactionColumnPadding = Modifier.padding(bottom = 75.dp)
 
 val DividerThickness = 0.25.dp
 
-val ReactionRowHeight = Modifier.height(24.dp).padding(start = 10.dp)
+val ReactionRowHeight = Modifier.height(24.dp)
+val ReactionRowHeightWithPadding = Modifier.height(24.dp).padding(start = 10.dp)
 val ReactionRowHeightChat = Modifier.height(25.dp)
 val UserNameRowHeight = Modifier.fillMaxWidth()
 val UserNameMaxRowHeight = Modifier.fillMaxWidth()
