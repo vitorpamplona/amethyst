@@ -433,7 +433,7 @@
     <string name="live_stream_is_offline">तत्क्षणप्रसार कट गया</string>
     <string name="live_stream_has_ended">तत्क्षणप्रसार समाप्त</string>
     <string name="are_you_sure_you_want_to_log_out">निर्गमनांकन करने पर आपकी सारी स्थानीय जानकारी मिट जाएगी। सुनिश्चित करें कि आपके निजी कुंचिकाएँ सुरक्षित रखें हैं अपनी लेखा नहीं खोना चाहते हैं तो। क्या आप आगे बढना चाहते हैं?</string>
-    <string name="followed_tags">अनुचरण किये हुए विषयसूचक</string>
+    <string name="followed_tags">अनुचरित विषयसूचक</string>
     <string name="relay_setup">पुनःप्रसारक</string>
     <string name="discover_content">लेख आविष्करण</string>
     <string name="discover_marketplace">पण्यक्षेत्र</string>
