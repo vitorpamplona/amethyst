@@ -318,7 +318,7 @@ class RichTextParser() {
             "^((http|https)://)?([A-Za-z0-9-_]+(\\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?"
                 .toRegex(RegexOption.IGNORE_CASE)
 
-        val imageExtensions = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg")
+        val imageExtensions = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg", "avif")
         val videoExtensions = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8")
 
         val tagIndex = Pattern.compile("\\#\\[([0-9]+)\\](.*)")

@@ -402,6 +402,7 @@ private fun RenderImageOrVideo(
             UrlImageView(
                 content = content,
                 mainImageModifier = mainModifier,
+                loadedImageModifier = Modifier.fillMaxWidth(),
                 isFiniteHeight = isFiniteHeight,
                 controllerVisible = controllerVisible,
                 accountViewModel = accountViewModel,
@@ -436,6 +437,7 @@ private fun RenderImageOrVideo(
             LocalImageView(
                 content = content,
                 mainImageModifier = mainModifier,
+                loadedImageModifier = Modifier.fillMaxWidth(),
                 isFiniteHeight = isFiniteHeight,
                 controllerVisible = controllerVisible,
                 accountViewModel = accountViewModel,

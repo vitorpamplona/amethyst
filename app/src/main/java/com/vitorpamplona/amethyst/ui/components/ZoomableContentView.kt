@@ -117,32 +117,14 @@ fun ZoomableContentView(
     // store the dialog open or close state
     var dialogOpen by remember(content) { mutableStateOf(false) }
 
-    var mainImageModifier =
-        if (roundedCorner) {
-            MaterialTheme.colorScheme.imageModifier
-        } else {
-            Modifier.fillMaxWidth()
-        }
-
-    if (content is MediaUrlContent) {
-        mainImageModifier =
-            mainImageModifier.clickable(
-                onClick = { dialogOpen = true },
-            )
-    } else if (content is MediaPreloadedContent) {
-        mainImageModifier =
-            mainImageModifier.clickable(
-                onClick = { dialogOpen = true },
-            )
-    } else {
-        mainImageModifier = mainImageModifier.clickable { dialogOpen = true }
-    }
+    val mainImageModifier = Modifier.fillMaxWidth().clickable { dialogOpen = true }
+    val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
 
     when (content) {
         is MediaUrlImage ->
             SensitivityWarning(content.contentWarning != null, accountViewModel) {
                 TwoSecondController(content) { controllerVisible ->
-                    UrlImageView(content, mainImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
+                    UrlImageView(content, mainImageModifier, loadedImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
                 }
             }
         is MediaUrlVideo ->
@@ -166,7 +148,7 @@ fun ZoomableContentView(
             }
         is MediaLocalImage ->
             TwoSecondController(content) { controllerVisible ->
-                LocalImageView(content, mainImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
+                LocalImageView(content, mainImageModifier, loadedImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
             }
         is MediaLocalVideo ->
             content.localFile?.let {
@@ -215,6 +197,7 @@ fun TwoSecondController(
 fun LocalImageView(
     content: MediaLocalImage,
     mainImageModifier: Modifier,
+    loadedImageModifier: Modifier,
     isFiniteHeight: Boolean,
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
@@ -252,14 +235,14 @@ fun LocalImageView(
                                         content.blurhash,
                                         content.description,
                                         contentScale,
-                                        Modifier.aspectRatio(ratio),
+                                        loadedImageModifier.aspectRatio(ratio),
                                     )
                                 } else {
                                     DisplayBlurHash(
                                         content.blurhash,
                                         content.description,
                                         contentScale,
-                                        Modifier,
+                                        loadedImageModifier,
                                     )
                                 }
                             } else {
@@ -267,10 +250,10 @@ fun LocalImageView(
                             }
                         }
                         is AsyncImagePainter.State.Error -> {
-                            BlankNote()
+                            BlankNote(loadedImageModifier)
                         }
                         is AsyncImagePainter.State.Success -> {
-                            SubcomposeAsyncImageContent()
+                            SubcomposeAsyncImageContent(loadedImageModifier)
 
                             content.isVerified?.let {
                                 AnimatedVisibility(
@@ -294,7 +277,7 @@ fun LocalImageView(
                         content.blurhash,
                         content.description,
                         ContentScale.Crop,
-                        mainImageModifier
+                        loadedImageModifier
                             .aspectRatio(ratio)
                             .clickable { showImage.value = true },
                     )
@@ -310,7 +293,7 @@ fun LocalImageView(
             }
         }
     } else {
-        BlankNote()
+        BlankNote(loadedImageModifier)
     }
 }
 
@@ -318,6 +301,7 @@ fun LocalImageView(
 fun UrlImageView(
     content: MediaUrlImage,
     mainImageModifier: Modifier,
+    loadedImageModifier: Modifier,
     isFiniteHeight: Boolean,
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
@@ -351,14 +335,14 @@ fun UrlImageView(
                                     content.blurhash,
                                     content.description,
                                     ContentScale.Crop,
-                                    Modifier.aspectRatio(ratio),
+                                    loadedImageModifier.aspectRatio(ratio),
                                 )
                             } else {
                                 DisplayBlurHash(
                                     content.blurhash,
                                     content.description,
                                     ContentScale.Crop,
-                                    Modifier,
+                                    loadedImageModifier,
                                 )
                             }
                         } else {
@@ -369,7 +353,7 @@ fun UrlImageView(
                         ClickableUrl(urlText = "${content.url} ", url = content.url)
                     }
                     is AsyncImagePainter.State.Success -> {
-                        SubcomposeAsyncImageContent()
+                        SubcomposeAsyncImageContent(loadedImageModifier)
 
                         AnimatedVisibility(
                             visible = controllerVisible.value,
@@ -391,7 +375,7 @@ fun UrlImageView(
                     content.blurhash,
                     content.description,
                     ContentScale.Crop,
-                    mainImageModifier
+                    loadedImageModifier
                         .aspectRatio(ratio)
                         .clickable { showImage.value = true },
                 )
