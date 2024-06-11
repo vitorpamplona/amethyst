@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import java.math.BigDecimal
 import java.security.MessageDigest
 
@@ -562,10 +563,6 @@ open class BaseAddressableEvent(
      * Creates the tag in a memory effecient way (without creating the ATag class
      */
     override fun addressTag() = ATag.assembleATag(kind, pubKey, dTag())
-}
-
-fun String.bytesUsedInMemory(): Int {
-    return (8 * ((((this.length) * 2) + 45) / 8))
 }
 
 data class ZapSplitSetup(

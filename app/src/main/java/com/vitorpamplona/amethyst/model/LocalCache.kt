@@ -209,13 +209,13 @@ object LocalCache {
         } as LatestByKindAndAuthor<T>
     }
 
-    fun updateObservables(event: Event) {
-        val observablesOfKind = observablesByKindAndETag[event.kind()] ?: return
+    private fun updateObservables(event: Event) {
+        val observablesOfKind = observablesByKindAndETag[event.kind] ?: return
         event.forEachTaggedEvent {
             observablesOfKind[it]?.updateIfMatches(event)
         }
 
-        observablesByKindAndAuthor[event.kind()]?.get(event.pubKey)?.updateIfMatches(event)
+        observablesByKindAndAuthor[event.kind]?.get(event.pubKey)?.updateIfMatches(event)
     }
 
     fun checkGetOrCreateUser(key: String): User? {
