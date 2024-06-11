@@ -23,15 +23,10 @@ package com.vitorpamplona.amethyst.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.amethyst.commons.robohash.Robohash
 import com.vitorpamplona.amethyst.commons.robohash.RobohashAssembler
-import okio.Buffer
-import okio.buffer
-import okio.source
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.nio.charset.Charset
 
 /**
  * Benchmark, which will execute on an Android device.
@@ -47,38 +42,10 @@ class RobohashBenchmark {
     val testHex = "48a72b485d38338627ec9d427583551f9af4f016c739b8ec0d6313540a8b12cf"
 
     @Test
-    fun createSVGInString() {
-        // warm up
-        Robohash.assemble(warmHex, true)
-        benchmarkRule.measureRepeated {
-            Robohash.assemble(testHex, true)
-        }
-    }
-
-    @Test
     fun createSVGFromPaths() {
         // warm up
         benchmarkRule.measureRepeated {
             RobohashAssembler().build(testHex, true)
-        }
-    }
-
-    @Test
-    fun createSVGInBufferCopy() {
-        // warm up
-        Robohash.assemble(warmHex, true)
-        benchmarkRule.measureRepeated {
-            val buffer = Buffer()
-            buffer.writeString(Robohash.assemble(testHex, true), Charset.defaultCharset())
-        }
-    }
-
-    @Test
-    fun createSVGInBufferViaInputStream() {
-        // warm up
-        Robohash.assemble(warmHex, true)
-        benchmarkRule.measureRepeated {
-            Robohash.assemble(testHex, true).byteInputStream(Charset.defaultCharset()).source().buffer()
         }
     }
 }
