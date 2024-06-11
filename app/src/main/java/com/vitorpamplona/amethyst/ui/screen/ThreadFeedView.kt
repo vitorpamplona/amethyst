@@ -644,7 +644,11 @@ fun NoteMaster(
             val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
             if (zapSplits && noteEvent != null) {
                 Spacer(modifier = DoubleVertSpacer)
-                DisplayZapSplits(noteEvent, false, accountViewModel, nav)
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                ) {
+                    DisplayZapSplits(noteEvent, false, accountViewModel, nav)
+                }
             }
 
             ReactionsRow(note, true, editState, accountViewModel, nav)
