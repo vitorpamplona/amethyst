@@ -475,17 +475,21 @@ open class NewPostViewModel() : ViewModel() {
 
         val zapReceiver =
             if (wantsForwardZapTo) {
-                forwardZapTo.items.map { split ->
-                    val homeRelay =
-                        accountViewModel?.getRelayListFor(split.key)?.writeRelays()?.firstOrNull()
-                            ?: split.key.relaysBeingUsed.keys.firstOrNull { !it.contains("localhost") }
+                forwardZapTo.items.mapNotNull { split ->
+                    if (split.percentage > 0.00001) {
+                        val homeRelay =
+                            accountViewModel?.getRelayListFor(split.key)?.writeRelays()?.firstOrNull()
+                                ?: split.key.relaysBeingUsed.keys.firstOrNull { !it.contains("localhost") }
 
-                    ZapSplitSetup(
-                        lnAddressOrPubKeyHex = split.key.pubkeyHex,
-                        relay = homeRelay,
-                        weight = round(split.percentage.toDouble() * 10000),
-                        isLnAddress = false,
-                    )
+                        ZapSplitSetup(
+                            lnAddressOrPubKeyHex = split.key.pubkeyHex,
+                            relay = homeRelay,
+                            weight = round(split.percentage.toDouble() * 10000) / 10000,
+                            isLnAddress = false,
+                        )
+                    } else {
+                        null
+                    }
                 }
             } else {
                 null
