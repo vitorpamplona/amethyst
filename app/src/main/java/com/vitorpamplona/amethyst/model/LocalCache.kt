@@ -800,7 +800,7 @@ object LocalCache {
                     .mapNotNull { checkGetOrCreateNote(it) }
 
             is DraftEvent -> {
-                event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) } + event.taggedAddresses().mapNotNull { checkGetOrCreateAddressableNote(it.toTag()) }
+                event.mapTaggedEvent { checkGetOrCreateNote(it) } + event.mapTaggedAddress { checkGetOrCreateAddressableNote(it) }
             }
 
             else -> emptyList<Note>()
