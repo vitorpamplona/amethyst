@@ -388,7 +388,7 @@ class Relay(
 
                         writeToSocket(request)
 
-                        resetEOSEStatuses()
+                        afterEOSEPerSubscription[requestId] = false
                     }
                 }
             } else {
