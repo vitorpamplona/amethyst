@@ -74,6 +74,7 @@ import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.AddressableEvent
+import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
@@ -1401,6 +1402,16 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) {
             account.sendZapPaymentRequestFor(bolt11, zappedNote, onSent, onResponse)
         }
+    }
+
+    fun getRelayListFor(user: User): AdvertisedRelayListEvent? {
+        return (getRelayListNoteFor(user)?.event as? AdvertisedRelayListEvent?)
+    }
+
+    fun getRelayListNoteFor(user: User): AddressableNote? {
+        return LocalCache.getAddressableNoteIfExists(
+            AdvertisedRelayListEvent.createAddressTag(user.pubkeyHex),
+        )
     }
 
     val draftNoteCache = CachedDraftNotes(this)

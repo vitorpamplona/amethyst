@@ -79,6 +79,7 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
+import kotlin.math.round
 
 enum class UserSuggestionAnchor {
     MAIN_MESSAGE,
@@ -474,11 +475,15 @@ open class NewPostViewModel() : ViewModel() {
 
         val zapReceiver =
             if (wantsForwardZapTo) {
-                forwardZapTo.items.map {
+                forwardZapTo.items.map { split ->
+                    val homeRelay =
+                        accountViewModel?.getRelayListFor(split.key)?.writeRelays()?.firstOrNull()
+                            ?: split.key.relaysBeingUsed.keys.firstOrNull { !it.contains("localhost") }
+
                     ZapSplitSetup(
-                        lnAddressOrPubKeyHex = it.key.pubkeyHex,
-                        relay = it.key.relaysBeingUsed.keys.firstOrNull(),
-                        weight = it.percentage.toDouble(),
+                        lnAddressOrPubKeyHex = split.key.pubkeyHex,
+                        relay = homeRelay,
+                        weight = round(split.percentage.toDouble() * 10000),
                         isLnAddress = false,
                     )
                 }
