@@ -53,7 +53,7 @@
     <string name="error_parsing_error_message">Błąd podczas analizowania komunikatu o błędzie</string>
     <string name="following">" Obserwowani"</string>
     <string name="followers">" Obserwujący"</string>
-    <string name="profile">Profil</string>
+    <string name="profile">Twój Profil</string>
     <string name="security_filters">Filtry bezpieczeństwa</string>
     <string name="log_out">Wyloguj się</string>
     <string name="show_more">Pokaż Więcej</string>
@@ -71,15 +71,16 @@
     <string name="description">Opis</string>
     <string name="about_us">"O nas. "</string>
     <string name="what_s_on_your_mind">Co masz na myśli?</string>
-    <string name="post">Wpis</string>
+    <string name="post">Wyślij</string>
     <string name="save">Zapisz</string>
     <string name="create">Utwórz</string>
     <string name="cancel">Anuluj</string>
     <string name="relay_address">Adres transmitera</string>
     <string name="posts">Wpisy</string>
     <string name="errors">Błędy</string>
-    <string name="global_feed">Wszystkie</string>
+    <string name="global_feed">Kanał Ogólny</string>
     <string name="add_a_relay">Dodaj Transmiter</string>
+    <string name="display_name">Nazwa użytkownika</string>
     <string name="username">Nazwa użytkownika</string>
     <string name="about_me">O mnie</string>
     <string name="avatar_url">URL awatara</string>
@@ -93,7 +94,9 @@
     <string name="reply_here">"odpowiedz tutaj.. "</string>
     <string name="join">Dołącz</string>
     <string name="blocked_users">Zablokowani użytkownicy</string>
-    <string name="notes">Notatki</string>
+    <string name="new_threads">Nowe Wpisy</string>
+    <string name="conversations">Konwersacje</string>
+    <string name="notes">Uwagi</string>
     <string name="replies">Odpowiedzi</string>
     <string name="reports">"Zgłoszenia"</string>
     <string name="more_options">Więcej opcji</string>
@@ -128,6 +131,9 @@
     <string name="already_have_an_account">Masz już konto Nostr?</string>
     <string name="create_a_new_account">Utwórz nowe konto</string>
     <string name="generate_a_new_key">Wygeneruj nowy klucz</string>
+    <string name="loading_feed">Wczytywanie zawartości</string>
+    <string name="loading_account">Wczytywanie konta</string>
+    <string name="error_loading_replies">"Błąd wczytywania odpowiedzi: "</string>
     <string name="try_again">Spróbuj ponownie</string>
     <string name="feed_is_empty">Brak zawartości.</string>
     <string name="refresh">Odśwież</string>
@@ -199,6 +205,9 @@
     <string name="remove_from_public_bookmarks">Usuń z publicznych zakładek</string>
     <string name="wallet_connect_service_explainer">Autoryzuje Nostr Secret do płacenia zapów bez opuszczania aplikacji. Strzeż pilnie i użyj prywatnego transmitera, jeśli to możliwe</string>
     <string name="wallet_connect_service_show_secret">Pokaż tajny klucz</string>
+    <string name="poll_option_index">Opcja %s</string>
+    <string name="poll_zap_value_min">Minimalny Zap</string>
+    <string name="poll_zap_value_max">Maksymalny Zap</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time_days">dni</string>
     <string name="custom_zaps_add_a_message">Dodaj wiadomość publiczną</string>
@@ -271,6 +280,7 @@
     <string name="subscriptions">Subskrybcje</string>
     <string name="filters">Filtry</string>
     <string name="cashu">Cashu Token</string>
+    <string name="followed_tags">Obserwowane tagi</string>
     <string name="relay_setup">Transmitery</string>
     <string name="discover_community">Społeczność</string>
     <string name="discover_chat">Czaty</string>
@@ -309,6 +319,7 @@
     <string name="default_relays">Domyślne</string>
     <string name="select_a_relay_to_continue">Wybierz Transmiter, aby kontynuować</string>
     <string name="zap_forward_title">Przekaż zapy do:</string>
+    <string name="add_sensitive_content_explainer">Dodaje ostrzeżenie o wrażliwych treściach przed wyświetleniem treści. Jest to idealne dla dowolnych treści NSFW lub treści, które niektóre osoby mogą uznać za obraźliwe lub przeszkadzające</string>
     <string name="new_feature_nip17_might_not_be_available_description">Aktywacja tego trybu wymaga wysłania wiadomości NIP-17 przez Ametyst. (Prezent, Zapieczętowane wiadomości bezpośrednie i grupowe). NIP-17 jest nowy, a większość klientów jeszcze go nie zaimplementowała. Upewnij się, że odbiorca używa kompatybilnego klienta.</string>
     <string name="messages_new_message_to">Do</string>
     <string name="messages_new_message_subject">Temat</string>
@@ -323,11 +334,14 @@
     <string name="copy_npub_to_clipboard">Kopiuj npub do schowka</string>
     <string name="copy_url_to_clipboard">Kopiuj adres URL do schowka</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopiuj ID notatki do schowka</string>
-    <string name="status_update">Zaktualizuj status</string>
+    <string name="status_update">Zaktualizuj swój status</string>
     <string name="lightning_wallets_not_found">Błąd podczas analizowania komunikatu o błędzie</string>
     <string name="poll_zap_value_min_max_explainer">Głosy są oceniane na podstawie ilości zapperów. Możesz ustawić minimalną kwotę, aby uniknąć spamerów i maksymalną kwotę, aby uniknąć przejęcia ankiety przez dużych zapperów. Użyj tej samej kwoty w obu polach, aby upewnić się, że każdy głos ma taką samą wartość. Pozostaw to pole puste, aby zaakceptować dowolną kwotę.</string>
     <string name="error_dialog_button_ok">OK</string>
     <string name="active_for_global">Wszystkie</string>
+    <string name="zap_split_title">Podziel i przekaż Zapy</string>
+    <string name="zap_split_explainer">Obsługa klientów podzieli i przekaże zapy do użytkowników dodanych tutaj, zamiast twoich</string>
+    <string name="zap_split_search_and_add_user">Szukaj i dodaj użytkownika</string>
     <string name="zap_split_weight_placeholder">25</string>
     <string name="hidden_words">Ukryte słowa</string>
     <string name="automatically_show_profile_picture">Zdjęcie profilowe</string>
@@ -337,9 +351,14 @@
     <string name="could_not_connect_to_tor">Połączenie z serwerem Tor nieudane</string>
     <string name="unable_to_download_relay_document">Nie można pobrać dokumentu transmitera</string>
     <string name="read_only_user">Użytkownik z prawem \"tylko do odczytu\"</string>
+    <string name="classifieds_title">Tytuł</string>
     <string name="classifieds_title_placeholder">iPhone 13</string>
+    <string name="classifieds_condition">Stan</string>
+    <string name="classifieds_category">Kategoria</string>
     <string name="classifieds_price">Cena (w Satach)</string>
+    <string name="classifieds_location">Lokalizacja</string>
     <string name="classifieds_location_placeholder">Miasto, Województwo, Kraj</string>
+    <string name="classifieds_condition_like_new">Jak nowy</string>
     <string name="classifieds_category_accessories">Akcesoria</string>
     <string name="classifieds_category_electronics">Elektronika</string>
     <string name="classifieds_category_furniture">Meble</string>
@@ -352,6 +371,9 @@
     <string name="classifieds_category_food">Żywność</string>
     <string name="classifieds_category_misc">Różne</string>
     <string name="classifieds_category_other">Inne</string>
+    <string name="failed_to_upload_media">Błąd wysyłania: %1$s</string>
+    <string name="server_did_not_provide_a_url_after_uploading">Serwer nie podał adresu URL po załadowaniu</string>
+    <string name="route_global">Wszystkie</string>
     <string name="route_security_filters">Filtry bezpieczeństwa</string>
     <string name="new_post">Nowy post</string>
     <string name="relay_info">Transmiter %1$s</string>
@@ -365,7 +387,7 @@
     <string name="dm_relays_not_found">Skonfiguruj prywatne transmitery odbiorcze</string>
     <string name="dm_relays_not_found_examples">Dobre opcje to:\n - inbox.nostr.wine (płatny)\n - you.nostr1.com (transmitery osobiste - płatny)</string>
     <string name="dm_relays_not_found_editing">Wstaw od 1 do 3 transmiterów, które będą służyć jako Twoja prywatna skrzynka odbiorcza. Transmitery DM powinny akceptować dowolne wiadomości od każdego, ale pozwalać tylko na ich pobieranie.</string>
-    <string name="dm_relays_not_found_create_now">Skonfiguruj teraz</string>
+    <string name="dm_relays_not_found_create_now">Skonfiguruj</string>
     <string name="search_relays_title">Transmitery wyszukujące</string>
     <string name="search_relays_not_found">Skonfiguruj swoje Transmitery wyszukujące</string>
     <string name="search_relays_not_found_editing">Wstaw od 1 do 3 transmiterów, które będą używane podczas wyszukiwania treści lub tagowania użytkowników. Upewnij się, że zaimplementowano NIP-50</string>
@@ -392,4 +414,5 @@
     <string name="max_limit">Maksymalny Limit</string>
     <string name="accessibility_send">Wyślij</string>
     <string name="accessibility_scan_qr_code">Zeskanuj QR kod</string>
+    <string name="load_from_text">Z sms-a</string>
 </resources>
