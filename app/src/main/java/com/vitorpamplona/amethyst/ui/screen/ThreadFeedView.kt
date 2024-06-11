@@ -651,7 +651,7 @@ fun NoteMaster(
                 }
             }
 
-            ReactionsRow(note, true, editState, accountViewModel, nav)
+            ReactionsRow(note, true, true, editState, accountViewModel, nav)
         }
 
         NoteQuickActionMenu(

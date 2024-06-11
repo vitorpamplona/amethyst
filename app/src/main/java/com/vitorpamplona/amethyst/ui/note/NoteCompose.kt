@@ -506,6 +506,7 @@ fun InnerNoteWithReactions(
             ReactionsRow(
                 baseNote = baseNote,
                 showReactionDetail = notBoostedNorQuote,
+                addPadding = !isBoostedNote,
                 editState = editState,
                 accountViewModel = accountViewModel,
                 nav = nav,

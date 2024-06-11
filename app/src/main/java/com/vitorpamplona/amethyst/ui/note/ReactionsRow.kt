@@ -147,6 +147,7 @@ import kotlin.math.roundToInt
 fun ReactionsRow(
     baseNote: Note,
     showReactionDetail: Boolean,
+    addPadding: Boolean,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -155,7 +156,7 @@ fun ReactionsRow(
 
     Spacer(modifier = HalfDoubleVertSpacer)
 
-    InnerReactionRow(baseNote, showReactionDetail, wantsToSeeReactions, editState, accountViewModel, nav)
+    InnerReactionRow(baseNote, showReactionDetail, addPadding, wantsToSeeReactions, editState, accountViewModel, nav)
 
     Spacer(modifier = HalfDoubleVertSpacer)
 
@@ -171,6 +172,7 @@ fun ReactionsRow(
 private fun InnerReactionRow(
     baseNote: Note,
     showReactionDetail: Boolean,
+    addPadding: Boolean,
     wantsToSeeReactions: MutableState<Boolean>,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
@@ -178,6 +180,7 @@ private fun InnerReactionRow(
 ) {
     GenericInnerReactionRow(
         showReactionDetail = showReactionDetail,
+        addPadding = addPadding,
         one = {
             WatchReactionsZapsBoostsAndDisplayIfExists(baseNote) {
                 RenderShowIndividualReactionsButton(wantsToSeeReactions)
@@ -219,6 +222,7 @@ private fun InnerReactionRow(
 @Composable
 private fun GenericInnerReactionRow(
     showReactionDetail: Boolean,
+    addPadding: Boolean,
     one: @Composable () -> Unit,
     two: @Composable () -> Unit,
     three: @Composable () -> Unit,
@@ -229,7 +233,7 @@ private fun GenericInnerReactionRow(
     Row(
         verticalAlignment = CenterVertically,
         horizontalArrangement = RowColSpacing,
-        modifier = if (showReactionDetail) ReactionRowHeightWithPadding else ReactionRowHeight,
+        modifier = if (addPadding) ReactionRowHeightWithPadding else ReactionRowHeight,
     ) {
         if (showReactionDetail) {
             Row(
