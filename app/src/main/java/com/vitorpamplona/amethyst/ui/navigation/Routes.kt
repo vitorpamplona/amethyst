@@ -275,21 +275,16 @@ open class LatestItem {
         val newestItem = newestItemPerAccount[account.userProfile().pubkeyHex]
 
         // Block list got updated
-        if (newestItem == null || !account.isAcceptable(newestItem)) {
-            newestItemPerAccount =
-                newestItemPerAccount +
-                Pair(
-                    account.userProfile().pubkeyHex,
-                    filterMore(filter.feed(), account).firstOrNull { it.createdAt() != null },
-                )
-        } else {
-            newestItemPerAccount =
-                newestItemPerAccount +
-                Pair(
-                    account.userProfile().pubkeyHex,
-                    filter.sort(filterMore(filter.applyFilter(newNotes), account) + newestItem).first(),
-                )
-        }
+        val newNewest =
+            if (newestItem == null || !account.isAcceptable(newestItem)) {
+                filterMore(filter.feed(), account).firstOrNull { it.createdAt() != null && account.isAcceptable(it) }
+            } else {
+                filter.sort(
+                    filterMore(filter.applyFilter(newNotes), account) + newestItem,
+                ).firstOrNull { it.createdAt() != null && account.isAcceptable(it) }
+            }
+
+        newestItemPerAccount = newestItemPerAccount + Pair(account.userProfile().pubkeyHex, newNewest)
 
         return newestItemPerAccount[account.userProfile().pubkeyHex]
     }
