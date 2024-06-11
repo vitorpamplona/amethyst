@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.collectSuccessfulSigningOperations
+import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
@@ -170,6 +171,15 @@ class ZapPaymentHandler(val account: Account) {
         zapsToSend: List<ZapSplitSetup>,
         onAllDone: suspend (MutableMap<ZapSplitSetup, SignAllZapRequestsReturn>) -> Unit,
     ) {
+        val authorRelayList =
+            note.author?.pubkeyHex?.let {
+                (
+                    LocalCache.getAddressableNoteIfExists(
+                        AdvertisedRelayListEvent.createAddressTag(it),
+                    )?.event as? AdvertisedRelayListEvent?
+                )?.readRelays()
+            }?.toSet()
+
         collectSuccessfulSigningOperations<ZapSplitSetup, SignAllZapRequestsReturn>(
             operationsInput = zapsToSend,
             runRequestFor = { next: ZapSplitSetup, onReady ->
@@ -181,7 +191,16 @@ class ZapPaymentHandler(val account: Account) {
                     }
                 } else {
                     val user = LocalCache.getUserIfExists(next.lnAddressOrPubKeyHex)
-                    prepareZapRequestIfNeeded(note, pollOption, message, zapType, user) { zapRequestJson ->
+                    val userRelayList =
+                        (
+                            (
+                                LocalCache.getAddressableNoteIfExists(
+                                    AdvertisedRelayListEvent.createAddressTag(next.lnAddressOrPubKeyHex),
+                                )?.event as? AdvertisedRelayListEvent?
+                            )?.readRelays()?.toSet() ?: emptySet()
+                        ) + (authorRelayList ?: emptySet())
+
+                    prepareZapRequestIfNeeded(note, pollOption, message, zapType, user, userRelayList) { zapRequestJson ->
                         if (zapRequestJson != null) {
                             onReady(SignAllZapRequestsReturn(zapRequestJson, user))
                         }
@@ -338,10 +357,12 @@ class ZapPaymentHandler(val account: Account) {
         message: String,
         zapType: LnZapEvent.ZapType,
         overrideUser: User? = null,
+        additionalRelays: Set<String>? = null,
         onReady: (String?) -> Unit,
     ) {
         if (zapType != LnZapEvent.ZapType.NONZAP) {
-            account.createZapRequestFor(note, pollOption, message, zapType, overrideUser) { zapRequest ->
+            account.createZapRequestFor(note, pollOption, message, zapType, overrideUser, additionalRelays) { zapRequest ->
+                println("Zap Request " + zapRequest.toJson())
                 onReady(zapRequest.toJson())
             }
         } else {

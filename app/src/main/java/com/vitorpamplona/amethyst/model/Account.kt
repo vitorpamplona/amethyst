@@ -782,6 +782,7 @@ class Account(
         message: String = "",
         zapType: LnZapEvent.ZapType,
         toUser: User?,
+        additionalRelays: Set<String>? = null,
         onReady: (LnZapRequestEvent) -> Unit,
     ) {
         if (!isWriteable()) return
@@ -789,7 +790,7 @@ class Account(
         note.event?.let { event ->
             LnZapRequestEvent.create(
                 event,
-                relays = getReceivingRelays(),
+                relays = getReceivingRelays() + (additionalRelays ?: emptySet()),
                 signer,
                 pollOption,
                 message,
