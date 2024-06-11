@@ -213,7 +213,7 @@ fun ZapTheDevsCard(
     val releaseNoteState by baseNote.live().metadata.observeAsState()
     val releaseNote = releaseNoteState?.note ?: return
 
-    Row(modifier = Modifier.padding(horizontal = Size10dp)) {
+    Row(modifier = Modifier.padding(start = Size10dp, end = Size10dp, bottom = Size10dp)) {
         Card(
             modifier = MaterialTheme.colorScheme.imageModifier,
         ) {
