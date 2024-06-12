@@ -33,7 +33,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun TimeAgo(note: Note) {
-    val time = remember(note) { note.createdAt() } ?: return
+    val time = note.createdAt() ?: return
     TimeAgo(time)
 }
 
