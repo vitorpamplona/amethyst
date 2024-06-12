@@ -350,7 +350,7 @@
     <string name="wallet_connect_pay_invoice_error_error">Twój dostawca połączenia z portfelem zwrócił następujący błąd: %1$s</string>
     <string name="could_not_connect_to_tor">Połączenie z serwerem Tor nieudane</string>
     <string name="unable_to_download_relay_document">Nie można pobrać dokumentu transmitera</string>
-    <string name="read_only_user">Użytkownik z prawem \"tylko do odczytu\"</string>
+    <string name="read_only_user">\"Tylko do odczytu\"</string>
     <string name="classifieds_title">Tytuł</string>
     <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Stan</string>
