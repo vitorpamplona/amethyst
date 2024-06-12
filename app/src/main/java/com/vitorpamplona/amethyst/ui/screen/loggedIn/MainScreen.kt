@@ -457,14 +457,10 @@ fun MainScreen(
 }
 
 @OptIn(ExperimentalAnimationApi::class)
-private fun <S> AnimatedContentTransitionScope<S>.topBarTransitionSpec(): ContentTransform {
-    return topBarAnimation
-}
+private fun <S> AnimatedContentTransitionScope<S>.topBarTransitionSpec(): ContentTransform = topBarAnimation
 
 @OptIn(ExperimentalAnimationApi::class)
-private fun <S> AnimatedContentTransitionScope<S>.bottomBarTransitionSpec(): ContentTransform {
-    return bottomBarAnimation
-}
+private fun <S> AnimatedContentTransitionScope<S>.bottomBarTransitionSpec(): ContentTransform = bottomBarAnimation
 
 @ExperimentalAnimationApi
 val topBarAnimation: ContentTransform =
@@ -588,14 +584,20 @@ private fun WritePermissionButtons(
 ) {
     val currentRoute by
         remember(navEntryState.value) {
-            derivedStateOf { navEntryState.value?.destination?.route?.substringBefore("?") }
+            derivedStateOf {
+                navEntryState.value
+                    ?.destination
+                    ?.route
+                    ?.substringBefore("?")
+            }
         }
 
     when (currentRoute) {
         Route.Home.base -> NewNoteButton(accountViewModel, nav)
         Route.Message.base -> {
             if (
-                accountViewModel.settings.windowSizeClass.value?.widthSizeClass ==
+                accountViewModel.settings.windowSizeClass.value
+                    ?.widthSizeClass ==
                 WindowWidthSizeClass.Compact
             ) {
                 ChannelFabColumn(accountViewModel, nav)
