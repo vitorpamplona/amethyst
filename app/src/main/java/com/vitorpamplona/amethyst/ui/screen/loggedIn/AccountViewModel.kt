@@ -254,16 +254,70 @@ class AccountViewModel(
         }
     }
 
-    val noteIsHiddenFlows = LruCache<Note, StateFlow<Boolean>>(300)
+    @Immutable
+    data class NoteComposeReportState(
+        val isPostHidden: Boolean = false,
+        val isAcceptable: Boolean = true,
+        val canPreview: Boolean = true,
+        val isHiddenAuthor: Boolean = false,
+        val relevantReports: ImmutableSet<Note> = persistentSetOf(),
+    )
 
-    fun createIsHiddenFlow(note: Note): StateFlow<Boolean> =
+    fun isNoteAcceptable(
+        note: Note,
+        accountChoices: Account.LiveHiddenUsers,
+        followUsers: Set<HexKey>,
+    ): NoteComposeReportState {
+        val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
+        val isFromLoggedInFollow = note.author?.let { followUsers.contains(it.pubkeyHex) } ?: true
+        val isPostHidden = note.isHiddenFor(accountChoices)
+        val isHiddenAuthor = note.author?.let { account.isHidden(it) } == true
+
+        return if (isPostHidden) {
+            // Spam + Blocked Users + Hidden Words + Sensitive Content
+            NoteComposeReportState(isPostHidden, false, false, isHiddenAuthor, persistentSetOf())
+        } else if (isFromLoggedIn || isFromLoggedInFollow) {
+            // No need to process if from trusted people
+            NoteComposeReportState(isPostHidden, true, true, isHiddenAuthor, persistentSetOf())
+        } else {
+            val newCanPreview = !note.hasAnyReports()
+
+            val newIsAcceptable = account.isAcceptable(note)
+
+            if (newCanPreview && newIsAcceptable) {
+                // No need to process reports if nothing is wrong
+                NoteComposeReportState(isPostHidden, true, true, false, persistentSetOf())
+            } else {
+                val newRelevantReports = account.getRelevantReports(note)
+
+                NoteComposeReportState(
+                    isPostHidden,
+                    newIsAcceptable,
+                    newCanPreview,
+                    false,
+                    newRelevantReports.toImmutableSet(),
+                )
+            }
+        }
+    }
+
+    val noteIsHiddenFlows = LruCache<Note, StateFlow<NoteComposeReportState>>(300)
+
+    fun createIsHiddenFlow(note: Note): StateFlow<NoteComposeReportState> =
         noteIsHiddenFlows.get(note)
-            ?: combineTransform(account.flowHiddenUsers, note.flow().metadata.stateFlow) { hiddenUsers, metadata ->
-                emit(metadata.note.isHiddenFor(hiddenUsers))
+            ?: combineTransform(
+                account.flowHiddenUsers,
+                account.liveKind3FollowsFlow,
+                note.flow().metadata.stateFlow,
+                note.flow().reports.stateFlow,
+            ) { hiddenUsers, followingUsers, metadata, reports ->
+                emit(
+                    isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.users),
+                )
             }.stateIn(
                 viewModelScope,
                 SharingStarted.Eagerly,
-                false,
+                NoteComposeReportState(),
             ).also {
                 noteIsHiddenFlows.put(note, it)
             }
@@ -760,52 +814,6 @@ class AccountViewModel(
     }
 
     fun defaultZapType(): LnZapEvent.ZapType = account.defaultZapType
-
-    @Immutable
-    data class NoteComposeReportState(
-        val isAcceptable: Boolean = true,
-        val canPreview: Boolean = true,
-        val isHiddenAuthor: Boolean = false,
-        val relevantReports: ImmutableSet<Note> = persistentSetOf(),
-    )
-
-    suspend fun isNoteAcceptable(
-        note: Note,
-        onReady: (NoteComposeReportState) -> Unit,
-    ) {
-        val newState =
-            withContext(Dispatchers.IO) {
-                val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
-                val isFromLoggedInFollow = note.author?.let { userProfile().isFollowingCached(it) } ?: true
-
-                if (isFromLoggedIn || isFromLoggedInFollow) {
-                    // No need to process if from trusted people
-                    NoteComposeReportState(true, true, false, persistentSetOf())
-                } else if (note.author?.let { account.isHidden(it) } == true) {
-                    NoteComposeReportState(false, false, true, persistentSetOf())
-                } else {
-                    val newCanPreview = !note.hasAnyReports()
-
-                    val newIsAcceptable = account.isAcceptable(note)
-
-                    if (newCanPreview && newIsAcceptable) {
-                        // No need to process reports if nothing is wrong
-                        NoteComposeReportState(true, true, false, persistentSetOf())
-                    } else {
-                        val newRelevantReports = account.getRelevantReports(note)
-
-                        NoteComposeReportState(
-                            newIsAcceptable,
-                            newCanPreview,
-                            false,
-                            newRelevantReports.toImmutableSet(),
-                        )
-                    }
-                }
-            }
-
-        onReady(newState)
-    }
 
     fun unwrap(
         event: GiftWrapEvent,

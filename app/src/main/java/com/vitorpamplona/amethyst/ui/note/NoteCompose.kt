@@ -204,7 +204,7 @@ fun NoteCompose(
         CheckHiddenFeedWatchBlockAndReport(
             note = baseNote,
             modifier = modifier,
-            showHidden = isHiddenFeed,
+            ignoreAllBlocksAndReports = isHiddenFeed,
             showHiddenWarning = isQuotedNote || isBoostedNote,
             accountViewModel = accountViewModel,
             nav = nav,
@@ -264,9 +264,7 @@ fun AcceptableNote(
                 }
             is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
             else ->
-                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) {
-                        showPopup,
-                    ->
+                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
                     CheckNewAndRenderNote(
                         baseNote = baseNote,
                         routeForLastRead = routeForLastRead,

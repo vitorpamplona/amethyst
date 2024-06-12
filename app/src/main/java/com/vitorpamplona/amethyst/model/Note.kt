@@ -258,7 +258,9 @@ open class Note(
         if (repliesChanged) liveSet?.innerReplies?.invalidateData()
         if (reactionsChanged) liveSet?.innerReactions?.invalidateData()
         if (boostsChanged) liveSet?.innerBoosts?.invalidateData()
-        if (reportsChanged) liveSet?.innerReports?.invalidateData()
+        if (reportsChanged) {
+            flowSet?.reports?.invalidateData()
+        }
         if (zapsChanged) liveSet?.innerZaps?.invalidateData()
 
         return toBeRemoved
@@ -290,7 +292,7 @@ open class Note(
         if (reports[author]?.contains(deleteNote) == true) {
             reports[author]?.let {
                 reports = reports + Pair(author, it.minus(deleteNote))
-                liveSet?.innerReports?.invalidateData()
+                flowSet?.reports?.invalidateData()
             }
         }
     }
@@ -399,10 +401,10 @@ open class Note(
 
         if (reportsByAuthor == null) {
             reports = reports + Pair(author, listOf(note))
-            liveSet?.innerReports?.invalidateData()
+            flowSet?.reports?.invalidateData()
         } else if (!reportsByAuthor.contains(note)) {
             reports = reports + Pair(author, reportsByAuthor + note)
-            liveSet?.innerReports?.invalidateData()
+            flowSet?.reports?.invalidateData()
         }
     }
 
@@ -844,11 +846,13 @@ class NoteFlowSet(
 ) {
     // Observers line up here.
     val metadata = NoteBundledRefresherFlow(u)
+    val reports = NoteBundledRefresherFlow(u)
 
-    fun isInUse(): Boolean = metadata.stateFlow.subscriptionCount.value > 0
+    fun isInUse(): Boolean = metadata.stateFlow.subscriptionCount.value > 0 || reports.stateFlow.subscriptionCount.value > 0
 
     fun destroy() {
         metadata.destroy()
+        reports.destroy()
     }
 }
 
@@ -861,7 +865,6 @@ class NoteLiveSet(
     val innerReactions = NoteBundledRefresherLiveData(u)
     val innerBoosts = NoteBundledRefresherLiveData(u)
     val innerReplies = NoteBundledRefresherLiveData(u)
-    val innerReports = NoteBundledRefresherLiveData(u)
     val innerRelays = NoteBundledRefresherLiveData(u)
     val innerZaps = NoteBundledRefresherLiveData(u)
     val innerOts = NoteBundledRefresherLiveData(u)
@@ -871,7 +874,6 @@ class NoteLiveSet(
     val reactions = innerReactions.map { it }
     val boosts = innerBoosts.map { it }
     val replies = innerReplies.map { it }
-    val reports = innerReports.map { it }
     val relays = innerRelays.map { it }
     val zaps = innerZaps.map { it }
 
@@ -907,7 +909,6 @@ class NoteLiveSet(
             reactions.hasObservers() ||
             boosts.hasObservers() ||
             replies.hasObservers() ||
-            reports.hasObservers() ||
             relays.hasObservers() ||
             zaps.hasObservers() ||
             hasEvent.hasObservers() ||
@@ -923,7 +924,6 @@ class NoteLiveSet(
         innerReactions.destroy()
         innerBoosts.destroy()
         innerReplies.destroy()
-        innerReports.destroy()
         innerRelays.destroy()
         innerZaps.destroy()
         innerOts.destroy()

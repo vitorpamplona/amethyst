@@ -22,9 +22,7 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -38,12 +36,12 @@ fun CheckHiddenFeedWatchBlockAndReport(
     note: Note,
     modifier: Modifier = Modifier,
     showHiddenWarning: Boolean,
-    showHidden: Boolean = false,
+    ignoreAllBlocksAndReports: Boolean = false,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     normalNote: @Composable (canPreview: Boolean) -> Unit,
 ) {
-    if (showHidden) {
+    if (ignoreAllBlocksAndReports) {
         // Ignores reports as well
         normalNote(true)
     } else {
@@ -62,19 +60,28 @@ fun WatchBlockAndReport(
     nav: (String) -> Unit,
     normalNote: @Composable (canPreview: Boolean) -> Unit,
 ) {
-    val isHiddenState by accountViewModel.createIsHiddenFlow(note).collectAsStateWithLifecycle()
+    val hiddenState by accountViewModel.createIsHiddenFlow(note).collectAsStateWithLifecycle()
 
     val showAnyway =
         remember {
             mutableStateOf(false)
         }
 
-    Crossfade(targetState = isHiddenState, label = "CheckHiddenNoteCompose") { isHidden ->
+    Crossfade(targetState = hiddenState, label = "CheckHiddenNoteCompose") { isHidden ->
         if (showAnyway.value) {
             normalNote(true)
-        } else if (!isHidden) {
-            LoadReportsNoteCompose(note, modifier, accountViewModel, nav) { canPreview ->
-                normalNote(canPreview)
+        } else if (!isHidden.isPostHidden) {
+            if (isHidden.isAcceptable) {
+                normalNote(isHidden.canPreview)
+            } else {
+                HiddenNote(
+                    isHidden.relevantReports,
+                    isHidden.isHiddenAuthor,
+                    accountViewModel,
+                    modifier,
+                    nav,
+                    onClick = { showAnyway.value = true },
+                )
             }
         } else if (showHiddenWarning) {
             // if it is a quoted or boosted note, how the hidden warning.
@@ -82,77 +89,5 @@ fun WatchBlockAndReport(
                 showAnyway.value = true
             }
         }
-    }
-}
-
-@Composable
-private fun LoadReportsNoteCompose(
-    note: Note,
-    modifier: Modifier = Modifier,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    normalNote: @Composable (canPreview: Boolean) -> Unit,
-) {
-    var state by
-        remember(note) {
-            mutableStateOf(
-                AccountViewModel.NoteComposeReportState(),
-            )
-        }
-
-    WatchForReports(note, accountViewModel) { newState ->
-        if (state != newState) {
-            state = newState
-        }
-    }
-
-    Crossfade(targetState = state, label = "LoadedNoteCompose") {
-        RenderReportState(state = it, note = note, modifier = modifier, accountViewModel = accountViewModel, nav = nav) { canPreview ->
-            normalNote(canPreview)
-        }
-    }
-}
-
-@Composable
-private fun RenderReportState(
-    state: AccountViewModel.NoteComposeReportState,
-    note: Note,
-    modifier: Modifier = Modifier,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    normalNote: @Composable (canPreview: Boolean) -> Unit,
-) {
-    var showReportedNote by remember(note) { mutableStateOf(false) }
-
-    Crossfade(targetState = !state.isAcceptable && !showReportedNote, label = "RenderReportState") { showHiddenNote ->
-        if (showHiddenNote) {
-            HiddenNote(
-                state.relevantReports,
-                state.isHiddenAuthor,
-                accountViewModel,
-                modifier,
-                nav,
-                onClick = { showReportedNote = true },
-            )
-        } else {
-            val canPreview = (!state.isAcceptable && showReportedNote) || state.canPreview
-
-            normalNote(canPreview)
-        }
-    }
-}
-
-@Composable
-fun WatchForReports(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    onChange: (AccountViewModel.NoteComposeReportState) -> Unit,
-) {
-    val userFollowsState by accountViewModel.userFollows.observeAsState()
-    val noteReportsState by note.live().reports.observeAsState()
-    val userBlocks by accountViewModel.account.flowHiddenUsers.collectAsStateWithLifecycle()
-
-    LaunchedEffect(key1 = noteReportsState, key2 = userFollowsState, userBlocks) {
-        accountViewModel.isNoteAcceptable(note, onChange)
     }
 }

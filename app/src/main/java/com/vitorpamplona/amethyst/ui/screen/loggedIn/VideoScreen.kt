@@ -24,6 +24,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -51,7 +52,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,14 +70,13 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.BoostReaction
-import com.vitorpamplona.amethyst.ui.note.HiddenNote
+import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.RenderRelay
 import com.vitorpamplona.amethyst.ui.note.ReplyReaction
 import com.vitorpamplona.amethyst.ui.note.ViewCountReaction
-import com.vitorpamplona.amethyst.ui.note.WatchForReports
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
@@ -107,8 +106,6 @@ import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.VideoEvent
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun VideoScreen(
@@ -249,73 +246,22 @@ fun SlidingCarousel(
         key = { index -> feed.value.getOrNull(index)?.idHex ?: "$index" },
     ) { index ->
         feed.value.getOrNull(index)?.let { note ->
-            LoadedVideoCompose(note, showHidden, accountViewModel, nav)
-        }
-    }
-}
-
-@Composable
-fun LoadedVideoCompose(
-    note: Note,
-    showHidden: Boolean,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    var state by
-        remember(note) {
-            mutableStateOf(
-                AccountViewModel.NoteComposeReportState(),
-            )
-        }
-
-    if (!showHidden) {
-        val scope = rememberCoroutineScope()
-
-        WatchForReports(note, accountViewModel) { newState ->
-            if (state != newState) {
-                scope.launch(Dispatchers.Main) { state = newState }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CheckHiddenFeedWatchBlockAndReport(
+                    note = note,
+                    modifier = Modifier.fillMaxWidth(),
+                    showHiddenWarning = true,
+                    ignoreAllBlocksAndReports = showHidden,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                ) {
+                    RenderVideoOrPictureNote(
+                        note,
+                        accountViewModel,
+                        nav,
+                    )
+                }
             }
-        }
-    }
-
-    Crossfade(targetState = state, label = "LoadedVideoCompose") {
-        RenderReportState(
-            it,
-            note,
-            accountViewModel,
-            nav,
-        )
-    }
-}
-
-@Composable
-fun RenderReportState(
-    state: AccountViewModel.NoteComposeReportState,
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    var showReportedNote by remember { mutableStateOf(false) }
-
-    Crossfade(targetState = (!state.isAcceptable || state.isHiddenAuthor) && !showReportedNote) {
-            showHiddenNote ->
-        if (showHiddenNote) {
-            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
-                HiddenNote(
-                    state.relevantReports,
-                    state.isHiddenAuthor,
-                    accountViewModel,
-                    Modifier.fillMaxWidth(),
-                    nav,
-                    onClick = { showReportedNote = true },
-                )
-            }
-        } else {
-            RenderVideoOrPictureNote(
-                note,
-                accountViewModel,
-                nav,
-            )
         }
     }
 }
@@ -478,8 +424,7 @@ fun ReactionsColumn(
             routeFor(
                 baseNote,
                 accountViewModel.userProfile(),
-            )
-                ?.let { nav(it) }
+            )?.let { nav(it) }
         }
         BoostReaction(
             baseNote = baseNote,
