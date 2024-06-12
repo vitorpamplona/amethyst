@@ -171,7 +171,7 @@ fun MainScreen(
     val navPopBack =
         remember(navController) {
             {
-                navController.popBackStack()
+                navController.navigateUp()
                 Unit
             }
         }
