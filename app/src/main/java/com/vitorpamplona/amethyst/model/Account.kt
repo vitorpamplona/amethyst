@@ -107,10 +107,6 @@ import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.DualCase
-import kotlinx.collections.immutable.ImmutableSet
-import kotlinx.collections.immutable.persistentSetOf
-import kotlinx.collections.immutable.toImmutableSet
-import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -206,7 +202,7 @@ class Account(
     var pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
     val scope: CoroutineScope = Amethyst.instance.applicationIOScope,
 ) {
-    var transientHiddenUsers: ImmutableSet<String> = persistentSetOf()
+    var transientHiddenUsers: Set<String> = setOf()
 
     data class PaymentRequest(
         val relayUrl: String,
@@ -223,13 +219,16 @@ class Account(
 
     @Immutable
     class LiveFollowLists(
-        val users: ImmutableSet<String> = persistentSetOf(),
-        val hashtags: ImmutableSet<String> = persistentSetOf(),
-        val geotags: ImmutableSet<String> = persistentSetOf(),
-        val communities: ImmutableSet<String> = persistentSetOf(),
+        val users: Set<String> = emptySet(),
+        val hashtags: Set<String> = emptySet(),
+        val geotags: Set<String> = emptySet(),
+        val communities: Set<String> = emptySet(),
     )
 
-    class ListNameNotePair(val listName: String, val event: GeneralListEvent?)
+    class ListNameNotePair(
+        val listName: String,
+        val event: GeneralListEvent?,
+    )
 
     val connectToRelaysFlow =
         combineTransform(
@@ -361,10 +360,10 @@ class Account(
         userProfile().flow().follows.stateFlow.transformLatest {
             emit(
                 LiveFollowLists(
-                    it.user.cachedFollowingKeySet().toImmutableSet(),
-                    it.user.cachedFollowingTagSet().toImmutableSet(),
-                    it.user.cachedFollowingGeohashSet().toImmutableSet(),
-                    it.user.cachedFollowingCommunitiesSet().toImmutableSet(),
+                    it.user.cachedFollowingKeySet(),
+                    it.user.cachedFollowingTagSet(),
+                    it.user.cachedFollowingGeohashSet(),
+                    it.user.cachedFollowingCommunitiesSet(),
                 ),
             )
         }
@@ -379,8 +378,8 @@ class Account(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun loadPeopleListFlowFromListName(listName: String): Flow<ListNameNotePair> {
-        return if (listName != GLOBAL_FOLLOWS && listName != KIND3_FOLLOWS) {
+    fun loadPeopleListFlowFromListName(listName: String): Flow<ListNameNotePair> =
+        if (listName != GLOBAL_FOLLOWS && listName != KIND3_FOLLOWS) {
             val note = LocalCache.checkGetOrCreateAddressableNote(listName)
             note?.flow()?.metadata?.stateFlow?.mapLatest {
                 val noteEvent = it.note.event as? GeneralListEvent
@@ -389,13 +388,12 @@ class Account(
         } else {
             MutableStateFlow(ListNameNotePair(listName, null))
         }
-    }
 
     fun combinePeopleListFlows(
         kind3FollowsSource: Flow<LiveFollowLists>,
         peopleListFollowsSource: Flow<ListNameNotePair>,
-    ): Flow<LiveFollowLists?> {
-        return combineTransform(kind3FollowsSource, peopleListFollowsSource) { kind3Follows, peopleListFollows ->
+    ): Flow<LiveFollowLists?> =
+        combineTransform(kind3FollowsSource, peopleListFollowsSource) { kind3Follows, peopleListFollows ->
             if (peopleListFollows.listName == GLOBAL_FOLLOWS) {
                 emit(null)
             } else if (peopleListFollows.listName == KIND3_FOLLOWS) {
@@ -411,7 +409,6 @@ class Account(
                 }
             }
         }
-    }
 
     val liveHomeFollowLists: StateFlow<LiveFollowLists?> by lazy {
         combinePeopleListFlows(liveKind3FollowsFlow, liveHomeList)
@@ -465,38 +462,41 @@ class Account(
             onReady(
                 LiveFollowLists(
                     users =
-                        (listEvent.bookmarkedPeople() + listEvent.filterUsers(privateTagList)).toImmutableSet(),
+                        (listEvent.bookmarkedPeople() + listEvent.filterUsers(privateTagList)).toSet(),
                     hashtags =
-                        (listEvent.hashtags() + listEvent.filterHashtags(privateTagList)).toImmutableSet(),
+                        (listEvent.hashtags() + listEvent.filterHashtags(privateTagList)).toSet(),
                     geotags =
-                        (listEvent.geohashes() + listEvent.filterGeohashes(privateTagList)).toImmutableSet(),
+                        (listEvent.geohashes() + listEvent.filterGeohashes(privateTagList)).toSet(),
                     communities =
                         (listEvent.taggedAddresses() + listEvent.filterAddresses(privateTagList))
                             .map { it.toTag() }
-                            .toImmutableSet(),
+                            .toSet(),
                 ),
             )
         }
     }
 
-    suspend fun waitToDecrypt(peopleListFollows: GeneralListEvent): LiveFollowLists? {
-        return withTimeoutOrNull(1000) {
+    suspend fun waitToDecrypt(peopleListFollows: GeneralListEvent): LiveFollowLists? =
+        withTimeoutOrNull(1000) {
             suspendCancellableCoroutine { continuation ->
                 decryptLiveFollows(peopleListFollows) {
                     continuation.resume(it)
                 }
             }
         }
-    }
 
     @Immutable
-    data class LiveHiddenUsers(
-        val hiddenUsers: ImmutableSet<String>,
-        val spammers: ImmutableSet<String>,
-        val hiddenWords: ImmutableSet<String>,
-        val hiddenWordsCase: List<DualCase>,
+    class LiveHiddenUsers(
+        val hiddenUsers: Set<String>,
+        val spammers: Set<String>,
+        val hiddenWords: Set<String>,
         val showSensitiveContent: Boolean?,
-    )
+    ) {
+        // speeds up isHidden calculations
+        val hiddenUsersHashCodes = hiddenUsers.mapTo(HashSet()) { it.hashCode() }
+        val spammersHashCodes = spammers.mapTo(HashSet()) { it.hashCode() }
+        val hiddenWordsCase = hiddenWords.map { DualCase(it.lowercase(), it.uppercase()) }
+    }
 
     val flowHiddenUsers: StateFlow<LiveHiddenUsers> by lazy {
         combineTransform(
@@ -530,25 +530,22 @@ class Account(
 
             emit(
                 LiveHiddenUsers(
-                    hiddenUsers = (resultBlockList.users + resultMuteList.users).toPersistentSet(),
-                    hiddenWords = hiddenWords.toPersistentSet(),
-                    hiddenWordsCase = hiddenWords.map { DualCase(it.lowercase(), it.uppercase()) },
+                    hiddenUsers = (resultBlockList.users + resultMuteList.users),
+                    hiddenWords = hiddenWords,
                     spammers = localLive.account.transientHiddenUsers,
                     showSensitiveContent = localLive.account.showSensitiveContent,
                 ),
             )
-        }
-            .stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                LiveHiddenUsers(
-                    hiddenUsers = persistentSetOf(),
-                    hiddenWords = persistentSetOf(),
-                    hiddenWordsCase = emptyList(),
-                    spammers = transientHiddenUsers,
-                    showSensitiveContent = showSensitiveContent,
-                ),
-            )
+        }.stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            LiveHiddenUsers(
+                hiddenUsers = setOf(),
+                hiddenWords = setOf(),
+                spammers = transientHiddenUsers,
+                showSensitiveContent = showSensitiveContent,
+            ),
+        )
     }
 
     val liveHiddenUsers = flowHiddenUsers.asLiveData()
@@ -599,24 +596,21 @@ class Account(
         filterSpamFromStrangers = filterSpam
         LocalCache.antiSpam.active = filterSpamFromStrangers
         if (!filterSpamFromStrangers) {
-            transientHiddenUsers = persistentSetOf()
+            transientHiddenUsers = setOf()
         }
         live.invalidateData()
         saveable.invalidateData()
     }
 
-    fun userProfile(): User {
-        return userProfileCache
+    fun userProfile(): User =
+        userProfileCache
             ?: run {
                 val myUser: User = LocalCache.getOrCreateUser(keyPair.pubKey.toHexKey())
                 userProfileCache = myUser
                 myUser
             }
-    }
 
-    fun isWriteable(): Boolean {
-        return keyPair.privKey != null || signer is NostrSignerExternal
-    }
+    fun isWriteable(): Boolean = keyPair.privKey != null || signer is NostrSignerExternal
 
     fun sendKind3RelayList(relays: Map<String, ContactListEvent.ReadWrite>) {
         if (!isWriteable()) return
@@ -689,24 +683,16 @@ class Account(
     fun reactionTo(
         note: Note,
         reaction: String,
-    ): List<Note> {
-        return note.reactedBy(userProfile(), reaction)
-    }
+    ): List<Note> = note.reactedBy(userProfile(), reaction)
 
-    fun hasBoosted(note: Note): Boolean {
-        return boostsTo(note).isNotEmpty()
-    }
+    fun hasBoosted(note: Note): Boolean = boostsTo(note).isNotEmpty()
 
-    fun boostsTo(note: Note): List<Note> {
-        return note.boostedBy(userProfile())
-    }
+    fun boostsTo(note: Note): List<Note> = note.boostedBy(userProfile())
 
     fun hasReacted(
         note: Note,
         reaction: String,
-    ): Boolean {
-        return note.hasReacted(userProfile(), reaction)
-    }
+    ): Boolean = note.hasReacted(userProfile(), reaction)
 
     suspend fun reactTo(
         note: Note,
@@ -721,7 +707,12 @@ class Account(
 
         if (note.event is ChatMessageEvent) {
             val event = note.event as ChatMessageEvent
-            val users = event.recipientsPubKey().plus(event.pubKey).toSet().toList()
+            val users =
+                event
+                    .recipientsPubKey()
+                    .plus(event.pubKey)
+                    .toSet()
+                    .toList()
 
             if (reaction.startsWith(":")) {
                 val emojiUrl = EmojiUrl.decode(reaction)
@@ -801,24 +792,23 @@ class Account(
         }
     }
 
-    fun getReceivingRelays(): Set<String> {
-        return getNIP65RelayList()?.readRelays()?.toSet()
-            ?: userProfile().latestContactList?.relays()?.filter { it.value.read }?.keys?.ifEmpty { null }
+    fun getReceivingRelays(): Set<String> =
+        getNIP65RelayList()?.readRelays()?.toSet()
+            ?: userProfile()
+                .latestContactList
+                ?.relays()
+                ?.filter { it.value.read }
+                ?.keys
+                ?.ifEmpty { null }
             ?: localRelays.filter { it.read }.map { it.url }.toSet()
-    }
 
-    fun hasWalletConnectSetup(): Boolean {
-        return zapPaymentRequest != null
-    }
+    fun hasWalletConnectSetup(): Boolean = zapPaymentRequest != null
 
-    fun isNIP47Author(pubkeyHex: String?): Boolean {
-        return (getNIP47Signer().pubKey == pubkeyHex)
-    }
+    fun isNIP47Author(pubkeyHex: String?): Boolean = (getNIP47Signer().pubKey == pubkeyHex)
 
-    fun getNIP47Signer(): NostrSigner {
-        return zapPaymentRequest?.secret?.hexToByteArray()?.let { NostrSignerInternal(KeyPair(it)) }
+    fun getNIP47Signer(): NostrSigner =
+        zapPaymentRequest?.secret?.hexToByteArray()?.let { NostrSignerInternal(KeyPair(it)) }
             ?: signer
-    }
 
     fun decryptZapPaymentResponseEvent(
         zapResponseEvent: LnZapPaymentResponseEvent,
@@ -885,7 +875,11 @@ class Account(
     ) {
         LnZapRequestEvent.create(
             userPubKeyHex,
-            userProfile().latestContactList?.relays()?.keys?.ifEmpty { null }
+            userProfile()
+                .latestContactList
+                ?.relays()
+                ?.keys
+                ?.ifEmpty { null }
                 ?: localRelays.map { it.url }.toSet(),
             signer,
             message,
@@ -2010,7 +2004,8 @@ class Account(
             if (receiver != null) {
                 val relayList =
                     (
-                        LocalCache.getAddressableNoteIfExists(ChatMessageRelayListEvent.createAddressTag(receiver))
+                        LocalCache
+                            .getAddressableNoteIfExists(ChatMessageRelayListEvent.createAddressTag(receiver))
                             ?.event as? ChatMessageRelayListEvent
                     )?.relays()?.ifEmpty { null }
 
@@ -2201,9 +2196,7 @@ class Account(
         relay: Relay,
         challenge: String,
         onReady: (RelayAuthEvent) -> Unit,
-    ) {
-        return createAuthEvent(relay.url, challenge, onReady = onReady)
-    }
+    ) = createAuthEvent(relay.url, challenge, onReady = onReady)
 
     fun createAuthEvent(
         relayUrl: String,
@@ -2271,13 +2264,9 @@ class Account(
         return LocalCache.getOrCreateAddressableNote(aTag)
     }
 
-    fun getBlockList(): PeopleListEvent? {
-        return getBlockListNote().event as? PeopleListEvent
-    }
+    fun getBlockList(): PeopleListEvent? = getBlockListNote().event as? PeopleListEvent
 
-    fun getMuteList(): MuteListEvent? {
-        return getMuteListNote().event as? MuteListEvent
-    }
+    fun getMuteList(): MuteListEvent? = getMuteListNote().event as? MuteListEvent
 
     fun hideWord(word: String) {
         val muteList = getMuteList()
@@ -2388,7 +2377,7 @@ class Account(
             }
         }
 
-        transientHiddenUsers = (transientHiddenUsers - pubkeyHex).toImmutableSet()
+        transientHiddenUsers = (transientHiddenUsers - pubkeyHex)
         live.invalidateData()
         saveable.invalidateData()
     }
@@ -2509,9 +2498,7 @@ class Account(
         return event.cachedGossip(signer, onReady)
     }
 
-    fun cachedDecryptContent(note: Note): String? {
-        return cachedDecryptContent(note.event)
-    }
+    fun cachedDecryptContent(note: Note): String? = cachedDecryptContent(note.event)
 
     fun cachedDecryptContent(event: EventInterface?): String? {
         if (event == null) return null
@@ -2591,9 +2578,7 @@ class Account(
     fun preferenceBetween(
         source: String,
         target: String,
-    ): String? {
-        return languagePreferences.get("$source,$target")
-    }
+    ): String? = languagePreferences.get("$source,$target")
 
     private fun updateContactListTo(newContactList: ContactListEvent?) {
         if (newContactList == null || newContactList.tags.isEmpty()) return
@@ -2625,39 +2610,27 @@ class Account(
         return usersRelayList.toTypedArray()
     }
 
-    fun convertLocalRelays(): Array<RelaySetupInfo> {
-        return localRelays.map { RelaySetupInfo(RelayUrlFormatter.normalize(it.url), it.read, it.write, it.feedTypes) }.toTypedArray()
-    }
+    fun convertLocalRelays(): Array<RelaySetupInfo> = localRelays.map { RelaySetupInfo(RelayUrlFormatter.normalize(it.url), it.read, it.write, it.feedTypes) }.toTypedArray()
 
-    fun activeGlobalRelays(): Array<String> {
-        return connectToRelays.value
+    fun activeGlobalRelays(): Array<String> =
+        connectToRelays.value
             .filter { it.feedTypes.contains(FeedType.GLOBAL) }
             .map { it.url }
             .toTypedArray()
-    }
 
-    fun activeWriteRelays(): List<RelaySetupInfo> {
-        return connectToRelays.value.filter { it.write }
-    }
+    fun activeWriteRelays(): List<RelaySetupInfo> = connectToRelays.value.filter { it.write }
 
-    fun isAllHidden(users: Set<HexKey>): Boolean {
-        return users.all { isHidden(it) }
-    }
+    fun isAllHidden(users: Set<HexKey>): Boolean = users.all { isHidden(it) }
 
     fun isHidden(user: User) = isHidden(user.pubkeyHex)
 
-    fun isHidden(userHex: String): Boolean {
-        return flowHiddenUsers.value.hiddenUsers.contains(userHex) ||
+    fun isHidden(userHex: String): Boolean =
+        flowHiddenUsers.value.hiddenUsers.contains(userHex) ||
             flowHiddenUsers.value.spammers.contains(userHex)
-    }
 
-    fun followingKeySet(): Set<HexKey> {
-        return userProfile().cachedFollowingKeySet()
-    }
+    fun followingKeySet(): Set<HexKey> = userProfile().cachedFollowingKeySet()
 
-    fun followingTagSet(): Set<HexKey> {
-        return userProfile().cachedFollowingTagSet()
-    }
+    fun followingTagSet(): Set<HexKey> = userProfile().cachedFollowingTagSet()
 
     fun isAcceptable(user: User): Boolean {
         if (userProfile().pubkeyHex == user.pubkeyHex) {
@@ -2669,11 +2642,14 @@ class Account(
         }
 
         if (!warnAboutPostsWithReports) {
-            return !isHidden(user) && // if user hasn't hided this author
+            return !isHidden(user) &&
+                // if user hasn't hided this author
                 user.reportsBy(userProfile()).isEmpty() // if user has not reported this post
         }
-        return !isHidden(user) && // if user hasn't hided this author
-            user.reportsBy(userProfile()).isEmpty() && // if user has not reported this post
+        return !isHidden(user) &&
+            // if user hasn't hided this author
+            user.reportsBy(userProfile()).isEmpty() &&
+            // if user has not reported this post
             user.countReportAuthorsBy(followingKeySet()) < 5
     }
 
@@ -2681,20 +2657,18 @@ class Account(
         if (!warnAboutPostsWithReports) {
             return !note.hasReportsBy(userProfile())
         }
-        return !note.hasReportsBy(userProfile()) && // if user has not reported this post
+        return !note.hasReportsBy(userProfile()) &&
+            // if user has not reported this post
             note.countReportAuthorsBy(followingKeySet()) < 5 // if it has 5 reports by reliable users
     }
 
-    fun isFollowing(user: User): Boolean {
-        return user.pubkeyHex in followingKeySet()
-    }
+    fun isFollowing(user: User): Boolean = user.pubkeyHex in followingKeySet()
 
-    fun isFollowing(user: HexKey): Boolean {
-        return user in followingKeySet()
-    }
+    fun isFollowing(user: HexKey): Boolean = user in followingKeySet()
 
     fun isAcceptable(note: Note): Boolean {
-        return note.author?.let { isAcceptable(it) } ?: true && // if user hasn't hided this author
+        return note.author?.let { isAcceptable(it) } ?: true &&
+            // if user hasn't hided this author
             isAcceptableDirect(note) &&
             (
                 (note.event !is RepostEvent && note.event !is GenericRepostEvent) ||
@@ -2719,8 +2693,7 @@ class Account(
             note.reportsBy(followsPlusMe) +
                 (note.author?.reportsBy(followsPlusMe) ?: emptyList()) +
                 innerReports
-        )
-            .toSet()
+        ).toSet()
     }
 
     fun saveKind3RelayList(value: List<RelaySetupInfo>) {
@@ -2734,19 +2707,14 @@ class Account(
         }
     }
 
-    fun getDMRelayListNote(): AddressableNote {
-        return LocalCache.getOrCreateAddressableNote(
+    fun getDMRelayListNote(): AddressableNote =
+        LocalCache.getOrCreateAddressableNote(
             ChatMessageRelayListEvent.createAddressATag(signer.pubKey),
         )
-    }
 
-    fun getDMRelayListFlow(): StateFlow<NoteState> {
-        return getDMRelayListNote().flow().metadata.stateFlow
-    }
+    fun getDMRelayListFlow(): StateFlow<NoteState> = getDMRelayListNote().flow().metadata.stateFlow
 
-    fun getDMRelayList(): ChatMessageRelayListEvent? {
-        return getDMRelayListNote().event as? ChatMessageRelayListEvent
-    }
+    fun getDMRelayList(): ChatMessageRelayListEvent? = getDMRelayListNote().event as? ChatMessageRelayListEvent
 
     fun saveDMRelayList(dmRelays: List<String>) {
         if (!isWriteable()) return
@@ -2772,19 +2740,14 @@ class Account(
         }
     }
 
-    fun getPrivateOutboxRelayListNote(): AddressableNote {
-        return LocalCache.getOrCreateAddressableNote(
+    fun getPrivateOutboxRelayListNote(): AddressableNote =
+        LocalCache.getOrCreateAddressableNote(
             PrivateOutboxRelayListEvent.createAddressATag(signer.pubKey),
         )
-    }
 
-    fun getPrivateOutboxRelayListFlow(): StateFlow<NoteState> {
-        return getPrivateOutboxRelayListNote().flow().metadata.stateFlow
-    }
+    fun getPrivateOutboxRelayListFlow(): StateFlow<NoteState> = getPrivateOutboxRelayListNote().flow().metadata.stateFlow
 
-    fun getPrivateOutboxRelayList(): PrivateOutboxRelayListEvent? {
-        return getPrivateOutboxRelayListNote().event as? PrivateOutboxRelayListEvent
-    }
+    fun getPrivateOutboxRelayList(): PrivateOutboxRelayListEvent? = getPrivateOutboxRelayListNote().event as? PrivateOutboxRelayListEvent
 
     fun savePrivateOutboxRelayList(relays: List<String>) {
         if (!isWriteable()) return
@@ -2811,19 +2774,14 @@ class Account(
         }
     }
 
-    fun getSearchRelayListNote(): AddressableNote {
-        return LocalCache.getOrCreateAddressableNote(
+    fun getSearchRelayListNote(): AddressableNote =
+        LocalCache.getOrCreateAddressableNote(
             SearchRelayListEvent.createAddressATag(signer.pubKey),
         )
-    }
 
-    fun getSearchRelayListFlow(): StateFlow<NoteState> {
-        return getSearchRelayListNote().flow().metadata.stateFlow
-    }
+    fun getSearchRelayListFlow(): StateFlow<NoteState> = getSearchRelayListNote().flow().metadata.stateFlow
 
-    fun getSearchRelayList(): SearchRelayListEvent? {
-        return getSearchRelayListNote().event as? SearchRelayListEvent
-    }
+    fun getSearchRelayList(): SearchRelayListEvent? = getSearchRelayListNote().event as? SearchRelayListEvent
 
     fun saveSearchRelayList(searchRelays: List<String>) {
         if (!isWriteable()) return
@@ -2850,19 +2808,14 @@ class Account(
         }
     }
 
-    fun getNIP65RelayListNote(): AddressableNote {
-        return LocalCache.getOrCreateAddressableNote(
+    fun getNIP65RelayListNote(): AddressableNote =
+        LocalCache.getOrCreateAddressableNote(
             AdvertisedRelayListEvent.createAddressATag(signer.pubKey),
         )
-    }
 
-    fun getNIP65RelayListFlow(): StateFlow<NoteState> {
-        return getNIP65RelayListNote().flow().metadata.stateFlow
-    }
+    fun getNIP65RelayListFlow(): StateFlow<NoteState> = getNIP65RelayListNote().flow().metadata.stateFlow
 
-    fun getNIP65RelayList(): AdvertisedRelayListEvent? {
-        return getNIP65RelayListNote().event as? AdvertisedRelayListEvent
-    }
+    fun getNIP65RelayList(): AdvertisedRelayListEvent? = getNIP65RelayListNote().event as? AdvertisedRelayListEvent
 
     fun sendNip65RelayList(relays: List<AdvertisedRelayListEvent.AdvertisedRelayInfo>) {
         if (!isWriteable()) return
@@ -2889,17 +2842,11 @@ class Account(
         }
     }
 
-    fun getFileServersList(): FileServersEvent? {
-        return getFileServersNote().event as? FileServersEvent
-    }
+    fun getFileServersList(): FileServersEvent? = getFileServersNote().event as? FileServersEvent
 
-    fun getFileServersListFlow(): StateFlow<NoteState> {
-        return getFileServersNote().flow().metadata.stateFlow
-    }
+    fun getFileServersListFlow(): StateFlow<NoteState> = getFileServersNote().flow().metadata.stateFlow
 
-    fun getFileServersNote(): AddressableNote {
-        return LocalCache.getOrCreateAddressableNote(FileServersEvent.createAddressATag(userProfile().pubkeyHex))
-    }
+    fun getFileServersNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(FileServersEvent.createAddressATag(userProfile().pubkeyHex))
 
     fun sendFileServersList(servers: List<String>) {
         if (!isWriteable()) return
@@ -2961,13 +2908,9 @@ class Account(
         }
     }
 
-    fun loadLastRead(route: String): Long {
-        return lastReadPerRoute[route] ?: 0
-    }
+    fun loadLastRead(route: String): Long = lastReadPerRoute[route] ?: 0
 
-    fun hasDonatedInThisVersion(): Boolean {
-        return hasDonatedInVersion.contains(BuildConfig.VERSION_NAME)
-    }
+    fun hasDonatedInThisVersion(): Boolean = hasDonatedInVersion.contains(BuildConfig.VERSION_NAME)
 
     fun markDonatedInThisVersion() {
         hasDonatedInVersion = hasDonatedInVersion + BuildConfig.VERSION_NAME
@@ -2988,7 +2931,7 @@ class Account(
                     it.cache.spamMessages.snapshot().values.forEach {
                         if (it.pubkeyHex !in transientHiddenUsers && it.duplicatedMessages.size >= 5) {
                             if (it.pubkeyHex != userProfile().pubkeyHex && it.pubkeyHex !in followingKeySet()) {
-                                transientHiddenUsers = (transientHiddenUsers + it.pubkeyHex).toImmutableSet()
+                                transientHiddenUsers = (transientHiddenUsers + it.pubkeyHex)
                                 live.invalidateData()
                             }
                         }
@@ -3009,8 +2952,9 @@ class Account(
     }
 }
 
-class AccountLiveData(private val account: Account) :
-    LiveData<AccountState>(AccountState(account)) {
+class AccountLiveData(
+    private val account: Account,
+) : LiveData<AccountState>(AccountState(account)) {
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(300, Dispatchers.Default)
 
@@ -3027,4 +2971,6 @@ class AccountLiveData(private val account: Account) :
     }
 }
 
-@Immutable class AccountState(val account: Account)
+@Immutable class AccountState(
+    val account: Account,
+)

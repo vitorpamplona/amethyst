@@ -30,8 +30,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -64,12 +62,7 @@ fun WatchBlockAndReport(
     nav: (String) -> Unit,
     normalNote: @Composable (canPreview: Boolean) -> Unit,
 ) {
-    val isHiddenState by remember(note) {
-        accountViewModel.account.liveHiddenUsers
-            .map { note.isHiddenFor(it) }
-            .distinctUntilChanged()
-    }
-        .observeAsState(accountViewModel.isNoteHidden(note))
+    val isHiddenState by accountViewModel.createIsHiddenFlow(note).collectAsStateWithLifecycle()
 
     val showAnyway =
         remember {

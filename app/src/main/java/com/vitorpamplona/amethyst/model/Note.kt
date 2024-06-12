@@ -75,7 +75,9 @@ import java.math.BigDecimal
 import kotlin.coroutines.resume
 
 @Stable
-class AddressableNote(val address: ATag) : Note(address.toTag()) {
+class AddressableNote(
+    val address: ATag,
+) : Note(address.toTag()) {
     override fun idNote() = address.toNAddr()
 
     override fun toNEvent() = address.toNAddr()
@@ -93,9 +95,7 @@ class AddressableNote(val address: ATag) : Note(address.toTag()) {
         return minOf(publishedAt, lastCreatedAt)
     }
 
-    fun dTag(): String? {
-        return (event as? AddressableEvent)?.dTag()
-    }
+    fun dTag(): String? = (event as? AddressableEvent)?.dTag()
 
     override fun wasOrShouldBeDeletedBy(
         deletionEvents: Set<HexKey>,
@@ -107,7 +107,9 @@ class AddressableNote(val address: ATag) : Note(address.toTag()) {
 }
 
 @Stable
-open class Note(val idHex: String) {
+open class Note(
+    val idHex: String,
+) {
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.
     var event: EventInterface? = null
@@ -163,14 +165,12 @@ open class Note(val idHex: String) {
         }
     }
 
-    fun toNostrUri(): String {
-        return "nostr:${toNEvent()}"
-    }
+    fun toNostrUri(): String = "nostr:${toNEvent()}"
 
     open fun idDisplayNote() = idNote().toShortenHex()
 
-    fun channelHex(): HexKey? {
-        return if (
+    fun channelHex(): HexKey? =
+        if (
             event is ChannelMessageEvent ||
             event is ChannelMetadataEvent ||
             event is ChannelCreateEvent ||
@@ -185,7 +185,6 @@ open class Note(val idHex: String) {
         } else {
             null
         }
-    }
 
     open fun address(): ATag? = null
 
@@ -523,39 +522,30 @@ open class Note(val idHex: String) {
         isZappedByCalculation(option, user, account, zaps, onWasZappedByAuthor)
     }
 
-    fun getReactionBy(user: User): String? {
-        return reactions.firstNotNullOfOrNull {
+    fun getReactionBy(user: User): String? =
+        reactions.firstNotNullOfOrNull {
             if (it.value.any { it.author?.pubkeyHex == user.pubkeyHex }) {
                 it.key
             } else {
                 null
             }
         }
-    }
 
-    fun isBoostedBy(user: User): Boolean {
-        return boosts.any { it.author?.pubkeyHex == user.pubkeyHex }
-    }
+    fun isBoostedBy(user: User): Boolean = boosts.any { it.author?.pubkeyHex == user.pubkeyHex }
 
-    fun hasReportsBy(user: User): Boolean {
-        return reports[user]?.isNotEmpty() ?: false
-    }
+    fun hasReportsBy(user: User): Boolean = reports[user]?.isNotEmpty() ?: false
 
-    fun countReportAuthorsBy(users: Set<HexKey>): Int {
-        return reports.count { it.key.pubkeyHex in users }
-    }
+    fun countReportAuthorsBy(users: Set<HexKey>): Int = reports.count { it.key.pubkeyHex in users }
 
-    fun reportsBy(users: Set<HexKey>): List<Note> {
-        return reports
+    fun reportsBy(users: Set<HexKey>): List<Note> =
+        reports
             .mapNotNull {
                 if (it.key.pubkeyHex in users) {
                     it.value
                 } else {
                     null
                 }
-            }
-            .flatten()
-    }
+            }.flatten()
 
     private fun updateZapTotal() {
         var sumOfAmounts = BigDecimal.ZERO
@@ -635,8 +625,8 @@ open class Note(val idHex: String) {
         )
     }
 
-    fun hasPledgeBy(user: User): Boolean {
-        return replies
+    fun hasPledgeBy(user: User): Boolean =
+        replies
             .filter { it.event?.isTaggedHash("bounty-added-reward") ?: false }
             .any {
                 val pledgeValue =
@@ -650,10 +640,9 @@ open class Note(val idHex: String) {
 
                 pledgeValue != null && it.author == user
             }
-    }
 
-    fun pledgedAmountByOthers(): BigDecimal {
-        return replies
+    fun pledgedAmountByOthers(): BigDecimal =
+        replies
             .filter { it.event?.isTaggedHash("bounty-added-reward") ?: false }
             .mapNotNull {
                 try {
@@ -663,9 +652,7 @@ open class Note(val idHex: String) {
                     null
                     // do nothing if it can't convert to bigdecimal
                 }
-            }
-            .sumOf { it }
-    }
+            }.sumOf { it }
 
     fun hasAnyReports(): Boolean {
         val dayAgo = TimeUtils.oneDayAgo()
@@ -676,8 +663,8 @@ open class Note(val idHex: String) {
             )
     }
 
-    fun isNewThread(): Boolean {
-        return (
+    fun isNewThread(): Boolean =
+        (
             event is RepostEvent ||
                 event is GenericRepostEvent ||
                 replyTo == null ||
@@ -685,29 +672,20 @@ open class Note(val idHex: String) {
         ) &&
             event !is ChannelMessageEvent &&
             event !is LiveActivitiesChatMessageEvent
-    }
 
-    fun hasZapped(loggedIn: User): Boolean {
-        return zaps.any { it.key.author == loggedIn }
-    }
+    fun hasZapped(loggedIn: User): Boolean = zaps.any { it.key.author == loggedIn }
 
     fun hasReacted(
         loggedIn: User,
         content: String,
-    ): Boolean {
-        return reactedBy(loggedIn, content).isNotEmpty()
-    }
+    ): Boolean = reactedBy(loggedIn, content).isNotEmpty()
 
     fun reactedBy(
         loggedIn: User,
         content: String,
-    ): List<Note> {
-        return reactions[content]?.filter { it.author == loggedIn } ?: emptyList()
-    }
+    ): List<Note> = reactions[content]?.filter { it.author == loggedIn } ?: emptyList()
 
-    fun reactedBy(loggedIn: User): List<String> {
-        return reactions.filter { it.value.any { it.author == loggedIn } }.mapNotNull { it.key }
-    }
+    fun reactedBy(loggedIn: User): List<String> = reactions.filter { it.value.any { it.author == loggedIn } }.mapNotNull { it.key }
 
     fun hasBoostedInTheLast5Minutes(loggedIn: User): Boolean {
         return boosts.firstOrNull {
@@ -715,9 +693,7 @@ open class Note(val idHex: String) {
         } != null // 5 minute protection
     }
 
-    fun boostedBy(loggedIn: User): List<Note> {
-        return boosts.filter { it.author == loggedIn }
-    }
+    fun boostedBy(loggedIn: User): List<Note> = boosts.filter { it.author == loggedIn }
 
     fun moveAllReferencesTo(note: AddressableNote) {
         // migrates these comments to a new version
@@ -762,33 +738,38 @@ open class Note(val idHex: String) {
 
     fun isHiddenFor(accountChoices: Account.LiveHiddenUsers): Boolean {
         val thisEvent = event ?: return false
+        val hash = thisEvent.pubKey().hashCode()
 
-        val isBoostedNoteHidden =
-            if (
-                thisEvent is GenericRepostEvent ||
-                thisEvent is RepostEvent ||
-                thisEvent is CommunityPostApprovalEvent
-            ) {
-                replyTo?.lastOrNull()?.isHiddenFor(accountChoices) ?: false
-            } else {
-                false
+        // if the author is hidden by spam or blocked
+        if (accountChoices.hiddenUsersHashCodes.contains(hash) ||
+            accountChoices.spammersHashCodes.contains(hash)
+        ) {
+            return true
+        }
+
+        // if the post is sensitive and the user doesn't want to see sensitive content
+        if (accountChoices.showSensitiveContent == false && thisEvent.isSensitive()) {
+            return true
+        }
+
+        // if this is a repost, consider the inner event.
+        if (
+            thisEvent is GenericRepostEvent ||
+            thisEvent is RepostEvent ||
+            thisEvent is CommunityPostApprovalEvent
+        ) {
+            if (replyTo?.lastOrNull()?.isHiddenFor(accountChoices) == true) {
+                return true
             }
+        }
 
-        val isHiddenByWord =
-            if (thisEvent is BaseTextNoteEvent) {
-                accountChoices.hiddenWords.any {
-                    thisEvent.content.containsAny(accountChoices.hiddenWordsCase)
-                }
-            } else {
-                false
+        if (thisEvent is BaseTextNoteEvent) {
+            if (thisEvent.content.containsAny(accountChoices.hiddenWordsCase)) {
+                return true
             }
+        }
 
-        val isSensitive = thisEvent.isSensitive()
-        return isBoostedNoteHidden ||
-            isHiddenByWord ||
-            accountChoices.hiddenUsers.contains(author?.pubkeyHex) ||
-            accountChoices.spammers.contains(author?.pubkeyHex) ||
-            (isSensitive && accountChoices.showSensitiveContent == false)
+        return false
     }
 
     var liveSet: NoteLiveSet? = null
@@ -858,13 +839,13 @@ open class Note(val idHex: String) {
 }
 
 @Stable
-class NoteFlowSet(u: Note) {
+class NoteFlowSet(
+    u: Note,
+) {
     // Observers line up here.
     val metadata = NoteBundledRefresherFlow(u)
 
-    fun isInUse(): Boolean {
-        return metadata.stateFlow.subscriptionCount.value > 0
-    }
+    fun isInUse(): Boolean = metadata.stateFlow.subscriptionCount.value > 0
 
     fun destroy() {
         metadata.destroy()
@@ -872,7 +853,9 @@ class NoteFlowSet(u: Note) {
 }
 
 @Stable
-class NoteLiveSet(u: Note) {
+class NoteLiveSet(
+    u: Note,
+) {
     // Observers line up here.
     val innerMetadata = NoteBundledRefresherLiveData(u)
     val innerReactions = NoteBundledRefresherLiveData(u)
@@ -901,8 +884,7 @@ class NoteLiveSet(u: Note) {
                     ?: false ||
                     boostState?.note?.boosts?.isNotEmpty() ?: false ||
                     reactionState?.note?.reactions?.isNotEmpty() ?: false
-            }
-            .distinctUntilChanged()
+            }.distinctUntilChanged()
 
     val replyCount = innerReplies.map { it.note.replies.size }.distinctUntilChanged()
 
@@ -912,8 +894,7 @@ class NoteLiveSet(u: Note) {
                 var total = 0
                 it.note.reactions.forEach { total += it.value.size }
                 total
-            }
-            .distinctUntilChanged()
+            }.distinctUntilChanged()
 
     val boostCount = innerBoosts.map { it.note.boosts.size }.distinctUntilChanged()
 
@@ -921,8 +902,8 @@ class NoteLiveSet(u: Note) {
 
     val content = innerMetadata.map { it.note.event?.content() ?: "" }
 
-    fun isInUse(): Boolean {
-        return metadata.hasObservers() ||
+    fun isInUse(): Boolean =
+        metadata.hasObservers() ||
             reactions.hasObservers() ||
             boosts.hasObservers() ||
             replies.hasObservers() ||
@@ -936,7 +917,6 @@ class NoteLiveSet(u: Note) {
             boostCount.hasObservers() ||
             innerOts.hasObservers() ||
             innerModifications.hasObservers()
-    }
 
     fun destroy() {
         innerMetadata.destroy()
@@ -952,7 +932,9 @@ class NoteLiveSet(u: Note) {
 }
 
 @Stable
-class NoteBundledRefresherFlow(val note: Note) {
+class NoteBundledRefresherFlow(
+    val note: Note,
+) {
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(500, Dispatchers.IO)
     val stateFlow = MutableStateFlow(NoteState(note))
@@ -973,7 +955,9 @@ class NoteBundledRefresherFlow(val note: Note) {
 }
 
 @Stable
-class NoteBundledRefresherLiveData(val note: Note) : LiveData<NoteState>(NoteState(note)) {
+class NoteBundledRefresherLiveData(
+    val note: Note,
+) : LiveData<NoteState>(NoteState(note)) {
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(500, Dispatchers.IO)
 
@@ -1000,7 +984,10 @@ class NoteBundledRefresherLiveData(val note: Note) : LiveData<NoteState>(NoteSta
 }
 
 @Stable
-class NoteLoadingLiveData<Y>(val note: Note, initialValue: Y?) : MediatorLiveData<Y>(initialValue) {
+class NoteLoadingLiveData<Y>(
+    val note: Note,
+    initialValue: Y?,
+) : MediatorLiveData<Y>(initialValue) {
     override fun onActive() {
         super.onActive()
         if (note is AddressableNote) {
@@ -1020,7 +1007,9 @@ class NoteLoadingLiveData<Y>(val note: Note, initialValue: Y?) : MediatorLiveDat
     }
 }
 
-@Immutable class NoteState(val note: Note)
+@Immutable class NoteState(
+    val note: Note,
+)
 
 object RelayBriefInfoCache {
     val cache = LruCache<String, RelayBriefInfo?>(50)

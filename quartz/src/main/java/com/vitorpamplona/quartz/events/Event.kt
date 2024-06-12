@@ -59,14 +59,13 @@ open class Event(
 ) : EventInterface {
     override fun isContentEncoded() = false
 
-    override fun countMemory(): Long {
-        return 12L +
+    override fun countMemory(): Long =
+        12L +
             id.bytesUsedInMemory() +
             pubKey.bytesUsedInMemory() +
             tags.sumOf { it.sumOf { it.bytesUsedInMemory() } } +
             content.bytesUsedInMemory() +
             sig.bytesUsedInMemory()
-    }
 
     override fun id(): HexKey = id
 
@@ -152,8 +151,8 @@ open class Event(
 
     override fun hasZapSplitSetup() = tags.any { it.size > 1 && it[0] == "zap" }
 
-    override fun zapSplitSetup(): List<ZapSplitSetup> {
-        return tags
+    override fun zapSplitSetup(): List<ZapSplitSetup> =
+        tags
             .filter { it.size > 1 && it[0] == "zap" }
             .mapNotNull {
                 val isLnAddress = it[0].contains("@") || it[0].startsWith("LNURL", true)
@@ -170,7 +169,6 @@ open class Event(
                     null
                 }
             }
-    }
 
     override fun taggedAddresses() =
         tags
@@ -272,29 +270,23 @@ open class Event(
         return rank
     }
 
-    override fun getGeoHash(): String? {
-        return tags.firstOrNull { it.size > 1 && it[0] == "g" }?.get(1)?.ifBlank { null }
-    }
+    override fun getGeoHash(): String? = tags.firstOrNull { it.size > 1 && it[0] == "g" }?.get(1)?.ifBlank { null }
 
-    override fun getReward(): BigDecimal? {
-        return try {
+    override fun getReward(): BigDecimal? =
+        try {
             tags.firstOrNull { it.size > 1 && it[0] == "reward" }?.get(1)?.let { BigDecimal(it) }
         } catch (e: Exception) {
             null
         }
-    }
 
-    open fun toNIP19(): String {
-        return if (this is AddressableEvent) {
+    open fun toNIP19(): String =
+        if (this is AddressableEvent) {
             ATag(kind, pubKey, dTag(), null).toNAddr()
         } else {
             Nip19Bech32.createNEvent(id, pubKey, kind, null)
         }
-    }
 
-    fun toNostrUri(): String {
-        return "nostr:${toNIP19()}"
-    }
+    fun toNostrUri(): String = "nostr:${toNIP19()}"
 
     fun hasCorrectIDHash(): Boolean {
         if (id.isEmpty()) return false
@@ -320,8 +312,7 @@ open class Event(
                 |  Event: ${toJson()}
                 |  Actual ID: $id
                 |  Generated: ${generateId()}
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
         }
         if (!hasVerifiedSignature()) {
@@ -329,22 +320,17 @@ open class Event(
         }
     }
 
-    override fun hasValidSignature(): Boolean {
-        return try {
+    override fun hasValidSignature(): Boolean =
+        try {
             hasCorrectIDHash() && hasVerifiedSignature()
         } catch (e: Exception) {
             Log.w("Event", "Event $id does not have a valid signature: ${toJson()}", e)
             false
         }
-    }
 
-    fun makeJsonForId(): String {
-        return makeJsonForId(pubKey, createdAt, kind, tags, content)
-    }
+    fun makeJsonForId(): String = makeJsonForId(pubKey, createdAt, kind, tags, content)
 
-    fun generateId(): String {
-        return CryptoUtils.sha256(makeJsonForId().toByteArray()).toHexKey()
-    }
+    fun generateId(): String = CryptoUtils.sha256(makeJsonForId().toByteArray()).toHexKey()
 
     fun generateId2(): String {
         val sha256 = MessageDigest.getInstance("SHA-256")
@@ -356,9 +342,7 @@ open class Event(
         override fun deserialize(
             jp: JsonParser,
             ctxt: DeserializationContext,
-        ): Event {
-            return fromJson(jp.codec.readTree(jp))
-        }
+        ): Event = fromJson(jp.codec.readTree(jp))
     }
 
     private class GossipDeserializer : StdDeserializer<Gossip>(Gossip::class.java) {
@@ -460,8 +444,8 @@ open class Event(
                         .addDeserializer(Request::class.java, RequestDeserializer()),
                 )
 
-        fun fromJson(jsonObject: JsonNode): Event {
-            return EventFactory.create(
+        fun fromJson(jsonObject: JsonNode): Event =
+            EventFactory.create(
                 id = jsonObject.get("id").asText().intern(),
                 pubKey = jsonObject.get("pubkey").asText().intern(),
                 createdAt = jsonObject.get("created_at").asLong(),
@@ -473,11 +457,8 @@ open class Event(
                 content = jsonObject.get("content").asText(),
                 sig = jsonObject.get("sig").asText(),
             )
-        }
 
-        private inline fun <reified R> JsonNode.toTypedArray(transform: (JsonNode) -> R): Array<R> {
-            return Array(size()) { transform(get(it)) }
-        }
+        private inline fun <reified R> JsonNode.toTypedArray(transform: (JsonNode) -> R): Array<R> = Array(size()) { transform(get(it)) }
 
         fun fromJson(json: String): Event = mapper.readValue(json, Event::class.java)
 
@@ -518,9 +499,7 @@ open class Event(
             kind: Int,
             tags: Array<Array<String>>,
             content: String,
-        ): ByteArray {
-            return CryptoUtils.sha256(makeJsonForId(pubKey, createdAt, kind, tags, content).toByteArray())
-        }
+        ): ByteArray = CryptoUtils.sha256(makeJsonForId(pubKey, createdAt, kind, tags, content).toByteArray())
 
         fun create(
             signer: NostrSigner,
@@ -529,9 +508,7 @@ open class Event(
             content: String = "",
             createdAt: Long = TimeUtils.now(),
             onReady: (Event) -> Unit,
-        ) {
-            return signer.sign(createdAt, kind, tags, content, onReady)
-        }
+        ) = signer.sign(createdAt, kind, tags, content, onReady)
     }
 }
 
@@ -572,7 +549,8 @@ open class BaseAddressableEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, kind, tags, content, sig), AddressableEvent {
+) : Event(id, pubKey, createdAt, kind, tags, content, sig),
+    AddressableEvent {
     override fun dTag() = tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: ""
 
     override fun address() = ATag(kind, pubKey, dTag(), null)

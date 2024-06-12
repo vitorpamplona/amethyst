@@ -436,8 +436,7 @@ fun ClickableNote(
                         }
                     },
                     onLongClick = showPopup,
-                )
-                .background(backgroundColor.value)
+                ).background(backgroundColor.value)
         }
 
     Column(modifier = updatedModifier) { content() }
@@ -476,8 +475,11 @@ fun InnerNoteWithReactions(
 
         Column(Modifier.fillMaxWidth()) {
             val showSecondRow =
-                baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent &&
-                    !isBoostedNote && !isQuotedNote && accountViewModel.settings.featureSet != FeatureSetType.SIMPLIFIED
+                baseNote.event !is RepostEvent &&
+                    baseNote.event !is GenericRepostEvent &&
+                    !isBoostedNote &&
+                    !isQuotedNote &&
+                    accountViewModel.settings.featureSet != FeatureSetType.SIMPLIFIED
             NoteBody(
                 baseNote = baseNote,
                 showAuthorPicture = isQuotedNote,
@@ -843,15 +845,14 @@ fun RenderRepost(
     }
 }
 
-fun getGradient(backgroundColor: MutableState<Color>): Brush {
-    return Brush.verticalGradient(
+fun getGradient(backgroundColor: MutableState<Color>): Brush =
+    Brush.verticalGradient(
         colors =
             listOf(
                 backgroundColor.value.copy(alpha = 0f),
                 backgroundColor.value,
             ),
     )
-}
 
 @Composable
 fun ReplyNoteComposition(
@@ -1126,7 +1127,10 @@ private fun ChannelNotePicture(
     loadProfilePicture: Boolean,
 ) {
     val model by
-        baseChannel.live.map { it.channel.profilePicture() }.distinctUntilChanged().observeAsState()
+        baseChannel.live
+            .map { it.channel.profilePicture() }
+            .distinctUntilChanged()
+            .observeAsState()
 
     Box(Size30Modifier) {
         RobohashFallbackAsyncImage(
