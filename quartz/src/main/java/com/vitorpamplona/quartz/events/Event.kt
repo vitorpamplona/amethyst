@@ -142,9 +142,8 @@ open class Event(
 
     override fun isSensitive() =
         tags.any {
-            (it.size > 0 && it[0].equals("content-warning", true)) ||
-                (it.size > 1 && it[0] == "t" && it[1].equals("nsfw", true)) ||
-                (it.size > 1 && it[0] == "t" && it[1].equals("nude", true))
+            (it.size > 0 && it[0].equals("content-warning")) ||
+                (it.size > 1 && it[0] == "t" && (it[1].equals("nsfw", true) || it[1].equals("nude", true)))
         }
 
     override fun subject() = tags.firstOrNull { it.size > 1 && it[0] == "subject" }?.get(1)
