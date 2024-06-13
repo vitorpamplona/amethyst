@@ -137,23 +137,22 @@ fun LongPressToQuickAction(
     content: @Composable (() -> Unit) -> Unit,
 ) {
     val popupExpanded = remember { mutableStateOf(false) }
-    val showPopup = remember { { popupExpanded.value = true } }
 
-    content(showPopup)
+    content { popupExpanded.value = true }
 
-    NoteQuickActionMenu(
-        note = baseNote,
-        popupExpanded = popupExpanded.value,
-        onDismiss = { popupExpanded.value = false },
-        accountViewModel = accountViewModel,
-        nav = {},
-    )
+    if (popupExpanded.value) {
+        NoteQuickActionMenu(
+            note = baseNote,
+            onDismiss = { popupExpanded.value = false },
+            accountViewModel = accountViewModel,
+            nav = {},
+        )
+    }
 }
 
 @Composable
 fun NoteQuickActionMenu(
     note: Note,
-    popupExpanded: Boolean,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -173,7 +172,6 @@ fun NoteQuickActionMenu(
 
     NoteQuickActionMenu(
         note = note,
-        popupExpanded = popupExpanded,
         onDismiss = onDismiss,
         onWantsToEditDraft = { editDraftDialog.value = true },
         accountViewModel = accountViewModel,
@@ -184,7 +182,6 @@ fun NoteQuickActionMenu(
 @Composable
 fun NoteQuickActionMenu(
     note: Note,
-    popupExpanded: Boolean,
     onDismiss: () -> Unit,
     onWantsToEditDraft: () -> Unit,
     accountViewModel: AccountViewModel,
@@ -195,17 +192,15 @@ fun NoteQuickActionMenu(
     val showBlockAlertDialog = remember { mutableStateOf(false) }
     val showReportDialog = remember { mutableStateOf(false) }
 
-    if (popupExpanded) {
-        RenderMainPopup(
-            accountViewModel,
-            note,
-            onDismiss,
-            showBlockAlertDialog,
-            showDeleteAlertDialog,
-            showReportDialog,
-            onWantsToEditDraft,
-        )
-    }
+    RenderMainPopup(
+        accountViewModel,
+        note,
+        onDismiss,
+        showBlockAlertDialog,
+        showDeleteAlertDialog,
+        showReportDialog,
+        onWantsToEditDraft,
+    )
 
     if (showSelectTextDialog.value) {
         val decryptedNote = remember { mutableStateOf<String?>(null) }
@@ -267,12 +262,12 @@ private fun RenderMainPopup(
 
     val showToast = { stringResource: Int ->
         scope.launch {
-            Toast.makeText(
-                context,
-                context.getString(stringResource),
-                Toast.LENGTH_SHORT,
-            )
-                .show()
+            Toast
+                .makeText(
+                    context,
+                    context.getString(stringResource),
+                    Toast.LENGTH_SHORT,
+                ).show()
         }
     }
 

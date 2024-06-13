@@ -40,7 +40,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
@@ -121,6 +120,7 @@ import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfEndPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
+import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
@@ -179,7 +179,6 @@ import com.vitorpamplona.quartz.events.VideoEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
-import kotlinx.coroutines.launch
 
 @Composable
 fun NoteCompose(
@@ -416,22 +415,18 @@ fun ClickableNote(
     nav: (String) -> Unit,
     content: @Composable () -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
-
     val updatedModifier =
         remember(baseNote, backgroundColor.value) {
             modifier
                 .combinedClickable(
                     onClick = {
-                        scope.launch {
-                            val redirectToNote =
-                                if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
-                                    baseNote.replyTo?.lastOrNull() ?: baseNote
-                                } else {
-                                    baseNote
-                                }
-                            routeFor(redirectToNote, accountViewModel.userProfile())?.let { nav(it) }
-                        }
+                        val redirectToNote =
+                            if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
+                                baseNote.replyTo?.lastOrNull() ?: baseNote
+                            } else {
+                                baseNote
+                            }
+                        routeFor(redirectToNote, accountViewModel.userProfile())?.let { nav(it) }
                     },
                     onLongClick = showPopup,
                 ).background(backgroundColor.value)
@@ -465,9 +460,7 @@ fun InnerNoteWithReactions(
             },
     ) {
         if (notBoostedNorQuote) {
-            Column(WidthAuthorPictureModifier) {
-                AuthorAndRelayInformation(baseNote, accountViewModel, nav)
-            }
+            AuthorAndRelayInformation(baseNote, accountViewModel, nav)
             Spacer(modifier = DoubleHorzSpacer)
         }
 
@@ -1064,12 +1057,14 @@ private fun AuthorAndRelayInformation(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    // Draws the boosted picture outside the boosted card.
-    Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
-        RenderAuthorImages(baseNote, nav, accountViewModel)
-    }
+    Column(WidthAuthorPictureModifier, verticalArrangement = RowColSpacing5dp) {
+        // Draws the boosted picture outside the boosted card.
+        Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
+            RenderAuthorImages(baseNote, nav, accountViewModel)
+        }
 
-    BadgeBox(baseNote, accountViewModel, nav)
+        BadgeBox(baseNote, accountViewModel, nav)
+    }
 }
 
 @Composable

@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -167,7 +168,7 @@ val HeaderPictureModifier = Modifier.size(34.dp).clip(shape = CircleShape)
 
 val ShowMoreRelaysButtonIconButtonModifier = Modifier.size(15.dp)
 val ShowMoreRelaysButtonIconModifier = Modifier.size(20.dp)
-val ShowMoreRelaysButtonBoxModifer = Modifier.fillMaxWidth().height(17.dp)
+val ShowMoreRelaysButtonBoxModifer = Modifier.width(55.dp).height(17.dp)
 
 val ChatBubbleMaxSizeModifier = Modifier.fillMaxWidth(0.85f)
 
@@ -194,7 +195,8 @@ val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
 
 val ChatPaddingInnerQuoteModifier = Modifier.padding(top = 10.dp)
 val ChatPaddingModifier =
-    Modifier.fillMaxWidth(1f)
+    Modifier
+        .fillMaxWidth(1f)
         .padding(
             start = 12.dp,
             end = 12.dp,
@@ -217,7 +219,8 @@ val imageHeaderBannerSize = Modifier.fillMaxWidth().height(150.dp)
 val authorNotePictureForImageHeader = Modifier.size(75.dp).padding(10.dp)
 
 val normalWithTopMarginNoteModifier =
-    Modifier.fillMaxWidth()
+    Modifier
+        .fillMaxWidth()
         .padding(
             start = 12.dp,
             end = 12.dp,
@@ -225,7 +228,8 @@ val normalWithTopMarginNoteModifier =
         )
 
 val boostedNoteModifier =
-    Modifier.fillMaxWidth()
+    Modifier
+        .fillMaxWidth()
         .padding(
             start = 0.dp,
             end = 0.dp,
@@ -258,3 +262,5 @@ val incognitoIconModifier =
         .size(14.dp)
 
 val hashVerifierMark = Modifier.width(40.dp).height(40.dp).padding(10.dp)
+
+val noteComposeRelayBox = Modifier.width(55.dp).heightIn(min = 17.dp).padding(start = 2.dp, end = 1.dp)

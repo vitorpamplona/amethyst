@@ -87,13 +87,11 @@ fun RobohashFallbackAsyncImage(
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
     loadProfilePicture: Boolean,
 ) {
-    val context = LocalContext.current
-    val isLightTheme = MaterialTheme.colorScheme.isLight
-
     if (model != null && loadProfilePicture) {
         val isBase64 by remember { derivedStateOf { model.startsWith("data:image/jpeg;base64,") } }
 
         if (isBase64) {
+            val context = LocalContext.current
             val base64Painter =
                 rememberAsyncImagePainter(
                     model = Base64Requester.imageRequest(context, model),
@@ -110,7 +108,7 @@ fun RobohashFallbackAsyncImage(
         } else {
             val painter =
                 rememberVectorPainter(
-                    image = CachedRobohash.get(robot, isLightTheme),
+                    image = CachedRobohash.get(robot, MaterialTheme.colorScheme.isLight),
                 )
 
             AsyncImage(
@@ -128,7 +126,7 @@ fun RobohashFallbackAsyncImage(
             )
         }
     } else {
-        val robotPainter = CachedRobohash.get(robot, isLightTheme)
+        val robotPainter = CachedRobohash.get(robot, MaterialTheme.colorScheme.isLight)
 
         Image(
             imageVector = robotPainter,
@@ -145,9 +143,12 @@ object Base64Requester {
     fun imageRequest(
         context: Context,
         message: String,
-    ): ImageRequest {
-        return ImageRequest.Builder(context).data(message).fetcherFactory(Base64Fetcher.Factory).build()
-    }
+    ): ImageRequest =
+        ImageRequest
+            .Builder(context)
+            .data(message)
+            .fetcherFactory(Base64Fetcher.Factory)
+            .build()
 }
 
 @Stable
@@ -179,8 +180,6 @@ class Base64Fetcher(
             data: Uri,
             options: Options,
             imageLoader: ImageLoader,
-        ): Fetcher {
-            return Base64Fetcher(options, data)
-        }
+        ): Fetcher = Base64Fetcher(options, data)
     }
 }

@@ -21,32 +21,24 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.lifecycle.map
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
@@ -70,42 +62,25 @@ public fun RelayBadgesHorizontal(
 ) {
     val expanded = remember { mutableStateOf(false) }
 
-    RenderRelayList(baseNote, expanded, accountViewModel, nav)
-
-    RenderExpandButton(baseNote, expanded) { ChatRelayExpandButton { expanded.value = true } }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun RenderRelayList(
-    baseNote: Note,
-    expanded: MutableState<Boolean>,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    val noteRelays by baseNote.live().relayInfo.observeAsState(baseNote.relays)
-
-    FlowRow(StdStartPadding, verticalArrangement = Arrangement.Center) {
-        if (expanded.value) {
-            noteRelays?.forEach { RenderRelay(it, accountViewModel, nav) }
-        } else {
-            noteRelays?.getOrNull(0)?.let { RenderRelay(it, accountViewModel, nav) }
-            noteRelays?.getOrNull(1)?.let { RenderRelay(it, accountViewModel, nav) }
-            noteRelays?.getOrNull(2)?.let { RenderRelay(it, accountViewModel, nav) }
+    if (expanded.value) {
+        RenderAllRelayList(baseNote, StdStartPadding, verticalArrangement = Arrangement.Center, accountViewModel, nav)
+    } else {
+        RenderClosedRelayList(baseNote, StdStartPadding, verticalAlignment = Alignment.CenterVertically, accountViewModel = accountViewModel, nav = nav)
+        ShouldShowExpandButton(baseNote, accountViewModel) {
+            ChatRelayExpandButton { expanded.value = true }
         }
     }
 }
 
 @Composable
-fun RenderExpandButton(
+fun ShouldShowExpandButton(
     baseNote: Note,
-    expanded: MutableState<Boolean>,
+    accountViewModel: AccountViewModel,
     content: @Composable () -> Unit,
 ) {
-    val showExpandButton by
-        baseNote.live().relays.map { it.note.relays.size > 3 }.observeAsState(baseNote.relays.size > 3)
+    val showExpandButton by accountViewModel.createMustShowExpandButtonFlows(baseNote).collectAsStateWithLifecycle()
 
-    if (showExpandButton && !expanded.value) {
+    if (showExpandButton) {
         content()
     }
 }
@@ -159,19 +134,11 @@ fun RenderRelay(
         )
     }
 
-    val context = LocalContext.current
-
-    val interactionSource = remember { MutableInteractionSource() }
-    val ripple = rememberRipple(bounded = false, radius = Size17dp)
-
     val clickableModifier =
         remember(relay) {
             Modifier
                 .size(Size17dp)
                 .clickable(
-                    role = Role.Button,
-                    interactionSource = interactionSource,
-                    indication = ripple,
                     onClick = {
                         accountViewModel.retrieveRelayDocument(
                             relay.url,
@@ -179,40 +146,23 @@ fun RenderRelay(
                                 openRelayDialog = true
                             },
                             onError = { url, errorCode, exceptionMessage ->
-                                val msg =
+                                accountViewModel.toast(
+                                    R.string.unable_to_download_relay_document,
                                     when (errorCode) {
                                         Nip11Retriever.ErrorCode.FAIL_TO_ASSEMBLE_URL ->
-                                            context.getString(
-                                                R.string.relay_information_document_error_assemble_url,
-                                                url,
-                                                exceptionMessage,
-                                            )
+                                            R.string.relay_information_document_error_failed_to_assemble_url
 
                                         Nip11Retriever.ErrorCode.FAIL_TO_REACH_SERVER ->
-                                            context.getString(
-                                                R.string.relay_information_document_error_assemble_url,
-                                                url,
-                                                exceptionMessage,
-                                            )
+                                            R.string.relay_information_document_error_failed_to_reach_server
 
                                         Nip11Retriever.ErrorCode.FAIL_TO_PARSE_RESULT ->
-                                            context.getString(
-                                                R.string.relay_information_document_error_assemble_url,
-                                                url,
-                                                exceptionMessage,
-                                            )
+                                            R.string.relay_information_document_error_failed_to_parse_response
 
                                         Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS ->
-                                            context.getString(
-                                                R.string.relay_information_document_error_assemble_url,
-                                                url,
-                                                exceptionMessage,
-                                            )
-                                    }
-
-                                accountViewModel.toast(
-                                    context.getString(R.string.unable_to_download_relay_document),
-                                    msg,
+                                            R.string.relay_information_document_error_failed_with_http
+                                    },
+                                    url,
+                                    exceptionMessage ?: errorCode.toString(),
                                 )
                             },
                         )

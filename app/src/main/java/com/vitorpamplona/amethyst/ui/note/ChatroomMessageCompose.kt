@@ -190,10 +190,9 @@ fun NormalChatNote(
                 nav("User/${it.pubkeyHex}")
             }
         },
-        actionMenu = { popupExpanded, onDismiss ->
+        actionMenu = { onDismiss ->
             NoteQuickActionMenu(
                 note = note,
-                popupExpanded = popupExpanded,
                 onDismiss = onDismiss,
                 onWantsToEditDraft = { onWantsToEditDraft(note) },
                 accountViewModel = accountViewModel,
@@ -256,7 +255,7 @@ fun ChatBubbleLayout(
     parentBackgroundColor: MutableState<Color>? = null,
     onClick: () -> Boolean,
     onAuthorClick: () -> Unit,
-    actionMenu: @Composable (popupExpanded: Boolean, onDismiss: () -> Unit) -> Unit,
+    actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
     detailRow: @Composable () -> Unit,
     drawAuthorLine: @Composable () -> Unit,
     inner: @Composable (MutableState<Color>) -> Unit,
@@ -294,7 +293,7 @@ fun ChatBubbleLayout(
         modifier = if (innerQuote) ChatPaddingInnerQuoteModifier else ChatPaddingModifier,
         horizontalArrangement = alignment,
     ) {
-        var popupExpanded by remember { mutableStateOf(false) }
+        var popupExpanded = remember { mutableStateOf(false) }
 
         val modif2 = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier
 
@@ -319,7 +318,7 @@ fun ChatBubbleLayout(
                             }
                         }
                     },
-                    onLongClick = { popupExpanded = true },
+                    onLongClick = { popupExpanded.value = true },
                 )
             }
 
@@ -357,8 +356,10 @@ fun ChatBubbleLayout(
             }
         }
 
-        actionMenu(popupExpanded) {
-            popupExpanded = false
+        if (popupExpanded.value) {
+            actionMenu {
+                popupExpanded.value = false
+            }
         }
     }
 }
@@ -381,7 +382,7 @@ private fun BubblePreview() {
             parentBackgroundColor = backgroundBubbleColor,
             onClick = { false },
             onAuthorClick = {},
-            actionMenu = { popupExpanded, onDismiss ->
+            actionMenu = { onDismiss ->
             },
             drawAuthorLine = {
                 UserDisplayNameLayout(
@@ -411,7 +412,7 @@ private fun BubblePreview() {
             parentBackgroundColor = backgroundBubbleColor,
             onClick = { false },
             onAuthorClick = {},
-            actionMenu = { popupExpanded, onDismiss ->
+            actionMenu = { onDismiss ->
             },
             drawAuthorLine = {
                 UserDisplayNameLayout(

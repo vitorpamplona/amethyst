@@ -111,6 +111,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -321,6 +322,23 @@ class AccountViewModel(
             ).also {
                 noteIsHiddenFlows.put(note, it)
             }
+
+    val noteMustShowExpandButtonFlows = LruCache<Note, StateFlow<Boolean>>(300)
+
+    fun createMustShowExpandButtonFlows(note: Note): StateFlow<Boolean> =
+        noteMustShowExpandButtonFlows.get(note)
+            ?: note
+                .flow()
+                .relays
+                .stateFlow
+                .map { it.note.relays.size > 3 }
+                .stateIn(
+                    viewModelScope,
+                    SharingStarted.Eagerly,
+                    note.relays.size > 3,
+                ).also {
+                    noteMustShowExpandButtonFlows.put(note, it)
+                }
 
     fun hasReactedTo(
         baseNote: Note,

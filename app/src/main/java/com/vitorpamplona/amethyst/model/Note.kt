@@ -418,7 +418,7 @@ open class Note(
     fun addRelay(relay: Relay) {
         if (relay.brief !in relays) {
             addRelaySync(relay.brief)
-            liveSet?.innerRelays?.invalidateData()
+            flowSet?.relays?.invalidateData()
         }
     }
 
@@ -847,12 +847,17 @@ class NoteFlowSet(
     // Observers line up here.
     val metadata = NoteBundledRefresherFlow(u)
     val reports = NoteBundledRefresherFlow(u)
+    val relays = NoteBundledRefresherFlow(u)
 
-    fun isInUse(): Boolean = metadata.stateFlow.subscriptionCount.value > 0 || reports.stateFlow.subscriptionCount.value > 0
+    fun isInUse(): Boolean =
+        metadata.stateFlow.subscriptionCount.value > 0 ||
+            reports.stateFlow.subscriptionCount.value > 0 ||
+            relays.stateFlow.subscriptionCount.value > 0
 
     fun destroy() {
         metadata.destroy()
         reports.destroy()
+        relays.destroy()
     }
 }
 
@@ -865,7 +870,6 @@ class NoteLiveSet(
     val innerReactions = NoteBundledRefresherLiveData(u)
     val innerBoosts = NoteBundledRefresherLiveData(u)
     val innerReplies = NoteBundledRefresherLiveData(u)
-    val innerRelays = NoteBundledRefresherLiveData(u)
     val innerZaps = NoteBundledRefresherLiveData(u)
     val innerOts = NoteBundledRefresherLiveData(u)
     val innerModifications = NoteBundledRefresherLiveData(u)
@@ -874,7 +878,6 @@ class NoteLiveSet(
     val reactions = innerReactions.map { it }
     val boosts = innerBoosts.map { it }
     val replies = innerReplies.map { it }
-    val relays = innerRelays.map { it }
     val zaps = innerZaps.map { it }
 
     val hasEvent = innerMetadata.map { it.note.event != null }.distinctUntilChanged()
@@ -900,8 +903,6 @@ class NoteLiveSet(
 
     val boostCount = innerBoosts.map { it.note.boosts.size }.distinctUntilChanged()
 
-    val relayInfo = innerRelays.map { it.note.relays }
-
     val content = innerMetadata.map { it.note.event?.content() ?: "" }
 
     fun isInUse(): Boolean =
@@ -909,7 +910,6 @@ class NoteLiveSet(
             reactions.hasObservers() ||
             boosts.hasObservers() ||
             replies.hasObservers() ||
-            relays.hasObservers() ||
             zaps.hasObservers() ||
             hasEvent.hasObservers() ||
             hasReactions.hasObservers() ||
@@ -924,7 +924,6 @@ class NoteLiveSet(
         innerReactions.destroy()
         innerBoosts.destroy()
         innerReplies.destroy()
-        innerRelays.destroy()
         innerZaps.destroy()
         innerOts.destroy()
         innerModifications.destroy()
@@ -936,6 +935,7 @@ class NoteBundledRefresherFlow(
     val note: Note,
 ) {
     // Refreshes observers in batches.
+    // TODO: Replace the bundler for .sample
     private val bundler = BundledUpdate(500, Dispatchers.IO)
     val stateFlow = MutableStateFlow(NoteState(note))
 
@@ -1015,11 +1015,12 @@ object RelayBriefInfoCache {
     val cache = LruCache<String, RelayBriefInfo?>(50)
 
     @Immutable
-    data class RelayBriefInfo(
+    class RelayBriefInfo(
         val url: String,
-        val displayUrl: String = RelayUrlFormatter.displayUrl(url).intern(),
-        val favIcon: String = "https://$displayUrl/favicon.ico".intern(),
-    )
+    ) {
+        val displayUrl: String = RelayUrlFormatter.displayUrl(url).intern()
+        val favIcon: String = "https://$displayUrl/favicon.ico".intern()
+    }
 
     fun get(url: String): RelayBriefInfo {
         val info = cache[url]

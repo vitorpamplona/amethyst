@@ -26,8 +26,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -49,7 +47,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -74,7 +71,7 @@ import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
-import com.vitorpamplona.amethyst.ui.note.RenderRelay
+import com.vitorpamplona.amethyst.ui.note.RenderAllRelayList
 import com.vitorpamplona.amethyst.ui.note.ReplyReaction
 import com.vitorpamplona.amethyst.ui.note.ViewCountReaction
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
@@ -312,7 +309,9 @@ private fun RenderAuthorInformation(
         Spacer(modifier = DoubleHorzSpacer)
 
         Column(
-            Modifier.height(65.dp).weight(1f),
+            Modifier
+                .height(65.dp)
+                .weight(1f),
             verticalArrangement = Arrangement.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -332,7 +331,7 @@ private fun RenderAuthorInformation(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 2.dp),
                 ) {
-                    RelayBadges(baseNote = note, accountViewModel, nav)
+                    RenderAllRelayList(baseNote = note, accountViewModel = accountViewModel, nav = nav)
                 }
             }
         }
@@ -367,18 +366,6 @@ private fun VideoUserOptionAction(
             nav,
         )
     }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun RelayBadges(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    val noteRelays by baseNote.live().relayInfo.observeAsState(baseNote.relays)
-
-    FlowRow { noteRelays?.forEach { relayInfo -> RenderRelay(relayInfo, accountViewModel, nav) } }
 }
 
 @Composable
