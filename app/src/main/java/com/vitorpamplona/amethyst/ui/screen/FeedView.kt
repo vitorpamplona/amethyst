@@ -248,9 +248,7 @@ private fun FeedLoaded(
         state = listState,
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-            val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
-
-            Row(defaultModifier) {
+            Row(Modifier.fillMaxWidth().animateItemPlacement()) {
                 NoteCompose(
                     item,
                     routeForLastRead = routeForLastRead,

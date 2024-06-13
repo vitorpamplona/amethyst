@@ -276,10 +276,10 @@ class AccountViewModel(
 
         return if (isPostHidden) {
             // Spam + Blocked Users + Hidden Words + Sensitive Content
-            NoteComposeReportState(isPostHidden, false, false, isHiddenAuthor, persistentSetOf())
+            NoteComposeReportState(isPostHidden, false, false, isHiddenAuthor)
         } else if (isFromLoggedIn || isFromLoggedInFollow) {
             // No need to process if from trusted people
-            NoteComposeReportState(isPostHidden, true, true, isHiddenAuthor, persistentSetOf())
+            NoteComposeReportState(isPostHidden, true, true, isHiddenAuthor)
         } else {
             val newCanPreview = !note.hasAnyReports()
 
@@ -287,22 +287,20 @@ class AccountViewModel(
 
             if (newCanPreview && newIsAcceptable) {
                 // No need to process reports if nothing is wrong
-                NoteComposeReportState(isPostHidden, true, true, false, persistentSetOf())
+                NoteComposeReportState(isPostHidden, true, true, false)
             } else {
-                val newRelevantReports = account.getRelevantReports(note)
-
                 NoteComposeReportState(
                     isPostHidden,
                     newIsAcceptable,
                     newCanPreview,
                     false,
-                    newRelevantReports.toImmutableSet(),
+                    account.getRelevantReports(note).toImmutableSet(),
                 )
             }
         }
     }
 
-    val noteIsHiddenFlows = LruCache<Note, StateFlow<NoteComposeReportState>>(300)
+    private val noteIsHiddenFlows = LruCache<Note, StateFlow<NoteComposeReportState>>(300)
 
     fun createIsHiddenFlow(note: Note): StateFlow<NoteComposeReportState> =
         noteIsHiddenFlows.get(note)
@@ -312,9 +310,7 @@ class AccountViewModel(
                 note.flow().metadata.stateFlow,
                 note.flow().reports.stateFlow,
             ) { hiddenUsers, followingUsers, metadata, reports ->
-                emit(
-                    isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.users),
-                )
+                emit(isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.users))
             }.stateIn(
                 viewModelScope,
                 SharingStarted.Eagerly,
@@ -323,7 +319,7 @@ class AccountViewModel(
                 noteIsHiddenFlows.put(note, it)
             }
 
-    val noteMustShowExpandButtonFlows = LruCache<Note, StateFlow<Boolean>>(300)
+    private val noteMustShowExpandButtonFlows = LruCache<Note, StateFlow<Boolean>>(300)
 
     fun createMustShowExpandButtonFlows(note: Note): StateFlow<Boolean> =
         noteMustShowExpandButtonFlows.get(note)

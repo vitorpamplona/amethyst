@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,34 +59,32 @@ fun WatchBlockAndReport(
     nav: (String) -> Unit,
     normalNote: @Composable (canPreview: Boolean) -> Unit,
 ) {
-    val hiddenState by accountViewModel.createIsHiddenFlow(note).collectAsStateWithLifecycle()
+    val isHidden by accountViewModel.createIsHiddenFlow(note).collectAsStateWithLifecycle()
 
     val showAnyway =
         remember {
             mutableStateOf(false)
         }
 
-    Crossfade(targetState = hiddenState, label = "CheckHiddenNoteCompose") { isHidden ->
-        if (showAnyway.value) {
-            normalNote(true)
-        } else if (!isHidden.isPostHidden) {
-            if (isHidden.isAcceptable) {
-                normalNote(isHidden.canPreview)
-            } else {
-                HiddenNote(
-                    isHidden.relevantReports,
-                    isHidden.isHiddenAuthor,
-                    accountViewModel,
-                    modifier,
-                    nav,
-                    onClick = { showAnyway.value = true },
-                )
-            }
-        } else if (showHiddenWarning) {
-            // if it is a quoted or boosted note, how the hidden warning.
-            HiddenNoteByMe {
-                showAnyway.value = true
-            }
+    if (showAnyway.value) {
+        normalNote(true)
+    } else if (!isHidden.isPostHidden) {
+        if (isHidden.isAcceptable) {
+            normalNote(isHidden.canPreview)
+        } else {
+            HiddenNote(
+                isHidden.relevantReports,
+                isHidden.isHiddenAuthor,
+                accountViewModel,
+                modifier,
+                nav,
+                onClick = { showAnyway.value = true },
+            )
+        }
+    } else if (showHiddenWarning) {
+        // if it is a quoted or boosted note, how the hidden warning.
+        HiddenNoteByMe {
+            showAnyway.value = true
         }
     }
 }

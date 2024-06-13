@@ -112,6 +112,7 @@ val BigPadding = Modifier.padding(15.dp)
 
 val RowColSpacing = Arrangement.spacedBy(3.dp)
 val RowColSpacing5dp = Arrangement.spacedBy(5.dp)
+val RowColSpacing10dp = Arrangement.spacedBy(10.dp)
 
 val HalfHorzPadding = Modifier.padding(horizontal = 5.dp)
 val HalfVertPadding = Modifier.padding(vertical = 5.dp)
@@ -154,8 +155,8 @@ val VideoReactionColumnPadding = Modifier.padding(bottom = 75.dp)
 
 val DividerThickness = 0.25.dp
 
-val ReactionRowHeight = Modifier.height(24.dp)
-val ReactionRowHeightWithPadding = Modifier.height(24.dp).padding(start = 10.dp)
+val ReactionRowHeight = Modifier.padding(vertical = 7.dp).height(24.dp)
+val ReactionRowHeightWithPadding = Modifier.padding(vertical = 7.dp).height(24.dp).padding(start = 10.dp)
 val ReactionRowHeightChat = Modifier.height(25.dp)
 val UserNameRowHeight = Modifier.fillMaxWidth()
 val UserNameMaxRowHeight = Modifier.fillMaxWidth()

@@ -113,13 +113,13 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.RenderChannelHeader
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfEndPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
+import com.vitorpamplona.amethyst.ui.theme.RowColSpacing10dp
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
@@ -458,10 +458,10 @@ fun InnerNoteWithReactions(
             } else {
                 boostedNoteModifier
             },
+        horizontalArrangement = RowColSpacing10dp,
     ) {
         if (notBoostedNorQuote) {
             AuthorAndRelayInformation(baseNote, accountViewModel, nav)
-            Spacer(modifier = DoubleHorzSpacer)
         }
 
         Column(Modifier.fillMaxWidth()) {

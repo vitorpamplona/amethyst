@@ -154,11 +154,7 @@ fun ReactionsRow(
 ) {
     val wantsToSeeReactions = remember(baseNote) { mutableStateOf(false) }
 
-    Spacer(modifier = HalfDoubleVertSpacer)
-
     InnerReactionRow(baseNote, showReactionDetail, addPadding, wantsToSeeReactions, editState, accountViewModel, nav)
-
-    Spacer(modifier = HalfDoubleVertSpacer)
 
     LoadAndDisplayZapraiser(baseNote, showReactionDetail, wantsToSeeReactions, accountViewModel)
 
