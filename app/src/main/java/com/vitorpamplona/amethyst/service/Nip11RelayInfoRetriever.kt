@@ -33,14 +33,23 @@ import okhttp3.Response
 import java.io.IOException
 
 object Nip11CachedRetriever {
-    open class RetrieveResult(val time: Long)
+    open class RetrieveResult(
+        val time: Long,
+    )
 
-    class RetrieveResultError(val error: Nip11Retriever.ErrorCode, val msg: String? = null) : RetrieveResult(TimeUtils.now())
+    class RetrieveResultError(
+        val error: Nip11Retriever.ErrorCode,
+        val msg: String? = null,
+    ) : RetrieveResult(TimeUtils.now())
 
-    class RetrieveResultSuccess(val data: Nip11RelayInformation) : RetrieveResult(TimeUtils.now())
+    class RetrieveResultSuccess(
+        val data: Nip11RelayInformation,
+    ) : RetrieveResult(TimeUtils.now())
 
-    val relayInformationDocumentCache = LruCache<String, RetrieveResult?>(100)
-    val retriever = Nip11Retriever()
+    class RetrieveResultLoading : RetrieveResult(TimeUtils.now())
+
+    private val relayInformationDocumentCache = LruCache<String, RetrieveResult?>(100)
+    private val retriever = Nip11Retriever()
 
     fun getFromCache(dirtyUrl: String): Nip11RelayInformation? {
         val result = relayInformationDocumentCache.get(RelayUrlFormatter.getHttpsUrl(dirtyUrl)) ?: return null
@@ -53,44 +62,52 @@ object Nip11CachedRetriever {
         onInfo: (Nip11RelayInformation) -> Unit,
         onError: (String, Nip11Retriever.ErrorCode, String?) -> Unit,
     ) {
+        checkNotInMainThread()
         val url = RelayUrlFormatter.getHttpsUrl(dirtyUrl)
         val doc = relayInformationDocumentCache.get(url)
 
         if (doc != null) {
             if (doc is RetrieveResultSuccess) {
                 onInfo(doc.data)
+            } else if (doc is RetrieveResultLoading) {
+                if (TimeUtils.now() - doc.time < TimeUtils.ONE_MINUTE) {
+                    // just wait.
+                } else {
+                    retrieve(url, dirtyUrl, onInfo, onError)
+                }
             } else if (doc is RetrieveResultError) {
                 if (TimeUtils.now() - doc.time < TimeUtils.ONE_HOUR) {
                     onError(dirtyUrl, doc.error, null)
                 } else {
-                    retriever.loadRelayInfo(
-                        url = url,
-                        dirtyUrl = dirtyUrl,
-                        onInfo = {
-                            relayInformationDocumentCache.put(url, RetrieveResultSuccess(it))
-                            onInfo(it)
-                        },
-                        onError = { dirtyUrl, code, errorMsg ->
-                            relayInformationDocumentCache.put(url, RetrieveResultError(code, errorMsg))
-                            onError(url, code, errorMsg)
-                        },
-                    )
+                    retrieve(url, dirtyUrl, onInfo, onError)
                 }
             }
         } else {
-            retriever.loadRelayInfo(
-                url = url,
-                dirtyUrl = dirtyUrl,
-                onInfo = {
-                    relayInformationDocumentCache.put(url, RetrieveResultSuccess(it))
-                    onInfo(it)
-                },
-                onError = { dirtyUrl, code, errorMsg ->
-                    relayInformationDocumentCache.put(url, RetrieveResultError(code, errorMsg))
-                    onError(url, code, errorMsg)
-                },
-            )
+            retrieve(url, dirtyUrl, onInfo, onError)
         }
+    }
+
+    private suspend fun retrieve(
+        url: String,
+        dirtyUrl: String,
+        onInfo: (Nip11RelayInformation) -> Unit,
+        onError: (String, Nip11Retriever.ErrorCode, String?) -> Unit,
+    ) {
+        relayInformationDocumentCache.put(url, RetrieveResultLoading())
+        retriever.loadRelayInfo(
+            url = url,
+            dirtyUrl = dirtyUrl,
+            onInfo = {
+                checkNotInMainThread()
+                relayInformationDocumentCache.put(url, RetrieveResultSuccess(it))
+                onInfo(it)
+            },
+            onError = { dirtyUrl, code, errorMsg ->
+                checkNotInMainThread()
+                relayInformationDocumentCache.put(url, RetrieveResultError(code, errorMsg))
+                onError(url, code, errorMsg)
+            },
+        )
     }
 }
 
@@ -111,9 +128,14 @@ class Nip11Retriever {
         checkNotInMainThread()
         try {
             val request: Request =
-                Request.Builder().header("Accept", "application/nostr+json").url(url).build()
+                Request
+                    .Builder()
+                    .header("Accept", "application/nostr+json")
+                    .url(url)
+                    .build()
 
-            HttpClientManager.getHttpClientForUrl(dirtyUrl)
+            HttpClientManager
+                .getHttpClientForUrl(dirtyUrl)
                 .newCall(request)
                 .enqueue(
                     object : Callback {
