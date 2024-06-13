@@ -21,11 +21,14 @@
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import org.czeal.rfc3986.URIReference
 
 class MediaServersViewModel : ViewModel() {
@@ -55,7 +58,6 @@ class MediaServersViewModel : ViewModel() {
     }
 
     fun addServer(serverUrl: String) {
-        account.sendFileServersList(listOf(serverUrl))
         val serverNameReference = URIReference.parse(serverUrl).host.value
         _fileServers.update {
             it.plus(
@@ -69,13 +71,6 @@ class MediaServersViewModel : ViewModel() {
         name: String = "",
         serverUrl: String,
     ) {
-        // Here, there are two approaches: either use the internal fileServers flow value to update,
-        // Or re-read the account's saved file servers. They are the same most of the time, but I am
-        // not sure that assumption always holds. Prefer reading from account instead.
-        // TODO: Test the two approaches and choose one(for future commit).
-        val currentFileServers = obtainFileServers()
-        val newFileServers = currentFileServers?.minus(serverUrl)
-        newFileServers?.let { account.sendFileServersList(it) }
         val serverName = if (name.isNotBlank()) name else URIReference.parse(serverUrl).host.value
         _fileServers.update {
             it.minus(
@@ -88,6 +83,17 @@ class MediaServersViewModel : ViewModel() {
     fun removeAllServers() {
         _fileServers.update { emptyList() }
         isModified = true
+    }
+
+    fun saveFileServers() {
+        // TODO: Add setting the default file server here.
+        if (isModified) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val serverList = _fileServers.value.map { it.baseUrl }
+                account.sendFileServersList(serverList)
+                refresh()
+            }
+        }
     }
 
     private fun obtainFileServers(): List<String>? = account.getFileServersList()?.servers()
