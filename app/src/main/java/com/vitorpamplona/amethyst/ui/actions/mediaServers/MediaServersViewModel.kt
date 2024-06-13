@@ -43,7 +43,7 @@ class MediaServersViewModel : ViewModel() {
     fun refresh() {
         isModified = false
         _fileServers.update {
-            val obtainedFileServers = account.getFileServersList()?.servers() ?: emptyList()
+            val obtainedFileServers = obtainFileServers() ?: emptyList()
             obtainedFileServers.map { serverUrl ->
                 Nip96MediaServers
                     .ServerName(
@@ -55,16 +55,40 @@ class MediaServersViewModel : ViewModel() {
     }
 
     fun addServer(serverUrl: String) {
+        account.sendFileServersList(listOf(serverUrl))
+        val serverNameReference = URIReference.parse(serverUrl).host.value
+        _fileServers.update {
+            it.plus(
+                Nip96MediaServers.ServerName(serverNameReference, serverUrl),
+            )
+        }
+        isModified = true
     }
 
     fun removeServer(
         name: String = "",
         serverUrl: String,
     ) {
+        // Here, there are two approaches: either use the internal fileServers flow value to update,
+        // Or re-read the account's saved file servers. They are the same most of the time, but I am
+        // not sure that assumption always holds. Prefer reading from account instead.
+        // TODO: Test the two approaches and choose one(for future commit).
+        val currentFileServers = obtainFileServers()
+        val newFileServers = currentFileServers?.minus(serverUrl)
+        newFileServers?.let { account.sendFileServersList(it) }
+        val serverName = if (name.isNotBlank()) name else URIReference.parse(serverUrl).host.value
+        _fileServers.update {
+            it.minus(
+                Nip96MediaServers.ServerName(serverName, serverUrl),
+            )
+        }
+        isModified = true
     }
 
-    fun removeAll() {
+    fun removeAllServers() {
         _fileServers.update { emptyList() }
         isModified = true
     }
+
+    private fun obtainFileServers(): List<String>? = account.getFileServersList()?.servers()
 }
