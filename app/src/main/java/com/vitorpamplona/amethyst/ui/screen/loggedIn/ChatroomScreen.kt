@@ -672,7 +672,7 @@ fun GroupChatroomHeader(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 NonClickableUserPictures(
-                    users = room.users,
+                    room = room,
                     accountViewModel = accountViewModel,
                     size = Size34dp,
                 )

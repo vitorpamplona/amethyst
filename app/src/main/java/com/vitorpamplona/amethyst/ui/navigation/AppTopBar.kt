@@ -167,7 +167,12 @@ fun AppTopBar(
 ) {
     val currentRoute by
         remember(navEntryState.value) {
-            derivedStateOf { navEntryState.value?.destination?.route?.substringBefore("?") }
+            derivedStateOf {
+                navEntryState.value
+                    ?.destination
+                    ?.route
+                    ?.substringBefore("?")
+            }
         }
 
     val id by
@@ -397,7 +402,7 @@ private fun RenderRoomTopBar(
         FlexibleTopBarWithBackButton(
             title = {
                 NonClickableUserPictures(
-                    users = room.users,
+                    room = room,
                     accountViewModel = accountViewModel,
                     size = Size34dp,
                 )
@@ -577,7 +582,11 @@ private fun LoggedInUserPictureDrawer(
     onClick: () -> Unit,
 ) {
     val profilePicture by
-        accountViewModel.account.userProfile().live().profilePictureChanges.observeAsState()
+        accountViewModel.account
+            .userProfile()
+            .live()
+            .profilePictureChanges
+            .observeAsState()
 
     IconButton(onClick = onClick) {
         RobohashFallbackAsyncImage(
@@ -633,32 +642,48 @@ abstract class Name {
     open fun name(context: Context) = name()
 }
 
-class GeoHashName(val geoHashTag: String) : Name() {
+class GeoHashName(
+    val geoHashTag: String,
+) : Name() {
     override fun name() = "/g/$geoHashTag"
 }
 
-class HashtagName(val hashTag: String) : Name() {
+class HashtagName(
+    val hashTag: String,
+) : Name() {
     override fun name() = "#$hashTag"
 }
 
-class ResourceName(val resourceId: Int) : Name() {
+class ResourceName(
+    val resourceId: Int,
+) : Name() {
     override fun name() = " $resourceId " // Space to make sure it goes first
 
     override fun name(context: Context) = context.getString(resourceId)
 }
 
-class PeopleListName(val note: AddressableNote) : Name() {
+class PeopleListName(
+    val note: AddressableNote,
+) : Name() {
     override fun name() = (note.event as? PeopleListEvent)?.nameOrTitle() ?: note.dTag() ?: ""
 }
 
-class CommunityName(val note: AddressableNote) : Name() {
+class CommunityName(
+    val note: AddressableNote,
+) : Name() {
     override fun name() = "/n/${(note.dTag() ?: "")}"
 }
 
-@Immutable data class CodeName(val code: String, val name: Name, val type: CodeNameType)
+@Immutable data class CodeName(
+    val code: String,
+    val name: Name,
+    val type: CodeNameType,
+)
 
 @Stable
-class FollowListViewModel(val account: Account) : ViewModel() {
+class FollowListViewModel(
+    val account: Account,
+) : ViewModel() {
     val kind3Follow =
         CodeName(KIND3_FOLLOWS, ResourceName(R.string.follow_list_kind3follows), CodeNameType.HARDCODED)
     val globalFollow =
@@ -699,8 +724,7 @@ class FollowListViewModel(val account: Account) : ViewModel() {
                             } else {
                                 null
                             }
-                        }
-                        .sortedBy { it.name.name() }
+                        }.sortedBy { it.name.name() }
 
                 emit(newFollowLists)
             }
@@ -757,10 +781,10 @@ class FollowListViewModel(val account: Account) : ViewModel() {
 
     val kind3GlobalPeople = _kind3GlobalPeople.stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
 
-    class Factory(val account: Account) : ViewModelProvider.Factory {
-        override fun <FollowListViewModel : ViewModel> create(modelClass: Class<FollowListViewModel>): FollowListViewModel {
-            return FollowListViewModel(account) as FollowListViewModel
-        }
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <FollowListViewModel : ViewModel> create(modelClass: Class<FollowListViewModel>): FollowListViewModel = FollowListViewModel(account) as FollowListViewModel
     }
 }
 
@@ -942,7 +966,8 @@ fun AmethystClickableIcon() {
 }
 
 fun debugState(context: Context) {
-    Client.allSubscriptions()
+    Client
+        .allSubscriptions()
         .forEach { Log.d("STATE DUMP", "${it.key} ${it.value.joinToString { it.filter.toJson() }}") }
 
     NostrAccountDataSource.printCounter()

@@ -164,7 +164,10 @@ private fun ChannelRoomCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val authorState by note.author!!.live().metadata.observeAsState()
+    val authorState by note.author!!
+        .live()
+        .metadata
+        .observeAsState()
     val authorName = remember(note, authorState) { authorState?.user?.toBestDisplayName() }
 
     val chanHex = remember { channel.idHex }
@@ -273,7 +276,7 @@ private fun UserRoomCompose(
         ChannelName(
             channelPicture = {
                 NonClickableUserPictures(
-                    users = room.users,
+                    room = room,
                     accountViewModel = accountViewModel,
                     size = Size55dp,
                 )
@@ -536,7 +539,8 @@ private fun TimeAgo(channelLastTime: Long?) {
 fun NewItemsBubble() {
     Box(
         modifier =
-            Modifier.padding(start = 3.dp)
+            Modifier
+                .padding(start = 3.dp)
                 .width(10.dp)
                 .height(10.dp)
                 .clip(shape = CircleShape)

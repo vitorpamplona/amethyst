@@ -50,8 +50,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.encoders.HexKey
-import kotlinx.collections.immutable.ImmutableSet
+import com.vitorpamplona.quartz.events.ChatroomKey
 
 @Composable
 fun NoteAuthorPicture(
@@ -157,14 +156,16 @@ fun ClickableUserPicture(
     val myModifier =
         remember {
             if (onClick != null && onLongClick != null) {
-                Modifier.size(size)
+                Modifier
+                    .size(size)
                     .combinedClickable(
                         onClick = { onClick(baseUser) },
                         onLongClick = { onLongClick(baseUser) },
                         role = Role.Button,
                     )
             } else if (onClick != null) {
-                Modifier.size(size)
+                Modifier
+                    .size(size)
                     .clickable(
                         onClick = { onClick(baseUser) },
                         role = Role.Button,
@@ -181,15 +182,13 @@ fun ClickableUserPicture(
 
 @Composable
 fun NonClickableUserPictures(
-    users: ImmutableSet<HexKey>,
+    room: ChatroomKey,
     size: Dp,
     accountViewModel: AccountViewModel,
 ) {
-    val myBoxModifier = remember { Modifier.size(size) }
+    val userList = remember(room) { room.users.toList() }
 
-    Box(myBoxModifier, contentAlignment = Alignment.TopEnd) {
-        val userList = remember(users) { users.toList() }
-
+    Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
         when (userList.size) {
             0 -> {}
             1 ->
@@ -395,13 +394,11 @@ fun WatchUserFollows(
                 .map {
                     it.user.isFollowingCached(userHex) ||
                         (userHex == accountViewModel.account.userProfile().pubkeyHex)
-                }
-                .distinctUntilChanged()
-        }
-            .observeAsState(
-                accountViewModel.account.userProfile().isFollowingCached(userHex) ||
-                    (userHex == accountViewModel.account.userProfile().pubkeyHex),
-            )
+                }.distinctUntilChanged()
+        }.observeAsState(
+            accountViewModel.account.userProfile().isFollowingCached(userHex) ||
+                (userHex == accountViewModel.account.userProfile().pubkeyHex),
+        )
 
     onFollowChanges(showFollowingMark)
 }

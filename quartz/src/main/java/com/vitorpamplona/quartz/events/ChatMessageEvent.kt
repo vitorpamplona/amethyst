@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableSet
 
 @Immutable
@@ -37,7 +36,8 @@ class ChatMessageEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : WrappedEvent(id, pubKey, createdAt, KIND, tags, content, sig), ChatroomKeyable {
+) : WrappedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    ChatroomKeyable {
     /** Recipients intended to receive this conversation */
     fun recipientsPubKey() = tags.mapNotNull { if (it.size > 1 && it[0] == "p") it[1] else null }
 
@@ -61,9 +61,7 @@ class ChatMessageEvent(
         return result
     }
 
-    override fun chatroomKey(toRemove: String): ChatroomKey {
-        return ChatroomKey(talkingWith(toRemove).toImmutableSet())
-    }
+    override fun chatroomKey(toRemove: String): ChatroomKey = ChatroomKey(talkingWith(toRemove).toImmutableSet())
 
     companion object {
         const val KIND = 14
@@ -122,5 +120,5 @@ interface ChatroomKeyable {
 
 @Stable
 data class ChatroomKey(
-    val users: ImmutableSet<HexKey>,
+    val users: Set<HexKey>,
 )
