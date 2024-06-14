@@ -766,7 +766,7 @@ open class Note(
         }
 
         if (thisEvent is BaseTextNoteEvent) {
-            if (thisEvent.content.containsAny(accountChoices.hiddenWordsCase)) {
+            if (accountChoices.hiddenWordsCase.isNotEmpty() && thisEvent.content.containsAny(accountChoices.hiddenWordsCase)) {
                 return true
             }
         }
