@@ -513,6 +513,10 @@
     <string name="error_dialog_talk_to_user">Mensagem ao usuário</string>
     <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">Falha ao acessar %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_assemble_url">Falha ao montar NIP-11 url para %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">Falha ao acessar %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">Falha ao analisar a resposta do %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_with_http">Relay recusou pedido %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">Falha ao acessar %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">Falha ao analisar o resultado de %1$s: %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s falhou com o código %2$s</string>

@@ -512,6 +512,10 @@
     <string name="error_dialog_talk_to_user">Meddela användaren</string>
     <string name="error_dialog_button_ok">Ok</string>
     <string name="relay_information_document_error_assemble_url">Misslyckades att nå %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_assemble_url">Det gick inte att montera NIP-11 url för %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">Det gick inte att nå %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">Det gick inte att tolka svaret från %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_with_http">Relä avböjde förfrågan %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">Misslyckades att nå %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">Misslyckades att parsa resultatet från %1$s: %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s misslyckades med kod %2$s</string>

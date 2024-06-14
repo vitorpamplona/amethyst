@@ -513,6 +513,10 @@
     <string name="error_dialog_talk_to_user">Poslat zprávu uživateli</string>
     <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">Nepodařilo se dosáhnout %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_assemble_url">Nepodařilo se sestavit adresu URL NIP-11 pro %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">Nepodařilo se dosáhnout %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">Nepodařilo se zpracovat odpověď od %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_with_http">Relé odmítlo požadavek %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">Nepodařilo se dosáhnout %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">Nepodařilo se zpracovat výsledek z %1$s: %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s selhalo s kódem %2$s</string>
