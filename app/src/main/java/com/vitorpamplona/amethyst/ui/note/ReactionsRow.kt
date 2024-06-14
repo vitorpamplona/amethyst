@@ -34,7 +34,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -494,8 +493,8 @@ private fun WatchZapAndRenderGallery(
         RenderZapGallery(
             zapEvents,
             backgroundColor,
-            nav,
             accountViewModel,
+            nav,
         )
     }
 }

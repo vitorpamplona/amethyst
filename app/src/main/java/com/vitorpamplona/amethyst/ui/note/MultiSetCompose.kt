@@ -44,6 +44,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -163,18 +164,7 @@ private fun Galeries(
     nav: (String) -> Unit,
 ) {
     if (multiSetCard.zapEvents.isNotEmpty()) {
-        var zapEvents by
-            remember(multiSetCard) {
-                mutableStateOf(
-                    accountViewModel.cachedDecryptAmountMessageInGroup(multiSetCard.zapEvents),
-                )
-            }
-
-        LaunchedEffect(key1 = Unit) {
-            accountViewModel.decryptAmountMessageInGroup(multiSetCard.zapEvents) { zapEvents = it }
-        }
-
-        RenderZapGallery(zapEvents, backgroundColor, nav, accountViewModel)
+        DecryptAndRenderZapGallery(multiSetCard, backgroundColor, accountViewModel, nav)
     }
 
     if (multiSetCard.boostEvents.isNotEmpty()) {
@@ -230,11 +220,26 @@ fun RenderLikeGallery(
 }
 
 @Composable
+fun DecryptAndRenderZapGallery(
+    multiSetCard: MultiSetCard,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val zapEvents by
+        produceState(initialValue = accountViewModel.cachedDecryptAmountMessageInGroup(multiSetCard.zapEvents)) {
+            accountViewModel.decryptAmountMessageInGroup(multiSetCard.zapEvents) { value = it }
+        }
+
+    RenderZapGallery(zapEvents, backgroundColor, accountViewModel, nav)
+}
+
+@Composable
 fun RenderZapGallery(
     zapEvents: ImmutableList<ZapAmountCommentNotification>,
     backgroundColor: MutableState<Color>,
-    nav: (String) -> Unit,
     accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
     Row(Modifier.fillMaxWidth()) {
         Box(
