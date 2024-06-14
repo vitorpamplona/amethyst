@@ -746,5 +746,5 @@
     <string name="dvm_waiting_status">数据作业已申请，正在等待回复</string>
     <string name="dvm_requesting_job">向 DVM 请求数据作业</string>
     <string name="nwc_payment_request">付款请求已发送，正在等待您的钱包的确认</string>
-    <string name="dvm_waiting_to_confim_payment">等待 DVM 确认付款或返回结果</string>
+    <string name="dvm_waiting_to_confirm_payment">等待 DVM 确认付款或返回结果</string>
 </resources>

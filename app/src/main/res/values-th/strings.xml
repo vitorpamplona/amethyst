@@ -743,5 +743,5 @@
     <string name="dvm_waiting_status">ส่งคำขอเรียบร้อย และกำลังรอการตอบกลับ</string>
     <string name="dvm_requesting_job">กำลังรองานจาก DVM</string>
     <string name="nwc_payment_request">คำขอชำระเงินถูกส่งแล้ว รอการยืนยันจาก wallet ของคุณ</string>
-    <string name="dvm_waiting_to_confim_payment">รอการยืนยันการชำระเงินหรือผลลัพธ์จาก DVM</string>
+    <string name="dvm_waiting_to_confirm_payment">รอการยืนยันการชำระเงินหรือผลลัพธ์จาก DVM</string>
 </resources>

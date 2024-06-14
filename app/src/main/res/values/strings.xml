@@ -890,5 +890,5 @@
     <string name="dvm_waiting_status">Job Requested, waiting for a reply</string>
     <string name="dvm_requesting_job">Requesting Job from DVM</string>
     <string name="nwc_payment_request">Payment request sent, waiting for confirmation from your wallet</string>
-    <string name="dvm_waiting_to_confim_payment">Waiting for DVM to confirm payment or send results</string>
+    <string name="dvm_waiting_to_confirm_payment">Waiting for DVM to confirm payment or send results</string>
 </resources>

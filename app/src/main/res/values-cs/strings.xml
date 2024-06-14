@@ -748,5 +748,5 @@
     <string name="dvm_waiting_status">Požadavek na práci, čeká se na odpověď</string>
     <string name="dvm_requesting_job">Žádost o práci od DVM</string>
     <string name="nwc_payment_request">Žádost o platbu odeslána, čeká se na potvrzení z vaší peněženky</string>
-    <string name="dvm_waiting_to_confim_payment">Čekání na potvrzení platby DVM nebo na zaslání výsledků</string>
+    <string name="dvm_waiting_to_confirm_payment">Čekání na potvrzení platby DVM nebo na zaslání výsledků</string>
 </resources>

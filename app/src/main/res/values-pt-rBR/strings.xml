@@ -748,5 +748,5 @@
     <string name="dvm_waiting_status">Trabalho Solicitado, aguardando resposta</string>
     <string name="dvm_requesting_job">Solicitando Trabalho ao DVM</string>
     <string name="nwc_payment_request">Pedido de pagamento enviado, aguardando confirmação da sua carteira</string>
-    <string name="dvm_waiting_to_confim_payment">Aguardando o DVM confirmar o pagamento ou enviar resultados</string>
+    <string name="dvm_waiting_to_confirm_payment">Aguardando o DVM confirmar o pagamento ou enviar resultados</string>
 </resources>

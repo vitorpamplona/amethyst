@@ -753,5 +753,5 @@ anz der Bedingungen ist erforderlich</string>
     <string name="dvm_waiting_status">Job angefordert, wartet auf Antwort</string>
     <string name="dvm_requesting_job">Anforderung eines Jobs von DVM</string>
     <string name="nwc_payment_request">Zahlungsanforderung gesendet, wartet auf Bestätigung Ihrer Geldbörse</string>
-    <string name="dvm_waiting_to_confim_payment">Warten auf Bestätigung der Zahlung durch DVM oder auf die Ergebnisse</string>
+    <string name="dvm_waiting_to_confirm_payment">Warten auf Bestätigung der Zahlung durch DVM oder auf die Ergebnisse</string>
 </resources>

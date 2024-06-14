@@ -330,7 +330,7 @@ fun FeedDVM(
 
             val invoice = amountTag?.lnInvoice
 
-            val thankYou = stringResource(id = R.string.dvm_waiting_to_confim_payment)
+            val thankYou = stringResource(id = R.string.dvm_waiting_to_confirm_payment)
             val nwcPaymentRequest = stringResource(id = R.string.nwc_payment_request)
 
             if (invoice != null) {

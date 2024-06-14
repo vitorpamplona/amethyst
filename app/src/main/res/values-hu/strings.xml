@@ -743,5 +743,5 @@
     <string name="dvm_waiting_status">Feladat kérve, válaszra várunk</string>
     <string name="dvm_requesting_job">Feladatot kér a DVM-től</string>
     <string name="nwc_payment_request">Fizetési kérelem elküldve, megerősítésére vár a tárcádtól</string>
-    <string name="dvm_waiting_to_confim_payment">Várakozás a DVM-re a fizetés megerősítésére vagy az eredmények elküldésére</string>
+    <string name="dvm_waiting_to_confirm_payment">Várakozás a DVM-re a fizetés megerősítésére vagy az eredmények elküldésére</string>
 </resources>

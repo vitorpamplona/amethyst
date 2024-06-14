@@ -746,5 +746,5 @@
     <string name="dvm_waiting_status">Taak aangevraagd, wachten op een antwoord</string>
     <string name="dvm_requesting_job">Taak aanvragen bij DVM</string>
     <string name="nwc_payment_request">Betalingsverzoek verzonden, wachten op bevestiging van uw wallet</string>
-    <string name="dvm_waiting_to_confim_payment">Wachten op DVM-betaling te bevestigen of resultaten te verzenden</string>
+    <string name="dvm_waiting_to_confirm_payment">Wachten op DVM-betaling te bevestigen of resultaten te verzenden</string>
 </resources>

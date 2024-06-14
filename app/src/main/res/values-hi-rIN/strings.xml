@@ -746,5 +746,5 @@
     <string name="dvm_waiting_status">कार्य का अनुरोध किया गया। उत्तर की प्रतीक्षा में</string>
     <string name="dvm_requesting_job">डीवीएम॰ से कार्य का अनुरोध किया जा रहा है</string>
     <string name="nwc_payment_request">भुगतान अनुरोध भेजा गया। आपके धनकोष से पुष्टीकरण की प्रतीक्षा में</string>
-    <string name="dvm_waiting_to_confim_payment">डीवीएम॰ से भुगतान की पुष्टीकरण अथवा परिणाम भेजने की प्रतीक्षा में</string>
+    <string name="dvm_waiting_to_confirm_payment">डीवीएम॰ से भुगतान की पुष्टीकरण अथवा परिणाम भेजने की प्रतीक्षा में</string>
 </resources>

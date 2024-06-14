@@ -741,5 +741,5 @@
     <string name="dvm_waiting_status">Tâche demandée, en attente d\'une réponse</string>
     <string name="dvm_requesting_job">Tâche demandée par DVM</string>
     <string name="nwc_payment_request">Demande de paiement envoyée, en attente de confirmation depuis votre portefeuille</string>
-    <string name="dvm_waiting_to_confim_payment">En attente que DVM confirme le paiement ou envoie les résultats</string>
+    <string name="dvm_waiting_to_confirm_payment">En attente que DVM confirme le paiement ou envoie les résultats</string>
 </resources>

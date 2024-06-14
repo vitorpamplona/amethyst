@@ -747,5 +747,5 @@
     <string name="dvm_waiting_status">Jobb begärt, väntar på svar</string>
     <string name="dvm_requesting_job">Begär jobb från DVM</string>
     <string name="nwc_payment_request">Betalningsbegäran skickad, väntar på bekräftelse från din plånbok</string>
-    <string name="dvm_waiting_to_confim_payment">Väntar på att DVM ska bekräfta betalningen eller skicka resultaten</string>
+    <string name="dvm_waiting_to_confirm_payment">Väntar på att DVM ska bekräfta betalningen eller skicka resultaten</string>
 </resources>
