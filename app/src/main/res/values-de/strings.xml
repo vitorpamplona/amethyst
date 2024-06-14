@@ -518,6 +518,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="error_dialog_talk_to_user">Mit dem Benutzer kommunizieren</string>
     <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">Konnte %1$s nicht erreichen: %2$s</string>
+    <string name="relay_information_document_error_failed_to_assemble_url">Fehler beim Zusammenstellen der NIP-11-URL für %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">Konnte %1$s nicht erreichen: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">Fehler beim Analysieren der Antwort von %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_with_http">Relais abgelehnt Nachfragen %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">Konnte %1$s nicht erreichen: %2$s</string>
     <string name="relay_information_document_error_parse_result">Konnte das Ergebnis von %1$s nicht verarbeiten: %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s fehlgeschlagen mit Code %2$s</string>
