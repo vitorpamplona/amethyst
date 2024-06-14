@@ -27,7 +27,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -88,7 +87,7 @@ fun RobohashFallbackAsyncImage(
     loadProfilePicture: Boolean,
 ) {
     if (model != null && loadProfilePicture) {
-        val isBase64 by remember { derivedStateOf { model.startsWith("data:image/jpeg;base64,") } }
+        val isBase64 = model.startsWith("data:image/jpeg;base64,")
 
         if (isBase64) {
             val context = LocalContext.current
