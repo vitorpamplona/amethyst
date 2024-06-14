@@ -123,7 +123,7 @@ fun ChannelFabColumn(
         ) {
             Icon(
                 imageVector = Icons.Outlined.Add,
-                contentDescription = stringResource(R.string.messages_create_public_private_chat_desription),
+                contentDescription = stringResource(R.string.messages_create_public_private_chat_description),
                 modifier = Modifier.size(26.dp),
                 tint = Color.White,
             )

@@ -482,7 +482,7 @@
     <string name="new_feature_nip17_might_not_be_available_description">Az Amethystnek ennek a módnak az aktiválásához NIP-17 üzenetet kell küldenie (GiftWrapped, Zárolt direkt és csoportos üzeneteket). A NIP-17 új, és a legtöbb kliens még nem implementálta. Győződj meg arról, hogy a fogadó fél kompatibilis klienst használ.</string>
     <string name="new_feature_nip17_activate">Aktiválás</string>
     <string name="messages_create_public_chat">Publikus</string>
-    <string name="messages_create_public_private_chat_desription">Új nyilvános vagy privát csoport</string>
+    <string name="messages_create_public_private_chat_description">Új nyilvános vagy privát csoport</string>
     <string name="messages_new_message">Privát</string>
     <string name="messages_new_message_to">Címzett</string>
     <string name="messages_new_message_subject">Téma</string>

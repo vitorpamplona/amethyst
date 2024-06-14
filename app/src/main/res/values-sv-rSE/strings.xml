@@ -481,7 +481,7 @@
     <string name="new_feature_nip17_might_not_be_available_description">För att aktivera denna funktion kräver det att Amethyst skickar ett NIP-17 meddelande (GiftWrapped, Förseglade Direkta och Gruppmeddelanden). NIP-17 är nytt och de flesta klienter har ännu inte implementerat det. Se till att mottagaren använder en kompatibel klient.</string>
     <string name="new_feature_nip17_activate">Aktivera</string>
     <string name="messages_create_public_chat">Publik</string>
-    <string name="messages_create_public_private_chat_desription">Ny offentlig eller privat grupp</string>
+    <string name="messages_create_public_private_chat_description">Ny offentlig eller privat grupp</string>
     <string name="messages_new_message">Privat</string>
     <string name="messages_new_message_to">Till</string>
     <string name="messages_new_message_subject">Ämne</string>

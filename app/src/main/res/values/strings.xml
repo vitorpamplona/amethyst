@@ -559,7 +559,7 @@
     <string name="new_feature_nip17_activate">Activate</string>
 
     <string name="messages_create_public_chat">Public</string>
-    <string name="messages_create_public_private_chat_desription">New Public or Private Group</string>
+    <string name="messages_create_public_private_chat_description">New Public or Private Group</string>
     <string name="messages_new_message">Private</string>
     <string name="messages_new_message_to">To</string>
     <string name="messages_new_message_subject">Subject</string>

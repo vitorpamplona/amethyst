@@ -484,7 +484,7 @@
     <string name="new_feature_nip17_might_not_be_available_description">इस कार्यशैली सक्षम करने के लिए अमेथिस्ट के द्वारा निप॰-१७ संदेश (उपहारकोषयुक्त, आच्छादित सीधा तथा झुण्ड संदेश) भेजना पडेगा। यह निप॰-१७ नया है तथा अनेक ग्राहक इसे कार्यान्वित किया नहीं अब तक। सुनिश्चित करें कि प्राप्तकर्ता एक अनुकूल ग्राहक का प्रयोग कर रहे हैं।</string>
     <string name="new_feature_nip17_activate">सक्रिय करें</string>
     <string name="messages_create_public_chat">सार्वजनिक</string>
-    <string name="messages_create_public_private_chat_desription">नया निजी अथवा सार्वजनिक झुण्ड</string>
+    <string name="messages_create_public_private_chat_description">नया निजी अथवा सार्वजनिक झुण्ड</string>
     <string name="messages_new_message">निजी</string>
     <string name="messages_new_message_to">के लिए</string>
     <string name="messages_new_message_subject">विषय</string>

@@ -482,7 +482,7 @@
     <string name="new_feature_nip17_might_not_be_available_description">Ativando este modo requer o Amethyst para enviar uma mensagem de NIP-17 (GiftWrapped, Sealed Direct and Group Messages). NIP-17 é novo e a maioria dos clientes ainda não o implementaram. Certifique-se de que o destinatário está usando um cliente compatível.</string>
     <string name="new_feature_nip17_activate">Ativar</string>
     <string name="messages_create_public_chat">Público</string>
-    <string name="messages_create_public_private_chat_desription">Novo Grupo Público ou Privado</string>
+    <string name="messages_create_public_private_chat_description">Novo Grupo Público ou Privado</string>
     <string name="messages_new_message">Privado</string>
     <string name="messages_new_message_to">Para</string>
     <string name="messages_new_message_subject">Assunto</string>

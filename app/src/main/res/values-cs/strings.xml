@@ -482,7 +482,7 @@
     <string name="new_feature_nip17_might_not_be_available_description">Aktivace tohoto režimu vyžaduje od Amethystu odeslání zprávy NIP-17 (GiftWrapped, Zapečetěné přímé a skupinové zprávy). NIP-17 je nový a většina klientů ho zatím neimplementovala. Ujistěte se, že příjemce používá kompatibilního klienta.</string>
     <string name="new_feature_nip17_activate">Aktivovat</string>
     <string name="messages_create_public_chat">Veřejné</string>
-    <string name="messages_create_public_private_chat_desription">Nová veřejná nebo soukromá skupina</string>
+    <string name="messages_create_public_private_chat_description">Nová veřejná nebo soukromá skupina</string>
     <string name="messages_new_message">Soukromé</string>
     <string name="messages_new_message_to">Pro</string>
     <string name="messages_new_message_subject">Předmět</string>
