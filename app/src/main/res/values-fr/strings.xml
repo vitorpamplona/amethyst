@@ -518,6 +518,7 @@
     <string name="relay_information_document_error_failed_to_assemble_url">Impossible d\'assembler l\'URL NIP-11 pour %1$s: %2$s</string>
     <string name="relay_information_document_error_failed_to_reach_server">Impossible d\'accéder à %1$s: %2$s</string>
     <string name="relay_information_document_error_failed_to_parse_response">Impossible d\'analyser la réponse depuis %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_with_http">Le Relais a refusé la requête %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">Impossible d\'atteindre %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">Impossible d\'analyser le résultat de %1$s: %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s a échoué avec le code %2$s</string>
