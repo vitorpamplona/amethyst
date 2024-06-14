@@ -483,7 +483,7 @@
     <string name="new_feature_nip17_might_not_be_available_description">การเปิดใช้งานโหมดนี้ต้องใช้ Amethyst เพื่อส่งข้อความ NIP-17 (GiftWrapped, Sealed Direct และ Group Messages) NIP-17 เป็นของใหม่และไคลเอ็นต์ส่วนใหญ่ยังไม่ได้รองรับ ตรวจสอบให้แน่ใจว่าเครื่องรับใช้ไคลเอ็นต์ที่รองรับ</string>
     <string name="new_feature_nip17_activate">เปิดใช้งาน</string>
     <string name="messages_create_public_chat">สาธรณะ</string>
-    <string name="messages_create_public_private_chat_desription">สร้างกลุ่มสาธารณะ/ส่วนตัว</string>
+    <string name="messages_create_public_private_chat_description">สร้างกลุ่มสาธารณะ/ส่วนตัว</string>
     <string name="messages_new_message">ส่วนตัว</string>
     <string name="messages_new_message_to">ถึง</string>
     <string name="messages_new_message_subject">ชื่อเรื่อง</string>
@@ -743,5 +743,5 @@
     <string name="dvm_waiting_status">ส่งคำขอเรียบร้อย และกำลังรอการตอบกลับ</string>
     <string name="dvm_requesting_job">กำลังรองานจาก DVM</string>
     <string name="nwc_payment_request">คำขอชำระเงินถูกส่งแล้ว รอการยืนยันจาก wallet ของคุณ</string>
-    <string name="dvm_waiting_to_confim_payment">รอการยืนยันการชำระเงินหรือผลลัพธ์จาก DVM</string>
+    <string name="dvm_waiting_to_confirm_payment">รอการยืนยันการชำระเงินหรือผลลัพธ์จาก DVM</string>
 </resources>

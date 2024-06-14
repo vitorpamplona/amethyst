@@ -482,7 +482,7 @@
     <string name="new_feature_nip17_might_not_be_available_description">Aktivace tohoto režimu vyžaduje od Amethystu odeslání zprávy NIP-17 (GiftWrapped, Zapečetěné přímé a skupinové zprávy). NIP-17 je nový a většina klientů ho zatím neimplementovala. Ujistěte se, že příjemce používá kompatibilního klienta.</string>
     <string name="new_feature_nip17_activate">Aktivovat</string>
     <string name="messages_create_public_chat">Veřejné</string>
-    <string name="messages_create_public_private_chat_desription">Nová veřejná nebo soukromá skupina</string>
+    <string name="messages_create_public_private_chat_description">Nová veřejná nebo soukromá skupina</string>
     <string name="messages_new_message">Soukromé</string>
     <string name="messages_new_message_to">Pro</string>
     <string name="messages_new_message_subject">Předmět</string>
@@ -748,5 +748,5 @@
     <string name="dvm_waiting_status">Požadavek na práci, čeká se na odpověď</string>
     <string name="dvm_requesting_job">Žádost o práci od DVM</string>
     <string name="nwc_payment_request">Žádost o platbu odeslána, čeká se na potvrzení z vaší peněženky</string>
-    <string name="dvm_waiting_to_confim_payment">Čekání na potvrzení platby DVM nebo na zaslání výsledků</string>
+    <string name="dvm_waiting_to_confirm_payment">Čekání na potvrzení platby DVM nebo na zaslání výsledků</string>
 </resources>

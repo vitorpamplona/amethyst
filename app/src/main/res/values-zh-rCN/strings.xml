@@ -484,7 +484,7 @@
     <string name="new_feature_nip17_might_not_be_available_description">启用此模式需要 Amethyst 发送一条 NIP-17 消息（包装的、密封的私信和群聊消息）。因为 NIP-17 是新的，大多数客户端尚未执行。请确保接收方正在使用兼容的客户端。</string>
     <string name="new_feature_nip17_activate">启用</string>
     <string name="messages_create_public_chat">公开</string>
-    <string name="messages_create_public_private_chat_desription">新建公开或私人群组</string>
+    <string name="messages_create_public_private_chat_description">新建公开或私人群组</string>
     <string name="messages_new_message">私人</string>
     <string name="messages_new_message_to">至</string>
     <string name="messages_new_message_subject">主题</string>
@@ -746,5 +746,5 @@
     <string name="dvm_waiting_status">数据作业已申请，正在等待回复</string>
     <string name="dvm_requesting_job">向 DVM 请求数据作业</string>
     <string name="nwc_payment_request">付款请求已发送，正在等待您的钱包的确认</string>
-    <string name="dvm_waiting_to_confim_payment">等待 DVM 确认付款或返回结果</string>
+    <string name="dvm_waiting_to_confirm_payment">等待 DVM 确认付款或返回结果</string>
 </resources>
