@@ -24,8 +24,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
@@ -34,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -42,14 +39,13 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
+import com.vitorpamplona.amethyst.ui.theme.previewCardImageModifier
 
 @Composable
 private fun CopyToClipboard(
@@ -108,11 +104,9 @@ fun UrlPreviewCard(
         AsyncImage(
             model = previewInfo.imageUrlFullPath,
             contentDescription = stringResource(R.string.preview_card_image_for, previewInfo.url),
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp),
+            contentScale = ContentScale.Crop,
+            modifier = previewCardImageModifier,
         )
-
-        Spacer(modifier = StdVertSpacer)
 
         Text(
             text = previewInfo.verifiedUrl?.host ?: previewInfo.url,
