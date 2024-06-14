@@ -41,7 +41,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -118,15 +117,15 @@ fun MultiSetCompose(
 
     val columnModifier =
         remember(backgroundColor.value) {
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .background(backgroundColor.value)
                 .combinedClickable(
                     onClick = {
                         scope.launch { routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) } }
                     },
                     onLongClick = enablePopup,
-                )
-                .padding(
+                ).padding(
                     start = 12.dp,
                     end = 12.dp,
                     top = 10.dp,
@@ -163,13 +162,9 @@ private fun Galeries(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val hasZapEvents by remember { derivedStateOf { multiSetCard.zapEvents.isNotEmpty() } }
-    val hasBoostEvents by remember { derivedStateOf { multiSetCard.boostEvents.isNotEmpty() } }
-    val hasLikeEvents by remember { derivedStateOf { multiSetCard.likeEvents.isNotEmpty() } }
-
-    if (hasZapEvents) {
+    if (multiSetCard.zapEvents.isNotEmpty()) {
         var zapEvents by
-            remember(multiSetCard.zapEvents) {
+            remember(multiSetCard) {
                 mutableStateOf(
                     accountViewModel.cachedDecryptAmountMessageInGroup(multiSetCard.zapEvents),
                 )
@@ -182,11 +177,11 @@ private fun Galeries(
         RenderZapGallery(zapEvents, backgroundColor, nav, accountViewModel)
     }
 
-    if (hasBoostEvents) {
+    if (multiSetCard.boostEvents.isNotEmpty()) {
         RenderBoostGallery(multiSetCard.boostEvents, nav, accountViewModel)
     }
 
-    if (hasLikeEvents) {
+    if (multiSetCard.likeEvents.isNotEmpty()) {
         multiSetCard.likeEventsByType.forEach {
             RenderLikeGallery(it.key, it.value, nav, accountViewModel)
         }

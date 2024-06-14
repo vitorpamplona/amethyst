@@ -60,7 +60,6 @@ fun RenderNIP90ContentDiscoveryResponse(
     nav: (String) -> Unit,
 ) {
     val noteEvent = note.event
-    val modifier = remember(note) { Modifier.fillMaxWidth() }
 
     val showReply by
         remember(note) {

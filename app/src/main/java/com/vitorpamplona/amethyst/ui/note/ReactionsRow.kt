@@ -137,7 +137,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -270,7 +269,10 @@ private fun LoadAndDisplayZapraiser(
     }
 }
 
-@Immutable data class ZapraiserStatus(val progress: Float, val left: String)
+@Immutable data class ZapraiserStatus(
+    val progress: Float,
+    val left: String,
+)
 
 @Composable
 fun RenderZapRaiser(
@@ -453,12 +455,11 @@ private fun WatchReactionsAndRenderGallery(
     accountViewModel: AccountViewModel,
 ) {
     val reactionsState by baseNote.live().reactions.observeAsState()
-    val reactionEvents by
-        remember(reactionsState) { derivedStateOf { baseNote.reactions.toImmutableMap() } }
+    val reactionEvents = reactionsState?.note?.reactions ?: return
 
     if (reactionEvents.isNotEmpty()) {
         reactionEvents.forEach {
-            val reactions = remember(it.value) { it.value.toImmutableList() }
+            val reactions = remember(it.key) { it.value.toImmutableList() }
             RenderLikeGallery(
                 it.key,
                 reactions,
@@ -636,9 +637,7 @@ private fun SlidingAnimationCount(
 }
 
 @OptIn(ExperimentalAnimationApi::class)
-private fun <S> AnimatedContentTransitionScope<S>.transitionSpec(): ContentTransform {
-    return slideAnimation
-}
+private fun <S> AnimatedContentTransitionScope<S>.transitionSpec(): ContentTransform = slideAnimation
 
 @ExperimentalAnimationApi
 val slideAnimation: ContentTransform =
@@ -647,13 +646,12 @@ val slideAnimation: ContentTransform =
             fadeIn(
                 animationSpec = tween(durationMillis = 100),
             )
+    ).togetherWith(
+        slideOutVertically(animationSpec = tween(durationMillis = 100)) { height -> -height } +
+            fadeOut(
+                animationSpec = tween(durationMillis = 100),
+            ),
     )
-        .togetherWith(
-            slideOutVertically(animationSpec = tween(durationMillis = 100)) { height -> -height } +
-                fadeOut(
-                    animationSpec = tween(durationMillis = 100),
-                ),
-        )
 
 @Composable
 fun TextCount(
@@ -744,10 +742,9 @@ fun ObserveBoostIcon(
                 .boosts
                 .map { it.note.isBoostedBy(accountViewModel.userProfile()) }
                 .distinctUntilChanged()
-        }
-            .observeAsState(
-                baseNote.isBoostedBy(accountViewModel.userProfile()),
-            )
+        }.observeAsState(
+            baseNote.isBoostedBy(accountViewModel.userProfile()),
+        )
 
     inner(hasBoosted)
 }
@@ -1066,8 +1063,7 @@ fun ZapReaction(
                         targetValue = zappingProgress,
                         animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
                         label = "ZapIconIndicator",
-                    )
-                        .value,
+                    ).value,
                 modifier = remember { Modifier.size(animationSize) },
                 strokeWidth = 2.dp,
             )
@@ -1210,7 +1206,8 @@ private fun DrawViewCount(
     AsyncImage(
         model =
             remember(note) {
-                ImageRequest.Builder(context)
+                ImageRequest
+                    .Builder(context)
                     .data("https://counter.amethyst.social/${note.idHex}.svg?label=+&color=00000000")
                     .diskCachePolicy(CachePolicy.DISABLED)
                     .memoryCachePolicy(CachePolicy.ENABLED)
