@@ -113,6 +113,7 @@
     <string name="website_url">URL de site</string>
     <string name="ln_address">Adresse LN</string>
     <string name="ln_url_outdated">URL LN (obsolete)</string>
+    <string name="save_to_gallery">Enregistrer dans la Galerie</string>
     <string name="image_saved_to_the_gallery">Image enregistrée dans la galerie</string>
     <string name="failed_to_save_the_image">Échec de l\'enregistrement de l\'image</string>
     <string name="upload_image">Charger une image</string>
@@ -407,6 +408,7 @@
     <string name="languages">Langages</string>
     <string name="tags">Étiquettes</string>
     <string name="posting_policy">Politique de publication</string>
+    <string name="relay_error_messages">Erreurs et Notifications de ce Relais</string>
     <string name="message_length">Longueur du message</string>
     <string name="subscriptions">Abonnements</string>
     <string name="filters">Filtres</string>
@@ -500,6 +502,7 @@
     <string name="load_image_description">Quand charger les images</string>
     <string name="copy_to_clipboard">Copier dans le presse-papiers</string>
     <string name="copy_npub_to_clipboard">Copier npub dans le presse-papiers</string>
+    <string name="share_or_save">Partager ou Enregistrer</string>
     <string name="copy_url_to_clipboard">Copier l\'URL dans le presse-papiers</string>
     <string name="copy_the_note_id_to_the_clipboard">Copier l\'ID de la note dans le presse-papiers</string>
     <string name="created_at">Créé le</string>
@@ -512,6 +515,9 @@
     <string name="error_dialog_talk_to_user">Contacter l\'utilisateur</string>
     <string name="error_dialog_button_ok">Ok</string>
     <string name="relay_information_document_error_assemble_url">Impossible d\'atteindre %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_assemble_url">Impossible d\'assembler l\'URL NIP-11 pour %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">Impossible d\'accéder à %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">Impossible d\'analyser la réponse depuis %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">Impossible d\'atteindre %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">Impossible d\'analyser le résultat de %1$s: %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s a échoué avec le code %2$s</string>
@@ -694,6 +700,8 @@
     <string name="public_notif_section_explainer">Ce type de relais reçoit toutes les réponses, commentaires, likes et zaps de vos messages. Insérez de 1 à 3 relais et assurez-vous qu\'ils acceptent les messages de n\'importe qui.</string>
     <string name="private_inbox_section">Relais de la boîte de réception MP</string>
     <string name="private_inbox_section_explainer">Insérez de 1 à 3 relais pour servir de boîte de réception privée. Les autres utilisateurs utiliseront ces relais pour vous envoyer des MPs. Les relais de la boîte de réception MP doivent accepter tout message de tout le monde, mais ne vous permet que de les télécharger. De bonnes options sont:\n - inbox.nostr.wine (payant)\n - you.nostr1.com (relais personnels - payant)</string>
+    <string name="private_outbox_section">Relais privés</string>
+    <string name="private_outbox_section_explainer">Insérez entre 1 et 3 relais pour stocker des événements que personne d\'autre ne peut voir, comme vos Brouillons et/ou paramètres d\'application. Idéalement, ces relais sont soit locaux soit nécessitent une authentification avant de télécharger le contenu de chaque utilisateur.</string>
     <string name="kind_3_section">Relais généraux</string>
     <string name="kind_3_section_description">Amethyst utilise ces relais pour télécharger des messages pour vous.</string>
     <string name="search_section">Relais de recherche</string>
