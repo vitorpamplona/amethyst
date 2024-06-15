@@ -652,6 +652,7 @@
     <string name="route_video">Filmiki</string>
     <string name="route_security_filters">Filtry bezpieczeństwa</string>
     <string name="new_post">Nowy post</string>
+    <string name="new_short">Nowe Króciaki: zdjęcia lub filmiki</string>
     <string name="new_community_note">Nowy wpis w społeczności</string>
     <string name="open_all_reactions_to_this_post">Otwórz wszystkie reakcje na ten post</string>
     <string name="close_all_reactions_to_this_post">Zamknij wszystkie reakcje na ten post</string>
@@ -692,6 +693,7 @@
     <string name="search_relays_not_found">Skonfiguruj transmitery wyszukujące</string>
     <string name="search_relays_not_found_description">Stworzenie listy transmiterów specjalnie przeznaczonych do wyszukiwania i tagowania użytkowników poprawi te wyniki.</string>
     <string name="search_relays_not_found_editing">Wstaw od 1 do 3 transmiterów, które będą używane podczas wyszukiwania treści lub tagowania użytkowników. Upewnij się, że zaimplementowano NIP-50</string>
+    <string name="search_relays_not_found_examples">Dobre opcje to:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
     <string name="relay_settings">Ustawienia Transmiterów</string>
     <string name="public_home_section">Publiczne transmitery domowe</string>
     <string name="public_home_section_explainer">Ten typ transmitera przechowuje całą zawartość. Amethyst będzie wysyłać Twoje posty tutaj, a inni będą korzystać z tych transmiterów, aby znaleźć Twoje treści. Wstaw od 1 do 3 transmiterów. Mogą to być transmitery prywatne, płatne lub publiczne.</string>
