@@ -64,8 +64,8 @@ class Nip05NostrAddressVerifier() {
                     .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                     .url(url)
                     .build()
-
-            HttpClientManager.getHttpClient()
+            // Fetchers MUST ignore any HTTP redirects given by the /.well-known/nostr.json endpoint.
+            HttpClientManager.getHttpClient().newBuilder().followRedirects(false).build()
                 .newCall(request)
                 .enqueue(
                     object : Callback {
