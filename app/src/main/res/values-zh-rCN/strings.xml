@@ -515,6 +515,10 @@
     <string name="error_dialog_talk_to_user">向用户发送消息</string>
     <string name="error_dialog_button_ok">好</string>
     <string name="relay_information_document_error_assemble_url">无法连接 %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_assemble_url">组合 %1$s 的 NIP-11 URL 失败: %2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">无法连接 %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">无法解析来自 %1$s 的响应: %2$s</string>
+    <string name="relay_information_document_error_failed_with_http">中继拒绝请求 %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">无法连接 %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">无法解析来自 %1$s的结果: %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s 失败，代码 %2$s</string>
