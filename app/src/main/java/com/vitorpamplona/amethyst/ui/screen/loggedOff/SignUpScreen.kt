@@ -161,9 +161,7 @@ fun SignUpPage(
                         }
 
                         if (acceptedTerms.value && displayName.value.text.isNotBlank()) {
-                            accountStateViewModel.login(displayName.value.text, useProxy.value, proxyPort.value.toInt()) {
-                                errorMessage = context.getString(R.string.invalid_key)
-                            }
+                            accountStateViewModel.newKey(useProxy.value, proxyPort.value.toInt(), displayName.value.text)
                         }
                     },
                 ),
@@ -202,8 +200,7 @@ fun SignUpPage(
             ClickableText(
                 text = annotatedTermsString,
             ) { spanOffset ->
-                annotatedTermsString.getStringAnnotations(spanOffset, spanOffset).firstOrNull()?.also {
-                        span ->
+                annotatedTermsString.getStringAnnotations(spanOffset, spanOffset).firstOrNull()?.also { span ->
                     if (span.tag == "openTerms") {
                         runCatching {
                             uri.openUri("https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md")
@@ -244,12 +241,12 @@ fun SignUpPage(
                     },
                     onError = {
                         scope.launch {
-                            Toast.makeText(
-                                context,
-                                it,
-                                Toast.LENGTH_LONG,
-                            )
-                                .show()
+                            Toast
+                                .makeText(
+                                    context,
+                                    it,
+                                    Toast.LENGTH_LONG,
+                                ).show()
                         }
                     },
                     proxyPort,
