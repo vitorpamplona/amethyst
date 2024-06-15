@@ -21,12 +21,14 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,6 +40,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -269,15 +272,17 @@ private fun RenderReactionOption(
     reactionType: String,
     postViewModel: UpdateReactionTypeViewModel,
 ) {
-    Button(
-        modifier = Modifier.padding(horizontal = 3.dp),
-        shape = ButtonBorder,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-            ),
-        onClick = { postViewModel.removeChoice(reactionType) },
-        contentPadding = PaddingValues(horizontal = 5.dp),
+    Box(
+        modifier =
+            Modifier
+                .padding(3.dp)
+                .clickable { postViewModel.removeChoice(reactionType) }
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.surfaceDim,
+                    shape = RoundedCornerShape(8.dp),
+                )
+                .padding(8.dp),
     ) {
         if (reactionType.startsWith(":")) {
             val noStartColon = reactionType.removePrefix(":")
@@ -291,7 +296,7 @@ private fun RenderReactionOption(
 
             InLineIconRenderer(
                 renderable,
-                style = SpanStyle(color = Color.White),
+                style = SpanStyle(color = MaterialTheme.colorScheme.onBackground),
                 maxLines = 1,
             )
         } else {
@@ -301,24 +306,24 @@ private fun RenderReactionOption(
                         painter = painterResource(R.drawable.ic_liked),
                         null,
                         modifier = remember { Modifier.size(16.dp) },
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onBackground,
                     )
                     Text(
                         text = " ✖",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         textAlign = TextAlign.Center,
                     )
                 }
                 "-" ->
                     Text(
                         text = "\uD83D\uDC4E ✖",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         textAlign = TextAlign.Center,
                     )
                 else ->
                     Text(
                         text = "$reactionType ✖",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         textAlign = TextAlign.Center,
                     )
             }
