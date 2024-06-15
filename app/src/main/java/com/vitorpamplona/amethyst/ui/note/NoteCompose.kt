@@ -461,7 +461,14 @@ fun InnerNoteWithReactions(
         horizontalArrangement = RowColSpacing10dp,
     ) {
         if (notBoostedNorQuote) {
-            AuthorAndRelayInformation(baseNote, accountViewModel, nav)
+            Column(WidthAuthorPictureModifier, verticalArrangement = RowColSpacing5dp) {
+                // Draws the boosted picture outside the boosted card.
+                Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
+                    RenderAuthorImages(baseNote, nav, accountViewModel)
+                }
+
+                BadgeBox(baseNote, accountViewModel, nav)
+            }
         }
 
         Column(Modifier.fillMaxWidth()) {
@@ -1052,22 +1059,6 @@ fun observeEdits(
 }
 
 @Composable
-private fun AuthorAndRelayInformation(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    Column(WidthAuthorPictureModifier, verticalArrangement = RowColSpacing5dp) {
-        // Draws the boosted picture outside the boosted card.
-        Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
-            RenderAuthorImages(baseNote, nav, accountViewModel)
-        }
-
-        BadgeBox(baseNote, accountViewModel, nav)
-    }
-}
-
-@Composable
 private fun BadgeBox(
     baseNote: Note,
     accountViewModel: AccountViewModel,
@@ -1088,9 +1079,7 @@ private fun RenderAuthorImages(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    val isRepost = baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
-
-    if (isRepost) {
+    if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
         val baseRepost = baseNote.replyTo?.lastOrNull()
         if (baseRepost != null) {
             RepostNoteAuthorPicture(baseNote, baseRepost, accountViewModel, nav)
