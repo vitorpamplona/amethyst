@@ -515,6 +515,10 @@
     <string name="error_dialog_talk_to_user">उपयोगकर्ता को संदेश भेजें</string>
     <string name="error_dialog_button_ok">ठीक है</string>
     <string name="relay_information_document_error_assemble_url">%1$s तक जा नहीं पाए : %2$s</string>
+    <string name="relay_information_document_error_failed_to_assemble_url">%1$s के लिए निप॰-११ जालपता बनाने में असफल : %2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">%1$s तक जाने में असफल : %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">%1$s से प्रतिवचन परखने में असफल : %2$s</string>
+    <string name="relay_information_document_error_failed_with_http">पुनःप्रसारक ने %1$s अनुरोध को इनकार किया : %2$s</string>
     <string name="relay_information_document_error_reach_server">%1$s तक जा नहीं पाए : %2$s</string>
     <string name="relay_information_document_error_parse_result">%1$s से परिणाम परख नहीं पाए : %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s असफल हुआ इस संकेतक के साथ : %2$s</string>
