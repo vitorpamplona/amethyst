@@ -710,8 +710,7 @@ fun ShowVideoStreaming(
                     .map {
                         val activity = it.channel as? LiveActivitiesChannel
                         activity?.info
-                    }
-                    .distinctUntilChanged()
+                    }.distinctUntilChanged()
                     .observeAsState(baseChannel.info)
 
             streamingInfo?.let { event ->
@@ -869,12 +868,12 @@ fun LongChannelHeader(
                 )
             }
 
-            if (baseChannel is LiveActivitiesChannel && baseChannel.info?.hasHashtags() == true) {
-                val hashtags =
-                    remember(baseChannel.info) {
-                        baseChannel.info?.hashtags()?.toImmutableList() ?: persistentListOf()
+            if (baseChannel is LiveActivitiesChannel && summary != null) {
+                baseChannel.info?.let {
+                    if (it.hasHashtags()) {
+                        DisplayUncitedHashtags(it, summary, nav)
                     }
-                DisplayUncitedHashtags(hashtags, summary ?: "", nav)
+                }
             }
         }
 
@@ -938,8 +937,7 @@ fun LongChannelHeader(
                         ?.participants()
                         ?.mapNotNull { part ->
                             LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) }
-                        }
-                        ?.toImmutableList()
+                        }?.toImmutableList()
 
                 if (
                     newParticipantUsers != null && !equalImmutableLists(newParticipantUsers, participantUsers)
@@ -1155,10 +1153,11 @@ fun OfflineFlag() {
 fun ScheduledFlag(starts: Long?) {
     val startsIn =
         starts?.let {
-            SimpleDateFormat.getDateTimeInstance(
-                DateFormat.SHORT,
-                DateFormat.SHORT,
-            ).format(Date(starts * 1000))
+            SimpleDateFormat
+                .getDateTimeInstance(
+                    DateFormat.SHORT,
+                    DateFormat.SHORT,
+                ).format(Date(starts * 1000))
         }
 
     Text(

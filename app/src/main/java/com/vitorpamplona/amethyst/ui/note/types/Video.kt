@@ -58,7 +58,6 @@ import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.VideoEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
-import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun VideoDisplay(
@@ -178,17 +177,13 @@ fun VideoDisplay(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
-            }
 
-            if (event.hasHashtags()) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                ) {
-                    DisplayUncitedHashtags(
-                        remember(event) { event.hashtags().toImmutableList() },
-                        summary ?: "",
-                        nav,
-                    )
+                if (event.hasHashtags()) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                    ) {
+                        DisplayUncitedHashtags(event, summary, nav)
+                    }
                 }
             }
         }

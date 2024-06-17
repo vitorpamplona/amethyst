@@ -89,6 +89,8 @@ open class Event(
 
     override fun forEachTaggedEvent(onEach: (eventId: HexKey) -> Unit) = forEachTagged("e", onEach)
 
+    override fun forEachHashTag(onEach: (eventId: HexKey) -> Unit) = forEachTagged("t", onEach)
+
     private fun forEachTagged(
         tagName: String,
         onEach: (eventId: HexKey) -> Unit,

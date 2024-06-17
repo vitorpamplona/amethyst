@@ -28,13 +28,16 @@ import com.vitorpamplona.quartz.events.ImmutableListOfLists
 object CachedRichTextParser {
     val richTextCache = LruCache<String, RichTextViewerState>(50)
 
+    fun getCached(content: String): RichTextViewerState? = richTextCache[content]
+
     fun parseText(
         content: String,
         tags: ImmutableListOfLists<String>,
         callbackUri: String? = null,
     ): RichTextViewerState {
-        return if (richTextCache[content] != null) {
-            richTextCache[content]
+        val cached = richTextCache[content]
+        return if (cached != null) {
+            cached
         } else {
             val newUrls = RichTextParser().parseText(content, tags, callbackUri)
             richTextCache.put(content, newUrls)

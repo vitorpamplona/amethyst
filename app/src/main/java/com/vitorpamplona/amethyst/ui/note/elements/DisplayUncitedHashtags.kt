@@ -26,23 +26,75 @@ import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.AnnotatedString
+import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
+import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
-import kotlinx.collections.immutable.ImmutableList
+import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+@Composable
+fun DisplayUncitedHashtags(
+    event: Event,
+    nav: (String) -> Unit,
+) {
+    DisplayUncitedHashtags(event, event.content, nav)
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DisplayUncitedHashtags(
-    hashtags: ImmutableList<String>,
-    eventContent: String,
+    event: Event,
+    content: String,
     nav: (String) -> Unit,
 ) {
-    val unusedHashtags =
-        remember(eventContent) { hashtags.filter { !eventContent.contains(it, true) } }
+    val unusedHashtags by
+        produceState(initialValue = emptyList<String>()) {
+            withContext(Dispatchers.Default) {
+                val state = CachedRichTextParser.parseText(content, event.tags.toImmutableListOfLists())
+
+                val tagsInEvent = event.hashtags()
+
+                if (tagsInEvent.isEmpty()) return@withContext
+
+                val tagsInContent =
+                    state
+                        .paragraphs
+                        .map {
+                            it.words.mapNotNull {
+                                if (it is HashTagSegment) {
+                                    it.hashtag
+                                } else {
+                                    null
+                                }
+                            }
+                        }.flatten()
+
+                val unusedHashtags =
+                    tagsInEvent.filterNot { eventTag ->
+                        tagsInContent.any { contentTag ->
+                            eventTag.equals(contentTag, true)
+                        }
+                    }
+
+                if (unusedHashtags.isNotEmpty()) {
+                    value = unusedHashtags
+                }
+            }
+        }
 
     if (unusedHashtags.isNotEmpty()) {
+        val style =
+            LocalTextStyle.current.copy(
+                color = MaterialTheme.colorScheme.lessImportantLink,
+            )
+
         FlowRow(
             modifier = HalfTopPadding,
         ) {
@@ -50,10 +102,7 @@ fun DisplayUncitedHashtags(
                 ClickableText(
                     text = remember { AnnotatedString("#$hashtag ") },
                     onClick = { nav("Hashtag/$hashtag") },
-                    style =
-                        LocalTextStyle.current.copy(
-                            color = MaterialTheme.colorScheme.lessImportantLink,
-                        ),
+                    style = style,
                 )
             }
         }

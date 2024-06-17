@@ -66,8 +66,6 @@ import com.vitorpamplona.quartz.events.GitPatchEvent
 import com.vitorpamplona.quartz.events.GitRepositoryEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun RenderGitPatchEvent(
@@ -195,11 +193,11 @@ private fun RenderGitPatchEvent(
             }
 
             if (note.event?.hasHashtags() == true) {
-                val hashtags =
-                    remember(note.event) {
-                        note.event?.hashtags()?.toImmutableList() ?: persistentListOf()
-                    }
-                DisplayUncitedHashtags(hashtags, eventContent, nav)
+                DisplayUncitedHashtags(
+                    event = noteEvent,
+                    content = eventContent,
+                    nav = nav,
+                )
             }
         }
     }
@@ -299,11 +297,7 @@ private fun RenderGitIssueEvent(
             }
 
             if (note.event?.hasHashtags() == true) {
-                val hashtags =
-                    remember(note.event) {
-                        note.event?.hashtags()?.toImmutableList() ?: persistentListOf()
-                    }
-                DisplayUncitedHashtags(hashtags, eventContent, nav)
+                DisplayUncitedHashtags(noteEvent, eventContent, nav)
             }
         }
     }

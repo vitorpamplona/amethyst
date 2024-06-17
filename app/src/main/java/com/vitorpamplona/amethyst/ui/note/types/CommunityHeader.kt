@@ -79,7 +79,6 @@ import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.Participant
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import java.util.Locale
 
 @Composable
@@ -90,9 +89,10 @@ fun RenderCommunity(
 ) {
     if (baseNote is AddressableNote) {
         Row(
-            MaterialTheme.colorScheme.innerPostModifier.clickable {
-                routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) }
-            }.padding(Size10dp),
+            MaterialTheme.colorScheme.innerPostModifier
+                .clickable {
+                    routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) }
+                }.padding(Size10dp),
         ) {
             ShortCommunityHeader(
                 baseNote = baseNote,
@@ -160,8 +160,8 @@ fun LongCommunityHeader(
 
             if (summary != null && noteEvent.hasHashtags()) {
                 DisplayUncitedHashtags(
-                    hashtags = remember(key1 = noteEvent) { noteEvent.hashtags().toImmutableList() },
-                    eventContent = summary,
+                    event = noteEvent,
+                    content = summary,
                     nav = nav,
                 )
             }
@@ -361,8 +361,7 @@ fun WatchAddressableNoteFollows(
             accountViewModel.userFollows
                 .map { it.user.latestContactList?.isTaggedAddressableNote(note.idHex) ?: false }
                 .distinctUntilChanged()
-        }
-            .observeAsState(false)
+        }.observeAsState(false)
 
     onFollowChanges(showFollowingMark)
 }

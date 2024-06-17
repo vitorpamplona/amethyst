@@ -52,8 +52,6 @@ import com.vitorpamplona.quartz.events.ChatroomKeyable
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun RenderPrivateMessage(
@@ -122,11 +120,7 @@ fun RenderPrivateMessage(
                 }
 
                 if (noteEvent.hasHashtags()) {
-                    val hashtags =
-                        remember(note.event?.id()) {
-                            note.event?.hashtags()?.toImmutableList() ?: persistentListOf()
-                        }
-                    DisplayUncitedHashtags(hashtags, eventContent, nav)
+                    DisplayUncitedHashtags(noteEvent, eventContent, nav)
                 }
             }
         }

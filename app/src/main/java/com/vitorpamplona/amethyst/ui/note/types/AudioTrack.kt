@@ -240,8 +240,7 @@ fun AudioHeader(
 
             if (noteEvent.hasHashtags()) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    val hashtags = remember(noteEvent) { noteEvent.hashtags().toImmutableList() }
-                    DisplayUncitedHashtags(hashtags, content ?: "", nav)
+                    DisplayUncitedHashtags(noteEvent, nav)
                 }
             }
         }
