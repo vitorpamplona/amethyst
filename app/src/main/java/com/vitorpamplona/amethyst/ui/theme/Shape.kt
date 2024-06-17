@@ -97,6 +97,7 @@ val Size35dp = 35.dp
 val Size40dp = 40.dp
 val Size55dp = 55.dp
 val Size75dp = 75.dp
+val Size100dp = 100.dp
 val Size110dp = 110.dp
 val Size165dp = 165.dp
 
@@ -122,7 +123,7 @@ val VertPadding = Modifier.padding(vertical = 10.dp)
 
 val MaxWidthWithHorzPadding = Modifier.fillMaxWidth().padding(horizontal = 10.dp)
 
-val Size6Modifier = Modifier.size(6.dp)
+val Size5Modifier = Modifier.size(5.dp)
 val Size10Modifier = Modifier.size(10.dp)
 val Size15Modifier = Modifier.size(15.dp)
 val Size16Modifier = Modifier.size(16.dp)

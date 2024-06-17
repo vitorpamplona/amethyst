@@ -78,21 +78,6 @@ fun RefresheableFeedView(
 }
 
 @Composable
-fun DVMStatusView(
-    viewModel: FeedViewModel,
-    routeForLastRead: String?,
-    enablePullRefresh: Boolean = true,
-    scrollStateKey: String? = null,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    viewModel.invalidateData()
-    SaveableFeedState(viewModel, scrollStateKey) { listState ->
-        RenderFeedState(viewModel, accountViewModel, listState, nav, routeForLastRead)
-    }
-}
-
-@Composable
 fun RefresheableBox(
     viewModel: InvalidatableViewModel,
     enablePullRefresh: Boolean = true,

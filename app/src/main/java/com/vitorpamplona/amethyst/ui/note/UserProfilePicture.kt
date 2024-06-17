@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -30,7 +27,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
@@ -40,7 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
@@ -161,23 +156,19 @@ fun ClickableUserPicture(
                     .combinedClickable(
                         onClick = { onClick(baseUser) },
                         onLongClick = { onLongClick(baseUser) },
-                        role = Role.Button,
                     )
             } else if (onClick != null) {
                 Modifier
                     .size(size)
                     .clickable(
                         onClick = { onClick(baseUser) },
-                        role = Role.Button,
                     )
             } else {
                 Modifier.size(size)
             }
         }
 
-    Box(modifier = myModifier, contentAlignment = Alignment.TopEnd) {
-        BaseUserPicture(baseUser, size, accountViewModel, modifier)
-    }
+    BaseUserPicture(baseUser, size, accountViewModel, modifier, myModifier)
 }
 
 @Composable
@@ -301,10 +292,8 @@ fun BaseUserPicture(
     size: Dp,
     accountViewModel: AccountViewModel,
     innerModifier: Modifier = Modifier,
-    outerModifier: Modifier = remember { Modifier.size(size) },
+    outerModifier: Modifier = Modifier.size(size),
 ) {
-    val myIconSize by remember(size) { derivedStateOf { size.div(3.5f) } }
-
     Box(outerModifier, contentAlignment = Alignment.TopEnd) {
         LoadUserProfilePicture(baseUser) { userProfilePicture, userName ->
             InnerUserPicture(
@@ -317,7 +306,11 @@ fun BaseUserPicture(
             )
         }
 
-        ObserveAndDisplayFollowingMark(baseUser.pubkeyHex, myIconSize, accountViewModel)
+        WatchUserFollows(baseUser.pubkeyHex, accountViewModel) { newFollowingState ->
+            if (newFollowingState) {
+                FollowingIcon(Modifier.size(size.div(3.5f)))
+            }
+        }
     }
 }
 
@@ -345,11 +338,6 @@ fun InnerUserPicture(
             modifier.size(size).clip(shape = CircleShape)
         }
 
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
-
     RobohashFallbackAsyncImage(
         robot = userHex,
         model = userPicture,
@@ -361,25 +349,8 @@ fun InnerUserPicture(
             },
         modifier = myImageModifier,
         contentScale = ContentScale.Crop,
-        loadProfilePicture = automaticallyShowProfilePicture,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
     )
-}
-
-@Composable
-fun ObserveAndDisplayFollowingMark(
-    userHex: String,
-    iconSize: Dp,
-    accountViewModel: AccountViewModel,
-) {
-    WatchUserFollows(userHex, accountViewModel) { newFollowingState ->
-        AnimatedVisibility(
-            visible = newFollowingState,
-            enter = remember { fadeIn() },
-            exit = remember { fadeOut() },
-        ) {
-            FollowingIcon(iconSize)
-        }
-    }
 }
 
 @Composable

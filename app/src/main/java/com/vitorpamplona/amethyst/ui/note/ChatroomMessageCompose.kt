@@ -78,7 +78,7 @@ import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.Size5Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.chatAuthorBox
@@ -769,7 +769,11 @@ private fun WatchAndDisplayUser(
                 accountViewModel = accountViewModel,
             )
 
-            ObserveAndDisplayFollowingMark(author.pubkeyHex, Size5dp, accountViewModel)
+            WatchUserFollows(author.pubkeyHex, accountViewModel) { newFollowingState ->
+                if (newFollowingState) {
+                    FollowingIcon(Size5Modifier)
+                }
+            }
         },
         name = {
             if (userState != null) {

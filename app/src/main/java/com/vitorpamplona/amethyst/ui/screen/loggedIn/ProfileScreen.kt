@@ -25,7 +25,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.scrollBy
@@ -159,6 +158,7 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.Size100dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25Modifier
@@ -166,6 +166,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.userProfileBorderModifier
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
@@ -429,8 +430,7 @@ private fun RenderSurface(
                                         }
                                     }
                                 },
-                            )
-                            .fillMaxHeight()
+                            ).fillMaxHeight()
                     },
             ) {
                 RenderScreen(
@@ -550,8 +550,7 @@ fun UpdateThreadsAndRepliesWhenBlockUnblock(
         accountViewModel.account.liveHiddenUsers
             .map {
                 it.hiddenUsers.contains(baseUser.pubkeyHex) || it.spammers.contains(baseUser.pubkeyHex)
-            }
-            .observeAsState(accountViewModel.account.isHidden(baseUser))
+            }.observeAsState(accountViewModel.account.isHidden(baseUser))
 
     LaunchedEffect(key1 = isHidden) {
         threadsViewModel.invalidateData()
@@ -597,7 +596,11 @@ private fun RelaysTabHeader(baseUser: User) {
     val userStateRelayInfo by baseUser.live().relayInfo.observeAsState()
     val userRelays =
         remember(userStateRelayInfo) {
-            userStateRelayInfo?.user?.latestContactList?.relays()?.size ?: "--"
+            userStateRelayInfo
+                ?.user
+                ?.latestContactList
+                ?.relays()
+                ?.size ?: "--"
         }
 
     Text(text = "$userRelaysBeingUsed / $userRelays ${stringResource(R.string.relays)}")
@@ -780,13 +783,8 @@ private fun ProfileHeader(
                 ClickableUserPicture(
                     baseUser = baseUser,
                     accountViewModel = accountViewModel,
-                    size = 100.dp,
-                    modifier =
-                        Modifier.border(
-                            3.dp,
-                            MaterialTheme.colorScheme.background,
-                            CircleShape,
-                        ),
+                    size = Size100dp,
+                    modifier = MaterialTheme.colorScheme.userProfileBorderModifier,
                     onClick = {
                         if (baseUser.profilePicture() != null) {
                             zoomImageDialogOpen = true
@@ -922,31 +920,28 @@ fun WatchIsHiddenUser(
         accountViewModel.account.liveHiddenUsers
             .map {
                 it.hiddenUsers.contains(baseUser.pubkeyHex) || it.spammers.contains(baseUser.pubkeyHex)
-            }
-            .observeAsState(accountViewModel.account.isHidden(baseUser))
+            }.observeAsState(accountViewModel.account.isHidden(baseUser))
 
     content(isHidden)
 }
 
-fun getIdentityClaimIcon(identity: IdentityClaim): Int {
-    return when (identity) {
+fun getIdentityClaimIcon(identity: IdentityClaim): Int =
+    when (identity) {
         is TwitterIdentity -> R.drawable.twitter
         is TelegramIdentity -> R.drawable.telegram
         is MastodonIdentity -> R.drawable.mastodon
         is GitHubIdentity -> R.drawable.github
         else -> R.drawable.github
     }
-}
 
-fun getIdentityClaimDescription(identity: IdentityClaim): Int {
-    return when (identity) {
+fun getIdentityClaimDescription(identity: IdentityClaim): Int =
+    when (identity) {
         is TwitterIdentity -> R.string.twitter
         is TelegramIdentity -> R.string.telegram
         is MastodonIdentity -> R.string.mastodon
         is GitHubIdentity -> R.string.github
         else -> R.drawable.github
     }
-}
 
 @Composable
 private fun DrawAdditionalInfo(

@@ -87,10 +87,15 @@ fun AmethystIcon(iconSize: Dp) {
 
 @Composable
 fun FollowingIcon(iconSize: Dp) {
+    FollowingIcon(Modifier.size(iconSize))
+}
+
+@Composable
+fun FollowingIcon(modifier: Modifier) {
     Icon(
         imageVector = Following,
         contentDescription = stringResource(id = R.string.following),
-        modifier = Modifier.size(iconSize),
+        modifier = modifier,
         tint = Color.Unspecified,
     )
 }
@@ -549,18 +554,26 @@ fun ZapSplitIcon(
 fun ZapSplitPreview() {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
-            Modifier.height(20.dp).width(25.dp),
+            Modifier
+                .height(20.dp)
+                .width(25.dp),
         ) {
             Icon(
                 imageVector = Icons.Outlined.Bolt,
                 contentDescription = stringResource(id = R.string.zaps),
-                modifier = Modifier.size(20.dp).align(Alignment.CenterStart),
+                modifier =
+                    Modifier
+                        .size(20.dp)
+                        .align(Alignment.CenterStart),
                 tint = BitcoinOrange,
             )
             Icon(
                 imageVector = Icons.Outlined.ArrowForwardIos,
                 contentDescription = stringResource(id = R.string.zaps),
-                modifier = Modifier.size(13.dp).align(Alignment.CenterEnd),
+                modifier =
+                    Modifier
+                        .size(13.dp)
+                        .align(Alignment.CenterEnd),
                 tint = BitcoinOrange,
             )
         }
