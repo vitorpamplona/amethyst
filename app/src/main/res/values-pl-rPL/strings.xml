@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="point_to_the_qr_code">Najedź na kod QR</string>
+    <string name="point_to_the_qr_code">Najedź na QR kod</string>
     <string name="show_qr">Pokaż QR kod</string>
     <string name="profile_image">Zdjęcie profilowe</string>
     <string name="your_profile_image">Twoje zdjęcie profilowe</string>
@@ -451,6 +451,7 @@
     <string name="connectivity_type_never">Nigdy</string>
     <string name="ui_feature_set_type_complete">Kompletny</string>
     <string name="ui_feature_set_type_simplified">Uproszczony</string>
+    <string name="ui_feature_set_type_performance">Wydajność</string>
     <string name="system">Automatyczny</string>
     <string name="light">Jasny</string>
     <string name="dark">Ciemny</string>
