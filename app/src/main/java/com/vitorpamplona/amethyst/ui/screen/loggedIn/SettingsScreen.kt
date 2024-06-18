@@ -147,6 +147,7 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
         persistentListOf(
             TitleExplainer(stringResource(FeatureSetType.COMPLETE.resourceId)),
             TitleExplainer(stringResource(FeatureSetType.SIMPLIFIED.resourceId)),
+            TitleExplainer(stringResource(FeatureSetType.PERFORMANCE.resourceId)),
         )
 
     val showImagesIndex = sharedPreferencesViewModel.sharedPrefs.automaticallyShowImages.screenCode
@@ -168,7 +169,8 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
         sharedPreferencesViewModel.sharedPrefs.featureSet.screenCode
 
     Column(
-        Modifier.fillMaxSize()
+        Modifier
+            .fillMaxSize()
             .padding(top = Size10dp, start = Size20dp, end = Size20dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,

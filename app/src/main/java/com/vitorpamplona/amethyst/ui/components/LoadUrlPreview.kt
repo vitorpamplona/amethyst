@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,6 +28,7 @@ import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 
@@ -55,10 +54,10 @@ fun LoadUrlPreview(
                 }
             }
 
-        Crossfade(
+        CrossfadeIfEnabled(
             targetState = urlPreviewState,
-            animationSpec = tween(durationMillis = 100),
             label = "UrlPreview",
+            accountViewModel = accountViewModel,
         ) { state ->
             when (state) {
                 is UrlPreviewState.Loaded -> {

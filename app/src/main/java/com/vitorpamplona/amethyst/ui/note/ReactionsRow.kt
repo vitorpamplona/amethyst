@@ -24,7 +24,6 @@ import android.content.Context
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -98,8 +97,10 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
@@ -177,7 +178,7 @@ private fun InnerReactionRow(
         addPadding = addPadding,
         one = {
             WatchReactionsZapsBoostsAndDisplayIfExists(baseNote) {
-                RenderShowIndividualReactionsButton(wantsToSeeReactions)
+                RenderShowIndividualReactionsButton(wantsToSeeReactions, accountViewModel)
             }
         },
         two = {
@@ -377,14 +378,18 @@ fun <T, K, P, R> LiveData<T>.combineWith(
 }
 
 @Composable
-private fun RenderShowIndividualReactionsButton(wantsToSeeReactions: MutableState<Boolean>) {
+private fun RenderShowIndividualReactionsButton(
+    wantsToSeeReactions: MutableState<Boolean>,
+    accountViewModel: AccountViewModel,
+) {
     IconButton(
         onClick = { wantsToSeeReactions.value = !wantsToSeeReactions.value },
         modifier = Size20Modifier,
     ) {
-        Crossfade(
+        CrossfadeIfEnabled(
             targetState = wantsToSeeReactions.value,
             label = "RenderShowIndividualReactionsButton",
+            accountViewModel = accountViewModel,
         ) {
             if (it) {
                 ExpandLessIcon(modifier = Size22Modifier, R.string.close_all_reactions_to_this_post)
@@ -607,7 +612,7 @@ fun ReplyReaction(
     }
 
     if (showCounter) {
-        ReplyCounter(baseNote, grayTint)
+        ReplyCounter(baseNote, grayTint, accountViewModel)
     }
 }
 
@@ -615,23 +620,29 @@ fun ReplyReaction(
 fun ReplyCounter(
     baseNote: Note,
     textColor: Color,
+    accountViewModel: AccountViewModel,
 ) {
     val repliesState by baseNote.live().replyCount.observeAsState(baseNote.replies.size)
 
-    SlidingAnimationCount(repliesState, textColor)
+    SlidingAnimationCount(repliesState, textColor, accountViewModel)
 }
 
 @Composable
 private fun SlidingAnimationCount(
     baseCount: Int,
     textColor: Color,
+    accountViewModel: AccountViewModel,
 ) {
-    AnimatedContent<Int>(
-        targetState = baseCount,
-        transitionSpec = AnimatedContentTransitionScope<Int>::transitionSpec,
-        label = "SlidingAnimationCount",
-    ) { count ->
-        TextCount(count, textColor)
+    if (accountViewModel.settings.featureSet == FeatureSetType.PERFORMANCE) {
+        TextCount(baseCount, textColor)
+    } else {
+        AnimatedContent<Int>(
+            targetState = baseCount,
+            transitionSpec = AnimatedContentTransitionScope<Int>::transitionSpec,
+            label = "SlidingAnimationCount",
+        ) { count ->
+            TextCount(count, textColor)
+        }
     }
 }
 
@@ -669,18 +680,28 @@ fun TextCount(
 fun SlidingAnimationAmount(
     amount: String,
     textColor: Color,
+    accountViewModel: AccountViewModel,
 ) {
-    AnimatedContent(
-        targetState = amount,
-        transitionSpec = AnimatedContentTransitionScope<String>::transitionSpec,
-        label = "SlidingAnimationAmount",
-    ) { count ->
+    if (accountViewModel.settings.featureSet == FeatureSetType.PERFORMANCE) {
         Text(
-            text = count,
+            text = amount,
             fontSize = Font14SP,
             color = textColor,
             maxLines = 1,
         )
+    } else {
+        AnimatedContent(
+            targetState = amount,
+            transitionSpec = AnimatedContentTransitionScope<String>::transitionSpec,
+            label = "SlidingAnimationAmount",
+        ) { count ->
+            Text(
+                text = count,
+                fontSize = Font14SP,
+                color = textColor,
+                maxLines = 1,
+            )
+        }
     }
 }
 
@@ -725,7 +746,7 @@ fun BoostReaction(
         }
     }
 
-    BoostText(baseNote, grayTint)
+    BoostText(baseNote, grayTint, accountViewModel)
 }
 
 @Composable
@@ -752,10 +773,11 @@ fun ObserveBoostIcon(
 fun BoostText(
     baseNote: Note,
     grayTint: Color,
+    accountViewModel: AccountViewModel,
 ) {
     val boostState by baseNote.live().boostCount.observeAsState(baseNote.boosts.size)
 
-    SlidingAnimationCount(boostState, grayTint)
+    SlidingAnimationCount(boostState, grayTint, accountViewModel)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -792,7 +814,7 @@ fun LikeReaction(
                 ),
     ) {
         ObserveLikeIcon(baseNote, accountViewModel) { reactionType ->
-            Crossfade(targetState = reactionType, label = "LikeIcon") {
+            CrossfadeIfEnabled(targetState = reactionType, label = "LikeIcon", accountViewModel = accountViewModel) {
                 if (it != null) {
                     RenderReactionType(it, heartSizeModifier, iconFontSize)
                 } else {
@@ -823,7 +845,7 @@ fun LikeReaction(
         }
     }
 
-    ObserveLikeText(baseNote) { reactionCount -> SlidingAnimationCount(reactionCount, grayTint) }
+    ObserveLikeText(baseNote) { reactionCount -> SlidingAnimationCount(reactionCount, grayTint, accountViewModel) }
 }
 
 @Composable
@@ -1071,7 +1093,7 @@ fun ZapReaction(
                 baseNote,
                 accountViewModel,
             ) { wasZappedByLoggedInUser ->
-                Crossfade(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon") {
+                CrossfadeIfEnabled(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon", accountViewModel = accountViewModel) {
                     if (it) {
                         ZappedIcon(iconSizeModifier)
                     } else {
@@ -1083,7 +1105,7 @@ fun ZapReaction(
     }
 
     ObserveZapAmountText(baseNote, accountViewModel) { zapAmountTxt ->
-        SlidingAnimationAmount(zapAmountTxt, grayTint)
+        SlidingAnimationAmount(zapAmountTxt, grayTint, accountViewModel)
     }
 }
 

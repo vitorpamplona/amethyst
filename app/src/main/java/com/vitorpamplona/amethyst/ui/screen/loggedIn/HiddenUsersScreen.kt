@@ -219,6 +219,7 @@ private fun HiddenWordsFeed(
     RefresheableBox(hiddenWordsViewModel, false) {
         StringFeedView(
             hiddenWordsViewModel,
+            accountViewModel,
             post = { AddMuteWordTextField(accountViewModel) },
         ) {
             MutedWordHeader(tag = it, account = accountViewModel)

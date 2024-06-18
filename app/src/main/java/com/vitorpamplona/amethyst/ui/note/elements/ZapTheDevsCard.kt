@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note.elements
 
 import android.content.Context
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -68,6 +67,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
@@ -443,7 +443,7 @@ fun ZapDonationButton(
                         }
                     }
 
-                    Crossfade(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon") {
+                    CrossfadeIfEnabled(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon", accountViewModel = accountViewModel) {
                         if (it) {
                             ZappedIcon(iconSizeModifier)
                         } else {

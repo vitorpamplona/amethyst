@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -86,6 +85,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -103,15 +103,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
-fun isMarkdown(content: String): Boolean {
-    return content.startsWith("> ") ||
+fun isMarkdown(content: String): Boolean =
+    content.startsWith("> ") ||
         content.startsWith("# ") ||
         content.contains("##") ||
         content.contains("__") ||
         content.contains("**") ||
         content.contains("```") ||
         content.contains("](")
-}
 
 @Composable
 fun RichTextViewer(
@@ -172,8 +171,8 @@ fun RenderRegularPreview() {
                 // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
                 // is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
                 is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
-                is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
-                is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
+                // is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
+                // is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
                 // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
                 is EmailSegment -> ClickableEmail(word.segmentText)
                 is PhoneSegment -> ClickablePhone(word.segmentText)
@@ -209,8 +208,8 @@ fun RenderRegularPreview2() {
             // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
             // is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
             is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
-            is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
-            is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
+            // is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
+            // is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
             // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
             is EmailSegment -> ClickableEmail(word.segmentText)
             is PhoneSegment -> ClickablePhone(word.segmentText)
@@ -270,8 +269,8 @@ fun RenderRegularPreview3() {
             // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
             is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, null, accountViewModel)
             is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
-            is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
-            is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
+            // is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
+            // is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
             // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
             is EmailSegment -> ClickableEmail(word.segmentText)
             is PhoneSegment -> ClickablePhone(word.segmentText)
@@ -424,8 +423,8 @@ private fun RenderWordWithPreview(
         is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
         is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, callbackUri, accountViewModel)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
-        is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
-        is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
+        is InvoiceSegment -> MayBeInvoicePreview(word.segmentText, accountViewModel)
+        is WithdrawSegment -> MayBeWithdrawal(word.segmentText, accountViewModel)
         is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
         is EmailSegment -> ClickableEmail(word.segmentText)
         is PhoneSegment -> ClickablePhone(word.segmentText)
@@ -598,7 +597,7 @@ fun TagLink(
             Text(text = word.segmentText)
         } else {
             Row {
-                DisplayUserFromTag(it, nav)
+                DisplayUserFromTag(it, accountViewModel, nav)
                 word.extras?.let {
                     Text(text = it)
                 }
@@ -683,11 +682,12 @@ private fun DisplayNoteFromTag(
 @Composable
 private fun DisplayUserFromTag(
     baseUser: User,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     val meta by baseUser.live().userMetadataInfo.observeAsState(baseUser.info)
 
-    Crossfade(targetState = meta, label = "DisplayUserFromTag") {
+    CrossfadeIfEnabled(targetState = meta, label = "DisplayUserFromTag", accountViewModel = accountViewModel) {
         Row {
             CreateClickableTextWithEmoji(
                 clickablePart = remember(meta) { it?.bestName() ?: baseUser.pubkeyDisplayHex() },

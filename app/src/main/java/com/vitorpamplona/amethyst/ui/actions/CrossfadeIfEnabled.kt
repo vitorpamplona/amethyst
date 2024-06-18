@@ -18,46 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note
+package com.vitorpamplona.amethyst.ui.actions
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.Size55dp
-import com.vitorpamplona.amethyst.ui.theme.StdPadding
 
 @Composable
-fun UserCompose(
-    baseUser: User,
-    overallModifier: Modifier = StdPadding,
+fun <T> CrossfadeIfEnabled(
+    targetState: T,
+    modifier: Modifier = Modifier,
+    animationSpec: FiniteAnimationSpec<Float> = tween(),
+    label: String = "Crossfade",
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    content: @Composable (T) -> Unit,
 ) {
-    Row(
-        modifier =
-            overallModifier.clickable(
-                onClick = { nav("User/${baseUser.pubkeyHex}") },
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        UserPicture(baseUser, Size55dp, accountViewModel = accountViewModel, nav = nav)
-
-        Column(modifier = remember { Modifier.padding(start = 10.dp).weight(1f) }) {
-            Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser, accountViewModel = accountViewModel) }
-
-            AboutDisplay(baseUser)
-        }
-
-        Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
-            UserActionOptions(baseUser, accountViewModel)
-        }
+    if (accountViewModel.settings.featureSet == FeatureSetType.PERFORMANCE) {
+        content(targetState)
+    } else {
+        Crossfade(targetState, modifier, animationSpec, label, content)
     }
 }

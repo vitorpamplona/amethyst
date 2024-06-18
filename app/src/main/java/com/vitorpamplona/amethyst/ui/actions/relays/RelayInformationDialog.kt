@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.relays
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,9 +49,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.service.relays.RelayStats
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableEmail
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -81,12 +82,13 @@ fun RelayInformationDialog(
 ) {
     val messages =
         remember(relayBriefInfo) {
-            RelayStats.get(url = relayBriefInfo.url).messages.snapshot().values.sortedByDescending { it.time }.toImmutableList()
-        }
-
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
+            RelayStats
+                .get(url = relayBriefInfo.url)
+                .messages
+                .snapshot()
+                .values
+                .sortedByDescending { it.time }
+                .toImmutableList()
         }
 
     Dialog(
@@ -124,10 +126,11 @@ fun RelayInformationDialog(
                     ) {
                         Column {
                             RenderRelayIcon(
-                                relayBriefInfo.displayUrl,
-                                relayInfo.icon ?: relayBriefInfo.favIcon,
-                                automaticallyShowProfilePicture,
-                                MaterialTheme.colorScheme.largeRelayIconModifier,
+                                displayUrl = relayBriefInfo.displayUrl,
+                                iconUrl = relayInfo.icon ?: relayBriefInfo.favIcon,
+                                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                                iconModifier = MaterialTheme.colorScheme.largeRelayIconModifier,
                             )
                         }
 
@@ -346,7 +349,7 @@ private fun DisplayOwnerInformation(
     nav: (String) -> Unit,
 ) {
     LoadUser(baseUserHex = userHex, accountViewModel) {
-        Crossfade(it) {
+        CrossfadeIfEnabled(it, accountViewModel = accountViewModel) {
             if (it != null) {
                 UserCompose(
                     baseUser = it,

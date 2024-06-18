@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -66,6 +65,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.DVMCard
@@ -117,6 +117,7 @@ fun NIP90ContentDiscoveryScreen(
                 onBlank = {
                     FeedEmptyWithStatus(baseNote, stringResource(R.string.dvm_looking_for_app), accountViewModel, nav)
                 },
+                accountViewModel,
             )
         }
     }
@@ -530,8 +531,7 @@ fun ZapDVMButton(
                             targetValue = zappingProgress,
                             animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
                             label = "ZapIconIndicator",
-                        )
-                            .value,
+                        ).value,
                     modifier = remember { Modifier.size(animationSize) },
                     strokeWidth = 2.dp,
                     color = grayTint,
@@ -549,7 +549,7 @@ fun ZapDVMButton(
                         }
                     }
 
-                    Crossfade(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon") {
+                    CrossfadeIfEnabled(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon", accountViewModel = accountViewModel) {
                         if (it) {
                             ZappedIcon(iconSizeModifier)
                         } else {
@@ -632,8 +632,7 @@ fun observeAppDefinition(appDefinitionNote: Note): DVMCard {
                     description = noteEvent?.appMetaData()?.about ?: "",
                     cover = noteEvent?.appMetaData()?.image?.ifBlank { null },
                 )
-            }
-            .distinctUntilChanged()
+            }.distinctUntilChanged()
             .observeAsState(
                 DVMCard(
                     name = noteEvent.appMetaData()?.name ?: "",

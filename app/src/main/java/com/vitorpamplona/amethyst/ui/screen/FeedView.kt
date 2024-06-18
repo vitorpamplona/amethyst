@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -105,12 +105,10 @@ fun RefresheableBox(
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
     val modifier =
-        remember {
-            if (enablePullRefresh) {
-                Modifier.fillMaxSize().pullRefresh(pullRefreshState)
-            } else {
-                Modifier.fillMaxSize()
-            }
+        if (enablePullRefresh) {
+            Modifier.fillMaxSize().pullRefresh(pullRefreshState)
+        } else {
+            Modifier.fillMaxSize()
         }
 
     Box(modifier) {
@@ -120,7 +118,7 @@ fun RefresheableBox(
             PullRefreshIndicator(
                 refreshing = refreshing,
                 state = pullRefreshState,
-                modifier = remember { Modifier.align(Alignment.TopCenter) },
+                modifier = Modifier.align(Alignment.TopCenter),
             )
         }
     }
@@ -176,9 +174,10 @@ fun RenderFeedState(
 ) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
-    Crossfade(
+    CrossfadeIfEnabled(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),
+        accountViewModel = accountViewModel,
     ) { state ->
         when (state) {
             is FeedState.Empty -> onEmpty()

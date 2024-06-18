@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
@@ -63,6 +62,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
@@ -176,10 +176,11 @@ fun RenderPage(
 ) {
     val feedState by videoFeedView.feedContent.collectAsStateWithLifecycle()
 
-    Crossfade(
+    CrossfadeIfEnabled(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),
         label = "RenderPage",
+        accountViewModel = accountViewModel,
     ) { state ->
         when (state) {
             is FeedState.Empty -> {
@@ -315,10 +316,10 @@ private fun RenderAuthorInformation(
             verticalArrangement = Arrangement.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                NoteUsernameDisplay(note, remember { Modifier.weight(1f) })
+                NoteUsernameDisplay(note, Modifier.weight(1f), accountViewModel = accountViewModel)
                 VideoUserOptionAction(note, accountViewModel, nav)
             }
-            if (accountViewModel.settings.featureSet != FeatureSetType.SIMPLIFIED) {
+            if (accountViewModel.settings.featureSet == FeatureSetType.COMPLETE) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ObserveDisplayNip05Status(
                         note.author!!,

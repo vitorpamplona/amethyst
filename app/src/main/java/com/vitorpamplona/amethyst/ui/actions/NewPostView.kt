@@ -324,8 +324,7 @@ fun NewPostView(
                             top = pad.calculateTopPadding(),
                             end = Size10dp,
                             bottom = pad.calculateBottomPadding(),
-                        )
-                        .fillMaxSize(),
+                        ).fillMaxSize(),
             ) {
                 Column(
                     modifier =
@@ -676,8 +675,7 @@ private fun MessageField(postViewModel: NewPostViewModel) {
                     width = 1.dp,
                     color = MaterialTheme.colorScheme.surface,
                     shape = RoundedCornerShape(8.dp),
-                )
-                .focusRequester(focusRequester)
+                ).focusRequester(focusRequester)
                 .onFocusChanged {
                     if (it.isFocused) {
                         keyboardController?.show()
@@ -1130,7 +1128,7 @@ fun FowardZapTo(
                 Spacer(modifier = DoubleHorzSpacer)
 
                 Column(modifier = Modifier.weight(1f)) {
-                    UsernameDisplay(splitItem.key)
+                    UsernameDisplay(splitItem.key, accountViewModel = accountViewModel)
                     Text(
                         text = String.format("%.0f%%", splitItem.percentage * 100),
                         maxLines = 1,

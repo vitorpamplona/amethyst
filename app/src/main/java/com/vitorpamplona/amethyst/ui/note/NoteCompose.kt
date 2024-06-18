@@ -477,7 +477,7 @@ fun InnerNoteWithReactions(
                     baseNote.event !is GenericRepostEvent &&
                     !isBoostedNote &&
                     !isQuotedNote &&
-                    accountViewModel.settings.featureSet != FeatureSetType.SIMPLIFIED
+                    accountViewModel.settings.featureSet == FeatureSetType.COMPLETE
             NoteBody(
                 baseNote = baseNote,
                 showAuthorPicture = isQuotedNote,
@@ -975,9 +975,9 @@ fun FirstUserInfoRow(
         if (showAuthorPicture) {
             NoteAuthorPicture(baseNote, nav, accountViewModel, Size25dp)
             Spacer(HalfPadding)
-            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor)
+            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
         } else {
-            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor)
+            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
         }
 
         if (isCommunityPost) {
@@ -1064,7 +1064,7 @@ private fun BadgeBox(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    if (accountViewModel.settings.featureSet != FeatureSetType.SIMPLIFIED) {
+    if (accountViewModel.settings.featureSet == FeatureSetType.COMPLETE) {
         if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
             baseNote.replyTo?.lastOrNull()?.let { RelayBadges(it, accountViewModel, nav) }
         } else {
@@ -1097,6 +1097,7 @@ private fun RenderAuthorImages(
                 ChannelNotePicture(
                     channel,
                     loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                    loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                 )
             }
         }
@@ -1107,6 +1108,7 @@ private fun RenderAuthorImages(
 private fun ChannelNotePicture(
     baseChannel: Channel,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
 ) {
     val model by
         baseChannel.live
@@ -1121,6 +1123,7 @@ private fun ChannelNotePicture(
             contentDescription = stringResource(R.string.group_picture),
             modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
             loadProfilePicture = loadProfilePicture,
+            loadRobohash = loadRobohash,
         )
     }
 }

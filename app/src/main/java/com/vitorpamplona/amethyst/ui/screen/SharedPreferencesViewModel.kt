@@ -42,7 +42,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Stable
-class SettingsState() {
+class SettingsState {
     var theme by mutableStateOf(ThemeType.SYSTEM)
     var language by mutableStateOf<String?>(null)
 
@@ -53,7 +53,7 @@ class SettingsState() {
     var automaticallyShowProfilePictures by mutableStateOf(ConnectivityType.ALWAYS)
     var dontShowPushNotificationSelector by mutableStateOf<Boolean>(false)
     var dontAskForNotificationPermissions by mutableStateOf<Boolean>(false)
-    var featureSet by mutableStateOf(FeatureSetType.COMPLETE)
+    var featureSet by mutableStateOf(FeatureSetType.SIMPLIFIED)
 
     var isOnMobileData: State<Boolean> = mutableStateOf(false)
 

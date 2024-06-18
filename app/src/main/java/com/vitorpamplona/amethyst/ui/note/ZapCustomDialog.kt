@@ -102,13 +102,9 @@ class ZapOptionstViewModel : ViewModel() {
         this.account = account
     }
 
-    fun canSend(): Boolean {
-        return value() != null
-    }
+    fun canSend(): Boolean = value() != null
 
-    fun value(): Long? {
-        return customAmount.text.trim().toLongOrNull()
-    }
+    fun value(): Long? = customAmount.text.trim().toLongOrNull()
 
     fun cancel() {}
 }
@@ -383,14 +379,14 @@ fun PayViaIntentDialog(
                             if (it.user != null) {
                                 BaseUserPicture(it.user, Size55dp, accountViewModel = accountViewModel)
                             } else {
-                                DisplayBlankAuthor(size = Size55dp)
+                                DisplayBlankAuthor(size = Size55dp, accountViewModel = accountViewModel)
                             }
 
                             Spacer(modifier = DoubleHorzSpacer)
 
                             Column(modifier = Modifier.weight(1f)) {
                                 if (it.user != null) {
-                                    UsernameDisplay(it.user)
+                                    UsernameDisplay(it.user, accountViewModel = accountViewModel)
                                 } else {
                                     Text(
                                         text = stringResource(id = R.string.wallet_number, index + 1),

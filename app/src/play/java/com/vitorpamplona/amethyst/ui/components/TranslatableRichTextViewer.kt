@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import android.content.res.Resources
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -59,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
@@ -94,7 +94,7 @@ fun TranslatableRichTextViewer(
         }
     }
 
-    Crossfade(targetState = translatedTextState) {
+    CrossfadeIfEnabled(targetState = translatedTextState, accountViewModel = accountViewModel) {
         RenderText(
             translatedTextState = it,
             content = content,
@@ -215,8 +215,7 @@ private fun TranslationMessage(
             overflow = TextOverflow.Visible,
             maxLines = 3,
         ) { spanOffset ->
-            annotatedTranslationString.getStringAnnotations(spanOffset, spanOffset).firstOrNull()?.also {
-                    span ->
+            annotatedTranslationString.getStringAnnotations(spanOffset, spanOffset).firstOrNull()?.also { span ->
                 if (span.tag == "showOriginal") {
                     onChangeWhatToShow(span.item.toBoolean())
                 } else {
@@ -373,12 +372,12 @@ fun TranslateAndWatchLanguageChanges(
         // This takes some time. Launches as a Composition scope to make sure this gets cancel if this
         // item gets out of view.
         withContext(Dispatchers.IO) {
-            LanguageTranslatorService.autoTranslate(
-                content,
-                accountViewModel.account.dontTranslateFrom,
-                accountViewModel.account.translateTo,
-            )
-                .addOnCompleteListener { task ->
+            LanguageTranslatorService
+                .autoTranslate(
+                    content,
+                    accountViewModel.account.dontTranslateFrom,
+                    accountViewModel.account.translateTo,
+                ).addOnCompleteListener { task ->
                     if (task.isSuccessful && !content.equals(task.result.result, true)) {
                         if (task.result.sourceLang != null && task.result.targetLang != null) {
                             val preference =

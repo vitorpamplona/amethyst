@@ -67,6 +67,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
@@ -146,6 +147,7 @@ fun LazyListScope.renderKind3Items(
 fun ServerConfigPreview() {
     ClickableRelayItem(
         loadProfilePicture = true,
+        loadRobohash = false,
         item =
             Kind3BasicRelaySetupInfo(
                 url = "nostr.mom",
@@ -200,14 +202,10 @@ fun LoadRelayInfo(
         )
     }
 
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
-
     ClickableRelayItem(
         item = item,
-        loadProfilePicture = automaticallyShowProfilePicture,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         onToggleDownload = onToggleDownload,
         onToggleUpload = onToggleUpload,
         onToggleFollows = onToggleFollows,
@@ -268,6 +266,7 @@ fun LoadRelayInfo(
 fun ClickableRelayItem(
     item: Kind3BasicRelaySetupInfo,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     onToggleDownload: (Kind3BasicRelaySetupInfo) -> Unit,
     onToggleUpload: (Kind3BasicRelaySetupInfo) -> Unit,
     onToggleFollows: (Kind3BasicRelaySetupInfo) -> Unit,
@@ -293,6 +292,7 @@ fun ClickableRelayItem(
                     item.briefInfo.displayUrl,
                     iconUrlFromRelayInfoDoc ?: item.briefInfo.favIcon,
                     loadProfilePicture,
+                    loadRobohash,
                     MaterialTheme.colorScheme.largeRelayIconModifier,
                 )
             }
@@ -348,17 +348,18 @@ private fun StatusRow(
         imageVector = Icons.Default.Download,
         contentDescription = stringResource(R.string.read_from_relay),
         modifier =
-            Modifier.size(15.dp)
+            Modifier
+                .size(15.dp)
                 .combinedClickable(
                     onClick = { onToggleDownload(item) },
                     onLongClick = {
                         scope.launch {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.read_from_relay),
-                                Toast.LENGTH_SHORT,
-                            )
-                                .show()
+                            Toast
+                                .makeText(
+                                    context,
+                                    context.getString(R.string.read_from_relay),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                         }
                     },
                 ),
@@ -384,17 +385,18 @@ private fun StatusRow(
         imageVector = Icons.Default.Upload,
         stringResource(R.string.write_to_relay),
         modifier =
-            Modifier.size(15.dp)
+            Modifier
+                .size(15.dp)
                 .combinedClickable(
                     onClick = { onToggleUpload(item) },
                     onLongClick = {
                         scope.launch {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.write_to_relay),
-                                Toast.LENGTH_SHORT,
-                            )
-                                .show()
+                            Toast
+                                .makeText(
+                                    context,
+                                    context.getString(R.string.write_to_relay),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                         }
                     },
                 ),
@@ -420,17 +422,18 @@ private fun StatusRow(
         imageVector = Icons.Default.SyncProblem,
         stringResource(R.string.errors),
         modifier =
-            Modifier.size(15.dp)
+            Modifier
+                .size(15.dp)
                 .combinedClickable(
                     onClick = {},
                     onLongClick = {
                         scope.launch {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.errors),
-                                Toast.LENGTH_SHORT,
-                            )
-                                .show()
+                            Toast
+                                .makeText(
+                                    context,
+                                    context.getString(R.string.errors),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                         }
                     },
                 ),
@@ -454,17 +457,18 @@ private fun StatusRow(
         imageVector = Icons.Default.DeleteSweep,
         stringResource(R.string.spam),
         modifier =
-            Modifier.size(15.dp)
+            Modifier
+                .size(15.dp)
                 .combinedClickable(
                     onClick = {},
                     onLongClick = {
                         scope.launch {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.spam),
-                                Toast.LENGTH_SHORT,
-                            )
-                                .show()
+                            Toast
+                                .makeText(
+                                    context,
+                                    context.getString(R.string.spam),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                         }
                     },
                 ),
@@ -514,18 +518,19 @@ private fun ActiveToggles(
             painterResource(R.drawable.ic_home),
             stringResource(R.string.home_feed),
             modifier =
-                Modifier.padding(horizontal = 5.dp)
+                Modifier
+                    .padding(horizontal = 5.dp)
                     .size(15.dp)
                     .combinedClickable(
                         onClick = { onToggleFollows(item) },
                         onLongClick = {
                             scope.launch {
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.home_feed),
-                                    Toast.LENGTH_SHORT,
-                                )
-                                    .show()
+                                Toast
+                                    .makeText(
+                                        context,
+                                        context.getString(R.string.home_feed),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
                             }
                         },
                     ),
@@ -547,18 +552,19 @@ private fun ActiveToggles(
             painterResource(R.drawable.ic_dm),
             stringResource(R.string.private_message_feed),
             modifier =
-                Modifier.padding(horizontal = 5.dp)
+                Modifier
+                    .padding(horizontal = 5.dp)
                     .size(15.dp)
                     .combinedClickable(
                         onClick = { onTogglePrivateDMs(item) },
                         onLongClick = {
                             scope.launch {
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.private_message_feed),
-                                    Toast.LENGTH_SHORT,
-                                )
-                                    .show()
+                                Toast
+                                    .makeText(
+                                        context,
+                                        context.getString(R.string.private_message_feed),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
                             }
                         },
                     ),
@@ -580,18 +586,19 @@ private fun ActiveToggles(
             imageVector = Icons.Default.Groups,
             contentDescription = stringResource(R.string.public_chat_feed),
             modifier =
-                Modifier.padding(horizontal = 5.dp)
+                Modifier
+                    .padding(horizontal = 5.dp)
                     .size(15.dp)
                     .combinedClickable(
                         onClick = { onTogglePublicChats(item) },
                         onLongClick = {
                             scope.launch {
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.public_chat_feed),
-                                    Toast.LENGTH_SHORT,
-                                )
-                                    .show()
+                                Toast
+                                    .makeText(
+                                        context,
+                                        context.getString(R.string.public_chat_feed),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
                             }
                         },
                     ),
@@ -613,18 +620,19 @@ private fun ActiveToggles(
             imageVector = Icons.Default.Public,
             stringResource(R.string.global_feed),
             modifier =
-                Modifier.padding(horizontal = 5.dp)
+                Modifier
+                    .padding(horizontal = 5.dp)
                     .size(15.dp)
                     .combinedClickable(
                         onClick = { onToggleGlobal(item) },
                         onLongClick = {
                             scope.launch {
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.global_feed),
-                                    Toast.LENGTH_SHORT,
-                                )
-                                    .show()
+                                Toast
+                                    .makeText(
+                                        context,
+                                        context.getString(R.string.global_feed),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
                             }
                         },
                     ),

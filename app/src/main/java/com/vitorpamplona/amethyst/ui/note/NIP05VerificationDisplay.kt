@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -54,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
@@ -132,10 +132,11 @@ fun ObserveDisplayNip05Status(
     val nip05 by baseUser.live().nip05Changes.observeAsState(baseUser.nip05())
 
     LoadStatuses(baseUser, accountViewModel) { statuses ->
-        Crossfade(
+        CrossfadeIfEnabled(
             targetState = nip05,
             modifier = columnModifier,
             label = "ObserveDisplayNip05StatusCrossfade",
+            accountViewModel = accountViewModel,
         ) {
             VerifyAndDisplayNIP05OrStatusLine(
                 it,
@@ -165,11 +166,11 @@ private fun VerifyAndDisplayNIP05OrStatusLine(
                     nip05VerificationAsAState(baseUser.info!!, baseUser.pubkeyHex, accountViewModel)
 
                 if (nip05Verified.value != true) {
-                    DisplayNIP05(nip05, nip05Verified)
+                    DisplayNIP05(nip05, nip05Verified, accountViewModel)
                 } else if (!statuses.isEmpty()) {
                     RotateStatuses(statuses, accountViewModel, nav)
                 } else {
-                    DisplayNIP05(nip05, nip05Verified)
+                    DisplayNIP05(nip05, nip05Verified, accountViewModel)
                 }
             } else {
                 if (!statuses.isEmpty()) {
@@ -271,8 +272,7 @@ fun DisplayStatus(
                         routeFor(
                             note,
                             accountViewModel.userProfile(),
-                        )
-                            ?.let { nav(it) }
+                        )?.let { nav(it) }
                     },
                 ) {
                     Icon(
@@ -294,8 +294,7 @@ fun DisplayStatus(
                         routeFor(
                             it,
                             accountViewModel.userProfile(),
-                        )
-                            ?.let { nav(it) }
+                        )?.let { nav(it) }
                     },
                 ) {
                     Icon(
@@ -314,6 +313,7 @@ fun DisplayStatus(
 private fun DisplayNIP05(
     nip05: String,
     nip05Verified: MutableState<Boolean?>,
+    accountViewModel: AccountViewModel,
 ) {
     val uri = LocalUriHandler.current
     val (user, domain) =
@@ -336,7 +336,7 @@ private fun DisplayNIP05(
         )
     }
 
-    NIP05VerifiedSymbol(nip05Verified, NIP05IconSize)
+    NIP05VerifiedSymbol(nip05Verified, NIP05IconSize, accountViewModel)
 
     ClickableText(
         text = remember(nip05) { AnnotatedString(domain) },
@@ -352,8 +352,9 @@ private fun DisplayNIP05(
 private fun NIP05VerifiedSymbol(
     nip05Verified: MutableState<Boolean?>,
     modifier: Modifier,
+    accountViewModel: AccountViewModel,
 ) {
-    Crossfade(targetState = nip05Verified.value) {
+    CrossfadeIfEnabled(targetState = nip05Verified.value, accountViewModel = accountViewModel) {
         when (it) {
             null -> NIP05CheckingIcon(modifier = modifier)
             true -> NIP05VerifiedIcon(modifier = modifier)
@@ -373,7 +374,7 @@ fun DisplayNip05ProfileStatus(
         if (nip05.split("@").size <= 2) {
             val nip05Verified = nip05VerificationAsAState(user.info!!, user.pubkeyHex, accountViewModel)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                NIP05VerifiedSymbol(nip05Verified, Size16Modifier)
+                NIP05VerifiedSymbol(nip05Verified, Size16Modifier, accountViewModel)
                 var domainPadStart = 5.dp
 
                 val (user, domain) =

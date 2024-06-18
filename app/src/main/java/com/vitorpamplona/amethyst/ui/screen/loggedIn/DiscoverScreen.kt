@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
@@ -59,6 +58,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChannelCardCompose
 import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
@@ -146,8 +146,7 @@ fun DiscoverScreen(
                         ScrollStateKeys.DISCOVER_CHATS,
                         ChannelCreateEvent.KIND,
                     ),
-                )
-                    .toImmutableList(),
+                ).toImmutableList(),
             )
         }
 
@@ -213,8 +212,7 @@ private fun DiscoverPages(
     HorizontalPager(state = pagerState) { page ->
         RefresheableBox(tabs[page].viewModel, true) {
             if (tabs[page].viewModel is NostrDiscoverMarketplaceFeedViewModel) {
-                SaveableGridFeedState(tabs[page].viewModel, scrollStateKey = tabs[page].scrollStateKey) {
-                        listState ->
+                SaveableGridFeedState(tabs[page].viewModel, scrollStateKey = tabs[page].scrollStateKey) { listState ->
                     RenderDiscoverFeed(
                         viewModel = tabs[page].viewModel,
                         routeForLastRead = tabs[page].routeForLastRead,
@@ -225,8 +223,7 @@ private fun DiscoverPages(
                     )
                 }
             } else {
-                SaveableFeedState(tabs[page].viewModel, scrollStateKey = tabs[page].scrollStateKey) {
-                        listState ->
+                SaveableFeedState(tabs[page].viewModel, scrollStateKey = tabs[page].scrollStateKey) { listState ->
                     RenderDiscoverFeed(
                         viewModel = tabs[page].viewModel,
                         routeForLastRead = tabs[page].routeForLastRead,
@@ -252,10 +249,11 @@ private fun RenderDiscoverFeed(
 ) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
-    Crossfade(
+    CrossfadeIfEnabled(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),
         label = "RenderDiscoverFeed",
+        accountViewModel = accountViewModel,
     ) { state ->
         when (state) {
             is FeedState.Empty -> {
@@ -292,10 +290,11 @@ private fun RenderDiscoverFeed(
 ) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
-    Crossfade(
+    CrossfadeIfEnabled(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),
         label = "RenderDiscoverFeed",
+        accountViewModel = accountViewModel,
     ) { state ->
         when (state) {
             is FeedState.Empty -> {

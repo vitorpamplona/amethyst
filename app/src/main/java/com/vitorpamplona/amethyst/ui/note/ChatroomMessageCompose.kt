@@ -173,7 +173,7 @@ fun NormalChatNote(
     ChatBubbleLayout(
         isLoggedInUser = isLoggedInUser,
         innerQuote = innerQuote,
-        isSimplified = accountViewModel.settings.featureSet == FeatureSetType.SIMPLIFIED,
+        isComplete = accountViewModel.settings.featureSet == FeatureSetType.COMPLETE,
         hasDetailsToShow = note.zaps.isNotEmpty() || note.zapPayments.isNotEmpty() || note.reactions.isNotEmpty(),
         drawAuthorInfo = drawAuthorInfo,
         parentBackgroundColor = parentBackgroundColor,
@@ -249,7 +249,7 @@ fun NormalChatNote(
 fun ChatBubbleLayout(
     isLoggedInUser: Boolean,
     innerQuote: Boolean,
-    isSimplified: Boolean,
+    isComplete: Boolean,
     hasDetailsToShow: Boolean,
     drawAuthorInfo: Boolean,
     parentBackgroundColor: MutableState<Color>? = null,
@@ -300,10 +300,10 @@ fun ChatBubbleLayout(
         val showDetails =
             remember {
                 mutableStateOf(
-                    if (isSimplified) {
-                        hasDetailsToShow
-                    } else {
+                    if (isComplete) {
                         true
+                    } else {
+                        hasDetailsToShow
                     },
                 )
             }
@@ -313,7 +313,7 @@ fun ChatBubbleLayout(
                 Modifier.combinedClickable(
                     onClick = {
                         if (!onClick()) {
-                            if (isSimplified) {
+                            if (!isComplete) {
                                 showDetails.value = !showDetails.value
                             }
                         }
@@ -376,7 +376,7 @@ private fun BubblePreview() {
         ChatBubbleLayout(
             isLoggedInUser = false,
             innerQuote = false,
-            isSimplified = false,
+            isComplete = true,
             hasDetailsToShow = true,
             drawAuthorInfo = true,
             parentBackgroundColor = backgroundBubbleColor,
@@ -406,7 +406,7 @@ private fun BubblePreview() {
         ChatBubbleLayout(
             isLoggedInUser = true,
             innerQuote = false,
-            isSimplified = false,
+            isComplete = true,
             hasDetailsToShow = true,
             drawAuthorInfo = true,
             parentBackgroundColor = backgroundBubbleColor,

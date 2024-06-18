@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,6 +48,7 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.elements.AddButton
@@ -195,10 +195,9 @@ private fun EmojiListOptions(
                         .metadata
                         .map { usersEmojiList.event?.isTaggedAddressableNote(emojiPackNote.idHex) }
                         .distinctUntilChanged()
-                }
-                    .observeAsState()
+                }.observeAsState()
 
-            Crossfade(targetState = hasAddedThis, label = "EmojiListOptions") {
+            CrossfadeIfEnabled(targetState = hasAddedThis, label = "EmojiListOptions", accountViewModel = accountViewModel) {
                 if (it != true) {
                     AddButton { accountViewModel.addEmojiPack(usersEmojiList, emojiPackNote) }
                 } else {

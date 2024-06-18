@@ -47,6 +47,7 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -188,7 +189,7 @@ fun LongCommunityHeader(
         Spacer(DoubleHorzSpacer)
         NoteAuthorPicture(baseNote, nav, accountViewModel, Size25dp)
         Spacer(DoubleHorzSpacer)
-        NoteUsernameDisplay(baseNote, remember { Modifier.weight(1f) })
+        NoteUsernameDisplay(baseNote, Modifier.weight(1f), accountViewModel = accountViewModel)
     }
 
     var participantUsers by
@@ -228,7 +229,7 @@ fun LongCommunityHeader(
             Spacer(DoubleHorzSpacer)
             ClickableUserPicture(it.second, Size25dp, accountViewModel)
             Spacer(DoubleHorzSpacer)
-            UsernameDisplay(it.second, remember { Modifier.weight(1f) })
+            UsernameDisplay(it.second, Modifier.weight(1f), accountViewModel = accountViewModel)
         }
     }
 
@@ -258,11 +259,6 @@ fun ShortCommunityHeader(
     val noteEvent =
         remember(noteState) { noteState?.note?.event as? CommunityDefinitionEvent } ?: return
 
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
-
     Row(verticalAlignment = Alignment.CenterVertically) {
         noteEvent.image()?.let {
             RobohashFallbackAsyncImage(
@@ -271,7 +267,8 @@ fun ShortCommunityHeader(
                 contentDescription = stringResource(R.string.profile_image),
                 contentScale = ContentScale.Crop,
                 modifier = HeaderPictureModifier,
-                loadProfilePicture = automaticallyShowProfilePicture,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
             )
         }
 

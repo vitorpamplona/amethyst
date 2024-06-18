@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
@@ -68,9 +69,9 @@ fun NoteAuthorPicture(
     modifier: Modifier = Modifier,
     onClick: ((User) -> Unit)? = null,
 ) {
-    WatchAuthorWithBlank(baseNote) {
+    WatchAuthorWithBlank(baseNote, accountViewModel = accountViewModel) {
         if (it == null) {
-            DisplayBlankAuthor(size, modifier)
+            DisplayBlankAuthor(size, modifier, accountViewModel)
         } else {
             ClickableUserPicture(it, size, accountViewModel, modifier, onClick)
         }
@@ -81,6 +82,7 @@ fun NoteAuthorPicture(
 fun DisplayBlankAuthor(
     size: Dp,
     modifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
 ) {
     val nullModifier =
         remember {
@@ -91,6 +93,7 @@ fun DisplayBlankAuthor(
         robot = "authornotfound",
         contentDescription = stringResource(R.string.unknown_author),
         modifier = nullModifier,
+        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
     )
 }
 
@@ -115,6 +118,7 @@ fun UserPicture(
             DisplayBlankAuthor(
                 size,
                 pictureModifier,
+                accountViewModel,
             )
         }
     }
@@ -350,6 +354,7 @@ fun InnerUserPicture(
         modifier = myImageModifier,
         contentScale = ContentScale.Crop,
         loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
     )
 }
 

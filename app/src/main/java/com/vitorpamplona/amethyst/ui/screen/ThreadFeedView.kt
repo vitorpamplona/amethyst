@@ -402,7 +402,7 @@ private fun FullBleedNoteCompose(
 
             Column(modifier = Modifier.padding(start = 10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    NoteUsernameDisplay(baseNote, Modifier.weight(1f))
+                    NoteUsernameDisplay(baseNote, Modifier.weight(1f), accountViewModel = accountViewModel)
 
                     val isCommunityPost =
                         remember(baseNote) {

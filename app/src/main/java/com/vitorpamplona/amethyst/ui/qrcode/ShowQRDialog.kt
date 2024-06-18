@@ -77,6 +77,7 @@ fun ShowQRDialogPreview() {
     ShowQRDialog(
         user = user,
         loadProfilePicture = false,
+        loadRobohash = false,
         onScan = {},
         onClose = {},
     )
@@ -86,6 +87,7 @@ fun ShowQRDialogPreview() {
 fun ShowQRDialog(
     user: User,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     onScan: (String) -> Unit,
     onClose: () -> Unit,
 ) {
@@ -120,11 +122,13 @@ fun ShowQRDialog(
                                     model = user.profilePicture(),
                                     contentDescription = stringResource(R.string.profile_image),
                                     modifier =
-                                        Modifier.width(100.dp)
+                                        Modifier
+                                            .width(100.dp)
                                             .height(100.dp)
                                             .clip(shape = CircleShape)
                                             .border(3.dp, MaterialTheme.colorScheme.background, CircleShape),
                                     loadProfilePicture = loadProfilePicture,
+                                    loadRobohash = loadRobohash,
                                 )
                             }
                             Row(

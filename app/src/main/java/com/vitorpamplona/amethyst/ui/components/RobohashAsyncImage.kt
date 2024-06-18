@@ -24,11 +24,12 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.compose.foundation.Image
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
@@ -51,6 +52,7 @@ import coil.request.Options
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.theme.isLight
+import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
 import java.util.Base64
 
 @Composable
@@ -58,19 +60,22 @@ fun RobohashAsyncImage(
     robot: String,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
+    loadRobohash: Boolean,
 ) {
-    val isLightTheme = MaterialTheme.colorScheme.isLight
-
-    val robotPainter =
-        remember(robot) {
-            CachedRobohash.get(robot, isLightTheme)
-        }
-
-    Image(
-        imageVector = robotPainter,
-        contentDescription = contentDescription,
-        modifier = modifier,
-    )
+    if (loadRobohash) {
+        Image(
+            imageVector = CachedRobohash.get(robot, MaterialTheme.colorScheme.isLight),
+            contentDescription = contentDescription,
+            modifier = modifier,
+        )
+    } else {
+        Image(
+            imageVector = Icons.Default.Face,
+            contentDescription = contentDescription,
+            colorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
+            modifier = modifier,
+        )
+    }
 }
 
 @Composable
@@ -85,6 +90,7 @@ fun RobohashFallbackAsyncImage(
     colorFilter: ColorFilter? = null,
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
 ) {
     if (model != null && loadProfilePicture) {
         val isBase64 = model.startsWith("data:image/jpeg;base64,")
@@ -106,9 +112,20 @@ fun RobohashFallbackAsyncImage(
             )
         } else {
             val painter =
-                rememberVectorPainter(
-                    image = CachedRobohash.get(robot, MaterialTheme.colorScheme.isLight),
-                )
+                if (loadRobohash) {
+                    rememberVectorPainter(
+                        image = CachedRobohash.get(robot, MaterialTheme.colorScheme.isLight),
+                    )
+                } else {
+                    forwardingPainter(
+                        painter =
+                            rememberVectorPainter(
+                                image = Icons.Default.Face,
+                            ),
+                        colorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
+                        alpha = 0.5f,
+                    )
+                }
 
             AsyncImage(
                 model = model,
@@ -125,16 +142,25 @@ fun RobohashFallbackAsyncImage(
             )
         }
     } else {
-        val robotPainter = CachedRobohash.get(robot, MaterialTheme.colorScheme.isLight)
-
-        Image(
-            imageVector = robotPainter,
-            contentDescription = contentDescription,
-            modifier = modifier,
-            alignment = alignment,
-            contentScale = contentScale,
-            colorFilter = colorFilter,
-        )
+        if (loadRobohash) {
+            Image(
+                imageVector = CachedRobohash.get(robot, MaterialTheme.colorScheme.isLight),
+                contentDescription = contentDescription,
+                modifier = modifier,
+                alignment = alignment,
+                contentScale = contentScale,
+                colorFilter = colorFilter,
+            )
+        } else {
+            Image(
+                imageVector = Icons.Default.Face,
+                contentDescription = contentDescription,
+                colorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
+                modifier = modifier,
+                alignment = alignment,
+                contentScale = contentScale,
+            )
+        }
     }
 }
 

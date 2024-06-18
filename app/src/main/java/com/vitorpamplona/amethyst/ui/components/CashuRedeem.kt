@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.components
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -69,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.service.CachedCashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.note.CashuIcon
 import com.vitorpamplona.amethyst.ui.note.CopyIcon
@@ -106,7 +106,7 @@ fun CashuPreview(
         }
     }
 
-    Crossfade(targetState = cashuData, label = "CashuPreview") {
+    CrossfadeIfEnabled(targetState = cashuData, label = "CashuPreview", accountViewModel = accountViewModel) {
         when (it) {
             is GenericLoadable.Loaded<CashuToken> -> CashuPreview(it.loaded, accountViewModel)
             is GenericLoadable.Error<CashuToken> ->

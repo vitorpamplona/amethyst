@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -116,7 +116,7 @@ fun RenderLiveActivityEventInner(
 
         Spacer(modifier = StdHorzSpacer)
 
-        Crossfade(targetState = status, label = "RenderLiveActivityEventInner") {
+        CrossfadeIfEnabled(targetState = status, label = "RenderLiveActivityEventInner", accountViewModel = accountViewModel) {
             when (it) {
                 LiveActivitiesEvent.STATUS_LIVE -> {
                     media?.let { CrossfadeCheckIfUrlIsOnline(it, accountViewModel) { LiveFlag() } }
@@ -205,7 +205,7 @@ fun RenderLiveActivityEventInner(
         ) {
             ClickableUserPicture(it.second, 25.dp, accountViewModel)
             Spacer(StdHorzSpacer)
-            UsernameDisplay(it.second, Modifier.weight(1f))
+            UsernameDisplay(it.second, Modifier.weight(1f), accountViewModel = accountViewModel)
             Spacer(StdHorzSpacer)
             it.first.role?.let {
                 Text(

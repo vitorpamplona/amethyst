@@ -64,6 +64,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -191,12 +192,11 @@ fun DisplayAccount(
                                 .width(55.dp)
                                 .padding(0.dp),
                     ) {
-                        val automaticallyShowProfilePicture =
-                            remember {
-                                accountViewModel.settings.showProfilePictures.value
-                            }
-
-                        AccountPicture(it, automaticallyShowProfilePicture)
+                        AccountPicture(
+                            it,
+                            accountViewModel.settings.showProfilePictures.value,
+                            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                        )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) { AccountName(acc, it) }
@@ -232,6 +232,7 @@ private fun ActiveMarker(
 private fun AccountPicture(
     user: User,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
 ) {
     val profilePicture by user.live().profilePictureChanges.observeAsState()
 
@@ -241,6 +242,7 @@ private fun AccountPicture(
         contentDescription = stringResource(R.string.profile_image),
         modifier = AccountPictureModifier,
         loadProfilePicture = loadProfilePicture,
+        loadRobohash = loadRobohash,
     )
 }
 

@@ -59,6 +59,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
@@ -493,7 +494,7 @@ private fun BoxedAuthor(
     accountViewModel: AccountViewModel,
 ) {
     Box(modifier = Size35Modifier.clickable(onClick = { nav(authorRouteFor(note)) })) {
-        WatchAuthorWithBlank(note, Size35Modifier) { author ->
+        WatchAuthorWithBlank(note, Size35Modifier, accountViewModel) { author ->
             WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
                 author,
                 accountViewModel,
@@ -510,7 +511,7 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
     if (author != null) {
         WatchUserMetadataAndFollowsAndRenderUserProfilePicture(author, accountViewModel)
     } else {
-        DisplayBlankAuthor(Size35dp)
+        DisplayBlankAuthor(Size35dp, accountViewModel = accountViewModel)
     }
 }
 
@@ -520,7 +521,6 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
     accountViewModel: AccountViewModel,
 ) {
     WatchUserMetadata(author) { baseUserPicture ->
-        // Crossfade(targetState = baseUserPicture) { userPicture ->
         RobohashFallbackAsyncImage(
             robot = author.pubkeyHex,
             model = baseUserPicture,
@@ -528,18 +528,16 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
             modifier = MaterialTheme.colorScheme.profile35dpModifier,
             contentScale = ContentScale.Crop,
             loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         )
-        // }
     }
 
     WatchUserFollows(author.pubkeyHex, accountViewModel) { isFollowing ->
-        // Crossfade(targetState = isFollowing) {
         if (isFollowing) {
             Box(modifier = Size35Modifier, contentAlignment = Alignment.TopEnd) {
                 FollowingIcon(Size10dp)
             }
         }
-        // }
     }
 }
 

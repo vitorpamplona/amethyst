@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.widget.Toast
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -89,6 +88,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.ServerOption
@@ -646,7 +646,7 @@ fun ChatroomHeader(
                 )
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
-                    UsernameDisplay(baseUser)
+                    UsernameDisplay(baseUser, accountViewModel = accountViewModel)
                 }
             }
         }
@@ -678,7 +678,7 @@ fun GroupChatroomHeader(
                 )
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
-                    RoomNameOnlyDisplay(room, Modifier, FontWeight.Bold, accountViewModel.userProfile())
+                    RoomNameOnlyDisplay(room, Modifier, FontWeight.Bold, accountViewModel)
                     DisplayUserSetAsSubject(room, accountViewModel, FontWeight.Normal)
                 }
             }
@@ -892,17 +892,18 @@ fun RoomNameOnlyDisplay(
     room: ChatroomKey,
     modifier: Modifier,
     fontWeight: FontWeight = FontWeight.Bold,
-    loggedInUser: User,
+    accountViewModel: AccountViewModel,
 ) {
     val roomSubject by
-        loggedInUser
+        accountViewModel
+            .userProfile()
             .live()
             .messages
             .map { it.user.privateChatrooms[room]?.subject }
             .distinctUntilChanged()
-            .observeAsState(loggedInUser.privateChatrooms[room]?.subject)
+            .observeAsState(accountViewModel.userProfile().privateChatrooms[room]?.subject)
 
-    Crossfade(targetState = roomSubject, modifier) {
+    CrossfadeIfEnabled(targetState = roomSubject, modifier, accountViewModel = accountViewModel) {
         if (it != null && it.isNotBlank()) {
             DisplayRoomSubject(it, fontWeight)
         }

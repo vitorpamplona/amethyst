@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -763,11 +764,6 @@ fun ShortChannelHeader(
     val channelState by baseChannel.live.observeAsState()
     val channel = channelState?.channel ?: return
 
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
-
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (channel is LiveActivitiesChannel) {
             channel.creator?.let {
@@ -786,7 +782,8 @@ fun ShortChannelHeader(
                     contentDescription = stringResource(R.string.profile_image),
                     contentScale = ContentScale.Crop,
                     modifier = HeaderPictureModifier,
-                    loadProfilePicture = automaticallyShowProfilePicture,
+                    loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                    loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                 )
             }
         }
@@ -902,7 +899,7 @@ fun LongChannelHeader(
                 Spacer(DoubleHorzSpacer)
                 NoteAuthorPicture(note, nav, accountViewModel, Size25dp)
                 Spacer(DoubleHorzSpacer)
-                NoteUsernameDisplay(note, remember { Modifier.weight(1f) })
+                NoteUsernameDisplay(note, Modifier.weight(1f), accountViewModel = accountViewModel)
             }
 
             Row(
@@ -963,7 +960,7 @@ fun LongChannelHeader(
                 Spacer(DoubleHorzSpacer)
                 ClickableUserPicture(it.second, Size25dp, accountViewModel)
                 Spacer(DoubleHorzSpacer)
-                UsernameDisplay(it.second, remember { Modifier.weight(1f) })
+                UsernameDisplay(it.second, Modifier.weight(1f), accountViewModel = accountViewModel)
             }
         }
     }

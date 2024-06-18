@@ -86,6 +86,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.service.relays.RelayPoolStatus
@@ -131,11 +132,6 @@ fun DrawerContent(
         Unit
     }
 
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
-
     ModalDrawerSheet(
         drawerContainerColor = MaterialTheme.colorScheme.background,
         drawerTonalElevation = 0.dp,
@@ -174,7 +170,8 @@ fun DrawerContent(
             BottomContent(
                 accountViewModel.account.userProfile(),
                 drawerState,
-                automaticallyShowProfilePicture,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                 nav,
             )
         }
@@ -243,6 +240,7 @@ fun ProfileContentTemplate(
                         .border(3.dp, MaterialTheme.colorScheme.background, CircleShape)
                         .clickable(onClick = onClick),
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
             )
 
             if (bestDisplayName != null) {
@@ -746,6 +744,7 @@ fun BottomContent(
     user: User,
     drawerState: DrawerState,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     nav: (String) -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -804,6 +803,7 @@ fun BottomContent(
         ShowQRDialog(
             user,
             loadProfilePicture = loadProfilePicture,
+            loadRobohash = loadRobohash,
             onScan = {
                 dialogOpen = false
                 coroutineScope.launch { drawerState.close() }

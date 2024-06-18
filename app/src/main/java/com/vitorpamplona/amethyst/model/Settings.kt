@@ -34,17 +34,20 @@ data class Settings(
     val automaticallyShowProfilePictures: ConnectivityType = ConnectivityType.ALWAYS,
     val dontShowPushNotificationSelector: Boolean = false,
     val dontAskForNotificationPermissions: Boolean = false,
-    val featureSet: FeatureSetType = FeatureSetType.COMPLETE,
+    val featureSet: FeatureSetType = FeatureSetType.SIMPLIFIED,
 )
 
-enum class ThemeType(val screenCode: Int, val resourceId: Int) {
+enum class ThemeType(
+    val screenCode: Int,
+    val resourceId: Int,
+) {
     SYSTEM(0, R.string.system),
     LIGHT(1, R.string.light),
     DARK(2, R.string.dark),
 }
 
-fun parseThemeType(code: Int?): ThemeType {
-    return when (code) {
+fun parseThemeType(code: Int?): ThemeType =
+    when (code) {
         ThemeType.SYSTEM.screenCode -> ThemeType.SYSTEM
         ThemeType.LIGHT.screenCode -> ThemeType.LIGHT
         ThemeType.DARK.screenCode -> ThemeType.DARK
@@ -52,21 +55,28 @@ fun parseThemeType(code: Int?): ThemeType {
             ThemeType.SYSTEM
         }
     }
-}
 
-enum class ConnectivityType(val prefCode: Boolean?, val screenCode: Int, val resourceId: Int) {
+enum class ConnectivityType(
+    val prefCode: Boolean?,
+    val screenCode: Int,
+    val resourceId: Int,
+) {
     ALWAYS(null, 0, R.string.connectivity_type_always),
     WIFI_ONLY(true, 1, R.string.connectivity_type_wifi_only),
     NEVER(false, 2, R.string.connectivity_type_never),
 }
 
-enum class FeatureSetType(val screenCode: Int, val resourceId: Int) {
+enum class FeatureSetType(
+    val screenCode: Int,
+    val resourceId: Int,
+) {
     COMPLETE(0, R.string.ui_feature_set_type_complete),
     SIMPLIFIED(1, R.string.ui_feature_set_type_simplified),
+    PERFORMANCE(2, R.string.ui_feature_set_type_performance),
 }
 
-fun parseConnectivityType(code: Boolean?): ConnectivityType {
-    return when (code) {
+fun parseConnectivityType(code: Boolean?): ConnectivityType =
+    when (code) {
         ConnectivityType.ALWAYS.prefCode -> ConnectivityType.ALWAYS
         ConnectivityType.WIFI_ONLY.prefCode -> ConnectivityType.WIFI_ONLY
         ConnectivityType.NEVER.prefCode -> ConnectivityType.NEVER
@@ -74,10 +84,9 @@ fun parseConnectivityType(code: Boolean?): ConnectivityType {
             ConnectivityType.ALWAYS
         }
     }
-}
 
-fun parseConnectivityType(screenCode: Int): ConnectivityType {
-    return when (screenCode) {
+fun parseConnectivityType(screenCode: Int): ConnectivityType =
+    when (screenCode) {
         ConnectivityType.ALWAYS.screenCode -> ConnectivityType.ALWAYS
         ConnectivityType.WIFI_ONLY.screenCode -> ConnectivityType.WIFI_ONLY
         ConnectivityType.NEVER.screenCode -> ConnectivityType.NEVER
@@ -85,39 +94,40 @@ fun parseConnectivityType(screenCode: Int): ConnectivityType {
             ConnectivityType.ALWAYS
         }
     }
-}
 
-fun parseFeatureSetType(screenCode: Int): FeatureSetType {
-    return when (screenCode) {
+fun parseFeatureSetType(screenCode: Int): FeatureSetType =
+    when (screenCode) {
         FeatureSetType.COMPLETE.screenCode -> FeatureSetType.COMPLETE
         FeatureSetType.SIMPLIFIED.screenCode -> FeatureSetType.SIMPLIFIED
+        FeatureSetType.PERFORMANCE.screenCode -> FeatureSetType.PERFORMANCE
         else -> {
             FeatureSetType.COMPLETE
         }
     }
-}
 
-enum class BooleanType(val prefCode: Boolean?, val screenCode: Int, val reourceId: Int) {
+enum class BooleanType(
+    val prefCode: Boolean?,
+    val screenCode: Int,
+    val reourceId: Int,
+) {
     ALWAYS(null, 0, R.string.connectivity_type_always),
     NEVER(false, 1, R.string.connectivity_type_never),
 }
 
-fun parseBooleanType(code: Boolean?): BooleanType {
-    return when (code) {
+fun parseBooleanType(code: Boolean?): BooleanType =
+    when (code) {
         BooleanType.ALWAYS.prefCode -> BooleanType.ALWAYS
         BooleanType.NEVER.prefCode -> BooleanType.NEVER
         else -> {
             BooleanType.ALWAYS
         }
     }
-}
 
-fun parseBooleanType(screenCode: Int): BooleanType {
-    return when (screenCode) {
+fun parseBooleanType(screenCode: Int): BooleanType =
+    when (screenCode) {
         BooleanType.ALWAYS.screenCode -> BooleanType.ALWAYS
         BooleanType.NEVER.screenCode -> BooleanType.NEVER
         else -> {
             BooleanType.ALWAYS
         }
     }
-}

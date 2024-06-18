@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
@@ -178,6 +179,7 @@ fun RenderRelay(
             displayUrl = relay.displayUrl,
             iconUrl = relayInfo?.icon ?: relay.favIcon,
             loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         )
     }
 }
@@ -187,6 +189,7 @@ fun RenderRelayIcon(
     displayUrl: String,
     iconUrl: String?,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     iconModifier: Modifier = MaterialTheme.colorScheme.relayIconModifier,
 ) {
     RobohashFallbackAsyncImage(
@@ -196,5 +199,6 @@ fun RenderRelayIcon(
         colorFilter = RelayIconFilter,
         modifier = iconModifier,
         loadProfilePicture = loadProfilePicture,
+        loadRobohash = loadRobohash,
     )
 }

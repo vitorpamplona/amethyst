@@ -74,6 +74,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.vitorpamplona.amethyst.R
@@ -141,7 +142,6 @@ fun MainScreen(
         }
 
     val navController = rememberNavController()
-    val navState = navController.currentBackStackEntryAsState()
 
     val orientation = LocalConfiguration.current.orientation
     val currentDrawerState = drawerState.currentValue
@@ -165,9 +165,6 @@ fun MainScreen(
             }
         }
 
-    DisplayErrorMessages(accountViewModel)
-    DisplayNotifyMessages(accountViewModel, nav)
-
     val navPopBack =
         remember(navController) {
             {
@@ -176,7 +173,10 @@ fun MainScreen(
             }
         }
 
-    val followLists: FollowListViewModel =
+    DisplayErrorMessages(accountViewModel)
+    DisplayNotifyMessages(accountViewModel, nav)
+
+    val followListsViewModel: FollowListViewModel =
         viewModel(
             key = "FollowListViewModel",
             factory = FollowListViewModel.Factory(accountViewModel.account),
@@ -297,52 +297,6 @@ fun MainScreen(
             }
         }
 
-    val bottomBarHeightPx = with(LocalDensity.current) { 50.dp.roundToPx().toFloat() }
-    val bottomBarOffsetHeightPx = remember { mutableFloatStateOf(0f) }
-    val shouldShow = remember { mutableStateOf(true) }
-
-    val nestedScrollConnection =
-        remember {
-            object : NestedScrollConnection {
-                override fun onPreScroll(
-                    available: Offset,
-                    source: NestedScrollSource,
-                ): Offset {
-                    val newOffset = bottomBarOffsetHeightPx.floatValue + available.y
-
-                    if (accountViewModel.settings.automaticallyHideNavigationBars == BooleanType.ALWAYS) {
-                        val newBottomBarOffset =
-                            if (navState.value?.destination?.route !in InvertedLayouts) {
-                                newOffset.coerceIn(-bottomBarHeightPx, 0f)
-                            } else {
-                                newOffset.coerceIn(0f, bottomBarHeightPx)
-                            }
-
-                        if (newBottomBarOffset != bottomBarOffsetHeightPx.floatValue) {
-                            bottomBarOffsetHeightPx.floatValue = newBottomBarOffset
-                        }
-                    } else {
-                        if (abs(bottomBarOffsetHeightPx.floatValue) > 0.1) {
-                            bottomBarOffsetHeightPx.floatValue = 0f
-                        }
-                    }
-
-                    val newShouldShow = abs(bottomBarOffsetHeightPx.floatValue) < bottomBarHeightPx / 2.0f
-
-                    if (shouldShow.value != newShouldShow) {
-                        shouldShow.value = newShouldShow
-                    }
-
-                    return Offset.Zero
-                }
-            }
-        }
-
-    WatchNavStateToUpdateBarVisibility(navState) {
-        bottomBarOffsetHeightPx.floatValue = 0f
-        shouldShow.value = true
-    }
-
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -350,87 +304,29 @@ fun MainScreen(
             BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }
         },
         content = {
-            Scaffold(
-                // containerColor = Color.Unspecified,
-                modifier =
-                    Modifier
-                        .statusBarsPadding()
-                        .nestedScroll(nestedScrollConnection),
-                bottomBar = {
-                    AnimatedContent(
-                        targetState = shouldShow.value,
-                        transitionSpec = AnimatedContentTransitionScope<Boolean>::bottomBarTransitionSpec,
-                        label = "BottomBarAnimatedContent",
-                    ) { isVisible ->
-                        if (isVisible) {
-                            AppBottomBar(accountViewModel, navState, navBottomRow)
-                        }
-                    }
-                },
-                topBar = {
-                    AnimatedContent(
-                        targetState = shouldShow.value,
-                        transitionSpec = AnimatedContentTransitionScope<Boolean>::topBarTransitionSpec,
-                        label = "TopBarAnimatedContent",
-                    ) { isVisible ->
-                        if (isVisible) {
-                            AppTopBar(
-                                followLists,
-                                navState,
-                                drawerState,
-                                accountViewModel,
-                                nav = nav,
-                                navPopBack,
-                            )
-                        }
-                    }
-                },
-                floatingActionButton = {
-                    AnimatedVisibility(
-                        visible = shouldShow.value,
-                        enter = remember { scaleIn() },
-                        exit = remember { scaleOut() },
-                    ) {
-                        Box(
-                            modifier = Modifier.defaultMinSize(minWidth = 55.dp, minHeight = 55.dp),
-                        ) {
-                            FloatingButtons(
-                                navState,
-                                accountViewModel,
-                                accountStateViewModel,
-                                nav,
-                                navBottomRow,
-                            )
-                        }
-                    }
-                },
-            ) {
-                Column(
-                    modifier =
-                        Modifier.padding(
-                            top = it.calculateTopPadding(),
-                            bottom = it.calculateBottomPadding(),
-                        ),
-                ) {
-                    AppNavigation(
-                        homeFeedViewModel = homeFeedViewModel,
-                        repliesFeedViewModel = repliesFeedViewModel,
-                        knownFeedViewModel = knownFeedViewModel,
-                        newFeedViewModel = newFeedViewModel,
-                        videoFeedViewModel = videoFeedViewModel,
-                        discoverNip89FeedViewModel = discoverNIP89FeedViewModel,
-                        discoverMarketplaceFeedViewModel = discoverMarketplaceFeedViewModel,
-                        discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
-                        discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
-                        discoveryChatFeedViewModel = discoveryChatFeedViewModel,
-                        notifFeedViewModel = notifFeedViewModel,
-                        userReactionsStatsModel = userReactionsStatsModel,
-                        navController = navController,
-                        accountViewModel = accountViewModel,
-                        sharedPreferencesViewModel = sharedPreferencesViewModel,
-                    )
-                }
-            }
+            MainScaffold(
+                navController = navController,
+                navBottomRow = navBottomRow,
+                navPopBack = navPopBack,
+                openDrawer = { scope.launch { drawerState.open() } },
+                accountStateViewModel = accountStateViewModel,
+                userReactionsStatsModel = userReactionsStatsModel,
+                followListsViewModel = followListsViewModel,
+                homeFeedViewModel = homeFeedViewModel,
+                repliesFeedViewModel = repliesFeedViewModel,
+                knownFeedViewModel = knownFeedViewModel,
+                newFeedViewModel = newFeedViewModel,
+                videoFeedViewModel = videoFeedViewModel,
+                discoverNIP89FeedViewModel = discoverNIP89FeedViewModel,
+                discoverMarketplaceFeedViewModel = discoverMarketplaceFeedViewModel,
+                discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
+                discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
+                discoveryChatFeedViewModel = discoveryChatFeedViewModel,
+                notifFeedViewModel = notifFeedViewModel,
+                sharedPreferencesViewModel = sharedPreferencesViewModel,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
         },
     )
 
@@ -451,6 +347,168 @@ fun MainScreen(
             AccountSwitchBottomSheet(
                 accountViewModel = accountViewModel,
                 accountStateViewModel = accountStateViewModel,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MainScaffold(
+    navController: NavHostController,
+    navBottomRow: (Route, Boolean) -> Unit,
+    navPopBack: () -> Unit,
+    openDrawer: () -> Unit,
+    accountStateViewModel: AccountStateViewModel,
+    userReactionsStatsModel: UserReactionsViewModel,
+    followListsViewModel: FollowListViewModel,
+    homeFeedViewModel: NostrHomeFeedViewModel,
+    repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
+    knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
+    newFeedViewModel: NostrChatroomListNewFeedViewModel,
+    videoFeedViewModel: NostrVideoFeedViewModel,
+    discoverNIP89FeedViewModel: NostrDiscoverNIP89FeedViewModel,
+    discoverMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel,
+    discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
+    discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
+    discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
+    notifFeedViewModel: NotificationViewModel,
+    sharedPreferencesViewModel: SharedPreferencesViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val navState = navController.currentBackStackEntryAsState()
+
+    val shouldShow = remember { mutableStateOf(true) }
+
+    val modifier =
+        if (accountViewModel.settings.automaticallyHideNavigationBars == BooleanType.ALWAYS) {
+            val bottomBarHeightPx = with(LocalDensity.current) { 50.dp.roundToPx().toFloat() }
+            val bottomBarOffsetHeightPx = remember { mutableFloatStateOf(0f) }
+
+            val nestedScrollConnection =
+                remember {
+                    object : NestedScrollConnection {
+                        override fun onPreScroll(
+                            available: Offset,
+                            source: NestedScrollSource,
+                        ): Offset {
+                            val newOffset = bottomBarOffsetHeightPx.floatValue + available.y
+
+                            if (accountViewModel.settings.automaticallyHideNavigationBars == BooleanType.ALWAYS) {
+                                val newBottomBarOffset =
+                                    if (navState.value?.destination?.route !in InvertedLayouts) {
+                                        newOffset.coerceIn(-bottomBarHeightPx, 0f)
+                                    } else {
+                                        newOffset.coerceIn(0f, bottomBarHeightPx)
+                                    }
+
+                                if (newBottomBarOffset != bottomBarOffsetHeightPx.floatValue) {
+                                    bottomBarOffsetHeightPx.floatValue = newBottomBarOffset
+                                }
+                            } else {
+                                if (abs(bottomBarOffsetHeightPx.floatValue) > 0.1) {
+                                    bottomBarOffsetHeightPx.floatValue = 0f
+                                }
+                            }
+
+                            val newShouldShow = abs(bottomBarOffsetHeightPx.floatValue) < bottomBarHeightPx / 2.0f
+
+                            if (shouldShow.value != newShouldShow) {
+                                shouldShow.value = newShouldShow
+                            }
+
+                            return Offset.Zero
+                        }
+                    }
+                }
+
+            WatchNavStateToUpdateBarVisibility(navState) {
+                bottomBarOffsetHeightPx.floatValue = 0f
+                shouldShow.value = true
+            }
+
+            Modifier
+                .statusBarsPadding()
+                .nestedScroll(nestedScrollConnection)
+        } else {
+            Modifier
+                .statusBarsPadding()
+        }
+
+    Scaffold(
+        modifier = modifier,
+        bottomBar = {
+            AnimatedContent(
+                targetState = shouldShow.value,
+                transitionSpec = AnimatedContentTransitionScope<Boolean>::bottomBarTransitionSpec,
+                label = "BottomBarAnimatedContent",
+            ) { isVisible ->
+                if (isVisible) {
+                    AppBottomBar(accountViewModel, navState, navBottomRow)
+                }
+            }
+        },
+        topBar = {
+            AnimatedContent(
+                targetState = shouldShow.value,
+                transitionSpec = AnimatedContentTransitionScope<Boolean>::topBarTransitionSpec,
+                label = "TopBarAnimatedContent",
+            ) { isVisible ->
+                if (isVisible) {
+                    AppTopBar(
+                        followListsViewModel,
+                        navState,
+                        openDrawer,
+                        accountViewModel,
+                        nav = nav,
+                        navPopBack,
+                    )
+                }
+            }
+        },
+        floatingActionButton = {
+            AnimatedVisibility(
+                visible = shouldShow.value,
+                enter = remember { scaleIn() },
+                exit = remember { scaleOut() },
+            ) {
+                Box(
+                    modifier = Modifier.defaultMinSize(minWidth = 55.dp, minHeight = 55.dp),
+                ) {
+                    FloatingButtons(
+                        navState,
+                        accountViewModel,
+                        accountStateViewModel,
+                        nav,
+                        navBottomRow,
+                    )
+                }
+            }
+        },
+    ) {
+        Column(
+            modifier =
+                Modifier.padding(
+                    top = it.calculateTopPadding(),
+                    bottom = it.calculateBottomPadding(),
+                ),
+        ) {
+            AppNavigation(
+                homeFeedViewModel = homeFeedViewModel,
+                repliesFeedViewModel = repliesFeedViewModel,
+                knownFeedViewModel = knownFeedViewModel,
+                newFeedViewModel = newFeedViewModel,
+                videoFeedViewModel = videoFeedViewModel,
+                discoverNip89FeedViewModel = discoverNIP89FeedViewModel,
+                discoverMarketplaceFeedViewModel = discoverMarketplaceFeedViewModel,
+                discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
+                discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
+                discoveryChatFeedViewModel = discoveryChatFeedViewModel,
+                notifFeedViewModel = notifFeedViewModel,
+                userReactionsStatsModel = userReactionsStatsModel,
+                navController = navController,
+                accountViewModel = accountViewModel,
+                sharedPreferencesViewModel = sharedPreferencesViewModel,
             )
         }
     }

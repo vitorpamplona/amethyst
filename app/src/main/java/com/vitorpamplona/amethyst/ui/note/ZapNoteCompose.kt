@@ -65,7 +65,10 @@ fun ZapNoteCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val baseNoteRequest by baseReqResponse.zapRequest.live().metadata.observeAsState()
+    val baseNoteRequest by baseReqResponse.zapRequest
+        .live()
+        .metadata
+        .observeAsState()
 
     var baseAuthor by remember { mutableStateOf<User?>(null) }
 
@@ -115,7 +118,7 @@ private fun RenderZapNote(
         Column(
             modifier = remember { Modifier.padding(start = 10.dp).weight(1f) },
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseAuthor) }
+            Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseAuthor, accountViewModel = accountViewModel) }
             Row(verticalAlignment = Alignment.CenterVertically) { AboutDisplay(baseAuthor) }
         }
 
@@ -179,7 +182,11 @@ fun ShowFollowingOrUnfollowingButton(
     accountViewModel: AccountViewModel,
 ) {
     var isFollowing by remember { mutableStateOf(false) }
-    val accountFollowsState by accountViewModel.account.userProfile().live().follows.observeAsState()
+    val accountFollowsState by accountViewModel.account
+        .userProfile()
+        .live()
+        .follows
+        .observeAsState()
 
     LaunchedEffect(key1 = accountFollowsState) {
         launch(Dispatchers.Default) {

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -117,10 +116,12 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -957,11 +958,6 @@ private fun DrawAdditionalInfo(
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
 
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
-
     user.toBestDisplayName().let {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 7.dp)) {
             CreateTextWithEmoji(
@@ -1002,7 +998,8 @@ private fun DrawAdditionalInfo(
         if (dialogOpen) {
             ShowQRDialog(
                 user,
-                automaticallyShowProfilePicture,
+                accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                 onScan = {
                     dialogOpen = false
                     nav(it)
@@ -1105,7 +1102,7 @@ private fun DrawAdditionalInfo(
         }
     }
 
-    DisplayAppRecommendations(appRecommendations, nav)
+    DisplayAppRecommendations(appRecommendations, accountViewModel, nav)
 }
 
 @Composable
@@ -1199,15 +1196,17 @@ fun DisplayLNAddress(
 @OptIn(ExperimentalLayoutApi::class)
 private fun DisplayAppRecommendations(
     appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     val feedState by appRecommendations.feedContent.collectAsStateWithLifecycle()
 
     LaunchedEffect(key1 = Unit) { appRecommendations.invalidateData() }
 
-    Crossfade(
+    CrossfadeIfEnabled(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),
+        accountViewModel = accountViewModel,
     ) { state ->
         when (state) {
             is FeedState.Loaded -> {
@@ -1274,17 +1273,17 @@ private fun DisplayBadges(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
-
     LoadAddressableNote(
         aTag = BadgeProfilesEvent.createAddressTag(baseUser.pubkeyHex),
         accountViewModel = accountViewModel,
     ) { note ->
         if (note != null) {
-            WatchAndRenderBadgeList(note, automaticallyShowProfilePicture, nav)
+            WatchAndRenderBadgeList(
+                note = note,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                nav = nav,
+            )
         }
     }
 }
@@ -1293,6 +1292,7 @@ private fun DisplayBadges(
 private fun WatchAndRenderBadgeList(
     note: AddressableNote,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     nav: (String) -> Unit,
 ) {
     val badgeList by
@@ -1303,7 +1303,7 @@ private fun WatchAndRenderBadgeList(
             .distinctUntilChanged()
             .observeAsState()
 
-    badgeList?.let { list -> RenderBadgeList(list, loadProfilePicture, nav) }
+    badgeList?.let { list -> RenderBadgeList(list, loadProfilePicture, loadRobohash, nav) }
 }
 
 @Composable
@@ -1311,13 +1311,14 @@ private fun WatchAndRenderBadgeList(
 private fun RenderBadgeList(
     list: ImmutableList<String>,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     nav: (String) -> Unit,
 ) {
     FlowRow(
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.padding(vertical = 5.dp),
     ) {
-        list.forEach { badgeAwardEvent -> LoadAndRenderBadge(badgeAwardEvent, loadProfilePicture, nav) }
+        list.forEach { badgeAwardEvent -> LoadAndRenderBadge(badgeAwardEvent, loadProfilePicture, loadRobohash, nav) }
     }
 }
 
@@ -1325,6 +1326,7 @@ private fun RenderBadgeList(
 private fun LoadAndRenderBadge(
     badgeAwardEventHex: String,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     nav: (String) -> Unit,
 ) {
     var baseNote by remember(badgeAwardEventHex) { mutableStateOf(LocalCache.getNoteIfExists(badgeAwardEventHex)) }
@@ -1337,37 +1339,40 @@ private fun LoadAndRenderBadge(
         }
     }
 
-    baseNote?.let { ObserveAndRenderBadge(it, loadProfilePicture, nav) }
+    baseNote?.let { ObserveAndRenderBadge(it, loadProfilePicture, loadRobohash, nav) }
 }
 
 @Composable
 private fun ObserveAndRenderBadge(
     it: Note,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     nav: (String) -> Unit,
 ) {
     val badgeAwardState by it.live().metadata.observeAsState()
     val baseBadgeDefinition by
         remember(badgeAwardState) { derivedStateOf { badgeAwardState?.note?.replyTo?.firstOrNull() } }
 
-    baseBadgeDefinition?.let { BadgeThumb(it, loadProfilePicture, nav, Size35dp) }
+    baseBadgeDefinition?.let { BadgeThumb(it, loadProfilePicture, loadRobohash, nav, Size35dp) }
 }
 
 @Composable
 fun BadgeThumb(
     note: Note,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     nav: (String) -> Unit,
     size: Dp,
     pictureModifier: Modifier = Modifier,
 ) {
-    BadgeThumb(note, loadProfilePicture, size, pictureModifier) { nav("Note/${note.idHex}") }
+    BadgeThumb(note, loadProfilePicture, loadRobohash, size, pictureModifier) { nav("Note/${note.idHex}") }
 }
 
 @Composable
 fun BadgeThumb(
     baseNote: Note,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     size: Dp,
     pictureModifier: Modifier = Modifier,
     onClick: ((String) -> Unit)? = null,
@@ -1379,7 +1384,7 @@ fun BadgeThumb(
                 .height(size)
         },
     ) {
-        WatchAndRenderBadgeImage(baseNote, loadProfilePicture, size, pictureModifier, onClick)
+        WatchAndRenderBadgeImage(baseNote, loadProfilePicture, loadRobohash, size, pictureModifier, onClick)
     }
 }
 
@@ -1387,6 +1392,7 @@ fun BadgeThumb(
 private fun WatchAndRenderBadgeImage(
     baseNote: Note,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     size: Dp,
     pictureModifier: Modifier,
     onClick: ((String) -> Unit)?,
@@ -1411,6 +1417,7 @@ private fun WatchAndRenderBadgeImage(
                         .width(size)
                         .height(size)
                 },
+            loadRobohash = loadRobohash,
         )
     } else {
         RobohashFallbackAsyncImage(
@@ -1432,6 +1439,7 @@ private fun WatchAndRenderBadgeImage(
                         }
                 },
             loadProfilePicture = loadProfilePicture,
+            loadRobohash = loadRobohash,
         )
     }
 }

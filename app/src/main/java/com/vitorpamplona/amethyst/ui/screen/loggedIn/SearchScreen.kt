@@ -71,6 +71,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -168,7 +169,9 @@ fun WatchAccountForSearchScreen(accountViewModel: AccountViewModel) {
 }
 
 @Stable
-class SearchBarViewModel(val account: Account) : ViewModel() {
+class SearchBarViewModel(
+    val account: Account,
+) : ViewModel() {
     var searchValue by mutableStateOf("")
 
     private var _searchResultsUsers = MutableStateFlow<List<User>>(emptyList())
@@ -198,12 +201,14 @@ class SearchBarViewModel(val account: Account) : ViewModel() {
 
         _hashtagResults.emit(findHashtags(searchValue))
         _searchResultsUsers.emit(
-            LocalCache.findUsersStartingWith(searchValue)
+            LocalCache
+                .findUsersStartingWith(searchValue)
                 .sortedWith(compareBy({ account.isFollowing(it) }, { it.toBestDisplayName() }))
                 .reversed(),
         )
         _searchResultsNotes.emit(
-            LocalCache.findNotesStartingWith(searchValue)
+            LocalCache
+                .findNotesStartingWith(searchValue)
                 .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
                 .reversed(),
         )
@@ -236,10 +241,10 @@ class SearchBarViewModel(val account: Account) : ViewModel() {
 
     fun isSearchingFun() = searchValue.isNotBlank()
 
-    class Factory(val account: Account) : ViewModelProvider.Factory {
-        override fun <SearchBarViewModel : ViewModel> create(modelClass: Class<SearchBarViewModel>): SearchBarViewModel {
-            return SearchBarViewModel(account) as SearchBarViewModel
-        }
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <SearchBarViewModel : ViewModel> create(modelClass: Class<SearchBarViewModel>): SearchBarViewModel = SearchBarViewModel(account) as SearchBarViewModel
     }
 }
 
@@ -377,11 +382,6 @@ private fun DisplaySearchResults(
 
     val hasNewMessages = remember { mutableStateOf(false) }
 
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
-
     LazyColumn(
         modifier = Modifier.fillMaxHeight(),
         contentPadding = FeedPadding,
@@ -426,7 +426,8 @@ private fun DisplaySearchResults(
                 channelLastTime = null,
                 channelLastContent = item.summary(),
                 hasNewMessages = hasNewMessages,
-                loadProfilePicture = automaticallyShowProfilePicture,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                 onClick = { nav("Channel/${item.idHex}") },
             )
 
@@ -500,7 +501,7 @@ fun UserLine(
         Column(
             modifier = Modifier.padding(start = 10.dp).weight(1f),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser) }
+            Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser, accountViewModel = accountViewModel) }
 
             AboutDisplay(baseUser)
         }

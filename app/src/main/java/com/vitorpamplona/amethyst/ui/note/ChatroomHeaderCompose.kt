@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -61,8 +60,10 @@ import androidx.lifecycle.map
 import com.patrykandpatrick.vico.core.extension.forEachIndexedExtended
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.ChatHeaderLayout
@@ -136,7 +137,7 @@ private fun ChatroomPrivateMessages(
             }
         }
 
-    Crossfade(userRoom, label = "ChatroomPrivateMessages") { room ->
+    CrossfadeIfEnabled(userRoom, label = "ChatroomPrivateMessages", accountViewModel = accountViewModel) { room ->
         if (room != null) {
             UserRoomCompose(baseNote, room, accountViewModel, nav)
         } else {
@@ -191,11 +192,6 @@ private fun ChannelRoomCompose(
 
     val hasNewMessages = remember { mutableStateOf<Boolean>(false) }
 
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
-
     WatchNotificationChanges(note, route, accountViewModel) { newHasNewMessages ->
         if (hasNewMessages.value != newHasNewMessages) {
             hasNewMessages.value = newHasNewMessages
@@ -209,7 +205,8 @@ private fun ChannelRoomCompose(
         channelLastTime = remember(note) { note.createdAt() },
         channelLastContent = remember(note, authorState) { "$authorName: $description" },
         hasNewMessages = hasNewMessages,
-        loadProfilePicture = automaticallyShowProfilePicture,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         onClick = { nav(route) },
     )
 }
@@ -305,7 +302,7 @@ fun RoomNameDisplay(
             .distinctUntilChanged()
             .observeAsState(accountViewModel.userProfile().privateChatrooms[room]?.subject)
 
-    Crossfade(targetState = roomSubject, modifier, label = "RoomNameDisplay") {
+    CrossfadeIfEnabled(targetState = roomSubject, modifier, label = "RoomNameDisplay", accountViewModel = accountViewModel) {
         if (!it.isNullOrBlank()) {
             if (room.users.size > 1) {
                 DisplayRoomSubject(it)
@@ -337,7 +334,7 @@ private fun DisplayUserAndSubject(
             maxLines = 1,
         )
         LoadUser(baseUserHex = user, accountViewModel = accountViewModel) {
-            it?.let { UsernameDisplay(it, Modifier.weight(1f)) }
+            it?.let { UsernameDisplay(it, Modifier.weight(1f), accountViewModel = accountViewModel) }
         }
     }
 }
@@ -354,14 +351,14 @@ fun DisplayUserSetAsSubject(
         // Regular Design
         Row {
             LoadUser(baseUserHex = userList[0], accountViewModel) {
-                it?.let { UsernameDisplay(it, Modifier.weight(1f), fontWeight = fontWeight) }
+                it?.let { UsernameDisplay(it, Modifier.weight(1f), fontWeight = fontWeight, accountViewModel = accountViewModel) }
             }
         }
     } else {
         Row {
             userList.take(4).forEachIndexedExtended { index, isFirst, isLast, value ->
                 LoadUser(baseUserHex = value, accountViewModel) {
-                    it?.let { ShortUsernameDisplay(baseUser = it, fontWeight = fontWeight) }
+                    it?.let { ShortUsernameDisplay(baseUser = it, fontWeight = fontWeight, accountViewModel = accountViewModel) }
                 }
 
                 if (!isLast) {
@@ -395,6 +392,7 @@ fun ShortUsernameDisplay(
     baseUser: User,
     weight: Modifier = Modifier,
     fontWeight: FontWeight = FontWeight.Bold,
+    accountViewModel: AccountViewModel,
 ) {
     val userName by
         baseUser
@@ -404,7 +402,7 @@ fun ShortUsernameDisplay(
             .distinctUntilChanged()
             .observeAsState(baseUser.toBestShortFirstName())
 
-    Crossfade(targetState = userName, modifier = weight) {
+    CrossfadeIfEnabled(targetState = userName, modifier = weight, accountViewModel = accountViewModel) {
         CreateTextWithEmoji(
             text = it,
             tags = baseUser.info?.tags,
@@ -459,6 +457,7 @@ fun ChannelName(
     channelLastContent: String?,
     hasNewMessages: MutableState<Boolean>,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     onClick: () -> Unit,
 ) {
     ChannelName(
@@ -469,6 +468,7 @@ fun ChannelName(
                 contentDescription = stringResource(R.string.channel_image),
                 modifier = AccountPictureModifier,
                 loadProfilePicture = loadProfilePicture,
+                loadRobohash = loadRobohash,
             )
         },
         channelTitle,

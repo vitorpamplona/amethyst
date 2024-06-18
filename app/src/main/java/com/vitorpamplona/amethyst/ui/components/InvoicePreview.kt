@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -54,8 +53,10 @@ import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
 import com.vitorpamplona.amethyst.service.lnurl.CachedLnInvoiceParser
 import com.vitorpamplona.amethyst.service.lnurl.InvoiceAmount
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -82,9 +83,12 @@ fun LoadValueFromInvoice(
 }
 
 @Composable
-fun MayBeInvoicePreview(lnbcWord: String) {
+fun MayBeInvoicePreview(
+    lnbcWord: String,
+    accountViewModel: AccountViewModel,
+) {
     LoadValueFromInvoice(lnbcWord = lnbcWord) { invoiceAmount ->
-        Crossfade(targetState = invoiceAmount, label = "MayBeInvoicePreview") {
+        CrossfadeIfEnabled(targetState = invoiceAmount, label = "MayBeInvoicePreview", accountViewModel = accountViewModel) {
             if (it != null) {
                 InvoicePreview(it.invoice, it.amount)
             } else {
