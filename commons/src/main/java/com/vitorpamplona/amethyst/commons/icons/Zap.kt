@@ -72,7 +72,7 @@ inline fun ImageVector.Builder.materialOutlinedPath(
     fillAlpha = fillAlpha,
     stroke = SolidColor(Color.Black),
     strokeAlpha = strokeAlpha,
-    strokeLineWidth = 1.4f,
+    strokeLineWidth = 1.3f,
     strokeLineCap = StrokeCap.Butt,
     strokeLineJoin = StrokeJoin.Bevel,
     strokeLineMiter = 1f,

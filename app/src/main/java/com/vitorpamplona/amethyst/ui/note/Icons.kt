@@ -44,8 +44,8 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Report
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.ArrowForwardIos
-import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material3.Icon
@@ -243,6 +243,7 @@ fun ReactionRowIconPreview() {
         OutlinedZapIcon(Size20Modifier)
         ZapIcon(Size20Modifier)
         ZappedIcon(Size20Modifier)
+        ShareIcon(Size20Modifier, Color.Unspecified)
     }
 }
 
@@ -271,6 +272,19 @@ fun OutlinedZapIcon(
         contentDescription = stringResource(contentDescriptor),
         tint = tint,
         modifier = modifier,
+    )
+}
+
+@Composable
+fun ShareIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+) {
+    Icon(
+        imageVector = Icons.Default.Share,
+        modifier = modifier,
+        contentDescription = stringResource(R.string.share_or_save),
+        tint = tint,
     )
 }
 
@@ -345,19 +359,6 @@ fun CommentIcon(
         imageVector = Reply,
         contentDescription = stringResource(id = R.string.reply_description),
         modifier = iconSizeModifier,
-        tint = tint,
-    )
-}
-
-@Composable
-fun ViewCountIcon(
-    modifier: Modifier,
-    tint: Color = Color.Unspecified,
-) {
-    Icon(
-        imageVector = Icons.Outlined.BarChart,
-        null,
-        modifier = modifier,
         tint = tint,
     )
 }

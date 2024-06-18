@@ -73,7 +73,6 @@ import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.RenderAllRelayList
 import com.vitorpamplona.amethyst.ui.note.ReplyReaction
-import com.vitorpamplona.amethyst.ui.note.ViewCountReaction
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
@@ -92,12 +91,10 @@ import com.vitorpamplona.amethyst.ui.theme.AuthorInfoVideoFeed
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.ui.theme.Size39Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.VideoReactionColumnPadding
-import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
@@ -443,12 +440,6 @@ fun ReactionsColumn(
             iconSizeModifier = Size40Modifier,
             animationSize = Size35dp,
             nav = nav,
-        )
-        ViewCountReaction(
-            note = baseNote,
-            grayTint = MaterialTheme.colorScheme.onBackground,
-            barChartModifier = Size39Modifier,
-            viewCountColorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
         )
     }
 }

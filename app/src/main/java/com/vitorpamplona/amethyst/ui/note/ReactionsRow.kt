@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
@@ -75,7 +76,6 @@ import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -87,13 +87,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
-import coil.compose.AsyncImage
-import coil.request.CachePolicy
-import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
@@ -109,7 +107,6 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DarkerGreen
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.Height24dpModifier
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.NoSoTinyBorders
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowExpandButton
@@ -202,13 +199,49 @@ private fun InnerReactionRow(
             ZapReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
         },
         six = {
-            // ViewCountReaction(
-            //    note = baseNote,
-            //    grayTint = MaterialTheme.colorScheme.placeholderText,
-            //    viewCountColorFilter = MaterialTheme.colorScheme.placeholderTextColorFilter,
-            // )
+            ShareReaction(
+                note = baseNote,
+                grayTint = MaterialTheme.colorScheme.placeholderText,
+            )
         },
     )
+}
+
+@Composable
+fun ShareReaction(
+    note: Note,
+    grayTint: Color,
+    barChartModifier: Modifier = Size19Modifier,
+) {
+    val context = LocalContext.current
+
+    IconButton(
+        modifier = barChartModifier,
+        onClick = {
+            val sendIntent =
+                Intent().apply {
+                    action = Intent.ACTION_SEND
+                    type = "text/plain"
+                    putExtra(
+                        Intent.EXTRA_TEXT,
+                        externalLinkForNote(note),
+                    )
+                    putExtra(
+                        Intent.EXTRA_TITLE,
+                        context.getString(R.string.quick_action_share_browser_link),
+                    )
+                }
+
+            val shareIntent =
+                Intent.createChooser(
+                    sendIntent,
+                    context.getString(R.string.quick_action_share),
+                )
+            ContextCompat.startActivity(context, shareIntent, null)
+        },
+    ) {
+        ShareIcon(barChartModifier, grayTint)
+    }
 }
 
 @Composable
@@ -244,7 +277,7 @@ private fun GenericInnerReactionRow(
 
         Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) { five() }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) { six() }
+        Row(verticalAlignment = CenterVertically, modifier = Modifier) { six() }
     }
 }
 
@@ -1199,42 +1232,6 @@ fun ObserveZapAmountText(
     } else {
         inner(showAmount(zapsState?.note?.zapsAmount))
     }
-}
-
-@Composable
-fun ViewCountReaction(
-    note: Note,
-    grayTint: Color,
-    barChartModifier: Modifier = Size19Modifier,
-    numberSizeModifier: Modifier = Height24dpModifier,
-    viewCountColorFilter: ColorFilter,
-) {
-    ViewCountIcon(barChartModifier, grayTint)
-    DrawViewCount(note, numberSizeModifier, viewCountColorFilter)
-}
-
-@Composable
-private fun DrawViewCount(
-    note: Note,
-    iconModifier: Modifier = Modifier,
-    viewCountColorFilter: ColorFilter,
-) {
-    val context = LocalContext.current
-
-    AsyncImage(
-        model =
-            remember(note) {
-                ImageRequest
-                    .Builder(context)
-                    .data("https://counter.amethyst.social/${note.idHex}.svg?label=+&color=00000000")
-                    .diskCachePolicy(CachePolicy.DISABLED)
-                    .memoryCachePolicy(CachePolicy.ENABLED)
-                    .build()
-            },
-        contentDescription = context.getString(R.string.view_count),
-        modifier = iconModifier,
-        colorFilter = viewCountColorFilter,
-    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
