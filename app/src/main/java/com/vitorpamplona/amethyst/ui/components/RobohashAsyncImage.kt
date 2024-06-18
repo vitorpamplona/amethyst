@@ -123,7 +123,6 @@ fun RobohashFallbackAsyncImage(
                                 image = Icons.Default.Face,
                             ),
                         colorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
-                        alpha = 0.5f,
                     )
                 }
 
