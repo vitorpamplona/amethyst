@@ -47,7 +47,6 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -405,11 +404,9 @@ private fun FullBleedNoteCompose(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     NoteUsernameDisplay(baseNote, Modifier.weight(1f))
 
-                    val isCommunityPost by
+                    val isCommunityPost =
                         remember(baseNote) {
-                            derivedStateOf {
-                                baseNote.event?.isTaggedAddressableKind(CommunityDefinitionEvent.KIND) == true
-                            }
+                            baseNote.event?.isTaggedAddressableKind(CommunityDefinitionEvent.KIND) == true
                         }
 
                     if (isCommunityPost) {

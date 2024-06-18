@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 
 object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
-    var usersToWatch = setOf<User>()
+    private var usersToWatch = setOf<User>()
 
     fun createUserMetadataFilter(): List<TypedFilter>? {
         if (usersToWatch.isEmpty()) return null
@@ -83,8 +83,7 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
                             ),
                     ),
                 )
-            }
-            .flatten()
+            }.flatten()
     }
 
     val userChannel =
@@ -110,8 +109,7 @@ object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
             listOfNotNull(
                 createUserMetadataFilter(),
                 createUserMetadataStatusReportFilter(),
-            )
-                .flatten()
+            ).flatten()
                 .ifEmpty { null }
     }
 

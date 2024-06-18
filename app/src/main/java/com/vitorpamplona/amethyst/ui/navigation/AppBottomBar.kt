@@ -35,7 +35,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -146,12 +145,16 @@ private fun RowScope.HasNewItemsIcon(
     navEntryState: State<NavBackStackEntry?>,
     nav: (Route, Boolean) -> Unit,
 ) {
-    val selected by
-        remember(navEntryState.value) {
-            derivedStateOf { navEntryState.value?.destination?.route?.substringBefore("?") == route.base }
-        }
+    val selected =
+        (
+            navEntryState.value
+                ?.destination
+                ?.route
+                ?.indexOf(route.base) ?: -1
+        ) > -1
 
     NavigationBarItem(
+        alwaysShowLabel = false,
         icon = {
             NotifiableIcon(
                 selected,
