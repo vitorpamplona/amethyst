@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
@@ -39,9 +38,7 @@ fun LoadUrlPreview(
     callbackUri: String? = null,
     accountViewModel: AccountViewModel,
 ) {
-    val automaticallyShowUrlPreview = remember { accountViewModel.settings.showUrlPreview.value }
-
-    if (!automaticallyShowUrlPreview) {
+    if (!accountViewModel.settings.showUrlPreview.value) {
         ClickableUrl(urlText, url)
     } else {
         val urlPreviewState by
