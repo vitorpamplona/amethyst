@@ -269,6 +269,8 @@ class AccountViewModel(
         accountChoices: Account.LiveHiddenUsers,
         followUsers: Set<HexKey>,
     ): NoteComposeReportState {
+        checkNotInMainThread()
+
         val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
         val isFromLoggedInFollow = note.author?.let { followUsers.contains(it.pubkeyHex) } ?: true
         val isPostHidden = note.isHiddenFor(accountChoices)
@@ -310,7 +312,11 @@ class AccountViewModel(
                 note.flow().metadata.stateFlow,
                 note.flow().reports.stateFlow,
             ) { hiddenUsers, followingUsers, metadata, reports ->
-                emit(isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.users))
+                val isAcceptable =
+                    withContext(Dispatchers.IO) {
+                        isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.users)
+                    }
+                emit(isAcceptable)
             }.stateIn(
                 viewModelScope,
                 SharingStarted.Eagerly,
