@@ -87,9 +87,7 @@ class Relay(
         listeners = listeners.minus(listener)
     }
 
-    fun isConnected(): Boolean {
-        return socket != null
-    }
+    fun isConnected(): Boolean = socket != null
 
     fun connect() {
         connectAndRun {
@@ -123,7 +121,8 @@ class Relay(
             lastConnectTentative = TimeUtils.now()
 
             val request =
-                Request.Builder()
+                Request
+                    .Builder()
                     .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                     .url(url.trim())
                     .build()
@@ -141,7 +140,9 @@ class Relay(
         }
     }
 
-    inner class RelayListener(val onConnected: (Relay) -> Unit) : WebSocketListener() {
+    inner class RelayListener(
+        val onConnected: (Relay) -> Unit,
+    ) : WebSocketListener() {
         override fun onOpen(
             webSocket: WebSocket,
             response: Response,
@@ -524,12 +525,11 @@ class Relay(
         writeToSocket("""["CLOSE","$subscriptionId"]""")
     }
 
-    fun isSameRelayConfig(other: RelaySetupInfo): Boolean {
-        return url == other.url &&
+    fun isSameRelayConfig(other: RelaySetupInfo): Boolean =
+        url == other.url &&
             write == other.write &&
             read == other.read &&
             activeTypes == other.feedTypes
-    }
 
     enum class StateType {
         // Websocket connected
