@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.actions
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.model.FeatureSetType
@@ -38,7 +39,9 @@ fun <T> CrossfadeIfEnabled(
     content: @Composable (T) -> Unit,
 ) {
     if (accountViewModel.settings.featureSet == FeatureSetType.PERFORMANCE) {
-        content(targetState)
+        Box(modifier) {
+            content(targetState)
+        }
     } else {
         Crossfade(targetState, modifier, animationSpec, label, content)
     }

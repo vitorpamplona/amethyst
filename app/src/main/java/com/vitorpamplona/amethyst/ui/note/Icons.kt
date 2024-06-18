@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Bolt
@@ -43,8 +44,6 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Report
-import androidx.compose.material.icons.materialIcon
-import androidx.compose.material.icons.materialPath
 import androidx.compose.material.icons.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Bolt
@@ -56,7 +55,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -66,7 +64,14 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
-import com.vitorpamplona.amethyst.commons.labels.Following
+import com.vitorpamplona.amethyst.commons.icons.Following
+import com.vitorpamplona.amethyst.commons.icons.Like
+import com.vitorpamplona.amethyst.commons.icons.Liked
+import com.vitorpamplona.amethyst.commons.icons.Reply
+import com.vitorpamplona.amethyst.commons.icons.Repost
+import com.vitorpamplona.amethyst.commons.icons.Reposted
+import com.vitorpamplona.amethyst.commons.icons.Search
+import com.vitorpamplona.amethyst.commons.icons.ZapSplit
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -153,12 +158,15 @@ fun HashCheckFailedIcon(iconSize: Dp) {
 }
 
 @Composable
-fun LikedIcon(modifier: Modifier) {
+fun LikedIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+) {
     Icon(
-        painter = painterResource(R.drawable.ic_liked),
-        null,
+        imageVector = Liked,
+        stringResource(id = R.string.like_description),
         modifier = modifier,
-        tint = Color.Unspecified,
+        tint = tint,
     )
 }
 
@@ -168,10 +176,23 @@ fun LikeIcon(
     grayTint: Color,
 ) {
     Icon(
-        painter = painterResource(R.drawable.ic_like),
+        imageVector = Like,
         contentDescription = stringResource(id = R.string.like_description),
         modifier = iconSizeModifier,
         tint = grayTint,
+    )
+}
+
+@Composable
+fun RepostIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+) {
+    Icon(
+        imageVector = Repost,
+        contentDescription = stringResource(id = R.string.boost_or_quote_description),
+        modifier = modifier,
+        tint = tint,
     )
 }
 
@@ -181,7 +202,7 @@ fun RepostedIcon(
     tint: Color = Color.Unspecified,
 ) {
     Icon(
-        painter = painterResource(R.drawable.ic_retweeted),
+        imageVector = Reposted,
         contentDescription = stringResource(id = R.string.boost_or_quote_description),
         modifier = modifier,
         tint = tint,
@@ -305,7 +326,7 @@ fun CommentIcon(
     tint: Color,
 ) {
     Icon(
-        painter = painterResource(R.drawable.ic_comment),
+        imageVector = Reply,
         contentDescription = stringResource(id = R.string.reply_description),
         modifier = iconSizeModifier,
         tint = tint,
@@ -390,7 +411,7 @@ fun SearchIcon(
     tint: Color = Color.Unspecified,
 ) {
     Icon(
-        painter = painterResource(R.drawable.ic_search),
+        imageVector = Search,
         contentDescription = stringResource(id = R.string.search_button),
         modifier = modifier,
         tint = tint,
@@ -542,7 +563,7 @@ fun ZapSplitIcon(
     tint: Color = BitcoinOrange,
 ) {
     Icon(
-        imageVector = ZapSplitVector,
+        imageVector = ZapSplit,
         contentDescription = stringResource(id = R.string.zap_split_title),
         modifier = modifier,
         tint = tint,
@@ -580,38 +601,3 @@ fun ZapSplitPreview() {
         ZapSplitIcon(tint = BitcoinOrange)
     }
 }
-
-public val ZapSplitVector: ImageVector
-    get() {
-        if (zapSplit != null) {
-            return zapSplit!!
-        }
-        zapSplit =
-            materialIcon(name = "ZapSplit") {
-                materialPath {
-                    moveTo(7.0f, 21.0f)
-                    horizontalLineToRelative(-1.0f)
-                    lineToRelative(1.0f, -7.0f)
-                    horizontalLineTo(3.5f)
-                    curveToRelative(-0.88f, 0.0f, -0.33f, -0.75f, -0.31f, -0.78f)
-                    curveTo(4.48f, 10.94f, 6.42f, 7.54f, 9.01f, 3.0f)
-                    horizontalLineToRelative(1.0f)
-                    lineToRelative(-1.0f, 7.0f)
-                    horizontalLineToRelative(3.51f)
-                    curveToRelative(0.4f, 0.0f, 0.62f, 0.19f, 0.4f, 0.66f)
-                    curveTo(8.97f, 17.55f, 7.0f, 21.0f, 7.0f, 21.0f)
-                    close()
-                    moveTo(14.59f, 16.59f)
-                    lineTo(19.17f, 12.0f)
-                    lineTo(14.59f, 7.41f)
-                    lineTo(16.0f, 6.0f)
-                    lineToRelative(6.0f, 6.0f)
-                    lineToRelative(-6.0f, 6.0f)
-                    lineToRelative(-1.41f, -1.41f)
-                    close()
-                }
-            }
-        return zapSplit!!
-    }
-
-private var zapSplit: ImageVector? = null

@@ -137,7 +137,7 @@ private fun ChatroomPrivateMessages(
             }
         }
 
-    CrossfadeIfEnabled(userRoom, label = "ChatroomPrivateMessages", accountViewModel = accountViewModel) { room ->
+    CrossfadeIfEnabled(targetState = userRoom, label = "ChatroomPrivateMessages", accountViewModel = accountViewModel) { room ->
         if (room != null) {
             UserRoomCompose(baseNote, room, accountViewModel, nav)
         } else {

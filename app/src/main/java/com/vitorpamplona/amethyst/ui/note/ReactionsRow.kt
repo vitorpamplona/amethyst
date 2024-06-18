@@ -50,7 +50,6 @@ import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -79,7 +78,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
@@ -120,8 +118,8 @@ import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightWithPadding
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiserWithPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
-import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size17Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size18dp
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
@@ -130,7 +128,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.ui.theme.TinyBorders
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.theme.placeholderTextColorFilter
 import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -205,11 +202,11 @@ private fun InnerReactionRow(
             ZapReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
         },
         six = {
-            ViewCountReaction(
-                note = baseNote,
-                grayTint = MaterialTheme.colorScheme.placeholderText,
-                viewCountColorFilter = MaterialTheme.colorScheme.placeholderTextColorFilter,
-            )
+            // ViewCountReaction(
+            //    note = baseNote,
+            //    grayTint = MaterialTheme.colorScheme.placeholderText,
+            //    viewCountColorFilter = MaterialTheme.colorScheme.placeholderTextColorFilter,
+            // )
         },
     )
 }
@@ -585,7 +582,7 @@ fun ReplyReaction(
     grayTint: Color,
     accountViewModel: AccountViewModel,
     showCounter: Boolean = true,
-    iconSizeModifier: Modifier = Size17Modifier,
+    iconSizeModifier: Modifier = Size19Modifier,
     onPress: () -> Unit,
 ) {
     IconButton(
@@ -710,7 +707,7 @@ fun BoostReaction(
     baseNote: Note,
     grayTint: Color,
     accountViewModel: AccountViewModel,
-    iconSizeModifier: Modifier = Size20Modifier,
+    iconSizeModifier: Modifier = Size19Modifier,
     iconSize: Dp = Size20dp,
     onQuotePress: () -> Unit,
     onForkPress: () -> Unit,
@@ -787,8 +784,8 @@ fun LikeReaction(
     grayTint: Color,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
-    iconSize: Dp = Size20dp,
-    heartSizeModifier: Modifier = Size16Modifier,
+    iconSize: Dp = Size18dp,
+    heartSizeModifier: Modifier = Size18Modifier,
     iconFontSize: TextUnit = Font14SP,
 ) {
     var wantsToChangeReactionSymbol by remember { mutableStateOf(false) }
@@ -1408,12 +1405,8 @@ private fun ActionableReactionButton(
         } else {
             when (reactionType) {
                 "+" -> {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_liked),
-                        null,
-                        modifier = remember { thisModifier.size(16.dp) },
-                        tint = Color.White,
-                    )
+                    LikedIcon(modifier = thisModifier.size(16.dp), tint = Color.White)
+
                     Text(
                         text = removeSymbol,
                         color = Color.White,
