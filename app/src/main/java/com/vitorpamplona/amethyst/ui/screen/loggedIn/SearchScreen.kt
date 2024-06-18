@@ -330,7 +330,7 @@ private fun SearchTextField(
                 KeyboardOptions.Default.copy(
                     capitalization = KeyboardCapitalization.Sentences,
                 ),
-            leadingIcon = { SearchIcon(modifier = Size20Modifier, Color.Unspecified) },
+            leadingIcon = { SearchIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText) },
             modifier =
                 Modifier
                     .weight(1f, true)

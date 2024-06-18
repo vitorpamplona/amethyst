@@ -59,7 +59,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -285,7 +284,7 @@ private fun SearchEditTextForJoin(
                 searchBarViewModel.updateSearchValue(it)
                 scope.launch(Dispatchers.IO) { searchTextChanges.trySend(it) }
             },
-            leadingIcon = { SearchIcon(modifier = Size20Modifier, Color.Unspecified) },
+            leadingIcon = { SearchIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText) },
             modifier =
                 Modifier
                     .weight(1f, true)
