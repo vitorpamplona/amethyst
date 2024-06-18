@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.icons.Reply
 import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.commons.icons.Reposted
 import com.vitorpamplona.amethyst.commons.icons.Search
+import com.vitorpamplona.amethyst.commons.icons.Zap
 import com.vitorpamplona.amethyst.commons.icons.ZapSplit
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
@@ -239,6 +240,7 @@ fun ReactionRowIconPreview() {
         CommentIcon(Size20Modifier, Color.Unspecified)
         RepostedIcon(Size20Modifier)
         LikeIcon(Size20Modifier, Color.Unspecified)
+        OutlinedZapIcon(Size20Modifier)
         ZapIcon(Size20Modifier)
         ZappedIcon(Size20Modifier)
     }
@@ -252,6 +254,20 @@ fun ZapIcon(
 ) {
     Icon(
         imageVector = Icons.Default.Bolt,
+        contentDescription = stringResource(contentDescriptor),
+        tint = tint,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun OutlinedZapIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+    contentDescriptor: Int = R.string.zap_description,
+) {
+    Icon(
+        imageVector = Zap,
         contentDescription = stringResource(contentDescriptor),
         tint = tint,
         modifier = modifier,

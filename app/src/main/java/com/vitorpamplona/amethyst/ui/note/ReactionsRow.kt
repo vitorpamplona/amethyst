@@ -1094,7 +1094,7 @@ fun ZapReaction(
                     if (it) {
                         ZappedIcon(iconSizeModifier)
                     } else {
-                        ZapIcon(iconSizeModifier, grayTint)
+                        OutlinedZapIcon(iconSizeModifier, grayTint)
                     }
                 }
             }
