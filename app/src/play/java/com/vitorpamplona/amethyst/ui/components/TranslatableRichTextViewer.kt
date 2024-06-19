@@ -82,7 +82,7 @@ fun TranslatableRichTextViewer(
     nav: (String) -> Unit,
 ) {
     var translatedTextState by
-        remember(content) { mutableStateOf(TranslationConfig(content, null, null, false)) }
+        remember(id, content.length) { mutableStateOf(TranslationConfig(content, null, null, false)) }
 
     TranslateAndWatchLanguageChanges(content, accountViewModel) { result ->
         if (

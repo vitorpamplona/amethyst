@@ -24,7 +24,6 @@ import android.content.Intent
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -46,6 +45,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
+import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
@@ -67,7 +67,7 @@ fun MoreOptionsButton(
 ) {
     val popupExpanded = remember { mutableStateOf(false) }
 
-    IconButton(
+    ClickableBox(
         modifier = Size24Modifier,
         onClick = { popupExpanded.value = true },
     ) {
@@ -388,8 +388,16 @@ fun WatchBookmarksFollowsAndAccount(
     accountViewModel: AccountViewModel,
     onNew: (DropDownParams) -> Unit,
 ) {
-    val followState by accountViewModel.userProfile().live().follows.observeAsState()
-    val bookmarkState by accountViewModel.userProfile().live().bookmarks.observeAsState()
+    val followState by accountViewModel
+        .userProfile()
+        .live()
+        .follows
+        .observeAsState()
+    val bookmarkState by accountViewModel
+        .userProfile()
+        .live()
+        .bookmarks
+        .observeAsState()
     val showSensitiveContent by
         accountViewModel.showSensitiveContentChanges.observeAsState(
             accountViewModel.account.showSensitiveContent,

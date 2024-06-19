@@ -34,7 +34,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -98,6 +97,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
+import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
@@ -607,24 +607,6 @@ private fun ReplyReactionWithDialog(
     }
 
     ReplyReaction(baseNote, grayTint, accountViewModel) { wantsToReplyTo = baseNote }
-}
-
-@Composable
-fun ClickableBox(
-    modifier: Modifier,
-    onClick: () -> Unit,
-    content: @Composable () -> Unit,
-) {
-    Box(
-        modifier.clickable(
-            role = Role.Button,
-            interactionSource = remember { MutableInteractionSource() },
-            indication = rememberRipple(bounded = false, radius = Size24dp),
-            onClick = onClick,
-        ),
-    ) {
-        content()
-    }
 }
 
 @Composable
