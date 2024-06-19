@@ -34,6 +34,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -51,7 +52,6 @@ import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
@@ -215,7 +215,7 @@ fun ShareReaction(
 ) {
     val context = LocalContext.current
 
-    IconButton(
+    ClickableBox(
         modifier = barChartModifier,
         onClick = {
             val sendIntent =
@@ -412,7 +412,7 @@ private fun RenderShowIndividualReactionsButton(
     wantsToSeeReactions: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
 ) {
-    IconButton(
+    ClickableBox(
         onClick = { wantsToSeeReactions.value = !wantsToSeeReactions.value },
         modifier = Size20Modifier,
     ) {
@@ -610,6 +610,24 @@ private fun ReplyReactionWithDialog(
 }
 
 @Composable
+fun ClickableBox(
+    modifier: Modifier,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier.clickable(
+            role = Role.Button,
+            interactionSource = remember { MutableInteractionSource() },
+            indication = rememberRipple(bounded = false, radius = Size24dp),
+            onClick = onClick,
+        ),
+    ) {
+        content()
+    }
+}
+
+@Composable
 fun ReplyReaction(
     baseNote: Note,
     grayTint: Color,
@@ -618,7 +636,7 @@ fun ReplyReaction(
     iconSizeModifier: Modifier = Size19Modifier,
     onPress: () -> Unit,
 ) {
-    IconButton(
+    ClickableBox(
         modifier = iconSizeModifier,
         onClick = {
             if (baseNote.isDraft()) {
@@ -626,15 +644,15 @@ fun ReplyReaction(
                     R.string.draft_note,
                     R.string.it_s_not_possible_to_reply_to_a_draft_note,
                 )
-                return@IconButton
-            }
-            if (accountViewModel.isWriteable()) {
-                onPress()
             } else {
-                accountViewModel.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_reply,
-                )
+                if (accountViewModel.isWriteable()) {
+                    onPress()
+                } else {
+                    accountViewModel.toast(
+                        R.string.read_only_user,
+                        R.string.login_with_a_private_key_to_be_able_to_reply,
+                    )
+                }
             }
         },
     ) {
@@ -747,9 +765,11 @@ fun BoostReaction(
 ) {
     var wantsToBoost by remember { mutableStateOf(false) }
 
-    IconButton(
+    ClickableBox(
         modifier = iconSizeModifier,
-        onClick = { accountViewModel.tryBoost(baseNote) { wantsToBoost = true } },
+        onClick = {
+            accountViewModel.tryBoost(baseNote) { wantsToBoost = true }
+        },
     ) {
         ObserveBoostIcon(baseNote, accountViewModel) { hasBoosted ->
             RepostedIcon(iconSizeModifier, if (hasBoosted) Color.Unspecified else grayTint)
