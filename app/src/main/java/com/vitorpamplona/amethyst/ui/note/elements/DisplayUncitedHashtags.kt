@@ -37,7 +37,7 @@ import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 @Composable
 fun DisplayUncitedHashtags(
@@ -56,35 +56,34 @@ fun DisplayUncitedHashtags(
 ) {
     val unusedHashtags by
         produceState(initialValue = emptyList<String>()) {
-            withContext(Dispatchers.Default) {
-                val state = CachedRichTextParser.parseText(content, event.tags.toImmutableListOfLists())
+            val tagsInEvent = event.hashtags()
+            if (tagsInEvent.isNotEmpty()) {
+                launch(Dispatchers.Default) {
+                    val state = CachedRichTextParser.parseText(content, event.tags.toImmutableListOfLists())
 
-                val tagsInEvent = event.hashtags()
-
-                if (tagsInEvent.isEmpty()) return@withContext
-
-                val tagsInContent =
-                    state
-                        .paragraphs
-                        .map {
-                            it.words.mapNotNull {
-                                if (it is HashTagSegment) {
-                                    it.hashtag
-                                } else {
-                                    null
+                    val tagsInContent =
+                        state
+                            .paragraphs
+                            .map {
+                                it.words.mapNotNull {
+                                    if (it is HashTagSegment) {
+                                        it.hashtag
+                                    } else {
+                                        null
+                                    }
                                 }
+                            }.flatten()
+
+                    val unusedHashtags =
+                        tagsInEvent.filterNot { eventTag ->
+                            tagsInContent.any { contentTag ->
+                                eventTag.equals(contentTag, true)
                             }
-                        }.flatten()
-
-                val unusedHashtags =
-                    tagsInEvent.filterNot { eventTag ->
-                        tagsInContent.any { contentTag ->
-                            eventTag.equals(contentTag, true)
                         }
-                    }
 
-                if (unusedHashtags.isNotEmpty()) {
-                    value = unusedHashtags
+                    if (unusedHashtags.isNotEmpty()) {
+                        value = unusedHashtags
+                    }
                 }
             }
         }
