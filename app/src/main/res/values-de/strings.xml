@@ -454,6 +454,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="connectivity_type_never">Nie</string>
     <string name="ui_feature_set_type_complete">Fertig</string>
     <string name="ui_feature_set_type_simplified">Vereinfacht</string>
+    <string name="ui_feature_set_type_performance">Leistung</string>
     <string name="system">System</string>
     <string name="light">Hell</string>
     <string name="dark">Dunkel</string>

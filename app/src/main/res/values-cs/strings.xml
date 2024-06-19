@@ -449,6 +449,7 @@
     <string name="connectivity_type_never">Nikdy</string>
     <string name="ui_feature_set_type_complete">Hotovo</string>
     <string name="ui_feature_set_type_simplified">Zjednodušené</string>
+    <string name="ui_feature_set_type_performance">Výkonost</string>
     <string name="system">Systém</string>
     <string name="light">Světlý</string>
     <string name="dark">Tmavý</string>

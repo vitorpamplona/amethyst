@@ -449,6 +449,7 @@
     <string name="connectivity_type_never">Nunca</string>
     <string name="ui_feature_set_type_complete">Concluído</string>
     <string name="ui_feature_set_type_simplified">Simplificado</string>
+    <string name="ui_feature_set_type_performance">Desempenho</string>
     <string name="system">Sistema</string>
     <string name="light">Claro</string>
     <string name="dark">Escuro</string>
