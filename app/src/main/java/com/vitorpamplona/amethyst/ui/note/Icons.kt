@@ -73,7 +73,7 @@ import com.vitorpamplona.amethyst.commons.icons.Zap
 import com.vitorpamplona.amethyst.commons.icons.ZapSplit
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
@@ -508,11 +508,11 @@ fun LinkIcon(
 }
 
 @Composable
-fun VerticalDotsIcon(contentDescriptor: Int? = null) {
+fun VerticalDotsIcon() {
     Icon(
         imageVector = Icons.Default.MoreVert,
-        contentDescription = contentDescriptor?.let { stringRes(id = it) },
-        modifier = Size18Modifier,
+        contentDescription = stringRes(id = R.string.note_options),
+        modifier = Size19Modifier,
         tint = MaterialTheme.colorScheme.placeholderText,
     )
 }

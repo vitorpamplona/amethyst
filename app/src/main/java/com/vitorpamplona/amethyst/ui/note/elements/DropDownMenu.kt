@@ -28,7 +28,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -71,15 +70,17 @@ fun MoreOptionsButton(
         modifier = Size24Modifier,
         onClick = { popupExpanded.value = true },
     ) {
-        VerticalDotsIcon(R.string.note_options)
+        VerticalDotsIcon()
 
-        NoteDropDownMenu(
-            baseNote,
-            popupExpanded,
-            editState,
-            accountViewModel,
-            nav,
-        )
+        if (popupExpanded.value) {
+            NoteDropDownMenu(
+                note = baseNote,
+                onDismiss = { popupExpanded.value = false },
+                editState = editState,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
     }
 }
 
@@ -96,7 +97,7 @@ data class DropDownParams(
 @Composable
 fun NoteDropDownMenu(
     note: Note,
-    popupExpanded: MutableState<Boolean>,
+    onDismiss: () -> Unit,
     editState: State<GenericLoadable<EditState>>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -115,8 +116,6 @@ fun NoteDropDownMenu(
             ),
         )
     }
-
-    val onDismiss = remember(popupExpanded) { { popupExpanded.value = false } }
 
     val wantsToEditPost =
         remember {
@@ -137,7 +136,7 @@ fun NoteDropDownMenu(
 
         EditPostView(
             onClose = {
-                popupExpanded.value = false
+                onDismiss()
                 wantsToEditPost.value = false
             },
             edit = note,
@@ -150,7 +149,7 @@ fun NoteDropDownMenu(
     if (wantsToEditDraft.value) {
         NewPostView(
             onClose = {
-                popupExpanded.value = false
+                onDismiss()
                 wantsToEditDraft.value = false
             },
             accountViewModel = accountViewModel,
@@ -160,7 +159,7 @@ fun NoteDropDownMenu(
     }
 
     DropdownMenu(
-        expanded = popupExpanded.value,
+        expanded = true,
         onDismissRequest = onDismiss,
     ) {
         val clipboardManager = LocalClipboardManager.current

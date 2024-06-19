@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
@@ -43,6 +44,7 @@ fun ClickableBox(
             indication = rememberRipple(bounded = false, radius = Size24dp),
             onClick = onClick,
         ),
+        contentAlignment = Alignment.Center,
     ) {
         content()
     }

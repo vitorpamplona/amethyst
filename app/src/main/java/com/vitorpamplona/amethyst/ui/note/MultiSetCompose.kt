@@ -106,7 +106,6 @@ fun MultiSetCompose(
     val baseNote = remember { multiSetCard.note }
 
     val popupExpanded = remember { mutableStateOf(false) }
-    val enablePopup = remember { { popupExpanded.value = true } }
 
     val scope = rememberCoroutineScope()
 
@@ -126,7 +125,7 @@ fun MultiSetCompose(
                     onClick = {
                         scope.launch { routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) } }
                     },
-                    onLongClick = enablePopup,
+                    onLongClick = { popupExpanded.value = true },
                 ).padding(
                     start = 12.dp,
                     end = 12.dp,
@@ -152,7 +151,9 @@ fun MultiSetCompose(
                 nav = nav,
             )
 
-            NoteDropDownMenu(baseNote, popupExpanded, null, accountViewModel, nav)
+            if (popupExpanded.value) {
+                NoteDropDownMenu(baseNote, { popupExpanded.value = false }, null, accountViewModel, nav)
+            }
         }
     }
 }

@@ -39,7 +39,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -63,6 +62,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
+import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.BoostReaction
@@ -89,6 +89,8 @@ import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AuthorInfoVideoFeed
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
@@ -343,26 +345,27 @@ private fun VideoUserOptionAction(
     nav: (String) -> Unit,
 ) {
     val popupExpanded = remember { mutableStateOf(false) }
-    val enablePopup = remember { { popupExpanded.value = true } }
 
-    IconButton(
-        modifier = remember { Modifier.size(22.dp) },
-        onClick = enablePopup,
+    ClickableBox(
+        modifier = Size22Modifier,
+        onClick = { popupExpanded.value = true },
     ) {
         Icon(
             imageVector = Icons.Default.MoreVert,
             contentDescription = stringRes(id = R.string.more_options),
-            modifier = remember { Modifier.size(20.dp) },
+            modifier = Size20Modifier,
             tint = MaterialTheme.colorScheme.placeholderText,
         )
 
-        NoteDropDownMenu(
-            note,
-            popupExpanded,
-            null,
-            accountViewModel,
-            nav,
-        )
+        if (popupExpanded.value) {
+            NoteDropDownMenu(
+                note,
+                { popupExpanded.value = false },
+                null,
+                accountViewModel,
+                nav,
+            )
+        }
     }
 }
 

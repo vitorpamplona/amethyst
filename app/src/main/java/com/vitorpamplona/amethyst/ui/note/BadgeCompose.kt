@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,17 +31,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MilitaryTech
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -49,14 +44,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
-import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
+import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.screen.BadgeCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -75,11 +68,6 @@ fun BadgeCompose(
 
     val context = LocalContext.current.applicationContext
 
-    val popupExpanded = remember { mutableStateOf(false) }
-    val enablePopup = remember { { popupExpanded.value = true } }
-
-    val scope = rememberCoroutineScope()
-
     if (note == null) {
         BlankNote(Modifier)
     } else {
@@ -94,16 +82,13 @@ fun BadgeCompose(
             modifier =
                 Modifier
                     .background(backgroundColor.value)
-                    .combinedClickable(
+                    .clickable(
                         onClick = {
-                            scope.launch {
-                                routeFor(
-                                    note,
-                                    accountViewModel.userProfile(),
-                                )?.let { nav(it) }
-                            }
+                            routeFor(
+                                note,
+                                accountViewModel.userProfile(),
+                            )?.let { nav(it) }
                         },
-                        onLongClick = enablePopup,
                     ),
         ) {
             Row(
@@ -142,19 +127,7 @@ fun BadgeCompose(
                             maxLines = 1,
                         )
 
-                        IconButton(
-                            modifier = Modifier.then(Modifier.size(24.dp)),
-                            onClick = enablePopup,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = stringRes(id = R.string.more_options),
-                                modifier = Size15Modifier,
-                                tint = MaterialTheme.colorScheme.placeholderText,
-                            )
-
-                            NoteDropDownMenu(note, popupExpanded, null, accountViewModel, nav)
-                        }
+                        MoreOptionsButton(note, null, accountViewModel, nav)
                     }
 
                     note.replyTo?.firstOrNull()?.let {
