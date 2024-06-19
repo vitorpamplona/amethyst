@@ -105,7 +105,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -150,6 +149,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.MyTextField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -276,7 +276,7 @@ fun NewPostView(
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.relays),
-                                        contentDescription = stringResource(id = R.string.relay_list_selector),
+                                        contentDescription = stringRes(id = R.string.relay_list_selector),
                                         modifier = Modifier.height(25.dp),
                                         tint = MaterialTheme.colorScheme.onBackground,
                                     )
@@ -510,8 +510,8 @@ fun NewPostView(
                                                     lud16,
                                                     accountViewModel.account.userProfile().pubkeyHex,
                                                     accountViewModel.account,
-                                                    stringResource(id = R.string.lightning_invoice),
-                                                    stringResource(id = R.string.lightning_create_and_add_invoice),
+                                                    stringRes(id = R.string.lightning_invoice),
+                                                    stringRes(id = R.string.lightning_create_and_add_invoice),
                                                     onSuccess = {
                                                         postViewModel.insertAtCursor(it)
                                                         postViewModel.wantsInvoice = false
@@ -530,7 +530,7 @@ fun NewPostView(
                                         modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
                                     ) {
                                         ZapRaiserRequest(
-                                            stringResource(id = R.string.zapraiser),
+                                            stringRes(id = R.string.zapraiser),
                                             postViewModel,
                                         )
                                     }
@@ -574,7 +574,7 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
 
         if (postViewModel.canUsePoll) {
             // These should be hashtag recommendations the user selects in the future.
-            // val hashtag = stringResource(R.string.poll_hashtag)
+            // val hashtag = stringRes(R.string.poll_hashtag)
             // postViewModel.includePollHashtagInMessage(postViewModel.wantsPoll, hashtag)
             AddPollButton(postViewModel.wantsPoll) {
                 postViewModel.wantsPoll = !postViewModel.wantsPoll
@@ -685,9 +685,9 @@ private fun MessageField(postViewModel: NewPostViewModel) {
             Text(
                 text =
                     if (postViewModel.wantsProduct) {
-                        stringResource(R.string.description)
+                        stringRes(R.string.description)
                     } else {
-                        stringResource(R.string.what_s_on_your_mind)
+                        stringRes(R.string.what_s_on_your_mind)
                     },
                 color = MaterialTheme.colorScheme.placeholderText,
             )
@@ -721,7 +721,7 @@ fun ContentSensitivityExplainer(postViewModel: NewPostViewModel) {
             ) {
                 Icon(
                     imageVector = Icons.Default.VisibilityOff,
-                    contentDescription = stringResource(id = R.string.content_warning),
+                    contentDescription = stringRes(id = R.string.content_warning),
                     modifier =
                         Modifier
                             .size(18.dp)
@@ -730,7 +730,7 @@ fun ContentSensitivityExplainer(postViewModel: NewPostViewModel) {
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
-                    contentDescription = stringResource(id = R.string.content_warning),
+                    contentDescription = stringRes(id = R.string.content_warning),
                     modifier =
                         Modifier
                             .size(10.dp)
@@ -740,7 +740,7 @@ fun ContentSensitivityExplainer(postViewModel: NewPostViewModel) {
             }
 
             Text(
-                text = stringResource(R.string.add_sensitive_content_label),
+                text = stringRes(R.string.add_sensitive_content_label),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
                 modifier = Modifier.padding(start = 10.dp),
@@ -750,7 +750,7 @@ fun ContentSensitivityExplainer(postViewModel: NewPostViewModel) {
         HorizontalDivider(thickness = DividerThickness)
 
         Text(
-            text = stringResource(R.string.add_sensitive_content_explainer),
+            text = stringRes(R.string.add_sensitive_content_explainer),
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(vertical = 10.dp),
         )
@@ -767,7 +767,7 @@ fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringResource(R.string.messages_new_message_to),
+                text = stringRes(R.string.messages_new_message_to),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -778,7 +778,7 @@ fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
-                        text = stringResource(R.string.messages_new_message_to_caption),
+                        text = stringRes(R.string.messages_new_message_to_caption),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
@@ -801,7 +801,7 @@ fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringResource(R.string.messages_new_message_subject),
+                text = stringRes(R.string.messages_new_message_subject),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -812,7 +812,7 @@ fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
-                        text = stringResource(R.string.messages_new_message_subject_caption),
+                        text = stringRes(R.string.messages_new_message_subject_caption),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
@@ -842,7 +842,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringResource(R.string.classifieds_title),
+                text = stringRes(R.string.classifieds_title),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -855,7 +855,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
-                        text = stringResource(R.string.classifieds_title_placeholder),
+                        text = stringRes(R.string.classifieds_title_placeholder),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
@@ -878,7 +878,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringResource(R.string.classifieds_price),
+                text = stringRes(R.string.classifieds_price),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -915,7 +915,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringResource(R.string.classifieds_condition),
+                text = stringRes(R.string.classifieds_condition),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -924,23 +924,23 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                 listOf(
                     Triple(
                         ClassifiedsEvent.CONDITION.NEW,
-                        stringResource(id = R.string.classifieds_condition_new),
-                        stringResource(id = R.string.classifieds_condition_new_explainer),
+                        stringRes(id = R.string.classifieds_condition_new),
+                        stringRes(id = R.string.classifieds_condition_new_explainer),
                     ),
                     Triple(
                         ClassifiedsEvent.CONDITION.USED_LIKE_NEW,
-                        stringResource(id = R.string.classifieds_condition_like_new),
-                        stringResource(id = R.string.classifieds_condition_like_new_explainer),
+                        stringRes(id = R.string.classifieds_condition_like_new),
+                        stringRes(id = R.string.classifieds_condition_like_new_explainer),
                     ),
                     Triple(
                         ClassifiedsEvent.CONDITION.USED_GOOD,
-                        stringResource(id = R.string.classifieds_condition_good),
-                        stringResource(id = R.string.classifieds_condition_good_explainer),
+                        stringRes(id = R.string.classifieds_condition_good),
+                        stringRes(id = R.string.classifieds_condition_good_explainer),
                     ),
                     Triple(
                         ClassifiedsEvent.CONDITION.USED_FAIR,
-                        stringResource(id = R.string.classifieds_condition_fair),
-                        stringResource(id = R.string.classifieds_condition_fair_explainer),
+                        stringRes(id = R.string.classifieds_condition_fair),
+                        stringRes(id = R.string.classifieds_condition_fair_explainer),
                     ),
                 )
 
@@ -982,7 +982,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringResource(R.string.classifieds_category),
+                text = stringRes(R.string.classifieds_category),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -1007,7 +1007,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                     R.string.classifieds_category_other,
                 )
 
-            val categoryTypes = categoryList.map { Triple(it, stringResource(id = it), null) }
+            val categoryTypes = categoryList.map { Triple(it, stringRes(id = it), null) }
 
             val categoryOptions =
                 remember {
@@ -1048,7 +1048,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringResource(R.string.classifieds_location),
+                text = stringRes(R.string.classifieds_location),
                 fontSize = Font14SP,
                 fontWeight = FontWeight.W500,
             )
@@ -1061,7 +1061,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
-                        text = stringResource(R.string.classifieds_location_placeholder),
+                        text = stringRes(R.string.classifieds_location_placeholder),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
@@ -1099,21 +1099,21 @@ fun FowardZapTo(
             ZapSplitIcon()
 
             Text(
-                text = stringResource(R.string.zap_split_title),
+                text = stringRes(R.string.zap_split_title),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
                 modifier = Modifier.padding(horizontal = 10.dp).weight(1f),
             )
 
             OutlinedButton(onClick = { postViewModel.updateZapFromText() }) {
-                Text(text = stringResource(R.string.load_from_text))
+                Text(text = stringRes(R.string.load_from_text))
             }
         }
 
         HorizontalDivider(thickness = DividerThickness)
 
         Text(
-            text = stringResource(R.string.zap_split_explainer),
+            text = stringRes(R.string.zap_split_explainer),
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(vertical = 10.dp),
         )
@@ -1154,11 +1154,11 @@ fun FowardZapTo(
         OutlinedTextField(
             value = postViewModel.forwardZapToEditting,
             onValueChange = { postViewModel.updateZapForwardTo(it) },
-            label = { Text(text = stringResource(R.string.zap_split_search_and_add_user)) },
+            label = { Text(text = stringRes(R.string.zap_split_search_and_add_user)) },
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
-                    text = stringResource(R.string.zap_split_search_and_add_user_placeholder),
+                    text = stringRes(R.string.zap_split_search_and_add_user_placeholder),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -1205,7 +1205,7 @@ fun LocationAsHash(postViewModel: NewPostViewModel) {
                 }
 
                 Text(
-                    text = stringResource(R.string.geohash_title),
+                    text = stringRes(R.string.geohash_title),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.W500,
                     modifier = Modifier.padding(start = 10.dp),
@@ -1217,7 +1217,7 @@ fun LocationAsHash(postViewModel: NewPostViewModel) {
             HorizontalDivider(thickness = DividerThickness)
 
             Text(
-                text = stringResource(R.string.geohash_explainer),
+                text = stringRes(R.string.geohash_explainer),
                 color = MaterialTheme.colorScheme.placeholderText,
                 modifier = Modifier.padding(vertical = 10.dp),
             )
@@ -1275,7 +1275,7 @@ fun Notifying(
     FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         if (!mentions.isNullOrEmpty()) {
             Text(
-                stringResource(R.string.reply_notify),
+                stringRes(R.string.reply_notify),
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.placeholderText,
                 modifier = Modifier.align(CenterVertically),
@@ -1348,7 +1348,7 @@ private fun AddZapraiserButton(
                 )
                 Icon(
                     imageVector = Icons.Default.Bolt,
-                    contentDescription = stringResource(R.string.add_zapraiser),
+                    contentDescription = stringRes(R.string.add_zapraiser),
                     modifier =
                         Modifier
                             .size(13.dp)
@@ -1367,7 +1367,7 @@ private fun AddZapraiserButton(
                 )
                 Icon(
                     imageVector = Icons.Default.Bolt,
-                    contentDescription = stringResource(R.string.cancel_zapraiser),
+                    contentDescription = stringRes(R.string.cancel_zapraiser),
                     modifier =
                         Modifier
                             .size(13.dp)
@@ -1390,14 +1390,14 @@ fun AddGeoHash(
         if (!postViewModel.wantsToAddGeoHash) {
             Icon(
                 imageVector = Icons.Default.LocationOff,
-                contentDescription = stringResource(id = R.string.add_location),
+                contentDescription = stringRes(id = R.string.add_location),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 imageVector = Icons.Default.LocationOn,
-                contentDescription = stringResource(id = R.string.remove_location),
+                contentDescription = stringRes(id = R.string.remove_location),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
@@ -1416,14 +1416,14 @@ private fun AddLnInvoiceButton(
         if (!isLnInvoiceActive) {
             Icon(
                 imageVector = Icons.Default.CurrencyBitcoin,
-                contentDescription = stringResource(id = R.string.add_bitcoin_invoice),
+                contentDescription = stringRes(id = R.string.add_bitcoin_invoice),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 imageVector = Icons.Default.CurrencyBitcoin,
-                contentDescription = stringResource(id = R.string.cancel_bitcoin_invoice),
+                contentDescription = stringRes(id = R.string.cancel_bitcoin_invoice),
                 modifier = Modifier.size(20.dp),
                 tint = BitcoinOrange,
             )
@@ -1458,14 +1458,14 @@ private fun AddClassifiedsButton(
         if (!postViewModel.wantsProduct) {
             Icon(
                 imageVector = Icons.Default.Sell,
-                contentDescription = stringResource(R.string.classifieds),
+                contentDescription = stringRes(R.string.classifieds),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 imageVector = Icons.Default.Sell,
-                contentDescription = stringResource(id = R.string.cancel_classifieds),
+                contentDescription = stringRes(id = R.string.cancel_classifieds),
                 modifier = Modifier.size(20.dp),
                 tint = BitcoinOrange,
             )
@@ -1489,7 +1489,7 @@ private fun MarkAsSensitive(
             if (!postViewModel.wantsToMarkAsSensitive) {
                 Icon(
                     imageVector = Icons.Default.Visibility,
-                    contentDescription = stringResource(R.string.add_content_warning),
+                    contentDescription = stringRes(R.string.add_content_warning),
                     modifier =
                         Modifier
                             .size(18.dp)
@@ -1498,7 +1498,7 @@ private fun MarkAsSensitive(
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
-                    contentDescription = stringResource(R.string.add_content_warning),
+                    contentDescription = stringRes(R.string.add_content_warning),
                     modifier =
                         Modifier
                             .size(10.dp)
@@ -1508,7 +1508,7 @@ private fun MarkAsSensitive(
             } else {
                 Icon(
                     imageVector = Icons.Default.VisibilityOff,
-                    contentDescription = stringResource(id = R.string.remove_content_warning),
+                    contentDescription = stringRes(id = R.string.remove_content_warning),
                     modifier =
                         Modifier
                             .size(18.dp)
@@ -1517,7 +1517,7 @@ private fun MarkAsSensitive(
                 )
                 Icon(
                     imageVector = Icons.Rounded.Warning,
-                    contentDescription = stringResource(id = R.string.remove_content_warning),
+                    contentDescription = stringRes(id = R.string.remove_content_warning),
                     modifier =
                         Modifier
                             .size(10.dp)
@@ -1550,7 +1550,7 @@ fun PostButton(
         enabled = isActive,
         onClick = onPost,
     ) {
-        Text(text = stringResource(R.string.post))
+        Text(text = stringRes(R.string.post))
     }
 }
 
@@ -1565,7 +1565,7 @@ fun SaveButton(
         modifier = modifier,
         onClick = onPost,
     ) {
-        Text(text = stringResource(R.string.save))
+        Text(text = stringRes(R.string.save))
     }
 }
 
@@ -1588,7 +1588,7 @@ fun CreateButton(
                 containerColor = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray,
             ),
     ) {
-        Text(text = stringResource(R.string.create), color = Color.White)
+        Text(text = stringRes(R.string.create), color = Color.White)
     }
 }
 
@@ -1613,7 +1613,7 @@ fun ImageVideoDescription(
                 ServerOption(
                     Nip96MediaServers.ServerName(
                         "NIP95",
-                        stringResource(id = R.string.upload_server_relays_nip95),
+                        stringRes(id = R.string.upload_server_relays_nip95),
                     ),
                     true,
                 ),
@@ -1655,7 +1655,7 @@ fun ImageVideoDescription(
             ) {
                 Text(
                     text =
-                        stringResource(
+                        stringRes(
                             if (isImage) {
                                 R.string.content_description_add_image
                             } else {
@@ -1745,7 +1745,7 @@ fun ImageVideoDescription(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 TextSpinner(
-                    label = stringResource(id = R.string.file_server),
+                    label = stringRes(id = R.string.file_server),
                     placeholder =
                         fileServers
                             .firstOrNull { it.server == accountViewModel.account.defaultFileServer }
@@ -1785,7 +1785,7 @@ fun ImageVideoDescription(
                         .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
             ) {
                 OutlinedTextField(
-                    label = { Text(text = stringResource(R.string.content_description)) },
+                    label = { Text(text = stringRes(R.string.content_description)) },
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -1794,7 +1794,7 @@ fun ImageVideoDescription(
                     onValueChange = { message = it },
                     placeholder = {
                         Text(
-                            text = stringResource(R.string.content_description_example),
+                            text = stringRes(R.string.content_description_example),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -1817,7 +1817,7 @@ fun ImageVideoDescription(
                         containerColor = MaterialTheme.colorScheme.primary,
                     ),
             ) {
-                Text(text = stringResource(R.string.add_content), color = Color.White, fontSize = 20.sp)
+                Text(text = stringRes(R.string.add_content), color = Color.White, fontSize = 20.sp)
             }
         }
     }
@@ -1851,12 +1851,12 @@ fun SettingSwitchItem(
             verticalArrangement = Arrangement.spacedBy(Size5dp),
         ) {
             Text(
-                text = stringResource(id = title),
+                text = stringRes(id = title),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = stringResource(id = description),
+                text = stringRes(id = description),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray,
                 maxLines = 2,

@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.SettingsState
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
@@ -110,7 +111,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combineTransform
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.joinAll
@@ -1303,8 +1303,9 @@ class AccountViewModel(
             }
         } else {
             onDone(
-                context.getString(R.string.no_lightning_address_set),
-                context.getString(
+                stringRes(context, R.string.no_lightning_address_set),
+                stringRes(
+                    context,
                     R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
                     account.userProfile().toBestDisplayName(),
                 ),

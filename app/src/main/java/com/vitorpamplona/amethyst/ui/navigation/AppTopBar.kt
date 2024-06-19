@@ -63,7 +63,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -128,6 +127,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.RoomNameOnlyDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShortChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.observeAppDefinition
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -149,7 +149,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combineTransform
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 
@@ -195,9 +194,9 @@ private fun RenderTopRouteBar(
         Route.Video.base -> StoriesTopBar(followLists, openDrawer, accountViewModel, nav)
         Route.Discover.base -> DiscoveryTopBar(followLists, openDrawer, accountViewModel, nav)
         Route.Notification.base -> NotificationTopBar(followLists, openDrawer, accountViewModel, nav)
-        Route.Settings.base -> TopBarWithBackButton(stringResource(id = R.string.application_preferences), navPopBack)
-        Route.Bookmarks.base -> TopBarWithBackButton(stringResource(id = R.string.bookmarks), navPopBack)
-        Route.Drafts.base -> TopBarWithBackButton(stringResource(id = R.string.drafts), navPopBack)
+        Route.Settings.base -> TopBarWithBackButton(stringRes(id = R.string.application_preferences), navPopBack)
+        Route.Bookmarks.base -> TopBarWithBackButton(stringRes(id = R.string.bookmarks), navPopBack)
+        Route.Drafts.base -> TopBarWithBackButton(stringRes(id = R.string.drafts), navPopBack)
 
         else -> {
             if (id != null) {
@@ -226,7 +225,7 @@ private fun ThreadTopBar(
     navPopBack: () -> Unit,
 ) {
     FlexibleTopBarWithBackButton(
-        title = { Text(stringResource(id = R.string.thread_title)) },
+        title = { Text(stringRes(id = R.string.thread_title)) },
         popBack = navPopBack,
     )
 }
@@ -588,7 +587,7 @@ private fun LoggedInUserPictureDrawer(
         RobohashFallbackAsyncImage(
             robot = accountViewModel.userProfile().pubkeyHex,
             model = profilePicture,
-            contentDescription = stringResource(id = R.string.your_profile_image),
+            contentDescription = stringRes(id = R.string.your_profile_image),
             modifier = HeaderPictureModifier,
             contentScale = ContentScale.Crop,
             loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
@@ -656,7 +655,7 @@ class ResourceName(
 ) : Name() {
     override fun name() = " $resourceId " // Space to make sure it goes first
 
-    override fun name(context: Context) = context.getString(resourceId)
+    override fun name(context: Context) = stringRes(context, resourceId)
 }
 
 class PeopleListName(
@@ -797,7 +796,7 @@ fun SimpleTextSpinner(
 
     val context = LocalContext.current
     val selectAnOption =
-        stringResource(
+        stringRes(
             id = R.string.select_an_option,
         )
 
@@ -879,7 +878,7 @@ fun RenderOption(option: Name) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = stringResource(id = option.resourceId),
+                    text = stringRes(id = option.resourceId),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }

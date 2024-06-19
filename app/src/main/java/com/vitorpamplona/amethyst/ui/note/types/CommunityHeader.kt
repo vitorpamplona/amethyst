@@ -40,7 +40,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.distinctUntilChanged
@@ -66,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.JoinCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LeaveCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.NormalTimeAgo
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
@@ -118,7 +118,7 @@ fun LongCommunityHeader(
     Row(
         lineModifier,
     ) {
-        val rulesLabel = stringResource(id = R.string.rules)
+        val rulesLabel = stringRes(id = R.string.rules)
         val summary =
             remember(noteState) {
                 val subject = noteEvent.subject()?.ifEmpty { null }
@@ -148,7 +148,7 @@ fun LongCommunityHeader(
                 val background = remember { mutableStateOf(defaultBackground) }
 
                 TranslatableRichTextViewer(
-                    content = summary ?: stringResource(id = R.string.community_no_descriptor),
+                    content = summary ?: stringRes(id = R.string.community_no_descriptor),
                     canPreview = false,
                     quotesLeft = 1,
                     tags = EmptyTagList,
@@ -181,7 +181,7 @@ fun LongCommunityHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringResource(id = R.string.owner),
+            text = stringRes(id = R.string.owner),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.width(75.dp),
@@ -238,7 +238,7 @@ fun LongCommunityHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringResource(id = R.string.created_at),
+            text = stringRes(id = R.string.created_at),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.width(75.dp),
@@ -264,7 +264,7 @@ fun ShortCommunityHeader(
             RobohashFallbackAsyncImage(
                 robot = baseNote.idHex,
                 model = it,
-                contentDescription = stringResource(R.string.profile_image),
+                contentDescription = stringRes(R.string.profile_image),
                 contentScale = ContentScale.Crop,
                 modifier = HeaderPictureModifier,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,

@@ -28,11 +28,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import kotlinx.coroutines.launch
 import java.io.File
@@ -54,22 +54,22 @@ fun SaveToGallery(url: String) {
             url = url,
             onSuccess = {
                 scope.launch {
-                    Toast.makeText(
-                        localContext,
-                        localContext.getString(R.string.image_saved_to_the_gallery),
-                        Toast.LENGTH_SHORT,
-                    )
-                        .show()
+                    Toast
+                        .makeText(
+                            localContext,
+                            stringRes(localContext, R.string.image_saved_to_the_gallery),
+                            Toast.LENGTH_SHORT,
+                        ).show()
                 }
             },
             onError = {
                 scope.launch {
-                    Toast.makeText(
-                        localContext,
-                        localContext.getString(R.string.failed_to_save_the_image),
-                        Toast.LENGTH_SHORT,
-                    )
-                        .show()
+                    Toast
+                        .makeText(
+                            localContext,
+                            stringRes(localContext, R.string.failed_to_save_the_image),
+                            Toast.LENGTH_SHORT,
+                        ).show()
                 }
             },
         )
@@ -96,7 +96,7 @@ fun SaveToGallery(url: String) {
             }
         },
     ) {
-        Text(text = stringResource(id = R.string.save))
+        Text(text = stringRes(id = R.string.save))
     }
 }
 
@@ -116,22 +116,22 @@ fun SaveToGallery(
             mimeType = mimeType,
             onSuccess = {
                 scope.launch {
-                    Toast.makeText(
-                        localContext,
-                        localContext.getString(R.string.image_saved_to_the_gallery),
-                        Toast.LENGTH_SHORT,
-                    )
-                        .show()
+                    Toast
+                        .makeText(
+                            localContext,
+                            stringRes(localContext, R.string.image_saved_to_the_gallery),
+                            Toast.LENGTH_SHORT,
+                        ).show()
                 }
             },
             onError = {
                 scope.launch {
-                    Toast.makeText(
-                        localContext,
-                        localContext.getString(R.string.failed_to_save_the_image),
-                        Toast.LENGTH_SHORT,
-                    )
-                        .show()
+                    Toast
+                        .makeText(
+                            localContext,
+                            stringRes(localContext, R.string.failed_to_save_the_image),
+                            Toast.LENGTH_SHORT,
+                        ).show()
                 }
             },
         )
@@ -159,6 +159,6 @@ fun SaveToGallery(
         },
         shape = ButtonBorder,
     ) {
-        Text(text = stringResource(id = R.string.save))
+        Text(text = stringRes(id = R.string.save))
     }
 }

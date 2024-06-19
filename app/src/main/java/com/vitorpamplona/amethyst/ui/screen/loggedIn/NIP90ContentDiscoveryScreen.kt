@@ -50,7 +50,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -84,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrNIP90ContentDiscoveryFeedViewMo
 import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
@@ -115,7 +115,7 @@ fun NIP90ContentDiscoveryScreen(
                     NIP90ContentDiscoveryScreen(baseNote, accountViewModel, nav)
                 },
                 onBlank = {
-                    FeedEmptyWithStatus(baseNote, stringResource(R.string.dvm_looking_for_app), accountViewModel, nav)
+                    FeedEmptyWithStatus(baseNote, stringRes(R.string.dvm_looking_for_app), accountViewModel, nav)
                 },
                 accountViewModel,
             )
@@ -166,7 +166,7 @@ fun NIP90ContentDiscoveryScreen(
         } else {
             // TODO: Make a good splash screen with loading animation for this DVM.
             // FeedDVM(appDefinition, null, accountViewModel, nav)
-            FeedEmptyWithStatus(appDefinition, stringResource(R.string.dvm_requesting_job), accountViewModel, nav)
+            FeedEmptyWithStatus(appDefinition, stringRes(R.string.dvm_requesting_job), accountViewModel, nav)
         }
     }
 }
@@ -228,7 +228,7 @@ fun ObserverDvmStatusResponse(
         }
     } else {
         // TODO: Make a good splash screen with loading animation for this DVM.
-        FeedEmptyWithStatus(appDefinition, stringResource(R.string.dvm_waiting_status), accountViewModel, nav)
+        FeedEmptyWithStatus(appDefinition, stringRes(R.string.dvm_waiting_status), accountViewModel, nav)
     }
 }
 
@@ -331,8 +331,8 @@ fun FeedDVM(
 
             val invoice = amountTag?.lnInvoice
 
-            val thankYou = stringResource(id = R.string.dvm_waiting_to_confirm_payment)
-            val nwcPaymentRequest = stringResource(id = R.string.nwc_payment_request)
+            val thankYou = stringRes(id = R.string.dvm_waiting_to_confirm_payment)
+            val nwcPaymentRequest = stringRes(id = R.string.nwc_payment_request)
 
             if (invoice != null) {
                 val context = LocalContext.current
@@ -347,7 +347,8 @@ fun FeedDVM(
                             onResponse = { response ->
                                 currentStatus =
                                     if (response is PayInvoiceErrorResponse) {
-                                        context.getString(
+                                        stringRes(
+                                            context,
                                             R.string.wallet_connect_pay_invoice_error_error,
                                             response.error?.message
                                                 ?: response.error?.code?.toString() ?: "Error parsing error message",
@@ -484,7 +485,7 @@ fun ZapDVMButton(
 
         if (showErrorMessageDialog != null) {
             ErrorMessageDialog(
-                title = stringResource(id = R.string.error_dialog_zap_error),
+                title = stringRes(id = R.string.error_dialog_zap_error),
                 textContent = showErrorMessageDialog ?: "",
                 onClickStartMessage = {
                     baseNote.author?.let {
@@ -561,9 +562,9 @@ fun ZapDVMButton(
         }
 
         if (hasZapped) {
-            Text(text = stringResource(id = R.string.thank_you))
+            Text(text = stringRes(id = R.string.thank_you))
         } else {
-            Text(text = "Zap " + (amount / 1000).toString() + " sats to the DVM") // stringResource(id = R.string.donate_now))
+            Text(text = "Zap " + (amount / 1000).toString() + " sats to the DVM") // stringRes(id = R.string.donate_now))
         }
     }
 }

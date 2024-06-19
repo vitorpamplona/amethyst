@@ -28,7 +28,6 @@ import android.view.Window
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -56,7 +55,6 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -64,7 +62,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.window.DialogWindowProvider
-import androidx.core.net.toFile
 import androidx.core.net.toUri
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.AsyncImage
@@ -89,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.HashCheckFailedIcon
 import com.vitorpamplona.amethyst.ui.note.HashCheckIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
@@ -99,7 +97,7 @@ import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -109,21 +107,20 @@ import kotlinx.coroutines.withContext
 @Composable
 fun ZoomableContentView(
     content: BaseMediaContent,
-    images: ImmutableList<BaseMediaContent> = remember(content) { listOf(content).toImmutableList() },
+    images: ImmutableList<BaseMediaContent> = remember(content) { persistentListOf(content) },
     roundedCorner: Boolean,
     isFiniteHeight: Boolean,
     accountViewModel: AccountViewModel,
 ) {
-    // store the dialog open or close state
     var dialogOpen by remember(content) { mutableStateOf(false) }
-
-    val mainImageModifier = Modifier.fillMaxWidth().clickable { dialogOpen = true }
-    val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
 
     when (content) {
         is MediaUrlImage ->
             SensitivityWarning(content.contentWarning != null, accountViewModel) {
                 TwoSecondController(content) { controllerVisible ->
+                    val mainImageModifier = Modifier.fillMaxWidth().clickable { dialogOpen = true }
+                    val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
+
                     UrlImageView(content, mainImageModifier, loadedImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
                 }
             }
@@ -148,6 +145,9 @@ fun ZoomableContentView(
             }
         is MediaLocalImage ->
             TwoSecondController(content) { controllerVisible ->
+                val mainImageModifier = Modifier.fillMaxWidth().clickable { dialogOpen = true }
+                val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
+
                 LocalImageView(content, mainImageModifier, loadedImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
             }
         is MediaLocalVideo ->
@@ -315,15 +315,13 @@ fun UrlImageView(
                 )
             }
 
-        val contentScale = if (isFiniteHeight) ContentScale.Fit else ContentScale.FillWidth
-
         val ratio = remember(content) { aspectRatio(content.dim) }
 
         if (showImage.value) {
             SubcomposeAsyncImage(
                 model = content.url,
                 contentDescription = content.description,
-                contentScale = contentScale,
+                contentScale = if (isFiniteHeight) ContentScale.Fit else ContentScale.FillWidth,
                 modifier = mainImageModifier,
             ) {
                 when (painter.state) {
@@ -635,7 +633,7 @@ fun ShareImageAction(
 
         if (videoUri != null && !videoUri.startsWith("file")) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.copy_url_to_clipboard)) },
+                text = { Text(stringRes(R.string.copy_url_to_clipboard)) },
                 onClick = {
                     clipboardManager.setText(AnnotatedString(videoUri))
                     onDismiss()
@@ -645,7 +643,7 @@ fun ShareImageAction(
 
         postNostrUri?.let {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.copy_the_note_id_to_the_clipboard)) },
+                text = { Text(stringRes(R.string.copy_the_note_id_to_the_clipboard)) },
                 onClick = {
                     clipboardManager.setText(AnnotatedString(it))
                     onDismiss()
@@ -677,7 +675,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
 
     openDialogMsg.value?.let {
         InformationDialog(
-            title = localContext.getString(R.string.hash_verification_info_title),
+            title = stringRes(localContext, R.string.hash_verification_info_title),
             textContent = it,
         ) {
             openDialogMsg.value = null
@@ -688,7 +686,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
         IconButton(
             modifier = hashVerifierMark,
             onClick = {
-                openDialogMsg.value = localContext.getString(R.string.hash_verification_passed)
+                openDialogMsg.value = stringRes(localContext, R.string.hash_verification_passed)
             },
         ) {
             HashCheckIcon(Size30dp)
@@ -697,7 +695,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
         IconButton(
             modifier = hashVerifierMark,
             onClick = {
-                openDialogMsg.value = localContext.getString(R.string.hash_verification_failed)
+                openDialogMsg.value = stringRes(localContext, R.string.hash_verification_failed)
             },
         ) {
             HashCheckFailedIcon(Size30dp)

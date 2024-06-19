@@ -43,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -79,7 +78,7 @@ fun SelectNotificationProvider(sharedPreferencesViewModel: SharedPreferencesView
                 LoadDistributors { currentDistributor, list, readableListWithExplainer ->
                     if (readableListWithExplainer.size > 1) {
                         SpinnerSelectionDialog(
-                            title = stringResource(id = R.string.select_push_server),
+                            title = stringRes(id = R.string.select_push_server),
                             options = readableListWithExplainer,
                             onSelect = { index ->
                                 if (list[index] == "None") {
@@ -101,9 +100,9 @@ fun SelectNotificationProvider(sharedPreferencesViewModel: SharedPreferencesView
                     } else {
                         AlertDialog(
                             onDismissRequest = { distributorPresent = true },
-                            title = { Text(stringResource(R.string.push_server_install_app)) },
+                            title = { Text(stringRes(R.string.push_server_install_app)) },
                             text = {
-                                val content = stringResource(R.string.push_server_install_app_description)
+                                val content = stringRes(R.string.push_server_install_app_description)
 
                                 val astNode =
                                     remember {
@@ -128,7 +127,7 @@ fun SelectNotificationProvider(sharedPreferencesViewModel: SharedPreferencesView
                                             sharedPreferencesViewModel.dontShowPushNotificationSelector()
                                         },
                                     ) {
-                                        Text(stringResource(R.string.quick_action_dont_show_again_button))
+                                        Text(stringRes(R.string.quick_action_dont_show_again_button))
                                     }
                                     Button(
                                         onClick = { distributorPresent = true },
@@ -142,7 +141,7 @@ fun SelectNotificationProvider(sharedPreferencesViewModel: SharedPreferencesView
                                                 contentDescription = null,
                                             )
                                             Spacer(Modifier.width(8.dp))
-                                            Text(stringResource(R.string.error_dialog_button_ok))
+                                            Text(stringRes(R.string.error_dialog_button_ok))
                                         }
                                     }
                                 }
@@ -168,20 +167,19 @@ fun LoadDistributors(onInner: @Composable (String, ImmutableList<String>, Immuta
         }
 
     val readableListWithExplainer =
-        PushDistributorHandler.formattedDistributorNames()
+        PushDistributorHandler
+            .formattedDistributorNames()
             .mapIndexed { index, name ->
                 TitleExplainer(
                     name,
-                    stringResource(id = R.string.push_server_uses_app_explainer, list[index]),
+                    stringRes(id = R.string.push_server_uses_app_explainer, list[index]),
                 )
-            }
-            .plus(
+            }.plus(
                 TitleExplainer(
-                    stringResource(id = R.string.push_server_none),
-                    stringResource(id = R.string.push_server_none_explainer),
+                    stringRes(id = R.string.push_server_none),
+                    stringRes(id = R.string.push_server_none_explainer),
                 ),
-            )
-            .toImmutableList()
+            ).toImmutableList()
 
     onInner(
         currentDistributor,

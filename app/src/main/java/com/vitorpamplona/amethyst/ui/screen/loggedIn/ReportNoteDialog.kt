@@ -52,7 +52,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,6 +60,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
 import com.vitorpamplona.quartz.events.ReportEvent
@@ -75,14 +75,14 @@ fun ReportNoteDialog(
 ) {
     val reportTypes =
         listOf(
-            Pair(ReportEvent.ReportType.SPAM, stringResource(R.string.report_dialog_spam)),
-            Pair(ReportEvent.ReportType.PROFANITY, stringResource(R.string.report_dialog_profanity)),
+            Pair(ReportEvent.ReportType.SPAM, stringRes(R.string.report_dialog_spam)),
+            Pair(ReportEvent.ReportType.PROFANITY, stringRes(R.string.report_dialog_profanity)),
             Pair(
                 ReportEvent.ReportType.IMPERSONATION,
-                stringResource(R.string.report_dialog_impersonation),
+                stringRes(R.string.report_dialog_impersonation),
             ),
-            Pair(ReportEvent.ReportType.NUDITY, stringResource(R.string.report_dialog_nudity)),
-            Pair(ReportEvent.ReportType.ILLEGAL, stringResource(R.string.report_dialog_illegal)),
+            Pair(ReportEvent.ReportType.NUDITY, stringRes(R.string.report_dialog_nudity)),
+            Pair(ReportEvent.ReportType.ILLEGAL, stringRes(R.string.report_dialog_illegal)),
         )
 
     val reasonOptions = remember { reportTypes.map { TitleExplainer(it.second) }.toImmutableList() }
@@ -96,7 +96,7 @@ fun ReportNoteDialog(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(text = stringResource(id = R.string.report_dialog_title)) },
+                    title = { Text(text = stringRes(id = R.string.report_dialog_title)) },
                     navigationIcon = { IconButton(onClick = onDismiss) { ArrowBackIcon() } },
                     colors =
                         TopAppBarDefaults.topAppBarColors(
@@ -111,14 +111,14 @@ fun ReportNoteDialog(
                 verticalArrangement = Arrangement.SpaceAround,
             ) {
                 SpacerH16()
-                SectionHeader(text = stringResource(id = R.string.block_only))
+                SectionHeader(text = stringRes(id = R.string.block_only))
                 SpacerH16()
                 Text(
-                    text = stringResource(R.string.report_dialog_blocking_a_user),
+                    text = stringRes(R.string.report_dialog_blocking_a_user),
                 )
                 SpacerH16()
                 ActionButton(
-                    text = stringResource(R.string.report_dialog_block_hide_user_btn),
+                    text = stringRes(R.string.report_dialog_block_hide_user_btn),
                     icon = Icons.Default.Block,
                     onClick = {
                         note.author?.let { accountViewModel.hide(it) }
@@ -130,13 +130,13 @@ fun ReportNoteDialog(
                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface, thickness = DividerThickness)
 
                 SpacerH16()
-                SectionHeader(text = stringResource(R.string.report_dialog_report_btn))
+                SectionHeader(text = stringRes(R.string.report_dialog_report_btn))
                 SpacerH16()
-                Text(stringResource(R.string.report_dialog_reminder_public))
+                Text(stringRes(R.string.report_dialog_reminder_public))
                 SpacerH16()
                 TextSpinner(
-                    label = stringResource(R.string.report_dialog_select_reason_label),
-                    placeholder = stringResource(R.string.report_dialog_select_reason_placeholder),
+                    label = stringRes(R.string.report_dialog_select_reason_label),
+                    placeholder = stringRes(R.string.report_dialog_select_reason_placeholder),
                     options = reasonOptions,
                     onSelect = { selectedReason = it },
                     modifier = Modifier.fillMaxWidth(),
@@ -146,15 +146,15 @@ fun ReportNoteDialog(
                     value = additionalReason,
                     onValueChange = { additionalReason = it },
                     placeholder = {
-                        Text(text = stringResource(R.string.report_dialog_additional_reason_placeholder))
+                        Text(text = stringRes(R.string.report_dialog_additional_reason_placeholder))
                     },
-                    label = { Text(stringResource(R.string.report_dialog_additional_reason_label)) },
+                    label = { Text(stringRes(R.string.report_dialog_additional_reason_label)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 SpacerH16()
 
                 ActionButton(
-                    text = stringResource(R.string.report_dialog_post_report_btn),
+                    text = stringRes(R.string.report_dialog_post_report_btn),
                     icon = Icons.Default.Report,
                     enabled = selectedReason in 0..reportTypes.lastIndex,
                     onClick = {

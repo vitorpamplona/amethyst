@@ -37,13 +37,13 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -74,7 +74,7 @@ fun NewPollPrimaryDescription(pollViewModel: NewPostViewModel) {
         onValueChange = { pollViewModel.updateMessage(it) },
         label = {
             Text(
-                text = stringResource(R.string.poll_primary_description),
+                text = stringRes(R.string.poll_primary_description),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -90,7 +90,7 @@ fun NewPollPrimaryDescription(pollViewModel: NewPostViewModel) {
             },
         placeholder = {
             Text(
-                text = stringResource(R.string.poll_primary_description),
+                text = stringRes(R.string.poll_primary_description),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },

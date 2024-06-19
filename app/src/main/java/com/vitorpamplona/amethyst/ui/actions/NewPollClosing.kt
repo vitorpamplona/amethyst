@@ -36,12 +36,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.CancellationException
 
@@ -87,13 +87,13 @@ fun NewPollClosing(pollViewModel: NewPostViewModel) {
             colors = if (pollViewModel.isValidClosedAt.value) colorValid else colorInValid,
             label = {
                 Text(
-                    text = stringResource(R.string.poll_closing_time),
+                    text = stringRes(R.string.poll_closing_time),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
             placeholder = {
                 Text(
-                    text = stringResource(R.string.poll_closing_time_days),
+                    text = stringRes(R.string.poll_closing_time_days),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

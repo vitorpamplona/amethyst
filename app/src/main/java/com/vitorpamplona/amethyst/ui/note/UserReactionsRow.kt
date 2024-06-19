@@ -39,7 +39,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,6 +59,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -99,7 +99,7 @@ fun UserReactionsRow(
     ) {
         Row(verticalAlignment = CenterVertically, modifier = Modifier.width(68.dp)) {
             Text(
-                text = stringResource(id = R.string.today),
+                text = stringRes(id = R.string.today),
                 fontWeight = FontWeight.Bold,
             )
 
@@ -133,7 +133,7 @@ fun UserReactionsRow(
 private fun UserZapModel(model: UserReactionsViewModel) {
     Icon(
         imageVector = Icons.Default.Bolt,
-        contentDescription = stringResource(R.string.zaps),
+        contentDescription = stringRes(R.string.zaps),
         modifier = Size24Modifier,
         tint = BitcoinOrange,
     )

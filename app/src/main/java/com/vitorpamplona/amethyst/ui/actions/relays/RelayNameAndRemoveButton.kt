@@ -34,10 +34,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 
@@ -76,7 +76,7 @@ fun RelayNameAndRemoveButton(
         ) {
             Icon(
                 imageVector = Icons.Default.Cancel,
-                contentDescription = stringResource(id = R.string.remove),
+                contentDescription = stringRes(id = R.string.remove),
                 modifier =
                     Modifier
                         .padding(start = 10.dp)

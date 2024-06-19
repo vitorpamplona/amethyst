@@ -24,11 +24,11 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.res.stringResource
 import com.google.zxing.client.android.Intents
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.coroutines.CancellationException
 
@@ -60,7 +60,7 @@ fun SimpleQrCodeScanner(onScan: (String?) -> Unit) {
     val scanOptions =
         ScanOptions().apply {
             setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-            setPrompt(stringResource(id = R.string.point_to_the_qr_code))
+            setPrompt(stringRes(id = R.string.point_to_the_qr_code))
             setBeepEnabled(false)
             setOrientationLocked(false)
             addExtra(Intents.Scan.SCAN_TYPE, Intents.Scan.MIXED_SCAN)

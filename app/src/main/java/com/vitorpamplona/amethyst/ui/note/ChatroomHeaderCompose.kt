@@ -45,7 +45,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -68,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.ChatHeaderLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
@@ -183,9 +183,9 @@ private fun ChannelRoomCompose(
 
     val description =
         if (noteEvent is ChannelCreateEvent) {
-            stringResource(R.string.channel_created)
+            stringRes(R.string.channel_created)
         } else if (noteEvent is ChannelMetadataEvent) {
-            "${stringResource(R.string.channel_information_changed_to)} "
+            "${stringRes(R.string.channel_information_changed_to)} "
         } else {
             noteEvent?.content()
         }
@@ -216,7 +216,7 @@ private fun ChannelTitleWithLabelInfo(
     channelName: String,
     modifier: Modifier,
 ) {
-    val label = stringResource(id = R.string.public_chat)
+    val label = stringRes(id = R.string.public_chat)
     val placeHolderColor = MaterialTheme.colorScheme.placeholderText
     val channelNameAndBoostInfo =
         remember(channelName) {
@@ -465,7 +465,7 @@ fun ChannelName(
             RobohashFallbackAsyncImage(
                 robot = channelIdHex,
                 model = channelPicture,
-                contentDescription = stringResource(R.string.channel_image),
+                contentDescription = stringRes(R.string.channel_image),
                 modifier = AccountPictureModifier,
                 loadProfilePicture = loadProfilePicture,
                 loadRobohash = loadRobohash,
@@ -506,7 +506,7 @@ fun ChannelName(
                 )
             } else {
                 Text(
-                    stringResource(R.string.referenced_event_not_found),
+                    stringRes(R.string.referenced_event_not_found),
                     color = MaterialTheme.colorScheme.grayText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

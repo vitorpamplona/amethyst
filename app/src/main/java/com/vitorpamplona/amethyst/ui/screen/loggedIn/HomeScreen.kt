@@ -46,7 +46,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -66,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
@@ -118,8 +118,7 @@ private fun AssembleHomeTabs(
                         Route.Home.base + "FollowsReplies",
                         ScrollStateKeys.HOME_REPLIES,
                     ),
-                )
-                    .toImmutableList(),
+                ).toImmutableList(),
             )
         }
 
@@ -185,7 +184,7 @@ private fun HomePages(
         tabs.forEachIndexed { index, tab ->
             Tab(
                 selected = pagerState.currentPage == index,
-                text = { Text(text = stringResource(tab.resource)) },
+                text = { Text(text = stringRes(tab.resource)) },
                 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
             )
         }
@@ -240,9 +239,9 @@ fun HomeFeedEmpty(onRefresh: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(stringResource(R.string.feed_is_empty))
+        Text(stringRes(R.string.feed_is_empty))
         Spacer(modifier = StdVertSpacer)
-        OutlinedButton(onClick = onRefresh) { Text(text = stringResource(R.string.refresh)) }
+        OutlinedButton(onClick = onRefresh) { Text(text = stringRes(R.string.refresh)) }
     }
 }
 

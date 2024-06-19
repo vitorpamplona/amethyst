@@ -38,7 +38,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.R
@@ -52,6 +51,7 @@ import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.quartz.events.TextNoteEvent
@@ -177,7 +177,7 @@ fun NoteDropDownMenu(
 
         if (!state.isFollowingAuthor) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.follow)) },
+                text = { Text(stringRes(R.string.follow)) },
                 onClick = {
                     val author = note.author ?: return@DropdownMenuItem
                     accountViewModel.follow(author)
@@ -187,7 +187,7 @@ fun NoteDropDownMenu(
             HorizontalDivider(thickness = DividerThickness)
         }
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.copy_text)) },
+            text = { Text(stringRes(R.string.copy_text)) },
             onClick = {
                 scope.launch(Dispatchers.IO) {
                     accountViewModel.decrypt(note) { clipboardManager.setText(AnnotatedString(it)) }
@@ -196,7 +196,7 @@ fun NoteDropDownMenu(
             },
         )
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.copy_user_pubkey)) },
+            text = { Text(stringRes(R.string.copy_user_pubkey)) },
             onClick = {
                 scope.launch(Dispatchers.IO) {
                     clipboardManager.setText(AnnotatedString("nostr:${note.author?.pubkeyNpub()}"))
@@ -205,7 +205,7 @@ fun NoteDropDownMenu(
             },
         )
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.copy_note_id)) },
+            text = { Text(stringRes(R.string.copy_note_id)) },
             onClick = {
                 scope.launch(Dispatchers.IO) {
                     clipboardManager.setText(AnnotatedString("nostr:" + note.toNEvent()))
@@ -214,7 +214,7 @@ fun NoteDropDownMenu(
             },
         )
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.quick_action_share)) },
+            text = { Text(stringRes(R.string.quick_action_share)) },
             onClick = {
                 val sendIntent =
                     Intent().apply {
@@ -226,12 +226,12 @@ fun NoteDropDownMenu(
                         )
                         putExtra(
                             Intent.EXTRA_TITLE,
-                            actContext.getString(R.string.quick_action_share_browser_link),
+                            stringRes(actContext, R.string.quick_action_share_browser_link),
                         )
                     }
 
                 val shareIntent =
-                    Intent.createChooser(sendIntent, appContext.getString(R.string.quick_action_share))
+                    Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
                 ContextCompat.startActivity(actContext, shareIntent, null)
                 onDismiss()
             },
@@ -239,7 +239,7 @@ fun NoteDropDownMenu(
         HorizontalDivider(thickness = DividerThickness)
         if (state.isLoggedUser && note.isDraft()) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.edit_draft)) },
+                text = { Text(stringRes(R.string.edit_draft)) },
                 onClick = {
                     wantsToEditDraft.value = true
                 },
@@ -248,14 +248,14 @@ fun NoteDropDownMenu(
         if (note.event is TextNoteEvent && !note.isDraft()) {
             if (state.isLoggedUser) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.edit_post)) },
+                    text = { Text(stringRes(R.string.edit_post)) },
                     onClick = {
                         wantsToEditPost.value = true
                     },
                 )
             } else {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.propose_an_edit)) },
+                    text = { Text(stringRes(R.string.propose_an_edit)) },
                     onClick = {
                         wantsToEditPost.value = true
                     },
@@ -263,7 +263,7 @@ fun NoteDropDownMenu(
             }
         }
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.broadcast)) },
+            text = { Text(stringRes(R.string.broadcast)) },
             onClick = {
                 accountViewModel.broadcast(note)
                 onDismiss()
@@ -272,14 +272,14 @@ fun NoteDropDownMenu(
         HorizontalDivider(thickness = DividerThickness)
         if (accountViewModel.account.hasPendingAttestations(note)) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.timestamp_pending)) },
+                text = { Text(stringRes(R.string.timestamp_pending)) },
                 onClick = {
                     onDismiss()
                 },
             )
         } else {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.timestamp_it)) },
+                text = { Text(stringRes(R.string.timestamp_it)) },
                 onClick = {
                     accountViewModel.timestamp(note)
                     onDismiss()
@@ -289,7 +289,7 @@ fun NoteDropDownMenu(
         HorizontalDivider(thickness = DividerThickness)
         if (state.isPrivateBookmarkNote) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.remove_from_private_bookmarks)) },
+                text = { Text(stringRes(R.string.remove_from_private_bookmarks)) },
                 onClick = {
                     accountViewModel.removePrivateBookmark(note)
                     onDismiss()
@@ -297,7 +297,7 @@ fun NoteDropDownMenu(
             )
         } else {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.add_to_private_bookmarks)) },
+                text = { Text(stringRes(R.string.add_to_private_bookmarks)) },
                 onClick = {
                     accountViewModel.addPrivateBookmark(note)
                     onDismiss()
@@ -306,7 +306,7 @@ fun NoteDropDownMenu(
         }
         if (state.isPublicBookmarkNote) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.remove_from_public_bookmarks)) },
+                text = { Text(stringRes(R.string.remove_from_public_bookmarks)) },
                 onClick = {
                     accountViewModel.removePublicBookmark(note)
                     onDismiss()
@@ -314,7 +314,7 @@ fun NoteDropDownMenu(
             )
         } else {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.add_to_public_bookmarks)) },
+                text = { Text(stringRes(R.string.add_to_public_bookmarks)) },
                 onClick = {
                     accountViewModel.addPublicBookmark(note)
                     onDismiss()
@@ -324,7 +324,7 @@ fun NoteDropDownMenu(
         HorizontalDivider(thickness = DividerThickness)
         if (state.showSensitiveContent == null || state.showSensitiveContent == true) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.content_warning_hide_all_sensitive_content)) },
+                text = { Text(stringRes(R.string.content_warning_hide_all_sensitive_content)) },
                 onClick = {
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.hideSensitiveContent()
@@ -335,7 +335,7 @@ fun NoteDropDownMenu(
         }
         if (state.showSensitiveContent == null || state.showSensitiveContent == false) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.content_warning_show_all_sensitive_content)) },
+                text = { Text(stringRes(R.string.content_warning_show_all_sensitive_content)) },
                 onClick = {
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.disableContentWarnings()
@@ -346,7 +346,7 @@ fun NoteDropDownMenu(
         }
         if (state.showSensitiveContent != null) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.content_warning_see_warnings)) },
+                text = { Text(stringRes(R.string.content_warning_see_warnings)) },
                 onClick = {
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.seeContentWarnings()
@@ -358,7 +358,7 @@ fun NoteDropDownMenu(
         HorizontalDivider(thickness = DividerThickness)
         if (state.isLoggedUser) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.request_deletion)) },
+                text = { Text(stringRes(R.string.request_deletion)) },
                 onClick = {
                     scope.launch(Dispatchers.IO) {
                         accountViewModel.delete(note)
@@ -368,7 +368,7 @@ fun NoteDropDownMenu(
             )
         } else {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.block_report)) },
+                text = { Text(stringRes(R.string.block_report)) },
                 onClick = { reportDialogShowing = true },
             )
         }

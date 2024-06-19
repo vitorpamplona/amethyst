@@ -68,7 +68,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
@@ -108,6 +107,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForDMs
 import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForDMsAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
@@ -118,7 +118,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.findURLs
@@ -426,7 +425,7 @@ fun PrivateMessageEditFieldRow(
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
-                    text = stringResource(R.string.reply_here),
+                    text = stringRes(R.string.reply_here),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -553,10 +552,10 @@ fun NewFeatureNIP17AlertDialog(
     val scope = rememberCoroutineScope()
 
     QuickActionAlertDialog(
-        title = stringResource(R.string.new_feature_nip17_might_not_be_available_title),
-        textContent = stringResource(R.string.new_feature_nip17_might_not_be_available_description),
+        title = stringRes(R.string.new_feature_nip17_might_not_be_available_title),
+        textContent = stringRes(R.string.new_feature_nip17_might_not_be_available_description),
         buttonIconResource = R.drawable.incognito,
-        buttonText = stringResource(R.string.new_feature_nip17_activate),
+        buttonText = stringRes(R.string.new_feature_nip17_activate),
         onClickDoOnce = {
             scope.launch(Dispatchers.IO) { onConfirm() }
             onDismiss()
@@ -585,7 +584,7 @@ fun ThinSendButton(
     ) {
         Icon(
             imageVector = Icons.Default.Send,
-            contentDescription = stringResource(id = R.string.accessibility_send),
+            contentDescription = stringRes(id = R.string.accessibility_send),
             modifier = Size20Modifier,
         )
     }
@@ -708,7 +707,7 @@ private fun EditRoomSubjectButton(
         Icon(
             tint = Color.White,
             imageVector = Icons.Default.EditNote,
-            contentDescription = stringResource(R.string.edits_the_channel_metadata),
+            contentDescription = stringRes(R.string.edits_the_channel_metadata),
         )
     }
 }
@@ -769,13 +768,13 @@ fun NewSubjectView(
                 Spacer(modifier = Modifier.height(15.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringResource(R.string.messages_new_message_subject)) },
+                    label = { Text(text = stringRes(R.string.messages_new_message_subject)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = groupName.value,
                     onValueChange = { groupName.value = it },
                     placeholder = {
                         Text(
-                            text = stringResource(R.string.messages_new_message_subject_caption),
+                            text = stringRes(R.string.messages_new_message_subject_caption),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -789,7 +788,7 @@ fun NewSubjectView(
                 Spacer(modifier = Modifier.height(15.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringResource(R.string.messages_new_subject_message)) },
+                    label = { Text(text = stringRes(R.string.messages_new_subject_message)) },
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -798,7 +797,7 @@ fun NewSubjectView(
                     onValueChange = { message.value = it },
                     placeholder = {
                         Text(
-                            text = stringResource(R.string.messages_new_subject_message_placeholder),
+                            text = stringRes(R.string.messages_new_subject_message_placeholder),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -829,7 +828,7 @@ fun LongRoomHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringResource(id = R.string.messages_group_descriptor),
+            text = stringRes(id = R.string.messages_group_descriptor),
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -858,31 +857,6 @@ fun LongRoomHeader(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun DMRelayLine(
-    baseUser: User,
-    accountViewModel: AccountViewModel,
-) {
-    ObserveRelayListForDMs(pubkey = baseUser.pubkeyHex, accountViewModel = accountViewModel) {
-        val relayList = it?.relays()
-        if (relayList.isNullOrEmpty()) {
-            Text(
-                text = stringResource(id = R.string.dm_relays_regular),
-                color = MaterialTheme.colorScheme.placeholderText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        } else {
-            Text(
-                text = stringResource(id = R.string.dm_relays_through, relayList.joinToString(", ") { RelayUrlFormatter.displayUrl(it) }),
-                color = MaterialTheme.colorScheme.placeholderText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
         }
     }
 }

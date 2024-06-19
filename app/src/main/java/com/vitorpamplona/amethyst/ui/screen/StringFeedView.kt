@@ -34,11 +34,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
@@ -84,8 +84,8 @@ fun StringFeedEmpty(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Text(stringResource(R.string.feed_is_empty))
-            OutlinedButton(onClick = onRefresh) { Text(text = stringResource(R.string.refresh)) }
+            Text(stringRes(R.string.feed_is_empty))
+            OutlinedButton(onClick = onRefresh) { Text(text = stringRes(R.string.refresh)) }
         }
 
         post?.let { it() }

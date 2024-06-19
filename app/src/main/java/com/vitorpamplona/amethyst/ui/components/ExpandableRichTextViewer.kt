@@ -40,11 +40,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.ExpandableTextCutOffCalculator
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
@@ -110,7 +110,8 @@ fun ExpandableRichTextViewer(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier =
-                    Modifier.align(Alignment.BottomCenter)
+                    Modifier
+                        .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .background(getGradient(backgroundColor)),
             ) {
@@ -135,6 +136,6 @@ fun ShowMoreButton(onClick: () -> Unit) {
             ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringResource(R.string.show_more), color = Color.White)
+        Text(text = stringRes(R.string.show_more), color = Color.White)
     }
 }

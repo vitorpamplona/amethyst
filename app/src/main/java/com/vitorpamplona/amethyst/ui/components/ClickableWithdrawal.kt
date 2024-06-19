@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.encoders.LnWithdrawalUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -75,7 +76,7 @@ fun ClickableWithdrawal(withdrawalString: String) {
 
     if (showErrorMessageDialog != null) {
         ErrorMessageDialog(
-            title = context.getString(R.string.error_dialog_pay_withdraw_error),
+            title = stringRes(context, R.string.error_dialog_pay_withdraw_error),
             textContent = showErrorMessageDialog ?: "",
             onDismiss = { showErrorMessageDialog = null },
         )

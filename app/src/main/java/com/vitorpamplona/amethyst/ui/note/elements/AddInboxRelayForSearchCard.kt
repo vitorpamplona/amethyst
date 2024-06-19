@@ -34,7 +34,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -47,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.actions.relays.AddSearchRelayListDialog
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BigPadding
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -159,7 +159,7 @@ fun AddInboxRelayForSearchCard(
             ) {
                 // Title
                 Text(
-                    text = stringResource(id = R.string.search_relays_not_found),
+                    text = stringRes(id = R.string.search_relays_not_found),
                     style =
                         TextStyle(
                             fontSize = 20.sp,
@@ -170,7 +170,7 @@ fun AddInboxRelayForSearchCard(
                 Spacer(modifier = StdVertSpacer)
 
                 Text(
-                    text = stringResource(id = R.string.search_relays_not_found_description),
+                    text = stringRes(id = R.string.search_relays_not_found_description),
                 )
 
                 Spacer(modifier = StdVertSpacer)
@@ -186,7 +186,7 @@ fun AddInboxRelayForSearchCard(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(text = stringResource(id = R.string.dm_relays_not_found_create_now))
+                    Text(text = stringRes(id = R.string.dm_relays_not_found_create_now))
                 }
             }
         }

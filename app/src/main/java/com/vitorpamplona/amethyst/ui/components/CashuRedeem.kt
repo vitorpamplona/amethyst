@@ -52,7 +52,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
@@ -76,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.note.OpenInNewIcon
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -190,7 +190,7 @@ fun CashuPreview(
                 )
 
                 Text(
-                    text = stringResource(R.string.cashu),
+                    text = stringRes(R.string.cashu),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.W500,
                     modifier = Modifier.padding(start = 10.dp),
@@ -200,7 +200,7 @@ fun CashuPreview(
             HorizontalDivider(thickness = DividerThickness)
 
             Text(
-                text = "${token.totalAmount} ${stringResource(id = R.string.sats)}",
+                text = "${token.totalAmount} ${stringRes(id = R.string.sats)}",
                 fontSize = 25.sp,
                 fontWeight = FontWeight.W500,
                 modifier =
@@ -239,7 +239,7 @@ fun CashuPreview(
                     Spacer(DoubleHorzSpacer)
 
                     Text(
-                        stringResource(id = R.string.cashu_redeem_to_zap),
+                        stringRes(id = R.string.cashu_redeem_to_zap),
                         color = Color.White,
                         fontSize = 16.sp,
                     )
@@ -256,7 +256,7 @@ fun CashuPreview(
                         startActivity(context, intent, null)
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        toast("Cashu", context.getString(R.string.cashu_no_wallet_found))
+                        toast(stringRes(context, R.string.cashu), stringRes(context, R.string.cashu_no_wallet_found))
                     }
                 },
                 shape = QuoteBorder,
@@ -268,7 +268,7 @@ fun CashuPreview(
                 CashuIcon(Size20Modifier)
                 Spacer(DoubleHorzSpacer)
                 Text(
-                    stringResource(id = R.string.cashu_redeem_to_cashu),
+                    stringRes(id = R.string.cashu_redeem_to_cashu),
                     color = Color.White,
                     fontSize = 16.sp,
                 )
@@ -287,7 +287,7 @@ fun CashuPreview(
             ) {
                 CopyIcon(Size20Modifier, Color.White)
                 Spacer(DoubleHorzSpacer)
-                Text(stringResource(id = R.string.cashu_copy_token), color = Color.White, fontSize = 16.sp)
+                Text(stringRes(id = R.string.cashu_copy_token), color = Color.White, fontSize = 16.sp)
             }
             Spacer(modifier = StdHorzSpacer)
         }
@@ -328,14 +328,14 @@ fun CashuPreviewNew(
                 )
 
                 Text(
-                    text = stringResource(R.string.cashu),
+                    text = stringRes(R.string.cashu),
                     fontSize = 12.sp,
                     modifier = Modifier.padding(start = 5.dp, bottom = 1.dp),
                 )
             }
 
             Text(
-                text = "${token.totalAmount} ${stringResource(id = R.string.sats)}",
+                text = "${token.totalAmount} ${stringRes(id = R.string.sats)}",
                 fontSize = 20.sp,
                 modifier = Modifier.padding(top = 5.dp),
             )
@@ -378,7 +378,7 @@ fun CashuPreviewNew(
                             startActivity(context, intent, null)
                         } catch (e: Exception) {
                             if (e is CancellationException) throw e
-                            toast("Cashu", context.getString(R.string.cashu_no_wallet_found))
+                            toast(stringRes(context, R.string.cashu), stringRes(context, R.string.cashu_no_wallet_found))
                         }
                     },
                     shape = SmallishBorder,

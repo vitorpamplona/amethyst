@@ -78,7 +78,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDirection
@@ -98,6 +97,7 @@ import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
@@ -189,7 +189,7 @@ fun EditPostView(
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.relays),
-                                        contentDescription = stringResource(id = R.string.relay_list_selector),
+                                        contentDescription = stringRes(id = R.string.relay_list_selector),
                                         modifier = Modifier.height(25.dp),
                                         tint = MaterialTheme.colorScheme.onBackground,
                                     )
@@ -236,8 +236,7 @@ fun EditPostView(
                             top = pad.calculateTopPadding(),
                             end = Size10dp,
                             bottom = pad.calculateBottomPadding(),
-                        )
-                        .fillMaxSize(),
+                        ).fillMaxSize(),
             ) {
                 Column(
                     modifier =
@@ -365,8 +364,8 @@ fun EditPostView(
                                                 lud16,
                                                 user.pubkeyHex,
                                                 accountViewModel.account,
-                                                stringResource(id = R.string.lightning_invoice),
-                                                stringResource(id = R.string.lightning_create_and_add_invoice),
+                                                stringRes(id = R.string.lightning_invoice),
+                                                stringRes(id = R.string.lightning_create_and_add_invoice),
                                                 onSuccess = {
                                                     postViewModel.message =
                                                         TextFieldValue(postViewModel.message.text + "\n\n" + it)
@@ -386,7 +385,7 @@ fun EditPostView(
                                 ) {
                                     Column {
                                         Text(
-                                            text = stringResource(R.string.message_to_author),
+                                            text = stringRes(R.string.message_to_author),
                                             fontSize = 18.sp,
                                             fontWeight = FontWeight.W500,
                                         )
@@ -399,7 +398,7 @@ fun EditPostView(
                                             modifier = Modifier.fillMaxWidth(),
                                             placeholder = {
                                                 Text(
-                                                    text = stringResource(R.string.message_to_author_placeholder),
+                                                    text = stringRes(R.string.message_to_author_placeholder),
                                                     color = MaterialTheme.colorScheme.placeholderText,
                                                 )
                                             },
@@ -514,8 +513,7 @@ private fun MessageField(postViewModel: EditPostViewModel) {
                     width = 1.dp,
                     color = MaterialTheme.colorScheme.surface,
                     shape = RoundedCornerShape(8.dp),
-                )
-                .focusRequester(focusRequester)
+                ).focusRequester(focusRequester)
                 .onFocusChanged {
                     if (it.isFocused) {
                         keyboardController?.show()
@@ -523,7 +521,7 @@ private fun MessageField(postViewModel: EditPostViewModel) {
                 },
         placeholder = {
             Text(
-                text = stringResource(R.string.what_s_on_your_mind),
+                text = stringRes(R.string.what_s_on_your_mind),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -548,14 +546,14 @@ private fun AddLnInvoiceButton(
         if (!isLnInvoiceActive) {
             Icon(
                 imageVector = Icons.Default.CurrencyBitcoin,
-                contentDescription = stringResource(id = R.string.add_bitcoin_invoice),
+                contentDescription = stringRes(id = R.string.add_bitcoin_invoice),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 imageVector = Icons.Default.CurrencyBitcoin,
-                contentDescription = stringResource(id = R.string.cancel_bitcoin_invoice),
+                contentDescription = stringRes(id = R.string.cancel_bitcoin_invoice),
                 modifier = Modifier.size(20.dp),
                 tint = BitcoinOrange,
             )

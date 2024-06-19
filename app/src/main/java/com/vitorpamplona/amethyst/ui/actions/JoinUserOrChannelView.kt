@@ -61,7 +61,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -83,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchBarViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -161,7 +161,7 @@ fun JoinUserOrChannelView(
                     )
 
                     Text(
-                        text = stringResource(R.string.channel_list_join_conversation),
+                        text = stringRes(R.string.channel_list_join_conversation),
                         fontWeight = FontWeight.Bold,
                     )
 
@@ -278,7 +278,7 @@ private fun SearchEditTextForJoin(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         OutlinedTextField(
-            label = { Text(text = stringResource(R.string.channel_list_user_or_group_id)) },
+            label = { Text(text = stringRes(R.string.channel_list_user_or_group_id)) },
             value = searchBarViewModel.searchValue,
             onValueChange = {
                 searchBarViewModel.updateSearchValue(it)
@@ -297,7 +297,7 @@ private fun SearchEditTextForJoin(
                     },
             placeholder = {
                 Text(
-                    text = stringResource(R.string.channel_list_user_or_group_id_demo),
+                    text = stringRes(R.string.channel_list_user_or_group_id_demo),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -311,7 +311,7 @@ private fun SearchEditTextForJoin(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Clear,
-                            contentDescription = stringResource(R.string.clear),
+                            contentDescription = stringRes(R.string.clear),
                         )
                     }
                 }

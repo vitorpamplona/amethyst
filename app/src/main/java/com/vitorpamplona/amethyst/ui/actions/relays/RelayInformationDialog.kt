@@ -42,7 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
@@ -144,7 +144,7 @@ fun RelayInformationDialog(
                     }
                 }
                 item {
-                    Section(stringResource(R.string.owner))
+                    Section(stringRes(R.string.owner))
 
                     relayInfo.pubkey?.let {
                         DisplayOwnerInformation(it, accountViewModel) {
@@ -154,16 +154,16 @@ fun RelayInformationDialog(
                     }
                 }
                 item {
-                    Section(stringResource(R.string.software))
+                    Section(stringRes(R.string.software))
 
                     DisplaySoftwareInformation(relayInfo)
 
-                    Section(stringResource(R.string.version))
+                    Section(stringRes(R.string.version))
 
                     SectionContent(relayInfo.version ?: "")
                 }
                 item {
-                    Section(stringResource(R.string.contact))
+                    Section(stringRes(R.string.contact))
 
                     Box(modifier = Modifier.padding(start = 10.dp)) {
                         relayInfo.contact?.let {
@@ -178,21 +178,21 @@ fun RelayInformationDialog(
                     }
                 }
                 item {
-                    Section(stringResource(R.string.supports))
+                    Section(stringRes(R.string.supports))
 
                     DisplaySupportedNips(relayInfo)
                 }
                 item {
                     relayInfo.fees?.admission?.let {
                         if (it.isNotEmpty()) {
-                            Section(stringResource(R.string.admission_fees))
+                            Section(stringRes(R.string.admission_fees))
 
                             it.forEach { item -> SectionContent("${item.amount?.div(1000) ?: 0} sats") }
                         }
                     }
 
                     relayInfo.payments_url?.let {
-                        Section(stringResource(R.string.payments_url))
+                        Section(stringRes(R.string.payments_url))
 
                         Box(modifier = Modifier.padding(start = 10.dp)) {
                             ClickableUrl(
@@ -204,68 +204,68 @@ fun RelayInformationDialog(
                 }
                 item {
                     relayInfo.limitation?.let {
-                        Section(stringResource(R.string.limitations))
+                        Section(stringRes(R.string.limitations))
                         val authRequiredText =
-                            if (it.auth_required ?: false) stringResource(R.string.yes) else stringResource(R.string.no)
+                            if (it.auth_required ?: false) stringRes(R.string.yes) else stringRes(R.string.no)
 
                         val paymentRequiredText =
-                            if (it.payment_required ?: false) stringResource(R.string.yes) else stringResource(R.string.no)
+                            if (it.payment_required ?: false) stringRes(R.string.yes) else stringRes(R.string.no)
 
                         val restrictedWritesText =
-                            if (it.restricted_writes ?: false) stringResource(R.string.yes) else stringResource(R.string.no)
+                            if (it.restricted_writes ?: false) stringRes(R.string.yes) else stringRes(R.string.no)
 
                         Column {
                             SectionContent(
-                                "${stringResource(R.string.message_length)}: ${it.max_message_length ?: 0}",
+                                "${stringRes(R.string.message_length)}: ${it.max_message_length ?: 0}",
                             )
                             SectionContent(
-                                "${stringResource(R.string.subscriptions)}: ${it.max_subscriptions ?: 0}",
+                                "${stringRes(R.string.subscriptions)}: ${it.max_subscriptions ?: 0}",
                             )
-                            SectionContent("${stringResource(R.string.filters)}: ${it.max_filters ?: 0}")
+                            SectionContent("${stringRes(R.string.filters)}: ${it.max_filters ?: 0}")
                             SectionContent(
-                                "${stringResource(R.string.subscription_id_length)}: ${it.max_subid_length ?: 0}",
+                                "${stringRes(R.string.subscription_id_length)}: ${it.max_subid_length ?: 0}",
                             )
-                            SectionContent("${stringResource(R.string.minimum_prefix)}: ${it.min_prefix ?: 0}")
+                            SectionContent("${stringRes(R.string.minimum_prefix)}: ${it.min_prefix ?: 0}")
                             SectionContent(
-                                "${stringResource(R.string.maximum_event_tags)}: ${it.max_event_tags ?: 0}",
-                            )
-                            SectionContent(
-                                "${stringResource(R.string.content_length)}: ${it.max_content_length ?: 0}",
+                                "${stringRes(R.string.maximum_event_tags)}: ${it.max_event_tags ?: 0}",
                             )
                             SectionContent(
-                                "${stringResource(R.string.max_limit)}: ${it.max_limit ?: 0}",
+                                "${stringRes(R.string.content_length)}: ${it.max_content_length ?: 0}",
                             )
-                            SectionContent("${stringResource(R.string.minimum_pow)}: ${it.min_pow_difficulty ?: 0}")
-                            SectionContent("${stringResource(R.string.auth)}: $authRequiredText")
-                            SectionContent("${stringResource(R.string.payment)}: $paymentRequiredText")
-                            SectionContent("${stringResource(R.string.restricted_writes)}: $restrictedWritesText")
+                            SectionContent(
+                                "${stringRes(R.string.max_limit)}: ${it.max_limit ?: 0}",
+                            )
+                            SectionContent("${stringRes(R.string.minimum_pow)}: ${it.min_pow_difficulty ?: 0}")
+                            SectionContent("${stringRes(R.string.auth)}: $authRequiredText")
+                            SectionContent("${stringRes(R.string.payment)}: $paymentRequiredText")
+                            SectionContent("${stringRes(R.string.restricted_writes)}: $restrictedWritesText")
                         }
                     }
                 }
                 item {
                     relayInfo.relay_countries?.let {
-                        Section(stringResource(R.string.countries))
+                        Section(stringRes(R.string.countries))
 
                         FlowRow { it.forEach { item -> SectionContent(item) } }
                     }
                 }
                 item {
                     relayInfo.language_tags?.let {
-                        Section(stringResource(R.string.languages))
+                        Section(stringRes(R.string.languages))
 
                         FlowRow { it.forEach { item -> SectionContent(item) } }
                     }
                 }
                 item {
                     relayInfo.tags?.let {
-                        Section(stringResource(R.string.tags))
+                        Section(stringRes(R.string.tags))
 
                         FlowRow { it.forEach { item -> SectionContent(item) } }
                     }
                 }
                 item {
                     relayInfo.posting_policy?.let {
-                        Section(stringResource(R.string.posting_policy))
+                        Section(stringRes(R.string.posting_policy))
 
                         Box(Modifier.padding(10.dp)) {
                             ClickableUrl(
@@ -277,7 +277,7 @@ fun RelayInformationDialog(
                 }
 
                 item {
-                    Section(stringResource(R.string.relay_error_messages))
+                    Section(stringRes(R.string.relay_error_messages))
                 }
 
                 items(messages) { msg ->

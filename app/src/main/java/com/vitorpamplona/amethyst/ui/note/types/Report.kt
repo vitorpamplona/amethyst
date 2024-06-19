@@ -26,12 +26,12 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.ReportEvent
@@ -52,21 +52,25 @@ fun RenderReport(
         base
             .map {
                 when (it.reportType) {
-                    ReportEvent.ReportType.EXPLICIT -> stringResource(R.string.explicit_content)
-                    ReportEvent.ReportType.NUDITY -> stringResource(R.string.nudity)
-                    ReportEvent.ReportType.PROFANITY -> stringResource(R.string.profanity_hateful_speech)
-                    ReportEvent.ReportType.SPAM -> stringResource(R.string.spam)
-                    ReportEvent.ReportType.IMPERSONATION -> stringResource(R.string.impersonation)
-                    ReportEvent.ReportType.ILLEGAL -> stringResource(R.string.illegal_behavior)
-                    ReportEvent.ReportType.OTHER -> stringResource(R.string.other)
+                    ReportEvent.ReportType.EXPLICIT -> stringRes(R.string.explicit_content)
+                    ReportEvent.ReportType.NUDITY -> stringRes(R.string.nudity)
+                    ReportEvent.ReportType.PROFANITY -> stringRes(R.string.profanity_hateful_speech)
+                    ReportEvent.ReportType.SPAM -> stringRes(R.string.spam)
+                    ReportEvent.ReportType.IMPERSONATION -> stringRes(R.string.impersonation)
+                    ReportEvent.ReportType.ILLEGAL -> stringRes(R.string.illegal_behavior)
+                    ReportEvent.ReportType.OTHER -> stringRes(R.string.other)
                 }
-            }
-            .toSet()
+            }.toSet()
             .joinToString(", ")
 
     val content =
         remember {
-            reportType + (note.event?.content()?.ifBlank { null }?.let { ": $it" } ?: "")
+            reportType + (
+                note.event
+                    ?.content()
+                    ?.ifBlank { null }
+                    ?.let { ": $it" } ?: ""
+            )
         }
 
     TranslatableRichTextViewer(

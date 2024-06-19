@@ -64,10 +64,8 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -109,6 +107,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -529,7 +528,6 @@ val bottomBarAnimation: ContentTransform =
 
 @Composable
 private fun DisplayErrorMessages(accountViewModel: AccountViewModel) {
-    val context = LocalContext.current
     val openDialogMsg = accountViewModel.toasts.collectAsStateWithLifecycle(null)
 
     openDialogMsg.value?.let { obj ->
@@ -537,15 +535,15 @@ private fun DisplayErrorMessages(accountViewModel: AccountViewModel) {
             is ResourceToastMsg ->
                 if (obj.params != null) {
                     InformationDialog(
-                        context.getString(obj.titleResId),
-                        context.getString(obj.resourceId, *obj.params),
+                        stringRes(obj.titleResId),
+                        stringRes(obj.resourceId, *obj.params),
                     ) {
                         accountViewModel.clearToasts()
                     }
                 } else {
                     InformationDialog(
-                        context.getString(obj.titleResId),
-                        context.getString(obj.resourceId),
+                        stringRes(obj.titleResId),
+                        stringRes(obj.resourceId),
                     ) {
                         accountViewModel.clearToasts()
                     }
@@ -573,7 +571,7 @@ private fun DisplayNotifyMessages(
     openDialogMsg.value?.firstOrNull()?.let { request ->
         NotifyRequestDialog(
             title =
-                stringResource(
+                stringRes(
                     id = R.string.payment_required_title,
                     RelayUrlFormatter.displayUrl(request.relayUrl),
                 ),

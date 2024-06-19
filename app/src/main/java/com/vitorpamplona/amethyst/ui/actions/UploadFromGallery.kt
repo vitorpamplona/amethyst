@@ -50,7 +50,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -58,6 +57,7 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.GetMediaActivityResultContract
+import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import java.util.concurrent.atomic.AtomicBoolean
@@ -114,7 +114,7 @@ private fun UploadBoxButton(
             if (!isUploading) {
                 Icon(
                     imageVector = Icons.Default.AddPhotoAlternate,
-                    contentDescription = stringResource(id = R.string.upload_image),
+                    contentDescription = stringRes(id = R.string.upload_image),
                     modifier = Modifier.height(25.dp),
                     tint = tint,
                 )
@@ -137,8 +137,7 @@ val DefaultAnimationColors =
         Color(0xFFFCAF45),
         Color(0xFFFFDC80),
         Color(0xFF5851D8),
-    )
-        .toImmutableList()
+    ).toImmutableList()
 
 @Composable
 fun LoadingAnimation(
@@ -164,7 +163,8 @@ fun LoadingAnimation(
 
     CircularProgressIndicator(
         modifier =
-            Modifier.size(size = indicatorSize)
+            Modifier
+                .size(size = indicatorSize)
                 .rotate(degrees = rotateAnimation)
                 .border(
                     width = 4.dp,

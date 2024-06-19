@@ -45,7 +45,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -54,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.screen.BadgeCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.launch
@@ -67,7 +67,10 @@ fun BadgeCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val noteState by likeSetCard.note.live().metadata.observeAsState()
+    val noteState by likeSetCard.note
+        .live()
+        .metadata
+        .observeAsState()
     val note = noteState?.note
 
     val context = LocalContext.current.applicationContext
@@ -89,15 +92,15 @@ fun BadgeCompose(
 
         Column(
             modifier =
-                Modifier.background(backgroundColor.value)
+                Modifier
+                    .background(backgroundColor.value)
                     .combinedClickable(
                         onClick = {
                             scope.launch {
                                 routeFor(
                                     note,
                                     accountViewModel.userProfile(),
-                                )
-                                    ?.let { nav(it) }
+                                )?.let { nav(it) }
                             }
                         },
                         onLongClick = enablePopup,
@@ -128,7 +131,7 @@ fun BadgeCompose(
                 Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
                     Row {
                         Text(
-                            stringResource(R.string.new_badge_award_notif),
+                            stringRes(R.string.new_badge_award_notif),
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = 5.dp).weight(1f),
                         )
@@ -145,7 +148,7 @@ fun BadgeCompose(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
-                                contentDescription = stringResource(id = R.string.more_options),
+                                contentDescription = stringRes(id = R.string.more_options),
                                 modifier = Size15Modifier,
                                 tint = MaterialTheme.colorScheme.placeholderText,
                             )

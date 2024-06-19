@@ -55,7 +55,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -75,6 +74,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrSpammerAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.StringFeedView
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -162,7 +162,7 @@ fun HiddenUsersScreen(
                 },
             )
 
-            Text(stringResource(R.string.warn_when_posts_have_reports_from_your_follows))
+            Text(stringRes(R.string.warn_when_posts_have_reports_from_your_follows))
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -174,7 +174,7 @@ fun HiddenUsersScreen(
                 },
             )
 
-            Text(stringResource(R.string.filter_spam_from_strangers))
+            Text(stringRes(R.string.filter_spam_from_strangers))
         }
 
         ScrollableTabRow(
@@ -188,17 +188,17 @@ fun HiddenUsersScreen(
             Tab(
                 selected = pagerState.currentPage == 0,
                 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                text = { Text(text = stringResource(R.string.blocked_users)) },
+                text = { Text(text = stringRes(R.string.blocked_users)) },
             )
             Tab(
                 selected = pagerState.currentPage == 1,
                 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                text = { Text(text = stringResource(R.string.spamming_users)) },
+                text = { Text(text = stringRes(R.string.spamming_users)) },
             )
             Tab(
                 selected = pagerState.currentPage == 2,
                 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
-                text = { Text(text = stringResource(R.string.hidden_words)) },
+                text = { Text(text = stringRes(R.string.hidden_words)) },
             )
         }
         HorizontalPager(state = pagerState) { page ->
@@ -236,11 +236,11 @@ private fun AddMuteWordTextField(accountViewModel: AccountViewModel) {
         OutlinedTextField(
             value = currentWordToAdd.value,
             onValueChange = { currentWordToAdd.value = it },
-            label = { Text(text = stringResource(R.string.hide_new_word_label)) },
+            label = { Text(text = stringRes(R.string.hide_new_word_label)) },
             modifier = Modifier.fillMaxWidth().padding(10.dp),
             placeholder = {
                 Text(
-                    text = stringResource(R.string.hide_new_word_label),
+                    text = stringRes(R.string.hide_new_word_label),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -354,7 +354,7 @@ fun HideWordButton(onClick: () -> Unit) {
             ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringResource(R.string.block_only), color = Color.White)
+        Text(text = stringRes(R.string.block_only), color = Color.White)
     }
 }
 
@@ -373,7 +373,7 @@ fun ShowWordButton(
             ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
+        Text(text = stringRes(text), color = Color.White, textAlign = TextAlign.Center)
     }
 }
 

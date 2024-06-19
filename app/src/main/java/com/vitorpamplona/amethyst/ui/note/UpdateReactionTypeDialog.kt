@@ -58,7 +58,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -82,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.encoders.ATag
@@ -217,7 +217,7 @@ fun UpdateReactionTypeDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             OutlinedTextField(
-                                label = { Text(text = stringResource(R.string.new_reaction_symbol)) },
+                                label = { Text(text = stringRes(R.string.new_reaction_symbol)) },
                                 value = postViewModel.nextChoice,
                                 onValueChange = { postViewModel.nextChoice = it },
                                 keyboardOptions =
@@ -243,7 +243,7 @@ fun UpdateReactionTypeDialog(
                                         containerColor = MaterialTheme.colorScheme.primary,
                                     ),
                             ) {
-                                Text(text = stringResource(R.string.add), color = Color.White)
+                                Text(text = stringRes(R.string.add), color = Color.White)
                             }
                         }
                     }

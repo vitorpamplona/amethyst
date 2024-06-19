@@ -37,7 +37,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -46,6 +45,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
@@ -76,7 +76,7 @@ fun AddDMRelayListDialog(
                         ) {
                             Spacer(modifier = StdHorzSpacer)
 
-                            Text(stringResource(R.string.dm_relays_title))
+                            Text(stringRes(R.string.dm_relays_title))
 
                             SaveButton(
                                 onPost = {
@@ -126,13 +126,13 @@ private fun Explanation() {
     Card(modifier = MaterialTheme.colorScheme.imageModifier) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = stringResource(id = R.string.dm_relays_not_found_editing),
+                text = stringRes(id = R.string.dm_relays_not_found_editing),
             )
 
             Spacer(modifier = StdVertSpacer)
 
             Text(
-                text = stringResource(id = R.string.dm_relays_not_found_examples),
+                text = stringRes(id = R.string.dm_relays_not_found_examples),
             )
         }
     }

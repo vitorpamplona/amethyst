@@ -31,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
@@ -40,6 +39,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.authorNotePictureForImageHeader
 
@@ -69,7 +69,7 @@ fun BannerImage(
         AsyncImage(
             model = it,
             contentDescription =
-                stringResource(
+                stringRes(
                     R.string.preview_card_image_for,
                     it,
                 ),
@@ -80,7 +80,7 @@ fun BannerImage(
     } ?: run {
         Image(
             painter = painterResource(R.drawable.profile_banner),
-            contentDescription = stringResource(R.string.profile_banner),
+            contentDescription = stringRes(R.string.profile_banner),
             contentScale = ContentScale.Crop,
             modifier = imageModifier,
         )

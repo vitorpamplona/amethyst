@@ -46,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.distinctUntilChanged
@@ -113,6 +112,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.RenderChannelHeader
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
@@ -1120,7 +1120,7 @@ private fun ChannelNotePicture(
         RobohashFallbackAsyncImage(
             robot = baseChannel.idHex,
             model = model,
-            contentDescription = stringResource(R.string.group_picture),
+            contentDescription = stringRes(R.string.group_picture),
             modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
             loadProfilePicture = loadProfilePicture,
             loadRobohash = loadRobohash,

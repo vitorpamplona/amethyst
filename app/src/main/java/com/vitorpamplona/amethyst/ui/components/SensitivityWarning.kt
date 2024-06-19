@@ -46,7 +46,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -55,6 +54,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.quartz.events.EventInterface
@@ -122,13 +122,13 @@ fun ContentWarningNote(onDismiss: () -> Unit) {
                     ) {
                         Icon(
                             imageVector = Icons.Default.Visibility,
-                            contentDescription = stringResource(R.string.content_warning),
+                            contentDescription = stringRes(R.string.content_warning),
                             modifier = Modifier.size(70.dp).align(Alignment.BottomStart),
                             tint = MaterialTheme.colorScheme.onBackground,
                         )
                         Icon(
                             imageVector = Icons.Rounded.Warning,
-                            contentDescription = stringResource(R.string.content_warning),
+                            contentDescription = stringRes(R.string.content_warning),
                             modifier = Modifier.size(30.dp).align(Alignment.TopEnd),
                             tint = MaterialTheme.colorScheme.onBackground,
                         )
@@ -137,7 +137,7 @@ fun ContentWarningNote(onDismiss: () -> Unit) {
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                     Text(
-                        text = stringResource(R.string.content_warning),
+                        text = stringRes(R.string.content_warning),
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                     )
@@ -145,7 +145,7 @@ fun ContentWarningNote(onDismiss: () -> Unit) {
 
                 Row {
                     Text(
-                        text = stringResource(R.string.content_warning_explanation),
+                        text = stringRes(R.string.content_warning_explanation),
                         color = Color.Gray,
                         modifier = Modifier.padding(top = 10.dp),
                         textAlign = TextAlign.Center,
@@ -164,7 +164,7 @@ fun ContentWarningNote(onDismiss: () -> Unit) {
                         contentPadding = ButtonPadding,
                     ) {
                         Text(
-                            text = stringResource(R.string.show_anyway),
+                            text = stringRes(R.string.show_anyway),
                             color = Color.White,
                         )
                     }

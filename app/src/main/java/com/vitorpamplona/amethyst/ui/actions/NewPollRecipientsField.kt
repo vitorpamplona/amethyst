@@ -26,10 +26,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
@@ -51,13 +51,13 @@ fun NewPollRecipientsField(
         enabled = false,
         label = {
             Text(
-                text = stringResource(R.string.poll_zap_recipients),
+                text = stringRes(R.string.poll_zap_recipients),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
         placeholder = {
             Text(
-                text = stringResource(R.string.poll_zap_recipients),
+                text = stringRes(R.string.poll_zap_recipients),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },

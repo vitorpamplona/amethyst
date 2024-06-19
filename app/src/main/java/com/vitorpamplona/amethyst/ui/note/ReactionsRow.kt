@@ -77,7 +77,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -103,6 +102,7 @@ import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DarkerGreen
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
@@ -228,14 +228,14 @@ fun ShareReaction(
                     )
                     putExtra(
                         Intent.EXTRA_TITLE,
-                        context.getString(R.string.quick_action_share_browser_link),
+                        stringRes(context, R.string.quick_action_share_browser_link),
                     )
                 }
 
             val shareIntent =
                 Intent.createChooser(
                     sendIntent,
-                    context.getString(R.string.quick_action_share),
+                    stringRes(context, R.string.quick_action_share),
                 )
             ContextCompat.startActivity(context, shareIntent, null)
         },
@@ -355,7 +355,7 @@ fun RenderZapRaiser(
 
             Text(
                 text =
-                    stringResource(id = R.string.sats_to_complete, totalPercentage, zapraiserStatus.left),
+                    stringRes(id = R.string.sats_to_complete, totalPercentage, zapraiserStatus.left),
                 modifier = NoSoTinyBorders,
                 color = MaterialTheme.colorScheme.placeholderText,
                 fontSize = Font14SP,
@@ -1050,7 +1050,7 @@ fun ZapReaction(
         if (showErrorMessageDialog.isNotEmpty()) {
             val msg = showErrorMessageDialog.joinToString("\n")
             ErrorMessageDialog(
-                title = stringResource(id = R.string.error_dialog_zap_error),
+                title = stringRes(id = R.string.error_dialog_zap_error),
                 textContent = msg,
                 onClickStartMessage = {
                     baseNote.author?.let {
@@ -1160,13 +1160,13 @@ fun zapClick(
 
     if (accountViewModel.account.zapAmountChoices.isEmpty()) {
         accountViewModel.toast(
-            context.getString(R.string.error_dialog_zap_error),
-            context.getString(R.string.no_zap_amount_setup_long_press_to_change),
+            R.string.error_dialog_zap_error,
+            R.string.no_zap_amount_setup_long_press_to_change,
         )
     } else if (!accountViewModel.isWriteable()) {
         accountViewModel.toast(
-            context.getString(R.string.error_dialog_zap_error),
-            context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
+            R.string.error_dialog_zap_error,
+            R.string.login_with_a_private_key_to_be_able_to_send_zaps,
         )
     } else if (accountViewModel.account.zapAmountChoices.size == 1) {
         accountViewModel.zap(
@@ -1272,7 +1272,7 @@ private fun BoostTypeChoicePopup(
                         containerColor = MaterialTheme.colorScheme.primary,
                     ),
             ) {
-                Text(stringResource(R.string.boost), color = Color.White, textAlign = TextAlign.Center)
+                Text(stringRes(R.string.boost), color = Color.White, textAlign = TextAlign.Center)
             }
 
             Button(
@@ -1284,7 +1284,7 @@ private fun BoostTypeChoicePopup(
                         containerColor = MaterialTheme.colorScheme.primary,
                     ),
             ) {
-                Text(stringResource(R.string.quote), color = Color.White, textAlign = TextAlign.Center)
+                Text(stringRes(R.string.quote), color = Color.White, textAlign = TextAlign.Center)
             }
 
             Button(
@@ -1296,7 +1296,7 @@ private fun BoostTypeChoicePopup(
                         containerColor = MaterialTheme.colorScheme.primary,
                     ),
             ) {
-                Text(stringResource(R.string.fork), color = Color.White, textAlign = TextAlign.Center)
+                Text(stringRes(R.string.fork), color = Color.White, textAlign = TextAlign.Center)
             }
         }
     }

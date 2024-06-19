@@ -40,7 +40,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,8 +52,10 @@ import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.model.parseFeatureSetType
 import com.vitorpamplona.amethyst.model.parseThemeType
+import com.vitorpamplona.amethyst.ui.checkLanguage
 import com.vitorpamplona.amethyst.ui.components.PushNotificationSettingsRow
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
@@ -125,29 +126,29 @@ fun getLanguageIndex(
 fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
     val selectedItens =
         persistentListOf(
-            TitleExplainer(stringResource(ConnectivityType.ALWAYS.resourceId)),
-            TitleExplainer(stringResource(ConnectivityType.WIFI_ONLY.resourceId)),
-            TitleExplainer(stringResource(ConnectivityType.NEVER.resourceId)),
+            TitleExplainer(stringRes(ConnectivityType.ALWAYS.resourceId)),
+            TitleExplainer(stringRes(ConnectivityType.WIFI_ONLY.resourceId)),
+            TitleExplainer(stringRes(ConnectivityType.NEVER.resourceId)),
         )
 
     val themeItens =
         persistentListOf(
-            TitleExplainer(stringResource(ThemeType.SYSTEM.resourceId)),
-            TitleExplainer(stringResource(ThemeType.LIGHT.resourceId)),
-            TitleExplainer(stringResource(ThemeType.DARK.resourceId)),
+            TitleExplainer(stringRes(ThemeType.SYSTEM.resourceId)),
+            TitleExplainer(stringRes(ThemeType.LIGHT.resourceId)),
+            TitleExplainer(stringRes(ThemeType.DARK.resourceId)),
         )
 
     val booleanItems =
         persistentListOf(
-            TitleExplainer(stringResource(ConnectivityType.ALWAYS.resourceId)),
-            TitleExplainer(stringResource(ConnectivityType.NEVER.resourceId)),
+            TitleExplainer(stringRes(ConnectivityType.ALWAYS.resourceId)),
+            TitleExplainer(stringRes(ConnectivityType.NEVER.resourceId)),
         )
 
     val featureItems =
         persistentListOf(
-            TitleExplainer(stringResource(FeatureSetType.COMPLETE.resourceId)),
-            TitleExplainer(stringResource(FeatureSetType.SIMPLIFIED.resourceId)),
-            TitleExplainer(stringResource(FeatureSetType.PERFORMANCE.resourceId)),
+            TitleExplainer(stringRes(FeatureSetType.COMPLETE.resourceId)),
+            TitleExplainer(stringRes(FeatureSetType.SIMPLIFIED.resourceId)),
+            TitleExplainer(stringRes(FeatureSetType.PERFORMANCE.resourceId)),
         )
 
     val showImagesIndex = sharedPreferencesViewModel.sharedPrefs.automaticallyShowImages.screenCode
@@ -182,6 +183,9 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
             languageIndex,
         ) {
             sharedPreferencesViewModel.updateLanguage(languageEntries[languageList[it].title])
+            languageEntries[languageList[it].title]?.let {
+                checkLanguage(it)
+            }
         }
 
         Spacer(modifier = HalfVertSpacer)
@@ -282,12 +286,12 @@ fun SettingsRow(
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             Text(
-                text = stringResource(name),
+                text = stringRes(name),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = stringResource(description),
+                text = stringRes(description),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray,
                 maxLines = 2,

@@ -36,12 +36,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
@@ -59,7 +59,7 @@ private fun CopyToClipboard(
     ) {
         val clipboardManager = LocalClipboardManager.current
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.copy_url_to_clipboard)) },
+            text = { Text(stringRes(R.string.copy_url_to_clipboard)) },
             onClick = {
                 clipboardManager.setText(AnnotatedString(content))
                 onDismiss()
@@ -103,7 +103,7 @@ fun UrlPreviewCard(
     ) {
         AsyncImage(
             model = previewInfo.imageUrlFullPath,
-            contentDescription = stringResource(R.string.preview_card_image_for, previewInfo.url),
+            contentDescription = previewInfo.title,
             contentScale = ContentScale.Crop,
             modifier = previewCardImageModifier,
         )

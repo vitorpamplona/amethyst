@@ -38,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.CheckIfUrlIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CrossfadeCheckIfUrlIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
@@ -171,7 +171,7 @@ fun RenderLiveActivityEventInner(
                                 .height(100.dp),
                     ) {
                         Text(
-                            text = stringResource(id = R.string.live_stream_is_offline),
+                            text = stringRes(id = R.string.live_stream_is_offline),
                             color = MaterialTheme.colorScheme.onBackground,
                             fontWeight = FontWeight.Bold,
                         )
@@ -187,7 +187,7 @@ fun RenderLiveActivityEventInner(
                         .height(100.dp),
             ) {
                 Text(
-                    text = stringResource(id = R.string.live_stream_has_ended),
+                    text = stringRes(id = R.string.live_stream_has_ended),
                     color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Bold,
                 )

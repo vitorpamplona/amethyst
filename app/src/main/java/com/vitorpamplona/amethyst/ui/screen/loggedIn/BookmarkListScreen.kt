@@ -36,12 +36,12 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.NostrBookmarkPrivateFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrBookmarkPublicFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
 
@@ -93,12 +93,12 @@ private fun RenderBookmarkScreen(
             Tab(
                 selected = pagerState.currentPage == 0,
                 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                text = { Text(text = stringResource(R.string.private_bookmarks)) },
+                text = { Text(text = stringRes(R.string.private_bookmarks)) },
             )
             Tab(
                 selected = pagerState.currentPage == 1,
                 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                text = { Text(text = stringResource(R.string.public_bookmarks)) },
+                text = { Text(text = stringRes(R.string.public_bookmarks)) },
             )
         }
         HorizontalPager(state = pagerState) { page ->

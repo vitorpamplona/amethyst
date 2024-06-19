@@ -49,7 +49,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,6 +59,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
@@ -182,11 +182,11 @@ private fun TranslationMessage(
             buildAnnotatedString {
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("langSettings", true.toString())
-                    append(stringResource(R.string.translations_auto))
+                    append(stringRes(R.string.translations_auto))
                     pop()
                 }
 
-                append("-${stringResource(R.string.translations_translated_from)} ")
+                append("-${stringRes(R.string.translations_translated_from)} ")
 
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("showOriginal", true.toString())
@@ -194,7 +194,7 @@ private fun TranslationMessage(
                     pop()
                 }
 
-                append(" ${stringResource(R.string.translations_to)} ")
+                append(" ${stringRes(R.string.translations_to)} ")
 
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("showOriginal", false.toString())
@@ -244,7 +244,7 @@ private fun TranslationMessage(
                         Spacer(modifier = Modifier.size(10.dp))
 
                         Text(
-                            stringResource(
+                            stringRes(
                                 R.string.translations_never_translate_from_lang,
                                 Locale(source).displayName,
                             ),
@@ -275,7 +275,7 @@ private fun TranslationMessage(
                         Spacer(modifier = Modifier.size(10.dp))
 
                         Text(
-                            stringResource(
+                            stringRes(
                                 R.string.translations_show_in_lang_first,
                                 Locale(source).displayName,
                             ),
@@ -305,7 +305,7 @@ private fun TranslationMessage(
                         Spacer(modifier = Modifier.size(10.dp))
 
                         Text(
-                            stringResource(
+                            stringRes(
                                 R.string.translations_show_in_lang_first,
                                 Locale(target).displayName,
                             ),
@@ -340,7 +340,7 @@ private fun TranslationMessage(
                                 Spacer(modifier = Modifier.size(10.dp))
 
                                 Text(
-                                    stringResource(
+                                    stringRes(
                                         R.string.translations_always_translate_to_lang,
                                         lang.displayName,
                                     ),

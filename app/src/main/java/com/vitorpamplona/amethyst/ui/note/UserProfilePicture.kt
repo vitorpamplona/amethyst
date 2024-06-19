@@ -30,12 +30,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
@@ -46,6 +44,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.events.ChatroomKey
 
 @Composable
@@ -91,7 +90,7 @@ fun DisplayBlankAuthor(
 
     RobohashAsyncImage(
         robot = "authornotfound",
-        contentDescription = stringResource(R.string.unknown_author),
+        contentDescription = stringRes(R.string.unknown_author),
         modifier = nullModifier,
         loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
     )
@@ -347,9 +346,9 @@ fun InnerUserPicture(
         model = userPicture,
         contentDescription =
             if (userName != null) {
-                stringResource(id = R.string.profile_image_of_user, userName)
+                stringRes(id = R.string.profile_image_of_user, userName)
             } else {
-                stringResource(id = R.string.profile_image)
+                stringRes(id = R.string.profile_image)
             },
         modifier = myImageModifier,
         contentScale = ContentScale.Crop,

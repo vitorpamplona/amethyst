@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.qrcode
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -45,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -57,6 +55,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.events.UserMetadata
 
@@ -120,7 +119,7 @@ fun ShowQRDialog(
                                 RobohashFallbackAsyncImage(
                                     robot = user.pubkeyHex,
                                     model = user.profilePicture(),
-                                    contentDescription = stringResource(R.string.profile_image),
+                                    contentDescription = stringRes(R.string.profile_image),
                                     modifier =
                                         Modifier
                                             .width(100.dp)
@@ -161,7 +160,7 @@ fun ShowQRDialog(
                                         containerColor = MaterialTheme.colorScheme.primary,
                                     ),
                             ) {
-                                Text(text = stringResource(R.string.scan_qr))
+                                Text(text = stringRes(R.string.scan_qr))
                             }
                         }
                     } else {

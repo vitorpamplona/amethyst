@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.collectSuccessfulSigningOperations
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
@@ -41,7 +42,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.round
 
-class ZapPaymentHandler(val account: Account) {
+class ZapPaymentHandler(
+    val account: Account,
+) {
     @Immutable
     data class Payable(
         val info: ZapSplitSetup,
@@ -79,8 +82,9 @@ class ZapPaymentHandler(val account: Account) {
 
                     if (lud16.isNullOrBlank()) {
                         onError(
-                            context.getString(R.string.missing_lud16),
-                            context.getString(
+                            stringRes(context, R.string.missing_lud16),
+                            stringRes(
+                                context,
                                 R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats,
                             ),
                         )
@@ -94,8 +98,9 @@ class ZapPaymentHandler(val account: Account) {
 
                 if (lud16.isNullOrBlank()) {
                     onError(
-                        context.getString(R.string.missing_lud16),
-                        context.getString(
+                        stringRes(context, R.string.missing_lud16),
+                        stringRes(
+                            context,
                             R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats,
                         ),
                     )
@@ -132,14 +137,15 @@ class ZapPaymentHandler(val account: Account) {
                     }
                 } else {
                     onPayViaIntent(
-                        it.map {
-                            Payable(
-                                info = it.key.first,
-                                user = it.key.second.user,
-                                amountMilliSats = it.value.zapValue,
-                                invoice = it.value.invoice,
-                            )
-                        }.toImmutableList(),
+                        it
+                            .map {
+                                Payable(
+                                    info = it.key.first,
+                                    user = it.key.second.user,
+                                    amountMilliSats = it.value.zapValue,
+                                    invoice = it.value.invoice,
+                                )
+                            }.toImmutableList(),
                     )
 
                     onProgress(0f)
@@ -172,13 +178,16 @@ class ZapPaymentHandler(val account: Account) {
         onAllDone: suspend (MutableMap<ZapSplitSetup, SignAllZapRequestsReturn>) -> Unit,
     ) {
         val authorRelayList =
-            note.author?.pubkeyHex?.let {
-                (
-                    LocalCache.getAddressableNoteIfExists(
-                        AdvertisedRelayListEvent.createAddressTag(it),
-                    )?.event as? AdvertisedRelayListEvent?
-                )?.readRelays()
-            }?.toSet()
+            note.author
+                ?.pubkeyHex
+                ?.let {
+                    (
+                        LocalCache
+                            .getAddressableNoteIfExists(
+                                AdvertisedRelayListEvent.createAddressTag(it),
+                            )?.event as? AdvertisedRelayListEvent?
+                    )?.readRelays()
+                }?.toSet()
 
         collectSuccessfulSigningOperations<ZapSplitSetup, SignAllZapRequestsReturn>(
             operationsInput = zapsToSend,
@@ -194,9 +203,10 @@ class ZapPaymentHandler(val account: Account) {
                     val userRelayList =
                         (
                             (
-                                LocalCache.getAddressableNoteIfExists(
-                                    AdvertisedRelayListEvent.createAddressTag(next.lnAddressOrPubKeyHex),
-                                )?.event as? AdvertisedRelayListEvent?
+                                LocalCache
+                                    .getAddressableNoteIfExists(
+                                        AdvertisedRelayListEvent.createAddressTag(next.lnAddressOrPubKeyHex),
+                                    )?.event as? AdvertisedRelayListEvent?
                             )?.readRelays()?.toSet() ?: emptySet()
                         ) + (authorRelayList ?: emptySet())
 
@@ -272,8 +282,9 @@ class ZapPaymentHandler(val account: Account) {
                             progressAllPayments += 0.5f / invoices.size
                             onProgress(progressAllPayments)
                             onError(
-                                context.getString(R.string.error_dialog_pay_invoice_error),
-                                context.getString(
+                                stringRes(context, R.string.error_dialog_pay_invoice_error),
+                                stringRes(
+                                    context,
                                     R.string.wallet_connect_pay_invoice_error_error,
                                     response.error?.message
                                         ?: response.error?.code?.toString() ?: "Error parsing error message",
@@ -339,10 +350,12 @@ class ZapPaymentHandler(val account: Account) {
         } else {
             if (showErrorIfNoLnAddress) {
                 onError(
-                    context.getString(
+                    stringRes(
+                        context,
                         R.string.missing_lud16,
                     ),
-                    context.getString(
+                    stringRes(
+                        context,
                         R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
                         user?.toBestDisplayName() ?: splitSetup.lnAddressOrPubKeyHex,
                     ),

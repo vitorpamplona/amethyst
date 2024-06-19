@@ -31,7 +31,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
@@ -67,7 +66,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
@@ -86,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.ui.actions.ImageSaver
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -234,7 +233,12 @@ private fun DialogContent(
         exit = remember { fadeOut() },
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = Size15dp, vertical = Size10dp).statusBarsPadding().systemBarsPadding().fillMaxWidth(),
+            modifier =
+                Modifier
+                    .padding(horizontal = Size15dp, vertical = Size10dp)
+                    .statusBarsPadding()
+                    .systemBarsPadding()
+                    .fillMaxWidth(),
             horizontalArrangement = spacedBy(Size10dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -245,7 +249,7 @@ private fun DialogContent(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.back),
+                    contentDescription = stringRes(R.string.back),
                 )
             }
 
@@ -262,7 +266,7 @@ private fun DialogContent(
                     Icon(
                         imageVector = Icons.Default.Share,
                         modifier = Size20Modifier,
-                        contentDescription = stringResource(R.string.quick_action_share),
+                        contentDescription = stringRes(R.string.quick_action_share),
                     )
 
                     ShareImageAction(popupExpanded = popupExpanded, myContent, onDismiss = { popupExpanded.value = false })
@@ -294,7 +298,7 @@ private fun DialogContent(
                     Icon(
                         imageVector = Icons.Default.Download,
                         modifier = Size20Modifier,
-                        contentDescription = stringResource(R.string.save_to_gallery),
+                        contentDescription = stringRes(R.string.save_to_gallery),
                     )
                 }
             }

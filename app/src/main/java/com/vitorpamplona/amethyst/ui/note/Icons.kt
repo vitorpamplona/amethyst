@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Bolt
@@ -56,7 +55,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -73,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.icons.Reposted
 import com.vitorpamplona.amethyst.commons.icons.Search
 import com.vitorpamplona.amethyst.commons.icons.Zap
 import com.vitorpamplona.amethyst.commons.icons.ZapSplit
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -85,7 +84,7 @@ import com.vitorpamplona.amethyst.ui.theme.subtleButton
 fun AmethystIcon(iconSize: Dp) {
     Icon(
         imageVector = CustomHashTagIcons.Amethyst,
-        contentDescription = stringResource(id = R.string.app_logo),
+        contentDescription = stringRes(id = R.string.app_logo),
         modifier = Modifier.size(iconSize),
         tint = Color.Unspecified,
     )
@@ -100,7 +99,7 @@ fun FollowingIcon(iconSize: Dp) {
 fun FollowingIcon(modifier: Modifier) {
     Icon(
         imageVector = Following,
-        contentDescription = stringResource(id = R.string.following),
+        contentDescription = stringRes(id = R.string.following),
         modifier = modifier,
         tint = Color.Unspecified,
     )
@@ -110,7 +109,7 @@ fun FollowingIcon(modifier: Modifier) {
 fun ArrowBackIcon() {
     Icon(
         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-        contentDescription = stringResource(R.string.back),
+        contentDescription = stringRes(R.string.back),
         tint = MaterialTheme.colorScheme.grayText,
     )
 }
@@ -132,7 +131,7 @@ fun DownloadForOfflineIcon(
 ) {
     Icon(
         imageVector = Icons.Default.DownloadForOffline,
-        contentDescription = stringResource(id = R.string.accessibility_download_for_offline),
+        contentDescription = stringRes(id = R.string.accessibility_download_for_offline),
         modifier = remember(iconSize) { Modifier.size(iconSize) },
         tint = tint,
     )
@@ -142,7 +141,7 @@ fun DownloadForOfflineIcon(
 fun HashCheckIcon(iconSize: Dp) {
     Icon(
         painter = painterResource(R.drawable.original),
-        contentDescription = stringResource(id = R.string.hash_verification_passed),
+        contentDescription = stringRes(id = R.string.hash_verification_passed),
         modifier = remember(iconSize) { Modifier.size(iconSize) },
         tint = Color.Unspecified,
     )
@@ -152,7 +151,7 @@ fun HashCheckIcon(iconSize: Dp) {
 fun HashCheckFailedIcon(iconSize: Dp) {
     Icon(
         imageVector = Icons.Default.Report,
-        contentDescription = stringResource(id = R.string.hash_verification_failed),
+        contentDescription = stringRes(id = R.string.hash_verification_failed),
         modifier = remember(iconSize) { Modifier.size(iconSize) },
         tint = Color.Red,
     )
@@ -165,7 +164,7 @@ fun LikedIcon(
 ) {
     Icon(
         imageVector = Liked,
-        stringResource(id = R.string.like_description),
+        stringRes(id = R.string.like_description),
         modifier = modifier,
         tint = tint,
     )
@@ -178,7 +177,7 @@ fun LikeIcon(
 ) {
     Icon(
         imageVector = Like,
-        contentDescription = stringResource(id = R.string.like_description),
+        contentDescription = stringRes(id = R.string.like_description),
         modifier = iconSizeModifier,
         tint = grayTint,
     )
@@ -191,7 +190,7 @@ fun RepostIcon(
 ) {
     Icon(
         imageVector = Repost,
-        contentDescription = stringResource(id = R.string.boost_or_quote_description),
+        contentDescription = stringRes(id = R.string.boost_or_quote_description),
         modifier = modifier,
         tint = tint,
     )
@@ -204,7 +203,7 @@ fun RepostedIcon(
 ) {
     Icon(
         imageVector = Reposted,
-        contentDescription = stringResource(id = R.string.boost_or_quote_description),
+        contentDescription = stringRes(id = R.string.boost_or_quote_description),
         modifier = modifier,
         tint = tint,
     )
@@ -217,7 +216,7 @@ fun LightningAddressIcon(
 ) {
     Icon(
         imageVector = Icons.Default.Bolt,
-        contentDescription = stringResource(R.string.lightning_address),
+        contentDescription = stringRes(R.string.lightning_address),
         tint = tint,
         modifier = modifier,
     )
@@ -255,7 +254,7 @@ fun ZapIcon(
 ) {
     Icon(
         imageVector = Icons.Default.Bolt,
-        contentDescription = stringResource(contentDescriptor),
+        contentDescription = stringRes(contentDescriptor),
         tint = tint,
         modifier = modifier,
     )
@@ -269,7 +268,7 @@ fun OutlinedZapIcon(
 ) {
     Icon(
         imageVector = Zap,
-        contentDescription = stringResource(contentDescriptor),
+        contentDescription = stringRes(contentDescriptor),
         tint = tint,
         modifier = modifier,
     )
@@ -283,7 +282,7 @@ fun ShareIcon(
     Icon(
         imageVector = Icons.Default.Share,
         modifier = modifier,
-        contentDescription = stringResource(R.string.share_or_save),
+        contentDescription = stringRes(R.string.share_or_save),
         tint = tint,
     )
 }
@@ -292,7 +291,7 @@ fun ShareIcon(
 fun CashuIcon(modifier: Modifier) {
     Icon(
         imageVector = CustomHashTagIcons.Cashu,
-        "Cashu",
+        stringRes(R.string.cashu),
         tint = Color.Unspecified,
         modifier = modifier,
     )
@@ -305,7 +304,7 @@ fun CopyIcon(
 ) {
     Icon(
         imageVector = Icons.Default.ContentCopy,
-        stringResource(id = R.string.copy_to_clipboard),
+        stringRes(id = R.string.copy_to_clipboard),
         tint = tint,
         modifier = modifier,
     )
@@ -318,7 +317,7 @@ fun OpenInNewIcon(
 ) {
     Icon(
         imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-        stringResource(id = R.string.copy_to_clipboard),
+        stringRes(id = R.string.copy_to_clipboard),
         tint = tint,
         modifier = modifier,
     )
@@ -331,7 +330,7 @@ fun ExpandLessIcon(
 ) {
     Icon(
         imageVector = Icons.Default.ExpandLess,
-        contentDescription = stringResource(id = contentDescriptor),
+        contentDescription = stringRes(id = contentDescriptor),
         modifier = modifier,
         tint = MaterialTheme.colorScheme.subtleButton,
     )
@@ -344,7 +343,7 @@ fun ExpandMoreIcon(
 ) {
     Icon(
         imageVector = Icons.Default.ExpandMore,
-        contentDescription = stringResource(id = contentDescriptor),
+        contentDescription = stringRes(id = contentDescriptor),
         modifier = modifier,
         tint = MaterialTheme.colorScheme.subtleButton,
     )
@@ -357,7 +356,7 @@ fun CommentIcon(
 ) {
     Icon(
         imageVector = Reply,
-        contentDescription = stringResource(id = R.string.reply_description),
+        contentDescription = stringRes(id = R.string.reply_description),
         modifier = iconSizeModifier,
         tint = tint,
     )
@@ -367,7 +366,7 @@ fun CommentIcon(
 fun PollIcon() {
     Icon(
         painter = painterResource(R.drawable.ic_poll),
-        contentDescription = stringResource(id = R.string.poll),
+        contentDescription = stringRes(id = R.string.poll),
         modifier = Size20Modifier,
         tint = MaterialTheme.colorScheme.onBackground,
     )
@@ -377,7 +376,7 @@ fun PollIcon() {
 fun RegularPostIcon() {
     Icon(
         painter = painterResource(R.drawable.ic_lists),
-        contentDescription = stringResource(id = R.string.disable_poll),
+        contentDescription = stringRes(id = R.string.disable_poll),
         modifier = Size20Modifier,
         tint = MaterialTheme.colorScheme.onBackground,
     )
@@ -387,7 +386,7 @@ fun RegularPostIcon() {
 fun CancelIcon() {
     Icon(
         imageVector = Icons.Default.Cancel,
-        contentDescription = stringResource(id = R.string.cancel),
+        contentDescription = stringRes(id = R.string.cancel),
         modifier = Size30Modifier,
         tint = MaterialTheme.colorScheme.placeholderText,
     )
@@ -397,7 +396,7 @@ fun CancelIcon() {
 fun CloseIcon() {
     Icon(
         painter = painterResource(id = R.drawable.ic_close),
-        contentDescription = stringResource(id = R.string.cancel),
+        contentDescription = stringRes(id = R.string.cancel),
         modifier = Size20Modifier,
     )
 }
@@ -406,7 +405,7 @@ fun CloseIcon() {
 fun MutedIcon() {
     Icon(
         imageVector = Icons.AutoMirrored.Filled.VolumeOff,
-        contentDescription = stringResource(id = R.string.muted_button),
+        contentDescription = stringRes(id = R.string.muted_button),
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Size30Modifier,
     )
@@ -416,7 +415,7 @@ fun MutedIcon() {
 fun MuteIcon() {
     Icon(
         imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-        contentDescription = stringResource(id = R.string.mute_button),
+        contentDescription = stringRes(id = R.string.mute_button),
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Size30Modifier,
     )
@@ -429,7 +428,7 @@ fun SearchIcon(
 ) {
     Icon(
         imageVector = Search,
-        contentDescription = stringResource(id = R.string.search_button),
+        contentDescription = stringRes(id = R.string.search_button),
         modifier = modifier,
         tint = tint,
     )
@@ -442,7 +441,7 @@ fun PlayIcon(
 ) {
     Icon(
         imageVector = Icons.Outlined.PlayCircle,
-        contentDescription = stringResource(id = R.string.accessibility_play_username),
+        contentDescription = stringRes(id = R.string.accessibility_play_username),
         modifier = modifier,
         tint = tint,
     )
@@ -468,7 +467,7 @@ fun LyricsIcon(
 ) {
     Icon(
         painter = painterResource(id = R.drawable.lyrics_on),
-        contentDescription = stringResource(id = R.string.accessibility_lyrics_on),
+        contentDescription = stringRes(id = R.string.accessibility_lyrics_on),
         modifier = modifier,
         tint = tint,
     )
@@ -481,7 +480,7 @@ fun LyricsOffIcon(
 ) {
     Icon(
         painter = painterResource(id = R.drawable.lyrics_off),
-        contentDescription = stringResource(id = R.string.accessibility_lyrics_off),
+        contentDescription = stringRes(id = R.string.accessibility_lyrics_off),
         modifier = modifier,
         tint = tint,
     )
@@ -491,7 +490,7 @@ fun LyricsOffIcon(
 fun ClearTextIcon() {
     Icon(
         imageVector = Icons.Default.Clear,
-        contentDescription = stringResource(R.string.clear),
+        contentDescription = stringRes(R.string.clear),
     )
 }
 
@@ -502,7 +501,7 @@ fun LinkIcon(
 ) {
     Icon(
         imageVector = Icons.Default.Link,
-        contentDescription = stringResource(R.string.website),
+        contentDescription = stringRes(R.string.website),
         modifier = modifier,
         tint = tint,
     )
@@ -512,7 +511,7 @@ fun LinkIcon(
 fun VerticalDotsIcon(contentDescriptor: Int? = null) {
     Icon(
         imageVector = Icons.Default.MoreVert,
-        contentDescription = contentDescriptor?.let { stringResource(id = it) },
+        contentDescription = contentDescriptor?.let { stringRes(id = it) },
         modifier = Size18Modifier,
         tint = MaterialTheme.colorScheme.placeholderText,
     )
@@ -522,7 +521,7 @@ fun VerticalDotsIcon(contentDescriptor: Int? = null) {
 fun NIP05CheckingIcon(modifier: Modifier) {
     Icon(
         imageVector = Icons.Default.Downloading,
-        contentDescription = stringResource(id = R.string.nip05_checking),
+        contentDescription = stringRes(id = R.string.nip05_checking),
         modifier = modifier,
         tint = Color.Yellow,
     )
@@ -532,7 +531,7 @@ fun NIP05CheckingIcon(modifier: Modifier) {
 fun NIP05VerifiedIcon(modifier: Modifier) {
     Icon(
         painter = painterResource(R.drawable.nip_05),
-        contentDescription = stringResource(id = R.string.nip05_verified),
+        contentDescription = stringRes(id = R.string.nip05_verified),
         modifier = modifier,
         tint = Color.Unspecified,
     )
@@ -542,7 +541,7 @@ fun NIP05VerifiedIcon(modifier: Modifier) {
 fun NIP05FailedVerification(modifier: Modifier) {
     Icon(
         imageVector = Icons.Default.Report,
-        contentDescription = stringResource(id = R.string.nip05_failed),
+        contentDescription = stringRes(id = R.string.nip05_failed),
         modifier = modifier,
         tint = Color.Red,
     )
@@ -555,7 +554,7 @@ fun IncognitoIconOn(
 ) {
     Icon(
         painter = painterResource(id = R.drawable.incognito),
-        contentDescription = stringResource(id = R.string.accessibility_turn_off_sealed_message),
+        contentDescription = stringRes(id = R.string.accessibility_turn_off_sealed_message),
         modifier = modifier,
         tint = tint,
     )
@@ -568,7 +567,7 @@ fun IncognitoIconOff(
 ) {
     Icon(
         painter = painterResource(id = R.drawable.incognito_off),
-        contentDescription = stringResource(id = R.string.accessibility_turn_on_sealed_message),
+        contentDescription = stringRes(id = R.string.accessibility_turn_on_sealed_message),
         modifier = modifier,
         tint = tint,
     )
@@ -581,7 +580,7 @@ fun ZapSplitIcon(
 ) {
     Icon(
         imageVector = ZapSplit,
-        contentDescription = stringResource(id = R.string.zap_split_title),
+        contentDescription = stringRes(id = R.string.zap_split_title),
         modifier = modifier,
         tint = tint,
     )
@@ -598,7 +597,7 @@ fun ZapSplitPreview() {
         ) {
             Icon(
                 imageVector = Icons.Outlined.Bolt,
-                contentDescription = stringResource(id = R.string.zaps),
+                contentDescription = stringRes(id = R.string.zaps),
                 modifier =
                     Modifier
                         .size(20.dp)
@@ -607,7 +606,7 @@ fun ZapSplitPreview() {
             )
             Icon(
                 imageVector = Icons.Outlined.ArrowForwardIos,
-                contentDescription = stringResource(id = R.string.zaps),
+                contentDescription = stringRes(id = R.string.zaps),
                 modifier =
                     Modifier
                         .size(13.dp)

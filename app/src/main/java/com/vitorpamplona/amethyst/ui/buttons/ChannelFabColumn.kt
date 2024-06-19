@@ -38,13 +38,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
@@ -86,7 +86,7 @@ fun ChannelFabColumn(
                 containerColor = MaterialTheme.colorScheme.primary,
             ) {
                 Text(
-                    text = stringResource(R.string.messages_new_message),
+                    text = stringRes(R.string.messages_new_message),
                     color = Color.White,
                     textAlign = TextAlign.Center,
                     fontSize = Font12SP,
@@ -105,7 +105,7 @@ fun ChannelFabColumn(
                 containerColor = MaterialTheme.colorScheme.primary,
             ) {
                 Text(
-                    text = stringResource(R.string.messages_create_public_chat),
+                    text = stringRes(R.string.messages_create_public_chat),
                     color = Color.White,
                     textAlign = TextAlign.Center,
                     fontSize = Font12SP,
@@ -123,7 +123,7 @@ fun ChannelFabColumn(
         ) {
             Icon(
                 imageVector = Icons.Outlined.Add,
-                contentDescription = stringResource(R.string.messages_create_public_private_chat_description),
+                contentDescription = stringRes(R.string.messages_create_public_private_chat_description),
                 modifier = Modifier.size(26.dp),
                 tint = Color.White,
             )

@@ -59,7 +59,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -136,6 +135,7 @@ import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ThinSendButton
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
@@ -734,14 +734,14 @@ private fun RenderClassifiedsReaderForThread(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_dm),
-                    stringResource(R.string.send_a_direct_message),
+                    stringRes(R.string.send_a_direct_message),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )
 
                 Spacer(modifier = StdHorzSpacer)
 
-                Text(stringResource(id = R.string.send_the_seller_a_message))
+                Text(stringRes(id = R.string.send_the_seller_a_message))
             }
 
             Row(
@@ -756,12 +756,12 @@ private fun RenderClassifiedsReaderForThread(
 
                 val msg =
                     if (sellerName != null) {
-                        stringResource(
+                        stringRes(
                             id = R.string.hi_seller_is_this_still_available,
                             sellerName,
                         )
                     } else {
-                        stringResource(id = R.string.hi_there_is_this_still_available)
+                        stringRes(id = R.string.hi_there_is_this_still_available)
                     }
 
                 var message by remember { mutableStateOf(TextFieldValue(msg)) }
@@ -778,7 +778,7 @@ private fun RenderClassifiedsReaderForThread(
                     modifier = Modifier.weight(1f, true),
                     placeholder = {
                         Text(
-                            text = stringResource(R.string.reply_here),
+                            text = stringRes(R.string.reply_here),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -813,7 +813,7 @@ private fun RenderLongFormHeaderForThread(noteEvent: LongTextNoteEvent) {
             AsyncImage(
                 model = it,
                 contentDescription =
-                    stringResource(
+                    stringRes(
                         R.string.preview_card_image_for,
                         it,
                     ),
@@ -904,7 +904,7 @@ private fun RenderWikiHeaderForThread(
                 AsyncImage(
                     model = it,
                     contentDescription =
-                        stringResource(
+                        stringRes(
                             R.string.preview_card_image_for,
                             it,
                         ),

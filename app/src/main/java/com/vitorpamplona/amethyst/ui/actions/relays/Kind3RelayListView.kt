@@ -61,7 +61,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -77,6 +76,7 @@ import com.vitorpamplona.amethyst.service.relays.RelayStat
 import com.vitorpamplona.amethyst.ui.actions.RelayInfoDialog
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -224,28 +224,32 @@ fun LoadRelayInfo(
                     val msg =
                         when (errorCode) {
                             Nip11Retriever.ErrorCode.FAIL_TO_ASSEMBLE_URL ->
-                                context.getString(
+                                stringRes(
+                                    context,
                                     R.string.relay_information_document_error_assemble_url,
                                     url,
                                     exceptionMessage,
                                 )
 
                             Nip11Retriever.ErrorCode.FAIL_TO_REACH_SERVER ->
-                                context.getString(
+                                stringRes(
+                                    context,
                                     R.string.relay_information_document_error_assemble_url,
                                     url,
                                     exceptionMessage,
                                 )
 
                             Nip11Retriever.ErrorCode.FAIL_TO_PARSE_RESULT ->
-                                context.getString(
+                                stringRes(
+                                    context,
                                     R.string.relay_information_document_error_assemble_url,
                                     url,
                                     exceptionMessage,
                                 )
 
                             Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS ->
-                                context.getString(
+                                stringRes(
+                                    context,
                                     R.string.relay_information_document_error_assemble_url,
                                     url,
                                     exceptionMessage,
@@ -253,7 +257,7 @@ fun LoadRelayInfo(
                         }
 
                     accountViewModel.toast(
-                        context.getString(R.string.unable_to_download_relay_document),
+                        stringRes(context, R.string.unable_to_download_relay_document),
                         msg,
                     )
                 },
@@ -346,7 +350,7 @@ private fun StatusRow(
 
     Icon(
         imageVector = Icons.Default.Download,
-        contentDescription = stringResource(R.string.read_from_relay),
+        contentDescription = stringRes(R.string.read_from_relay),
         modifier =
             Modifier
                 .size(15.dp)
@@ -357,7 +361,7 @@ private fun StatusRow(
                             Toast
                                 .makeText(
                                     context,
-                                    context.getString(R.string.read_from_relay),
+                                    stringRes(context, R.string.read_from_relay),
                                     Toast.LENGTH_SHORT,
                                 ).show()
                         }
@@ -383,7 +387,7 @@ private fun StatusRow(
 
     Icon(
         imageVector = Icons.Default.Upload,
-        stringResource(R.string.write_to_relay),
+        stringRes(R.string.write_to_relay),
         modifier =
             Modifier
                 .size(15.dp)
@@ -394,7 +398,7 @@ private fun StatusRow(
                             Toast
                                 .makeText(
                                     context,
-                                    context.getString(R.string.write_to_relay),
+                                    stringRes(context, R.string.write_to_relay),
                                     Toast.LENGTH_SHORT,
                                 ).show()
                         }
@@ -420,7 +424,7 @@ private fun StatusRow(
 
     Icon(
         imageVector = Icons.Default.SyncProblem,
-        stringResource(R.string.errors),
+        stringRes(R.string.errors),
         modifier =
             Modifier
                 .size(15.dp)
@@ -431,7 +435,7 @@ private fun StatusRow(
                             Toast
                                 .makeText(
                                     context,
-                                    context.getString(R.string.errors),
+                                    stringRes(context, R.string.errors),
                                     Toast.LENGTH_SHORT,
                                 ).show()
                         }
@@ -455,7 +459,7 @@ private fun StatusRow(
 
     Icon(
         imageVector = Icons.Default.DeleteSweep,
-        stringResource(R.string.spam),
+        stringRes(R.string.spam),
         modifier =
             Modifier
                 .size(15.dp)
@@ -466,7 +470,7 @@ private fun StatusRow(
                             Toast
                                 .makeText(
                                     context,
-                                    context.getString(R.string.spam),
+                                    stringRes(context, R.string.spam),
                                     Toast.LENGTH_SHORT,
                                 ).show()
                         }
@@ -502,7 +506,7 @@ private fun ActiveToggles(
     val context = LocalContext.current
 
     Text(
-        text = stringResource(id = R.string.active_for),
+        text = stringRes(id = R.string.active_for),
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         color = MaterialTheme.colorScheme.placeholderText,
@@ -516,7 +520,7 @@ private fun ActiveToggles(
     ) {
         Icon(
             painterResource(R.drawable.ic_home),
-            stringResource(R.string.home_feed),
+            stringRes(R.string.home_feed),
             modifier =
                 Modifier
                     .padding(horizontal = 5.dp)
@@ -528,7 +532,7 @@ private fun ActiveToggles(
                                 Toast
                                     .makeText(
                                         context,
-                                        context.getString(R.string.home_feed),
+                                        stringRes(context, R.string.home_feed),
                                         Toast.LENGTH_SHORT,
                                     ).show()
                             }
@@ -550,7 +554,7 @@ private fun ActiveToggles(
     ) {
         Icon(
             painterResource(R.drawable.ic_dm),
-            stringResource(R.string.private_message_feed),
+            stringRes(R.string.private_message_feed),
             modifier =
                 Modifier
                     .padding(horizontal = 5.dp)
@@ -562,7 +566,7 @@ private fun ActiveToggles(
                                 Toast
                                     .makeText(
                                         context,
-                                        context.getString(R.string.private_message_feed),
+                                        stringRes(context, R.string.private_message_feed),
                                         Toast.LENGTH_SHORT,
                                     ).show()
                             }
@@ -584,7 +588,7 @@ private fun ActiveToggles(
     ) {
         Icon(
             imageVector = Icons.Default.Groups,
-            contentDescription = stringResource(R.string.public_chat_feed),
+            contentDescription = stringRes(R.string.public_chat_feed),
             modifier =
                 Modifier
                     .padding(horizontal = 5.dp)
@@ -596,7 +600,7 @@ private fun ActiveToggles(
                                 Toast
                                     .makeText(
                                         context,
-                                        context.getString(R.string.public_chat_feed),
+                                        stringRes(context, R.string.public_chat_feed),
                                         Toast.LENGTH_SHORT,
                                     ).show()
                             }
@@ -618,7 +622,7 @@ private fun ActiveToggles(
     ) {
         Icon(
             imageVector = Icons.Default.Public,
-            stringResource(R.string.global_feed),
+            stringRes(R.string.global_feed),
             modifier =
                 Modifier
                     .padding(horizontal = 5.dp)
@@ -630,7 +634,7 @@ private fun ActiveToggles(
                                 Toast
                                     .makeText(
                                         context,
-                                        context.getString(R.string.global_feed),
+                                        stringRes(context, R.string.global_feed),
                                         Toast.LENGTH_SHORT,
                                     ).show()
                             }
@@ -680,7 +684,7 @@ private fun FirstLine(
         ) {
             Icon(
                 imageVector = Icons.Default.Cancel,
-                contentDescription = stringResource(id = R.string.remove),
+                contentDescription = stringRes(id = R.string.remove),
                 modifier = Modifier.padding(start = 10.dp).size(15.dp),
                 tint = WarningColor,
             )
@@ -699,7 +703,7 @@ fun Kind3RelayEditBox(
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(
-            label = { Text(text = stringResource(R.string.add_a_relay)) },
+            label = { Text(text = stringRes(R.string.add_a_relay)) },
             modifier = Modifier.weight(1f),
             value = url,
             onValueChange = { url = it },
@@ -716,7 +720,7 @@ fun Kind3RelayEditBox(
         IconButton(onClick = { read = !read }) {
             Icon(
                 imageVector = Icons.Default.Download,
-                contentDescription = stringResource(id = R.string.read_from_relay),
+                contentDescription = stringRes(id = R.string.read_from_relay),
                 modifier = Modifier.size(Size35dp).padding(horizontal = 5.dp),
                 tint =
                     if (read) {
@@ -730,7 +734,7 @@ fun Kind3RelayEditBox(
         IconButton(onClick = { write = !write }) {
             Icon(
                 imageVector = Icons.Default.Upload,
-                contentDescription = stringResource(id = R.string.write_to_relay),
+                contentDescription = stringRes(id = R.string.write_to_relay),
                 modifier = Modifier.size(Size35dp).padding(horizontal = 5.dp),
                 tint =
                     if (write) {
@@ -769,7 +773,7 @@ fun Kind3RelayEditBox(
                         },
                 ),
         ) {
-            Text(text = stringResource(id = R.string.add), color = Color.White)
+            Text(text = stringRes(id = R.string.add), color = Color.White)
         }
     }
 }

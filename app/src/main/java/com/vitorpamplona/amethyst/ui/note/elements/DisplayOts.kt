@@ -29,7 +29,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.R
@@ -37,6 +36,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.LoadOts
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import java.text.SimpleDateFormat
@@ -65,7 +65,7 @@ fun DisplayOts(
                 text =
                     buildAnnotatedString {
                         append(
-                            stringResource(
+                            stringRes(
                                 id = R.string.existed_since,
                                 timeStr,
                             ),
@@ -76,8 +76,9 @@ fun DisplayOts(
                         SimpleDateFormat.getDateTimeInstance().format(Date(unixtimestamp * 1000))
 
                     accountViewModel.toast(
-                        context.getString(R.string.ots_info_title),
-                        context.getString(R.string.ots_info_description, fullDateTime),
+                        R.string.ots_info_title,
+                        R.string.ots_info_description,
+                        fullDateTime,
                     )
                 },
                 style =
@@ -91,7 +92,7 @@ fun DisplayOts(
         },
         whenPending = {
             Text(
-                stringResource(id = R.string.timestamp_pending_short),
+                stringRes(id = R.string.timestamp_pending_short),
                 color = MaterialTheme.colorScheme.lessImportantLink,
                 fontSize = Font14SP,
                 fontWeight = FontWeight.Bold,

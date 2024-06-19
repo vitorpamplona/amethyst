@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.scrollBy
@@ -96,7 +95,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -155,6 +153,7 @@ import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
@@ -569,8 +568,8 @@ private fun CreateAndRenderTabs(
 
     val tabs =
         listOf<@Composable (() -> Unit)?>(
-            { Text(text = stringResource(R.string.notes)) },
-            { Text(text = stringResource(R.string.replies)) },
+            { Text(text = stringRes(R.string.notes)) },
+            { Text(text = stringRes(R.string.replies)) },
             { FollowTabHeader(baseUser) },
             { FollowersTabHeader(baseUser) },
             { ZapTabHeader(baseUser) },
@@ -604,7 +603,7 @@ private fun RelaysTabHeader(baseUser: User) {
                 ?.size ?: "--"
         }
 
-    Text(text = "$userRelaysBeingUsed / $userRelays ${stringResource(R.string.relays)}")
+    Text(text = "$userRelaysBeingUsed / $userRelays ${stringRes(R.string.relays)}")
 }
 
 @Composable
@@ -622,7 +621,7 @@ private fun ReportsTabHeader(baseUser: User) {
         }
     }
 
-    Text(text = "$userReports ${stringResource(R.string.reports)}")
+    Text(text = "$userReports ${stringRes(R.string.reports)}")
 }
 
 @Composable
@@ -635,7 +634,7 @@ private fun FollowedTagsTabHeader(baseUser: User) {
         }
     }
 
-    Text(text = "$usertags ${stringResource(R.string.followed_tags)}")
+    Text(text = "$usertags ${stringRes(R.string.followed_tags)}")
 }
 
 @Composable
@@ -660,7 +659,7 @@ private fun BookmarkTabHeader(baseUser: User) {
         }
     }
 
-    Text(text = "$userBookmarks ${stringResource(R.string.bookmarks)}")
+    Text(text = "$userBookmarks ${stringRes(R.string.bookmarks)}")
 }
 
 @Composable
@@ -677,7 +676,7 @@ private fun ZapTabHeader(baseUser: User) {
         }
     }
 
-    Text(text = "${showAmountAxis(zapAmount)} ${stringResource(id = R.string.zaps)}")
+    Text(text = "${showAmountAxis(zapAmount)} ${stringRes(id = R.string.zaps)}")
 }
 
 @Composable
@@ -685,7 +684,7 @@ private fun FollowersTabHeader(baseUser: User) {
     val userState by baseUser.live().followers.observeAsState()
     var followerCount by remember { mutableStateOf("--") }
 
-    val text = stringResource(R.string.followers)
+    val text = stringRes(R.string.followers)
 
     LaunchedEffect(key1 = userState) {
         launch(Dispatchers.IO) {
@@ -705,7 +704,7 @@ private fun FollowTabHeader(baseUser: User) {
     val userState by baseUser.live().follows.observeAsState()
     var followCount by remember { mutableStateOf("--") }
 
-    val text = stringResource(R.string.follows)
+    val text = stringRes(R.string.follows)
 
     LaunchedEffect(key1 = userState) {
         launch(Dispatchers.IO) {
@@ -756,7 +755,7 @@ private fun ProfileHeader(
                 Icon(
                     tint = MaterialTheme.colorScheme.placeholderText,
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = stringResource(R.string.more_options),
+                    contentDescription = stringRes(R.string.more_options),
                 )
 
                 UserProfileDropDownMenu(
@@ -987,7 +986,7 @@ private fun DrawAdditionalInfo(
         ) {
             Icon(
                 imageVector = Icons.Default.ContentCopy,
-                contentDescription = stringResource(id = R.string.copy_npub_to_clipboard),
+                contentDescription = stringRes(id = R.string.copy_npub_to_clipboard),
                 modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
@@ -1014,7 +1013,7 @@ private fun DrawAdditionalInfo(
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_qrcode),
-                contentDescription = stringResource(id = R.string.show_npub_as_a_qr_code),
+                contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
                 modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
@@ -1031,7 +1030,7 @@ private fun DrawAdditionalInfo(
             Icon(
                 tint = MaterialTheme.colorScheme.placeholderText,
                 imageVector = Icons.Default.Link,
-                contentDescription = stringResource(R.string.website),
+                contentDescription = stringRes(R.string.website),
                 modifier = Modifier.size(16.dp),
             )
 
@@ -1065,7 +1064,7 @@ private fun DrawAdditionalInfo(
                 Icon(
                     tint = Color.Unspecified,
                     painter = painterResource(id = getIdentityClaimIcon(identity)),
-                    contentDescription = stringResource(getIdentityClaimDescription(identity)),
+                    contentDescription = stringRes(getIdentityClaimDescription(identity)),
                     modifier = Modifier.size(16.dp),
                 )
 
@@ -1120,7 +1119,7 @@ fun DisplayLNAddress(
 
     if (showErrorMessageDialog != null) {
         ErrorMessageDialog(
-            title = stringResource(id = R.string.error_dialog_zap_error),
+            title = stringRes(id = R.string.error_dialog_zap_error),
             textContent = showErrorMessageDialog ?: "",
             onClickStartMessage = {
                 scope.launch(Dispatchers.IO) {
@@ -1135,7 +1134,7 @@ fun DisplayLNAddress(
     var showInfoMessageDialog by remember { mutableStateOf<String?>(null) }
     if (showInfoMessageDialog != null) {
         InformationDialog(
-            title = context.getString(R.string.payment_successful),
+            title = stringRes(context, R.string.payment_successful),
             textContent = showInfoMessageDialog ?: "",
         ) {
             showInfoMessageDialog = null
@@ -1172,12 +1171,12 @@ fun DisplayLNAddress(
                         if (accountViewModel.account.hasWalletConnectSetup()) {
                             accountViewModel.account.sendZapPaymentRequestFor(it, null, onSent = {}) { response ->
                                 if (response is PayInvoiceSuccessResponse) {
-                                    showInfoMessageDialog = context.getString(R.string.payment_successful)
+                                    showInfoMessageDialog = stringRes(context, R.string.payment_successful)
                                 } else if (response is PayInvoiceErrorResponse) {
                                     showErrorMessageDialog =
                                         response.error?.message
                                             ?: response.error?.code?.toString()
-                                            ?: context.getString(R.string.error_parsing_error_message)
+                                            ?: stringRes(context, R.string.error_parsing_error_message)
                                 }
                             }
                         } else {
@@ -1211,7 +1210,7 @@ private fun DisplayAppRecommendations(
         when (state) {
             is FeedState.Loaded -> {
                 Column {
-                    Text(stringResource(id = R.string.recommended_apps))
+                    Text(stringRes(id = R.string.recommended_apps))
 
                     FlowRow(
                         verticalArrangement = Arrangement.Center,
@@ -1410,7 +1409,7 @@ private fun WatchAndRenderBadgeImage(
     if (image == null) {
         RobohashAsyncImage(
             robot = "authornotfound",
-            contentDescription = stringResource(R.string.unknown_author),
+            contentDescription = stringRes(R.string.unknown_author),
             modifier =
                 remember {
                     pictureModifier
@@ -1423,7 +1422,7 @@ private fun WatchAndRenderBadgeImage(
         RobohashFallbackAsyncImage(
             robot = eventId,
             model = image!!,
-            contentDescription = stringResource(id = R.string.profile_image),
+            contentDescription = stringRes(id = R.string.profile_image),
             modifier =
                 remember {
                     pictureModifier
@@ -1459,7 +1458,7 @@ fun DrawBanner(
     if (!banner.isNullOrBlank()) {
         AsyncImage(
             model = banner,
-            contentDescription = stringResource(id = R.string.profile_image),
+            contentDescription = stringRes(id = R.string.profile_image),
             contentScale = ContentScale.FillWidth,
             modifier =
                 Modifier
@@ -1481,7 +1480,7 @@ fun DrawBanner(
     } else {
         Image(
             painter = painterResource(R.drawable.profile_banner),
-            contentDescription = stringResource(id = R.string.profile_banner),
+            contentDescription = stringRes(id = R.string.profile_banner),
             contentScale = ContentScale.FillWidth,
             modifier =
                 Modifier
@@ -1757,7 +1756,7 @@ private fun MessageButton(
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_dm),
-            stringResource(R.string.send_a_direct_message),
+            stringRes(R.string.send_a_direct_message),
             modifier = Modifier.size(20.dp),
             tint = Color.White,
         )
@@ -1794,7 +1793,7 @@ private fun InnerEditButton(onClick: () -> Unit) {
         Icon(
             tint = Color.White,
             imageVector = Icons.Default.EditNote,
-            contentDescription = stringResource(R.string.edits_the_user_s_metadata),
+            contentDescription = stringRes(R.string.edits_the_user_s_metadata),
         )
     }
 }
@@ -1811,7 +1810,7 @@ fun UnfollowButton(onClick: () -> Unit) {
             ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringResource(R.string.unfollow), color = Color.White)
+        Text(text = stringRes(R.string.unfollow), color = Color.White)
     }
 }
 
@@ -1830,7 +1829,7 @@ fun FollowButton(
             ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
+        Text(text = stringRes(text), color = Color.White, textAlign = TextAlign.Center)
     }
 }
 
@@ -1846,7 +1845,7 @@ fun ShowUserButton(onClick: () -> Unit) {
             ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringResource(R.string.unblock), color = Color.White)
+        Text(text = stringRes(R.string.unblock), color = Color.White)
     }
 }
 
@@ -1864,7 +1863,7 @@ fun UserProfileDropDownMenu(
         val clipboardManager = LocalClipboardManager.current
 
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.copy_user_id)) },
+            text = { Text(stringRes(R.string.copy_user_id)) },
             onClick = {
                 clipboardManager.setText(AnnotatedString(user.pubkeyNpub()))
                 onDismiss()
@@ -1875,7 +1874,7 @@ fun UserProfileDropDownMenu(
             HorizontalDivider(thickness = DividerThickness)
             if (accountViewModel.account.isHidden(user)) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.unblock_user)) },
+                    text = { Text(stringRes(R.string.unblock_user)) },
                     onClick = {
                         accountViewModel.show(user)
                         onDismiss()
@@ -1883,7 +1882,7 @@ fun UserProfileDropDownMenu(
                 )
             } else {
                 DropdownMenuItem(
-                    text = { Text(stringResource(id = R.string.block_hide_user)) },
+                    text = { Text(stringRes(id = R.string.block_hide_user)) },
                     onClick = {
                         accountViewModel.hide(user)
                         onDismiss()
@@ -1892,35 +1891,35 @@ fun UserProfileDropDownMenu(
             }
             HorizontalDivider(thickness = DividerThickness)
             DropdownMenuItem(
-                text = { Text(stringResource(id = R.string.report_spam_scam)) },
+                text = { Text(stringRes(id = R.string.report_spam_scam)) },
                 onClick = {
                     accountViewModel.report(user, ReportEvent.ReportType.SPAM)
                     onDismiss()
                 },
             )
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.report_hateful_speech)) },
+                text = { Text(stringRes(R.string.report_hateful_speech)) },
                 onClick = {
                     accountViewModel.report(user, ReportEvent.ReportType.PROFANITY)
                     onDismiss()
                 },
             )
             DropdownMenuItem(
-                text = { Text(stringResource(id = R.string.report_impersonation)) },
+                text = { Text(stringRes(id = R.string.report_impersonation)) },
                 onClick = {
                     accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION)
                     onDismiss()
                 },
             )
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.report_nudity_porn)) },
+                text = { Text(stringRes(R.string.report_nudity_porn)) },
                 onClick = {
                     accountViewModel.report(user, ReportEvent.ReportType.NUDITY)
                     onDismiss()
                 },
             )
             DropdownMenuItem(
-                text = { Text(stringResource(id = R.string.report_illegal_behaviour)) },
+                text = { Text(stringRes(id = R.string.report_illegal_behaviour)) },
                 onClick = {
                     accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL)
                     onDismiss()
