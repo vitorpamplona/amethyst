@@ -8,7 +8,7 @@
     <string name="show_anyway">फिर भी दिखाएँ</string>
     <string name="post_was_hidden">इस प्रकाशित पत्र को छिपाया गया क्योंकि इसमें आपके आच्छाद्य उपयोगकर्ता अथवा शब्द उल्लेखित हैं</string>
     <string name="post_was_flagged_as_inappropriate_by">प्रकाशित पत्र को मौन किया गया अथवा सूचित किया गया इनके द्वारा</string>
-    <string name="post_not_found">घटना उपलब्ध किया जा रहा है अथवा आपके पुनःप्रसारक सूची में से प्राप्त नहीं</string>
+    <string name="post_not_found">घटना उपलब्ध की जा रही है अथवा आपके पुनःप्रसारक सूची में से प्राप्त नहीं</string>
     <string name="channel_image">प्रणाली चित्र</string>
     <string name="referenced_event_not_found">उद्धृत घटना अप्राप्त</string>
     <string name="could_not_decrypt_the_message">सन्देश का अरहस्यीकरण असफल</string>
@@ -419,13 +419,13 @@
     <string name="minimum_pow">न्यूनतम श्रमप्रमाण</string>
     <string name="auth">प्रमाणीकरण</string>
     <string name="payment">भुगतान</string>
-    <string name="cashu">काशयु लिपिखण्ड</string>
+    <string name="cashu">काशयु राशिखण्ड</string>
     <string name="cashu_redeem">चुकाएँ</string>
     <string name="cashu_redeem_to_zap">ज्साप धनकोष को भेजें</string>
     <string name="cashu_redeem_to_cashu">काशयु धनकोष में खोलें</string>
-    <string name="cashu_copy_token">लिपिखण्ड की अनुकृति करें</string>
+    <string name="cashu_copy_token">राशिखण्ड की अनुकृति करें</string>
     <string name="no_lightning_address_set">कोई लैटनिंग पता स्थापित नहीं</string>
-    <string name="copied_token_to_clipboard">लिपिखण्ड की अनुकृति की गयी टाँकाफलक में</string>
+    <string name="copied_token_to_clipboard">राशिखण्ड की अनुकृति की गयी टाँकाफलक में</string>
     <string name="live_stream_live_tag">तत्क्षणप्रसार</string>
     <string name="live_stream_offline_tag">जालरहित</string>
     <string name="live_stream_ended_tag">समाप्त</string>
@@ -451,6 +451,7 @@
     <string name="connectivity_type_never">कभी नहीं</string>
     <string name="ui_feature_set_type_complete">सम्पूर्ण</string>
     <string name="ui_feature_set_type_simplified">सरलीकृत</string>
+    <string name="ui_feature_set_type_performance">प्रदर्शन</string>
     <string name="system">यन्त्रव्यवस्था</string>
     <string name="light">प्रकाशवान</string>
     <string name="dark">अन्धकारमय</string>
@@ -559,7 +560,7 @@
     <string name="error_parsing_nip47_no_error">निप॰-४७ संयोजन सूत्र परखने में अपक्रम। जाँच करें यदि यह सम्यक है अपने धनकोष सेवा प्रदाता के साथ : %1$s।</string>
     <string name="cashu_failed_redemption">काशयु नहीं चुका पाए</string>
     <string name="cashu_failed_redemption_explainer_error_msg">टकसाल ने यह अपक्रम संदेश उपलब्ध किया : %1$s</string>
-    <string name="cashu_failed_redemption_explainer_already_spent">काशयु लिपिखण्ड का व्यय हो चुका।</string>
+    <string name="cashu_failed_redemption_explainer_already_spent">काशयु राशिखण्ड का व्यय हो चुका।</string>
     <string name="cashu_successful_redemption">काशयु प्राप्त</string>
     <string name="cashu_successful_redemption_explainer">%1$s साट्स भेजे गये आपके धनकोष में। (शुल्क : %2$s साट्स)</string>
     <string name="cashu_no_wallet_found">कोई अनुकूल काशयु धनकोष उपलब्ध नहीं यन्त्र में</string>
