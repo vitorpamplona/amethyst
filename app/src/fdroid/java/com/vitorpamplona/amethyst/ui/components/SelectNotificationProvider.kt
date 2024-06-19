@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.CheckifItNeedsToRequestNoti
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SettingsRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
+import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
