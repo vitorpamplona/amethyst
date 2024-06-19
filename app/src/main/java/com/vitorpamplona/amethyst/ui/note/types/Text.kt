@@ -100,31 +100,26 @@ fun RenderTextEvent(
         note,
         accountViewModel,
     ) { body ->
-        val eventContent by
+        val eventContent =
             remember(note.event) {
-                derivedStateOf {
-                    val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
-                    val newBody =
-                        if (editState.value is GenericLoadable.Loaded) {
-                            val state =
-                                (editState.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow
-                            state?.value?.event?.content() ?: body
-                        } else {
-                            body
-                        }
-
-                    if (!subject.isNullOrBlank() && !newBody.split("\n")[0].contains(subject)) {
-                        "### $subject\n$newBody"
+                val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
+                val newBody =
+                    if (editState.value is GenericLoadable.Loaded) {
+                        val state =
+                            (editState.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow
+                        state?.value?.event?.content() ?: body
                     } else {
-                        newBody
+                        body
                     }
+
+                if (!subject.isNullOrBlank() && !newBody.split("\n")[0].contains(subject)) {
+                    "### $subject\n$newBody"
+                } else {
+                    newBody
                 }
             }
 
-        val isAuthorTheLoggedUser =
-            remember(note.event) { accountViewModel.isLoggedUser(note.author) }
-
-        if (makeItShort && isAuthorTheLoggedUser) {
+        if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
             Text(
                 text = eventContent,
                 color = MaterialTheme.colorScheme.placeholderText,
