@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.theme.largeRelayIconModifier
 fun BasicRelaySetupInfoClickableRow(
     item: BasicRelaySetupInfo,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     onDelete: (BasicRelaySetupInfo) -> Unit,
     onClick: () -> Unit,
     accountViewModel: AccountViewModel,
@@ -65,6 +66,7 @@ fun BasicRelaySetupInfoClickableRow(
                     item.briefInfo.displayUrl,
                     iconUrlFromRelayInfoDoc ?: item.briefInfo.favIcon,
                     loadProfilePicture,
+                    loadRobohash,
                     MaterialTheme.colorScheme.largeRelayIconModifier,
                 )
             }

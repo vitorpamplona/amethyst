@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,7 +43,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -54,8 +52,11 @@ import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
 import com.vitorpamplona.amethyst.service.lnurl.CachedLnInvoiceParser
 import com.vitorpamplona.amethyst.service.lnurl.InvoiceAmount
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -82,9 +83,12 @@ fun LoadValueFromInvoice(
 }
 
 @Composable
-fun MayBeInvoicePreview(lnbcWord: String) {
+fun MayBeInvoicePreview(
+    lnbcWord: String,
+    accountViewModel: AccountViewModel,
+) {
     LoadValueFromInvoice(lnbcWord = lnbcWord) { invoiceAmount ->
-        Crossfade(targetState = invoiceAmount, label = "MayBeInvoicePreview") {
+        CrossfadeIfEnabled(targetState = invoiceAmount, label = "MayBeInvoicePreview", accountViewModel = accountViewModel) {
             if (it != null) {
                 InvoicePreview(it.invoice, it.amount)
             } else {
@@ -108,7 +112,7 @@ fun InvoicePreview(
 
     if (showErrorMessageDialog != null) {
         ErrorMessageDialog(
-            title = context.getString(R.string.error_dialog_pay_invoice_error),
+            title = stringRes(context, R.string.error_dialog_pay_invoice_error),
             textContent = showErrorMessageDialog ?: "",
             onDismiss = { showErrorMessageDialog = null },
         )
@@ -143,7 +147,7 @@ fun InvoicePreview(
                 )
 
                 Text(
-                    text = stringResource(R.string.lightning_invoice),
+                    text = stringRes(R.string.lightning_invoice),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.W500,
                     modifier = Modifier.padding(start = 10.dp),
@@ -154,7 +158,7 @@ fun InvoicePreview(
 
             amount?.let {
                 Text(
-                    text = "$it ${stringResource(id = R.string.sats)}",
+                    text = "$it ${stringRes(id = R.string.sats)}",
                     fontSize = 25.sp,
                     fontWeight = FontWeight.W500,
                     modifier =
@@ -176,7 +180,7 @@ fun InvoicePreview(
                         containerColor = MaterialTheme.colorScheme.primary,
                     ),
             ) {
-                Text(text = stringResource(R.string.pay), color = Color.White, fontSize = 20.sp)
+                Text(text = stringRes(R.string.pay), color = Color.White, fontSize = 20.sp)
             }
         }
     }

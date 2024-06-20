@@ -113,6 +113,7 @@
     <string name="website_url">URL do Site</string>
     <string name="ln_address">Endereço LN</string>
     <string name="ln_url_outdated">LN URL (desatualizado)</string>
+    <string name="save_to_gallery">Salvar na Galeria</string>
     <string name="image_saved_to_the_gallery">Imagem salva para a galeria</string>
     <string name="failed_to_save_the_image">Falha ao salvar a imagem</string>
     <string name="upload_image">Enviar Imagem</string>
@@ -448,6 +449,7 @@
     <string name="connectivity_type_never">Nunca</string>
     <string name="ui_feature_set_type_complete">Concluído</string>
     <string name="ui_feature_set_type_simplified">Simplificado</string>
+    <string name="ui_feature_set_type_performance">Desempenho</string>
     <string name="system">Sistema</string>
     <string name="light">Claro</string>
     <string name="dark">Escuro</string>
@@ -481,7 +483,7 @@
     <string name="new_feature_nip17_might_not_be_available_description">Ativando este modo requer o Amethyst para enviar uma mensagem de NIP-17 (GiftWrapped, Sealed Direct and Group Messages). NIP-17 é novo e a maioria dos clientes ainda não o implementaram. Certifique-se de que o destinatário está usando um cliente compatível.</string>
     <string name="new_feature_nip17_activate">Ativar</string>
     <string name="messages_create_public_chat">Público</string>
-    <string name="messages_create_public_private_chat_desription">Novo Grupo Público ou Privado</string>
+    <string name="messages_create_public_private_chat_description">Novo Grupo Público ou Privado</string>
     <string name="messages_new_message">Privado</string>
     <string name="messages_new_message_to">Para</string>
     <string name="messages_new_message_subject">Assunto</string>
@@ -499,6 +501,7 @@
     <string name="load_image_description">Quando carregar imagens</string>
     <string name="copy_to_clipboard">Copiar para a Área de Transferência</string>
     <string name="copy_npub_to_clipboard">Copiar npub para a área de transferência</string>
+    <string name="share_or_save">Compartilhar ou Salvar</string>
     <string name="copy_url_to_clipboard">Copiar URL para a área de transferência</string>
     <string name="copy_the_note_id_to_the_clipboard">Copiar ID da nota para a área de transferência</string>
     <string name="created_at">Criado em</string>
@@ -511,6 +514,10 @@
     <string name="error_dialog_talk_to_user">Mensagem ao usuário</string>
     <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">Falha ao acessar %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_assemble_url">Falha ao montar NIP-11 url para %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">Falha ao acessar %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">Falha ao analisar a resposta do %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_with_http">Relay recusou pedido %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">Falha ao acessar %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">Falha ao analisar o resultado de %1$s: %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s falhou com o código %2$s</string>
@@ -742,5 +749,5 @@
     <string name="dvm_waiting_status">Trabalho Solicitado, aguardando resposta</string>
     <string name="dvm_requesting_job">Solicitando Trabalho ao DVM</string>
     <string name="nwc_payment_request">Pedido de pagamento enviado, aguardando confirmação da sua carteira</string>
-    <string name="dvm_waiting_to_confim_payment">Aguardando o DVM confirmar o pagamento ou enviar resultados</string>
+    <string name="dvm_waiting_to_confirm_payment">Aguardando o DVM confirmar o pagamento ou enviar resultados</string>
 </resources>

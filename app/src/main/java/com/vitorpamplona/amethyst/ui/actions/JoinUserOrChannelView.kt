@@ -59,10 +59,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -73,6 +71,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
@@ -83,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchBarViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -161,7 +161,7 @@ fun JoinUserOrChannelView(
                     )
 
                     Text(
-                        text = stringResource(R.string.channel_list_join_conversation),
+                        text = stringRes(R.string.channel_list_join_conversation),
                         fontWeight = FontWeight.Bold,
                     )
 
@@ -278,13 +278,13 @@ private fun SearchEditTextForJoin(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         OutlinedTextField(
-            label = { Text(text = stringResource(R.string.channel_list_user_or_group_id)) },
+            label = { Text(text = stringRes(R.string.channel_list_user_or_group_id)) },
             value = searchBarViewModel.searchValue,
             onValueChange = {
                 searchBarViewModel.updateSearchValue(it)
                 scope.launch(Dispatchers.IO) { searchTextChanges.trySend(it) }
             },
-            leadingIcon = { SearchIcon(modifier = Size20Modifier, Color.Unspecified) },
+            leadingIcon = { SearchIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText) },
             modifier =
                 Modifier
                     .weight(1f, true)
@@ -297,7 +297,7 @@ private fun SearchEditTextForJoin(
                     },
             placeholder = {
                 Text(
-                    text = stringResource(R.string.channel_list_user_or_group_id_demo),
+                    text = stringRes(R.string.channel_list_user_or_group_id_demo),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -311,7 +311,7 @@ private fun SearchEditTextForJoin(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Clear,
-                            contentDescription = stringResource(R.string.clear),
+                            contentDescription = stringRes(R.string.clear),
                         )
                     }
                 }
@@ -330,11 +330,6 @@ private fun RenderSearchResults(
     if (searchBarViewModel.isSearching) {
         val users by searchBarViewModel.searchResultsUsers.collectAsStateWithLifecycle()
         val channels by searchBarViewModel.searchResultsChannels.collectAsStateWithLifecycle()
-
-        val automaticallyShowProfilePicture =
-            remember {
-                accountViewModel.settings.showProfilePictures.value
-            }
 
         Row(
             modifier =
@@ -367,7 +362,11 @@ private fun RenderSearchResults(
                     channels,
                     key = { _, item -> "c" + item.idHex },
                 ) { _, item ->
-                    RenderChannel(item, automaticallyShowProfilePicture) {
+                    RenderChannel(
+                        item,
+                        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                    ) {
                         nav("Channel/${item.idHex}")
                         searchBarViewModel.clear()
                     }
@@ -385,6 +384,7 @@ private fun RenderSearchResults(
 private fun RenderChannel(
     item: com.vitorpamplona.amethyst.model.Channel,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     onClick: () -> Unit,
 ) {
     val hasNewMessages = remember { mutableStateOf(false) }
@@ -403,6 +403,7 @@ private fun RenderChannel(
         hasNewMessages,
         onClick = onClick,
         loadProfilePicture = loadProfilePicture,
+        loadRobohash = loadRobohash,
     )
 }
 
@@ -414,14 +415,15 @@ fun UserComposeForChat(
 ) {
     Row(
         modifier =
-            Modifier.clickable(
-                onClick = onClick,
-            ).padding(
-                start = 12.dp,
-                end = 12.dp,
-                top = 10.dp,
-                bottom = 10.dp,
-            ),
+            Modifier
+                .clickable(
+                    onClick = onClick,
+                ).padding(
+                    start = 12.dp,
+                    end = 12.dp,
+                    top = 10.dp,
+                    bottom = 10.dp,
+                ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ClickableUserPicture(baseUser, Size55dp, accountViewModel)
@@ -432,7 +434,7 @@ fun UserComposeForChat(
                     .padding(start = 10.dp)
                     .weight(1f),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser) }
+            Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser, accountViewModel = accountViewModel) }
 
             DisplayUserAboutInfo(baseUser)
         }

@@ -88,7 +88,7 @@ class ClassifiedsEvent(
 
     companion object {
         const val KIND = 30402
-        private val imageExtensions = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg")
+        private val imageExtensions = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg", "avif")
         const val ALT = "Classifieds listing"
 
         fun create(

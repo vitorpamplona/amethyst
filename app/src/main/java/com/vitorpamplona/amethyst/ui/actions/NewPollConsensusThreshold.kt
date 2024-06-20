@@ -36,12 +36,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.CancellationException
 
@@ -87,13 +87,13 @@ fun NewPollConsensusThreshold(pollViewModel: NewPostViewModel) {
             colors = if (pollViewModel.isValidConsensusThreshold.value) colorValid else colorInValid,
             label = {
                 Text(
-                    text = stringResource(R.string.poll_consensus_threshold),
+                    text = stringRes(R.string.poll_consensus_threshold),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
             placeholder = {
                 Text(
-                    text = stringResource(R.string.poll_consensus_threshold_percent),
+                    text = stringRes(R.string.poll_consensus_threshold_percent),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

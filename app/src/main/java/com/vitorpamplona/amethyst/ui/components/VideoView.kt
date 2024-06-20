@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import android.Manifest
 import android.content.Context
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -36,6 +38,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,6 +47,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -77,7 +81,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -89,20 +92,25 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import com.linc.audiowaveform.infiniteLinearGradient
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.produceCachedState
-import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.service.playback.PlaybackClientController
+import com.vitorpamplona.amethyst.ui.actions.ImageSaver
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.LyricsIcon
 import com.vitorpamplona.amethyst.ui.note.LyricsOffIcon
 import com.vitorpamplona.amethyst.ui.note.MuteIcon
 import com.vitorpamplona.amethyst.ui.note.MutedIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.Size110dp
+import com.vitorpamplona.amethyst.ui.theme.Size165dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
@@ -228,7 +236,9 @@ fun VideoView(
 
         Box(modifier) {
             if (!automaticallyStartPlayback.value) {
-                ImageUrlWithDownloadButton(url = videoUri, showImage = automaticallyStartPlayback)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    ImageUrlWithDownloadButton(url = videoUri, showImage = automaticallyStartPlayback)
+                }
             } else {
                 VideoViewInner(
                     videoUri = videoUri,
@@ -364,13 +374,15 @@ data class MediaItemData(
     val artworkUri: String? = null,
 )
 
-class MediaItemCache() : GenericBaseCache<MediaItemData, MediaItem>(20) {
-    override suspend fun compute(key: MediaItemData): MediaItem {
-        return MediaItem.Builder()
+class MediaItemCache : GenericBaseCache<MediaItemData, MediaItem>(20) {
+    override suspend fun compute(key: MediaItemData): MediaItem =
+        MediaItem
+            .Builder()
             .setMediaId(key.videoUri)
             .setUri(key.videoUri)
             .setMediaMetadata(
-                MediaMetadata.Builder()
+                MediaMetadata
+                    .Builder()
                     .setArtist(key.authorName?.ifBlank { null })
                     .setTitle(key.title?.ifBlank { null } ?: key.videoUri)
                     .setArtworkUri(
@@ -384,11 +396,8 @@ class MediaItemCache() : GenericBaseCache<MediaItemData, MediaItem>(20) {
                             if (e is CancellationException) throw e
                             null
                         },
-                    )
-                    .build(),
-            )
-            .build()
-    }
+                    ).build(),
+            ).build()
 }
 
 @Composable
@@ -609,7 +618,7 @@ var keepPlayingMutex: MediaController? = null
 val trackingVideos = mutableListOf<VisibilityData>()
 
 @Stable
-class VisibilityData() {
+class VisibilityData {
     var distanceToCenter: Float? = null
 }
 
@@ -635,8 +644,7 @@ fun VideoPlayerActiveMutex(
 
     val myModifier =
         remember(videoUri) {
-            Modifier.fillMaxWidth().defaultMinSize(minHeight = 70.dp).onVisiblePositionChanges {
-                    distanceToCenter ->
+            Modifier.fillMaxWidth().defaultMinSize(minHeight = 70.dp).onVisiblePositionChanges { distanceToCenter ->
                 myCache.distanceToCenter = distanceToCenter
 
                 if (distanceToCenter != null) {
@@ -789,14 +797,13 @@ private fun RenderVideoPlayer(
             keepPlaying.value = newKeepPlaying
         }
 
-        AnimatedSaveAndShareButton(
-            videoUri = videoUri,
-            mimeType = mimeType,
-            nostrUriCallback = nostrUriCallback,
-            controllerVisible = controllerVisible,
-            modifier = Modifier.align(Alignment.TopEnd).padding(end = Size110dp),
-            accountViewModel = accountViewModel,
-        )
+        AnimatedSaveButton(controllerVisible, Modifier.align(Alignment.TopEnd).padding(end = Size110dp)) { context ->
+            saveImage(videoUri, mimeType, context, accountViewModel)
+        }
+
+        AnimatedShareButton(controllerVisible, Modifier.align(Alignment.TopEnd).padding(end = Size165dp)) { popupExpanded, toggle ->
+            ShareImageAction(popupExpanded, videoUri, nostrUriCallback, toggle)
+        }
     }
 }
 
@@ -806,8 +813,7 @@ private fun pollCurrentDuration(controller: MediaController) =
             emit(controller.currentPosition / controller.duration.toFloat())
             delay(100)
         }
-    }
-        .conflate()
+    }.conflate()
 
 @Composable
 fun Waveform(
@@ -991,7 +997,8 @@ private fun MuteButton(
     ) {
         Box(modifier = VolumeBottomIconSize) {
             Box(
-                Modifier.clip(CircleShape)
+                Modifier
+                    .clip(CircleShape)
                     .fillMaxSize(0.6f)
                     .align(Alignment.Center)
                     .background(MaterialTheme.colorScheme.background),
@@ -1031,7 +1038,8 @@ private fun KeepPlayingButton(
     ) {
         Box(modifier = PinBottomIconSize) {
             Box(
-                Modifier.clip(CircleShape)
+                Modifier
+                    .clip(CircleShape)
                     .fillMaxSize(0.6f)
                     .align(Alignment.Center)
                     .background(MaterialTheme.colorScheme.background),
@@ -1055,31 +1063,23 @@ private fun KeepPlayingButton(
 }
 
 @Composable
-fun AnimatedSaveAndShareButton(
-    videoUri: String,
-    mimeType: String?,
-    nostrUriCallback: String?,
+fun AnimatedSaveButton(
     controllerVisible: State<Boolean>,
     modifier: Modifier,
-    accountViewModel: AccountViewModel,
+    onSaveClick: (localContext: Context) -> Unit,
 ) {
-    AnimatedSaveAndShareButton(controllerVisible, modifier) { popupExpanded, toggle ->
-        ShareImageAction(popupExpanded, videoUri, nostrUriCallback, mimeType, toggle, accountViewModel)
+    AnimatedVisibility(
+        visible = controllerVisible.value,
+        modifier = modifier,
+        enter = remember { fadeIn() },
+        exit = remember { fadeOut() },
+    ) {
+        SaveButton(onSaveClick)
     }
 }
 
 @Composable
-fun SaveAndShareButton(
-    content: BaseMediaContent,
-    accountViewModel: AccountViewModel,
-) {
-    SaveAndShareButton { popupExpanded, toggle ->
-        ShareImageAction(popupExpanded, content, toggle, accountViewModel)
-    }
-}
-
-@Composable
-fun AnimatedSaveAndShareButton(
+fun AnimatedShareButton(
     controllerVisible: State<Boolean>,
     modifier: Modifier,
     innerAction: @Composable (MutableState<Boolean>, () -> Unit) -> Unit,
@@ -1090,15 +1090,16 @@ fun AnimatedSaveAndShareButton(
         enter = remember { fadeIn() },
         exit = remember { fadeOut() },
     ) {
-        SaveAndShareButton(innerAction)
+        ShareButton(innerAction)
     }
 }
 
 @Composable
-fun SaveAndShareButton(innerAction: @Composable (MutableState<Boolean>, () -> Unit) -> Unit) {
+fun ShareButton(innerAction: @Composable (MutableState<Boolean>, () -> Unit) -> Unit) {
     Box(modifier = PinBottomIconSize) {
         Box(
-            Modifier.clip(CircleShape)
+            Modifier
+                .clip(CircleShape)
                 .fillMaxSize(0.6f)
                 .align(Alignment.Center)
                 .background(MaterialTheme.colorScheme.background),
@@ -1115,10 +1116,72 @@ fun SaveAndShareButton(innerAction: @Composable (MutableState<Boolean>, () -> Un
             Icon(
                 imageVector = Icons.Default.Share,
                 modifier = Size20Modifier,
-                contentDescription = stringResource(R.string.share_or_save),
+                contentDescription = stringRes(R.string.share_or_save),
             )
 
             innerAction(popupExpanded) { popupExpanded.value = false }
         }
     }
+}
+
+@kotlin.OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun SaveButton(onSaveClick: (localContext: Context) -> Unit) {
+    Box(modifier = PinBottomIconSize) {
+        Box(
+            Modifier
+                .clip(CircleShape)
+                .fillMaxSize(0.6f)
+                .align(Alignment.Center)
+                .background(MaterialTheme.colorScheme.background),
+        )
+
+        val localContext = LocalContext.current
+
+        val writeStoragePermissionState =
+            rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
+                if (isGranted) {
+                    onSaveClick(localContext)
+                }
+            }
+
+        IconButton(
+            onClick = {
+                if (
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
+                    writeStoragePermissionState.status.isGranted
+                ) {
+                    onSaveClick(localContext)
+                } else {
+                    writeStoragePermissionState.launchPermissionRequest()
+                }
+            },
+            modifier = Size50Modifier,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Download,
+                modifier = Size20Modifier,
+                contentDescription = stringRes(R.string.save_to_gallery),
+            )
+        }
+    }
+}
+
+private fun saveImage(
+    videoUri: String?,
+    mimeType: String?,
+    localContext: Context,
+    accountViewModel: AccountViewModel,
+) {
+    ImageSaver.saveImage(
+        videoUri = videoUri,
+        mimeType = mimeType,
+        localContext = localContext,
+        onSuccess = {
+            accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
+        },
+        onError = {
+            accountViewModel.toast(R.string.failed_to_save_the_image, null, it)
+        },
+    )
 }

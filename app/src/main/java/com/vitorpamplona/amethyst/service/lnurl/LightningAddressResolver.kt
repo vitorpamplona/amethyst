@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
 import com.vitorpamplona.quartz.encoders.Lud06
 import okhttp3.Request
@@ -34,7 +35,7 @@ import java.math.RoundingMode
 import java.net.URLEncoder
 import kotlin.coroutines.cancellation.CancellationException
 
-class LightningAddressResolver() {
+class LightningAddressResolver {
     val client = HttpClientManager.getHttpClient()
 
     fun assembleUrl(lnaddress: String): String? {
@@ -63,8 +64,9 @@ class LightningAddressResolver() {
 
         if (url == null) {
             onError(
-                context.getString(R.string.error_unable_to_fetch_invoice),
-                context.getString(
+                stringRes(context, R.string.error_unable_to_fetch_invoice),
+                stringRes(
+                    context,
                     R.string.could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup,
                     lnaddress,
                 ),
@@ -74,7 +76,8 @@ class LightningAddressResolver() {
 
         try {
             val request: Request =
-                Request.Builder()
+                Request
+                    .Builder()
                     .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                     .url(url)
                     .build()
@@ -84,8 +87,9 @@ class LightningAddressResolver() {
                     onSuccess(it.body.string())
                 } else {
                     onError(
-                        context.getString(R.string.error_unable_to_fetch_invoice),
-                        context.getString(
+                        stringRes(context, R.string.error_unable_to_fetch_invoice),
+                        stringRes(
+                            context,
                             R.string
                                 .the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct,
                             url,
@@ -99,8 +103,9 @@ class LightningAddressResolver() {
             if (e is CancellationException) throw e
             e.printStackTrace()
             onError(
-                context.getString(R.string.error_unable_to_fetch_invoice),
-                context.getString(
+                stringRes(context, R.string.error_unable_to_fetch_invoice),
+                stringRes(
+                    context,
                     R.string
                         .could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception,
                     url,
@@ -133,7 +138,8 @@ class LightningAddressResolver() {
         }
 
         val request: Request =
-            Request.Builder()
+            Request
+                .Builder()
                 .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                 .url(url)
                 .build()
@@ -143,8 +149,8 @@ class LightningAddressResolver() {
                 onSuccess(it.body.string())
             } else {
                 onError(
-                    context.getString(R.string.error_unable_to_fetch_invoice),
-                    context.getString(R.string.could_not_fetch_invoice_from, lnCallback),
+                    stringRes(context, R.string.error_unable_to_fetch_invoice),
+                    stringRes(context, R.string.could_not_fetch_invoice_from, lnCallback),
                 )
             }
         }
@@ -173,8 +179,9 @@ class LightningAddressResolver() {
                     } catch (t: Throwable) {
                         if (t is CancellationException) throw t
                         onError(
-                            context.getString(R.string.error_unable_to_fetch_invoice),
-                            context.getString(
+                            stringRes(context, R.string.error_unable_to_fetch_invoice),
+                            stringRes(
+                                context,
                                 R.string.error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user,
                                 lnaddress,
                             ),
@@ -186,8 +193,9 @@ class LightningAddressResolver() {
 
                 if (callback == null) {
                     onError(
-                        context.getString(R.string.error_unable_to_fetch_invoice),
-                        context.getString(
+                        stringRes(context, R.string.error_unable_to_fetch_invoice),
+                        stringRes(
+                            context,
                             R.string.callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user,
                             lnaddress,
                         ),
@@ -211,8 +219,9 @@ class LightningAddressResolver() {
                                 } catch (t: Throwable) {
                                     if (t is CancellationException) throw t
                                     onError(
-                                        context.getString(R.string.error_unable_to_fetch_invoice),
-                                        context.getString(
+                                        stringRes(context, R.string.error_unable_to_fetch_invoice),
+                                        stringRes(
+                                            context,
                                             R.string
                                                 .error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user,
                                             lnaddress,
@@ -236,8 +245,9 @@ class LightningAddressResolver() {
                                     } else {
                                         onProgress(0.0f)
                                         onError(
-                                            context.getString(R.string.error_unable_to_fetch_invoice),
-                                            context.getString(
+                                            stringRes(context, R.string.error_unable_to_fetch_invoice),
+                                            stringRes(
+                                                context,
                                                 R.string.incorrect_invoice_amount_sats_from_it_should_have_been,
                                                 invoiceAmount.toLong().toString(),
                                                 lnaddress,
@@ -253,8 +263,9 @@ class LightningAddressResolver() {
                                     ?.let { reason ->
                                         onProgress(0.0f)
                                         onError(
-                                            context.getString(R.string.error_unable_to_fetch_invoice),
-                                            context.getString(
+                                            stringRes(context, R.string.error_unable_to_fetch_invoice),
+                                            stringRes(
+                                                context,
                                                 R.string
                                                     .unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user,
                                                 lnaddress,
@@ -265,8 +276,9 @@ class LightningAddressResolver() {
                                 ?: run {
                                     onProgress(0.0f)
                                     onError(
-                                        context.getString(R.string.error_unable_to_fetch_invoice),
-                                        context.getString(
+                                        stringRes(context, R.string.error_unable_to_fetch_invoice),
+                                        stringRes(
+                                            context,
                                             R.string
                                                 .unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user,
                                             lnaddress,

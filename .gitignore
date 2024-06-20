@@ -12,6 +12,7 @@
 /.idea/ktlint-plugin.xml
 /.idea/ktfmt.xml
 /.idea/studiobot.xml
+/.idea/other.xml
 .DS_Store
 /build
 /captures

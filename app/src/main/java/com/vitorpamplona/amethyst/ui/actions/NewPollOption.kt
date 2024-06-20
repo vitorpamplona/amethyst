@@ -31,10 +31,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
@@ -51,7 +51,7 @@ fun NewPollOption(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.clear),
+                    contentDescription = stringRes(R.string.clear),
                 )
             }
         }
@@ -64,13 +64,13 @@ fun NewPollOption(
             },
             label = {
                 Text(
-                    text = stringResource(R.string.poll_option_index).format(optionIndex + 1),
+                    text = stringRes(R.string.poll_option_index).format(optionIndex + 1),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
             placeholder = {
                 Text(
-                    text = stringResource(R.string.poll_option_description),
+                    text = stringRes(R.string.poll_option_description),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

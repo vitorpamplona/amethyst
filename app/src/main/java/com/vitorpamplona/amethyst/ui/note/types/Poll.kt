@@ -45,7 +45,6 @@ import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
-import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun RenderPoll(
@@ -126,8 +125,7 @@ fun RenderPoll(
         }
 
         if (noteEvent.hasHashtags()) {
-            val hashtags = remember { noteEvent.hashtags().toImmutableList() }
-            DisplayUncitedHashtags(hashtags, eventContent, nav)
+            DisplayUncitedHashtags(noteEvent, eventContent, nav)
         }
     }
 }

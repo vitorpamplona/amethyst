@@ -35,11 +35,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 
@@ -61,7 +61,7 @@ fun NewChannelButton(accountViewModel: AccountViewModel) {
     ) {
         Icon(
             imageVector = Icons.Outlined.Add,
-            contentDescription = stringResource(R.string.new_channel),
+            contentDescription = stringRes(R.string.new_channel),
             modifier = Modifier.size(26.dp),
             tint = Color.White,
         )

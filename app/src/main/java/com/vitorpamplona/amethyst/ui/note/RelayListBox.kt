@@ -40,52 +40,101 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonBoxModifer
+import com.vitorpamplona.amethyst.ui.theme.Size17Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.noteComposeRelayBox
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.flow.map
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RelayBadges(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    val expanded = remember { mutableStateOf(false) }
 
-    val relayList by baseNote.live().relayInfo.observeAsState(baseNote.relays)
-
-    Spacer(StdVertSpacer)
-
-    // FlowRow Seems to be a lot faster than LazyVerticalGrid
-    Box(modifier = Modifier.fillMaxWidth().padding(start = 2.dp, end = 1.dp)) {
-        FlowRow(modifier = Modifier.fillMaxWidth()) {
-            if (expanded) {
-                relayList?.forEach { RenderRelay(it, accountViewModel, nav) }
-            } else {
-                relayList?.getOrNull(0)?.let { RenderRelay(it, accountViewModel, nav) }
-                relayList?.getOrNull(1)?.let { RenderRelay(it, accountViewModel, nav) }
-                relayList?.getOrNull(2)?.let { RenderRelay(it, accountViewModel, nav) }
+    CrossfadeIfEnabled(expanded.value, modifier = noteComposeRelayBox, label = "RelayBadges", accountViewModel = accountViewModel) {
+        if (it) {
+            RenderAllRelayList(baseNote, Modifier.fillMaxWidth(), accountViewModel = accountViewModel, nav = nav)
+        } else {
+            Column {
+                RenderClosedRelayList(baseNote, Modifier.fillMaxWidth(), accountViewModel = accountViewModel, nav = nav)
+                ShouldShowExpandButton(baseNote, accountViewModel) { ShowMoreRelaysButton { expanded.value = true } }
             }
         }
     }
+}
 
-    if (relayList.size > 3 && !expanded) {
-        ShowMoreRelaysButton { expanded = true }
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun RenderAllRelayList(
+    baseNote: Note,
+    modifier: Modifier = Modifier,
+    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val noteRelays by baseNote
+        .flow()
+        .relays.stateFlow
+        .collectAsStateWithLifecycle()
+
+    FlowRow(modifier, verticalArrangement = verticalArrangement) {
+        noteRelays.note.relays.forEach { RenderRelay(it, accountViewModel, nav) }
+    }
+}
+
+@Composable
+fun RenderClosedRelayList(
+    baseNote: Note,
+    modifier: Modifier = Modifier,
+    verticalAlignment: Alignment.Vertical = Alignment.Top,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    Row(modifier, verticalAlignment = verticalAlignment) {
+        WatchAndRenderRelay(baseNote, 0, accountViewModel, nav)
+        WatchAndRenderRelay(baseNote, 1, accountViewModel, nav)
+        WatchAndRenderRelay(baseNote, 2, accountViewModel, nav)
+    }
+}
+
+@Composable
+fun WatchAndRenderRelay(
+    baseNote: Note,
+    relayIndex: Int,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val noteRelays by baseNote
+        .flow()
+        .relays.stateFlow
+        .map {
+            it.note.relays.getOrNull(relayIndex)
+        }.collectAsStateWithLifecycle(
+            baseNote.relays.getOrNull(relayIndex),
+        )
+
+    CrossfadeIfEnabled(targetState = noteRelays, label = "RenderRelay", modifier = Size17Modifier, accountViewModel = accountViewModel) {
+        if (it != null) {
+            RenderRelay(it, accountViewModel, nav)
+        }
     }
 }
 
@@ -97,46 +146,79 @@ fun RelayIconLayoutPreview() {
         Spacer(StdVertSpacer)
 
         // FlowRow Seems to be a lot faster than LazyVerticalGrid
-        Box(modifier = Modifier.fillMaxWidth().padding(start = 2.dp, end = 1.dp)) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 2.dp, end = 1.dp),
+        ) {
             FlowRow {
                 Box(
                     modifier = Modifier.size(17.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Box(
-                        Modifier.size(13.dp).clip(shape = CircleShape).background(Color.Black),
+                        Modifier
+                            .size(13.dp)
+                            .clip(shape = CircleShape)
+                            .background(Color.Black),
                     )
                 }
                 Box(
                     modifier = Modifier.size(17.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Box(Modifier.size(13.dp).clip(shape = CircleShape).background(Color.Black))
+                    Box(
+                        Modifier
+                            .size(13.dp)
+                            .clip(shape = CircleShape)
+                            .background(Color.Black),
+                    )
                 }
                 Box(
                     modifier = Modifier.size(17.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Box(Modifier.size(13.dp).clip(shape = CircleShape).background(Color.Black))
+                    Box(
+                        Modifier
+                            .size(13.dp)
+                            .clip(shape = CircleShape)
+                            .background(Color.Black),
+                    )
                 }
 
                 Box(
                     modifier = Modifier.size(17.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Box(Modifier.size(13.dp).clip(shape = CircleShape).background(Color.Black))
+                    Box(
+                        Modifier
+                            .size(13.dp)
+                            .clip(shape = CircleShape)
+                            .background(Color.Black),
+                    )
                 }
                 Box(
                     modifier = Modifier.size(17.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Box(Modifier.size(13.dp).clip(shape = CircleShape).background(Color.Black))
+                    Box(
+                        Modifier
+                            .size(13.dp)
+                            .clip(shape = CircleShape)
+                            .background(Color.Black),
+                    )
                 }
                 Box(
                     modifier = Modifier.size(17.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Box(Modifier.size(13.dp).clip(shape = CircleShape).background(Color.Black))
+                    Box(
+                        Modifier
+                            .size(13.dp)
+                            .clip(shape = CircleShape)
+                            .background(Color.Black),
+                    )
                 }
             }
         }
@@ -157,7 +239,7 @@ private fun ShowMoreRelaysButton(onClick: () -> Unit) {
         ) {
             Icon(
                 imageVector = Icons.Default.ExpandMore,
-                contentDescription = stringResource(id = R.string.expand_relay_list),
+                contentDescription = stringRes(id = R.string.expand_relay_list),
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
         }

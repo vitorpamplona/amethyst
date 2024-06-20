@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import android.content.res.Resources
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -50,7 +49,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,7 +57,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
@@ -82,7 +82,7 @@ fun TranslatableRichTextViewer(
     nav: (String) -> Unit,
 ) {
     var translatedTextState by
-        remember(content) { mutableStateOf(TranslationConfig(content, null, null, false)) }
+        remember(id, content.length) { mutableStateOf(TranslationConfig(content, null, null, false)) }
 
     TranslateAndWatchLanguageChanges(content, accountViewModel) { result ->
         if (
@@ -94,7 +94,7 @@ fun TranslatableRichTextViewer(
         }
     }
 
-    Crossfade(targetState = translatedTextState) {
+    CrossfadeIfEnabled(targetState = translatedTextState, accountViewModel = accountViewModel) {
         RenderText(
             translatedTextState = it,
             content = content,
@@ -182,11 +182,11 @@ private fun TranslationMessage(
             buildAnnotatedString {
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("langSettings", true.toString())
-                    append(stringResource(R.string.translations_auto))
+                    append(stringRes(R.string.translations_auto))
                     pop()
                 }
 
-                append("-${stringResource(R.string.translations_translated_from)} ")
+                append("-${stringRes(R.string.translations_translated_from)} ")
 
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("showOriginal", true.toString())
@@ -194,7 +194,7 @@ private fun TranslationMessage(
                     pop()
                 }
 
-                append(" ${stringResource(R.string.translations_to)} ")
+                append(" ${stringRes(R.string.translations_to)} ")
 
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("showOriginal", false.toString())
@@ -215,8 +215,7 @@ private fun TranslationMessage(
             overflow = TextOverflow.Visible,
             maxLines = 3,
         ) { spanOffset ->
-            annotatedTranslationString.getStringAnnotations(spanOffset, spanOffset).firstOrNull()?.also {
-                    span ->
+            annotatedTranslationString.getStringAnnotations(spanOffset, spanOffset).firstOrNull()?.also { span ->
                 if (span.tag == "showOriginal") {
                     onChangeWhatToShow(span.item.toBoolean())
                 } else {
@@ -245,7 +244,7 @@ private fun TranslationMessage(
                         Spacer(modifier = Modifier.size(10.dp))
 
                         Text(
-                            stringResource(
+                            stringRes(
                                 R.string.translations_never_translate_from_lang,
                                 Locale(source).displayName,
                             ),
@@ -276,7 +275,7 @@ private fun TranslationMessage(
                         Spacer(modifier = Modifier.size(10.dp))
 
                         Text(
-                            stringResource(
+                            stringRes(
                                 R.string.translations_show_in_lang_first,
                                 Locale(source).displayName,
                             ),
@@ -306,7 +305,7 @@ private fun TranslationMessage(
                         Spacer(modifier = Modifier.size(10.dp))
 
                         Text(
-                            stringResource(
+                            stringRes(
                                 R.string.translations_show_in_lang_first,
                                 Locale(target).displayName,
                             ),
@@ -341,7 +340,7 @@ private fun TranslationMessage(
                                 Spacer(modifier = Modifier.size(10.dp))
 
                                 Text(
-                                    stringResource(
+                                    stringRes(
                                         R.string.translations_always_translate_to_lang,
                                         lang.displayName,
                                     ),
@@ -373,12 +372,12 @@ fun TranslateAndWatchLanguageChanges(
         // This takes some time. Launches as a Composition scope to make sure this gets cancel if this
         // item gets out of view.
         withContext(Dispatchers.IO) {
-            LanguageTranslatorService.autoTranslate(
-                content,
-                accountViewModel.account.dontTranslateFrom,
-                accountViewModel.account.translateTo,
-            )
-                .addOnCompleteListener { task ->
+            LanguageTranslatorService
+                .autoTranslate(
+                    content,
+                    accountViewModel.account.dontTranslateFrom,
+                    accountViewModel.account.translateTo,
+                ).addOnCompleteListener { task ->
                     if (task.isSuccessful && !content.equals(task.result.result, true)) {
                         if (task.result.sourceLang != null && task.result.targetLang != null) {
                             val preference =

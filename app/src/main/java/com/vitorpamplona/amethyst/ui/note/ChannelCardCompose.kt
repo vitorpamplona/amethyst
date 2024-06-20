@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,7 +48,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.BottomStart
-import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
@@ -69,6 +67,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.layouts.LeftPictureLayout
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
@@ -124,7 +123,7 @@ fun ChannelCardCompose(
             CheckHiddenFeedWatchBlockAndReport(
                 note = baseNote,
                 modifier = modifier,
-                showHidden = isHiddenFeed,
+                ignoreAllBlocksAndReports = isHiddenFeed,
                 showHiddenWarning = false,
                 accountViewModel = accountViewModel,
                 nav = nav,
@@ -308,8 +307,7 @@ fun RenderClassifiedsThumb(
                     title = noteEvent?.title(),
                     price = noteEvent?.price(),
                 )
-            }
-            .distinctUntilChanged()
+            }.distinctUntilChanged()
             .observeAsState(
                 ClassifiedsThumb(
                     image = noteEvent.image(),
@@ -437,8 +435,7 @@ fun RenderLiveActivityThumb(
                     status = noteEvent?.status(),
                     starts = noteEvent?.starts(),
                 )
-            }
-            .distinctUntilChanged()
+            }.distinctUntilChanged()
             .observeAsState(
                 LiveActivityCard(
                     name = noteEvent.dTag(),
@@ -475,7 +472,7 @@ fun RenderLiveActivityThumb(
             } ?: run { DisplayAuthorBanner(baseNote) }
 
             Box(Modifier.padding(10.dp)) {
-                Crossfade(targetState = card.status, label = "RenderLiveActivityThumb") {
+                CrossfadeIfEnabled(targetState = card.status, label = "RenderLiveActivityThumb", accountViewModel = accountViewModel) {
                     when (it) {
                         STATUS_LIVE -> {
                             val url = card.media
@@ -567,8 +564,7 @@ fun RenderCommunitiesThumb(
                     cover = noteEvent?.image()?.ifBlank { null },
                     moderators = noteEvent?.moderators()?.toImmutableList() ?: persistentListOf(),
                 )
-            }
-            .distinctUntilChanged()
+            }.distinctUntilChanged()
             .observeAsState(
                 CommunityCard(
                     name = noteEvent.dTag(),
@@ -672,7 +668,9 @@ fun LoadModerators(
                     }
                 }
 
-            val followingKeySet = accountViewModel.account.liveDiscoveryFollowLists.value?.users
+            val followingKeySet =
+                accountViewModel.account.liveDiscoveryFollowLists.value
+                    ?.users
             val allParticipants =
                 ParticipantListBuilder().followsThatParticipateOn(baseNote, followingKeySet).minus(hosts)
 
@@ -723,7 +721,9 @@ private fun LoadParticipants(
 
             val hostsAuthor = hosts + (baseNote.author?.let { listOf(it) } ?: emptyList<User>())
 
-            val followingKeySet = accountViewModel.account.liveDiscoveryFollowLists.value?.users
+            val followingKeySet =
+                accountViewModel.account.liveDiscoveryFollowLists.value
+                    ?.users
 
             val allParticipants =
                 ParticipantListBuilder()
@@ -760,7 +760,11 @@ fun RenderContentDVMThumb(
     nav: (String) -> Unit,
 ) {
     // downloads user metadata to pre-load the NIP-65 relays.
-    val user = baseNote.author?.live()?.metadata?.observeAsState()
+    val user =
+        baseNote.author
+            ?.live()
+            ?.metadata
+            ?.observeAsState()
 
     val card = observeAppDefinition(appDefinitionNote = baseNote)
 
@@ -875,7 +879,9 @@ fun RenderChannelThumb(
 
     LaunchedEffect(key1 = channelUpdates) {
         launch(Dispatchers.IO) {
-            val followingKeySet = accountViewModel.account.liveDiscoveryFollowLists.value?.users
+            val followingKeySet =
+                accountViewModel.account.liveDiscoveryFollowLists.value
+                    ?.users
             val allParticipants =
                 ParticipantListBuilder()
                     .followsThatParticipateOn(baseNote, followingKeySet)

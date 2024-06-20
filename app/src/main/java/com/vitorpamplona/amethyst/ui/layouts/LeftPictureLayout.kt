@@ -37,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -46,6 +45,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.LikeIcon
 import com.vitorpamplona.amethyst.ui.note.TextCount
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
@@ -66,7 +66,7 @@ fun LeftPictureLayoutPreviewCard() {
         onImage = {
             Image(
                 painter = painterResource(R.drawable.github),
-                contentDescription = stringResource(id = R.string.profile_banner),
+                contentDescription = stringRes(id = R.string.profile_banner),
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier.fillMaxSize().clip(QuoteBorder),
             )

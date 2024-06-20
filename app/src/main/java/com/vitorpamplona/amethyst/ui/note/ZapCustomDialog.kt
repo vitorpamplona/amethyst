@@ -57,7 +57,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -78,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -102,13 +102,9 @@ class ZapOptionstViewModel : ViewModel() {
         this.account = account
     }
 
-    fun canSend(): Boolean {
-        return value() != null
-    }
+    fun canSend(): Boolean = value() != null
 
-    fun value(): Long? {
-        return customAmount.text.trim().toLongOrNull()
-    }
+    fun value(): Long? = customAmount.text.trim().toLongOrNull()
 
     fun cancel() {}
 }
@@ -131,23 +127,23 @@ fun ZapCustomDialog(
         listOf(
             Triple(
                 LnZapEvent.ZapType.PUBLIC,
-                stringResource(id = R.string.zap_type_public),
-                stringResource(id = R.string.zap_type_public_explainer),
+                stringRes(id = R.string.zap_type_public),
+                stringRes(id = R.string.zap_type_public_explainer),
             ),
             Triple(
                 LnZapEvent.ZapType.PRIVATE,
-                stringResource(id = R.string.zap_type_private),
-                stringResource(id = R.string.zap_type_private_explainer),
+                stringRes(id = R.string.zap_type_private),
+                stringRes(id = R.string.zap_type_private_explainer),
             ),
             Triple(
                 LnZapEvent.ZapType.ANONYMOUS,
-                stringResource(id = R.string.zap_type_anonymous),
-                stringResource(id = R.string.zap_type_anonymous_explainer),
+                stringRes(id = R.string.zap_type_anonymous),
+                stringRes(id = R.string.zap_type_anonymous_explainer),
             ),
             Triple(
                 LnZapEvent.ZapType.NONZAP,
-                stringResource(id = R.string.zap_type_nonzap),
-                stringResource(id = R.string.zap_type_nonzap_explainer),
+                stringRes(id = R.string.zap_type_nonzap),
+                stringRes(id = R.string.zap_type_nonzap_explainer),
             ),
         )
 
@@ -204,8 +200,8 @@ fun ZapCustomDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedTextField(
-                        // stringResource(R.string.new_amount_in_sats
-                        label = { Text(text = stringResource(id = R.string.amount_in_sats)) },
+                        // stringRes(R.string.new_amount_in_sats
+                        label = { Text(text = stringRes(id = R.string.amount_in_sats)) },
                         value = postViewModel.customAmount,
                         onValueChange = { postViewModel.customAmount = it },
                         keyboardOptions =
@@ -224,7 +220,7 @@ fun ZapCustomDialog(
                     )
 
                     TextSpinner(
-                        label = stringResource(id = R.string.zap_type),
+                        label = stringRes(id = R.string.zap_type),
                         placeholder =
                             zapTypes
                                 .filter { it.first == accountViewModel.account.defaultZapType }
@@ -241,17 +237,17 @@ fun ZapCustomDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedTextField(
-                        // stringResource(R.string.new_amount_in_sats
+                        // stringRes(R.string.new_amount_in_sats
                         label = {
                             if (
                                 selectedZapType == LnZapEvent.ZapType.PUBLIC ||
                                 selectedZapType == LnZapEvent.ZapType.ANONYMOUS
                             ) {
-                                Text(text = stringResource(id = R.string.custom_zaps_add_a_message))
+                                Text(text = stringRes(id = R.string.custom_zaps_add_a_message))
                             } else if (selectedZapType == LnZapEvent.ZapType.PRIVATE) {
-                                Text(text = stringResource(id = R.string.custom_zaps_add_a_message_private))
+                                Text(text = stringRes(id = R.string.custom_zaps_add_a_message_private))
                             } else if (selectedZapType == LnZapEvent.ZapType.NONZAP) {
-                                Text(text = stringResource(id = R.string.custom_zaps_add_a_message_nonzap))
+                                Text(text = stringRes(id = R.string.custom_zaps_add_a_message_nonzap))
                             }
                         },
                         value = postViewModel.customMessage,
@@ -263,7 +259,7 @@ fun ZapCustomDialog(
                             ),
                         placeholder = {
                             Text(
-                                text = stringResource(id = R.string.custom_zaps_add_a_message_example),
+                                text = stringRes(id = R.string.custom_zaps_add_a_message_example),
                                 color = MaterialTheme.colorScheme.placeholderText,
                             )
                         },
@@ -317,7 +313,7 @@ fun ErrorMessageDialog(
                             contentDescription = null,
                         )
                         Spacer(StdHorzSpacer)
-                        Text(stringResource(R.string.error_dialog_talk_to_user))
+                        Text(stringRes(R.string.error_dialog_talk_to_user))
                     }
                 }
                 Button(
@@ -333,7 +329,7 @@ fun ErrorMessageDialog(
                             contentDescription = null,
                         )
                         Spacer(StdHorzSpacer)
-                        Text(stringResource(R.string.error_dialog_button_ok))
+                        Text(stringRes(R.string.error_dialog_button_ok))
                     }
                 }
             }
@@ -383,17 +379,17 @@ fun PayViaIntentDialog(
                             if (it.user != null) {
                                 BaseUserPicture(it.user, Size55dp, accountViewModel = accountViewModel)
                             } else {
-                                DisplayBlankAuthor(size = Size55dp)
+                                DisplayBlankAuthor(size = Size55dp, accountViewModel = accountViewModel)
                             }
 
                             Spacer(modifier = DoubleHorzSpacer)
 
                             Column(modifier = Modifier.weight(1f)) {
                                 if (it.user != null) {
-                                    UsernameDisplay(it.user)
+                                    UsernameDisplay(it.user, accountViewModel = accountViewModel)
                                 } else {
                                     Text(
-                                        text = stringResource(id = R.string.wallet_number, index + 1),
+                                        text = stringRes(id = R.string.wallet_number, index + 1),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         fontWeight = FontWeight.Bold,
@@ -410,7 +406,7 @@ fun PayViaIntentDialog(
                                     )
                                     Spacer(modifier = StdHorzSpacer)
                                     Text(
-                                        text = stringResource(id = R.string.sats),
+                                        text = stringRes(id = R.string.sats),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         fontWeight = FontWeight.Bold,
@@ -448,9 +444,9 @@ fun payViaIntent(
         if (e is CancellationException) throw e
         // don't display ugly error messages
         // if (e.message != null) {
-        //   onError(context.getString(R.string.no_wallet_found_with_error, e.message!!))
+        //   onError(stringRes(context, R.string.no_wallet_found_with_error, e.message!!))
         // } else {
-        onError(context.getString(R.string.no_wallet_found))
+        onError(stringRes(context, R.string.no_wallet_found))
         // }
     }
 }
@@ -472,9 +468,9 @@ fun PayButton(
         contentPadding = ZeroPadding,
     ) {
         if (isActive) {
-            Text(text = stringResource(R.string.pay), color = Color.White)
+            Text(text = stringRes(R.string.pay), color = Color.White)
         } else {
-            Text(text = stringResource(R.string.paid), color = Color.White)
+            Text(text = stringRes(R.string.paid), color = Color.White)
         }
     }
 }

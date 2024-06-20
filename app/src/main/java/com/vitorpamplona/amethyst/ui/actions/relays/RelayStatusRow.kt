@@ -36,11 +36,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.warningColor
@@ -58,7 +58,7 @@ fun RelayStatusRow(
 
     Icon(
         imageVector = Icons.Default.Download,
-        contentDescription = stringResource(R.string.read_from_relay),
+        contentDescription = stringRes(R.string.read_from_relay),
         modifier =
             Modifier
                 .size(15.dp)
@@ -84,7 +84,7 @@ fun RelayStatusRow(
 
     Icon(
         imageVector = Icons.Default.Upload,
-        stringResource(R.string.write_to_relay),
+        stringRes(R.string.write_to_relay),
         modifier =
             Modifier
                 .size(15.dp)
@@ -110,7 +110,7 @@ fun RelayStatusRow(
 
     Icon(
         imageVector = Icons.Default.SyncProblem,
-        stringResource(R.string.errors),
+        stringRes(R.string.errors),
         modifier =
             Modifier
                 .size(15.dp)
@@ -141,7 +141,7 @@ fun RelayStatusRow(
 
     Icon(
         imageVector = Icons.Default.DeleteSweep,
-        stringResource(R.string.spam),
+        stringRes(R.string.spam),
         modifier =
             Modifier
                 .size(15.dp)
@@ -153,12 +153,12 @@ fun RelayStatusRow(
                             R.string.spam_description,
                         )
                         scope.launch {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.spam),
-                                Toast.LENGTH_SHORT,
-                            )
-                                .show()
+                            Toast
+                                .makeText(
+                                    context,
+                                    stringRes(context, R.string.spam),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                         }
                     },
                 ),

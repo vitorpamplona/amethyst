@@ -38,10 +38,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.quartz.events.EmptyTagList
@@ -89,7 +89,7 @@ fun NotifyRequestDialog(
                         contentDescription = null,
                     )
                     Spacer(StdHorzSpacer)
-                    Text(stringResource(R.string.error_dialog_button_ok))
+                    Text(stringRes(R.string.error_dialog_button_ok))
                 }
             }
         },

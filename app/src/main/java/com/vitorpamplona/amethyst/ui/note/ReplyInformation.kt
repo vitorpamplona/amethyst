@@ -33,13 +33,13 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -85,7 +85,7 @@ fun ReplyInformationChannel(
         if (mentions != null && mentions.isNotEmpty()) {
             if (replyTo != null && replyTo.isNotEmpty()) {
                 Text(
-                    stringResource(id = R.string.replying_to),
+                    stringRes(id = R.string.replying_to),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -101,7 +101,7 @@ fun ReplyInformationChannel(
                         )
                     } else if (idx < mentions.size - 1) {
                         Text(
-                            " ${stringResource(id = R.string.and)} ",
+                            " ${stringRes(id = R.string.and)} ",
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.placeholderText,
                         )

@@ -46,7 +46,6 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,7 +53,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
@@ -65,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleMaxSizeModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
@@ -78,7 +77,7 @@ import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.Size5Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.chatAuthorBox
@@ -173,7 +172,7 @@ fun NormalChatNote(
     ChatBubbleLayout(
         isLoggedInUser = isLoggedInUser,
         innerQuote = innerQuote,
-        isSimplified = accountViewModel.settings.featureSet == FeatureSetType.SIMPLIFIED,
+        isComplete = accountViewModel.settings.featureSet == FeatureSetType.COMPLETE,
         hasDetailsToShow = note.zaps.isNotEmpty() || note.zapPayments.isNotEmpty() || note.reactions.isNotEmpty(),
         drawAuthorInfo = drawAuthorInfo,
         parentBackgroundColor = parentBackgroundColor,
@@ -190,10 +189,9 @@ fun NormalChatNote(
                 nav("User/${it.pubkeyHex}")
             }
         },
-        actionMenu = { popupExpanded, onDismiss ->
+        actionMenu = { onDismiss ->
             NoteQuickActionMenu(
                 note = note,
-                popupExpanded = popupExpanded,
                 onDismiss = onDismiss,
                 onWantsToEditDraft = { onWantsToEditDraft(note) },
                 accountViewModel = accountViewModel,
@@ -250,13 +248,13 @@ fun NormalChatNote(
 fun ChatBubbleLayout(
     isLoggedInUser: Boolean,
     innerQuote: Boolean,
-    isSimplified: Boolean,
+    isComplete: Boolean,
     hasDetailsToShow: Boolean,
     drawAuthorInfo: Boolean,
     parentBackgroundColor: MutableState<Color>? = null,
     onClick: () -> Boolean,
     onAuthorClick: () -> Unit,
-    actionMenu: @Composable (popupExpanded: Boolean, onDismiss: () -> Unit) -> Unit,
+    actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
     detailRow: @Composable () -> Unit,
     drawAuthorLine: @Composable () -> Unit,
     inner: @Composable (MutableState<Color>) -> Unit,
@@ -294,17 +292,17 @@ fun ChatBubbleLayout(
         modifier = if (innerQuote) ChatPaddingInnerQuoteModifier else ChatPaddingModifier,
         horizontalArrangement = alignment,
     ) {
-        var popupExpanded by remember { mutableStateOf(false) }
+        var popupExpanded = remember { mutableStateOf(false) }
 
         val modif2 = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier
 
         val showDetails =
             remember {
                 mutableStateOf(
-                    if (isSimplified) {
-                        hasDetailsToShow
-                    } else {
+                    if (isComplete) {
                         true
+                    } else {
+                        hasDetailsToShow
                     },
                 )
             }
@@ -314,12 +312,12 @@ fun ChatBubbleLayout(
                 Modifier.combinedClickable(
                     onClick = {
                         if (!onClick()) {
-                            if (isSimplified) {
+                            if (!isComplete) {
                                 showDetails.value = !showDetails.value
                             }
                         }
                     },
-                    onLongClick = { popupExpanded = true },
+                    onLongClick = { popupExpanded.value = true },
                 )
             }
 
@@ -357,8 +355,10 @@ fun ChatBubbleLayout(
             }
         }
 
-        actionMenu(popupExpanded) {
-            popupExpanded = false
+        if (popupExpanded.value) {
+            actionMenu {
+                popupExpanded.value = false
+            }
         }
     }
 }
@@ -375,13 +375,13 @@ private fun BubblePreview() {
         ChatBubbleLayout(
             isLoggedInUser = false,
             innerQuote = false,
-            isSimplified = false,
+            isComplete = true,
             hasDetailsToShow = true,
             drawAuthorInfo = true,
             parentBackgroundColor = backgroundBubbleColor,
             onClick = { false },
             onAuthorClick = {},
-            actionMenu = { popupExpanded, onDismiss ->
+            actionMenu = { onDismiss ->
             },
             drawAuthorLine = {
                 UserDisplayNameLayout(
@@ -405,13 +405,13 @@ private fun BubblePreview() {
         ChatBubbleLayout(
             isLoggedInUser = true,
             innerQuote = false,
-            isSimplified = false,
+            isComplete = true,
             hasDetailsToShow = true,
             drawAuthorInfo = true,
             parentBackgroundColor = backgroundBubbleColor,
             onClick = { false },
             onAuthorClick = {},
-            actionMenu = { popupExpanded, onDismiss ->
+            actionMenu = { onDismiss ->
             },
             drawAuthorLine = {
                 UserDisplayNameLayout(
@@ -622,10 +622,8 @@ fun IncognitoBadge(baseNote: Note) {
 
 @Composable
 fun ChatTimeAgo(baseNote: Note) {
-    val nowStr = stringResource(id = R.string.now)
-
-    val time by
-        remember(baseNote) { derivedStateOf { timeAgoShort(baseNote.createdAt() ?: 0, nowStr) } }
+    val nowStr = stringRes(id = R.string.now)
+    val time = remember(baseNote) { timeAgoShort(baseNote.createdAt() ?: 0, nowStr) }
 
     Text(
         text = time,
@@ -667,7 +665,7 @@ private fun RenderRegularTextNote(
             }
         } else {
             TranslatableRichTextViewer(
-                content = stringResource(id = R.string.could_not_decrypt_the_message),
+                content = stringRes(id = R.string.could_not_decrypt_the_message),
                 canPreview = true,
                 quotesLeft = 0,
                 modifier = HalfTopPadding,
@@ -689,11 +687,11 @@ private fun RenderChangeChannelMetadataNote(note: Note) {
     val channelInfo = noteEvent.channelInfo()
     val text =
         note.author?.toBestDisplayName().toString() +
-            " ${stringResource(R.string.changed_chat_name_to)} '" +
+            " ${stringRes(R.string.changed_chat_name_to)} '" +
             (channelInfo.name ?: "") +
-            "', ${stringResource(R.string.description_to)} '" +
+            "', ${stringRes(R.string.description_to)} '" +
             (channelInfo.about ?: "") +
-            "', ${stringResource(R.string.and_picture_to)} '" +
+            "', ${stringRes(R.string.and_picture_to)} '" +
             (channelInfo.picture ?: "") +
             "'"
 
@@ -710,11 +708,11 @@ private fun RenderCreateChannelNote(note: Note) {
 
     val text =
         note.author?.toBestDisplayName().toString() +
-            " ${stringResource(R.string.created)} " +
+            " ${stringRes(R.string.created)} " +
             (channelInfo.name ?: "") +
-            " ${stringResource(R.string.with_description_of)} '" +
+            " ${stringRes(R.string.with_description_of)} '" +
             (channelInfo.about ?: "") +
-            "', ${stringResource(R.string.and_picture)} '" +
+            "', ${stringRes(R.string.and_picture)} '" +
             (channelInfo.picture ?: "") +
             "'"
 
@@ -768,7 +766,11 @@ private fun WatchAndDisplayUser(
                 accountViewModel = accountViewModel,
             )
 
-            ObserveAndDisplayFollowingMark(author.pubkeyHex, Size5dp, accountViewModel)
+            WatchUserFollows(author.pubkeyHex, accountViewModel) { newFollowingState ->
+                if (newFollowingState) {
+                    FollowingIcon(Size5Modifier)
+                }
+            }
         },
         name = {
             if (userState != null) {

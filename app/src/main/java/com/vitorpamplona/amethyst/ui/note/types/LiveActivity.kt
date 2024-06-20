@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,13 +38,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -55,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.CheckIfUrlIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CrossfadeCheckIfUrlIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ScheduledFlag
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
@@ -116,7 +116,7 @@ fun RenderLiveActivityEventInner(
 
         Spacer(modifier = StdHorzSpacer)
 
-        Crossfade(targetState = status, label = "RenderLiveActivityEventInner") {
+        CrossfadeIfEnabled(targetState = status, label = "RenderLiveActivityEventInner", accountViewModel = accountViewModel) {
             when (it) {
                 LiveActivitiesEvent.STATUS_LIVE -> {
                     media?.let { CrossfadeCheckIfUrlIsOnline(it, accountViewModel) { LiveFlag() } }
@@ -171,7 +171,7 @@ fun RenderLiveActivityEventInner(
                                 .height(100.dp),
                     ) {
                         Text(
-                            text = stringResource(id = R.string.live_stream_is_offline),
+                            text = stringRes(id = R.string.live_stream_is_offline),
                             color = MaterialTheme.colorScheme.onBackground,
                             fontWeight = FontWeight.Bold,
                         )
@@ -187,7 +187,7 @@ fun RenderLiveActivityEventInner(
                         .height(100.dp),
             ) {
                 Text(
-                    text = stringResource(id = R.string.live_stream_has_ended),
+                    text = stringRes(id = R.string.live_stream_has_ended),
                     color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Bold,
                 )
@@ -205,7 +205,7 @@ fun RenderLiveActivityEventInner(
         ) {
             ClickableUserPicture(it.second, 25.dp, accountViewModel)
             Spacer(StdHorzSpacer)
-            UsernameDisplay(it.second, Modifier.weight(1f))
+            UsernameDisplay(it.second, Modifier.weight(1f), accountViewModel = accountViewModel)
             Spacer(StdHorzSpacer)
             it.first.role?.let {
                 Text(

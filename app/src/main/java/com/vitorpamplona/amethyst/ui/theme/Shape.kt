@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -96,7 +97,9 @@ val Size35dp = 35.dp
 val Size40dp = 40.dp
 val Size55dp = 55.dp
 val Size75dp = 75.dp
+val Size100dp = 100.dp
 val Size110dp = 110.dp
+val Size165dp = 165.dp
 
 val HalfEndPadding = Modifier.padding(end = 5.dp)
 val HalfStartPadding = Modifier.padding(start = 5.dp)
@@ -110,6 +113,7 @@ val BigPadding = Modifier.padding(15.dp)
 
 val RowColSpacing = Arrangement.spacedBy(3.dp)
 val RowColSpacing5dp = Arrangement.spacedBy(5.dp)
+val RowColSpacing10dp = Arrangement.spacedBy(10.dp)
 
 val HalfHorzPadding = Modifier.padding(horizontal = 5.dp)
 val HalfVertPadding = Modifier.padding(vertical = 5.dp)
@@ -119,7 +123,7 @@ val VertPadding = Modifier.padding(vertical = 10.dp)
 
 val MaxWidthWithHorzPadding = Modifier.fillMaxWidth().padding(horizontal = 10.dp)
 
-val Size6Modifier = Modifier.size(6.dp)
+val Size5Modifier = Modifier.size(5.dp)
 val Size10Modifier = Modifier.size(10.dp)
 val Size15Modifier = Modifier.size(15.dp)
 val Size16Modifier = Modifier.size(16.dp)
@@ -140,7 +144,9 @@ val Size55Modifier = Modifier.size(55.dp)
 
 val TinyBorders = Modifier.padding(2.dp)
 val NoSoTinyBorders = Modifier.padding(start = 5.dp, end = 5.dp, top = 2.dp, bottom = 2.dp)
-val ReactionRowZapraiserSize = Modifier.defaultMinSize(minHeight = 4.dp).fillMaxWidth()
+val ReactionRowZapraiserWithPadding = Modifier.defaultMinSize(minHeight = 4.dp).padding(start = Size75dp).fillMaxWidth()
+val ReactionRowZapraiser = Modifier.defaultMinSize(minHeight = 4.dp).fillMaxWidth()
+
 val ReactionRowExpandButton = Modifier.width(65.dp).padding(start = 31.dp)
 
 val WidthAuthorPictureModifier = Modifier.width(55.dp)
@@ -150,7 +156,8 @@ val VideoReactionColumnPadding = Modifier.padding(bottom = 75.dp)
 
 val DividerThickness = 0.25.dp
 
-val ReactionRowHeight = Modifier.height(24.dp).padding(start = 10.dp)
+val ReactionRowHeight = Modifier.padding(vertical = 7.dp).height(24.dp)
+val ReactionRowHeightWithPadding = Modifier.padding(vertical = 7.dp).height(24.dp).padding(horizontal = 10.dp)
 val ReactionRowHeightChat = Modifier.height(25.dp)
 val UserNameRowHeight = Modifier.fillMaxWidth()
 val UserNameMaxRowHeight = Modifier.fillMaxWidth()
@@ -163,7 +170,7 @@ val HeaderPictureModifier = Modifier.size(34.dp).clip(shape = CircleShape)
 
 val ShowMoreRelaysButtonIconButtonModifier = Modifier.size(15.dp)
 val ShowMoreRelaysButtonIconModifier = Modifier.size(20.dp)
-val ShowMoreRelaysButtonBoxModifer = Modifier.fillMaxWidth().height(17.dp)
+val ShowMoreRelaysButtonBoxModifer = Modifier.width(55.dp).height(17.dp)
 
 val ChatBubbleMaxSizeModifier = Modifier.fillMaxWidth(0.85f)
 
@@ -190,7 +197,8 @@ val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
 
 val ChatPaddingInnerQuoteModifier = Modifier.padding(top = 10.dp)
 val ChatPaddingModifier =
-    Modifier.fillMaxWidth(1f)
+    Modifier
+        .fillMaxWidth(1f)
         .padding(
             start = 12.dp,
             end = 12.dp,
@@ -213,7 +221,8 @@ val imageHeaderBannerSize = Modifier.fillMaxWidth().height(150.dp)
 val authorNotePictureForImageHeader = Modifier.size(75.dp).padding(10.dp)
 
 val normalWithTopMarginNoteModifier =
-    Modifier.fillMaxWidth()
+    Modifier
+        .fillMaxWidth()
         .padding(
             start = 12.dp,
             end = 12.dp,
@@ -221,7 +230,8 @@ val normalWithTopMarginNoteModifier =
         )
 
 val boostedNoteModifier =
-    Modifier.fillMaxWidth()
+    Modifier
+        .fillMaxWidth()
         .padding(
             start = 0.dp,
             end = 0.dp,
@@ -254,3 +264,7 @@ val incognitoIconModifier =
         .size(14.dp)
 
 val hashVerifierMark = Modifier.width(40.dp).height(40.dp).padding(10.dp)
+
+val noteComposeRelayBox = Modifier.width(55.dp).heightIn(min = 17.dp).padding(start = 2.dp, end = 1.dp)
+
+val previewCardImageModifier = Modifier.fillMaxWidth().heightIn(max = 200.dp).padding(bottom = 5.dp)

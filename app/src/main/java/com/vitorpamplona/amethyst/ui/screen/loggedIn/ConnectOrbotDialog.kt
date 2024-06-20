@@ -40,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -54,6 +53,7 @@ import com.halilibo.richtext.markdown.BasicMarkdown
 import com.halilibo.richtext.ui.material3.RichText
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.RichTextDefaults
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -81,7 +81,7 @@ fun ConnectOrbotDialog(
                 ) {
                     CloseButton(onPress = { onClose() })
 
-                    val toastMessage = stringResource(R.string.invalid_port_number)
+                    val toastMessage = stringRes(R.string.invalid_port_number)
 
                     UseOrbotButton(
                         onPost = {
@@ -115,7 +115,7 @@ fun ConnectOrbotDialog(
                         )
 
                     Row {
-                        val content1 = stringResource(R.string.connect_through_your_orbot_setup_markdown)
+                        val content1 = stringRes(R.string.connect_through_your_orbot_setup_markdown)
 
                         val astNode1 =
                             remember {
@@ -144,7 +144,7 @@ fun ConnectOrbotDialog(
                                     capitalization = KeyboardCapitalization.None,
                                     keyboardType = KeyboardType.Number,
                                 ),
-                            label = { Text(text = stringResource(R.string.orbot_socks_port)) },
+                            label = { Text(text = stringRes(R.string.orbot_socks_port)) },
                             placeholder = {
                                 Text(
                                     text = "9050",
@@ -178,6 +178,6 @@ fun UseOrbotButton(
                 containerColor = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray,
             ),
     ) {
-        Text(text = stringResource(R.string.use_orbot), color = Color.White)
+        Text(text = stringRes(R.string.use_orbot), color = Color.White)
     }
 }

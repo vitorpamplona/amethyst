@@ -68,25 +68,23 @@ fun MessageSetCompose(
 
     val columnModifier =
         remember(backgroundColor.value) {
-            Modifier.background(backgroundColor.value)
+            Modifier
+                .background(backgroundColor.value)
                 .padding(
                     start = 12.dp,
                     end = 12.dp,
                     top = 10.dp,
-                )
-                .combinedClickable(
+                ).combinedClickable(
                     onClick = {
                         scope.launch {
                             routeFor(
                                 baseNote,
                                 accountViewModel.userProfile(),
-                            )
-                                ?.let { nav(it) }
+                            )?.let { nav(it) }
                         }
                     },
                     onLongClick = enablePopup,
-                )
-                .fillMaxWidth()
+                ).fillMaxWidth()
         }
 
     Column(columnModifier) {
@@ -111,7 +109,9 @@ fun MessageSetCompose(
                     nav = nav,
                 )
 
-                NoteDropDownMenu(baseNote, popupExpanded, null, accountViewModel, nav)
+                if (popupExpanded.value) {
+                    NoteDropDownMenu(baseNote, { popupExpanded.value = false }, null, accountViewModel, nav)
+                }
             }
         }
     }

@@ -75,7 +75,6 @@ import androidx.compose.ui.platform.LocalAutofillTree
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
@@ -98,6 +97,7 @@ import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -164,12 +164,12 @@ fun LoginPage(
                 onResult = { result ->
                     if (result.resultCode != Activity.RESULT_OK) {
                         scope.launch(Dispatchers.Main) {
-                            Toast.makeText(
-                                Amethyst.instance,
-                                "Sign request rejected",
-                                Toast.LENGTH_SHORT,
-                            )
-                                .show()
+                            Toast
+                                .makeText(
+                                    Amethyst.instance,
+                                    "Sign request rejected",
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                         }
                     } else {
                         result.data?.let { externalSignerLauncher.newResult(it) }
@@ -189,12 +189,12 @@ fun LoginPage(
                         if (e is CancellationException) throw e
                         Log.e("Signer", "Error opening Signer app", e)
                         scope.launch(Dispatchers.Main) {
-                            Toast.makeText(
-                                Amethyst.instance,
-                                R.string.error_opening_external_signer,
-                                Toast.LENGTH_SHORT,
-                            )
-                                .show()
+                            Toast
+                                .makeText(
+                                    Amethyst.instance,
+                                    R.string.error_opening_external_signer,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                         }
                     }
                 },
@@ -215,11 +215,11 @@ fun LoginPage(
                 val packageName = if (split.size > 1) split[1] else ""
                 key.value = TextFieldValue(pubkey)
                 if (!acceptedTerms.value) {
-                    termsAcceptanceIsRequired = context.getString(R.string.acceptance_of_terms_is_required)
+                    termsAcceptanceIsRequired = stringRes(context, R.string.acceptance_of_terms_is_required)
                 }
 
                 if (key.value.text.isBlank()) {
-                    errorMessage = context.getString(R.string.key_is_required)
+                    errorMessage = stringRes(context, R.string.key_is_required)
                 }
 
                 if (acceptedTerms.value && key.value.text.isNotBlank()) {
@@ -230,7 +230,7 @@ fun LoginPage(
                         true,
                         packageName,
                     ) {
-                        errorMessage = context.getString(R.string.invalid_key)
+                        errorMessage = stringRes(context, R.string.invalid_key)
                     }
                 }
             }
@@ -248,7 +248,7 @@ fun LoginPage(
     ) {
         Image(
             imageVector = CustomHashTagIcons.Amethyst,
-            contentDescription = stringResource(R.string.app_logo),
+            contentDescription = stringRes(R.string.app_logo),
             modifier = Modifier.size(150.dp),
             contentScale = ContentScale.Inside,
         )
@@ -279,8 +279,7 @@ fun LoginPage(
                 Modifier
                     .onGloballyPositioned { coordinates ->
                         autofillNodeKey.boundingBox = coordinates.boundsInWindow()
-                    }
-                    .onFocusChanged { focusState ->
+                    }.onFocusChanged { focusState ->
                         autofill?.run {
                             if (focusState.isFocused) {
                                 requestAutofillForNode(autofillNodeKey)
@@ -304,7 +303,7 @@ fun LoginPage(
                 ),
             placeholder = {
                 Text(
-                    text = stringResource(R.string.nsec_npub_hex_private_key),
+                    text = stringRes(R.string.nsec_npub_hex_private_key),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -316,9 +315,9 @@ fun LoginPage(
                                 if (showCharsKey) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                             contentDescription =
                                 if (showCharsKey) {
-                                    stringResource(R.string.show_password)
+                                    stringRes(R.string.show_password)
                                 } else {
-                                    stringResource(
+                                    stringRes(
                                         R.string.hide_password,
                                     )
                                 },
@@ -339,7 +338,7 @@ fun LoginPage(
                     Icon(
                         painter = painterResource(R.drawable.ic_qrcode),
                         contentDescription =
-                            stringResource(
+                            stringRes(
                                 R.string.login_with_qr_code,
                             ),
                         modifier = Modifier.size(24.dp),
@@ -353,15 +352,15 @@ fun LoginPage(
                 KeyboardActions(
                     onGo = {
                         if (!acceptedTerms.value) {
-                            termsAcceptanceIsRequired = context.getString(R.string.acceptance_of_terms_is_required)
+                            termsAcceptanceIsRequired = stringRes(context, R.string.acceptance_of_terms_is_required)
                         }
 
                         if (key.value.text.isBlank()) {
-                            errorMessage = context.getString(R.string.key_is_required)
+                            errorMessage = stringRes(context, R.string.key_is_required)
                         }
 
                         if (needsPassword.value && password.value.text.isBlank()) {
-                            errorMessage = context.getString(R.string.password_is_required)
+                            errorMessage = stringRes(context, R.string.password_is_required)
                         }
 
                         if (acceptedTerms.value && key.value.text.isNotBlank() && !(needsPassword.value && password.value.text.isBlank())) {
@@ -370,9 +369,9 @@ fun LoginPage(
                                 processingLogin = false
                                 errorMessage =
                                     if (it != null) {
-                                        context.getString(R.string.invalid_key_with_message, it)
+                                        stringRes(context, R.string.invalid_key_with_message, it)
                                     } else {
-                                        context.getString(R.string.invalid_key)
+                                        stringRes(context, R.string.invalid_key)
                                     }
                             }
                         }
@@ -395,8 +394,7 @@ fun LoginPage(
                     Modifier
                         .onGloballyPositioned { coordinates ->
                             autofillNodePassword.boundingBox = coordinates.boundsInWindow()
-                        }
-                        .onFocusChanged { focusState ->
+                        }.onFocusChanged { focusState ->
                             autofill?.run {
                                 if (focusState.isFocused) {
                                     requestAutofillForNode(autofillNodePassword)
@@ -420,7 +418,7 @@ fun LoginPage(
                     ),
                 placeholder = {
                     Text(
-                        text = stringResource(R.string.ncryptsec_password),
+                        text = stringRes(R.string.ncryptsec_password),
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
@@ -432,9 +430,9 @@ fun LoginPage(
                                     if (showCharsPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                                 contentDescription =
                                     if (showCharsPassword) {
-                                        stringResource(R.string.show_password)
+                                        stringRes(R.string.show_password)
                                     } else {
-                                        stringResource(
+                                        stringRes(
                                             R.string.hide_password,
                                         )
                                     },
@@ -448,15 +446,15 @@ fun LoginPage(
                     KeyboardActions(
                         onGo = {
                             if (!acceptedTerms.value) {
-                                termsAcceptanceIsRequired = context.getString(R.string.acceptance_of_terms_is_required)
+                                termsAcceptanceIsRequired = stringRes(context, R.string.acceptance_of_terms_is_required)
                             }
 
                             if (key.value.text.isBlank()) {
-                                errorMessage = context.getString(R.string.key_is_required)
+                                errorMessage = stringRes(context, R.string.key_is_required)
                             }
 
                             if (needsPassword.value && password.value.text.isBlank()) {
-                                errorMessage = context.getString(R.string.password_is_required)
+                                errorMessage = stringRes(context, R.string.password_is_required)
                             }
 
                             if (acceptedTerms.value && key.value.text.isNotBlank() && !(needsPassword.value && password.value.text.isBlank())) {
@@ -465,9 +463,9 @@ fun LoginPage(
                                     processingLogin = false
                                     errorMessage =
                                         if (it != null) {
-                                            context.getString(R.string.invalid_key_with_message, it)
+                                            stringRes(context, R.string.invalid_key_with_message, it)
                                         } else {
-                                            context.getString(R.string.invalid_key)
+                                            stringRes(context, R.string.invalid_key)
                                         }
                                 }
                             }
@@ -488,7 +486,7 @@ fun LoginPage(
                         },
                     )
 
-                    Text(stringResource(R.string.connect_via_tor))
+                    Text(stringRes(R.string.connect_via_tor))
                 }
 
                 if (connectOrbotDialogOpen) {
@@ -500,12 +498,12 @@ fun LoginPage(
                         },
                         onError = {
                             scope.launch {
-                                Toast.makeText(
-                                    context,
-                                    it,
-                                    Toast.LENGTH_LONG,
-                                )
-                                    .show()
+                                Toast
+                                    .makeText(
+                                        context,
+                                        it,
+                                        Toast.LENGTH_LONG,
+                                    ).show()
                             }
                         },
                         proxyPort,
@@ -527,11 +525,11 @@ fun LoginPage(
 
                 val annotatedTermsString =
                     buildAnnotatedString {
-                        withStyle(regularText) { append(stringResource(R.string.i_accept_the)) }
+                        withStyle(regularText) { append(stringRes(R.string.i_accept_the)) }
 
                         withStyle(clickableTextStyle) {
                             pushStringAnnotation("openTerms", "")
-                            append(stringResource(R.string.terms_of_use))
+                            append(stringRes(R.string.terms_of_use))
                             pop()
                         }
                     }
@@ -539,8 +537,7 @@ fun LoginPage(
                 ClickableText(
                     text = annotatedTermsString,
                 ) { spanOffset ->
-                    annotatedTermsString.getStringAnnotations(spanOffset, spanOffset).firstOrNull()?.also {
-                            span ->
+                    annotatedTermsString.getStringAnnotations(spanOffset, spanOffset).firstOrNull()?.also { span ->
                         if (span.tag == "openTerms") {
                             runCatching {
                                 uri.openUri("https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md")
@@ -567,15 +564,15 @@ fun LoginPage(
                 onClick = {
                     if (!acceptedTerms.value) {
                         termsAcceptanceIsRequired =
-                            context.getString(R.string.acceptance_of_terms_is_required)
+                            stringRes(context, R.string.acceptance_of_terms_is_required)
                     }
 
                     if (key.value.text.isBlank()) {
-                        errorMessage = context.getString(R.string.key_is_required)
+                        errorMessage = stringRes(context, R.string.key_is_required)
                     }
 
                     if (needsPassword.value && password.value.text.isBlank()) {
-                        errorMessage = context.getString(R.string.password_is_required)
+                        errorMessage = stringRes(context, R.string.password_is_required)
                     }
 
                     if (acceptedTerms.value && key.value.text.isNotBlank() && !(needsPassword.value && password.value.text.isBlank())) {
@@ -584,9 +581,9 @@ fun LoginPage(
                             processingLogin = false
                             errorMessage =
                                 if (it != null) {
-                                    context.getString(R.string.invalid_key_with_message, it)
+                                    stringRes(context, R.string.invalid_key_with_message, it)
                                 } else {
-                                    context.getString(R.string.invalid_key)
+                                    stringRes(context, R.string.invalid_key)
                                 }
                         }
                     }
@@ -599,7 +596,7 @@ fun LoginPage(
                         LoadingAnimation()
                         Spacer(modifier = DoubleHorzSpacer)
                     }
-                    Text(stringResource(R.string.login))
+                    Text(stringRes(R.string.login))
                 }
             }
         }
@@ -611,7 +608,7 @@ fun LoginPage(
                     onClick = {
                         if (!acceptedTerms.value) {
                             termsAcceptanceIsRequired =
-                                context.getString(R.string.acceptance_of_terms_is_required)
+                                stringRes(context, R.string.acceptance_of_terms_is_required)
                             return@Button
                         }
 
@@ -622,7 +619,7 @@ fun LoginPage(
                     modifier = Modifier.height(50.dp),
                 ) {
                     Text(
-                        text = stringResource(R.string.login_with_external_signer),
+                        text = stringRes(R.string.login_with_external_signer),
                         modifier = Modifier.padding(horizontal = 40.dp),
                     )
                 }
@@ -631,7 +628,7 @@ fun LoginPage(
 
         Spacer(modifier = Modifier.height(Size40dp))
 
-        Text(text = stringResource(R.string.don_t_have_an_account))
+        Text(text = stringRes(R.string.don_t_have_an_account))
 
         Spacer(modifier = Modifier.height(Size20dp))
 
@@ -642,7 +639,7 @@ fun LoginPage(
                 modifier = Modifier.height(50.dp),
             ) {
                 Text(
-                    text = stringResource(R.string.sign_up),
+                    text = stringRes(R.string.sign_up),
                     modifier = Modifier.padding(horizontal = Size40dp),
                 )
             }

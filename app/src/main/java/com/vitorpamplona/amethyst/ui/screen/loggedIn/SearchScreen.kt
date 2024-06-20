@@ -58,7 +58,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -71,6 +70,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForSearchAndDisplayIfNotFound
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -168,7 +169,9 @@ fun WatchAccountForSearchScreen(accountViewModel: AccountViewModel) {
 }
 
 @Stable
-class SearchBarViewModel(val account: Account) : ViewModel() {
+class SearchBarViewModel(
+    val account: Account,
+) : ViewModel() {
     var searchValue by mutableStateOf("")
 
     private var _searchResultsUsers = MutableStateFlow<List<User>>(emptyList())
@@ -198,12 +201,14 @@ class SearchBarViewModel(val account: Account) : ViewModel() {
 
         _hashtagResults.emit(findHashtags(searchValue))
         _searchResultsUsers.emit(
-            LocalCache.findUsersStartingWith(searchValue)
+            LocalCache
+                .findUsersStartingWith(searchValue)
                 .sortedWith(compareBy({ account.isFollowing(it) }, { it.toBestDisplayName() }))
                 .reversed(),
         )
         _searchResultsNotes.emit(
-            LocalCache.findNotesStartingWith(searchValue)
+            LocalCache
+                .findNotesStartingWith(searchValue)
                 .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
                 .reversed(),
         )
@@ -236,10 +241,10 @@ class SearchBarViewModel(val account: Account) : ViewModel() {
 
     fun isSearchingFun() = searchValue.isNotBlank()
 
-    class Factory(val account: Account) : ViewModelProvider.Factory {
-        override fun <SearchBarViewModel : ViewModel> create(modelClass: Class<SearchBarViewModel>): SearchBarViewModel {
-            return SearchBarViewModel(account) as SearchBarViewModel
-        }
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <SearchBarViewModel : ViewModel> create(modelClass: Class<SearchBarViewModel>): SearchBarViewModel = SearchBarViewModel(account) as SearchBarViewModel
     }
 }
 
@@ -325,7 +330,7 @@ private fun SearchTextField(
                 KeyboardOptions.Default.copy(
                     capitalization = KeyboardCapitalization.Sentences,
                 ),
-            leadingIcon = { SearchIcon(modifier = Size20Modifier, Color.Unspecified) },
+            leadingIcon = { SearchIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText) },
             modifier =
                 Modifier
                     .weight(1f, true)
@@ -333,7 +338,7 @@ private fun SearchTextField(
                     .focusRequester(focusRequester),
             placeholder = {
                 Text(
-                    text = stringResource(R.string.npub_hex_username),
+                    text = stringRes(R.string.npub_hex_username),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -376,11 +381,6 @@ private fun DisplaySearchResults(
     val notes by searchBarViewModel.searchResultsNotes.collectAsStateWithLifecycle()
 
     val hasNewMessages = remember { mutableStateOf(false) }
-
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
 
     LazyColumn(
         modifier = Modifier.fillMaxHeight(),
@@ -426,7 +426,8 @@ private fun DisplaySearchResults(
                 channelLastTime = null,
                 channelLastContent = item.summary(),
                 hasNewMessages = hasNewMessages,
-                loadProfilePicture = automaticallyShowProfilePicture,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                 onClick = { nav("Channel/${item.idHex}") },
             )
 
@@ -500,7 +501,7 @@ fun UserLine(
         Column(
             modifier = Modifier.padding(start = 10.dp).weight(1f),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser) }
+            Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser, accountViewModel = accountViewModel) }
 
             AboutDisplay(baseUser)
         }

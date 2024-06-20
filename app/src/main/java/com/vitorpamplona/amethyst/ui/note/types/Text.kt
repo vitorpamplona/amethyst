@@ -46,10 +46,9 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.EmptyTagList
+import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun RenderTextEvent(
@@ -63,7 +62,7 @@ fun RenderTextEvent(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val noteEvent = note.event
+    val noteEvent = note.event as? Event ?: return
 
     val showReply by
         remember(note) {
@@ -101,31 +100,26 @@ fun RenderTextEvent(
         note,
         accountViewModel,
     ) { body ->
-        val eventContent by
+        val eventContent =
             remember(note.event) {
-                derivedStateOf {
-                    val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
-                    val newBody =
-                        if (editState.value is GenericLoadable.Loaded) {
-                            val state =
-                                (editState.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow
-                            state?.value?.event?.content() ?: body
-                        } else {
-                            body
-                        }
-
-                    if (!subject.isNullOrBlank() && !newBody.split("\n")[0].contains(subject)) {
-                        "### $subject\n$newBody"
+                val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
+                val newBody =
+                    if (editState.value is GenericLoadable.Loaded) {
+                        val state =
+                            (editState.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow
+                        state?.value?.event?.content() ?: body
                     } else {
-                        newBody
+                        body
                     }
+
+                if (!subject.isNullOrBlank() && !newBody.split("\n")[0].contains(subject)) {
+                    "### $subject\n$newBody"
+                } else {
+                    newBody
                 }
             }
 
-        val isAuthorTheLoggedUser =
-            remember(note.event) { accountViewModel.isLoggedUser(note.author) }
-
-        if (makeItShort && isAuthorTheLoggedUser) {
+        if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
             Text(
                 text = eventContent,
                 color = MaterialTheme.colorScheme.placeholderText,
@@ -137,7 +131,6 @@ fun RenderTextEvent(
                 note = note,
                 accountViewModel = accountViewModel,
             ) {
-                val modifier = remember(note) { Modifier.fillMaxWidth() }
                 val tags =
                     remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
 
@@ -145,7 +138,7 @@ fun RenderTextEvent(
                     content = eventContent,
                     canPreview = canPreview && !makeItShort,
                     quotesLeft = quotesLeft,
-                    modifier = modifier,
+                    modifier = Modifier.fillMaxWidth(),
                     tags = tags,
                     backgroundColor = backgroundColor,
                     id = note.idHex,
@@ -155,12 +148,8 @@ fun RenderTextEvent(
                 )
             }
 
-            if (note.event?.hasHashtags() == true) {
-                val hashtags =
-                    remember(note.event) {
-                        note.event?.hashtags()?.toImmutableList() ?: persistentListOf()
-                    }
-                DisplayUncitedHashtags(hashtags, eventContent, nav)
+            if (noteEvent.hasHashtags()) {
+                DisplayUncitedHashtags(noteEvent, eventContent, nav)
             }
         }
     }

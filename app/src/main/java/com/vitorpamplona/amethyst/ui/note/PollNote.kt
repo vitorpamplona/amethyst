@@ -61,7 +61,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -76,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.StringToastMsg
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BigPadding
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -437,7 +437,7 @@ fun ZapVote(
                         zappingProgress = 0f
                         showErrorMessageDialog =
                             StringToastMsg(
-                                context.getString(R.string.error_dialog_zap_error),
+                                stringRes(context, R.string.error_dialog_zap_error),
                                 it,
                             )
                     }
@@ -446,7 +446,7 @@ fun ZapVote(
                     scope.launch {
                         showErrorMessageDialog =
                             StringToastMsg(
-                                context.getString(R.string.error_dialog_zap_error),
+                                stringRes(context, R.string.error_dialog_zap_error),
                                 it,
                             )
                     }
@@ -471,7 +471,7 @@ fun ZapVote(
             zappingProgress = 1f
             Icon(
                 imageVector = Icons.Default.Bolt,
-                contentDescription = stringResource(R.string.zaps),
+                contentDescription = stringRes(R.string.zaps),
                 modifier = Modifier.size(20.dp),
                 tint = BitcoinOrange,
             )
@@ -479,7 +479,7 @@ fun ZapVote(
             if (zappingProgress < 0.1 || zappingProgress > 0.99) {
                 Icon(
                     imageVector = Icons.Outlined.Bolt,
-                    contentDescription = stringResource(id = R.string.zaps),
+                    contentDescription = stringRes(id = R.string.zaps),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
@@ -550,6 +550,7 @@ fun FilteredZapAmountChoicePopup(
                             pollOption,
                             zapMessage,
                             context,
+                            true,
                             onError,
                             onProgress,
                             onPayViaIntent,
@@ -576,6 +577,7 @@ fun FilteredZapAmountChoicePopup(
                                         pollOption,
                                         zapMessage,
                                         context,
+                                        true,
                                         onError,
                                         onProgress,
                                         onPayViaIntent,

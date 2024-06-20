@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -35,21 +34,27 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextDirection
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.encoders.LnWithdrawalUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
-fun MayBeWithdrawal(lnurlWord: String) {
+fun MayBeWithdrawal(
+    lnurlWord: String,
+    accountViewModel: AccountViewModel,
+) {
     var lnWithdrawal by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = lnurlWord) {
         launch(Dispatchers.IO) { lnWithdrawal = LnWithdrawalUtil.findWithdrawal(lnurlWord) }
     }
 
-    Crossfade(targetState = lnWithdrawal) {
+    CrossfadeIfEnabled(targetState = lnWithdrawal, accountViewModel = accountViewModel) {
         if (it != null) {
             ClickableWithdrawal(withdrawalString = it)
         } else {
@@ -71,7 +76,7 @@ fun ClickableWithdrawal(withdrawalString: String) {
 
     if (showErrorMessageDialog != null) {
         ErrorMessageDialog(
-            title = context.getString(R.string.error_dialog_pay_withdraw_error),
+            title = stringRes(context, R.string.error_dialog_pay_withdraw_error),
             textContent = showErrorMessageDialog ?: "",
             onDismiss = { showErrorMessageDialog = null },
         )

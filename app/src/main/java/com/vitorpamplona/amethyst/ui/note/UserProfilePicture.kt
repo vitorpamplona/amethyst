@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -30,28 +27,25 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.encoders.HexKey
-import kotlinx.collections.immutable.ImmutableSet
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.events.ChatroomKey
 
 @Composable
 fun NoteAuthorPicture(
@@ -74,9 +68,9 @@ fun NoteAuthorPicture(
     modifier: Modifier = Modifier,
     onClick: ((User) -> Unit)? = null,
 ) {
-    WatchAuthorWithBlank(baseNote) {
+    WatchAuthorWithBlank(baseNote, accountViewModel = accountViewModel) {
         if (it == null) {
-            DisplayBlankAuthor(size, modifier)
+            DisplayBlankAuthor(size, modifier, accountViewModel)
         } else {
             ClickableUserPicture(it, size, accountViewModel, modifier, onClick)
         }
@@ -87,6 +81,7 @@ fun NoteAuthorPicture(
 fun DisplayBlankAuthor(
     size: Dp,
     modifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
 ) {
     val nullModifier =
         remember {
@@ -95,8 +90,9 @@ fun DisplayBlankAuthor(
 
     RobohashAsyncImage(
         robot = "authornotfound",
-        contentDescription = stringResource(R.string.unknown_author),
+        contentDescription = stringRes(R.string.unknown_author),
         modifier = nullModifier,
+        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
     )
 }
 
@@ -121,6 +117,7 @@ fun UserPicture(
             DisplayBlankAuthor(
                 size,
                 pictureModifier,
+                accountViewModel,
             )
         }
     }
@@ -157,39 +154,35 @@ fun ClickableUserPicture(
     val myModifier =
         remember {
             if (onClick != null && onLongClick != null) {
-                Modifier.size(size)
+                Modifier
+                    .size(size)
                     .combinedClickable(
                         onClick = { onClick(baseUser) },
                         onLongClick = { onLongClick(baseUser) },
-                        role = Role.Button,
                     )
             } else if (onClick != null) {
-                Modifier.size(size)
+                Modifier
+                    .size(size)
                     .clickable(
                         onClick = { onClick(baseUser) },
-                        role = Role.Button,
                     )
             } else {
                 Modifier.size(size)
             }
         }
 
-    Box(modifier = myModifier, contentAlignment = Alignment.TopEnd) {
-        BaseUserPicture(baseUser, size, accountViewModel, modifier)
-    }
+    BaseUserPicture(baseUser, size, accountViewModel, modifier, myModifier)
 }
 
 @Composable
 fun NonClickableUserPictures(
-    users: ImmutableSet<HexKey>,
+    room: ChatroomKey,
     size: Dp,
     accountViewModel: AccountViewModel,
 ) {
-    val myBoxModifier = remember { Modifier.size(size) }
+    val userList = remember(room) { room.users.toList() }
 
-    Box(myBoxModifier, contentAlignment = Alignment.TopEnd) {
-        val userList = remember(users) { users.toList() }
-
+    Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
         when (userList.size) {
             0 -> {}
             1 ->
@@ -302,10 +295,8 @@ fun BaseUserPicture(
     size: Dp,
     accountViewModel: AccountViewModel,
     innerModifier: Modifier = Modifier,
-    outerModifier: Modifier = remember { Modifier.size(size) },
+    outerModifier: Modifier = Modifier.size(size),
 ) {
-    val myIconSize by remember(size) { derivedStateOf { size.div(3.5f) } }
-
     Box(outerModifier, contentAlignment = Alignment.TopEnd) {
         LoadUserProfilePicture(baseUser) { userProfilePicture, userName ->
             InnerUserPicture(
@@ -318,7 +309,11 @@ fun BaseUserPicture(
             )
         }
 
-        ObserveAndDisplayFollowingMark(baseUser.pubkeyHex, myIconSize, accountViewModel)
+        WatchUserFollows(baseUser.pubkeyHex, accountViewModel) { newFollowingState ->
+            if (newFollowingState) {
+                FollowingIcon(Modifier.size(size.div(3.5f)))
+            }
+        }
     }
 }
 
@@ -346,41 +341,20 @@ fun InnerUserPicture(
             modifier.size(size).clip(shape = CircleShape)
         }
 
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
-
     RobohashFallbackAsyncImage(
         robot = userHex,
         model = userPicture,
         contentDescription =
             if (userName != null) {
-                stringResource(id = R.string.profile_image_of_user, userName)
+                stringRes(id = R.string.profile_image_of_user, userName)
             } else {
-                stringResource(id = R.string.profile_image)
+                stringRes(id = R.string.profile_image)
             },
         modifier = myImageModifier,
         contentScale = ContentScale.Crop,
-        loadProfilePicture = automaticallyShowProfilePicture,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
     )
-}
-
-@Composable
-fun ObserveAndDisplayFollowingMark(
-    userHex: String,
-    iconSize: Dp,
-    accountViewModel: AccountViewModel,
-) {
-    WatchUserFollows(userHex, accountViewModel) { newFollowingState ->
-        AnimatedVisibility(
-            visible = newFollowingState,
-            enter = remember { fadeIn() },
-            exit = remember { fadeOut() },
-        ) {
-            FollowingIcon(iconSize)
-        }
-    }
 }
 
 @Composable
@@ -395,13 +369,11 @@ fun WatchUserFollows(
                 .map {
                     it.user.isFollowingCached(userHex) ||
                         (userHex == accountViewModel.account.userProfile().pubkeyHex)
-                }
-                .distinctUntilChanged()
-        }
-            .observeAsState(
-                accountViewModel.account.userProfile().isFollowingCached(userHex) ||
-                    (userHex == accountViewModel.account.userProfile().pubkeyHex),
-            )
+                }.distinctUntilChanged()
+        }.observeAsState(
+            accountViewModel.account.userProfile().isFollowingCached(userHex) ||
+                (userHex == accountViewModel.account.userProfile().pubkeyHex),
+        )
 
     onFollowChanges(showFollowingMark)
 }

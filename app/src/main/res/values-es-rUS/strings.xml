@@ -482,7 +482,7 @@
     <string name="new_feature_nip17_might_not_be_available_description">La activación de este modo requiere que Amethyst envíe un mensaje NIP-17 (mensajes directos sellados, de grupo y “GiftWrapped\"). NIP-17 es nuevo y la mayoría de los clientes aún no lo han implementado. Comprueba que el destinatario use un cliente compatible.</string>
     <string name="new_feature_nip17_activate">Activar</string>
     <string name="messages_create_public_chat">Público</string>
-    <string name="messages_create_public_private_chat_desription">Nuevo grupo público o privado</string>
+    <string name="messages_create_public_private_chat_description">Nuevo grupo público o privado</string>
     <string name="messages_new_message">Privado</string>
     <string name="messages_new_message_to">Para</string>
     <string name="messages_new_message_subject">Asunto</string>
@@ -743,5 +743,5 @@
     <string name="dvm_waiting_status">Trabajo solicitado, esperando respuesta</string>
     <string name="dvm_requesting_job">Solicitando trabajo a DVM</string>
     <string name="nwc_payment_request">Solicitud de pago enviada, esperando confirmación de tu billetera</string>
-    <string name="dvm_waiting_to_confim_payment">Esperando a que DVM confirme el pago o envíe resultados</string>
+    <string name="dvm_waiting_to_confirm_payment">Esperando a que DVM confirme el pago o envíe resultados</string>
 </resources>

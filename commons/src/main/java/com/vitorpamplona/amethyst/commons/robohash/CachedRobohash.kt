@@ -24,9 +24,9 @@ import android.util.LruCache
 import androidx.compose.ui.graphics.vector.ImageVector
 
 object CachedRobohash {
-    var cacheIsForLightTheme: Boolean? = null
-    val cache = LruCache<String, ImageVector>(100)
-    val assembler = RobohashAssembler()
+    private var cacheIsForLightTheme: Boolean? = null
+    private val cache = LruCache<String, ImageVector>(100)
+    private val assembler = RobohashAssembler()
 
     fun cached(
         msg: String,
@@ -52,7 +52,9 @@ object CachedRobohash {
             cache.evictAll()
         }
 
-        cache[msg]?.let { return it }
+        cache[msg]?.let {
+            return it
+        }
 
         val vector = assembler.build(msg, isLightTheme)
 

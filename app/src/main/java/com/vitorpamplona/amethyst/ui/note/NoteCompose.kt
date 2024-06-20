@@ -40,14 +40,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.distinctUntilChanged
@@ -114,13 +112,15 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.RenderChannelHeader
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfEndPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
+import com.vitorpamplona.amethyst.ui.theme.RowColSpacing10dp
+import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
@@ -179,7 +179,6 @@ import com.vitorpamplona.quartz.events.VideoEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
-import kotlinx.coroutines.launch
 
 @Composable
 fun NoteCompose(
@@ -204,7 +203,7 @@ fun NoteCompose(
         CheckHiddenFeedWatchBlockAndReport(
             note = baseNote,
             modifier = modifier,
-            showHidden = isHiddenFeed,
+            ignoreAllBlocksAndReports = isHiddenFeed,
             showHiddenWarning = isQuotedNote || isBoostedNote,
             accountViewModel = accountViewModel,
             nav = nav,
@@ -264,9 +263,7 @@ fun AcceptableNote(
                 }
             is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
             else ->
-                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) {
-                        showPopup,
-                    ->
+                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
                     CheckNewAndRenderNote(
                         baseNote = baseNote,
                         routeForLastRead = routeForLastRead,
@@ -418,26 +415,21 @@ fun ClickableNote(
     nav: (String) -> Unit,
     content: @Composable () -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
-
     val updatedModifier =
         remember(baseNote, backgroundColor.value) {
             modifier
                 .combinedClickable(
                     onClick = {
-                        scope.launch {
-                            val redirectToNote =
-                                if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
-                                    baseNote.replyTo?.lastOrNull() ?: baseNote
-                                } else {
-                                    baseNote
-                                }
-                            routeFor(redirectToNote, accountViewModel.userProfile())?.let { nav(it) }
-                        }
+                        val redirectToNote =
+                            if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
+                                baseNote.replyTo?.lastOrNull() ?: baseNote
+                            } else {
+                                baseNote
+                            }
+                        routeFor(redirectToNote, accountViewModel.userProfile())?.let { nav(it) }
                     },
                     onLongClick = showPopup,
-                )
-                .background(backgroundColor.value)
+                ).background(backgroundColor.value)
         }
 
     Column(modifier = updatedModifier) { content() }
@@ -466,18 +458,26 @@ fun InnerNoteWithReactions(
             } else {
                 boostedNoteModifier
             },
+        horizontalArrangement = RowColSpacing10dp,
     ) {
         if (notBoostedNorQuote) {
-            Column(WidthAuthorPictureModifier) {
-                AuthorAndRelayInformation(baseNote, accountViewModel, nav)
+            Column(WidthAuthorPictureModifier, verticalArrangement = RowColSpacing5dp) {
+                // Draws the boosted picture outside the boosted card.
+                Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
+                    RenderAuthorImages(baseNote, nav, accountViewModel)
+                }
+
+                BadgeBox(baseNote, accountViewModel, nav)
             }
-            Spacer(modifier = DoubleHorzSpacer)
         }
 
         Column(Modifier.fillMaxWidth()) {
             val showSecondRow =
-                baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent &&
-                    !isBoostedNote && !isQuotedNote && accountViewModel.settings.featureSet != FeatureSetType.SIMPLIFIED
+                baseNote.event !is RepostEvent &&
+                    baseNote.event !is GenericRepostEvent &&
+                    !isBoostedNote &&
+                    !isQuotedNote &&
+                    accountViewModel.settings.featureSet == FeatureSetType.COMPLETE
             NoteBody(
                 baseNote = baseNote,
                 showAuthorPicture = isQuotedNote,
@@ -506,6 +506,7 @@ fun InnerNoteWithReactions(
             ReactionsRow(
                 baseNote = baseNote,
                 showReactionDetail = notBoostedNorQuote,
+                addPadding = !isBoostedNote,
                 editState = editState,
                 accountViewModel = accountViewModel,
                 nav = nav,
@@ -842,15 +843,14 @@ fun RenderRepost(
     }
 }
 
-fun getGradient(backgroundColor: MutableState<Color>): Brush {
-    return Brush.verticalGradient(
+fun getGradient(backgroundColor: MutableState<Color>): Brush =
+    Brush.verticalGradient(
         colors =
             listOf(
                 backgroundColor.value.copy(alpha = 0f),
                 backgroundColor.value,
             ),
     )
-}
 
 @Composable
 fun ReplyNoteComposition(
@@ -975,9 +975,9 @@ fun FirstUserInfoRow(
         if (showAuthorPicture) {
             NoteAuthorPicture(baseNote, nav, accountViewModel, Size25dp)
             Spacer(HalfPadding)
-            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor)
+            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
         } else {
-            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor)
+            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
         }
 
         if (isCommunityPost) {
@@ -1059,26 +1059,12 @@ fun observeEdits(
 }
 
 @Composable
-private fun AuthorAndRelayInformation(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    // Draws the boosted picture outside the boosted card.
-    Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
-        RenderAuthorImages(baseNote, nav, accountViewModel)
-    }
-
-    BadgeBox(baseNote, accountViewModel, nav)
-}
-
-@Composable
 private fun BadgeBox(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    if (accountViewModel.settings.featureSet != FeatureSetType.SIMPLIFIED) {
+    if (accountViewModel.settings.featureSet == FeatureSetType.COMPLETE) {
         if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
             baseNote.replyTo?.lastOrNull()?.let { RelayBadges(it, accountViewModel, nav) }
         } else {
@@ -1093,9 +1079,7 @@ private fun RenderAuthorImages(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    val isRepost = baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
-
-    if (isRepost) {
+    if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
         val baseRepost = baseNote.replyTo?.lastOrNull()
         if (baseRepost != null) {
             RepostNoteAuthorPicture(baseNote, baseRepost, accountViewModel, nav)
@@ -1113,6 +1097,7 @@ private fun RenderAuthorImages(
                 ChannelNotePicture(
                     channel,
                     loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                    loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                 )
             }
         }
@@ -1123,17 +1108,22 @@ private fun RenderAuthorImages(
 private fun ChannelNotePicture(
     baseChannel: Channel,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
 ) {
     val model by
-        baseChannel.live.map { it.channel.profilePicture() }.distinctUntilChanged().observeAsState()
+        baseChannel.live
+            .map { it.channel.profilePicture() }
+            .distinctUntilChanged()
+            .observeAsState()
 
     Box(Size30Modifier) {
         RobohashFallbackAsyncImage(
             robot = baseChannel.idHex,
             model = model,
-            contentDescription = stringResource(R.string.group_picture),
+            contentDescription = stringRes(R.string.group_picture),
             modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
             loadProfilePicture = loadProfilePicture,
+            loadRobohash = loadRobohash,
         )
     }
 }

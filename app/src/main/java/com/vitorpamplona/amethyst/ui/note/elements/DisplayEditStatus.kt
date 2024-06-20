@@ -24,11 +24,11 @@ import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.types.EditState
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
@@ -38,11 +38,11 @@ fun DisplayEditStatus(editState: EditState) {
         text =
             buildAnnotatedString {
                 if (editState.showingVersion.value == editState.originalVersionId()) {
-                    append(stringResource(id = R.string.original))
+                    append(stringRes(id = R.string.original))
                 } else if (editState.showingVersion.value == editState.lastVersionId()) {
-                    append(stringResource(id = R.string.edited))
+                    append(stringRes(id = R.string.edited))
                 } else {
-                    append(stringResource(id = R.string.edited_number, editState.versionId()))
+                    append(stringRes(id = R.string.edited_number, editState.versionId()))
                 }
             },
         onClick = {

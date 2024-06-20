@@ -42,7 +42,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -59,8 +58,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -84,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.encoders.ATag
@@ -95,7 +93,9 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
-class UpdateReactionTypeViewModel(val account: Account) : ViewModel() {
+class UpdateReactionTypeViewModel(
+    val account: Account,
+) : ViewModel() {
     var nextChoice by mutableStateOf(TextFieldValue(""))
     var reactionSet by mutableStateOf(listOf<String>())
 
@@ -103,9 +103,7 @@ class UpdateReactionTypeViewModel(val account: Account) : ViewModel() {
         this.reactionSet = account.reactionChoices
     }
 
-    fun toListOfChoices(commaSeparatedAmounts: String): List<Long> {
-        return commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
-    }
+    fun toListOfChoices(commaSeparatedAmounts: String): List<Long> = commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
 
     fun addChoice() {
         val newValue = nextChoice.text.trim().firstFullChar()
@@ -131,14 +129,12 @@ class UpdateReactionTypeViewModel(val account: Account) : ViewModel() {
         nextChoice = TextFieldValue("")
     }
 
-    fun hasChanged(): Boolean {
-        return reactionSet != account.reactionChoices
-    }
+    fun hasChanged(): Boolean = reactionSet != account.reactionChoices
 
-    class Factory(val account: Account) : ViewModelProvider.Factory {
-        override fun <UpdateReactionTypeViewModel : ViewModel> create(modelClass: Class<UpdateReactionTypeViewModel>): UpdateReactionTypeViewModel {
-            return UpdateReactionTypeViewModel(account) as UpdateReactionTypeViewModel
-        }
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <UpdateReactionTypeViewModel : ViewModel> create(modelClass: Class<UpdateReactionTypeViewModel>): UpdateReactionTypeViewModel = UpdateReactionTypeViewModel(account) as UpdateReactionTypeViewModel
     }
 }
 
@@ -221,7 +217,7 @@ fun UpdateReactionTypeDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             OutlinedTextField(
-                                label = { Text(text = stringResource(R.string.new_reaction_symbol)) },
+                                label = { Text(text = stringRes(R.string.new_reaction_symbol)) },
                                 value = postViewModel.nextChoice,
                                 onValueChange = { postViewModel.nextChoice = it },
                                 keyboardOptions =
@@ -247,7 +243,7 @@ fun UpdateReactionTypeDialog(
                                         containerColor = MaterialTheme.colorScheme.primary,
                                     ),
                             ) {
-                                Text(text = stringResource(R.string.add), color = Color.White)
+                                Text(text = stringRes(R.string.add), color = Color.White)
                             }
                         }
                     }
@@ -297,12 +293,8 @@ private fun RenderReactionOption(
         } else {
             when (reactionType) {
                 "+" -> {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_liked),
-                        null,
-                        modifier = remember { Modifier.size(16.dp) },
-                        tint = Color.White,
-                    )
+                    LikedIcon(modifier = Modifier.size(16.dp), tint = Color.White)
+
                     Text(
                         text = " ✖",
                         color = Color.White,

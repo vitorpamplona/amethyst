@@ -38,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -51,6 +50,7 @@ import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
@@ -66,8 +66,6 @@ import com.vitorpamplona.quartz.events.GitPatchEvent
 import com.vitorpamplona.quartz.events.GitRepositoryEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun RenderGitPatchEvent(
@@ -107,7 +105,7 @@ private fun RenderShortRepositoryHeader(
     ) {
         val title = remember(noteEvent) { noteEvent.name() ?: noteEvent.dTag() }
         Text(
-            text = stringResource(id = R.string.git_repository, title),
+            text = stringRes(id = R.string.git_repository, title),
             style = MaterialTheme.typography.titleLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -195,11 +193,11 @@ private fun RenderGitPatchEvent(
             }
 
             if (note.event?.hasHashtags() == true) {
-                val hashtags =
-                    remember(note.event) {
-                        note.event?.hashtags()?.toImmutableList() ?: persistentListOf()
-                    }
-                DisplayUncitedHashtags(hashtags, eventContent, nav)
+                DisplayUncitedHashtags(
+                    event = noteEvent,
+                    content = eventContent,
+                    nav = nav,
+                )
             }
         }
     }
@@ -299,11 +297,7 @@ private fun RenderGitIssueEvent(
             }
 
             if (note.event?.hasHashtags() == true) {
-                val hashtags =
-                    remember(note.event) {
-                        note.event?.hashtags()?.toImmutableList() ?: persistentListOf()
-                    }
-                DisplayUncitedHashtags(hashtags, eventContent, nav)
+                DisplayUncitedHashtags(noteEvent, eventContent, nav)
             }
         }
     }
@@ -344,7 +338,7 @@ private fun RenderGitRepositoryEvent(
     ) {
         Column {
             Text(
-                text = stringResource(id = R.string.git_repository, title),
+                text = stringRes(id = R.string.git_repository, title),
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -365,7 +359,7 @@ private fun RenderGitRepositoryEvent(
             web?.let {
                 Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
                     Text(
-                        text = stringResource(id = R.string.git_web_address),
+                        text = stringRes(id = R.string.git_web_address),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -380,7 +374,7 @@ private fun RenderGitRepositoryEvent(
             clone?.let {
                 Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
                     Text(
-                        text = stringResource(id = R.string.git_clone_address),
+                        text = stringRes(id = R.string.git_clone_address),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )

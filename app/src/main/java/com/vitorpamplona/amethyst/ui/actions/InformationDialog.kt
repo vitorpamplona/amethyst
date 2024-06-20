@@ -34,8 +34,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 
@@ -64,7 +64,7 @@ fun InformationDialog(
                         contentDescription = null,
                     )
                     Spacer(StdHorzSpacer)
-                    Text(stringResource(R.string.error_dialog_button_ok))
+                    Text(stringRes(R.string.error_dialog_button_ok))
                 }
             }
         },

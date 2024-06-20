@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.HttpClientManager
+import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
@@ -57,7 +58,7 @@ import java.util.regex.Pattern
 val EMAIL_PATTERN = Pattern.compile(".+@.+\\.[a-z]+")
 
 @Stable
-class AccountStateViewModel() : ViewModel() {
+class AccountStateViewModel : ViewModel() {
     var serviceManager: ServiceManager? = null
 
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.Loading)
@@ -138,15 +139,6 @@ class AccountStateViewModel() : ViewModel() {
                 )
             } else if (pubKeyParsed != null) {
                 val keyPair = KeyPair(pubKey = pubKeyParsed)
-                Account(
-                    keyPair,
-                    proxy = proxy,
-                    proxyPort = proxyPort,
-                    signer = NostrSignerInternal(keyPair),
-                )
-            } else if (EMAIL_PATTERN.matcher(key).matches()) {
-                val keyPair = KeyPair()
-                // TODO: Evaluate NIP-5
                 Account(
                     keyPair,
                     proxy = proxy,
@@ -243,6 +235,18 @@ class AccountStateViewModel() : ViewModel() {
                         onError(null)
                     }
                 }
+            } else if (EMAIL_PATTERN.matcher(key).matches()) {
+                Nip05NostrAddressVerifier().verifyNip05(
+                    key,
+                    onSuccess = { publicKey ->
+                        loginSync(Hex.decode(publicKey).toNpub(), useProxy, proxyPort, loginWithExternalSigner, packageName) {
+                            onError(null)
+                        }
+                    },
+                    onError = {
+                        onError(it)
+                    },
+                )
             } else {
                 loginSync(key, useProxy, proxyPort, loginWithExternalSigner, packageName) {
                     onError(null)

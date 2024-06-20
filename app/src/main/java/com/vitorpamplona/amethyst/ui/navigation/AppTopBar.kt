@@ -41,7 +41,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -58,15 +57,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -81,6 +77,7 @@ import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -130,6 +127,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.RoomNameOnlyDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShortChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.observeAppDefinition
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -151,23 +149,26 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combineTransform
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
-import kotlinx.coroutines.launch
 
 @Composable
 fun AppTopBar(
     followLists: FollowListViewModel,
     navEntryState: State<NavBackStackEntry?>,
-    drawerState: DrawerState,
+    openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     navPopBack: () -> Unit,
 ) {
     val currentRoute by
         remember(navEntryState.value) {
-            derivedStateOf { navEntryState.value?.destination?.route?.substringBefore("?") }
+            derivedStateOf {
+                navEntryState.value
+                    ?.destination
+                    ?.route
+                    ?.substringBefore("?")
+            }
         }
 
     val id by
@@ -175,7 +176,7 @@ fun AppTopBar(
             derivedStateOf { navEntryState.value?.arguments?.getString("id") }
         }
 
-    RenderTopRouteBar(currentRoute, id, followLists, drawerState, accountViewModel, nav, navPopBack)
+    RenderTopRouteBar(currentRoute, id, followLists, openDrawer, accountViewModel, nav, navPopBack)
 }
 
 @Composable
@@ -183,19 +184,19 @@ private fun RenderTopRouteBar(
     currentRoute: String?,
     id: String?,
     followLists: FollowListViewModel,
-    drawerState: DrawerState,
+    openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     navPopBack: () -> Unit,
 ) {
     when (currentRoute) {
-        Route.Home.base -> HomeTopBar(followLists, drawerState, accountViewModel, nav)
-        Route.Video.base -> StoriesTopBar(followLists, drawerState, accountViewModel, nav)
-        Route.Discover.base -> DiscoveryTopBar(followLists, drawerState, accountViewModel, nav)
-        Route.Notification.base -> NotificationTopBar(followLists, drawerState, accountViewModel, nav)
-        Route.Settings.base -> TopBarWithBackButton(stringResource(id = R.string.application_preferences), navPopBack)
-        Route.Bookmarks.base -> TopBarWithBackButton(stringResource(id = R.string.bookmarks), navPopBack)
-        Route.Drafts.base -> TopBarWithBackButton(stringResource(id = R.string.drafts), navPopBack)
+        Route.Home.base -> HomeTopBar(followLists, openDrawer, accountViewModel, nav)
+        Route.Video.base -> StoriesTopBar(followLists, openDrawer, accountViewModel, nav)
+        Route.Discover.base -> DiscoveryTopBar(followLists, openDrawer, accountViewModel, nav)
+        Route.Notification.base -> NotificationTopBar(followLists, openDrawer, accountViewModel, nav)
+        Route.Settings.base -> TopBarWithBackButton(stringRes(id = R.string.application_preferences), navPopBack)
+        Route.Bookmarks.base -> TopBarWithBackButton(stringRes(id = R.string.bookmarks), navPopBack)
+        Route.Drafts.base -> TopBarWithBackButton(stringRes(id = R.string.drafts), navPopBack)
 
         else -> {
             if (id != null) {
@@ -208,10 +209,10 @@ private fun RenderTopRouteBar(
                     Route.Geohash.base -> GeoHashTopBar(id, accountViewModel, navPopBack)
                     Route.Note.base -> ThreadTopBar(id, accountViewModel, navPopBack)
                     Route.ContentDiscovery.base -> DvmTopBar(id, accountViewModel, nav, navPopBack)
-                    else -> MainTopBar(drawerState, accountViewModel, nav)
+                    else -> MainTopBar(openDrawer, accountViewModel, nav)
                 }
             } else {
-                MainTopBar(drawerState, accountViewModel, nav)
+                MainTopBar(openDrawer, accountViewModel, nav)
             }
         }
     }
@@ -224,7 +225,7 @@ private fun ThreadTopBar(
     navPopBack: () -> Unit,
 ) {
     FlexibleTopBarWithBackButton(
-        title = { Text(stringResource(id = R.string.thread_title)) },
+        title = { Text(stringRes(id = R.string.thread_title)) },
         popBack = navPopBack,
     )
 }
@@ -376,7 +377,7 @@ private fun RenderRoomTopBar(
 
                         Spacer(modifier = DoubleHorzSpacer)
 
-                        UsernameDisplay(baseUser, Modifier.weight(1f), fontWeight = FontWeight.Normal)
+                        UsernameDisplay(baseUser, Modifier.weight(1f), fontWeight = FontWeight.Normal, accountViewModel = accountViewModel)
                     }
                 }
             },
@@ -397,7 +398,7 @@ private fun RenderRoomTopBar(
         FlexibleTopBarWithBackButton(
             title = {
                 NonClickableUserPictures(
-                    users = room.users,
+                    room = room,
                     accountViewModel = accountViewModel,
                     size = Size34dp,
                 )
@@ -408,7 +409,7 @@ private fun RenderRoomTopBar(
                         .padding(start = 10.dp)
                         .weight(1f),
                     fontWeight = FontWeight.Normal,
-                    accountViewModel.userProfile(),
+                    accountViewModel,
                 )
             },
             extendableRow = {
@@ -447,11 +448,11 @@ private fun ChannelTopBar(
 @Composable
 fun StoriesTopBar(
     followLists: FollowListViewModel,
-    drawerState: DrawerState,
+    openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    GenericMainTopBar(drawerState, accountViewModel, nav) {
+    GenericMainTopBar(openDrawer, accountViewModel, nav) {
         val list by accountViewModel.account.defaultStoriesFollowList.collectAsStateWithLifecycle()
 
         FollowListWithRoutes(
@@ -466,11 +467,11 @@ fun StoriesTopBar(
 @Composable
 fun HomeTopBar(
     followLists: FollowListViewModel,
-    drawerState: DrawerState,
+    openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    GenericMainTopBar(drawerState, accountViewModel, nav) {
+    GenericMainTopBar(openDrawer, accountViewModel, nav) {
         val list by accountViewModel.account.defaultHomeFollowList.collectAsStateWithLifecycle()
 
         FollowListWithRoutes(
@@ -489,11 +490,11 @@ fun HomeTopBar(
 @Composable
 fun NotificationTopBar(
     followLists: FollowListViewModel,
-    drawerState: DrawerState,
+    openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    GenericMainTopBar(drawerState, accountViewModel, nav) {
+    GenericMainTopBar(openDrawer, accountViewModel, nav) {
         val list by accountViewModel.account.defaultNotificationFollowList.collectAsStateWithLifecycle()
 
         FollowListWithoutRoutes(
@@ -508,11 +509,11 @@ fun NotificationTopBar(
 @Composable
 fun DiscoveryTopBar(
     followLists: FollowListViewModel,
-    drawerState: DrawerState,
+    openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    GenericMainTopBar(drawerState, accountViewModel, nav) {
+    GenericMainTopBar(openDrawer, accountViewModel, nav) {
         val list by accountViewModel.account.defaultDiscoveryFollowList.collectAsStateWithLifecycle()
 
         FollowListWithoutRoutes(
@@ -526,17 +527,17 @@ fun DiscoveryTopBar(
 
 @Composable
 fun MainTopBar(
-    drawerState: DrawerState,
+    openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    GenericMainTopBar(drawerState, accountViewModel, nav) { AmethystClickableIcon() }
+    GenericMainTopBar(openDrawer, accountViewModel, nav) { AmethystClickableIcon() }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GenericMainTopBar(
-    drawerState: DrawerState,
+    openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     content: @Composable () -> Unit,
@@ -553,8 +554,7 @@ fun GenericMainTopBar(
                 }
             },
             navigationIcon = {
-                val coroutineScope = rememberCoroutineScope()
-                LoggedInUserPictureDrawer(accountViewModel) { coroutineScope.launch { drawerState.open() } }
+                LoggedInUserPictureDrawer(accountViewModel, openDrawer)
             },
             actions = { SearchButton { nav(Route.Search.route) } },
         )
@@ -567,7 +567,7 @@ private fun SearchButton(onClick: () -> Unit) {
     IconButton(
         onClick = onClick,
     ) {
-        SearchIcon(modifier = Size22Modifier, Color.Unspecified)
+        SearchIcon(modifier = Size22Modifier, MaterialTheme.colorScheme.placeholderText)
     }
 }
 
@@ -577,16 +577,21 @@ private fun LoggedInUserPictureDrawer(
     onClick: () -> Unit,
 ) {
     val profilePicture by
-        accountViewModel.account.userProfile().live().profilePictureChanges.observeAsState()
+        accountViewModel.account
+            .userProfile()
+            .live()
+            .profilePictureChanges
+            .observeAsState()
 
     IconButton(onClick = onClick) {
         RobohashFallbackAsyncImage(
             robot = accountViewModel.userProfile().pubkeyHex,
             model = profilePicture,
-            contentDescription = stringResource(id = R.string.your_profile_image),
+            contentDescription = stringRes(id = R.string.your_profile_image),
             modifier = HeaderPictureModifier,
             contentScale = ContentScale.Crop,
             loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         )
     }
 }
@@ -633,32 +638,48 @@ abstract class Name {
     open fun name(context: Context) = name()
 }
 
-class GeoHashName(val geoHashTag: String) : Name() {
+class GeoHashName(
+    val geoHashTag: String,
+) : Name() {
     override fun name() = "/g/$geoHashTag"
 }
 
-class HashtagName(val hashTag: String) : Name() {
+class HashtagName(
+    val hashTag: String,
+) : Name() {
     override fun name() = "#$hashTag"
 }
 
-class ResourceName(val resourceId: Int) : Name() {
+class ResourceName(
+    val resourceId: Int,
+) : Name() {
     override fun name() = " $resourceId " // Space to make sure it goes first
 
-    override fun name(context: Context) = context.getString(resourceId)
+    override fun name(context: Context) = stringRes(context, resourceId)
 }
 
-class PeopleListName(val note: AddressableNote) : Name() {
+class PeopleListName(
+    val note: AddressableNote,
+) : Name() {
     override fun name() = (note.event as? PeopleListEvent)?.nameOrTitle() ?: note.dTag() ?: ""
 }
 
-class CommunityName(val note: AddressableNote) : Name() {
+class CommunityName(
+    val note: AddressableNote,
+) : Name() {
     override fun name() = "/n/${(note.dTag() ?: "")}"
 }
 
-@Immutable data class CodeName(val code: String, val name: Name, val type: CodeNameType)
+@Immutable data class CodeName(
+    val code: String,
+    val name: Name,
+    val type: CodeNameType,
+)
 
 @Stable
-class FollowListViewModel(val account: Account) : ViewModel() {
+class FollowListViewModel(
+    val account: Account,
+) : ViewModel() {
     val kind3Follow =
         CodeName(KIND3_FOLLOWS, ResourceName(R.string.follow_list_kind3follows), CodeNameType.HARDCODED)
     val globalFollow =
@@ -699,8 +720,7 @@ class FollowListViewModel(val account: Account) : ViewModel() {
                             } else {
                                 null
                             }
-                        }
-                        .sortedBy { it.name.name() }
+                        }.sortedBy { it.name.name() }
 
                 emit(newFollowLists)
             }
@@ -757,10 +777,10 @@ class FollowListViewModel(val account: Account) : ViewModel() {
 
     val kind3GlobalPeople = _kind3GlobalPeople.stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
 
-    class Factory(val account: Account) : ViewModelProvider.Factory {
-        override fun <FollowListViewModel : ViewModel> create(modelClass: Class<FollowListViewModel>): FollowListViewModel {
-            return FollowListViewModel(account) as FollowListViewModel
-        }
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <FollowListViewModel : ViewModel> create(modelClass: Class<FollowListViewModel>): FollowListViewModel = FollowListViewModel(account) as FollowListViewModel
     }
 }
 
@@ -776,7 +796,7 @@ fun SimpleTextSpinner(
 
     val context = LocalContext.current
     val selectAnOption =
-        stringResource(
+        stringRes(
             id = R.string.select_an_option,
         )
 
@@ -858,7 +878,7 @@ fun RenderOption(option: Name) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = stringResource(id = option.resourceId),
+                    text = stringRes(id = option.resourceId),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -942,7 +962,8 @@ fun AmethystClickableIcon() {
 }
 
 fun debugState(context: Context) {
-    Client.allSubscriptions()
+    Client
+        .allSubscriptions()
         .forEach { Log.d("STATE DUMP", "${it.key} ${it.value.joinToString { it.filter.toJson() }}") }
 
     NostrAccountDataSource.printCounter()

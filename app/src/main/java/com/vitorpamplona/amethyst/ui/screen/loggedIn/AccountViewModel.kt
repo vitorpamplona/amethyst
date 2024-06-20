@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import android.content.Context
 import android.graphics.drawable.Drawable
 import android.util.Log
+import android.util.LruCache
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
@@ -68,12 +69,14 @@ import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.SettingsState
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.AddressableEvent
+import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
@@ -105,7 +108,11 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -115,9 +122,12 @@ import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.time.measureTimedValue
 
-@Immutable open class ToastMsg()
+@Immutable open class ToastMsg
 
-@Immutable class StringToastMsg(val title: String, val msg: String) : ToastMsg()
+@Immutable class StringToastMsg(
+    val title: String,
+    val msg: String,
+) : ToastMsg()
 
 @Immutable class ResourceToastMsg(
     val titleResId: Int,
@@ -125,16 +135,34 @@ import kotlin.time.measureTimedValue
     val params: Array<out String>? = null,
 ) : ToastMsg()
 
-@Immutable class ThrowableToastMsg(val titleResId: Int, val msg: String? = null, val throwable: Throwable) : ToastMsg()
+@Immutable class ThrowableToastMsg(
+    val titleResId: Int,
+    val msg: String? = null,
+    val throwable: Throwable,
+) : ToastMsg()
 
 @Stable
-class AccountViewModel(val account: Account, val settings: SettingsState) : ViewModel(), Dao {
+class AccountViewModel(
+    val account: Account,
+    val settings: SettingsState,
+) : ViewModel(),
+    Dao {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
     val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
     val accountMarkAsReadUpdates = mutableIntStateOf(0)
 
-    val userFollows: LiveData<UserState> = account.userProfile().live().follows.map { it }
-    val userRelays: LiveData<UserState> = account.userProfile().live().relays.map { it }
+    val userFollows: LiveData<UserState> =
+        account
+            .userProfile()
+            .live()
+            .follows
+            .map { it }
+    val userRelays: LiveData<UserState> =
+        account
+            .userProfile()
+            .live()
+            .relays
+            .map { it }
 
     val kind3Relays: StateFlow<ContactListEvent?> = observeByAuthor(ContactListEvent.KIND, account.signer.pubKey)
     val dmRelays: StateFlow<ChatMessageRelayListEvent?> = observeByAuthor(ChatMessageRelayListEvent.KIND, account.signer.pubKey)
@@ -181,13 +209,9 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch { toasts.emit(ResourceToastMsg(titleResId, resourceId, params)) }
     }
 
-    fun isWriteable(): Boolean {
-        return account.isWriteable()
-    }
+    fun isWriteable(): Boolean = account.isWriteable()
 
-    fun userProfile(): User {
-        return account.userProfile()
-    }
+    fun userProfile(): User = account.userProfile()
 
     suspend fun reactTo(
         note: Note,
@@ -199,16 +223,12 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     fun <T : Event> observeByETag(
         kind: Int,
         eTag: HexKey,
-    ): StateFlow<T?> {
-        return LocalCache.observeETag<T>(kind = kind, eventId = eTag, viewModelScope).latest
-    }
+    ): StateFlow<T?> = LocalCache.observeETag<T>(kind = kind, eventId = eTag, viewModelScope).latest
 
     fun <T : Event> observeByAuthor(
         kind: Int,
         pubkeyHex: HexKey,
-    ): StateFlow<T?> {
-        return LocalCache.observeAuthor<T>(kind = kind, pubkey = pubkeyHex, viewModelScope).latest
-    }
+    ): StateFlow<T?> = LocalCache.observeAuthor<T>(kind = kind, pubkey = pubkeyHex, viewModelScope).latest
 
     fun reactToOrDelete(
         note: Note,
@@ -235,16 +255,97 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
-    fun isNoteHidden(note: Note): Boolean {
-        return note.isHiddenFor(account.flowHiddenUsers.value)
+    @Immutable
+    data class NoteComposeReportState(
+        val isPostHidden: Boolean = false,
+        val isAcceptable: Boolean = true,
+        val canPreview: Boolean = true,
+        val isHiddenAuthor: Boolean = false,
+        val relevantReports: ImmutableSet<Note> = persistentSetOf(),
+    )
+
+    fun isNoteAcceptable(
+        note: Note,
+        accountChoices: Account.LiveHiddenUsers,
+        followUsers: Set<HexKey>,
+    ): NoteComposeReportState {
+        checkNotInMainThread()
+
+        val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
+        val isFromLoggedInFollow = note.author?.let { followUsers.contains(it.pubkeyHex) } ?: true
+        val isPostHidden = note.isHiddenFor(accountChoices)
+        val isHiddenAuthor = note.author?.let { account.isHidden(it) } == true
+
+        return if (isPostHidden) {
+            // Spam + Blocked Users + Hidden Words + Sensitive Content
+            NoteComposeReportState(isPostHidden, false, false, isHiddenAuthor)
+        } else if (isFromLoggedIn || isFromLoggedInFollow) {
+            // No need to process if from trusted people
+            NoteComposeReportState(isPostHidden, true, true, isHiddenAuthor)
+        } else {
+            val newCanPreview = !note.hasAnyReports()
+
+            val newIsAcceptable = account.isAcceptable(note)
+
+            if (newCanPreview && newIsAcceptable) {
+                // No need to process reports if nothing is wrong
+                NoteComposeReportState(isPostHidden, true, true, false)
+            } else {
+                NoteComposeReportState(
+                    isPostHidden,
+                    newIsAcceptable,
+                    newCanPreview,
+                    false,
+                    account.getRelevantReports(note).toImmutableSet(),
+                )
+            }
+        }
     }
+
+    private val noteIsHiddenFlows = LruCache<Note, StateFlow<NoteComposeReportState>>(300)
+
+    fun createIsHiddenFlow(note: Note): StateFlow<NoteComposeReportState> =
+        noteIsHiddenFlows.get(note)
+            ?: combineTransform(
+                account.flowHiddenUsers,
+                account.liveKind3FollowsFlow,
+                note.flow().metadata.stateFlow,
+                note.flow().reports.stateFlow,
+            ) { hiddenUsers, followingUsers, metadata, reports ->
+                val isAcceptable =
+                    withContext(Dispatchers.IO) {
+                        isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.users)
+                    }
+                emit(isAcceptable)
+            }.stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                NoteComposeReportState(),
+            ).also {
+                noteIsHiddenFlows.put(note, it)
+            }
+
+    private val noteMustShowExpandButtonFlows = LruCache<Note, StateFlow<Boolean>>(300)
+
+    fun createMustShowExpandButtonFlows(note: Note): StateFlow<Boolean> =
+        noteMustShowExpandButtonFlows.get(note)
+            ?: note
+                .flow()
+                .relays
+                .stateFlow
+                .map { it.note.relays.size > 3 }
+                .stateIn(
+                    viewModelScope,
+                    SharingStarted.Eagerly,
+                    note.relays.size > 3,
+                ).also {
+                    noteMustShowExpandButtonFlows.put(note, it)
+                }
 
     fun hasReactedTo(
         baseNote: Note,
         reaction: String,
-    ): Boolean {
-        return account.hasReacted(baseNote, reaction)
-    }
+    ): Boolean = account.hasReacted(baseNote, reaction)
 
     suspend fun deleteReactionTo(
         note: Note,
@@ -253,9 +354,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         account.delete(account.reactionTo(note, reaction))
     }
 
-    fun hasBoosted(baseNote: Note): Boolean {
-        return account.hasBoosted(baseNote)
-    }
+    fun hasBoosted(baseNote: Note): Boolean = account.hasBoosted(baseNote)
 
     fun deleteBoostsTo(note: Note) {
         viewModelScope.launch(Dispatchers.IO) { account.delete(account.boostsTo(note)) }
@@ -331,15 +430,17 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val initialResults =
-                zaps.associate {
-                    it.request to
-                        ZapAmountCommentNotification(
-                            it.request.author,
-                            it.request.event?.content()?.ifBlank { null },
-                            showAmountAxis((it.response.event as? LnZapEvent)?.amount),
-                        )
-                }
-                    .toMutableMap()
+                zaps
+                    .associate {
+                        it.request to
+                            ZapAmountCommentNotification(
+                                it.request.author,
+                                it.request.event
+                                    ?.content()
+                                    ?.ifBlank { null },
+                                showAmountAxis((it.response.event as? LnZapEvent)?.amount),
+                            )
+                    }.toMutableMap()
 
             collectSuccessfulSigningOperations<CombinedZap, ZapAmountCommentNotification>(
                 operationsInput = zaps.filter { (it.request.event as? LnZapRequestEvent)?.isPrivateZap() == true },
@@ -358,8 +459,8 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
-    fun cachedDecryptAmountMessageInGroup(zapNotes: List<CombinedZap>): ImmutableList<ZapAmountCommentNotification> {
-        return zapNotes
+    fun cachedDecryptAmountMessageInGroup(zapNotes: List<CombinedZap>): ImmutableList<ZapAmountCommentNotification> =
+        zapNotes
             .map {
                 val request = it.request.event as? LnZapRequestEvent
                 if (request?.isPrivateZap() == true) {
@@ -373,20 +474,22 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
                     } else {
                         ZapAmountCommentNotification(
                             it.request.author,
-                            it.request.event?.content()?.ifBlank { null },
+                            it.request.event
+                                ?.content()
+                                ?.ifBlank { null },
                             showAmountAxis((it.response.event as? LnZapEvent)?.amount),
                         )
                     }
                 } else {
                     ZapAmountCommentNotification(
                         it.request.author,
-                        it.request.event?.content()?.ifBlank { null },
+                        it.request.event
+                            ?.content()
+                            ?.ifBlank { null },
                         showAmountAxis((it.response.event as? LnZapEvent)?.amount),
                     )
                 }
-            }
-            .toImmutableList()
-    }
+            }.toImmutableList()
 
     fun cachedDecryptAmountMessageInGroup(baseNote: Note): ImmutableList<ZapAmountCommentNotification> {
         val myList = baseNote.zaps.toList()
@@ -405,19 +508,22 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
                     } else {
                         ZapAmountCommentNotification(
                             it.first.author,
-                            it.first.event?.content()?.ifBlank { null },
+                            it.first.event
+                                ?.content()
+                                ?.ifBlank { null },
                             showAmountAxis((it.second?.event as? LnZapEvent)?.amount),
                         )
                     }
                 } else {
                     ZapAmountCommentNotification(
                         it.first.author,
-                        it.first.event?.content()?.ifBlank { null },
+                        it.first.event
+                            ?.content()
+                            ?.ifBlank { null },
                         showAmountAxis((it.second?.event as? LnZapEvent)?.amount),
                     )
                 }
-            }
-            .toImmutableList()
+            }.toImmutableList()
     }
 
     fun decryptAmountMessageInGroup(
@@ -433,11 +539,12 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
                         it.first to
                             ZapAmountCommentNotification(
                                 it.first.author,
-                                it.first.event?.content()?.ifBlank { null },
+                                it.first.event
+                                    ?.content()
+                                    ?.ifBlank { null },
                                 showAmountAxis((it.second?.event as? LnZapEvent)?.amount),
                             )
-                    }
-                    .toMutableMap()
+                    }.toMutableMap()
 
             collectSuccessfulSigningOperations<Pair<Note, Note?>, ZapAmountCommentNotification>(
                 operationsInput = myList,
@@ -503,6 +610,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         pollOption: Int?,
         message: String,
         context: Context,
+        showErrorIfNoLnAddress: Boolean = true,
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
@@ -516,6 +624,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
                     pollOption,
                     message,
                     context,
+                    showErrorIfNoLnAddress,
                     onError,
                     onProgress = {
                         onProgress(it)
@@ -585,9 +694,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         account.isInPrivateBookmarks(note, onReady)
     }
 
-    fun isInPublicBookmarks(note: Note): Boolean {
-        return account.isInPublicBookmarks(note)
-    }
+    fun isInPublicBookmarks(note: Note): Boolean = account.isInPublicBookmarks(note)
 
     fun broadcast(note: Note) {
         viewModelScope.launch(Dispatchers.IO) { account.broadcast(note) }
@@ -612,13 +719,9 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) { account.delete(note) }
     }
 
-    fun cachedDecrypt(note: Note): String? {
-        return account.cachedDecryptContent(note)
-    }
+    fun cachedDecrypt(note: Note): String? = account.cachedDecryptContent(note)
 
-    fun cachedDecrypt(event: EventInterface?): String? {
-        return account.cachedDecryptContent(event)
-    }
+    fun cachedDecrypt(event: EventInterface?): String? = account.cachedDecryptContent(event)
 
     fun decrypt(
         note: Note,
@@ -682,18 +785,14 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) { account.hideWord(word) }
     }
 
-    fun isLoggedUser(user: User?): Boolean {
-        return account.userProfile().pubkeyHex == user?.pubkeyHex
-    }
+    fun isLoggedUser(user: User?): Boolean = account.userProfile().pubkeyHex == user?.pubkeyHex
 
     fun isFollowing(user: User?): Boolean {
         if (user == null) return false
         return account.userProfile().isFollowingCached(user)
     }
 
-    fun isFollowing(user: HexKey): Boolean {
-        return account.userProfile().isFollowingCached(user)
-    }
+    fun isFollowing(user: HexKey): Boolean = account.userProfile().isFollowingCached(user)
 
     val hideDeleteRequestDialog: Boolean
         get() = account.hideDeleteRequestDialog
@@ -734,55 +833,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
-    fun defaultZapType(): LnZapEvent.ZapType {
-        return account.defaultZapType
-    }
-
-    @Immutable
-    data class NoteComposeReportState(
-        val isAcceptable: Boolean = true,
-        val canPreview: Boolean = true,
-        val isHiddenAuthor: Boolean = false,
-        val relevantReports: ImmutableSet<Note> = persistentSetOf(),
-    )
-
-    suspend fun isNoteAcceptable(
-        note: Note,
-        onReady: (NoteComposeReportState) -> Unit,
-    ) {
-        val newState =
-            withContext(Dispatchers.IO) {
-                val isFromLoggedIn = note.author?.pubkeyHex == userProfile().pubkeyHex
-                val isFromLoggedInFollow = note.author?.let { userProfile().isFollowingCached(it) } ?: true
-
-                if (isFromLoggedIn || isFromLoggedInFollow) {
-                    // No need to process if from trusted people
-                    NoteComposeReportState(true, true, false, persistentSetOf())
-                } else if (note.author?.let { account.isHidden(it) } == true) {
-                    NoteComposeReportState(false, false, true, persistentSetOf())
-                } else {
-                    val newCanPreview = !note.hasAnyReports()
-
-                    val newIsAcceptable = account.isAcceptable(note)
-
-                    if (newCanPreview && newIsAcceptable) {
-                        // No need to process reports if nothing is wrong
-                        NoteComposeReportState(true, true, false, persistentSetOf())
-                    } else {
-                        val newRelevantReports = account.getRelevantReports(note)
-
-                        NoteComposeReportState(
-                            newIsAcceptable,
-                            newCanPreview,
-                            false,
-                            newRelevantReports.toImmutableSet(),
-                        )
-                    }
-                }
-            }
-
-        onReady(newState)
-    }
+    fun defaultZapType(): LnZapEvent.ZapType = account.defaultZapType
 
     fun unwrap(
         event: GiftWrapEvent,
@@ -895,13 +946,9 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) { runOnIO() }
     }
 
-    suspend fun checkGetOrCreateUser(key: HexKey): User? {
-        return LocalCache.checkGetOrCreateUser(key)
-    }
+    suspend fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
 
-    override suspend fun getOrCreateUser(key: HexKey): User {
-        return LocalCache.getOrCreateUser(key)
-    }
+    override suspend fun getOrCreateUser(key: HexKey): User = LocalCache.getOrCreateUser(key)
 
     fun checkGetOrCreateUser(
         key: HexKey,
@@ -910,17 +957,11 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreateUser(key)) }
     }
 
-    fun getUserIfExists(hex: HexKey): User? {
-        return LocalCache.getUserIfExists(hex)
-    }
+    fun getUserIfExists(hex: HexKey): User? = LocalCache.getUserIfExists(hex)
 
-    private suspend fun checkGetOrCreateNote(key: HexKey): Note? {
-        return LocalCache.checkGetOrCreateNote(key)
-    }
+    private suspend fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
 
-    override suspend fun getOrCreateNote(key: HexKey): Note {
-        return LocalCache.getOrCreateNote(key)
-    }
+    override suspend fun getOrCreateNote(key: HexKey): Note = LocalCache.getOrCreateNote(key)
 
     fun checkGetOrCreateNote(
         key: HexKey,
@@ -945,13 +986,9 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
-    fun getNoteIfExists(hex: HexKey): Note? {
-        return LocalCache.getNoteIfExists(hex)
-    }
+    fun getNoteIfExists(hex: HexKey): Note? = LocalCache.getNoteIfExists(hex)
 
-    override suspend fun checkGetOrCreateAddressableNote(key: HexKey): AddressableNote? {
-        return LocalCache.checkGetOrCreateAddressableNote(key)
-    }
+    override suspend fun checkGetOrCreateAddressableNote(key: HexKey): AddressableNote? = LocalCache.checkGetOrCreateAddressableNote(key)
 
     fun checkGetOrCreateAddressableNote(
         key: HexKey,
@@ -960,9 +997,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreateAddressableNote(key)) }
     }
 
-    suspend fun getOrCreateAddressableNote(key: ATag): AddressableNote? {
-        return LocalCache.getOrCreateAddressableNote(key)
-    }
+    suspend fun getOrCreateAddressableNote(key: ATag): AddressableNote? = LocalCache.getOrCreateAddressableNote(key)
 
     fun getOrCreateAddressableNote(
         key: ATag,
@@ -971,9 +1006,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) { onResult(getOrCreateAddressableNote(key)) }
     }
 
-    fun getAddressableNoteIfExists(key: String): AddressableNote? {
-        return LocalCache.getAddressableNoteIfExists(key)
-    }
+    fun getAddressableNoteIfExists(key: String): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
 
     suspend fun findStatusesForUser(
         myUser: User,
@@ -1004,9 +1037,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
-    private suspend fun checkGetOrCreateChannel(key: HexKey): Channel? {
-        return LocalCache.checkGetOrCreateChannel(key)
-    }
+    private suspend fun checkGetOrCreateChannel(key: HexKey): Channel? = LocalCache.checkGetOrCreateChannel(key)
 
     fun checkGetOrCreateChannel(
         key: HexKey,
@@ -1015,9 +1046,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreateChannel(key)) }
     }
 
-    fun getChannelIfExists(hex: HexKey): Channel? {
-        return LocalCache.getChannelIfExists(hex)
-    }
+    fun getChannelIfExists(hex: HexKey): Channel? = LocalCache.getChannelIfExists(hex)
 
     fun loadParticipants(
         participants: List<Participant>,
@@ -1033,8 +1062,7 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
                                 it,
                             )
                         }
-                    }
-                    .toImmutableList()
+                    }.toImmutableList()
 
             onReady(participantUsers)
         }
@@ -1147,10 +1175,11 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
-    class Factory(val account: Account, val settings: SettingsState) : ViewModelProvider.Factory {
-        override fun <AccountViewModel : ViewModel> create(modelClass: Class<AccountViewModel>): AccountViewModel {
-            return AccountViewModel(account, settings) as AccountViewModel
-        }
+    class Factory(
+        val account: Account,
+        val settings: SettingsState,
+    ) : ViewModelProvider.Factory {
+        override fun <AccountViewModel : ViewModel> create(modelClass: Class<AccountViewModel>): AccountViewModel = AccountViewModel(account, settings) as AccountViewModel
     }
 
     private var collectorJob: Job? = null
@@ -1274,8 +1303,9 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
             }
         } else {
             onDone(
-                context.getString(R.string.no_lightning_address_set),
-                context.getString(
+                stringRes(context, R.string.no_lightning_address_set),
+                stringRes(
+                    context,
                     R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
                     account.userProfile().toBestDisplayName(),
                 ),
@@ -1401,9 +1431,18 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
         }
     }
 
+    fun getRelayListFor(user: User): AdvertisedRelayListEvent? = (getRelayListNoteFor(user)?.event as? AdvertisedRelayListEvent?)
+
+    fun getRelayListNoteFor(user: User): AddressableNote? =
+        LocalCache.getAddressableNoteIfExists(
+            AdvertisedRelayListEvent.createAddressTag(user.pubkeyHex),
+        )
+
     val draftNoteCache = CachedDraftNotes(this)
 
-    class CachedDraftNotes(val accountViewModel: AccountViewModel) : GenericBaseCacheAsync<DraftEvent, Note>(20) {
+    class CachedDraftNotes(
+        val accountViewModel: AccountViewModel,
+    ) : GenericBaseCacheAsync<DraftEvent, Note>(20) {
         override suspend fun compute(
             key: DraftEvent,
             onReady: (Note?) -> Unit,
@@ -1418,9 +1457,11 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
 
     val bechLinkCache = CachedLoadedBechLink(this)
 
-    class CachedLoadedBechLink(val accountViewModel: AccountViewModel) : GenericBaseCache<String, LoadedBechLink>(20) {
-        override suspend fun compute(key: String): LoadedBechLink? {
-            return Nip19Bech32.uriToRoute(key)?.let {
+    class CachedLoadedBechLink(
+        val accountViewModel: AccountViewModel,
+    ) : GenericBaseCache<String, LoadedBechLink>(20) {
+        override suspend fun compute(key: String): LoadedBechLink? =
+            Nip19Bech32.uriToRoute(key)?.let {
                 var returningNote: Note? = null
 
                 when (val parsed = it.entity) {
@@ -1447,11 +1488,12 @@ class AccountViewModel(val account: Account, val settings: SettingsState) : View
 
                 LoadedBechLink(returningNote, it)
             }
-        }
     }
 }
 
-class HasNotificationDot(bottomNavigationItems: ImmutableList<Route>) {
+class HasNotificationDot(
+    bottomNavigationItems: ImmutableList<Route>,
+) {
     val hasNewItems = bottomNavigationItems.associateWith { MutableStateFlow(false) }
 
     fun update(
@@ -1476,7 +1518,10 @@ class HasNotificationDot(bottomNavigationItems: ImmutableList<Route>) {
     }
 }
 
-@Immutable data class LoadedBechLink(val baseNote: Note?, val nip19: Nip19Bech32.ParseReturn)
+@Immutable data class LoadedBechLink(
+    val baseNote: Note?,
+    val nip19: Nip19Bech32.ParseReturn,
+)
 
 public suspend fun <T, K> collectSuccessfulSigningOperations(
     operationsInput: List<T>,

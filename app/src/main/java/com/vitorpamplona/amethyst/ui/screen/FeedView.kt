@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
@@ -52,11 +51,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -74,21 +74,6 @@ fun RefresheableFeedView(
         SaveableFeedState(viewModel, scrollStateKey) { listState ->
             RenderFeedState(viewModel, accountViewModel, listState, nav, routeForLastRead)
         }
-    }
-}
-
-@Composable
-fun DVMStatusView(
-    viewModel: FeedViewModel,
-    routeForLastRead: String?,
-    enablePullRefresh: Boolean = true,
-    scrollStateKey: String? = null,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    viewModel.invalidateData()
-    SaveableFeedState(viewModel, scrollStateKey) { listState ->
-        RenderFeedState(viewModel, accountViewModel, listState, nav, routeForLastRead)
     }
 }
 
@@ -120,12 +105,10 @@ fun RefresheableBox(
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
 
     val modifier =
-        remember {
-            if (enablePullRefresh) {
-                Modifier.fillMaxSize().pullRefresh(pullRefreshState)
-            } else {
-                Modifier.fillMaxSize()
-            }
+        if (enablePullRefresh) {
+            Modifier.fillMaxSize().pullRefresh(pullRefreshState)
+        } else {
+            Modifier.fillMaxSize()
         }
 
     Box(modifier) {
@@ -135,7 +118,7 @@ fun RefresheableBox(
             PullRefreshIndicator(
                 refreshing = refreshing,
                 state = pullRefreshState,
-                modifier = remember { Modifier.align(Alignment.TopCenter) },
+                modifier = Modifier.align(Alignment.TopCenter),
             )
         }
     }
@@ -191,9 +174,10 @@ fun RenderFeedState(
 ) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
-    Crossfade(
+    CrossfadeIfEnabled(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),
+        accountViewModel = accountViewModel,
     ) { state ->
         when (state) {
             is FeedState.Empty -> onEmpty()
@@ -248,13 +232,11 @@ private fun FeedLoaded(
         state = listState,
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-            val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
-
-            Row(defaultModifier) {
+            Row(Modifier.fillMaxWidth().animateItemPlacement()) {
                 NoteCompose(
                     item,
                     routeForLastRead = routeForLastRead,
-                    modifier = Modifier,
+                    modifier = Modifier.fillMaxWidth(),
                     isBoostedNote = false,
                     isHiddenFeed = state.showHidden.value,
                     quotesLeft = 3,
@@ -277,7 +259,7 @@ fun LoadingFeed() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(stringResource(R.string.loading_feed))
+        Text(stringRes(R.string.loading_feed))
     }
 }
 
@@ -291,13 +273,13 @@ fun FeedError(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("${stringResource(R.string.error_loading_replies)} $errorMessage")
+        Text("${stringRes(R.string.error_loading_replies)} $errorMessage")
         Spacer(modifier = StdVertSpacer)
         Button(
             modifier = Modifier.align(Alignment.CenterHorizontally),
             onClick = onRefresh,
         ) {
-            Text(text = stringResource(R.string.try_again))
+            Text(text = stringRes(R.string.try_again))
         }
     }
 }
@@ -309,8 +291,8 @@ fun FeedEmpty(onRefresh: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(stringResource(R.string.feed_is_empty))
+        Text(stringRes(R.string.feed_is_empty))
         Spacer(modifier = StdVertSpacer)
-        OutlinedButton(onClick = onRefresh) { Text(text = stringResource(R.string.refresh)) }
+        OutlinedButton(onClick = onRefresh) { Text(text = stringRes(R.string.refresh)) }
     }
 }

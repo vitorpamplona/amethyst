@@ -31,7 +31,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.R
@@ -41,6 +40,7 @@ import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.nip05
@@ -90,7 +90,7 @@ fun ForkInformationRowLightColor(
             ClickableText(
                 text =
                     buildAnnotatedString {
-                        append(stringResource(id = R.string.forked_from))
+                        append(stringRes(id = R.string.forked_from))
                         append(" ")
                     },
                 onClick = { nav(route) },
@@ -139,7 +139,7 @@ fun ForkInformationRow(
             val author = note.author ?: return
             val meta by author.live().userMetadataInfo.observeAsState(author.info)
 
-            Text(stringResource(id = R.string.forked_from))
+            Text(stringRes(id = R.string.forked_from))
             Spacer(modifier = StdHorzSpacer)
 
             val userMetadata by author.live().userMetadataInfo.observeAsState()

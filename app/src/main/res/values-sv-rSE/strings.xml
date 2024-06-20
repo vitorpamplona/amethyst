@@ -113,6 +113,7 @@
     <string name="website_url">Websida URL</string>
     <string name="ln_address">LN Adress</string>
     <string name="ln_url_outdated">LN URL (Utdaterad)</string>
+    <string name="save_to_gallery">Spara i Galleri</string>
     <string name="image_saved_to_the_gallery">Bild sparad till galleriet</string>
     <string name="failed_to_save_the_image">Misslyckades att spara bilden</string>
     <string name="upload_image">Ladda upp bilden</string>
@@ -447,6 +448,7 @@
     <string name="connectivity_type_never">Aldrig</string>
     <string name="ui_feature_set_type_complete">Slutförd</string>
     <string name="ui_feature_set_type_simplified">Förenklad</string>
+    <string name="ui_feature_set_type_performance">Prestanda</string>
     <string name="system">System</string>
     <string name="light">Ljus</string>
     <string name="dark">Mörk</string>
@@ -480,7 +482,7 @@
     <string name="new_feature_nip17_might_not_be_available_description">För att aktivera denna funktion kräver det att Amethyst skickar ett NIP-17 meddelande (GiftWrapped, Förseglade Direkta och Gruppmeddelanden). NIP-17 är nytt och de flesta klienter har ännu inte implementerat det. Se till att mottagaren använder en kompatibel klient.</string>
     <string name="new_feature_nip17_activate">Aktivera</string>
     <string name="messages_create_public_chat">Publik</string>
-    <string name="messages_create_public_private_chat_desription">Ny offentlig eller privat grupp</string>
+    <string name="messages_create_public_private_chat_description">Ny offentlig eller privat grupp</string>
     <string name="messages_new_message">Privat</string>
     <string name="messages_new_message_to">Till</string>
     <string name="messages_new_message_subject">Ämne</string>
@@ -498,6 +500,7 @@
     <string name="load_image_description">När bilder ska laddas</string>
     <string name="copy_to_clipboard">Kopiera till Urklipp</string>
     <string name="copy_npub_to_clipboard">Kopiera npub till urklipp</string>
+    <string name="share_or_save">Dela eller Spara</string>
     <string name="copy_url_to_clipboard">Kopiera URL till urklipp</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopiera anteckningens ID till urklipp</string>
     <string name="created_at">Skapad den</string>
@@ -510,6 +513,10 @@
     <string name="error_dialog_talk_to_user">Meddela användaren</string>
     <string name="error_dialog_button_ok">Ok</string>
     <string name="relay_information_document_error_assemble_url">Misslyckades att nå %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_assemble_url">Det gick inte att montera NIP-11 url för %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">Det gick inte att nå %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">Det gick inte att tolka svaret från %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_with_http">Relä avböjde förfrågan %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">Misslyckades att nå %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">Misslyckades att parsa resultatet från %1$s: %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s misslyckades med kod %2$s</string>
@@ -741,5 +748,5 @@
     <string name="dvm_waiting_status">Jobb begärt, väntar på svar</string>
     <string name="dvm_requesting_job">Begär jobb från DVM</string>
     <string name="nwc_payment_request">Betalningsbegäran skickad, väntar på bekräftelse från din plånbok</string>
-    <string name="dvm_waiting_to_confim_payment">Väntar på att DVM ska bekräfta betalningen eller skicka resultaten</string>
+    <string name="dvm_waiting_to_confirm_payment">Väntar på att DVM ska bekräfta betalningen eller skicka resultaten</string>
 </resources>

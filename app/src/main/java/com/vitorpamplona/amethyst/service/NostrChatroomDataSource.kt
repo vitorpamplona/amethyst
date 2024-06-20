@@ -52,7 +52,7 @@ object NostrChatroomDataSource : NostrDataSource("ChatroomFeed") {
                 filter =
                     JsonFilter(
                         kinds = listOf(PrivateDmEvent.KIND),
-                        authors = myPeer.users.map { it },
+                        authors = myPeer.users.toList(),
                         tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
                         since =
                             latestEOSEs.users[account.userProfile()]
@@ -103,7 +103,6 @@ object NostrChatroomDataSource : NostrDataSource("ChatroomFeed") {
             listOfNotNull(
                 createMessagesToMeFilter(),
                 createMessagesFromMeFilter(),
-            )
-                .ifEmpty { null }
+            ).ifEmpty { null }
     }
 }

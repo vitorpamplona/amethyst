@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
 import com.vitorpamplona.amethyst.ui.note.showAmount
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
@@ -44,7 +45,9 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.persistentSetOf
 import java.math.BigDecimal
 
-class EventNotificationConsumer(private val applicationContext: Context) {
+class EventNotificationConsumer(
+    private val applicationContext: Context,
+) {
     suspend fun consume(event: GiftWrapEvent) {
         Log.d("EventNotificationConsumer", "New Notification Arrived")
         if (!LocalCache.justVerify(event)) return
@@ -124,7 +127,8 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         acc: Account,
     ) {
         if (
-            event.createdAt > TimeUtils.fifteenMinutesAgo() && // old event being re-broadcasted
+            event.createdAt > TimeUtils.fifteenMinutesAgo() &&
+            // old event being re-broadcasted
             event.pubKey != acc.userProfile().pubkeyHex
         ) { // from the user
 
@@ -137,7 +141,8 @@ class EventNotificationConsumer(private val applicationContext: Context) {
                 (
                     acc.userProfile().privateChatrooms[chatRoom]?.senderIntersects(followingKeySet) == true ||
                         acc.userProfile().hasSentMessagesTo(chatRoom)
-                ) && !acc.isAllHidden(chatRoom.users)
+                ) &&
+                    !acc.isAllHidden(chatRoom.users)
 
             if (isKnownRoom) {
                 val content = chatNote.event?.content() ?: ""
@@ -178,9 +183,9 @@ class EventNotificationConsumer(private val applicationContext: Context) {
                         (
                             acc.userProfile().privateChatrooms[it]?.senderIntersects(followingKeySet) == true ||
                                 acc.userProfile().hasSentMessagesTo(it)
-                        ) && !acc.isAllHidden(it.users)
-                    }
-                    .toSet()
+                        ) &&
+                            !acc.isAllHidden(it.users)
+                    }.toSet()
 
             note.author?.let {
                 if (ChatroomKey(persistentSetOf(it.pubkeyHex)) in knownChatrooms) {
@@ -223,17 +228,19 @@ class EventNotificationConsumer(private val applicationContext: Context) {
 
                         val user = senderInfo.first.toBestDisplayName()
                         var title =
-                            applicationContext.getString(R.string.app_notification_zaps_channel_message, amount)
+                            stringRes(applicationContext, R.string.app_notification_zaps_channel_message, amount)
                         senderInfo.second?.ifBlank { null }?.let { title += " ($it)" }
                         var content =
-                            applicationContext.getString(
+                            stringRes(
+                                applicationContext,
                                 R.string.app_notification_zaps_channel_message_from,
                                 user,
                             )
                         zappedContent?.let {
                             content +=
                                 " " +
-                                applicationContext.getString(
+                                stringRes(
+                                    applicationContext,
                                     R.string.app_notification_zaps_channel_message_for,
                                     zappedContent,
                                 )
@@ -255,8 +262,7 @@ class EventNotificationConsumer(private val applicationContext: Context) {
         }
     }
 
-    fun notificationManager(): NotificationManager {
-        return ContextCompat.getSystemService(applicationContext, NotificationManager::class.java)
+    fun notificationManager(): NotificationManager =
+        ContextCompat.getSystemService(applicationContext, NotificationManager::class.java)
             as NotificationManager
-    }
 }

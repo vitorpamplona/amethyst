@@ -30,14 +30,15 @@ import com.vitorpamplona.quartz.ots.exceptions.CommitmentNotFoundException
 import com.vitorpamplona.quartz.ots.exceptions.DeserializationException
 import com.vitorpamplona.quartz.ots.exceptions.ExceededSizeException
 import com.vitorpamplona.quartz.ots.exceptions.UrlException
-import com.vitorpamplona.quartz.ots.http.Request
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
  * Class representing remote calendar server interface.
  */
-class OkHttpCalendar(val url: String) : ICalendar {
+class OkHttpCalendar(
+    val url: String,
+) : ICalendar {
     /**
      * Submitting a digest to remote calendar. Returns a com.eternitywall.ots.Timestamp committing to that digest.
      *
@@ -57,7 +58,8 @@ class OkHttpCalendar(val url: String) : ICalendar {
             val requestBody = digest.toRequestBody(mediaType)
 
             val request =
-                okhttp3.Request.Builder()
+                okhttp3.Request
+                    .Builder()
                     .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                     .header("Accept", "application/vnd.opentimestamps.v1")
                     .header("Content-Type", "application/x-www-form-urlencoded")
@@ -104,7 +106,8 @@ class OkHttpCalendar(val url: String) : ICalendar {
             val url = url + "/timestamp/" + Hex.encode(commitment)
 
             val request =
-                okhttp3.Request.Builder()
+                okhttp3.Request
+                    .Builder()
                     .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                     .header("Accept", "application/vnd.opentimestamps.v1")
                     .header("Content-Type", "application/x-www-form-urlencoded")

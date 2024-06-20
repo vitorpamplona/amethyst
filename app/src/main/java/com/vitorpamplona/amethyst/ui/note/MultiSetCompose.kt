@@ -41,10 +41,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -53,12 +53,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifierSmaller
@@ -105,7 +106,6 @@ fun MultiSetCompose(
     val baseNote = remember { multiSetCard.note }
 
     val popupExpanded = remember { mutableStateOf(false) }
-    val enablePopup = remember { { popupExpanded.value = true } }
 
     val scope = rememberCoroutineScope()
 
@@ -118,15 +118,15 @@ fun MultiSetCompose(
 
     val columnModifier =
         remember(backgroundColor.value) {
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .background(backgroundColor.value)
                 .combinedClickable(
                     onClick = {
                         scope.launch { routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) } }
                     },
-                    onLongClick = enablePopup,
-                )
-                .padding(
+                    onLongClick = { popupExpanded.value = true },
+                ).padding(
                     start = 12.dp,
                     end = 12.dp,
                     top = 10.dp,
@@ -151,7 +151,9 @@ fun MultiSetCompose(
                 nav = nav,
             )
 
-            NoteDropDownMenu(baseNote, popupExpanded, null, accountViewModel, nav)
+            if (popupExpanded.value) {
+                NoteDropDownMenu(baseNote, { popupExpanded.value = false }, null, accountViewModel, nav)
+            }
         }
     }
 }
@@ -163,30 +165,15 @@ private fun Galeries(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val hasZapEvents by remember { derivedStateOf { multiSetCard.zapEvents.isNotEmpty() } }
-    val hasBoostEvents by remember { derivedStateOf { multiSetCard.boostEvents.isNotEmpty() } }
-    val hasLikeEvents by remember { derivedStateOf { multiSetCard.likeEvents.isNotEmpty() } }
-
-    if (hasZapEvents) {
-        var zapEvents by
-            remember(multiSetCard.zapEvents) {
-                mutableStateOf(
-                    accountViewModel.cachedDecryptAmountMessageInGroup(multiSetCard.zapEvents),
-                )
-            }
-
-        LaunchedEffect(key1 = Unit) {
-            accountViewModel.decryptAmountMessageInGroup(multiSetCard.zapEvents) { zapEvents = it }
-        }
-
-        RenderZapGallery(zapEvents, backgroundColor, nav, accountViewModel)
+    if (multiSetCard.zapEvents.isNotEmpty()) {
+        DecryptAndRenderZapGallery(multiSetCard, backgroundColor, accountViewModel, nav)
     }
 
-    if (hasBoostEvents) {
+    if (multiSetCard.boostEvents.isNotEmpty()) {
         RenderBoostGallery(multiSetCard.boostEvents, nav, accountViewModel)
     }
 
-    if (hasLikeEvents) {
+    if (multiSetCard.likeEvents.isNotEmpty()) {
         multiSetCard.likeEventsByType.forEach {
             RenderLikeGallery(it.key, it.value, nav, accountViewModel)
         }
@@ -235,11 +222,26 @@ fun RenderLikeGallery(
 }
 
 @Composable
+fun DecryptAndRenderZapGallery(
+    multiSetCard: MultiSetCard,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val zapEvents by
+        produceState(initialValue = accountViewModel.cachedDecryptAmountMessageInGroup(multiSetCard.zapEvents)) {
+            accountViewModel.decryptAmountMessageInGroup(multiSetCard.zapEvents) { value = it }
+        }
+
+    RenderZapGallery(zapEvents, backgroundColor, accountViewModel, nav)
+}
+
+@Composable
 fun RenderZapGallery(
     zapEvents: ImmutableList<ZapAmountCommentNotification>,
     backgroundColor: MutableState<Color>,
-    nav: (String) -> Unit,
     accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
 ) {
     Row(Modifier.fillMaxWidth()) {
         Box(
@@ -493,7 +495,7 @@ private fun BoxedAuthor(
     accountViewModel: AccountViewModel,
 ) {
     Box(modifier = Size35Modifier.clickable(onClick = { nav(authorRouteFor(note)) })) {
-        WatchAuthorWithBlank(note, Size35Modifier) { author ->
+        WatchAuthorWithBlank(note, Size35Modifier, accountViewModel) { author ->
             WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
                 author,
                 accountViewModel,
@@ -510,7 +512,7 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
     if (author != null) {
         WatchUserMetadataAndFollowsAndRenderUserProfilePicture(author, accountViewModel)
     } else {
-        DisplayBlankAuthor(Size35dp)
+        DisplayBlankAuthor(Size35dp, accountViewModel = accountViewModel)
     }
 }
 
@@ -520,26 +522,23 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
     accountViewModel: AccountViewModel,
 ) {
     WatchUserMetadata(author) { baseUserPicture ->
-        // Crossfade(targetState = baseUserPicture) { userPicture ->
         RobohashFallbackAsyncImage(
             robot = author.pubkeyHex,
             model = baseUserPicture,
-            contentDescription = stringResource(id = R.string.profile_image),
+            contentDescription = stringRes(id = R.string.profile_image),
             modifier = MaterialTheme.colorScheme.profile35dpModifier,
             contentScale = ContentScale.Crop,
             loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         )
-        // }
     }
 
     WatchUserFollows(author.pubkeyHex, accountViewModel) { isFollowing ->
-        // Crossfade(targetState = isFollowing) {
         if (isFollowing) {
             Box(modifier = Size35Modifier, contentAlignment = Alignment.TopEnd) {
                 FollowingIcon(Size10dp)
             }
         }
-        // }
     }
 }
 

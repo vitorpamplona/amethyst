@@ -58,9 +58,7 @@ class SealedGossipEvent(
 
     override fun isContentEncoded() = true
 
-    fun preCachedGossip(signer: NostrSigner): Event? {
-        return cachedInnerEvent[signer.pubKey]
-    }
+    fun preCachedGossip(signer: NostrSigner): Event? = cachedInnerEvent[signer.pubKey]
 
     fun addToCache(
         pubKey: HexKey,
@@ -133,7 +131,7 @@ class SealedGossipEvent(
             gossip: Gossip,
             encryptTo: HexKey,
             signer: NostrSigner,
-            createdAt: Long = TimeUtils.randomWithinAWeek(),
+            createdAt: Long = TimeUtils.randomWithTwoDays(),
             onReady: (SealedGossipEvent) -> Unit,
         ) {
             val msg = Gossip.toJson(gossip)
@@ -172,8 +170,6 @@ class Gossip(
 
         fun toJson(event: Gossip): String = Event.mapper.writeValueAsString(event)
 
-        fun create(event: Event): Gossip {
-            return Gossip(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content)
-        }
+        fun create(event: Event): Gossip = Gossip(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content)
     }
 }

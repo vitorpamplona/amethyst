@@ -48,7 +48,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -68,13 +67,16 @@ import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 
-@Stable data class Reward(val amount: BigDecimal)
+@Stable data class Reward(
+    val amount: BigDecimal,
+)
 
 @Composable
 fun DisplayReward(
@@ -199,9 +201,7 @@ class AddBountyAmountViewModel : ViewModel() {
         nextAmount = TextFieldValue("")
     }
 
-    fun hasChanged(): Boolean {
-        return nextAmount.text.trim().toLongOrNull() != null
-    }
+    fun hasChanged(): Boolean = nextAmount.text.trim().toLongOrNull() != null
 }
 
 @Composable
@@ -254,7 +254,7 @@ fun AddBountyAmountDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedTextField(
-                        label = { Text(text = stringResource(R.string.pledge_amount_in_sats)) },
+                        label = { Text(text = stringRes(R.string.pledge_amount_in_sats)) },
                         value = postViewModel.nextAmount,
                         onValueChange = { postViewModel.nextAmount = it },
                         keyboardOptions =

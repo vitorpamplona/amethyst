@@ -20,13 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -41,22 +39,18 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -66,18 +60,18 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
+import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.BoostReaction
-import com.vitorpamplona.amethyst.ui.note.HiddenNote
+import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
-import com.vitorpamplona.amethyst.ui.note.RenderRelay
+import com.vitorpamplona.amethyst.ui.note.RenderAllRelayList
 import com.vitorpamplona.amethyst.ui.note.ReplyReaction
-import com.vitorpamplona.amethyst.ui.note.ViewCountReaction
-import com.vitorpamplona.amethyst.ui.note.WatchForReports
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
@@ -92,23 +86,22 @@ import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AuthorInfoVideoFeed
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.ui.theme.Size39Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.VideoReactionColumnPadding
-import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.VideoEvent
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun VideoScreen(
@@ -182,10 +175,11 @@ fun RenderPage(
 ) {
     val feedState by videoFeedView.feedContent.collectAsStateWithLifecycle()
 
-    Crossfade(
+    CrossfadeIfEnabled(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),
         label = "RenderPage",
+        accountViewModel = accountViewModel,
     ) { state ->
         when (state) {
             is FeedState.Empty -> {
@@ -249,73 +243,22 @@ fun SlidingCarousel(
         key = { index -> feed.value.getOrNull(index)?.idHex ?: "$index" },
     ) { index ->
         feed.value.getOrNull(index)?.let { note ->
-            LoadedVideoCompose(note, showHidden, accountViewModel, nav)
-        }
-    }
-}
-
-@Composable
-fun LoadedVideoCompose(
-    note: Note,
-    showHidden: Boolean,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    var state by
-        remember(note) {
-            mutableStateOf(
-                AccountViewModel.NoteComposeReportState(),
-            )
-        }
-
-    if (!showHidden) {
-        val scope = rememberCoroutineScope()
-
-        WatchForReports(note, accountViewModel) { newState ->
-            if (state != newState) {
-                scope.launch(Dispatchers.Main) { state = newState }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CheckHiddenFeedWatchBlockAndReport(
+                    note = note,
+                    modifier = Modifier.fillMaxWidth(),
+                    showHiddenWarning = true,
+                    ignoreAllBlocksAndReports = showHidden,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                ) {
+                    RenderVideoOrPictureNote(
+                        note,
+                        accountViewModel,
+                        nav,
+                    )
+                }
             }
-        }
-    }
-
-    Crossfade(targetState = state, label = "LoadedVideoCompose") {
-        RenderReportState(
-            it,
-            note,
-            accountViewModel,
-            nav,
-        )
-    }
-}
-
-@Composable
-fun RenderReportState(
-    state: AccountViewModel.NoteComposeReportState,
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    var showReportedNote by remember { mutableStateOf(false) }
-
-    Crossfade(targetState = (!state.isAcceptable || state.isHiddenAuthor) && !showReportedNote) {
-            showHiddenNote ->
-        if (showHiddenNote) {
-            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
-                HiddenNote(
-                    state.relevantReports,
-                    state.isHiddenAuthor,
-                    accountViewModel,
-                    Modifier.fillMaxWidth(),
-                    nav,
-                    onClick = { showReportedNote = true },
-                )
-            }
-        } else {
-            RenderVideoOrPictureNote(
-                note,
-                accountViewModel,
-                nav,
-            )
         }
     }
 }
@@ -366,14 +309,16 @@ private fun RenderAuthorInformation(
         Spacer(modifier = DoubleHorzSpacer)
 
         Column(
-            Modifier.height(65.dp).weight(1f),
+            Modifier
+                .height(65.dp)
+                .weight(1f),
             verticalArrangement = Arrangement.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                NoteUsernameDisplay(note, remember { Modifier.weight(1f) })
+                NoteUsernameDisplay(note, Modifier.weight(1f), accountViewModel = accountViewModel)
                 VideoUserOptionAction(note, accountViewModel, nav)
             }
-            if (accountViewModel.settings.featureSet != FeatureSetType.SIMPLIFIED) {
+            if (accountViewModel.settings.featureSet == FeatureSetType.COMPLETE) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ObserveDisplayNip05Status(
                         note.author!!,
@@ -386,7 +331,7 @@ private fun RenderAuthorInformation(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 2.dp),
                 ) {
-                    RelayBadges(baseNote = note, accountViewModel, nav)
+                    RenderAllRelayList(baseNote = note, accountViewModel = accountViewModel, nav = nav)
                 }
             }
         }
@@ -400,39 +345,28 @@ private fun VideoUserOptionAction(
     nav: (String) -> Unit,
 ) {
     val popupExpanded = remember { mutableStateOf(false) }
-    val enablePopup = remember { { popupExpanded.value = true } }
 
-    IconButton(
-        modifier = remember { Modifier.size(22.dp) },
-        onClick = enablePopup,
+    ClickableBox(
+        modifier = Size22Modifier,
+        onClick = { popupExpanded.value = true },
     ) {
         Icon(
             imageVector = Icons.Default.MoreVert,
-            contentDescription = stringResource(id = R.string.more_options),
-            modifier = remember { Modifier.size(20.dp) },
+            contentDescription = stringRes(id = R.string.more_options),
+            modifier = Size20Modifier,
             tint = MaterialTheme.colorScheme.placeholderText,
         )
 
-        NoteDropDownMenu(
-            note,
-            popupExpanded,
-            null,
-            accountViewModel,
-            nav,
-        )
+        if (popupExpanded.value) {
+            NoteDropDownMenu(
+                note,
+                { popupExpanded.value = false },
+                null,
+                accountViewModel,
+                nav,
+            )
+        }
     }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun RelayBadges(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    val noteRelays by baseNote.live().relayInfo.observeAsState(baseNote.relays)
-
-    FlowRow { noteRelays?.forEach { relayInfo -> RenderRelay(relayInfo, accountViewModel, nav) } }
 }
 
 @Composable
@@ -478,8 +412,7 @@ fun ReactionsColumn(
             routeFor(
                 baseNote,
                 accountViewModel.userProfile(),
-            )
-                ?.let { nav(it) }
+            )?.let { nav(it) }
         }
         BoostReaction(
             baseNote = baseNote,
@@ -510,12 +443,6 @@ fun ReactionsColumn(
             iconSizeModifier = Size40Modifier,
             animationSize = Size35dp,
             nav = nav,
-        )
-        ViewCountReaction(
-            note = baseNote,
-            grayTint = MaterialTheme.colorScheme.onBackground,
-            barChartModifier = Size39Modifier,
-            viewCountColorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
         )
     }
 }

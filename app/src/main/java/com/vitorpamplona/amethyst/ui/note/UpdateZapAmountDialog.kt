@@ -72,7 +72,6 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -95,6 +94,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.getFragmentActivity
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
@@ -108,7 +108,9 @@ import com.vitorpamplona.quartz.events.LnZapEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 
-class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
+class UpdateZapAmountViewModel(
+    val account: Account,
+) : ViewModel() {
     var nextAmount by mutableStateOf(TextFieldValue(""))
     var amountSet by mutableStateOf(listOf<Long>())
     var walletConnectRelay by mutableStateOf(TextFieldValue(""))
@@ -134,9 +136,7 @@ class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
         this.selectedZapType = account.defaultZapType
     }
 
-    fun toListOfAmounts(commaSeparatedAmounts: String): List<Long> {
-        return commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
-    }
+    fun toListOfAmounts(commaSeparatedAmounts: String): List<Long> = commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
 
     fun addAmount() {
         val newValue = nextAmount.text.trim().toLongOrNull()
@@ -193,15 +193,14 @@ class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
         nextAmount = TextFieldValue("")
     }
 
-    fun hasChanged(): Boolean {
-        return (
+    fun hasChanged(): Boolean =
+        (
             selectedZapType != account?.defaultZapType ||
                 amountSet != account?.zapAmountChoices ||
                 walletConnectPubkey.text != (account?.zapPaymentRequest?.pubKeyHex ?: "") ||
                 walletConnectRelay.text != (account?.zapPaymentRequest?.relayUri ?: "") ||
                 walletConnectSecret.text != (account?.zapPaymentRequest?.secret ?: "")
         )
-    }
 
     fun updateNIP47(uri: String) {
         val contact = Nip47WalletConnect.parse(uri)
@@ -212,10 +211,10 @@ class UpdateZapAmountViewModel(val account: Account) : ViewModel() {
         }
     }
 
-    class Factory(val account: Account) : ViewModelProvider.Factory {
-        override fun <UpdateZapAmountViewModel : ViewModel> create(modelClass: Class<UpdateZapAmountViewModel>): UpdateZapAmountViewModel {
-            return UpdateZapAmountViewModel(account) as UpdateZapAmountViewModel
-        }
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <UpdateZapAmountViewModel : ViewModel> create(modelClass: Class<UpdateZapAmountViewModel>): UpdateZapAmountViewModel = UpdateZapAmountViewModel(account) as UpdateZapAmountViewModel
     }
 }
 
@@ -241,23 +240,23 @@ fun UpdateZapAmountDialog(
         listOf(
             Triple(
                 LnZapEvent.ZapType.PUBLIC,
-                stringResource(id = R.string.zap_type_public),
-                stringResource(id = R.string.zap_type_public_explainer),
+                stringRes(id = R.string.zap_type_public),
+                stringRes(id = R.string.zap_type_public_explainer),
             ),
             Triple(
                 LnZapEvent.ZapType.PRIVATE,
-                stringResource(id = R.string.zap_type_private),
-                stringResource(id = R.string.zap_type_private_explainer),
+                stringRes(id = R.string.zap_type_private),
+                stringRes(id = R.string.zap_type_private_explainer),
             ),
             Triple(
                 LnZapEvent.ZapType.ANONYMOUS,
-                stringResource(id = R.string.zap_type_anonymous),
-                stringResource(id = R.string.zap_type_anonymous_explainer),
+                stringRes(id = R.string.zap_type_anonymous),
+                stringRes(id = R.string.zap_type_anonymous_explainer),
             ),
             Triple(
                 LnZapEvent.ZapType.NONZAP,
-                stringResource(id = R.string.zap_type_nonzap),
-                stringResource(id = R.string.zap_type_nonzap_explainer),
+                stringRes(id = R.string.zap_type_nonzap),
+                stringRes(id = R.string.zap_type_nonzap_explainer),
             ),
         )
 
@@ -274,13 +273,13 @@ fun UpdateZapAmountDialog(
             } catch (e: IllegalArgumentException) {
                 if (e.message != null) {
                     accountViewModel.toast(
-                        context.getString(R.string.error_parsing_nip47_title),
-                        context.getString(R.string.error_parsing_nip47, nip47uri, e.message!!),
+                        stringRes(context, R.string.error_parsing_nip47_title),
+                        stringRes(context, R.string.error_parsing_nip47, nip47uri, e.message!!),
                     )
                 } else {
                     accountViewModel.toast(
-                        context.getString(R.string.error_parsing_nip47_title),
-                        context.getString(R.string.error_parsing_nip47_no_error, nip47uri),
+                        stringRes(context, R.string.error_parsing_nip47_title),
+                        stringRes(context, R.string.error_parsing_nip47_no_error, nip47uri),
                     )
                 }
             }
@@ -367,7 +366,7 @@ fun UpdateZapAmountDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             OutlinedTextField(
-                                label = { Text(text = stringResource(R.string.new_amount_in_sats)) },
+                                label = { Text(text = stringRes(R.string.new_amount_in_sats)) },
                                 value = postViewModel.nextAmount,
                                 onValueChange = { postViewModel.nextAmount = it },
                                 keyboardOptions =
@@ -393,7 +392,7 @@ fun UpdateZapAmountDialog(
                                         containerColor = MaterialTheme.colorScheme.primary,
                                     ),
                             ) {
-                                Text(text = stringResource(R.string.add), color = Color.White)
+                                Text(text = stringRes(R.string.add), color = Color.White)
                             }
                         }
 
@@ -402,7 +401,7 @@ fun UpdateZapAmountDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             TextSpinner(
-                                label = stringResource(id = R.string.zap_type_explainer),
+                                label = stringRes(id = R.string.zap_type_explainer),
                                 placeholder =
                                     zapTypes.filter { it.first == accountViewModel.defaultZapType() }.first().second,
                                 options = zapOptions,
@@ -423,7 +422,7 @@ fun UpdateZapAmountDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                stringResource(id = R.string.wallet_connect_service),
+                                stringRes(id = R.string.wallet_connect_service),
                                 Modifier.weight(1f),
                             )
 
@@ -447,7 +446,7 @@ fun UpdateZapAmountDialog(
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.alby),
-                                    contentDescription = stringResource(id = R.string.accessibility_navigate_to_alby),
+                                    contentDescription = stringRes(id = R.string.accessibility_navigate_to_alby),
                                     modifier = Modifier.size(24.dp),
                                     tint = Color.Unspecified,
                                 )
@@ -460,7 +459,7 @@ fun UpdateZapAmountDialog(
                             ) {
                                 Icon(
                                     Icons.Default.ContentPaste,
-                                    contentDescription = stringResource(id = R.string.paste_from_clipboard),
+                                    contentDescription = stringRes(id = R.string.paste_from_clipboard),
                                     modifier = Modifier.size(24.dp),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
@@ -469,7 +468,7 @@ fun UpdateZapAmountDialog(
                             IconButton(onClick = { qrScanning = true }) {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_qrcode),
-                                    contentDescription = stringResource(id = R.string.accessibility_scan_qr_code),
+                                    contentDescription = stringRes(id = R.string.accessibility_scan_qr_code),
                                     modifier = Modifier.size(24.dp),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
@@ -481,7 +480,7 @@ fun UpdateZapAmountDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                stringResource(id = R.string.wallet_connect_service_explainer),
+                                stringRes(id = R.string.wallet_connect_service_explainer),
                                 Modifier.weight(1f),
                                 color = MaterialTheme.colorScheme.placeholderText,
                                 fontSize = Font14SP,
@@ -497,13 +496,13 @@ fun UpdateZapAmountDialog(
                                     } catch (e: IllegalArgumentException) {
                                         if (e.message != null) {
                                             accountViewModel.toast(
-                                                context.getString(R.string.error_parsing_nip47_title),
-                                                context.getString(R.string.error_parsing_nip47, it, e.message!!),
+                                                stringRes(context, R.string.error_parsing_nip47_title),
+                                                stringRes(context, R.string.error_parsing_nip47, it, e.message!!),
                                             )
                                         } else {
                                             accountViewModel.toast(
-                                                context.getString(R.string.error_parsing_nip47_title),
-                                                context.getString(R.string.error_parsing_nip47_no_error, it),
+                                                stringRes(context, R.string.error_parsing_nip47_title),
+                                                stringRes(context, R.string.error_parsing_nip47_no_error, it),
                                             )
                                         }
                                     }
@@ -516,7 +515,7 @@ fun UpdateZapAmountDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             OutlinedTextField(
-                                label = { Text(text = stringResource(R.string.wallet_connect_service_pubkey)) },
+                                label = { Text(text = stringRes(R.string.wallet_connect_service_pubkey)) },
                                 value = postViewModel.walletConnectPubkey,
                                 onValueChange = { postViewModel.walletConnectPubkey = it },
                                 keyboardOptions =
@@ -539,7 +538,7 @@ fun UpdateZapAmountDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             OutlinedTextField(
-                                label = { Text(text = stringResource(R.string.wallet_connect_service_relay)) },
+                                label = { Text(text = stringRes(R.string.wallet_connect_service_relay)) },
                                 modifier = Modifier.weight(1f),
                                 value = postViewModel.walletConnectRelay,
                                 onValueChange = { postViewModel.walletConnectRelay = it },
@@ -559,21 +558,20 @@ fun UpdateZapAmountDialog(
                         val context = LocalContext.current
 
                         val keyguardLauncher =
-                            rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-                                    result: ActivityResult ->
+                            rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
                                 if (result.resultCode == Activity.RESULT_OK) {
                                     showPassword = true
                                 }
                             }
 
-                        val authTitle = stringResource(id = R.string.wallet_connect_service_show_secret)
+                        val authTitle = stringRes(id = R.string.wallet_connect_service_show_secret)
 
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             OutlinedTextField(
-                                label = { Text(text = stringResource(R.string.wallet_connect_service_secret)) },
+                                label = { Text(text = stringRes(R.string.wallet_connect_service_secret)) },
                                 modifier = Modifier.weight(1f),
                                 value = postViewModel.walletConnectSecret,
                                 onValueChange = { postViewModel.walletConnectSecret = it },
@@ -585,7 +583,7 @@ fun UpdateZapAmountDialog(
                                     ),
                                 placeholder = {
                                     Text(
-                                        text = stringResource(R.string.wallet_connect_service_secret_placeholder),
+                                        text = stringRes(R.string.wallet_connect_service_secret_placeholder),
                                         color = MaterialTheme.colorScheme.placeholderText,
                                     )
                                 },
@@ -614,9 +612,9 @@ fun UpdateZapAmountDialog(
                                                 },
                                             contentDescription =
                                                 if (showPassword) {
-                                                    stringResource(R.string.show_password)
+                                                    stringRes(R.string.show_password)
                                                 } else {
-                                                    stringResource(
+                                                    stringRes(
                                                         R.string.hide_password,
                                                     )
                                                 },
@@ -654,7 +652,7 @@ fun authenticate(
     fun keyguardPrompt() {
         val intent =
             keyguardManager.createConfirmDeviceCredentialIntent(
-                context.getString(R.string.app_name_release),
+                stringRes(context, R.string.app_name_release),
                 title,
             )
 
@@ -672,8 +670,9 @@ fun authenticate(
             BiometricManager.Authenticators.DEVICE_CREDENTIAL
 
     val promptInfo =
-        BiometricPrompt.PromptInfo.Builder()
-            .setTitle(context.getString(R.string.app_name_release))
+        BiometricPrompt.PromptInfo
+            .Builder()
+            .setTitle(stringRes(context, R.string.app_name_release))
             .setSubtitle(title)
             .setAllowedAuthenticators(authenticators)
             .build()
@@ -693,8 +692,9 @@ fun authenticate(
                         BiometricPrompt.ERROR_LOCKOUT -> keyguardPrompt()
                         else ->
                             onError(
-                                context.getString(R.string.biometric_authentication_failed),
-                                context.getString(
+                                stringRes(context, R.string.biometric_authentication_failed),
+                                stringRes(
+                                    context,
                                     R.string.biometric_authentication_failed_explainer_with_error,
                                     errString,
                                 ),
@@ -705,8 +705,8 @@ fun authenticate(
                 override fun onAuthenticationFailed() {
                     super.onAuthenticationFailed()
                     onError(
-                        context.getString(R.string.biometric_authentication_failed),
-                        context.getString(R.string.biometric_authentication_failed_explainer),
+                        stringRes(context, R.string.biometric_authentication_failed),
+                        stringRes(context, R.string.biometric_authentication_failed_explainer),
                     )
                 }
 

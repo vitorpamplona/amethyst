@@ -34,6 +34,7 @@ import coil.executeBlocking
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.stringRes
 
 object NotificationUtils {
     private var dmChannel: NotificationChannel? = null
@@ -46,14 +47,13 @@ object NotificationUtils {
 
         dmChannel =
             NotificationChannel(
-                applicationContext.getString(R.string.app_notification_dms_channel_id),
-                applicationContext.getString(R.string.app_notification_dms_channel_name),
+                stringRes(applicationContext, R.string.app_notification_dms_channel_id),
+                stringRes(applicationContext, R.string.app_notification_dms_channel_name),
                 NotificationManager.IMPORTANCE_DEFAULT,
-            )
-                .apply {
-                    description =
-                        applicationContext.getString(R.string.app_notification_dms_channel_description)
-                }
+            ).apply {
+                description =
+                    stringRes(applicationContext, R.string.app_notification_dms_channel_description)
+            }
 
         // Register the channel with the system
         val notificationManager: NotificationManager =
@@ -69,14 +69,13 @@ object NotificationUtils {
 
         zapChannel =
             NotificationChannel(
-                applicationContext.getString(R.string.app_notification_zaps_channel_id),
-                applicationContext.getString(R.string.app_notification_zaps_channel_name),
+                stringRes(applicationContext, R.string.app_notification_zaps_channel_id),
+                stringRes(applicationContext, R.string.app_notification_zaps_channel_name),
                 NotificationManager.IMPORTANCE_DEFAULT,
-            )
-                .apply {
-                    description =
-                        applicationContext.getString(R.string.app_notification_zaps_channel_description)
-                }
+            ).apply {
+                description =
+                    stringRes(applicationContext, R.string.app_notification_zaps_channel_description)
+            }
 
         // Register the channel with the system
         val notificationManager: NotificationManager =
@@ -96,7 +95,7 @@ object NotificationUtils {
         applicationContext: Context,
     ) {
         val zapChannel = getOrCreateZapChannel(applicationContext)
-        val channelId = applicationContext.getString(R.string.app_notification_zaps_channel_id)
+        val channelId = stringRes(applicationContext, R.string.app_notification_zaps_channel_id)
 
         sendNotification(
             id,
@@ -119,7 +118,7 @@ object NotificationUtils {
         applicationContext: Context,
     ) {
         val dmChannel = getOrCreateDMChannel(applicationContext)
-        val channelId = applicationContext.getString(R.string.app_notification_dms_channel_id)
+        val channelId = stringRes(applicationContext, R.string.app_notification_dms_channel_id)
 
         sendNotification(
             id,
@@ -205,13 +204,13 @@ object NotificationUtils {
 
         // Build the notification
         val builderPublic =
-            NotificationCompat.Builder(
-                applicationContext,
-                channelId,
-            )
-                .setSmallIcon(R.drawable.amethyst)
+            NotificationCompat
+                .Builder(
+                    applicationContext,
+                    channelId,
+                ).setSmallIcon(R.drawable.amethyst)
                 .setContentTitle(messageTitle)
-                .setContentText(applicationContext.getString(R.string.app_notification_private_message))
+                .setContentText(stringRes(applicationContext, R.string.app_notification_private_message))
                 .setLargeIcon(picture?.bitmap)
                 // .setGroup(messageTitle)
                 // .setGroup(notificationGroupKey) //-> Might need a Group summary as well before we
@@ -222,11 +221,11 @@ object NotificationUtils {
 
         // Build the notification
         val builder =
-            NotificationCompat.Builder(
-                applicationContext,
-                channelId,
-            )
-                .setSmallIcon(R.drawable.amethyst)
+            NotificationCompat
+                .Builder(
+                    applicationContext,
+                    channelId,
+                ).setSmallIcon(R.drawable.amethyst)
                 .setContentTitle(messageTitle)
                 .setContentText(messageBody)
                 .setLargeIcon(picture?.bitmap)

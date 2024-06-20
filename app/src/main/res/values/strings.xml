@@ -515,6 +515,7 @@
 
     <string name="ui_feature_set_type_complete">Complete</string>
     <string name="ui_feature_set_type_simplified">Simplified</string>
+    <string name="ui_feature_set_type_performance">Performance</string>
 
     <string name="system">System</string>
     <string name="light">Light</string>
@@ -559,7 +560,7 @@
     <string name="new_feature_nip17_activate">Activate</string>
 
     <string name="messages_create_public_chat">Public</string>
-    <string name="messages_create_public_private_chat_desription">New Public or Private Group</string>
+    <string name="messages_create_public_private_chat_description">New Public or Private Group</string>
     <string name="messages_new_message">Private</string>
     <string name="messages_new_message_to">To</string>
     <string name="messages_new_message_subject">Subject</string>
@@ -600,6 +601,12 @@
     <string name="error_dialog_button_ok">OK</string>
 
     <string name="relay_information_document_error_assemble_url">Failed to reach %1$s: %2$s</string>
+
+    <string name="relay_information_document_error_failed_to_assemble_url">Failed to assemble NIP-11 url for %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">Failed to reach %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">Failed to parse response from %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_with_http">Relay declined request %1$s: %2$s</string>
+
     <string name="relay_information_document_error_reach_server">Failed to reach %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">Failed to parse result from %1$s: %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s failed with code %2$s</string>
@@ -884,5 +891,5 @@
     <string name="dvm_waiting_status">Job Requested, waiting for a reply</string>
     <string name="dvm_requesting_job">Requesting Job from DVM</string>
     <string name="nwc_payment_request">Payment request sent, waiting for confirmation from your wallet</string>
-    <string name="dvm_waiting_to_confim_payment">Waiting for DVM to confirm payment or send results</string>
+    <string name="dvm_waiting_to_confirm_payment">Waiting for DVM to confirm payment or send results</string>
 </resources>

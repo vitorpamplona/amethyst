@@ -90,6 +90,11 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
+        val locales = this.applicationContext.resources.configuration.locales
+        if (!locales.isEmpty) {
+            checkLanguage(locales.get(0).language)
+        }
+
         Log.d("Lifetime Event", "MainActivity.onResume")
 
         // starts muted every time
@@ -263,8 +268,8 @@ class GetMediaActivityResultContract : ActivityResultContracts.GetContent() {
     }
 }
 
-fun uriToRoute(uri: String?): String? {
-    return if (uri.equals("nostr:Notifications", true)) {
+fun uriToRoute(uri: String?): String? =
+    if (uri.equals("nostr:Notifications", true)) {
         Route.Notification.route.replace("{scrollToTop}", "true")
     } else {
         if (uri?.startsWith("nostr:Hashtag?id=") == true) {
@@ -317,4 +322,3 @@ fun uriToRoute(uri: String?): String? {
                 null
             }
     }
-}

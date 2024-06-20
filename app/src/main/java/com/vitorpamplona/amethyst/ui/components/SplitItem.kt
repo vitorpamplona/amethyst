@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import kotlin.math.abs
 
 class SplitItem<T>(val key: T) {
+    // 0 to 1
     var percentage by mutableStateOf(0f)
 }
 

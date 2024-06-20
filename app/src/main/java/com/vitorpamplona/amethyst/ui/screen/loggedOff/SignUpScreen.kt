@@ -54,7 +54,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
@@ -70,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -118,18 +118,18 @@ fun SignUpPage(
     ) {
         Image(
             imageVector = CustomHashTagIcons.Amethyst,
-            contentDescription = stringResource(R.string.app_logo),
+            contentDescription = stringRes(R.string.app_logo),
             modifier = Modifier.size(150.dp),
             contentScale = ContentScale.Inside,
         )
 
         Spacer(modifier = Modifier.height(Size40dp))
 
-        Text(text = stringResource(R.string.welcome), style = MaterialTheme.typography.titleLarge)
+        Text(text = stringRes(R.string.welcome), style = MaterialTheme.typography.titleLarge)
 
         Spacer(modifier = Modifier.height(Size20dp))
 
-        Text(text = stringResource(R.string.how_should_we_call_you), style = MaterialTheme.typography.titleMedium)
+        Text(text = stringRes(R.string.how_should_we_call_you), style = MaterialTheme.typography.titleMedium)
 
         Spacer(modifier = Modifier.height(Size20dp))
 
@@ -144,7 +144,7 @@ fun SignUpPage(
                 ),
             placeholder = {
                 Text(
-                    text = stringResource(R.string.my_awesome_name),
+                    text = stringRes(R.string.my_awesome_name),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -153,17 +153,15 @@ fun SignUpPage(
                     onGo = {
                         if (!acceptedTerms.value) {
                             termsAcceptanceIsRequired =
-                                context.getString(R.string.acceptance_of_terms_is_required)
+                                stringRes(context, R.string.acceptance_of_terms_is_required)
                         }
 
                         if (displayName.value.text.isBlank()) {
-                            errorMessage = context.getString(R.string.name_is_required)
+                            errorMessage = stringRes(context, R.string.name_is_required)
                         }
 
                         if (acceptedTerms.value && displayName.value.text.isNotBlank()) {
-                            accountStateViewModel.login(displayName.value.text, useProxy.value, proxyPort.value.toInt()) {
-                                errorMessage = context.getString(R.string.invalid_key)
-                            }
+                            accountStateViewModel.newKey(useProxy.value, proxyPort.value.toInt(), displayName.value.text)
                         }
                     },
                 ),
@@ -190,11 +188,11 @@ fun SignUpPage(
 
             val annotatedTermsString =
                 buildAnnotatedString {
-                    withStyle(regularText) { append(stringResource(R.string.i_accept_the)) }
+                    withStyle(regularText) { append(stringRes(R.string.i_accept_the)) }
 
                     withStyle(clickableTextStyle) {
                         pushStringAnnotation("openTerms", "")
-                        append(stringResource(R.string.terms_of_use))
+                        append(stringRes(R.string.terms_of_use))
                         pop()
                     }
                 }
@@ -202,8 +200,7 @@ fun SignUpPage(
             ClickableText(
                 text = annotatedTermsString,
             ) { spanOffset ->
-                annotatedTermsString.getStringAnnotations(spanOffset, spanOffset).firstOrNull()?.also {
-                        span ->
+                annotatedTermsString.getStringAnnotations(spanOffset, spanOffset).firstOrNull()?.also { span ->
                     if (span.tag == "openTerms") {
                         runCatching {
                             uri.openUri("https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md")
@@ -232,7 +229,7 @@ fun SignUpPage(
                     },
                 )
 
-                Text(stringResource(R.string.connect_via_tor))
+                Text(stringRes(R.string.connect_via_tor))
             }
 
             if (connectOrbotDialogOpen) {
@@ -244,12 +241,12 @@ fun SignUpPage(
                     },
                     onError = {
                         scope.launch {
-                            Toast.makeText(
-                                context,
-                                it,
-                                Toast.LENGTH_LONG,
-                            )
-                                .show()
+                            Toast
+                                .makeText(
+                                    context,
+                                    it,
+                                    Toast.LENGTH_LONG,
+                                ).show()
                         }
                     },
                     proxyPort,
@@ -264,11 +261,11 @@ fun SignUpPage(
                 enabled = acceptedTerms.value,
                 onClick = {
                     if (!acceptedTerms.value) {
-                        termsAcceptanceIsRequired = context.getString(R.string.acceptance_of_terms_is_required)
+                        termsAcceptanceIsRequired = stringRes(context, R.string.acceptance_of_terms_is_required)
                     }
 
                     if (displayName.value.text.isBlank()) {
-                        errorMessage = context.getString(R.string.key_is_required)
+                        errorMessage = stringRes(context, R.string.key_is_required)
                     }
 
                     if (acceptedTerms.value && displayName.value.text.isNotBlank()) {
@@ -279,7 +276,7 @@ fun SignUpPage(
                 modifier = Modifier.height(50.dp),
             ) {
                 Text(
-                    text = stringResource(R.string.create_account),
+                    text = stringRes(R.string.create_account),
                     modifier = Modifier.padding(horizontal = Size40dp),
                 )
             }
@@ -287,7 +284,7 @@ fun SignUpPage(
 
         Spacer(modifier = Modifier.height(Size40dp))
 
-        Text(text = stringResource(R.string.already_have_an_account))
+        Text(text = stringRes(R.string.already_have_an_account))
 
         Spacer(modifier = Modifier.height(Size20dp))
 
@@ -298,7 +295,7 @@ fun SignUpPage(
                 modifier = Modifier.height(50.dp),
             ) {
                 Text(
-                    text = stringResource(R.string.login),
+                    text = stringRes(R.string.login),
                     modifier = Modifier.padding(horizontal = Size40dp),
                 )
             }

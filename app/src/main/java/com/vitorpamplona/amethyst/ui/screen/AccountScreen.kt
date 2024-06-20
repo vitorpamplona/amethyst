@@ -41,7 +41,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModelStore
@@ -57,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.MainScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import kotlinx.coroutines.CancellationException
 
@@ -149,7 +149,10 @@ fun LoggedInPage(
                         )
                     } else {
                         result.data?.let {
-                            accountViewModel.runOnIO { accountViewModel.account.signer.launcher.newResult(it) }
+                            accountViewModel.runOnIO {
+                                accountViewModel.account.signer.launcher
+                                    .newResult(it)
+                            }
                         }
                     }
                 },
@@ -196,7 +199,8 @@ fun LoggedInPage(
                 contentResolver = { Amethyst.instance.contentResolver },
             )
             onDispose {
-                accountViewModel.account.signer.launcher.clearLauncher()
+                accountViewModel.account.signer.launcher
+                    .clearLauncher()
                 lifeCycleOwner.lifecycle.removeObserver(observer)
             }
         }
@@ -205,7 +209,9 @@ fun LoggedInPage(
     MainScreen(accountViewModel, accountStateViewModel, sharedPreferencesViewModel)
 }
 
-class AccountCentricViewModelStore(val account: Account) : ViewModelStoreOwner {
+class AccountCentricViewModelStore(
+    val account: Account,
+) : ViewModelStoreOwner {
     override val viewModelStore = ViewModelStore()
 }
 
@@ -216,6 +222,6 @@ fun LoadingAccounts() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(stringResource(R.string.loading_account))
+        Text(stringRes(R.string.loading_account))
     }
 }

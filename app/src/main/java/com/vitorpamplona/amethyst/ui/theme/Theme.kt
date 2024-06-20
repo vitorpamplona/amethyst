@@ -191,6 +191,20 @@ val LightChannelNotePictureModifier =
         .clip(shape = CircleShape)
         .border(2.dp, LightColorPalette.background, CircleShape)
 
+val LightProfilePictureBorder =
+    Modifier.border(
+        3.dp,
+        DarkColorPalette.background,
+        CircleShape,
+    )
+
+val DarkProfilePictureBorder =
+    Modifier.border(
+        3.dp,
+        LightColorPalette.background,
+        CircleShape,
+    )
+
 val LightRelayIconModifier =
     Modifier
         .size(Size13dp)
@@ -379,6 +393,9 @@ val ColorScheme.innerPostModifier: Modifier
 val ColorScheme.channelNotePictureModifier: Modifier
     get() = if (isLight) LightChannelNotePictureModifier else DarkChannelNotePictureModifier
 
+val ColorScheme.userProfileBorderModifier: Modifier
+    get() = if (isLight) LightProfilePictureBorder else DarkProfilePictureBorder
+
 val ColorScheme.relayIconModifier: Modifier
     get() = if (isLight) LightRelayIconModifier else DarkRelayIconModifier
 
@@ -400,8 +417,7 @@ val ColorScheme.chartStyle: ChartStyle
                     defaultColors.entity1Color,
                     defaultColors.entity2Color,
                     defaultColors.entity3Color,
-                )
-                    .map(::Color),
+                ).map(::Color),
             elevationOverlayColor = Color(defaultColors.elevationOverlayColor),
         )
     }

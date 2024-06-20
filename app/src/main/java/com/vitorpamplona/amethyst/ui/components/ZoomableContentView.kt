@@ -20,11 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
-import android.os.Build
 import android.util.Log
 import android.view.Window
 import androidx.compose.animation.AnimatedVisibility
@@ -57,7 +55,6 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -65,7 +62,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.window.DialogWindowProvider
-import androidx.core.net.toFile
 import androidx.core.net.toUri
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.AsyncImage
@@ -73,8 +69,6 @@ import coil.compose.AsyncImagePainter
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
@@ -85,7 +79,6 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.service.BlurHashRequester
-import com.vitorpamplona.amethyst.ui.actions.ImageSaver
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.note.BlankNote
@@ -93,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.HashCheckFailedIcon
 import com.vitorpamplona.amethyst.ui.note.HashCheckIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
@@ -103,7 +97,7 @@ import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -113,41 +107,22 @@ import kotlinx.coroutines.withContext
 @Composable
 fun ZoomableContentView(
     content: BaseMediaContent,
-    images: ImmutableList<BaseMediaContent> = remember(content) { listOf(content).toImmutableList() },
+    images: ImmutableList<BaseMediaContent> = remember(content) { persistentListOf(content) },
     roundedCorner: Boolean,
     isFiniteHeight: Boolean,
     accountViewModel: AccountViewModel,
 ) {
-    // store the dialog open or close state
     var dialogOpen by remember(content) { mutableStateOf(false) }
-
-    var mainImageModifier =
-        if (roundedCorner) {
-            MaterialTheme.colorScheme.imageModifier
-        } else {
-            Modifier.fillMaxWidth()
-        }
-
-    if (content is MediaUrlContent) {
-        mainImageModifier =
-            mainImageModifier.clickable(
-                onClick = { dialogOpen = true },
-            )
-    } else if (content is MediaPreloadedContent) {
-        mainImageModifier =
-            mainImageModifier.clickable(
-                onClick = { dialogOpen = true },
-            )
-    } else {
-        mainImageModifier = mainImageModifier.clickable { dialogOpen = true }
-    }
-
-    val controllerVisible = remember { mutableStateOf(true) }
 
     when (content) {
         is MediaUrlImage ->
             SensitivityWarning(content.contentWarning != null, accountViewModel) {
-                UrlImageView(content, mainImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
+                TwoSecondController(content) { controllerVisible ->
+                    val mainImageModifier = Modifier.fillMaxWidth().clickable { dialogOpen = true }
+                    val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
+
+                    UrlImageView(content, mainImageModifier, loadedImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
+                }
             }
         is MediaUrlVideo ->
             SensitivityWarning(content.contentWarning != null, accountViewModel) {
@@ -169,7 +144,12 @@ fun ZoomableContentView(
                 }
             }
         is MediaLocalImage ->
-            LocalImageView(content, mainImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
+            TwoSecondController(content) { controllerVisible ->
+                val mainImageModifier = Modifier.fillMaxWidth().clickable { dialogOpen = true }
+                val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
+
+                LocalImageView(content, mainImageModifier, loadedImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
+            }
         is MediaLocalVideo ->
             content.localFile?.let {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -195,9 +175,29 @@ fun ZoomableContentView(
 }
 
 @Composable
+fun TwoSecondController(
+    content: BaseMediaContent,
+    inner: @Composable (controllerVisible: MutableState<Boolean>) -> Unit,
+) {
+    val controllerVisible = remember { mutableStateOf(true) }
+
+    LaunchedEffect(content) {
+        launch(Dispatchers.Default) {
+            delay(2000)
+            withContext(Dispatchers.Main) {
+                controllerVisible.value = false
+            }
+        }
+    }
+
+    inner(controllerVisible)
+}
+
+@Composable
 fun LocalImageView(
     content: MediaLocalImage,
     mainImageModifier: Modifier,
+    loadedImageModifier: Modifier,
     isFiniteHeight: Boolean,
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
@@ -235,14 +235,14 @@ fun LocalImageView(
                                         content.blurhash,
                                         content.description,
                                         contentScale,
-                                        Modifier.aspectRatio(ratio),
+                                        loadedImageModifier.aspectRatio(ratio),
                                     )
                                 } else {
                                     DisplayBlurHash(
                                         content.blurhash,
                                         content.description,
                                         contentScale,
-                                        Modifier,
+                                        loadedImageModifier,
                                     )
                                 }
                             } else {
@@ -250,10 +250,10 @@ fun LocalImageView(
                             }
                         }
                         is AsyncImagePainter.State.Error -> {
-                            BlankNote()
+                            BlankNote(loadedImageModifier)
                         }
                         is AsyncImagePainter.State.Success -> {
-                            SubcomposeAsyncImageContent()
+                            SubcomposeAsyncImageContent(loadedImageModifier)
 
                             content.isVerified?.let {
                                 AnimatedVisibility(
@@ -277,7 +277,7 @@ fun LocalImageView(
                         content.blurhash,
                         content.description,
                         ContentScale.Crop,
-                        mainImageModifier
+                        loadedImageModifier
                             .aspectRatio(ratio)
                             .clickable { showImage.value = true },
                     )
@@ -293,7 +293,7 @@ fun LocalImageView(
             }
         }
     } else {
-        BlankNote()
+        BlankNote(loadedImageModifier)
     }
 }
 
@@ -301,6 +301,7 @@ fun LocalImageView(
 fun UrlImageView(
     content: MediaUrlImage,
     mainImageModifier: Modifier,
+    loadedImageModifier: Modifier,
     isFiniteHeight: Boolean,
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
@@ -314,15 +315,13 @@ fun UrlImageView(
                 )
             }
 
-        val contentScale = if (isFiniteHeight) ContentScale.Fit else ContentScale.FillWidth
-
         val ratio = remember(content) { aspectRatio(content.dim) }
 
         if (showImage.value) {
             SubcomposeAsyncImage(
                 model = content.url,
                 contentDescription = content.description,
-                contentScale = contentScale,
+                contentScale = if (isFiniteHeight) ContentScale.Fit else ContentScale.FillWidth,
                 modifier = mainImageModifier,
             ) {
                 when (painter.state) {
@@ -334,14 +333,14 @@ fun UrlImageView(
                                     content.blurhash,
                                     content.description,
                                     ContentScale.Crop,
-                                    Modifier.aspectRatio(ratio),
+                                    loadedImageModifier.aspectRatio(ratio),
                                 )
                             } else {
                                 DisplayBlurHash(
                                     content.blurhash,
                                     content.description,
                                     ContentScale.Crop,
-                                    Modifier,
+                                    loadedImageModifier,
                                 )
                             }
                         } else {
@@ -352,7 +351,7 @@ fun UrlImageView(
                         ClickableUrl(urlText = "${content.url} ", url = content.url)
                     }
                     is AsyncImagePainter.State.Success -> {
-                        SubcomposeAsyncImageContent()
+                        SubcomposeAsyncImageContent(loadedImageModifier)
 
                         AnimatedVisibility(
                             visible = controllerVisible.value,
@@ -374,7 +373,7 @@ fun UrlImageView(
                     content.blurhash,
                     content.description,
                     ContentScale.Crop,
-                    mainImageModifier
+                    loadedImageModifier
                         .aspectRatio(ratio)
                         .clickable { showImage.value = true },
                 )
@@ -600,25 +599,20 @@ fun ShareImageAction(
     popupExpanded: MutableState<Boolean>,
     content: BaseMediaContent,
     onDismiss: () -> Unit,
-    accountViewModel: AccountViewModel,
 ) {
     if (content is MediaUrlContent) {
         ShareImageAction(
             popupExpanded = popupExpanded,
             videoUri = content.url,
             postNostrUri = content.uri,
-            mimeType = content.mimeType,
             onDismiss = onDismiss,
-            accountViewModel = accountViewModel,
         )
     } else if (content is MediaPreloadedContent) {
         ShareImageAction(
             popupExpanded = popupExpanded,
             videoUri = content.localFile?.toUri().toString(),
             postNostrUri = content.uri,
-            mimeType = content.mimeType,
             onDismiss = onDismiss,
-            accountViewModel = accountViewModel,
         )
     }
 }
@@ -629,9 +623,7 @@ fun ShareImageAction(
     popupExpanded: MutableState<Boolean>,
     videoUri: String?,
     postNostrUri: String?,
-    mimeType: String?,
     onDismiss: () -> Unit,
-    accountViewModel: AccountViewModel,
 ) {
     DropdownMenu(
         expanded = popupExpanded.value,
@@ -641,7 +633,7 @@ fun ShareImageAction(
 
         if (videoUri != null && !videoUri.startsWith("file")) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.copy_url_to_clipboard)) },
+                text = { Text(stringRes(R.string.copy_url_to_clipboard)) },
                 onClick = {
                     clipboardManager.setText(AnnotatedString(videoUri))
                     onDismiss()
@@ -651,91 +643,12 @@ fun ShareImageAction(
 
         postNostrUri?.let {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.copy_the_note_id_to_the_clipboard)) },
+                text = { Text(stringRes(R.string.copy_the_note_id_to_the_clipboard)) },
                 onClick = {
                     clipboardManager.setText(AnnotatedString(it))
                     onDismiss()
                 },
             )
-        }
-
-        if (videoUri != null) {
-            if (!videoUri.startsWith("file")) {
-                val localContext = LocalContext.current
-
-                fun saveImage() {
-                    ImageSaver.saveImage(
-                        context = localContext,
-                        url = videoUri,
-                        onSuccess = {
-                            accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
-                        },
-                        onError = {
-                            accountViewModel.toast(R.string.failed_to_save_the_image, null, it)
-                        },
-                    )
-                }
-
-                val writeStoragePermissionState =
-                    rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
-                        if (isGranted) {
-                            saveImage()
-                        }
-                    }
-
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.save_to_gallery)) },
-                    onClick = {
-                        if (
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
-                            writeStoragePermissionState.status.isGranted
-                        ) {
-                            saveImage()
-                        } else {
-                            writeStoragePermissionState.launchPermissionRequest()
-                        }
-                        onDismiss()
-                    },
-                )
-            } else {
-                val localContext = LocalContext.current
-
-                fun saveImage() {
-                    ImageSaver.saveImage(
-                        context = localContext,
-                        localFile = videoUri.toUri().toFile(),
-                        mimeType = mimeType,
-                        onSuccess = {
-                            accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
-                        },
-                        onError = {
-                            accountViewModel.toast(R.string.failed_to_save_the_image, null, it)
-                        },
-                    )
-                }
-
-                val writeStoragePermissionState =
-                    rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
-                        if (isGranted) {
-                            saveImage()
-                        }
-                    }
-
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.save_to_gallery)) },
-                    onClick = {
-                        if (
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
-                            writeStoragePermissionState.status.isGranted
-                        ) {
-                            saveImage()
-                        } else {
-                            writeStoragePermissionState.launchPermissionRequest()
-                        }
-                        onDismiss()
-                    },
-                )
-            }
         }
     }
 }
@@ -762,7 +675,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
 
     openDialogMsg.value?.let {
         InformationDialog(
-            title = localContext.getString(R.string.hash_verification_info_title),
+            title = stringRes(localContext, R.string.hash_verification_info_title),
             textContent = it,
         ) {
             openDialogMsg.value = null
@@ -773,7 +686,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
         IconButton(
             modifier = hashVerifierMark,
             onClick = {
-                openDialogMsg.value = localContext.getString(R.string.hash_verification_passed)
+                openDialogMsg.value = stringRes(localContext, R.string.hash_verification_passed)
             },
         ) {
             HashCheckIcon(Size30dp)
@@ -782,7 +695,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
         IconButton(
             modifier = hashVerifierMark,
             onClick = {
-                openDialogMsg.value = localContext.getString(R.string.hash_verification_failed)
+                openDialogMsg.value = stringRes(localContext, R.string.hash_verification_failed)
             },
         ) {
             HashCheckFailedIcon(Size30dp)

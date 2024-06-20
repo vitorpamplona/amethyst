@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
+import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -114,7 +115,7 @@ open class NewMediaModel : ViewModel() {
                             }
                                 ?: run {
                                     viewModelScope.launch {
-                                        onError(context.getString(R.string.could_not_open_the_compressed_file))
+                                        onError(stringRes(context, R.string.could_not_open_the_compressed_file))
                                         isUploadingImage = false
                                         uploadingPercentage.value = 0.00f
                                         uploadingDescription.value = null
@@ -153,7 +154,7 @@ open class NewMediaModel : ViewModel() {
                                     isUploadingImage = false
                                     uploadingPercentage.value = 0.00f
                                     uploadingDescription.value = null
-                                    onError(context.getString(R.string.failed_to_upload_media, e.message))
+                                    onError(stringRes(context, R.string.failed_to_upload_media, e.message))
                                 }
                             }
                         }
@@ -162,7 +163,7 @@ open class NewMediaModel : ViewModel() {
                         isUploadingImage = false
                         uploadingPercentage.value = 0.00f
                         uploadingDescription.value = null
-                        onError(context.getString(R.string.error_when_compressing_media, it))
+                        onError(stringRes(context, R.string.error_when_compressing_media, it))
                     },
                 )
         }
@@ -179,9 +180,7 @@ open class NewMediaModel : ViewModel() {
         selectedServer = ServerOption(defaultServer(), false)
     }
 
-    fun canPost(): Boolean {
-        return !isUploadingImage && galleryUri != null && selectedServer != null
-    }
+    fun canPost(): Boolean = !isUploadingImage && galleryUri != null && selectedServer != null
 
     suspend fun createNIP94Record(
         uploadingResult: Nip96Uploader.PartialEvent,
@@ -197,11 +196,20 @@ open class NewMediaModel : ViewModel() {
 
         val imageUrl = uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "url" }?.get(1)
         val remoteMimeType =
-            uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "m" }?.get(1)?.ifBlank { null }
+            uploadingResult.tags
+                ?.firstOrNull { it.size > 1 && it[0] == "m" }
+                ?.get(1)
+                ?.ifBlank { null }
         val originalHash =
-            uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "ox" }?.get(1)?.ifBlank { null }
+            uploadingResult.tags
+                ?.firstOrNull { it.size > 1 && it[0] == "ox" }
+                ?.get(1)
+                ?.ifBlank { null }
         val dim =
-            uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "dim" }?.get(1)?.ifBlank { null }
+            uploadingResult.tags
+                ?.firstOrNull { it.size > 1 && it[0] == "dim" }
+                ?.get(1)
+                ?.ifBlank { null }
         val magnet =
             uploadingResult.tags
                 ?.firstOrNull { it.size > 1 && it[0] == "magnet" }
@@ -214,7 +222,7 @@ open class NewMediaModel : ViewModel() {
             uploadingPercentage.value = 0.00f
             uploadingDescription.value = null
             isUploadingImage = false
-            onError(context.getString(R.string.server_did_not_provide_a_url_after_uploading))
+            onError(stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))
             return
         }
 
@@ -254,7 +262,7 @@ open class NewMediaModel : ViewModel() {
                     uploadingPercentage.value = 0.00f
                     uploadingDescription.value = null
                     isUploadingImage = false
-                    onError(context.getString(R.string.could_not_prepare_local_file_to_upload, it))
+                    onError(stringRes(context, R.string.could_not_prepare_local_file_to_upload, it))
                 },
             )
         } else {
@@ -263,7 +271,7 @@ open class NewMediaModel : ViewModel() {
             uploadingPercentage.value = 0.00f
             uploadingDescription.value = null
             isUploadingImage = false
-            onError(context.getString(R.string.could_not_download_from_the_server))
+            onError(stringRes(context, R.string.could_not_download_from_the_server))
         }
     }
 
@@ -312,7 +320,7 @@ open class NewMediaModel : ViewModel() {
                     uploadingPercentage.value = 0.00f
                     isUploadingImage = false
                     cancel()
-                    onError(context.getString(R.string.could_not_prepare_local_file_to_upload, it))
+                    onError(stringRes(context, R.string.could_not_prepare_local_file_to_upload, it))
                 },
             )
         }

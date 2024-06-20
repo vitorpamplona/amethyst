@@ -34,7 +34,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -42,6 +41,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -75,7 +75,7 @@ fun BlankNote(
                     horizontalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        text = stringResource(R.string.post_not_found) + if (idHex != null) ": $idHex" else "",
+                        text = stringRes(R.string.post_not_found) + if (idHex != null) ": $idHex" else "",
                         modifier = Modifier.padding(30.dp),
                         color = Color.Gray,
                         textAlign = TextAlign.Center,
@@ -125,7 +125,7 @@ fun HiddenNote(
                 modifier = Modifier.padding(30.dp),
             ) {
                 Text(
-                    text = stringResource(R.string.post_was_flagged_as_inappropriate_by),
+                    text = stringRes(R.string.post_was_flagged_as_inappropriate_by),
                     color = Color.Gray,
                 )
                 FlowRow(modifier = Modifier.padding(top = 10.dp)) {
@@ -157,7 +157,7 @@ fun HiddenNote(
                         ),
                     contentPadding = ButtonPadding,
                 ) {
-                    Text(text = stringResource(R.string.show_anyway), color = Color.White)
+                    Text(text = stringRes(R.string.show_anyway), color = Color.White)
                 }
             }
         }
@@ -188,7 +188,7 @@ fun HiddenNoteByMe(
                 modifier = Modifier.padding(30.dp),
             ) {
                 Text(
-                    text = stringResource(R.string.post_was_hidden),
+                    text = stringRes(R.string.post_was_hidden),
                     color = Color.Gray,
                     textAlign = TextAlign.Center,
                 )
@@ -203,7 +203,7 @@ fun HiddenNoteByMe(
                         ),
                     contentPadding = ButtonPadding,
                 ) {
-                    Text(text = stringResource(R.string.show_anyway), color = Color.White)
+                    Text(text = stringRes(R.string.show_anyway), color = Color.White)
                 }
             }
         }

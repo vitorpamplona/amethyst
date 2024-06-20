@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note.elements
 
 import android.content.Context
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -50,7 +49,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -68,6 +66,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
@@ -81,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -213,7 +213,7 @@ fun ZapTheDevsCard(
     val releaseNoteState by baseNote.live().metadata.observeAsState()
     val releaseNote = releaseNoteState?.note ?: return
 
-    Row(modifier = Modifier.padding(horizontal = Size10dp)) {
+    Row(modifier = Modifier.padding(start = Size10dp, end = Size10dp, bottom = Size10dp)) {
         Card(
             modifier = MaterialTheme.colorScheme.imageModifier,
         ) {
@@ -226,7 +226,7 @@ fun ZapTheDevsCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = stringResource(id = R.string.zap_the_devs_title),
+                        text = stringRes(id = R.string.zap_the_devs_title),
                         style =
                             TextStyle(
                                 fontSize = 20.sp,
@@ -247,7 +247,7 @@ fun ZapTheDevsCard(
                 ClickableText(
                     text =
                         buildAnnotatedString {
-                            append(stringResource(id = R.string.zap_the_devs_description, BuildConfig.VERSION_NAME))
+                            append(stringRes(id = R.string.zap_the_devs_description, BuildConfig.VERSION_NAME))
                             append(" ")
                             withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
                                 append("#value4value")
@@ -270,14 +270,14 @@ fun ZapTheDevsCard(
                             text =
                                 buildAnnotatedString {
                                     withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
-                                        append(stringResource(id = R.string.version_name, BuildConfig.VERSION_NAME.substringBefore("-")))
+                                        append(stringRes(id = R.string.version_name, BuildConfig.VERSION_NAME.substringBefore("-")))
                                     }
-                                    append(" " + stringResource(id = R.string.brought_to_you_by))
+                                    append(" " + stringRes(id = R.string.brought_to_you_by))
                                 },
                             onClick = { nav(route) },
                         )
                     } else {
-                        Text(stringResource(id = R.string.this_version_brought_to_you_by))
+                        Text(stringRes(id = R.string.this_version_brought_to_you_by))
                     }
 
                     Spacer(modifier = StdVertSpacer)
@@ -377,7 +377,7 @@ fun ZapDonationButton(
 
         if (showErrorMessageDialog != null) {
             ErrorMessageDialog(
-                title = stringResource(id = R.string.error_dialog_zap_error),
+                title = stringRes(id = R.string.error_dialog_zap_error),
                 textContent = showErrorMessageDialog ?: "",
                 onClickStartMessage = {
                     baseNote.author?.let {
@@ -424,8 +424,7 @@ fun ZapDonationButton(
                             targetValue = zappingProgress,
                             animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
                             label = "ZapIconIndicator",
-                        )
-                            .value,
+                        ).value,
                     modifier = remember { Modifier.size(animationSize) },
                     strokeWidth = 2.dp,
                     color = grayTint,
@@ -443,7 +442,7 @@ fun ZapDonationButton(
                         }
                     }
 
-                    Crossfade(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon") {
+                    CrossfadeIfEnabled(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon", accountViewModel = accountViewModel) {
                         if (it) {
                             ZappedIcon(iconSizeModifier)
                         } else {
@@ -455,9 +454,9 @@ fun ZapDonationButton(
         }
 
         if (hasZapped) {
-            Text(text = stringResource(id = R.string.thank_you))
+            Text(text = stringRes(id = R.string.thank_you))
         } else {
-            Text(text = stringResource(id = R.string.donate_now))
+            Text(text = stringRes(id = R.string.donate_now))
         }
     }
 }
@@ -481,13 +480,13 @@ fun customZapClick(
 
     if (accountViewModel.account.zapAmountChoices.isEmpty()) {
         accountViewModel.toast(
-            context.getString(R.string.error_dialog_zap_error),
-            context.getString(R.string.no_zap_amount_setup_long_press_to_change),
+            stringRes(context, R.string.error_dialog_zap_error),
+            stringRes(context, R.string.no_zap_amount_setup_long_press_to_change),
         )
     } else if (!accountViewModel.isWriteable()) {
         accountViewModel.toast(
-            context.getString(R.string.error_dialog_zap_error),
-            context.getString(R.string.login_with_a_private_key_to_be_able_to_send_zaps),
+            stringRes(context, R.string.error_dialog_zap_error),
+            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_send_zaps),
         )
     } else if (accountViewModel.account.zapAmountChoices.size == 1) {
         val amount = accountViewModel.account.zapAmountChoices.first()
@@ -499,6 +498,7 @@ fun customZapClick(
                 null,
                 "",
                 context,
+                showErrorIfNoLnAddress = false,
                 onError = onError,
                 onProgress = { onZappingProgress(it) },
                 zapType = accountViewModel.account.defaultZapType,

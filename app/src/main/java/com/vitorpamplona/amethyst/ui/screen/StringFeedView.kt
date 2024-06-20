@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,22 +34,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun StringFeedView(
     viewModel: StringFeedViewModel,
+    accountViewModel: AccountViewModel,
     pre: (@Composable () -> Unit)? = null,
     post: (@Composable () -> Unit)? = null,
     inner: @Composable (String) -> Unit,
 ) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
-    Crossfade(targetState = feedState, animationSpec = tween(durationMillis = 100)) { state ->
+    CrossfadeIfEnabled(targetState = feedState, animationSpec = tween(durationMillis = 100), accountViewModel = accountViewModel) { state ->
         when (state) {
             is StringFeedState.Empty -> {
                 StringFeedEmpty(pre, post) { viewModel.invalidateData() }
@@ -82,8 +84,8 @@ fun StringFeedEmpty(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Text(stringResource(R.string.feed_is_empty))
-            OutlinedButton(onClick = onRefresh) { Text(text = stringResource(R.string.refresh)) }
+            Text(stringRes(R.string.feed_is_empty))
+            OutlinedButton(onClick = onRefresh) { Text(text = stringRes(R.string.refresh)) }
         }
 
         post?.let { it() }

@@ -72,7 +72,6 @@ import androidx.compose.ui.platform.LocalAutofill
 import androidx.compose.ui.platform.LocalAutofillTree
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -93,6 +92,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.note.authenticate
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -143,7 +143,7 @@ fun AccountBackupDialog(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    val content1 = stringResource(R.string.account_backup_tips2_md)
+                    val content1 = stringRes(R.string.account_backup_tips2_md)
 
                     val astNode1 =
                         remember {
@@ -163,7 +163,7 @@ fun AccountBackupDialog(
 
                     Spacer(modifier = Modifier.height(30.dp))
 
-                    val content = stringResource(R.string.account_backup_tips3_md)
+                    val content = stringRes(R.string.account_backup_tips3_md)
 
                     val astNode =
                         remember {
@@ -196,8 +196,7 @@ fun AccountBackupDialog(
                             Modifier
                                 .onGloballyPositioned { coordinates ->
                                     autofillNode.boundingBox = coordinates.boundsInWindow()
-                                }
-                                .onFocusChanged { focusState ->
+                                }.onFocusChanged { focusState ->
                                     autofill?.run {
                                         if (focusState.isFocused) {
                                             requestAutofillForNode(autofillNode)
@@ -221,7 +220,7 @@ fun AccountBackupDialog(
                             ),
                         placeholder = {
                             Text(
-                                text = stringResource(R.string.ncryptsec_password),
+                                text = stringRes(R.string.ncryptsec_password),
                                 color = MaterialTheme.colorScheme.placeholderText,
                             )
                         },
@@ -233,9 +232,9 @@ fun AccountBackupDialog(
                                             if (showCharsPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                                         contentDescription =
                                             if (showCharsPassword) {
-                                                stringResource(R.string.show_password)
+                                                stringRes(R.string.show_password)
                                             } else {
-                                                stringResource(
+                                                stringRes(
                                                     R.string.hide_password,
                                                 )
                                             },
@@ -271,8 +270,7 @@ private fun NSecCopyButton(accountViewModel: AccountViewModel) {
     val scope = rememberCoroutineScope()
 
     val keyguardLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-                result: ActivityResult ->
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
             if (result.resultCode == Activity.RESULT_OK) {
                 copyNSec(context, scope, accountViewModel.account, clipboardManager)
             }
@@ -282,7 +280,7 @@ private fun NSecCopyButton(accountViewModel: AccountViewModel) {
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             authenticate(
-                title = context.getString(R.string.copy_my_secret_key),
+                title = stringRes(context, R.string.copy_my_secret_key),
                 context = context,
                 keyguardLauncher = keyguardLauncher,
                 onApproved = { copyNSec(context, scope, accountViewModel.account, clipboardManager) },
@@ -300,11 +298,11 @@ private fun NSecCopyButton(accountViewModel: AccountViewModel) {
             tint = MaterialTheme.colorScheme.onPrimary,
             imageVector = Icons.Default.Key,
             contentDescription =
-                stringResource(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
+                stringRes(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
             modifier = Modifier.padding(end = 5.dp),
         )
         Text(
-            stringResource(id = R.string.copy_my_secret_key),
+            stringRes(id = R.string.copy_my_secret_key),
             color = MaterialTheme.colorScheme.onPrimary,
         )
     }
@@ -320,8 +318,7 @@ private fun EncryptNSecCopyButton(
     val scope = rememberCoroutineScope()
 
     val keyguardLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-                result: ActivityResult ->
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
             if (result.resultCode == Activity.RESULT_OK) {
                 encryptCopyNSec(password, context, scope, accountViewModel, clipboardManager)
             }
@@ -331,7 +328,7 @@ private fun EncryptNSecCopyButton(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = {
             authenticate(
-                title = context.getString(R.string.copy_my_secret_key),
+                title = stringRes(context, R.string.copy_my_secret_key),
                 context = context,
                 keyguardLauncher = keyguardLauncher,
                 onApproved = { encryptCopyNSec(password, context, scope, accountViewModel, clipboardManager) },
@@ -345,11 +342,11 @@ private fun EncryptNSecCopyButton(
         Icon(
             imageVector = Icons.Default.Key,
             contentDescription =
-                stringResource(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
+                stringRes(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
             modifier = Modifier.padding(end = 5.dp),
         )
         Text(
-            stringResource(id = R.string.encrypt_and_copy_my_secret_key),
+            stringRes(id = R.string.encrypt_and_copy_my_secret_key),
         )
     }
 }
@@ -374,12 +371,12 @@ private fun copyNSec(
     account.keyPair.privKey?.let {
         clipboardManager.setText(AnnotatedString(it.toNsec()))
         scope.launch {
-            Toast.makeText(
-                context,
-                context.getString(R.string.secret_key_copied_to_clipboard),
-                Toast.LENGTH_SHORT,
-            )
-                .show()
+            Toast
+                .makeText(
+                    context,
+                    stringRes(context, R.string.secret_key_copied_to_clipboard),
+                    Toast.LENGTH_SHORT,
+                ).show()
         }
     }
 }
@@ -393,12 +390,12 @@ private fun encryptCopyNSec(
 ) {
     if (password.value.text.isBlank()) {
         scope.launch {
-            Toast.makeText(
-                context,
-                context.getString(R.string.password_is_required),
-                Toast.LENGTH_SHORT,
-            )
-                .show()
+            Toast
+                .makeText(
+                    context,
+                    stringRes(context, R.string.password_is_required),
+                    Toast.LENGTH_SHORT,
+                ).show()
         }
     } else {
         accountViewModel.account.keyPair.privKey?.let {
@@ -406,21 +403,21 @@ private fun encryptCopyNSec(
             if (key != null) {
                 clipboardManager.setText(AnnotatedString(key))
                 scope.launch {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.secret_key_copied_to_clipboard),
-                        Toast.LENGTH_SHORT,
-                    )
-                        .show()
+                    Toast
+                        .makeText(
+                            context,
+                            stringRes(context, R.string.secret_key_copied_to_clipboard),
+                            Toast.LENGTH_SHORT,
+                        ).show()
                 }
             } else {
                 scope.launch {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.failed_to_encrypt_key),
-                        Toast.LENGTH_SHORT,
-                    )
-                        .show()
+                    Toast
+                        .makeText(
+                            context,
+                            stringRes(context, R.string.failed_to_encrypt_key),
+                            Toast.LENGTH_SHORT,
+                        ).show()
                 }
             }
         }

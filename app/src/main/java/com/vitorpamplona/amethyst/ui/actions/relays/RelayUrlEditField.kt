@@ -35,9 +35,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relays.RelayStat
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -49,7 +49,7 @@ fun RelayUrlEditField(onNewRelay: (BasicRelaySetupInfo) -> Unit) {
 
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Size10dp)) {
         OutlinedTextField(
-            label = { Text(text = stringResource(R.string.add_a_relay)) },
+            label = { Text(text = stringRes(R.string.add_a_relay)) },
             modifier = Modifier.weight(1f),
             value = url,
             onValueChange = { url = it },
@@ -81,7 +81,7 @@ fun RelayUrlEditField(onNewRelay: (BasicRelaySetupInfo) -> Unit) {
                         },
                 ),
         ) {
-            Text(text = stringResource(id = R.string.add), color = Color.White)
+            Text(text = stringRes(id = R.string.add), color = Color.White)
         }
     }
 }

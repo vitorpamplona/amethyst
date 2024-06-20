@@ -40,7 +40,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -54,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.NoteBody
 import com.vitorpamplona.amethyst.ui.note.observeEdits
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
@@ -100,7 +100,7 @@ fun RenderTextModificationEvent(
     ) {
         Column(Modifier.fillMaxWidth().padding(Size10dp)) {
             Text(
-                text = stringResource(id = R.string.proposal_to_edit),
+                text = stringRes(id = R.string.proposal_to_edit),
                 style =
                     TextStyle(
                         fontSize = 18.sp,
@@ -170,7 +170,8 @@ fun RenderTextModificationEvent(
 
                         Column(
                             modifier =
-                                MaterialTheme.colorScheme.innerPostModifier.padding(Size10dp)
+                                MaterialTheme.colorScheme.innerPostModifier
+                                    .padding(Size10dp)
                                     .clickable {
                                         routeFor(
                                             baseNote,
@@ -215,7 +216,7 @@ fun RenderTextModificationEvent(
                     onClick = { wantsToEditPost.value = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(text = stringResource(id = R.string.accept_the_suggestion))
+                    Text(text = stringRes(id = R.string.accept_the_suggestion))
                 }
             }
         }
@@ -223,7 +224,7 @@ fun RenderTextModificationEvent(
 }
 
 @Stable
-class EditState() {
+class EditState {
     private var modificationsList: List<Note> = persistentListOf()
     private var modificationToShowIndex: Int = -1
 

@@ -51,7 +51,7 @@ fun UserCompose(
         UserPicture(baseUser, Size55dp, accountViewModel = accountViewModel, nav = nav)
 
         Column(modifier = remember { Modifier.padding(start = 10.dp).weight(1f) }) {
-            Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser) }
+            Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser, accountViewModel = accountViewModel) }
 
             AboutDisplay(baseUser)
         }
