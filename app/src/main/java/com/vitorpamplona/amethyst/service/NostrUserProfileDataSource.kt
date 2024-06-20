@@ -96,6 +96,7 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
                     JsonFilter(
                         kinds = listOf(LnZapEvent.KIND),
                         tags = mapOf("p" to listOf(it.pubkeyHex)),
+                        limit = 200,
                     ),
             )
         }
@@ -178,7 +179,6 @@ object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
                 createAcceptedAwardsFilter(),
                 createReceivedAwardsFilter(),
                 createBookmarksFilter(),
-            )
-                .ifEmpty { null }
+            ).ifEmpty { null }
     }
 }
