@@ -72,6 +72,7 @@ data class AccountInfo(
 
 private object PrefKeys {
     const val CURRENT_ACCOUNT = "currently_logged_in_account"
+    const val SAVED_ACCOUNTS = "all_saved_accounts"
     const val NOSTR_PRIVKEY = "nostr_privkey"
     const val NOSTR_PUBKEY = "nostr_pubkey"
     const val RELAYS = "relays"
@@ -140,8 +141,24 @@ object LocalPreferences {
                         Event.mapper.readValue<List<AccountInfo>>(it)
                     }
 
-                if (newSystemOfAccounts != null && newSystemOfAccounts.isNotEmpty()) {
+                if (!newSystemOfAccounts.isNullOrEmpty()) {
                     savedAccounts = newSystemOfAccounts
+                } else {
+                    val oldAccounts = getString(PrefKeys.SAVED_ACCOUNTS, null)?.split(COMMA) ?: listOf()
+
+                    val migrated =
+                        oldAccounts.map { npub ->
+                            AccountInfo(
+                                npub,
+                                encryptedPreferences(npub).getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false),
+                                (encryptedPreferences(npub).getString(PrefKeys.NOSTR_PRIVKEY, "") ?: "")
+                                    .isNotBlank(),
+                            )
+                        }
+
+                    savedAccounts = migrated
+
+                    edit().apply { putString(PrefKeys.ALL_ACCOUNT_INFO, Event.mapper.writeValueAsString(savedAccounts)) }.apply()
                 }
             }
         }
