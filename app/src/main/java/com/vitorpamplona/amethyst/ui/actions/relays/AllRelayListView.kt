@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +40,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -113,7 +113,8 @@ fun AllRelayListView(
                             Text(
                                 text = stringRes(R.string.relay_settings),
                                 style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier.widthIn(max = 200.dp),
+                                overflow = TextOverflow.Ellipsis,
+                                maxLines = 1,
                             )
 
                             SaveButton(

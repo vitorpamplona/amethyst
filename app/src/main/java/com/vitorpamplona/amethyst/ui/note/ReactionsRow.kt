@@ -56,8 +56,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
@@ -1410,7 +1408,7 @@ private fun ActionableReactionButton(
         when (reactionType) {
             "+" -> {
                 LikedIcon(modifier = thisModifier.size(16.dp), tint = Color.White)
-                
+
                 Text(
                     text = removeSymbol,
                     color = Color.White,

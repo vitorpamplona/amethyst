@@ -299,7 +299,7 @@ private fun RenderReactionOption(
             when (reactionType) {
                 "+" -> {
                     LikedIcon(modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onBackground)
-                  
+
                     Text(
                         text = " ✖",
                         color = MaterialTheme.colorScheme.onBackground,
