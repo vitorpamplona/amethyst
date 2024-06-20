@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.amethyst.service.relays.EOSETime
+import com.vitorpamplona.amethyst.service.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.amethyst.service.relays.JsonFilter
 import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.service.relays.TypedFilter
@@ -76,8 +77,8 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
     val latestEOSEs = EOSEAccount()
     val hasLoadedTheBasics = mutableMapOf<User, Boolean>()
 
-    fun createAccountContactListFilter(): TypedFilter {
-        return TypedFilter(
+    fun createAccountContactListFilter(): TypedFilter =
+        TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
                 JsonFilter(
@@ -86,10 +87,9 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     limit = 1,
                 ),
         )
-    }
 
-    fun createAccountMetadataFilter(): TypedFilter {
-        return TypedFilter(
+    fun createAccountMetadataFilter(): TypedFilter =
+        TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
                 JsonFilter(
@@ -98,10 +98,9 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     limit = 1,
                 ),
         )
-    }
 
-    fun createAccountRelayListFilter(): TypedFilter {
-        return TypedFilter(
+    fun createAccountRelayListFilter(): TypedFilter =
+        TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
                 JsonFilter(
@@ -110,12 +109,11 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     limit = 10,
                 ),
         )
-    }
 
     fun createOtherAccountsBaseFilter(): TypedFilter? {
         if (otherAccounts.isEmpty()) return null
         return TypedFilter(
-            types = COMMON_FEED_TYPES,
+            types = EVENT_FINDER_TYPES,
             filter =
                 JsonFilter(
                     kinds =
@@ -136,8 +134,8 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         )
     }
 
-    fun createAccountSettingsFilter(): TypedFilter {
-        return TypedFilter(
+    fun createAccountSettingsFilter(): TypedFilter =
+        TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
                 JsonFilter(
@@ -146,10 +144,9 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     limit = 100,
                 ),
         )
-    }
 
-    fun createAccountReportsFilter(): TypedFilter {
-        return TypedFilter(
+    fun createAccountReportsFilter(): TypedFilter =
+        TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
                 JsonFilter(
@@ -162,10 +159,9 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                             ?.relayList,
                 ),
         )
-    }
 
-    fun createAccountLastPostsListFilter(): TypedFilter {
-        return TypedFilter(
+    fun createAccountLastPostsListFilter(): TypedFilter =
+        TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
                 JsonFilter(
@@ -173,7 +169,6 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     limit = 400,
                 ),
         )
-    }
 
     fun createNotificationFilter(): TypedFilter {
         val since =
@@ -404,8 +399,8 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
         }
     }
 
-    override fun updateChannelFilters() {
-        return if (hasLoadedTheBasics[account.userProfile()] != null) {
+    override fun updateChannelFilters() =
+        if (hasLoadedTheBasics[account.userProfile()] != null) {
             // gets everything about the user logged in
             accountChannel.typedFilters =
                 listOfNotNull(
@@ -419,8 +414,7 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     createAccountSettingsFilter(),
                     createAccountLastPostsListFilter(),
                     createOtherAccountsBaseFilter(),
-                )
-                    .ifEmpty { null }
+                ).ifEmpty { null }
         } else {
             // just the basics.
             accountChannel.typedFilters =
@@ -429,10 +423,8 @@ object NostrAccountDataSource : NostrDataSource("AccountData") {
                     createAccountContactListFilter(),
                     createAccountRelayListFilter(),
                     createAccountSettingsFilter(),
-                )
-                    .ifEmpty { null }
+                ).ifEmpty { null }
         }
-    }
 
     override fun auth(
         relay: Relay,
