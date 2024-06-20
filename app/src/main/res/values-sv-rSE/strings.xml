@@ -448,6 +448,7 @@
     <string name="connectivity_type_never">Aldrig</string>
     <string name="ui_feature_set_type_complete">Slutförd</string>
     <string name="ui_feature_set_type_simplified">Förenklad</string>
+    <string name="ui_feature_set_type_performance">Prestanda</string>
     <string name="system">System</string>
     <string name="light">Ljus</string>
     <string name="dark">Mörk</string>

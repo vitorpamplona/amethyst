@@ -46,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.distinctUntilChanged
@@ -113,6 +112,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.RenderChannelHeader
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
@@ -461,7 +461,14 @@ fun InnerNoteWithReactions(
         horizontalArrangement = RowColSpacing10dp,
     ) {
         if (notBoostedNorQuote) {
-            AuthorAndRelayInformation(baseNote, accountViewModel, nav)
+            Column(WidthAuthorPictureModifier, verticalArrangement = RowColSpacing5dp) {
+                // Draws the boosted picture outside the boosted card.
+                Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
+                    RenderAuthorImages(baseNote, nav, accountViewModel)
+                }
+
+                BadgeBox(baseNote, accountViewModel, nav)
+            }
         }
 
         Column(Modifier.fillMaxWidth()) {
@@ -470,7 +477,7 @@ fun InnerNoteWithReactions(
                     baseNote.event !is GenericRepostEvent &&
                     !isBoostedNote &&
                     !isQuotedNote &&
-                    accountViewModel.settings.featureSet != FeatureSetType.SIMPLIFIED
+                    accountViewModel.settings.featureSet == FeatureSetType.COMPLETE
             NoteBody(
                 baseNote = baseNote,
                 showAuthorPicture = isQuotedNote,
@@ -968,9 +975,9 @@ fun FirstUserInfoRow(
         if (showAuthorPicture) {
             NoteAuthorPicture(baseNote, nav, accountViewModel, Size25dp)
             Spacer(HalfPadding)
-            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor)
+            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
         } else {
-            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor)
+            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
         }
 
         if (isCommunityPost) {
@@ -1052,28 +1059,12 @@ fun observeEdits(
 }
 
 @Composable
-private fun AuthorAndRelayInformation(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    Column(WidthAuthorPictureModifier, verticalArrangement = RowColSpacing5dp) {
-        // Draws the boosted picture outside the boosted card.
-        Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
-            RenderAuthorImages(baseNote, nav, accountViewModel)
-        }
-
-        BadgeBox(baseNote, accountViewModel, nav)
-    }
-}
-
-@Composable
 private fun BadgeBox(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    if (accountViewModel.settings.featureSet != FeatureSetType.SIMPLIFIED) {
+    if (accountViewModel.settings.featureSet == FeatureSetType.COMPLETE) {
         if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
             baseNote.replyTo?.lastOrNull()?.let { RelayBadges(it, accountViewModel, nav) }
         } else {
@@ -1088,9 +1079,7 @@ private fun RenderAuthorImages(
     nav: (String) -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    val isRepost = baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
-
-    if (isRepost) {
+    if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
         val baseRepost = baseNote.replyTo?.lastOrNull()
         if (baseRepost != null) {
             RepostNoteAuthorPicture(baseNote, baseRepost, accountViewModel, nav)
@@ -1108,6 +1097,7 @@ private fun RenderAuthorImages(
                 ChannelNotePicture(
                     channel,
                     loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                    loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                 )
             }
         }
@@ -1118,6 +1108,7 @@ private fun RenderAuthorImages(
 private fun ChannelNotePicture(
     baseChannel: Channel,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
 ) {
     val model by
         baseChannel.live
@@ -1129,9 +1120,10 @@ private fun ChannelNotePicture(
         RobohashFallbackAsyncImage(
             robot = baseChannel.idHex,
             model = model,
-            contentDescription = stringResource(R.string.group_picture),
+            contentDescription = stringRes(R.string.group_picture),
             modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
             loadProfilePicture = loadProfilePicture,
+            loadRobohash = loadRobohash,
         )
     }
 }

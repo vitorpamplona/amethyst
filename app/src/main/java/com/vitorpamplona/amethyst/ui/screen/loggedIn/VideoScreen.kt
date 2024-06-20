@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +39,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -53,7 +51,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -63,7 +60,9 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
+import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.BoostReaction
@@ -73,7 +72,6 @@ import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.RenderAllRelayList
 import com.vitorpamplona.amethyst.ui.note.ReplyReaction
-import com.vitorpamplona.amethyst.ui.note.ViewCountReaction
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
@@ -88,16 +86,17 @@ import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AuthorInfoVideoFeed
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.ui.theme.Size39Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.VideoReactionColumnPadding
-import com.vitorpamplona.amethyst.ui.theme.onBackgroundColorFilter
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
@@ -176,10 +175,11 @@ fun RenderPage(
 ) {
     val feedState by videoFeedView.feedContent.collectAsStateWithLifecycle()
 
-    Crossfade(
+    CrossfadeIfEnabled(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),
         label = "RenderPage",
+        accountViewModel = accountViewModel,
     ) { state ->
         when (state) {
             is FeedState.Empty -> {
@@ -315,10 +315,10 @@ private fun RenderAuthorInformation(
             verticalArrangement = Arrangement.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                NoteUsernameDisplay(note, remember { Modifier.weight(1f) })
+                NoteUsernameDisplay(note, Modifier.weight(1f), accountViewModel = accountViewModel)
                 VideoUserOptionAction(note, accountViewModel, nav)
             }
-            if (accountViewModel.settings.featureSet != FeatureSetType.SIMPLIFIED) {
+            if (accountViewModel.settings.featureSet == FeatureSetType.COMPLETE) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ObserveDisplayNip05Status(
                         note.author!!,
@@ -345,26 +345,27 @@ private fun VideoUserOptionAction(
     nav: (String) -> Unit,
 ) {
     val popupExpanded = remember { mutableStateOf(false) }
-    val enablePopup = remember { { popupExpanded.value = true } }
 
-    IconButton(
-        modifier = remember { Modifier.size(22.dp) },
-        onClick = enablePopup,
+    ClickableBox(
+        modifier = Size22Modifier,
+        onClick = { popupExpanded.value = true },
     ) {
         Icon(
             imageVector = Icons.Default.MoreVert,
-            contentDescription = stringResource(id = R.string.more_options),
-            modifier = remember { Modifier.size(20.dp) },
+            contentDescription = stringRes(id = R.string.more_options),
+            modifier = Size20Modifier,
             tint = MaterialTheme.colorScheme.placeholderText,
         )
 
-        NoteDropDownMenu(
-            note,
-            popupExpanded,
-            null,
-            accountViewModel,
-            nav,
-        )
+        if (popupExpanded.value) {
+            NoteDropDownMenu(
+                note,
+                { popupExpanded.value = false },
+                null,
+                accountViewModel,
+                nav,
+            )
+        }
     }
 }
 
@@ -442,12 +443,6 @@ fun ReactionsColumn(
             iconSizeModifier = Size40Modifier,
             animationSize = Size35dp,
             nav = nav,
-        )
-        ViewCountReaction(
-            note = baseNote,
-            grayTint = MaterialTheme.colorScheme.onBackground,
-            barChartModifier = Size39Modifier,
-            viewCountColorFilter = MaterialTheme.colorScheme.onBackgroundColorFilter,
         )
     }
 }

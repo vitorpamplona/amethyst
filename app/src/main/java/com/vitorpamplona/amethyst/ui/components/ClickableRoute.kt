@@ -470,13 +470,12 @@ fun CreateTextWithEmoji(
     overflow: TextOverflow = TextOverflow.Clip,
     modifier: Modifier = Modifier,
 ) {
-    val textColor =
-        color.takeOrElse { LocalTextStyle.current.color.takeOrElse { LocalContentColor.current } }
-
     CustomEmojiChecker(
         text,
         tags,
         onEmojiText = {
+            val textColor =
+                color.takeOrElse { LocalTextStyle.current.color.takeOrElse { LocalContentColor.current } }
             val style =
                 LocalTextStyle.current
                     .merge(
@@ -486,12 +485,13 @@ fun CreateTextWithEmoji(
                             fontWeight = fontWeight,
                             fontSize = fontSize,
                         ),
-                    )
-                    .toSpanStyle()
+                    ).toSpanStyle()
 
             InLineIconRenderer(it, style, fontSize, maxLines, overflow, modifier)
         },
         onRegularText = {
+            val textColor =
+                color.takeOrElse { LocalTextStyle.current.color.takeOrElse { LocalContentColor.current } }
             Text(
                 text = it,
                 color = textColor,
@@ -536,8 +536,7 @@ fun CreateTextWithEmoji(
                                 fontWeight = fontWeight,
                                 fontSize = fontSize,
                             ),
-                        )
-                        .toSpanStyle()
+                        ).toSpanStyle()
                 }
 
             InLineIconRenderer(it, style, fontSize, maxLines, overflow, modifier)
@@ -672,8 +671,7 @@ fun ClickableInLineIconRenderer(
                 } else {
                     null
                 }
-            }
-            .associate { it.first to it.second }
+            }.associate { it.first to it.second }
 
     val annotatedText =
         buildAnnotatedString {
@@ -757,8 +755,7 @@ fun InLineIconRenderer(
                 } else {
                     null
                 }
-            }
-            .associate { it.first to it.second }
+            }.associate { it.first to it.second }
 
     val annotatedText =
         remember {

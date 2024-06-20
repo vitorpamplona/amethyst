@@ -64,7 +64,9 @@ class Nip05NostrAddressVerifierTest {
 
             coEvery { nip05Verifier.fetchNip05Json(any(), any(), any()) } answers
                 {
-                    secondArg<(String) -> Unit>().invoke(nostrJson)
+                    runBlocking {
+                        secondArg<suspend (String) -> Unit>().invoke(nostrJson)
+                    }
                 }
 
             val nip05 = "$userNameToTest@domain.com"
@@ -95,7 +97,9 @@ class Nip05NostrAddressVerifierTest {
                     "}"
             coEvery { nip05Verifier.fetchNip05Json(any(), any(), any()) } answers
                 {
-                    secondArg<(String) -> Unit>().invoke(nostrJson)
+                    runBlocking {
+                        secondArg<suspend (String) -> Unit>().invoke(nostrJson)
+                    }
                 }
 
             val nip05 = "$ALL_LOWER_CASE_USER_NAME@domain.com"

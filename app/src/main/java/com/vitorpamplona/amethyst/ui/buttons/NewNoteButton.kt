@@ -33,11 +33,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
 @Composable
@@ -59,7 +59,7 @@ fun NewNoteButton(
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_compose),
-            contentDescription = stringResource(R.string.new_post),
+            contentDescription = stringRes(R.string.new_post),
             modifier = Modifier.size(26.dp),
             tint = Color.White,
         )

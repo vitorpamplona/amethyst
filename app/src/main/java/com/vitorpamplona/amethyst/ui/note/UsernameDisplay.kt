@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Context
 import android.util.Log
-import androidx.compose.animation.Crossfade
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,7 +39,9 @@ import androidx.lifecycle.LifecycleOwner
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.tts.TextToSpeechHelper
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.StdButtonSizeModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
@@ -50,9 +51,10 @@ fun NoteUsernameDisplay(
     baseNote: Note,
     weight: Modifier = Modifier,
     textColor: Color = Color.Unspecified,
+    accountViewModel: AccountViewModel,
 ) {
     WatchAuthor(baseNote) {
-        UsernameDisplay(it, weight, textColor = textColor)
+        UsernameDisplay(it, weight, textColor = textColor, accountViewModel = accountViewModel)
     }
 }
 
@@ -77,6 +79,7 @@ fun WatchAuthor(
 fun WatchAuthorWithBlank(
     baseNote: Note,
     modifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
     inner: @Composable (User?) -> Unit,
 ) {
     val noteAuthor = baseNote.author
@@ -85,7 +88,7 @@ fun WatchAuthorWithBlank(
     } else {
         val authorState by baseNote.live().metadata.observeAsState()
 
-        Crossfade(targetState = authorState?.note?.author, modifier = modifier, label = "WatchAuthorWithBlank") { newAuthor ->
+        CrossfadeIfEnabled(targetState = authorState?.note?.author, modifier = modifier, label = "WatchAuthorWithBlank", accountViewModel = accountViewModel) { newAuthor ->
             inner(newAuthor)
         }
     }
@@ -97,10 +100,11 @@ fun UsernameDisplay(
     weight: Modifier = Modifier,
     fontWeight: FontWeight = FontWeight.Bold,
     textColor: Color = Color.Unspecified,
+    accountViewModel: AccountViewModel,
 ) {
     val userMetadata by baseUser.live().userMetadataInfo.observeAsState(baseUser.info)
 
-    Crossfade(targetState = userMetadata, modifier = weight, label = "UsernameDisplay") {
+    CrossfadeIfEnabled(targetState = userMetadata, modifier = weight, label = "UsernameDisplay", accountViewModel = accountViewModel) {
         val name = it?.bestName()
         if (name != null) {
             UserDisplay(name, it.tags, weight, fontWeight, textColor)
@@ -164,7 +168,8 @@ private fun speak(
     context: Context,
     owner: LifecycleOwner,
 ) {
-    TextToSpeechHelper.getInstance(context)
+    TextToSpeechHelper
+        .getInstance(context)
         .registerLifecycle(owner)
         .speak(message)
         .highlight()

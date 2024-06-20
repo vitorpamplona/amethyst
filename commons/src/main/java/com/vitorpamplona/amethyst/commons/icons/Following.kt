@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.labels
+package com.vitorpamplona.amethyst.commons.icons
 
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
@@ -41,12 +41,9 @@ private fun VectorPreview() {
 private var labelsFollowing: ImageVector? = null
 
 public val Following: ImageVector
-    get() {
-        if (labelsFollowing != null) {
-            return labelsFollowing!!
-        }
-        labelsFollowing =
-            ImageVector.Builder(
+    get() =
+        labelsFollowing ?: ImageVector
+            .Builder(
                 name = "Following",
                 defaultWidth = 30.dp,
                 defaultHeight = 30.dp,
@@ -128,6 +125,4 @@ public val Following: ImageVector
                     close()
                 }
             }.build()
-
-        return labelsFollowing!!
-    }
+            .also { labelsFollowing = it }

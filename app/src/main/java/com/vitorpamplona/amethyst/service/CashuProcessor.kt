@@ -28,6 +28,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.events.Event
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
@@ -46,9 +47,7 @@ data class CashuToken(
 object CachedCashuProcessor {
     val cashuCache = LruCache<String, GenericLoadable<CashuToken>>(20)
 
-    fun cached(token: String): GenericLoadable<CashuToken> {
-        return cashuCache[token] ?: GenericLoadable.Loading()
-    }
+    fun cached(token: String): GenericLoadable<CashuToken> = cashuCache[token] ?: GenericLoadable.Loading()
 
     fun parse(token: String): GenericLoadable<CashuToken> {
         if (cashuCache[token] !is GenericLoadable.Loaded) {
@@ -150,7 +149,12 @@ class CashuProcessor {
 
             val mediaType = "application/json; charset=utf-8".toMediaType()
             val requestBody = jsonObject.toString().toRequestBody(mediaType)
-            val request = Request.Builder().url(url).post(requestBody).build()
+            val request =
+                Request
+                    .Builder()
+                    .url(url)
+                    .post(requestBody)
+                    .build()
 
             client.newCall(request).execute().use {
                 val body = it.body.string()
@@ -163,13 +167,19 @@ class CashuProcessor {
                         feeCost,
                     )
                 } else {
-                    val msg = tree?.get("detail")?.asText()?.split('.')?.getOrNull(0)?.ifBlank { null }
+                    val msg =
+                        tree
+                            ?.get("detail")
+                            ?.asText()
+                            ?.split('.')
+                            ?.getOrNull(0)
+                            ?.ifBlank { null }
                     onError(
-                        context.getString(R.string.cashu_failed_redemption),
+                        stringRes(context, R.string.cashu_failed_redemption),
                         if (msg != null) {
-                            context.getString(R.string.cashu_failed_redemption_explainer_error_msg, msg)
+                            stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, msg)
                         } else {
-                            context.getString(R.string.cashu_failed_redemption_explainer_error_msg)
+                            stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg)
                         },
                     )
                 }
@@ -177,8 +187,8 @@ class CashuProcessor {
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             onError(
-                context.getString(R.string.cashu_successful_redemption),
-                context.getString(R.string.cashu_failed_redemption_explainer_error_msg, e.message),
+                stringRes(context, R.string.cashu_successful_redemption),
+                stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, e.message),
             )
         }
     }
@@ -203,7 +213,12 @@ class CashuProcessor {
 
             val mediaType = "application/json; charset=utf-8".toMediaType()
             val requestBody = jsonObject.toString().toRequestBody(mediaType)
-            val request = Request.Builder().url(url).post(requestBody).build()
+            val request =
+                Request
+                    .Builder()
+                    .url(url)
+                    .post(requestBody)
+                    .build()
 
             client.newCall(request).execute().use {
                 val body = it.body.string()
@@ -213,21 +228,28 @@ class CashuProcessor {
 
                 if (successful) {
                     onSuccess(
-                        context.getString(R.string.cashu_successful_redemption),
-                        context.getString(
+                        stringRes(context, R.string.cashu_successful_redemption),
+                        stringRes(
+                            context,
                             R.string.cashu_successful_redemption_explainer,
                             token.totalAmount.toString(),
                             fees.toString(),
                         ),
                     )
                 } else {
-                    val msg = tree?.get("detail")?.asText()?.split('.')?.getOrNull(0)?.ifBlank { null }
+                    val msg =
+                        tree
+                            ?.get("detail")
+                            ?.asText()
+                            ?.split('.')
+                            ?.getOrNull(0)
+                            ?.ifBlank { null }
                     onError(
-                        context.getString(R.string.cashu_failed_redemption),
+                        stringRes(context, R.string.cashu_failed_redemption),
                         if (msg != null) {
-                            context.getString(R.string.cashu_failed_redemption_explainer_error_msg, msg)
+                            stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, msg)
                         } else {
-                            context.getString(R.string.cashu_failed_redemption_explainer_error_msg)
+                            stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg)
                         },
                     )
                 }
@@ -235,8 +257,8 @@ class CashuProcessor {
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             onError(
-                context.getString(R.string.cashu_successful_redemption),
-                context.getString(R.string.cashu_failed_redemption_explainer_error_msg, e.message),
+                stringRes(context, R.string.cashu_successful_redemption),
+                stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, e.message),
             )
         }
     }

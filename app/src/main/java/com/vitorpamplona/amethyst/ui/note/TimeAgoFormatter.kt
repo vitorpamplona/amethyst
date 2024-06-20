@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.note
 import android.content.Context
 import android.text.format.DateUtils
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -36,7 +37,7 @@ fun timeAgo(
     context: Context,
 ): String {
     if (time == null) return " "
-    if (time == 0L) return " • ${context.getString(R.string.never)}"
+    if (time == 0L) return " • ${stringRes(context, R.string.never)}"
 
     val timeDifference = TimeUtils.now() - time
 
@@ -61,13 +62,13 @@ fun timeAgo(
         monthFormatter.format(time * 1000)
     } else if (timeDifference > TimeUtils.ONE_DAY) {
         // 2 days
-        " • " + (timeDifference / TimeUtils.ONE_DAY).toString() + context.getString(R.string.d)
+        " • " + (timeDifference / TimeUtils.ONE_DAY).toString() + stringRes(context, R.string.d)
     } else if (timeDifference > TimeUtils.ONE_HOUR) {
-        " • " + (timeDifference / TimeUtils.ONE_HOUR).toString() + context.getString(R.string.h)
+        " • " + (timeDifference / TimeUtils.ONE_HOUR).toString() + stringRes(context, R.string.h)
     } else if (timeDifference > TimeUtils.ONE_MINUTE) {
-        " • " + (timeDifference / TimeUtils.ONE_MINUTE).toString() + context.getString(R.string.m)
+        " • " + (timeDifference / TimeUtils.ONE_MINUTE).toString() + stringRes(context, R.string.m)
     } else {
-        " • " + context.getString(R.string.now)
+        " • " + stringRes(context, R.string.now)
     }
 }
 
@@ -76,7 +77,7 @@ fun timeAgoNoDot(
     context: Context,
 ): String {
     if (time == null) return " "
-    if (time == 0L) return " ${context.getString(R.string.never)}"
+    if (time == 0L) return " ${stringRes(context, R.string.never)}"
 
     val timeDifference = TimeUtils.now() - time
 
@@ -101,13 +102,13 @@ fun timeAgoNoDot(
         monthFormatter.format(time * 1000)
     } else if (timeDifference > TimeUtils.ONE_DAY) {
         // 2 days
-        (timeDifference / TimeUtils.ONE_DAY).toString() + context.getString(R.string.d)
+        (timeDifference / TimeUtils.ONE_DAY).toString() + stringRes(context, R.string.d)
     } else if (timeDifference > TimeUtils.ONE_HOUR) {
-        (timeDifference / TimeUtils.ONE_HOUR).toString() + context.getString(R.string.h)
+        (timeDifference / TimeUtils.ONE_HOUR).toString() + stringRes(context, R.string.h)
     } else if (timeDifference > TimeUtils.ONE_MINUTE) {
-        (timeDifference / TimeUtils.ONE_MINUTE).toString() + context.getString(R.string.m)
+        (timeDifference / TimeUtils.ONE_MINUTE).toString() + stringRes(context, R.string.m)
     } else {
-        context.getString(R.string.now)
+        stringRes(context, R.string.now)
     }
 }
 
@@ -118,13 +119,13 @@ fun timeAgoShort(
     if (mills == null) return " "
 
     var humanReadable =
-        DateUtils.getRelativeTimeSpanString(
-            mills * 1000,
-            System.currentTimeMillis(),
-            DateUtils.MINUTE_IN_MILLIS,
-            DateUtils.FORMAT_ABBREV_ALL,
-        )
-            .toString()
+        DateUtils
+            .getRelativeTimeSpanString(
+                mills * 1000,
+                System.currentTimeMillis(),
+                DateUtils.MINUTE_IN_MILLIS,
+                DateUtils.FORMAT_ABBREV_ALL,
+            ).toString()
     if (humanReadable.startsWith("In") || humanReadable.startsWith("0")) {
         humanReadable = stringForNow
     }

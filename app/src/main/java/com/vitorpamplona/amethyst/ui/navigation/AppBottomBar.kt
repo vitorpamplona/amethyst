@@ -35,7 +35,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,10 +43,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
@@ -146,12 +145,16 @@ private fun RowScope.HasNewItemsIcon(
     navEntryState: State<NavBackStackEntry?>,
     nav: (Route, Boolean) -> Unit,
 ) {
-    val selected by
-        remember(navEntryState.value) {
-            derivedStateOf { navEntryState.value?.destination?.route?.substringBefore("?") == route.base }
-        }
+    val selected =
+        (
+            navEntryState.value
+                ?.destination
+                ?.route
+                ?.indexOf(route.base) ?: -1
+        ) > -1
 
     NavigationBarItem(
+        alwaysShowLabel = false,
         icon = {
             NotifiableIcon(
                 selected,
@@ -173,7 +176,7 @@ private fun NotifiableIcon(
     Box(route.notifSize) {
         Icon(
             painter = painterResource(id = route.icon),
-            contentDescription = stringResource(route.contentDescriptor),
+            contentDescription = stringRes(route.contentDescriptor),
             modifier = route.iconSize,
             tint = if (selected) MaterialTheme.colorScheme.primary else Color.Unspecified,
         )

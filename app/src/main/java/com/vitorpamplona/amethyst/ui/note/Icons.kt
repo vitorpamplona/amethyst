@@ -43,10 +43,8 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Report
-import androidx.compose.material.icons.materialIcon
-import androidx.compose.material.icons.materialPath
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.ArrowForwardIos
-import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material3.Icon
@@ -56,9 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -66,9 +62,18 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
-import com.vitorpamplona.amethyst.commons.labels.Following
+import com.vitorpamplona.amethyst.commons.icons.Following
+import com.vitorpamplona.amethyst.commons.icons.Like
+import com.vitorpamplona.amethyst.commons.icons.Liked
+import com.vitorpamplona.amethyst.commons.icons.Reply
+import com.vitorpamplona.amethyst.commons.icons.Repost
+import com.vitorpamplona.amethyst.commons.icons.Reposted
+import com.vitorpamplona.amethyst.commons.icons.Search
+import com.vitorpamplona.amethyst.commons.icons.Zap
+import com.vitorpamplona.amethyst.commons.icons.ZapSplit
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
@@ -79,7 +84,7 @@ import com.vitorpamplona.amethyst.ui.theme.subtleButton
 fun AmethystIcon(iconSize: Dp) {
     Icon(
         imageVector = CustomHashTagIcons.Amethyst,
-        contentDescription = stringResource(id = R.string.app_logo),
+        contentDescription = stringRes(id = R.string.app_logo),
         modifier = Modifier.size(iconSize),
         tint = Color.Unspecified,
     )
@@ -87,10 +92,15 @@ fun AmethystIcon(iconSize: Dp) {
 
 @Composable
 fun FollowingIcon(iconSize: Dp) {
+    FollowingIcon(Modifier.size(iconSize))
+}
+
+@Composable
+fun FollowingIcon(modifier: Modifier) {
     Icon(
         imageVector = Following,
-        contentDescription = stringResource(id = R.string.following),
-        modifier = Modifier.size(iconSize),
+        contentDescription = stringRes(id = R.string.following),
+        modifier = modifier,
         tint = Color.Unspecified,
     )
 }
@@ -99,7 +109,7 @@ fun FollowingIcon(iconSize: Dp) {
 fun ArrowBackIcon() {
     Icon(
         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-        contentDescription = stringResource(R.string.back),
+        contentDescription = stringRes(R.string.back),
         tint = MaterialTheme.colorScheme.grayText,
     )
 }
@@ -121,7 +131,7 @@ fun DownloadForOfflineIcon(
 ) {
     Icon(
         imageVector = Icons.Default.DownloadForOffline,
-        contentDescription = stringResource(id = R.string.accessibility_download_for_offline),
+        contentDescription = stringRes(id = R.string.accessibility_download_for_offline),
         modifier = remember(iconSize) { Modifier.size(iconSize) },
         tint = tint,
     )
@@ -131,7 +141,7 @@ fun DownloadForOfflineIcon(
 fun HashCheckIcon(iconSize: Dp) {
     Icon(
         painter = painterResource(R.drawable.original),
-        contentDescription = stringResource(id = R.string.hash_verification_passed),
+        contentDescription = stringRes(id = R.string.hash_verification_passed),
         modifier = remember(iconSize) { Modifier.size(iconSize) },
         tint = Color.Unspecified,
     )
@@ -141,19 +151,22 @@ fun HashCheckIcon(iconSize: Dp) {
 fun HashCheckFailedIcon(iconSize: Dp) {
     Icon(
         imageVector = Icons.Default.Report,
-        contentDescription = stringResource(id = R.string.hash_verification_failed),
+        contentDescription = stringRes(id = R.string.hash_verification_failed),
         modifier = remember(iconSize) { Modifier.size(iconSize) },
         tint = Color.Red,
     )
 }
 
 @Composable
-fun LikedIcon(modifier: Modifier) {
+fun LikedIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+) {
     Icon(
-        painter = painterResource(R.drawable.ic_liked),
-        null,
+        imageVector = Liked,
+        stringRes(id = R.string.like_description),
         modifier = modifier,
-        tint = Color.Unspecified,
+        tint = tint,
     )
 }
 
@@ -163,10 +176,23 @@ fun LikeIcon(
     grayTint: Color,
 ) {
     Icon(
-        painter = painterResource(R.drawable.ic_like),
-        contentDescription = stringResource(id = R.string.like_description),
+        imageVector = Like,
+        contentDescription = stringRes(id = R.string.like_description),
         modifier = iconSizeModifier,
         tint = grayTint,
+    )
+}
+
+@Composable
+fun RepostIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+) {
+    Icon(
+        imageVector = Repost,
+        contentDescription = stringRes(id = R.string.boost_or_quote_description),
+        modifier = modifier,
+        tint = tint,
     )
 }
 
@@ -176,8 +202,8 @@ fun RepostedIcon(
     tint: Color = Color.Unspecified,
 ) {
     Icon(
-        painter = painterResource(R.drawable.ic_retweeted),
-        contentDescription = stringResource(id = R.string.boost_or_quote_description),
+        imageVector = Reposted,
+        contentDescription = stringRes(id = R.string.boost_or_quote_description),
         modifier = modifier,
         tint = tint,
     )
@@ -190,7 +216,7 @@ fun LightningAddressIcon(
 ) {
     Icon(
         imageVector = Icons.Default.Bolt,
-        contentDescription = stringResource(R.string.lightning_address),
+        contentDescription = stringRes(R.string.lightning_address),
         tint = tint,
         modifier = modifier,
     )
@@ -213,8 +239,10 @@ fun ReactionRowIconPreview() {
         CommentIcon(Size20Modifier, Color.Unspecified)
         RepostedIcon(Size20Modifier)
         LikeIcon(Size20Modifier, Color.Unspecified)
+        OutlinedZapIcon(Size20Modifier)
         ZapIcon(Size20Modifier)
         ZappedIcon(Size20Modifier)
+        ShareIcon(Size20Modifier, Color.Unspecified)
     }
 }
 
@@ -226,9 +254,36 @@ fun ZapIcon(
 ) {
     Icon(
         imageVector = Icons.Default.Bolt,
-        contentDescription = stringResource(contentDescriptor),
+        contentDescription = stringRes(contentDescriptor),
         tint = tint,
         modifier = modifier,
+    )
+}
+
+@Composable
+fun OutlinedZapIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+    contentDescriptor: Int = R.string.zap_description,
+) {
+    Icon(
+        imageVector = Zap,
+        contentDescription = stringRes(contentDescriptor),
+        tint = tint,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun ShareIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+) {
+    Icon(
+        imageVector = Icons.Default.Share,
+        modifier = modifier,
+        contentDescription = stringRes(R.string.share_or_save),
+        tint = tint,
     )
 }
 
@@ -236,7 +291,7 @@ fun ZapIcon(
 fun CashuIcon(modifier: Modifier) {
     Icon(
         imageVector = CustomHashTagIcons.Cashu,
-        "Cashu",
+        stringRes(R.string.cashu),
         tint = Color.Unspecified,
         modifier = modifier,
     )
@@ -249,7 +304,7 @@ fun CopyIcon(
 ) {
     Icon(
         imageVector = Icons.Default.ContentCopy,
-        stringResource(id = R.string.copy_to_clipboard),
+        stringRes(id = R.string.copy_to_clipboard),
         tint = tint,
         modifier = modifier,
     )
@@ -262,7 +317,7 @@ fun OpenInNewIcon(
 ) {
     Icon(
         imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-        stringResource(id = R.string.copy_to_clipboard),
+        stringRes(id = R.string.copy_to_clipboard),
         tint = tint,
         modifier = modifier,
     )
@@ -275,7 +330,7 @@ fun ExpandLessIcon(
 ) {
     Icon(
         imageVector = Icons.Default.ExpandLess,
-        contentDescription = stringResource(id = contentDescriptor),
+        contentDescription = stringRes(id = contentDescriptor),
         modifier = modifier,
         tint = MaterialTheme.colorScheme.subtleButton,
     )
@@ -288,7 +343,7 @@ fun ExpandMoreIcon(
 ) {
     Icon(
         imageVector = Icons.Default.ExpandMore,
-        contentDescription = stringResource(id = contentDescriptor),
+        contentDescription = stringRes(id = contentDescriptor),
         modifier = modifier,
         tint = MaterialTheme.colorScheme.subtleButton,
     )
@@ -300,22 +355,9 @@ fun CommentIcon(
     tint: Color,
 ) {
     Icon(
-        painter = painterResource(R.drawable.ic_comment),
-        contentDescription = stringResource(id = R.string.reply_description),
+        imageVector = Reply,
+        contentDescription = stringRes(id = R.string.reply_description),
         modifier = iconSizeModifier,
-        tint = tint,
-    )
-}
-
-@Composable
-fun ViewCountIcon(
-    modifier: Modifier,
-    tint: Color = Color.Unspecified,
-) {
-    Icon(
-        imageVector = Icons.Outlined.BarChart,
-        null,
-        modifier = modifier,
         tint = tint,
     )
 }
@@ -324,7 +366,7 @@ fun ViewCountIcon(
 fun PollIcon() {
     Icon(
         painter = painterResource(R.drawable.ic_poll),
-        contentDescription = stringResource(id = R.string.poll),
+        contentDescription = stringRes(id = R.string.poll),
         modifier = Size20Modifier,
         tint = MaterialTheme.colorScheme.onBackground,
     )
@@ -334,7 +376,7 @@ fun PollIcon() {
 fun RegularPostIcon() {
     Icon(
         painter = painterResource(R.drawable.ic_lists),
-        contentDescription = stringResource(id = R.string.disable_poll),
+        contentDescription = stringRes(id = R.string.disable_poll),
         modifier = Size20Modifier,
         tint = MaterialTheme.colorScheme.onBackground,
     )
@@ -344,7 +386,7 @@ fun RegularPostIcon() {
 fun CancelIcon() {
     Icon(
         imageVector = Icons.Default.Cancel,
-        contentDescription = stringResource(id = R.string.cancel),
+        contentDescription = stringRes(id = R.string.cancel),
         modifier = Size30Modifier,
         tint = MaterialTheme.colorScheme.placeholderText,
     )
@@ -354,7 +396,7 @@ fun CancelIcon() {
 fun CloseIcon() {
     Icon(
         painter = painterResource(id = R.drawable.ic_close),
-        contentDescription = stringResource(id = R.string.cancel),
+        contentDescription = stringRes(id = R.string.cancel),
         modifier = Size20Modifier,
     )
 }
@@ -363,7 +405,7 @@ fun CloseIcon() {
 fun MutedIcon() {
     Icon(
         imageVector = Icons.AutoMirrored.Filled.VolumeOff,
-        contentDescription = stringResource(id = R.string.muted_button),
+        contentDescription = stringRes(id = R.string.muted_button),
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Size30Modifier,
     )
@@ -373,7 +415,7 @@ fun MutedIcon() {
 fun MuteIcon() {
     Icon(
         imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-        contentDescription = stringResource(id = R.string.mute_button),
+        contentDescription = stringRes(id = R.string.mute_button),
         tint = MaterialTheme.colorScheme.onBackground,
         modifier = Size30Modifier,
     )
@@ -385,8 +427,8 @@ fun SearchIcon(
     tint: Color = Color.Unspecified,
 ) {
     Icon(
-        painter = painterResource(R.drawable.ic_search),
-        contentDescription = stringResource(id = R.string.search_button),
+        imageVector = Search,
+        contentDescription = stringRes(id = R.string.search_button),
         modifier = modifier,
         tint = tint,
     )
@@ -399,7 +441,7 @@ fun PlayIcon(
 ) {
     Icon(
         imageVector = Icons.Outlined.PlayCircle,
-        contentDescription = stringResource(id = R.string.accessibility_play_username),
+        contentDescription = stringRes(id = R.string.accessibility_play_username),
         modifier = modifier,
         tint = tint,
     )
@@ -425,7 +467,7 @@ fun LyricsIcon(
 ) {
     Icon(
         painter = painterResource(id = R.drawable.lyrics_on),
-        contentDescription = stringResource(id = R.string.accessibility_lyrics_on),
+        contentDescription = stringRes(id = R.string.accessibility_lyrics_on),
         modifier = modifier,
         tint = tint,
     )
@@ -438,7 +480,7 @@ fun LyricsOffIcon(
 ) {
     Icon(
         painter = painterResource(id = R.drawable.lyrics_off),
-        contentDescription = stringResource(id = R.string.accessibility_lyrics_off),
+        contentDescription = stringRes(id = R.string.accessibility_lyrics_off),
         modifier = modifier,
         tint = tint,
     )
@@ -448,7 +490,7 @@ fun LyricsOffIcon(
 fun ClearTextIcon() {
     Icon(
         imageVector = Icons.Default.Clear,
-        contentDescription = stringResource(R.string.clear),
+        contentDescription = stringRes(R.string.clear),
     )
 }
 
@@ -459,18 +501,18 @@ fun LinkIcon(
 ) {
     Icon(
         imageVector = Icons.Default.Link,
-        contentDescription = stringResource(R.string.website),
+        contentDescription = stringRes(R.string.website),
         modifier = modifier,
         tint = tint,
     )
 }
 
 @Composable
-fun VerticalDotsIcon(contentDescriptor: Int? = null) {
+fun VerticalDotsIcon() {
     Icon(
         imageVector = Icons.Default.MoreVert,
-        contentDescription = contentDescriptor?.let { stringResource(id = it) },
-        modifier = Size18Modifier,
+        contentDescription = stringRes(id = R.string.note_options),
+        modifier = Size19Modifier,
         tint = MaterialTheme.colorScheme.placeholderText,
     )
 }
@@ -479,7 +521,7 @@ fun VerticalDotsIcon(contentDescriptor: Int? = null) {
 fun NIP05CheckingIcon(modifier: Modifier) {
     Icon(
         imageVector = Icons.Default.Downloading,
-        contentDescription = stringResource(id = R.string.nip05_checking),
+        contentDescription = stringRes(id = R.string.nip05_checking),
         modifier = modifier,
         tint = Color.Yellow,
     )
@@ -489,7 +531,7 @@ fun NIP05CheckingIcon(modifier: Modifier) {
 fun NIP05VerifiedIcon(modifier: Modifier) {
     Icon(
         painter = painterResource(R.drawable.nip_05),
-        contentDescription = stringResource(id = R.string.nip05_verified),
+        contentDescription = stringRes(id = R.string.nip05_verified),
         modifier = modifier,
         tint = Color.Unspecified,
     )
@@ -499,7 +541,7 @@ fun NIP05VerifiedIcon(modifier: Modifier) {
 fun NIP05FailedVerification(modifier: Modifier) {
     Icon(
         imageVector = Icons.Default.Report,
-        contentDescription = stringResource(id = R.string.nip05_failed),
+        contentDescription = stringRes(id = R.string.nip05_failed),
         modifier = modifier,
         tint = Color.Red,
     )
@@ -512,7 +554,7 @@ fun IncognitoIconOn(
 ) {
     Icon(
         painter = painterResource(id = R.drawable.incognito),
-        contentDescription = stringResource(id = R.string.accessibility_turn_off_sealed_message),
+        contentDescription = stringRes(id = R.string.accessibility_turn_off_sealed_message),
         modifier = modifier,
         tint = tint,
     )
@@ -525,7 +567,7 @@ fun IncognitoIconOff(
 ) {
     Icon(
         painter = painterResource(id = R.drawable.incognito_off),
-        contentDescription = stringResource(id = R.string.accessibility_turn_on_sealed_message),
+        contentDescription = stringRes(id = R.string.accessibility_turn_on_sealed_message),
         modifier = modifier,
         tint = tint,
     )
@@ -537,8 +579,8 @@ fun ZapSplitIcon(
     tint: Color = BitcoinOrange,
 ) {
     Icon(
-        imageVector = ZapSplitVector,
-        contentDescription = stringResource(id = R.string.zap_split_title),
+        imageVector = ZapSplit,
+        contentDescription = stringRes(id = R.string.zap_split_title),
         modifier = modifier,
         tint = tint,
     )
@@ -549,56 +591,29 @@ fun ZapSplitIcon(
 fun ZapSplitPreview() {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
-            Modifier.height(20.dp).width(25.dp),
+            Modifier
+                .height(20.dp)
+                .width(25.dp),
         ) {
             Icon(
                 imageVector = Icons.Outlined.Bolt,
-                contentDescription = stringResource(id = R.string.zaps),
-                modifier = Modifier.size(20.dp).align(Alignment.CenterStart),
+                contentDescription = stringRes(id = R.string.zaps),
+                modifier =
+                    Modifier
+                        .size(20.dp)
+                        .align(Alignment.CenterStart),
                 tint = BitcoinOrange,
             )
             Icon(
                 imageVector = Icons.Outlined.ArrowForwardIos,
-                contentDescription = stringResource(id = R.string.zaps),
-                modifier = Modifier.size(13.dp).align(Alignment.CenterEnd),
+                contentDescription = stringRes(id = R.string.zaps),
+                modifier =
+                    Modifier
+                        .size(13.dp)
+                        .align(Alignment.CenterEnd),
                 tint = BitcoinOrange,
             )
         }
         ZapSplitIcon(tint = BitcoinOrange)
     }
 }
-
-public val ZapSplitVector: ImageVector
-    get() {
-        if (zapSplit != null) {
-            return zapSplit!!
-        }
-        zapSplit =
-            materialIcon(name = "ZapSplit") {
-                materialPath {
-                    moveTo(7.0f, 21.0f)
-                    horizontalLineToRelative(-1.0f)
-                    lineToRelative(1.0f, -7.0f)
-                    horizontalLineTo(3.5f)
-                    curveToRelative(-0.88f, 0.0f, -0.33f, -0.75f, -0.31f, -0.78f)
-                    curveTo(4.48f, 10.94f, 6.42f, 7.54f, 9.01f, 3.0f)
-                    horizontalLineToRelative(1.0f)
-                    lineToRelative(-1.0f, 7.0f)
-                    horizontalLineToRelative(3.51f)
-                    curveToRelative(0.4f, 0.0f, 0.62f, 0.19f, 0.4f, 0.66f)
-                    curveTo(8.97f, 17.55f, 7.0f, 21.0f, 7.0f, 21.0f)
-                    close()
-                    moveTo(14.59f, 16.59f)
-                    lineTo(19.17f, 12.0f)
-                    lineTo(14.59f, 7.41f)
-                    lineTo(16.0f, 6.0f)
-                    lineToRelative(6.0f, 6.0f)
-                    lineToRelative(-6.0f, 6.0f)
-                    lineToRelative(-1.41f, -1.41f)
-                    close()
-                }
-            }
-        return zapSplit!!
-    }
-
-private var zapSplit: ImageVector? = null

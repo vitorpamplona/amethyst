@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,13 +46,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonBoxModifer
 import com.vitorpamplona.amethyst.ui.theme.Size17Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -69,7 +69,7 @@ fun RelayBadges(
 ) {
     val expanded = remember { mutableStateOf(false) }
 
-    Crossfade(expanded.value, modifier = noteComposeRelayBox, label = "RelayBadges") {
+    CrossfadeIfEnabled(expanded.value, modifier = noteComposeRelayBox, label = "RelayBadges", accountViewModel = accountViewModel) {
         if (it) {
             RenderAllRelayList(baseNote, Modifier.fillMaxWidth(), accountViewModel = accountViewModel, nav = nav)
         } else {
@@ -131,7 +131,7 @@ fun WatchAndRenderRelay(
             baseNote.relays.getOrNull(relayIndex),
         )
 
-    Crossfade(targetState = noteRelays, label = "RenderRelay", modifier = Size17Modifier) {
+    CrossfadeIfEnabled(targetState = noteRelays, label = "RenderRelay", modifier = Size17Modifier, accountViewModel = accountViewModel) {
         if (it != null) {
             RenderRelay(it, accountViewModel, nav)
         }
@@ -239,7 +239,7 @@ private fun ShowMoreRelaysButton(onClick: () -> Unit) {
         ) {
             Icon(
                 imageVector = Icons.Default.ExpandMore,
-                contentDescription = stringResource(id = R.string.expand_relay_list),
+                contentDescription = stringRes(id = R.string.expand_relay_list),
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
         }

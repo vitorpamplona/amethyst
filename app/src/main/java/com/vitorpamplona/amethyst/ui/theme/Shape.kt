@@ -97,6 +97,7 @@ val Size35dp = 35.dp
 val Size40dp = 40.dp
 val Size55dp = 55.dp
 val Size75dp = 75.dp
+val Size100dp = 100.dp
 val Size110dp = 110.dp
 val Size165dp = 165.dp
 
@@ -122,7 +123,7 @@ val VertPadding = Modifier.padding(vertical = 10.dp)
 
 val MaxWidthWithHorzPadding = Modifier.fillMaxWidth().padding(horizontal = 10.dp)
 
-val Size6Modifier = Modifier.size(6.dp)
+val Size5Modifier = Modifier.size(5.dp)
 val Size10Modifier = Modifier.size(10.dp)
 val Size15Modifier = Modifier.size(15.dp)
 val Size16Modifier = Modifier.size(16.dp)
@@ -156,7 +157,7 @@ val VideoReactionColumnPadding = Modifier.padding(bottom = 75.dp)
 val DividerThickness = 0.25.dp
 
 val ReactionRowHeight = Modifier.padding(vertical = 7.dp).height(24.dp)
-val ReactionRowHeightWithPadding = Modifier.padding(vertical = 7.dp).height(24.dp).padding(start = 10.dp)
+val ReactionRowHeightWithPadding = Modifier.padding(vertical = 7.dp).height(24.dp).padding(horizontal = 10.dp)
 val ReactionRowHeightChat = Modifier.height(25.dp)
 val UserNameRowHeight = Modifier.fillMaxWidth()
 val UserNameMaxRowHeight = Modifier.fillMaxWidth()

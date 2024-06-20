@@ -515,6 +515,7 @@
 
     <string name="ui_feature_set_type_complete">Complete</string>
     <string name="ui_feature_set_type_simplified">Simplified</string>
+    <string name="ui_feature_set_type_performance">Performance</string>
 
     <string name="system">System</string>
     <string name="light">Light</string>

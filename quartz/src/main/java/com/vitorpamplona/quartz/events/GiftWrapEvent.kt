@@ -56,9 +56,7 @@ class GiftWrapEvent(
 
     override fun isContentEncoded() = true
 
-    fun preCachedGift(signer: NostrSigner): Event? {
-        return cachedInnerEvent[signer.pubKey]
-    }
+    fun preCachedGift(signer: NostrSigner): Event? = cachedInnerEvent[signer.pubKey]
 
     fun addToCache(
         pubKey: HexKey,
@@ -114,7 +112,7 @@ class GiftWrapEvent(
         fun create(
             event: Event,
             recipientPubKey: HexKey,
-            createdAt: Long = TimeUtils.randomWithinAWeek(),
+            createdAt: Long = TimeUtils.randomWithTwoDays(),
             onReady: (GiftWrapEvent) -> Unit,
         ) {
             val signer = NostrSignerInternal(KeyPair()) // GiftWrap is always a random key

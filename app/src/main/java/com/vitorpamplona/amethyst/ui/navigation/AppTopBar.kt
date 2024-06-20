@@ -41,7 +41,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -58,15 +57,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -81,6 +77,7 @@ import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -130,6 +127,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.RoomNameOnlyDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShortChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.observeAppDefinition
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -151,16 +149,14 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combineTransform
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
-import kotlinx.coroutines.launch
 
 @Composable
 fun AppTopBar(
     followLists: FollowListViewModel,
     navEntryState: State<NavBackStackEntry?>,
-    drawerState: DrawerState,
+    openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     navPopBack: () -> Unit,
@@ -180,7 +176,7 @@ fun AppTopBar(
             derivedStateOf { navEntryState.value?.arguments?.getString("id") }
         }
 
-    RenderTopRouteBar(currentRoute, id, followLists, drawerState, accountViewModel, nav, navPopBack)
+    RenderTopRouteBar(currentRoute, id, followLists, openDrawer, accountViewModel, nav, navPopBack)
 }
 
 @Composable
@@ -188,19 +184,19 @@ private fun RenderTopRouteBar(
     currentRoute: String?,
     id: String?,
     followLists: FollowListViewModel,
-    drawerState: DrawerState,
+    openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     navPopBack: () -> Unit,
 ) {
     when (currentRoute) {
-        Route.Home.base -> HomeTopBar(followLists, drawerState, accountViewModel, nav)
-        Route.Video.base -> StoriesTopBar(followLists, drawerState, accountViewModel, nav)
-        Route.Discover.base -> DiscoveryTopBar(followLists, drawerState, accountViewModel, nav)
-        Route.Notification.base -> NotificationTopBar(followLists, drawerState, accountViewModel, nav)
-        Route.Settings.base -> TopBarWithBackButton(stringResource(id = R.string.application_preferences), navPopBack)
-        Route.Bookmarks.base -> TopBarWithBackButton(stringResource(id = R.string.bookmarks), navPopBack)
-        Route.Drafts.base -> TopBarWithBackButton(stringResource(id = R.string.drafts), navPopBack)
+        Route.Home.base -> HomeTopBar(followLists, openDrawer, accountViewModel, nav)
+        Route.Video.base -> StoriesTopBar(followLists, openDrawer, accountViewModel, nav)
+        Route.Discover.base -> DiscoveryTopBar(followLists, openDrawer, accountViewModel, nav)
+        Route.Notification.base -> NotificationTopBar(followLists, openDrawer, accountViewModel, nav)
+        Route.Settings.base -> TopBarWithBackButton(stringRes(id = R.string.application_preferences), navPopBack)
+        Route.Bookmarks.base -> TopBarWithBackButton(stringRes(id = R.string.bookmarks), navPopBack)
+        Route.Drafts.base -> TopBarWithBackButton(stringRes(id = R.string.drafts), navPopBack)
 
         else -> {
             if (id != null) {
@@ -213,10 +209,10 @@ private fun RenderTopRouteBar(
                     Route.Geohash.base -> GeoHashTopBar(id, accountViewModel, navPopBack)
                     Route.Note.base -> ThreadTopBar(id, accountViewModel, navPopBack)
                     Route.ContentDiscovery.base -> DvmTopBar(id, accountViewModel, nav, navPopBack)
-                    else -> MainTopBar(drawerState, accountViewModel, nav)
+                    else -> MainTopBar(openDrawer, accountViewModel, nav)
                 }
             } else {
-                MainTopBar(drawerState, accountViewModel, nav)
+                MainTopBar(openDrawer, accountViewModel, nav)
             }
         }
     }
@@ -229,7 +225,7 @@ private fun ThreadTopBar(
     navPopBack: () -> Unit,
 ) {
     FlexibleTopBarWithBackButton(
-        title = { Text(stringResource(id = R.string.thread_title)) },
+        title = { Text(stringRes(id = R.string.thread_title)) },
         popBack = navPopBack,
     )
 }
@@ -381,7 +377,7 @@ private fun RenderRoomTopBar(
 
                         Spacer(modifier = DoubleHorzSpacer)
 
-                        UsernameDisplay(baseUser, Modifier.weight(1f), fontWeight = FontWeight.Normal)
+                        UsernameDisplay(baseUser, Modifier.weight(1f), fontWeight = FontWeight.Normal, accountViewModel = accountViewModel)
                     }
                 }
             },
@@ -413,7 +409,7 @@ private fun RenderRoomTopBar(
                         .padding(start = 10.dp)
                         .weight(1f),
                     fontWeight = FontWeight.Normal,
-                    accountViewModel.userProfile(),
+                    accountViewModel,
                 )
             },
             extendableRow = {
@@ -452,11 +448,11 @@ private fun ChannelTopBar(
 @Composable
 fun StoriesTopBar(
     followLists: FollowListViewModel,
-    drawerState: DrawerState,
+    openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    GenericMainTopBar(drawerState, accountViewModel, nav) {
+    GenericMainTopBar(openDrawer, accountViewModel, nav) {
         val list by accountViewModel.account.defaultStoriesFollowList.collectAsStateWithLifecycle()
 
         FollowListWithRoutes(
@@ -471,11 +467,11 @@ fun StoriesTopBar(
 @Composable
 fun HomeTopBar(
     followLists: FollowListViewModel,
-    drawerState: DrawerState,
+    openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    GenericMainTopBar(drawerState, accountViewModel, nav) {
+    GenericMainTopBar(openDrawer, accountViewModel, nav) {
         val list by accountViewModel.account.defaultHomeFollowList.collectAsStateWithLifecycle()
 
         FollowListWithRoutes(
@@ -494,11 +490,11 @@ fun HomeTopBar(
 @Composable
 fun NotificationTopBar(
     followLists: FollowListViewModel,
-    drawerState: DrawerState,
+    openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    GenericMainTopBar(drawerState, accountViewModel, nav) {
+    GenericMainTopBar(openDrawer, accountViewModel, nav) {
         val list by accountViewModel.account.defaultNotificationFollowList.collectAsStateWithLifecycle()
 
         FollowListWithoutRoutes(
@@ -513,11 +509,11 @@ fun NotificationTopBar(
 @Composable
 fun DiscoveryTopBar(
     followLists: FollowListViewModel,
-    drawerState: DrawerState,
+    openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    GenericMainTopBar(drawerState, accountViewModel, nav) {
+    GenericMainTopBar(openDrawer, accountViewModel, nav) {
         val list by accountViewModel.account.defaultDiscoveryFollowList.collectAsStateWithLifecycle()
 
         FollowListWithoutRoutes(
@@ -531,17 +527,17 @@ fun DiscoveryTopBar(
 
 @Composable
 fun MainTopBar(
-    drawerState: DrawerState,
+    openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    GenericMainTopBar(drawerState, accountViewModel, nav) { AmethystClickableIcon() }
+    GenericMainTopBar(openDrawer, accountViewModel, nav) { AmethystClickableIcon() }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GenericMainTopBar(
-    drawerState: DrawerState,
+    openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     content: @Composable () -> Unit,
@@ -558,8 +554,7 @@ fun GenericMainTopBar(
                 }
             },
             navigationIcon = {
-                val coroutineScope = rememberCoroutineScope()
-                LoggedInUserPictureDrawer(accountViewModel) { coroutineScope.launch { drawerState.open() } }
+                LoggedInUserPictureDrawer(accountViewModel, openDrawer)
             },
             actions = { SearchButton { nav(Route.Search.route) } },
         )
@@ -572,7 +567,7 @@ private fun SearchButton(onClick: () -> Unit) {
     IconButton(
         onClick = onClick,
     ) {
-        SearchIcon(modifier = Size22Modifier, Color.Unspecified)
+        SearchIcon(modifier = Size22Modifier, MaterialTheme.colorScheme.placeholderText)
     }
 }
 
@@ -592,10 +587,11 @@ private fun LoggedInUserPictureDrawer(
         RobohashFallbackAsyncImage(
             robot = accountViewModel.userProfile().pubkeyHex,
             model = profilePicture,
-            contentDescription = stringResource(id = R.string.your_profile_image),
+            contentDescription = stringRes(id = R.string.your_profile_image),
             modifier = HeaderPictureModifier,
             contentScale = ContentScale.Crop,
             loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         )
     }
 }
@@ -659,7 +655,7 @@ class ResourceName(
 ) : Name() {
     override fun name() = " $resourceId " // Space to make sure it goes first
 
-    override fun name(context: Context) = context.getString(resourceId)
+    override fun name(context: Context) = stringRes(context, resourceId)
 }
 
 class PeopleListName(
@@ -800,7 +796,7 @@ fun SimpleTextSpinner(
 
     val context = LocalContext.current
     val selectAnOption =
-        stringResource(
+        stringRes(
             id = R.string.select_an_option,
         )
 
@@ -882,7 +878,7 @@ fun RenderOption(option: Name) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = stringResource(id = option.resourceId),
+                    text = stringRes(id = option.resourceId),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }

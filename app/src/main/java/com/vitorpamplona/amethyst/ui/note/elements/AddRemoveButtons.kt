@@ -29,11 +29,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
@@ -73,7 +73,7 @@ fun AddButton(
         enabled = isActive,
         contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp),
     ) {
-        Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
+        Text(text = stringRes(text), color = Color.White, textAlign = TextAlign.Center)
     }
 }
 
@@ -93,6 +93,6 @@ fun RemoveButton(
         enabled = isActive,
         contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp),
     ) {
-        Text(text = stringResource(R.string.remove), color = Color.White)
+        Text(text = stringRes(R.string.remove), color = Color.White)
     }
 }

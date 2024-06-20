@@ -32,7 +32,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -44,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomHeader
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
@@ -52,8 +52,6 @@ import com.vitorpamplona.quartz.events.ChatroomKeyable
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun RenderPrivateMessage(
@@ -122,11 +120,7 @@ fun RenderPrivateMessage(
                 }
 
                 if (noteEvent.hasHashtags()) {
-                    val hashtags =
-                        remember(note.event?.id()) {
-                            note.event?.hashtags()?.toImmutableList() ?: persistentListOf()
-                        }
-                    DisplayUncitedHashtags(hashtags, eventContent, nav)
+                    DisplayUncitedHashtags(noteEvent, eventContent, nav)
                 }
             }
         }
@@ -134,7 +128,7 @@ fun RenderPrivateMessage(
         val recipient = noteEvent.recipientPubKeyBytes()?.toNpub() ?: "Someone"
 
         TranslatableRichTextViewer(
-            stringResource(
+            stringRes(
                 id = R.string.private_conversation_notification,
                 "@${note.author?.pubkeyNpub()}",
                 "@$recipient",

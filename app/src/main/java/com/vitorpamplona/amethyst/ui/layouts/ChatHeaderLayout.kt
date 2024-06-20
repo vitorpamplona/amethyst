@@ -37,11 +37,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NewItemsBubble
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ChatHeadlineBorders
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -57,7 +57,7 @@ fun ChannelNamePreview() {
             channelPicture = {
                 Image(
                     painter = painterResource(R.drawable.github),
-                    contentDescription = stringResource(id = R.string.profile_banner),
+                    contentDescription = stringRes(id = R.string.profile_banner),
                     contentScale = ContentScale.FillWidth,
                 )
             },
@@ -90,7 +90,7 @@ fun ChannelNamePreview() {
             leadingContent = {
                 Image(
                     painter = painterResource(R.drawable.github),
-                    contentDescription = stringResource(id = R.string.profile_banner),
+                    contentDescription = stringRes(id = R.string.profile_banner),
                     contentScale = ContentScale.FillWidth,
                     modifier = Size55Modifier,
                 )

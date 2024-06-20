@@ -84,7 +84,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -104,6 +103,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -137,6 +137,7 @@ import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -452,7 +453,7 @@ fun EditFieldRow(
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
-                    text = stringResource(R.string.reply_here),
+                    text = stringRes(R.string.reply_here),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
@@ -710,8 +711,7 @@ fun ShowVideoStreaming(
                     .map {
                         val activity = it.channel as? LiveActivitiesChannel
                         activity?.info
-                    }
-                    .distinctUntilChanged()
+                    }.distinctUntilChanged()
                     .observeAsState(baseChannel.info)
 
             streamingInfo?.let { event ->
@@ -764,11 +764,6 @@ fun ShortChannelHeader(
     val channelState by baseChannel.live.observeAsState()
     val channel = channelState?.channel ?: return
 
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
-
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (channel is LiveActivitiesChannel) {
             channel.creator?.let {
@@ -784,10 +779,11 @@ fun ShortChannelHeader(
                 RobohashFallbackAsyncImage(
                     robot = channel.idHex,
                     model = it,
-                    contentDescription = stringResource(R.string.profile_image),
+                    contentDescription = stringRes(R.string.profile_image),
                     contentScale = ContentScale.Crop,
                     modifier = HeaderPictureModifier,
-                    loadProfilePicture = automaticallyShowProfilePicture,
+                    loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                    loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                 )
             }
         }
@@ -858,7 +854,7 @@ fun LongChannelHeader(
                     }
 
                 TranslatableRichTextViewer(
-                    content = summary ?: stringResource(id = R.string.groups_no_descriptor),
+                    content = summary ?: stringRes(id = R.string.groups_no_descriptor),
                     canPreview = false,
                     quotesLeft = 1,
                     tags = tags,
@@ -869,12 +865,12 @@ fun LongChannelHeader(
                 )
             }
 
-            if (baseChannel is LiveActivitiesChannel && baseChannel.info?.hasHashtags() == true) {
-                val hashtags =
-                    remember(baseChannel.info) {
-                        baseChannel.info?.hashtags()?.toImmutableList() ?: persistentListOf()
+            if (baseChannel is LiveActivitiesChannel && summary != null) {
+                baseChannel.info?.let {
+                    if (it.hasHashtags()) {
+                        DisplayUncitedHashtags(it, summary, nav)
                     }
-                DisplayUncitedHashtags(hashtags, summary ?: "", nav)
+                }
             }
         }
 
@@ -895,7 +891,7 @@ fun LongChannelHeader(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringResource(id = R.string.owner),
+                    text = stringRes(id = R.string.owner),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.width(75.dp),
@@ -903,7 +899,7 @@ fun LongChannelHeader(
                 Spacer(DoubleHorzSpacer)
                 NoteAuthorPicture(note, nav, accountViewModel, Size25dp)
                 Spacer(DoubleHorzSpacer)
-                NoteUsernameDisplay(note, remember { Modifier.weight(1f) })
+                NoteUsernameDisplay(note, Modifier.weight(1f), accountViewModel = accountViewModel)
             }
 
             Row(
@@ -911,7 +907,7 @@ fun LongChannelHeader(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringResource(id = R.string.created_at),
+                    text = stringRes(id = R.string.created_at),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.width(75.dp),
@@ -938,8 +934,7 @@ fun LongChannelHeader(
                         ?.participants()
                         ?.mapNotNull { part ->
                             LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) }
-                        }
-                        ?.toImmutableList()
+                        }?.toImmutableList()
 
                 if (
                     newParticipantUsers != null && !equalImmutableLists(newParticipantUsers, participantUsers)
@@ -965,7 +960,7 @@ fun LongChannelHeader(
                 Spacer(DoubleHorzSpacer)
                 ClickableUserPicture(it.second, Size25dp, accountViewModel)
                 Spacer(DoubleHorzSpacer)
-                UsernameDisplay(it.second, remember { Modifier.weight(1f) })
+                UsernameDisplay(it.second, Modifier.weight(1f), accountViewModel = accountViewModel)
             }
         }
     }
@@ -976,7 +971,7 @@ fun NormalTimeAgo(
     baseNote: Note,
     modifier: Modifier,
 ) {
-    val nowStr = stringResource(id = R.string.now)
+    val nowStr = stringRes(id = R.string.now)
 
     val time by
         remember(baseNote) { derivedStateOf { timeAgoShort(baseNote.createdAt() ?: 0, nowStr) } }
@@ -1105,7 +1100,7 @@ private fun LiveChannelActionOptions(
 @Composable
 fun LiveFlag() {
     Text(
-        text = stringResource(id = R.string.live_stream_live_tag),
+        text = stringRes(id = R.string.live_stream_live_tag),
         color = Color.White,
         fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
@@ -1122,7 +1117,7 @@ fun LiveFlag() {
 @Composable
 fun EndedFlag() {
     Text(
-        text = stringResource(id = R.string.live_stream_ended_tag),
+        text = stringRes(id = R.string.live_stream_ended_tag),
         color = Color.White,
         fontWeight = FontWeight.Bold,
         modifier =
@@ -1138,7 +1133,7 @@ fun EndedFlag() {
 @Composable
 fun OfflineFlag() {
     Text(
-        text = stringResource(id = R.string.live_stream_offline_tag),
+        text = stringRes(id = R.string.live_stream_offline_tag),
         color = Color.White,
         fontWeight = FontWeight.Bold,
         modifier =
@@ -1155,14 +1150,15 @@ fun OfflineFlag() {
 fun ScheduledFlag(starts: Long?) {
     val startsIn =
         starts?.let {
-            SimpleDateFormat.getDateTimeInstance(
-                DateFormat.SHORT,
-                DateFormat.SHORT,
-            ).format(Date(starts * 1000))
+            SimpleDateFormat
+                .getDateTimeInstance(
+                    DateFormat.SHORT,
+                    DateFormat.SHORT,
+                ).format(Date(starts * 1000))
         }
 
     Text(
-        text = startsIn ?: stringResource(id = R.string.live_stream_planned_tag),
+        text = startsIn ?: stringRes(id = R.string.live_stream_planned_tag),
         color = Color.White,
         fontWeight = FontWeight.Bold,
         modifier = liveStreamTag,
@@ -1188,7 +1184,7 @@ private fun NoteCopyButton(note: Channel) {
         Icon(
             tint = Color.White,
             imageVector = Icons.Default.Share,
-            contentDescription = stringResource(R.string.copies_the_note_id_to_the_clipboard_for_sharing),
+            contentDescription = stringRes(R.string.copies_the_note_id_to_the_clipboard_for_sharing),
         )
 
         DropdownMenu(
@@ -1198,7 +1194,7 @@ private fun NoteCopyButton(note: Channel) {
             val clipboardManager = LocalClipboardManager.current
 
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.copy_channel_id_note_to_the_clipboard)) },
+                text = { Text(stringRes(R.string.copy_channel_id_note_to_the_clipboard)) },
                 onClick = {
                     clipboardManager.setText(AnnotatedString("nostr:" + note.idNote()))
                     popupExpanded = false
@@ -1230,7 +1226,7 @@ private fun EditButton(
         Icon(
             tint = Color.White,
             imageVector = Icons.Default.EditNote,
-            contentDescription = stringResource(R.string.edits_the_channel_metadata),
+            contentDescription = stringRes(R.string.edits_the_channel_metadata),
         )
     }
 }
@@ -1248,7 +1244,7 @@ fun JoinChatButton(
         onClick = { scope.launch(Dispatchers.IO) { accountViewModel.account.follow(channel) } },
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringResource(R.string.join), color = Color.White)
+        Text(text = stringRes(R.string.join), color = Color.White)
     }
 }
 
@@ -1265,7 +1261,7 @@ fun LeaveChatButton(
         onClick = { scope.launch(Dispatchers.IO) { accountViewModel.account.unfollow(channel) } },
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringResource(R.string.leave), color = Color.White)
+        Text(text = stringRes(R.string.leave), color = Color.White)
     }
 }
 
@@ -1287,7 +1283,7 @@ fun JoinCommunityButton(
             ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringResource(R.string.join), color = Color.White)
+        Text(text = stringRes(R.string.join), color = Color.White)
     }
 }
 
@@ -1309,6 +1305,6 @@ fun LeaveCommunityButton(
             ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringResource(R.string.leave), color = Color.White)
+        Text(text = stringRes(R.string.leave), color = Color.White)
     }
 }

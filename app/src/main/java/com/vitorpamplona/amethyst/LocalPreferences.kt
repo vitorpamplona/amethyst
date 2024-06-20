@@ -99,14 +99,7 @@ private object PrefKeys {
     const val WARN_ABOUT_REPORTS = "warn_about_reports"
     const val FILTER_SPAM_FROM_STRANGERS = "filter_spam_from_strangers"
     const val LAST_READ_PER_ROUTE = "last_read_route_per_route"
-    const val AUTOMATICALLY_SHOW_IMAGES = "automatically_show_images"
-    const val AUTOMATICALLY_START_PLAYBACK = "automatically_start_playback"
-    const val THEME = "theme"
-    const val PREFERRED_LANGUAGE = "preferred_Language"
-    const val AUTOMATICALLY_LOAD_URL_PREVIEW = "automatically_load_url_preview"
-    const val AUTOMATICALLY_HIDE_NAV_BARS = "automatically_hide_nav_bars"
     const val LOGIN_WITH_EXTERNAL_SIGNER = "login_with_external_signer"
-    const val AUTOMATICALLY_SHOW_PROFILE_PICTURE = "automatically_show_profile_picture"
     const val SIGNER_PACKAGE_NAME = "signer_package_name"
     const val HAS_DONATED_IN_VERSION = "has_donated_in_version"
     const val PENDING_ATTESTATIONS = "pending_attestations"
@@ -148,7 +141,7 @@ object LocalPreferences {
                         Event.mapper.readValue<List<AccountInfo>>(it)
                     }
 
-                if (newSystemOfAccounts != null && newSystemOfAccounts.isNotEmpty()) {
+                if (!newSystemOfAccounts.isNullOrEmpty()) {
                     savedAccounts = newSystemOfAccounts
                 } else {
                     val oldAccounts = getString(PrefKeys.SAVED_ACCOUNTS, null)?.split(COMMA) ?: listOf()
@@ -164,6 +157,8 @@ object LocalPreferences {
                         }
 
                     savedAccounts = migrated
+
+                    edit().apply { putString(PrefKeys.ALL_ACCOUNT_INFO, Event.mapper.writeValueAsString(savedAccounts)) }.apply()
                 }
             }
         }
@@ -265,9 +260,7 @@ object LocalPreferences {
         saveToEncryptedStorage(account)
     }
 
-    fun allSavedAccounts(): List<AccountInfo> {
-        return savedAccounts()
-    }
+    fun allSavedAccounts(): List<AccountInfo> = savedAccounts()
 
     suspend fun saveToEncryptedStorage(account: Account) {
         Log.d("LocalPreferences", "Saving to encrypted storage")
@@ -345,14 +338,11 @@ object LocalPreferences {
                         PrefKeys.PENDING_ATTESTATIONS,
                         Event.mapper.writeValueAsString(account.pendingAttestations.value),
                     )
-                }
-                .apply()
+                }.apply()
         }
     }
 
-    suspend fun loadCurrentAccountFromEncryptedStorage(): Account? {
-        return currentAccount()?.let { loadCurrentAccountFromEncryptedStorage(it) }
-    }
+    suspend fun loadCurrentAccountFromEncryptedStorage(): Account? = currentAccount()?.let { loadCurrentAccountFromEncryptedStorage(it) }
 
     suspend fun saveSharedSettings(
         sharedSettings: Settings,

@@ -29,7 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.ui.note.RepostedIcon
+import com.vitorpamplona.amethyst.ui.note.RepostIcon
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
@@ -55,7 +55,7 @@ fun GenericRepostLayout(
         Box(
             remember { Size18Modifier.align(Alignment.BottomStart).padding(1.dp) },
         ) {
-            RepostedIcon(modifier = Size18Modifier, MaterialTheme.colorScheme.placeholderText)
+            RepostIcon(modifier = Size18Modifier, MaterialTheme.colorScheme.placeholderText)
         }
 
         Box(

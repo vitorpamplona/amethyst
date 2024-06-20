@@ -89,6 +89,8 @@ open class Event(
 
     override fun forEachTaggedEvent(onEach: (eventId: HexKey) -> Unit) = forEachTagged("e", onEach)
 
+    override fun forEachHashTag(onEach: (eventId: HexKey) -> Unit) = forEachTagged("t", onEach)
+
     private fun forEachTagged(
         tagName: String,
         onEach: (eventId: HexKey) -> Unit,
@@ -141,7 +143,7 @@ open class Event(
 
     override fun isSensitive() =
         tags.any {
-            (it.size > 0 && it[0].equals("content-warning")) ||
+            (it.size > 0 && it[0] == "content-warning") ||
                 (it.size > 1 && it[0] == "t" && (it[1].equals("nsfw", true) || it[1].equals("nude", true)))
         }
 

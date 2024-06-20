@@ -37,11 +37,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
 
@@ -74,7 +74,7 @@ fun SelectTextDialog(
                     ) {
                         ArrowBackIcon()
                     }
-                    Text(text = stringResource(R.string.select_text_dialog_top))
+                    Text(text = stringRes(R.string.select_text_dialog_top))
                 }
                 HorizontalDivider(thickness = DividerThickness)
                 Column(

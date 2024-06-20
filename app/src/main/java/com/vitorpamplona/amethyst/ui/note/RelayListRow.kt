@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,16 +36,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.actions.relays.RelayInformationDialog
+import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size17dp
@@ -87,13 +88,13 @@ fun ShouldShowExpandButton(
 
 @Composable
 fun ChatRelayExpandButton(onClick: () -> Unit) {
-    IconButton(
+    ClickableBox(
         modifier = Size15Modifier,
         onClick = onClick,
     ) {
         Icon(
             imageVector = Icons.Default.ChevronRight,
-            contentDescription = stringResource(id = R.string.expand_relay_list),
+            contentDescription = stringRes(id = R.string.expand_relay_list),
             modifier = Size15Modifier,
             tint = MaterialTheme.colorScheme.placeholderText,
         )
@@ -178,6 +179,7 @@ fun RenderRelay(
             displayUrl = relay.displayUrl,
             iconUrl = relayInfo?.icon ?: relay.favIcon,
             loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         )
     }
 }
@@ -187,14 +189,16 @@ fun RenderRelayIcon(
     displayUrl: String,
     iconUrl: String?,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     iconModifier: Modifier = MaterialTheme.colorScheme.relayIconModifier,
 ) {
     RobohashFallbackAsyncImage(
         robot = displayUrl,
         model = iconUrl,
-        contentDescription = stringResource(id = R.string.relay_info, displayUrl),
+        contentDescription = stringRes(id = R.string.relay_info, displayUrl),
         colorFilter = RelayIconFilter,
         modifier = iconModifier,
         loadProfilePicture = loadProfilePicture,
+        loadRobohash = loadRobohash,
     )
 }

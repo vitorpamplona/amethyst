@@ -81,7 +81,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -108,6 +107,7 @@ import com.vitorpamplona.amethyst.ui.note.LyricsOffIcon
 import com.vitorpamplona.amethyst.ui.note.MuteIcon
 import com.vitorpamplona.amethyst.ui.note.MutedIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.Size110dp
 import com.vitorpamplona.amethyst.ui.theme.Size165dp
@@ -374,13 +374,15 @@ data class MediaItemData(
     val artworkUri: String? = null,
 )
 
-class MediaItemCache() : GenericBaseCache<MediaItemData, MediaItem>(20) {
-    override suspend fun compute(key: MediaItemData): MediaItem {
-        return MediaItem.Builder()
+class MediaItemCache : GenericBaseCache<MediaItemData, MediaItem>(20) {
+    override suspend fun compute(key: MediaItemData): MediaItem =
+        MediaItem
+            .Builder()
             .setMediaId(key.videoUri)
             .setUri(key.videoUri)
             .setMediaMetadata(
-                MediaMetadata.Builder()
+                MediaMetadata
+                    .Builder()
                     .setArtist(key.authorName?.ifBlank { null })
                     .setTitle(key.title?.ifBlank { null } ?: key.videoUri)
                     .setArtworkUri(
@@ -394,11 +396,8 @@ class MediaItemCache() : GenericBaseCache<MediaItemData, MediaItem>(20) {
                             if (e is CancellationException) throw e
                             null
                         },
-                    )
-                    .build(),
-            )
-            .build()
-    }
+                    ).build(),
+            ).build()
 }
 
 @Composable
@@ -409,7 +408,15 @@ fun GetMediaItem(
     authorName: String?,
     inner: @Composable (State<MediaItem>) -> Unit,
 ) {
-    val data = remember(videoUri) { MediaItemData(videoUri, title, artworkUri, authorName) }
+    val data =
+        remember(videoUri) {
+            MediaItemData(
+                videoUri = videoUri,
+                authorName = authorName,
+                title = title,
+                artworkUri = artworkUri,
+            )
+        }
     val mediaItem by produceCachedState(cache = mediaItemCache, key = data)
 
     mediaItem?.let {
@@ -619,7 +626,7 @@ var keepPlayingMutex: MediaController? = null
 val trackingVideos = mutableListOf<VisibilityData>()
 
 @Stable
-class VisibilityData() {
+class VisibilityData {
     var distanceToCenter: Float? = null
 }
 
@@ -645,8 +652,7 @@ fun VideoPlayerActiveMutex(
 
     val myModifier =
         remember(videoUri) {
-            Modifier.fillMaxWidth().defaultMinSize(minHeight = 70.dp).onVisiblePositionChanges {
-                    distanceToCenter ->
+            Modifier.fillMaxWidth().defaultMinSize(minHeight = 70.dp).onVisiblePositionChanges { distanceToCenter ->
                 myCache.distanceToCenter = distanceToCenter
 
                 if (distanceToCenter != null) {
@@ -815,8 +821,7 @@ private fun pollCurrentDuration(controller: MediaController) =
             emit(controller.currentPosition / controller.duration.toFloat())
             delay(100)
         }
-    }
-        .conflate()
+    }.conflate()
 
 @Composable
 fun Waveform(
@@ -1000,7 +1005,8 @@ private fun MuteButton(
     ) {
         Box(modifier = VolumeBottomIconSize) {
             Box(
-                Modifier.clip(CircleShape)
+                Modifier
+                    .clip(CircleShape)
                     .fillMaxSize(0.6f)
                     .align(Alignment.Center)
                     .background(MaterialTheme.colorScheme.background),
@@ -1040,7 +1046,8 @@ private fun KeepPlayingButton(
     ) {
         Box(modifier = PinBottomIconSize) {
             Box(
-                Modifier.clip(CircleShape)
+                Modifier
+                    .clip(CircleShape)
                     .fillMaxSize(0.6f)
                     .align(Alignment.Center)
                     .background(MaterialTheme.colorScheme.background),
@@ -1099,7 +1106,8 @@ fun AnimatedShareButton(
 fun ShareButton(innerAction: @Composable (MutableState<Boolean>, () -> Unit) -> Unit) {
     Box(modifier = PinBottomIconSize) {
         Box(
-            Modifier.clip(CircleShape)
+            Modifier
+                .clip(CircleShape)
                 .fillMaxSize(0.6f)
                 .align(Alignment.Center)
                 .background(MaterialTheme.colorScheme.background),
@@ -1116,7 +1124,7 @@ fun ShareButton(innerAction: @Composable (MutableState<Boolean>, () -> Unit) -> 
             Icon(
                 imageVector = Icons.Default.Share,
                 modifier = Size20Modifier,
-                contentDescription = stringResource(R.string.share_or_save),
+                contentDescription = stringRes(R.string.share_or_save),
             )
 
             innerAction(popupExpanded) { popupExpanded.value = false }
@@ -1129,7 +1137,8 @@ fun ShareButton(innerAction: @Composable (MutableState<Boolean>, () -> Unit) -> 
 fun SaveButton(onSaveClick: (localContext: Context) -> Unit) {
     Box(modifier = PinBottomIconSize) {
         Box(
-            Modifier.clip(CircleShape)
+            Modifier
+                .clip(CircleShape)
                 .fillMaxSize(0.6f)
                 .align(Alignment.Center)
                 .background(MaterialTheme.colorScheme.background),
@@ -1160,7 +1169,7 @@ fun SaveButton(onSaveClick: (localContext: Context) -> Unit) {
             Icon(
                 imageVector = Icons.Default.Download,
                 modifier = Size20Modifier,
-                contentDescription = stringResource(R.string.save_to_gallery),
+                contentDescription = stringRes(R.string.save_to_gallery),
             )
         }
     }

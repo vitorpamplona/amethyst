@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.navigation
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -44,7 +43,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.HorizontalDivider
@@ -72,7 +70,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -86,6 +83,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.service.relays.RelayPoolStatus
@@ -98,6 +96,7 @@ import com.vitorpamplona.amethyst.ui.qrcode.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font18SP
@@ -130,11 +129,6 @@ fun DrawerContent(
         coroutineScope.launch { drawerState.close() }
         Unit
     }
-
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
 
     ModalDrawerSheet(
         drawerContainerColor = MaterialTheme.colorScheme.background,
@@ -174,7 +168,8 @@ fun DrawerContent(
             BottomContent(
                 accountViewModel.account.userProfile(),
                 drawerState,
-                automaticallyShowProfilePicture,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                 nav,
             )
         }
@@ -217,14 +212,14 @@ fun ProfileContentTemplate(
         if (profileBanner != null) {
             AsyncImage(
                 model = profileBanner,
-                contentDescription = stringResource(id = R.string.profile_image),
+                contentDescription = stringRes(id = R.string.profile_image),
                 contentScale = ContentScale.FillWidth,
                 modifier = bannerModifier,
             )
         } else {
             Image(
                 painter = painterResource(R.drawable.profile_banner),
-                contentDescription = stringResource(R.string.profile_banner),
+                contentDescription = stringRes(R.string.profile_banner),
                 contentScale = ContentScale.FillWidth,
                 modifier = bannerModifier,
             )
@@ -234,7 +229,7 @@ fun ProfileContentTemplate(
             RobohashFallbackAsyncImage(
                 robot = profilePubHex,
                 model = profilePicture,
-                contentDescription = stringResource(id = R.string.profile_image),
+                contentDescription = stringRes(id = R.string.profile_image),
                 modifier =
                     Modifier
                         .width(100.dp)
@@ -243,6 +238,7 @@ fun ProfileContentTemplate(
                         .border(3.dp, MaterialTheme.colorScheme.background, CircleShape)
                         .clickable(onClick = onClick),
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
             )
 
             if (bestDisplayName != null) {
@@ -295,11 +291,11 @@ fun StatusEditBar(
     OutlinedTextField(
         value = currentStatus.value,
         onValueChange = { currentStatus.value = it },
-        label = { Text(text = stringResource(R.string.status_update)) },
+        label = { Text(text = stringRes(R.string.status_update)) },
         modifier = Modifier.fillMaxWidth(),
         placeholder = {
             Text(
-                text = stringResource(R.string.status_update),
+                text = stringRes(R.string.status_update),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -401,7 +397,7 @@ private fun FollowingAndFollowerCounts(
             fontWeight = FontWeight.Bold,
         )
 
-        Text(stringResource(R.string.following))
+        Text(stringRes(R.string.following))
 
         Spacer(modifier = DoubleHorzSpacer)
 
@@ -410,7 +406,7 @@ private fun FollowingAndFollowerCounts(
             fontWeight = FontWeight.Bold,
         )
 
-        Text(stringResource(R.string.followers))
+        Text(stringRes(R.string.followers))
     }
 }
 
@@ -464,7 +460,7 @@ fun ListContent(
 
     Column(modifier) {
         NavigationRow(
-            title = stringResource(R.string.profile),
+            title = stringRes(R.string.profile),
             icon = Route.Profile.icon,
             tint = MaterialTheme.colorScheme.primary,
             nav = nav,
@@ -473,7 +469,7 @@ fun ListContent(
         )
 
         NavigationRow(
-            title = stringResource(R.string.bookmarks),
+            title = stringRes(R.string.bookmarks),
             icon = Route.Bookmarks.icon,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
@@ -482,7 +478,7 @@ fun ListContent(
         )
 
         NavigationRow(
-            title = stringResource(R.string.drafts),
+            title = stringRes(R.string.drafts),
             icon = Route.Drafts.icon,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
@@ -499,7 +495,7 @@ fun ListContent(
         )
 
         NavigationRow(
-            title = stringResource(R.string.security_filters),
+            title = stringRes(R.string.security_filters),
             icon = Route.BlockedUsers.icon,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
@@ -509,7 +505,7 @@ fun ListContent(
 
         accountViewModel.account.keyPair.privKey?.let {
             IconRow(
-                title = stringResource(R.string.backup_keys),
+                title = stringRes(R.string.backup_keys),
                 icon = R.drawable.ic_key,
                 tint = MaterialTheme.colorScheme.onBackground,
                 onClick = {
@@ -522,9 +518,9 @@ fun ListContent(
         IconRow(
             title =
                 if (checked) {
-                    stringResource(R.string.disconnect_from_your_orbot_setup)
+                    stringRes(R.string.disconnect_from_your_orbot_setup)
                 } else {
-                    stringResource(R.string.connect_via_tor_short)
+                    stringRes(R.string.connect_via_tor_short)
                 },
             icon = R.drawable.ic_tor,
             tint = MaterialTheme.colorScheme.onBackground,
@@ -543,7 +539,7 @@ fun ListContent(
         )
 
         NavigationRow(
-            title = stringResource(R.string.settings),
+            title = stringRes(R.string.settings),
             icon = Route.Settings.icon,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
@@ -554,7 +550,7 @@ fun ListContent(
         Spacer(modifier = Modifier.weight(1f))
 
         IconRow(
-            title = stringResource(R.string.drawer_accounts),
+            title = stringRes(R.string.drawer_accounts),
             icon = R.drawable.manage_accounts,
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = openSheet,
@@ -578,7 +574,7 @@ fun ListContent(
             },
             onError = {
                 accountViewModel.toast(
-                    context.getString(R.string.could_not_connect_to_tor),
+                    stringRes(context, R.string.could_not_connect_to_tor),
                     it,
                 )
             },
@@ -588,8 +584,8 @@ fun ListContent(
 
     if (disconnectTorDialog) {
         AlertDialog(
-            title = { Text(text = stringResource(R.string.do_you_really_want_to_disable_tor_title)) },
-            text = { Text(text = stringResource(R.string.do_you_really_want_to_disable_tor_text)) },
+            title = { Text(text = stringRes(R.string.do_you_really_want_to_disable_tor_title)) },
+            text = { Text(text = stringRes(R.string.do_you_really_want_to_disable_tor_text)) },
             onDismissRequest = { disconnectTorDialog = false },
             confirmButton = {
                 TextButton(
@@ -599,14 +595,14 @@ fun ListContent(
                         accountViewModel.enableTor(false, proxyPort)
                     },
                 ) {
-                    Text(text = stringResource(R.string.yes))
+                    Text(text = stringRes(R.string.yes))
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { disconnectTorDialog = false },
                 ) {
-                    Text(text = stringResource(R.string.no))
+                    Text(text = stringRes(R.string.no))
                 }
             },
         )
@@ -730,7 +726,7 @@ fun IconRowRelays(
 
             Text(
                 modifier = Modifier.padding(start = 16.dp),
-                text = stringResource(id = R.string.relay_setup),
+                text = stringRes(id = R.string.relay_setup),
                 fontSize = 18.sp,
             )
 
@@ -746,6 +742,7 @@ fun BottomContent(
     user: User,
     drawerState: DrawerState,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     nav: (String) -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -792,7 +789,7 @@ fun BottomContent(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_qrcode),
-                    contentDescription = stringResource(id = R.string.show_npub_as_a_qr_code),
+                    contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )
@@ -804,6 +801,7 @@ fun BottomContent(
         ShowQRDialog(
             user,
             loadProfilePicture = loadProfilePicture,
+            loadRobohash = loadRobohash,
             onScan = {
                 dialogOpen = false
                 coroutineScope.launch { drawerState.close() }

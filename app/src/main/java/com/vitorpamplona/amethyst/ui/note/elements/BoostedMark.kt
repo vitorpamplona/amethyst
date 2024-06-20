@@ -23,16 +23,16 @@ package com.vitorpamplona.amethyst.ui.note.elements
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun BoostedMark() {
     Text(
-        stringResource(id = R.string.boosted),
+        stringRes(id = R.string.boosted),
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.placeholderText,
         maxLines = 1,

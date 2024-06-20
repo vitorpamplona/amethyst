@@ -46,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewMediaModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -136,7 +136,7 @@ fun NewImageButton(
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_compose),
-                contentDescription = stringResource(id = R.string.new_short),
+                contentDescription = stringRes(id = R.string.new_short),
                 modifier = Modifier.size(26.dp),
                 tint = Color.White,
             )
@@ -152,8 +152,7 @@ private fun ShowProgress(postViewModel: NewMediaModel) {
                 animateFloatAsState(
                     targetValue = postViewModel.uploadingPercentage.value,
                     animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
-                )
-                    .value,
+                ).value,
             modifier =
                 Size55Modifier
                     .clip(CircleShape)

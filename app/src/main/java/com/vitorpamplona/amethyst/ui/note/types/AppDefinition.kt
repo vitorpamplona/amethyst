@@ -52,7 +52,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -66,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.note.LinkIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -101,7 +101,7 @@ fun RenderAppDefinition(
 
                 AsyncImage(
                     model = it.banner,
-                    contentDescription = stringResource(id = R.string.profile_image),
+                    contentDescription = stringRes(id = R.string.profile_image),
                     contentScale = ContentScale.FillWidth,
                     modifier =
                         Modifier
@@ -123,7 +123,7 @@ fun RenderAppDefinition(
             } else {
                 Image(
                     painter = painterResource(R.drawable.profile_banner),
-                    contentDescription = stringResource(id = R.string.profile_banner),
+                    contentDescription = stringRes(id = R.string.profile_banner),
                     contentScale = ContentScale.FillWidth,
                     modifier =
                         Modifier
@@ -157,8 +157,7 @@ fun RenderAppDefinition(
                                             3.dp,
                                             MaterialTheme.colorScheme.background,
                                             CircleShape,
-                                        )
-                                        .clip(shape = CircleShape)
+                                        ).clip(shape = CircleShape)
                                         .fillMaxSize()
                                         .background(MaterialTheme.colorScheme.background)
                                         .combinedClickable(

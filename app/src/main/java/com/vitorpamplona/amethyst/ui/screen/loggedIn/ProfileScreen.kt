@@ -20,12 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.scrollBy
@@ -98,7 +95,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -118,10 +114,12 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -155,10 +153,12 @@ import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.Size100dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25Modifier
@@ -166,6 +166,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.userProfileBorderModifier
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
@@ -429,8 +430,7 @@ private fun RenderSurface(
                                         }
                                     }
                                 },
-                            )
-                            .fillMaxHeight()
+                            ).fillMaxHeight()
                     },
             ) {
                 RenderScreen(
@@ -550,8 +550,7 @@ fun UpdateThreadsAndRepliesWhenBlockUnblock(
         accountViewModel.account.liveHiddenUsers
             .map {
                 it.hiddenUsers.contains(baseUser.pubkeyHex) || it.spammers.contains(baseUser.pubkeyHex)
-            }
-            .observeAsState(accountViewModel.account.isHidden(baseUser))
+            }.observeAsState(accountViewModel.account.isHidden(baseUser))
 
     LaunchedEffect(key1 = isHidden) {
         threadsViewModel.invalidateData()
@@ -569,8 +568,8 @@ private fun CreateAndRenderTabs(
 
     val tabs =
         listOf<@Composable (() -> Unit)?>(
-            { Text(text = stringResource(R.string.notes)) },
-            { Text(text = stringResource(R.string.replies)) },
+            { Text(text = stringRes(R.string.notes)) },
+            { Text(text = stringRes(R.string.replies)) },
             { FollowTabHeader(baseUser) },
             { FollowersTabHeader(baseUser) },
             { ZapTabHeader(baseUser) },
@@ -597,10 +596,14 @@ private fun RelaysTabHeader(baseUser: User) {
     val userStateRelayInfo by baseUser.live().relayInfo.observeAsState()
     val userRelays =
         remember(userStateRelayInfo) {
-            userStateRelayInfo?.user?.latestContactList?.relays()?.size ?: "--"
+            userStateRelayInfo
+                ?.user
+                ?.latestContactList
+                ?.relays()
+                ?.size ?: "--"
         }
 
-    Text(text = "$userRelaysBeingUsed / $userRelays ${stringResource(R.string.relays)}")
+    Text(text = "$userRelaysBeingUsed / $userRelays ${stringRes(R.string.relays)}")
 }
 
 @Composable
@@ -618,7 +621,7 @@ private fun ReportsTabHeader(baseUser: User) {
         }
     }
 
-    Text(text = "$userReports ${stringResource(R.string.reports)}")
+    Text(text = "$userReports ${stringRes(R.string.reports)}")
 }
 
 @Composable
@@ -631,7 +634,7 @@ private fun FollowedTagsTabHeader(baseUser: User) {
         }
     }
 
-    Text(text = "$usertags ${stringResource(R.string.followed_tags)}")
+    Text(text = "$usertags ${stringRes(R.string.followed_tags)}")
 }
 
 @Composable
@@ -656,7 +659,7 @@ private fun BookmarkTabHeader(baseUser: User) {
         }
     }
 
-    Text(text = "$userBookmarks ${stringResource(R.string.bookmarks)}")
+    Text(text = "$userBookmarks ${stringRes(R.string.bookmarks)}")
 }
 
 @Composable
@@ -673,7 +676,7 @@ private fun ZapTabHeader(baseUser: User) {
         }
     }
 
-    Text(text = "${showAmountAxis(zapAmount)} ${stringResource(id = R.string.zaps)}")
+    Text(text = "${showAmountAxis(zapAmount)} ${stringRes(id = R.string.zaps)}")
 }
 
 @Composable
@@ -681,7 +684,7 @@ private fun FollowersTabHeader(baseUser: User) {
     val userState by baseUser.live().followers.observeAsState()
     var followerCount by remember { mutableStateOf("--") }
 
-    val text = stringResource(R.string.followers)
+    val text = stringRes(R.string.followers)
 
     LaunchedEffect(key1 = userState) {
         launch(Dispatchers.IO) {
@@ -701,7 +704,7 @@ private fun FollowTabHeader(baseUser: User) {
     val userState by baseUser.live().follows.observeAsState()
     var followCount by remember { mutableStateOf("--") }
 
-    val text = stringResource(R.string.follows)
+    val text = stringRes(R.string.follows)
 
     LaunchedEffect(key1 = userState) {
         launch(Dispatchers.IO) {
@@ -752,7 +755,7 @@ private fun ProfileHeader(
                 Icon(
                     tint = MaterialTheme.colorScheme.placeholderText,
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = stringResource(R.string.more_options),
+                    contentDescription = stringRes(R.string.more_options),
                 )
 
                 UserProfileDropDownMenu(
@@ -780,13 +783,8 @@ private fun ProfileHeader(
                 ClickableUserPicture(
                     baseUser = baseUser,
                     accountViewModel = accountViewModel,
-                    size = 100.dp,
-                    modifier =
-                        Modifier.border(
-                            3.dp,
-                            MaterialTheme.colorScheme.background,
-                            CircleShape,
-                        ),
+                    size = Size100dp,
+                    modifier = MaterialTheme.colorScheme.userProfileBorderModifier,
                     onClick = {
                         if (baseUser.profilePicture() != null) {
                             zoomImageDialogOpen = true
@@ -922,31 +920,28 @@ fun WatchIsHiddenUser(
         accountViewModel.account.liveHiddenUsers
             .map {
                 it.hiddenUsers.contains(baseUser.pubkeyHex) || it.spammers.contains(baseUser.pubkeyHex)
-            }
-            .observeAsState(accountViewModel.account.isHidden(baseUser))
+            }.observeAsState(accountViewModel.account.isHidden(baseUser))
 
     content(isHidden)
 }
 
-fun getIdentityClaimIcon(identity: IdentityClaim): Int {
-    return when (identity) {
+fun getIdentityClaimIcon(identity: IdentityClaim): Int =
+    when (identity) {
         is TwitterIdentity -> R.drawable.twitter
         is TelegramIdentity -> R.drawable.telegram
         is MastodonIdentity -> R.drawable.mastodon
         is GitHubIdentity -> R.drawable.github
         else -> R.drawable.github
     }
-}
 
-fun getIdentityClaimDescription(identity: IdentityClaim): Int {
-    return when (identity) {
+fun getIdentityClaimDescription(identity: IdentityClaim): Int =
+    when (identity) {
         is TwitterIdentity -> R.string.twitter
         is TelegramIdentity -> R.string.telegram
         is MastodonIdentity -> R.string.mastodon
         is GitHubIdentity -> R.string.github
         else -> R.drawable.github
     }
-}
 
 @Composable
 private fun DrawAdditionalInfo(
@@ -961,11 +956,6 @@ private fun DrawAdditionalInfo(
 
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
-
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
 
     user.toBestDisplayName().let {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 7.dp)) {
@@ -996,7 +986,7 @@ private fun DrawAdditionalInfo(
         ) {
             Icon(
                 imageVector = Icons.Default.ContentCopy,
-                contentDescription = stringResource(id = R.string.copy_npub_to_clipboard),
+                contentDescription = stringRes(id = R.string.copy_npub_to_clipboard),
                 modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
@@ -1007,7 +997,8 @@ private fun DrawAdditionalInfo(
         if (dialogOpen) {
             ShowQRDialog(
                 user,
-                automaticallyShowProfilePicture,
+                accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                 onScan = {
                     dialogOpen = false
                     nav(it)
@@ -1022,7 +1013,7 @@ private fun DrawAdditionalInfo(
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_qrcode),
-                contentDescription = stringResource(id = R.string.show_npub_as_a_qr_code),
+                contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
                 modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
@@ -1039,7 +1030,7 @@ private fun DrawAdditionalInfo(
             Icon(
                 tint = MaterialTheme.colorScheme.placeholderText,
                 imageVector = Icons.Default.Link,
-                contentDescription = stringResource(R.string.website),
+                contentDescription = stringRes(R.string.website),
                 modifier = Modifier.size(16.dp),
             )
 
@@ -1073,7 +1064,7 @@ private fun DrawAdditionalInfo(
                 Icon(
                     tint = Color.Unspecified,
                     painter = painterResource(id = getIdentityClaimIcon(identity)),
-                    contentDescription = stringResource(getIdentityClaimDescription(identity)),
+                    contentDescription = stringRes(getIdentityClaimDescription(identity)),
                     modifier = Modifier.size(16.dp),
                 )
 
@@ -1110,7 +1101,7 @@ private fun DrawAdditionalInfo(
         }
     }
 
-    DisplayAppRecommendations(appRecommendations, nav)
+    DisplayAppRecommendations(appRecommendations, accountViewModel, nav)
 }
 
 @Composable
@@ -1128,7 +1119,7 @@ fun DisplayLNAddress(
 
     if (showErrorMessageDialog != null) {
         ErrorMessageDialog(
-            title = stringResource(id = R.string.error_dialog_zap_error),
+            title = stringRes(id = R.string.error_dialog_zap_error),
             textContent = showErrorMessageDialog ?: "",
             onClickStartMessage = {
                 scope.launch(Dispatchers.IO) {
@@ -1143,7 +1134,7 @@ fun DisplayLNAddress(
     var showInfoMessageDialog by remember { mutableStateOf<String?>(null) }
     if (showInfoMessageDialog != null) {
         InformationDialog(
-            title = context.getString(R.string.payment_successful),
+            title = stringRes(context, R.string.payment_successful),
             textContent = showInfoMessageDialog ?: "",
         ) {
             showInfoMessageDialog = null
@@ -1180,12 +1171,12 @@ fun DisplayLNAddress(
                         if (accountViewModel.account.hasWalletConnectSetup()) {
                             accountViewModel.account.sendZapPaymentRequestFor(it, null, onSent = {}) { response ->
                                 if (response is PayInvoiceSuccessResponse) {
-                                    showInfoMessageDialog = context.getString(R.string.payment_successful)
+                                    showInfoMessageDialog = stringRes(context, R.string.payment_successful)
                                 } else if (response is PayInvoiceErrorResponse) {
                                     showErrorMessageDialog =
                                         response.error?.message
                                             ?: response.error?.code?.toString()
-                                            ?: context.getString(R.string.error_parsing_error_message)
+                                            ?: stringRes(context, R.string.error_parsing_error_message)
                                 }
                             }
                         } else {
@@ -1204,20 +1195,22 @@ fun DisplayLNAddress(
 @OptIn(ExperimentalLayoutApi::class)
 private fun DisplayAppRecommendations(
     appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     val feedState by appRecommendations.feedContent.collectAsStateWithLifecycle()
 
     LaunchedEffect(key1 = Unit) { appRecommendations.invalidateData() }
 
-    Crossfade(
+    CrossfadeIfEnabled(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),
+        accountViewModel = accountViewModel,
     ) { state ->
         when (state) {
             is FeedState.Loaded -> {
                 Column {
-                    Text(stringResource(id = R.string.recommended_apps))
+                    Text(stringRes(id = R.string.recommended_apps))
 
                     FlowRow(
                         verticalArrangement = Arrangement.Center,
@@ -1279,17 +1272,17 @@ private fun DisplayBadges(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
-
     LoadAddressableNote(
         aTag = BadgeProfilesEvent.createAddressTag(baseUser.pubkeyHex),
         accountViewModel = accountViewModel,
     ) { note ->
         if (note != null) {
-            WatchAndRenderBadgeList(note, automaticallyShowProfilePicture, nav)
+            WatchAndRenderBadgeList(
+                note = note,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                nav = nav,
+            )
         }
     }
 }
@@ -1298,6 +1291,7 @@ private fun DisplayBadges(
 private fun WatchAndRenderBadgeList(
     note: AddressableNote,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     nav: (String) -> Unit,
 ) {
     val badgeList by
@@ -1308,7 +1302,7 @@ private fun WatchAndRenderBadgeList(
             .distinctUntilChanged()
             .observeAsState()
 
-    badgeList?.let { list -> RenderBadgeList(list, loadProfilePicture, nav) }
+    badgeList?.let { list -> RenderBadgeList(list, loadProfilePicture, loadRobohash, nav) }
 }
 
 @Composable
@@ -1316,13 +1310,14 @@ private fun WatchAndRenderBadgeList(
 private fun RenderBadgeList(
     list: ImmutableList<String>,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     nav: (String) -> Unit,
 ) {
     FlowRow(
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.padding(vertical = 5.dp),
     ) {
-        list.forEach { badgeAwardEvent -> LoadAndRenderBadge(badgeAwardEvent, loadProfilePicture, nav) }
+        list.forEach { badgeAwardEvent -> LoadAndRenderBadge(badgeAwardEvent, loadProfilePicture, loadRobohash, nav) }
     }
 }
 
@@ -1330,6 +1325,7 @@ private fun RenderBadgeList(
 private fun LoadAndRenderBadge(
     badgeAwardEventHex: String,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     nav: (String) -> Unit,
 ) {
     var baseNote by remember(badgeAwardEventHex) { mutableStateOf(LocalCache.getNoteIfExists(badgeAwardEventHex)) }
@@ -1342,37 +1338,40 @@ private fun LoadAndRenderBadge(
         }
     }
 
-    baseNote?.let { ObserveAndRenderBadge(it, loadProfilePicture, nav) }
+    baseNote?.let { ObserveAndRenderBadge(it, loadProfilePicture, loadRobohash, nav) }
 }
 
 @Composable
 private fun ObserveAndRenderBadge(
     it: Note,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     nav: (String) -> Unit,
 ) {
     val badgeAwardState by it.live().metadata.observeAsState()
     val baseBadgeDefinition by
         remember(badgeAwardState) { derivedStateOf { badgeAwardState?.note?.replyTo?.firstOrNull() } }
 
-    baseBadgeDefinition?.let { BadgeThumb(it, loadProfilePicture, nav, Size35dp) }
+    baseBadgeDefinition?.let { BadgeThumb(it, loadProfilePicture, loadRobohash, nav, Size35dp) }
 }
 
 @Composable
 fun BadgeThumb(
     note: Note,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     nav: (String) -> Unit,
     size: Dp,
     pictureModifier: Modifier = Modifier,
 ) {
-    BadgeThumb(note, loadProfilePicture, size, pictureModifier) { nav("Note/${note.idHex}") }
+    BadgeThumb(note, loadProfilePicture, loadRobohash, size, pictureModifier) { nav("Note/${note.idHex}") }
 }
 
 @Composable
 fun BadgeThumb(
     baseNote: Note,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     size: Dp,
     pictureModifier: Modifier = Modifier,
     onClick: ((String) -> Unit)? = null,
@@ -1384,7 +1383,7 @@ fun BadgeThumb(
                 .height(size)
         },
     ) {
-        WatchAndRenderBadgeImage(baseNote, loadProfilePicture, size, pictureModifier, onClick)
+        WatchAndRenderBadgeImage(baseNote, loadProfilePicture, loadRobohash, size, pictureModifier, onClick)
     }
 }
 
@@ -1392,6 +1391,7 @@ fun BadgeThumb(
 private fun WatchAndRenderBadgeImage(
     baseNote: Note,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     size: Dp,
     pictureModifier: Modifier,
     onClick: ((String) -> Unit)?,
@@ -1409,19 +1409,20 @@ private fun WatchAndRenderBadgeImage(
     if (image == null) {
         RobohashAsyncImage(
             robot = "authornotfound",
-            contentDescription = stringResource(R.string.unknown_author),
+            contentDescription = stringRes(R.string.unknown_author),
             modifier =
                 remember {
                     pictureModifier
                         .width(size)
                         .height(size)
                 },
+            loadRobohash = loadRobohash,
         )
     } else {
         RobohashFallbackAsyncImage(
             robot = eventId,
             model = image!!,
-            contentDescription = stringResource(id = R.string.profile_image),
+            contentDescription = stringRes(id = R.string.profile_image),
             modifier =
                 remember {
                     pictureModifier
@@ -1437,6 +1438,7 @@ private fun WatchAndRenderBadgeImage(
                         }
                 },
             loadProfilePicture = loadProfilePicture,
+            loadRobohash = loadRobohash,
         )
     }
 }
@@ -1456,7 +1458,7 @@ fun DrawBanner(
     if (!banner.isNullOrBlank()) {
         AsyncImage(
             model = banner,
-            contentDescription = stringResource(id = R.string.profile_image),
+            contentDescription = stringRes(id = R.string.profile_image),
             contentScale = ContentScale.FillWidth,
             modifier =
                 Modifier
@@ -1478,7 +1480,7 @@ fun DrawBanner(
     } else {
         Image(
             painter = painterResource(R.drawable.profile_banner),
-            contentDescription = stringResource(id = R.string.profile_banner),
+            contentDescription = stringRes(id = R.string.profile_banner),
             contentScale = ContentScale.FillWidth,
             modifier =
                 Modifier
@@ -1754,7 +1756,7 @@ private fun MessageButton(
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_dm),
-            stringResource(R.string.send_a_direct_message),
+            stringRes(R.string.send_a_direct_message),
             modifier = Modifier.size(20.dp),
             tint = Color.White,
         )
@@ -1791,7 +1793,7 @@ private fun InnerEditButton(onClick: () -> Unit) {
         Icon(
             tint = Color.White,
             imageVector = Icons.Default.EditNote,
-            contentDescription = stringResource(R.string.edits_the_user_s_metadata),
+            contentDescription = stringRes(R.string.edits_the_user_s_metadata),
         )
     }
 }
@@ -1808,7 +1810,7 @@ fun UnfollowButton(onClick: () -> Unit) {
             ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringResource(R.string.unfollow), color = Color.White)
+        Text(text = stringRes(R.string.unfollow), color = Color.White)
     }
 }
 
@@ -1827,7 +1829,7 @@ fun FollowButton(
             ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringResource(text), color = Color.White, textAlign = TextAlign.Center)
+        Text(text = stringRes(text), color = Color.White, textAlign = TextAlign.Center)
     }
 }
 
@@ -1843,7 +1845,7 @@ fun ShowUserButton(onClick: () -> Unit) {
             ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringResource(R.string.unblock), color = Color.White)
+        Text(text = stringRes(R.string.unblock), color = Color.White)
     }
 }
 
@@ -1861,7 +1863,7 @@ fun UserProfileDropDownMenu(
         val clipboardManager = LocalClipboardManager.current
 
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.copy_user_id)) },
+            text = { Text(stringRes(R.string.copy_user_id)) },
             onClick = {
                 clipboardManager.setText(AnnotatedString(user.pubkeyNpub()))
                 onDismiss()
@@ -1872,7 +1874,7 @@ fun UserProfileDropDownMenu(
             HorizontalDivider(thickness = DividerThickness)
             if (accountViewModel.account.isHidden(user)) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.unblock_user)) },
+                    text = { Text(stringRes(R.string.unblock_user)) },
                     onClick = {
                         accountViewModel.show(user)
                         onDismiss()
@@ -1880,7 +1882,7 @@ fun UserProfileDropDownMenu(
                 )
             } else {
                 DropdownMenuItem(
-                    text = { Text(stringResource(id = R.string.block_hide_user)) },
+                    text = { Text(stringRes(id = R.string.block_hide_user)) },
                     onClick = {
                         accountViewModel.hide(user)
                         onDismiss()
@@ -1889,35 +1891,35 @@ fun UserProfileDropDownMenu(
             }
             HorizontalDivider(thickness = DividerThickness)
             DropdownMenuItem(
-                text = { Text(stringResource(id = R.string.report_spam_scam)) },
+                text = { Text(stringRes(id = R.string.report_spam_scam)) },
                 onClick = {
                     accountViewModel.report(user, ReportEvent.ReportType.SPAM)
                     onDismiss()
                 },
             )
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.report_hateful_speech)) },
+                text = { Text(stringRes(R.string.report_hateful_speech)) },
                 onClick = {
                     accountViewModel.report(user, ReportEvent.ReportType.PROFANITY)
                     onDismiss()
                 },
             )
             DropdownMenuItem(
-                text = { Text(stringResource(id = R.string.report_impersonation)) },
+                text = { Text(stringRes(id = R.string.report_impersonation)) },
                 onClick = {
                     accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION)
                     onDismiss()
                 },
             )
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.report_nudity_porn)) },
+                text = { Text(stringRes(R.string.report_nudity_porn)) },
                 onClick = {
                     accountViewModel.report(user, ReportEvent.ReportType.NUDITY)
                     onDismiss()
                 },
             )
             DropdownMenuItem(
-                text = { Text(stringResource(id = R.string.report_illegal_behaviour)) },
+                text = { Text(stringRes(id = R.string.report_illegal_behaviour)) },
                 onClick = {
                     accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL)
                     onDismiss()

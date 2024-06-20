@@ -55,7 +55,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -64,6 +63,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
@@ -100,7 +101,7 @@ fun AccountSwitchBottomSheet(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(stringResource(R.string.account_switch_select_account), fontWeight = FontWeight.Bold)
+            Text(stringRes(R.string.account_switch_select_account), fontWeight = FontWeight.Bold)
         }
         accounts.forEach { acc -> DisplayAccount(acc, accountViewModel, accountStateViewModel) }
         Row(
@@ -112,7 +113,7 @@ fun AccountSwitchBottomSheet(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TextButton(onClick = { popupExpanded = true }) {
-                Text(stringResource(R.string.account_switch_add_account_btn))
+                Text(stringRes(R.string.account_switch_add_account_btn))
             }
         }
     }
@@ -127,7 +128,7 @@ fun AccountSwitchBottomSheet(
                     LoginOrSignupScreen(accountStateViewModel, isFirstLogin = false)
                     TopAppBar(
                         title = {
-                            Text(text = stringResource(R.string.account_switch_add_account_dialog_title))
+                            Text(text = stringRes(R.string.account_switch_add_account_dialog_title))
                         },
                         navigationIcon = {
                             IconButton(onClick = { popupExpanded = false }) { ArrowBackIcon() }
@@ -191,12 +192,11 @@ fun DisplayAccount(
                                 .width(55.dp)
                                 .padding(0.dp),
                     ) {
-                        val automaticallyShowProfilePicture =
-                            remember {
-                                accountViewModel.settings.showProfilePictures.value
-                            }
-
-                        AccountPicture(it, automaticallyShowProfilePicture)
+                        AccountPicture(
+                            it,
+                            accountViewModel.settings.showProfilePictures.value,
+                            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                        )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) { AccountName(acc, it) }
@@ -222,7 +222,7 @@ private fun ActiveMarker(
     if (isCurrentUser) {
         Icon(
             imageVector = Icons.Default.RadioButtonChecked,
-            contentDescription = stringResource(R.string.account_switch_active_account),
+            contentDescription = stringRes(R.string.account_switch_active_account),
             tint = MaterialTheme.colorScheme.secondary,
         )
     }
@@ -232,15 +232,17 @@ private fun ActiveMarker(
 private fun AccountPicture(
     user: User,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
 ) {
     val profilePicture by user.live().profilePictureChanges.observeAsState()
 
     RobohashFallbackAsyncImage(
         robot = user.pubkeyHex,
         model = profilePicture,
-        contentDescription = stringResource(R.string.profile_image),
+        contentDescription = stringRes(R.string.profile_image),
         modifier = AccountPictureModifier,
         loadProfilePicture = loadProfilePicture,
+        loadRobohash = loadRobohash,
     )
 }
 
@@ -275,8 +277,8 @@ private fun LogoutButton(
     var logoutDialog by remember { mutableStateOf(false) }
     if (logoutDialog) {
         AlertDialog(
-            title = { Text(text = stringResource(R.string.log_out)) },
-            text = { Text(text = stringResource(R.string.are_you_sure_you_want_to_log_out)) },
+            title = { Text(text = stringRes(R.string.log_out)) },
+            text = { Text(text = stringRes(R.string.are_you_sure_you_want_to_log_out)) },
             onDismissRequest = { logoutDialog = false },
             confirmButton = {
                 TextButton(
@@ -285,14 +287,14 @@ private fun LogoutButton(
                         accountStateViewModel.logOff(acc)
                     },
                 ) {
-                    Text(text = stringResource(R.string.log_out))
+                    Text(text = stringRes(R.string.log_out))
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { logoutDialog = false },
                 ) {
-                    Text(text = stringResource(R.string.cancel))
+                    Text(text = stringRes(R.string.cancel))
                 }
             },
         )
@@ -303,7 +305,7 @@ private fun LogoutButton(
     ) {
         Icon(
             imageVector = Icons.Default.Logout,
-            contentDescription = stringResource(R.string.log_out),
+            contentDescription = stringRes(R.string.log_out),
             tint = MaterialTheme.colorScheme.onSurface,
         )
     }

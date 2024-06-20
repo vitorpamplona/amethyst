@@ -57,9 +57,7 @@ dependencies {
     implementation 'net.java.dev.jna:jna:5.14.0@aar'
 
     // Performant Parser of JSONs into Events
-    api(libs.jackson.module.kotlin) {
-        exclude(module: 'byte-buddy') // Workaround https://github.com/FasterXML/jackson-databind/issues/4428 until Jackson 2.17.1
-    }
+    api(libs.jackson.module.kotlin)
 
     // immutable collections to avoid recomposition
     api libs.kotlinx.collections.immutable

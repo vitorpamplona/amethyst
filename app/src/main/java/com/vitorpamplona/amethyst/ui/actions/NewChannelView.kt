@@ -38,7 +38,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -48,6 +47,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
@@ -87,20 +87,21 @@ fun NewChannelView(
                             postViewModel.create()
                             onClose()
                         },
-                        postViewModel.channelName.value.text.isNotBlank(),
+                        postViewModel.channelName.value.text
+                            .isNotBlank(),
                     )
                 }
 
                 Spacer(modifier = Modifier.height(15.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringResource(R.string.channel_name)) },
+                    label = { Text(text = stringRes(R.string.channel_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.channelName.value,
                     onValueChange = { postViewModel.channelName.value = it },
                     placeholder = {
                         Text(
-                            text = stringResource(R.string.my_awesome_group),
+                            text = stringRes(R.string.my_awesome_group),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -114,7 +115,7 @@ fun NewChannelView(
                 Spacer(modifier = Modifier.height(15.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringResource(R.string.picture_url)) },
+                    label = { Text(text = stringRes(R.string.picture_url)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.channelPicture.value,
                     onValueChange = { postViewModel.channelPicture.value = it },
@@ -129,13 +130,13 @@ fun NewChannelView(
                 Spacer(modifier = Modifier.height(15.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringResource(R.string.description)) },
+                    label = { Text(text = stringRes(R.string.description)) },
                     modifier = Modifier.fillMaxWidth().height(100.dp),
                     value = postViewModel.channelDescription.value,
                     onValueChange = { postViewModel.channelDescription.value = it },
                     placeholder = {
                         Text(
-                            text = stringResource(R.string.about_us),
+                            text = stringRes(R.string.about_us),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },

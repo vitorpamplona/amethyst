@@ -58,7 +58,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -72,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.screen.ChatroomListFeedView
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
@@ -118,7 +118,10 @@ fun ChatroomListScreen(
     }
 }
 
-data class RouteId(val route: String, val id: String)
+data class RouteId(
+    val route: String,
+    val id: String,
+)
 
 @Composable
 fun ChatroomListTwoPane(
@@ -171,7 +174,8 @@ fun ChatroomListTwoPane(
                 }
                 HorizontalDivider(
                     modifier =
-                        Modifier.fillMaxHeight() // fill the max height
+                        Modifier
+                            .fillMaxHeight() // fill the max height
                             .width(DividerThickness),
                 )
             }
@@ -256,7 +260,7 @@ fun ChatroomListScreenOnlyList(
                 tabs.forEachIndexed { index, tab ->
                     Tab(
                         selected = pagerState.currentPage == index,
-                        text = { Text(text = stringResource(tab.resource)) },
+                        text = { Text(text = stringRes(tab.resource)) },
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
                     )
                 }
@@ -268,7 +272,7 @@ fun ChatroomListScreenOnlyList(
             ) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = stringResource(id = R.string.more_options),
+                    contentDescription = stringRes(id = R.string.more_options),
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )
 
@@ -327,21 +331,21 @@ fun ChatroomTabMenu(
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.mark_all_known_as_read)) },
+            text = { Text(stringRes(R.string.mark_all_known_as_read)) },
             onClick = {
                 onMarkKnownAsRead()
                 onDismiss()
             },
         )
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.mark_all_new_as_read)) },
+            text = { Text(stringRes(R.string.mark_all_new_as_read)) },
             onClick = {
                 onMarkNewAsRead()
                 onDismiss()
             },
         )
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.mark_all_as_read)) },
+            text = { Text(stringRes(R.string.mark_all_as_read)) },
             onClick = {
                 onMarkKnownAsRead()
                 onMarkNewAsRead()

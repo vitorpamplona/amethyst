@@ -53,12 +53,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifierSmaller
@@ -105,7 +106,6 @@ fun MultiSetCompose(
     val baseNote = remember { multiSetCard.note }
 
     val popupExpanded = remember { mutableStateOf(false) }
-    val enablePopup = remember { { popupExpanded.value = true } }
 
     val scope = rememberCoroutineScope()
 
@@ -125,7 +125,7 @@ fun MultiSetCompose(
                     onClick = {
                         scope.launch { routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) } }
                     },
-                    onLongClick = enablePopup,
+                    onLongClick = { popupExpanded.value = true },
                 ).padding(
                     start = 12.dp,
                     end = 12.dp,
@@ -151,7 +151,9 @@ fun MultiSetCompose(
                 nav = nav,
             )
 
-            NoteDropDownMenu(baseNote, popupExpanded, null, accountViewModel, nav)
+            if (popupExpanded.value) {
+                NoteDropDownMenu(baseNote, { popupExpanded.value = false }, null, accountViewModel, nav)
+            }
         }
     }
 }
@@ -493,7 +495,7 @@ private fun BoxedAuthor(
     accountViewModel: AccountViewModel,
 ) {
     Box(modifier = Size35Modifier.clickable(onClick = { nav(authorRouteFor(note)) })) {
-        WatchAuthorWithBlank(note, Size35Modifier) { author ->
+        WatchAuthorWithBlank(note, Size35Modifier, accountViewModel) { author ->
             WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
                 author,
                 accountViewModel,
@@ -510,7 +512,7 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
     if (author != null) {
         WatchUserMetadataAndFollowsAndRenderUserProfilePicture(author, accountViewModel)
     } else {
-        DisplayBlankAuthor(Size35dp)
+        DisplayBlankAuthor(Size35dp, accountViewModel = accountViewModel)
     }
 }
 
@@ -520,26 +522,23 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
     accountViewModel: AccountViewModel,
 ) {
     WatchUserMetadata(author) { baseUserPicture ->
-        // Crossfade(targetState = baseUserPicture) { userPicture ->
         RobohashFallbackAsyncImage(
             robot = author.pubkeyHex,
             model = baseUserPicture,
-            contentDescription = stringResource(id = R.string.profile_image),
+            contentDescription = stringRes(id = R.string.profile_image),
             modifier = MaterialTheme.colorScheme.profile35dpModifier,
             contentScale = ContentScale.Crop,
             loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         )
-        // }
     }
 
     WatchUserFollows(author.pubkeyHex, accountViewModel) { isFollowing ->
-        // Crossfade(targetState = isFollowing) {
         if (isFollowing) {
             Box(modifier = Size35Modifier, contentAlignment = Alignment.TopEnd) {
                 FollowingIcon(Size10dp)
             }
         }
-        // }
     }
 }
 

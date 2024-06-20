@@ -38,13 +38,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
@@ -90,7 +90,7 @@ fun RelayCompose(
             }
 
             Text(
-                "${relay.counter} ${stringResource(R.string.posts_received)}",
+                "${relay.counter} ${stringRes(R.string.posts_received)}",
                 color = MaterialTheme.colorScheme.placeholderText,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -114,7 +114,8 @@ private fun RelayOptions(
 
     val isNotUsingRelay =
         remember(userState) {
-            accountViewModel.account.connectToRelays.value.none { it.url == relay.url }
+            accountViewModel.account.connectToRelays.value
+                .none { it.url == relay.url }
         }
 
     if (isNotUsingRelay) {
@@ -136,7 +137,7 @@ fun AddRelayButton(onClick: () -> Unit) {
             ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringResource(id = R.string.add), color = Color.White)
+        Text(text = stringRes(id = R.string.add), color = Color.White)
     }
 }
 
@@ -152,12 +153,12 @@ fun RemoveRelayButton(onClick: () -> Unit) {
             ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringResource(R.string.remove), color = Color.White)
+        Text(text = stringRes(R.string.remove), color = Color.White)
     }
 }
 
-fun formattedDateTime(timestamp: Long): String {
-    return Instant.ofEpochSecond(timestamp)
+fun formattedDateTime(timestamp: Long): String =
+    Instant
+        .ofEpochSecond(timestamp)
         .atZone(ZoneId.systemDefault())
         .format(DateTimeFormatter.ofPattern("MMM d, uuuu hh:mm a"))
-}

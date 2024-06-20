@@ -44,7 +44,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -56,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.hashtags.Lightning
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -78,7 +78,8 @@ fun InvoiceRequestCard(
 ) {
     Column(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .padding(start = 30.dp, end = 30.dp)
                 .clip(shape = QuoteBorder)
                 .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder),
@@ -126,7 +127,7 @@ fun InvoiceRequest(
         )
 
         Text(
-            text = titleText ?: stringResource(R.string.lightning_tips),
+            text = titleText ?: stringRes(R.string.lightning_tips),
             fontSize = 20.sp,
             fontWeight = FontWeight.W500,
             modifier = Modifier.padding(start = 10.dp),
@@ -139,13 +140,13 @@ fun InvoiceRequest(
     var amount by remember { mutableStateOf(1000L) }
 
     OutlinedTextField(
-        label = { Text(text = stringResource(R.string.note_to_receiver)) },
+        label = { Text(text = stringRes(R.string.note_to_receiver)) },
         modifier = Modifier.fillMaxWidth(),
         value = message,
         onValueChange = { message = it },
         placeholder = {
             Text(
-                text = stringResource(R.string.thank_you_so_much),
+                text = stringRes(R.string.thank_you_so_much),
                 color = MaterialTheme.colorScheme.placeholderText,
             )
         },
@@ -157,7 +158,7 @@ fun InvoiceRequest(
     )
 
     OutlinedTextField(
-        label = { Text(text = stringResource(R.string.amount_in_sats)) },
+        label = { Text(text = stringRes(R.string.amount_in_sats)) },
         modifier = Modifier.fillMaxWidth(),
         value = amount.toString(),
         onValueChange = {
@@ -199,9 +200,7 @@ fun InvoiceRequest(
                             context = context,
                         )
                 } else {
-                    account.createZapRequestFor(toUserPubKeyHex, message, account.defaultZapType) {
-                            zapRequest,
-                        ->
+                    account.createZapRequestFor(toUserPubKeyHex, message, account.defaultZapType) { zapRequest ->
                         LocalCache.justConsume(zapRequest, null)
                         LightningAddressResolver()
                             .lnAddressInvoice(
@@ -225,7 +224,7 @@ fun InvoiceRequest(
             ),
     ) {
         Text(
-            text = buttonText ?: stringResource(R.string.send_sats),
+            text = buttonText ?: stringRes(R.string.send_sats),
             color = Color.White,
             fontSize = 20.sp,
         )

@@ -123,7 +123,7 @@ fun AudioTrackHeader(
                 ) {
                     ClickableUserPicture(it.second, 25.dp, accountViewModel)
                     Spacer(Modifier.width(5.dp))
-                    UsernameDisplay(it.second, Modifier.weight(1f))
+                    UsernameDisplay(it.second, Modifier.weight(1f), accountViewModel = accountViewModel)
                     Spacer(Modifier.width(5.dp))
                     it.first.role?.let {
                         Text(
@@ -240,8 +240,7 @@ fun AudioHeader(
 
             if (noteEvent.hasHashtags()) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    val hashtags = remember(noteEvent) { noteEvent.hashtags().toImmutableList() }
-                    DisplayUncitedHashtags(hashtags, content ?: "", nav)
+                    DisplayUncitedHashtags(noteEvent, nav)
                 }
             }
         }

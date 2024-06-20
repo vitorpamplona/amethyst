@@ -41,7 +41,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -53,6 +52,7 @@ import com.vitorpamplona.amethyst.service.relays.RelayStat
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.MinHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
@@ -111,7 +111,7 @@ fun AllRelayListView(
                             Spacer(modifier = MinHorzSpacer)
 
                             Text(
-                                text = stringResource(R.string.relay_settings),
+                                text = stringRes(R.string.relay_settings),
                                 style = MaterialTheme.typography.titleLarge,
                                 modifier = Modifier.widthIn(max = 200.dp),
                             )
@@ -168,8 +168,8 @@ fun AllRelayListView(
                 LazyColumn(contentPadding = FeedPadding) {
                     item {
                         SettingsCategory(
-                            stringResource(R.string.public_home_section),
-                            stringResource(R.string.public_home_section_explainer),
+                            stringRes(R.string.public_home_section),
+                            stringRes(R.string.public_home_section_explainer),
                             Modifier.padding(bottom = 8.dp),
                         )
                     }
@@ -177,32 +177,32 @@ fun AllRelayListView(
 
                     item {
                         SettingsCategory(
-                            stringResource(R.string.public_notif_section),
-                            stringResource(R.string.public_notif_section_explainer),
+                            stringRes(R.string.public_notif_section),
+                            stringRes(R.string.public_notif_section_explainer),
                         )
                     }
                     renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, onClose, nav)
 
                     item {
                         SettingsCategory(
-                            stringResource(R.string.private_inbox_section),
-                            stringResource(R.string.private_inbox_section_explainer),
+                            stringRes(R.string.private_inbox_section),
+                            stringRes(R.string.private_inbox_section_explainer),
                         )
                     }
                     renderDMItems(dmFeedState, dmViewModel, accountViewModel, onClose, nav)
 
                     item {
                         SettingsCategory(
-                            stringResource(R.string.private_outbox_section),
-                            stringResource(R.string.private_outbox_section_explainer),
+                            stringRes(R.string.private_outbox_section),
+                            stringRes(R.string.private_outbox_section_explainer),
                         )
                     }
                     renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, onClose, nav)
 
                     item {
                         SettingsCategoryWithButton(
-                            stringResource(R.string.search_section),
-                            stringResource(R.string.search_section_explainer),
+                            stringRes(R.string.search_section),
+                            stringRes(R.string.search_section_explainer),
                             action = {
                                 ResetSearchRelays(searchViewModel)
                             },
@@ -212,16 +212,16 @@ fun AllRelayListView(
 
                     item {
                         SettingsCategory(
-                            stringResource(R.string.local_section),
-                            stringResource(R.string.local_section_explainer),
+                            stringRes(R.string.local_section),
+                            stringRes(R.string.local_section_explainer),
                         )
                     }
                     renderLocalItems(localFeedState, localViewModel, accountViewModel, onClose, nav)
 
                     item {
                         SettingsCategoryWithButton(
-                            stringResource(R.string.kind_3_section),
-                            stringResource(R.string.kind_3_section_description),
+                            stringRes(R.string.kind_3_section),
+                            stringRes(R.string.kind_3_section_description),
                             action = {
                                 ResetKind3Relays(kind3ViewModel)
                             },
@@ -243,7 +243,7 @@ fun ResetKind3Relays(postViewModel: Kind3RelayListViewModel) {
             postViewModel.loadRelayDocuments()
         },
     ) {
-        Text(stringResource(R.string.default_relays))
+        Text(stringRes(R.string.default_relays))
     }
 }
 
@@ -256,7 +256,7 @@ fun ResetSearchRelays(postViewModel: SearchRelayListViewModel) {
             postViewModel.loadRelayDocuments()
         },
     ) {
-        Text(stringResource(R.string.default_relays))
+        Text(stringRes(R.string.default_relays))
     }
 }
 

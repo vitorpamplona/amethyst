@@ -49,7 +49,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -63,6 +62,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
@@ -86,7 +86,10 @@ fun BadgeDisplay(baseNote: Note) {
         launch(Dispatchers.IO) {
             imageResult?.let {
                 val backgroundColor =
-                    it.drawable.toBitmap(200, 200).copy(Bitmap.Config.ARGB_8888, false).get(0, 199)
+                    it.drawable
+                        .toBitmap(200, 200)
+                        .copy(Bitmap.Config.ARGB_8888, false)
+                        .get(0, 199)
                 val colorFromImage = Color(backgroundColor)
                 val textBackground =
                     if (colorFromImage.luminance() > 0.5) {
@@ -109,8 +112,7 @@ fun BadgeDisplay(baseNote: Note) {
                     5.dp,
                     MaterialTheme.colorScheme.mediumImportanceLink,
                     CutCornerShape(20),
-                )
-                .background(backgroundFromImage.first),
+                ).background(backgroundFromImage.first),
     ) {
         RenderBadge(
             image,
@@ -138,7 +140,7 @@ private fun RenderBadge(
             AsyncImage(
                 model = it,
                 contentDescription =
-                    stringResource(
+                    stringRes(
                         R.string.badge_award_image_for,
                         name ?: "",
                     ),
@@ -191,7 +193,7 @@ fun RenderBadgeAward(
     val noteEvent = note.event as? BadgeAwardEvent ?: return
     var awardees by remember { mutableStateOf<List<User>>(listOf()) }
 
-    Text(text = stringResource(R.string.award_granted_to))
+    Text(text = stringRes(R.string.award_granted_to))
 
     LaunchedEffect(key1 = note) { accountViewModel.loadUsers(noteEvent.awardees()) { awardees = it } }
 

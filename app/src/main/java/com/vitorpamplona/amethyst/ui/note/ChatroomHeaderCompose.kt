@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -46,7 +45,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -61,12 +59,15 @@ import androidx.lifecycle.map
 import com.patrykandpatrick.vico.core.extension.forEachIndexedExtended
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.ChatHeaderLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
@@ -136,7 +137,7 @@ private fun ChatroomPrivateMessages(
             }
         }
 
-    Crossfade(userRoom, label = "ChatroomPrivateMessages") { room ->
+    CrossfadeIfEnabled(targetState = userRoom, label = "ChatroomPrivateMessages", accountViewModel = accountViewModel) { room ->
         if (room != null) {
             UserRoomCompose(baseNote, room, accountViewModel, nav)
         } else {
@@ -182,19 +183,14 @@ private fun ChannelRoomCompose(
 
     val description =
         if (noteEvent is ChannelCreateEvent) {
-            stringResource(R.string.channel_created)
+            stringRes(R.string.channel_created)
         } else if (noteEvent is ChannelMetadataEvent) {
-            "${stringResource(R.string.channel_information_changed_to)} "
+            "${stringRes(R.string.channel_information_changed_to)} "
         } else {
             noteEvent?.content()
         }
 
     val hasNewMessages = remember { mutableStateOf<Boolean>(false) }
-
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
 
     WatchNotificationChanges(note, route, accountViewModel) { newHasNewMessages ->
         if (hasNewMessages.value != newHasNewMessages) {
@@ -209,7 +205,8 @@ private fun ChannelRoomCompose(
         channelLastTime = remember(note) { note.createdAt() },
         channelLastContent = remember(note, authorState) { "$authorName: $description" },
         hasNewMessages = hasNewMessages,
-        loadProfilePicture = automaticallyShowProfilePicture,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         onClick = { nav(route) },
     )
 }
@@ -219,7 +216,7 @@ private fun ChannelTitleWithLabelInfo(
     channelName: String,
     modifier: Modifier,
 ) {
-    val label = stringResource(id = R.string.public_chat)
+    val label = stringRes(id = R.string.public_chat)
     val placeHolderColor = MaterialTheme.colorScheme.placeholderText
     val channelNameAndBoostInfo =
         remember(channelName) {
@@ -305,7 +302,7 @@ fun RoomNameDisplay(
             .distinctUntilChanged()
             .observeAsState(accountViewModel.userProfile().privateChatrooms[room]?.subject)
 
-    Crossfade(targetState = roomSubject, modifier, label = "RoomNameDisplay") {
+    CrossfadeIfEnabled(targetState = roomSubject, modifier, label = "RoomNameDisplay", accountViewModel = accountViewModel) {
         if (!it.isNullOrBlank()) {
             if (room.users.size > 1) {
                 DisplayRoomSubject(it)
@@ -337,7 +334,7 @@ private fun DisplayUserAndSubject(
             maxLines = 1,
         )
         LoadUser(baseUserHex = user, accountViewModel = accountViewModel) {
-            it?.let { UsernameDisplay(it, Modifier.weight(1f)) }
+            it?.let { UsernameDisplay(it, Modifier.weight(1f), accountViewModel = accountViewModel) }
         }
     }
 }
@@ -354,14 +351,14 @@ fun DisplayUserSetAsSubject(
         // Regular Design
         Row {
             LoadUser(baseUserHex = userList[0], accountViewModel) {
-                it?.let { UsernameDisplay(it, Modifier.weight(1f), fontWeight = fontWeight) }
+                it?.let { UsernameDisplay(it, Modifier.weight(1f), fontWeight = fontWeight, accountViewModel = accountViewModel) }
             }
         }
     } else {
         Row {
             userList.take(4).forEachIndexedExtended { index, isFirst, isLast, value ->
                 LoadUser(baseUserHex = value, accountViewModel) {
-                    it?.let { ShortUsernameDisplay(baseUser = it, fontWeight = fontWeight) }
+                    it?.let { ShortUsernameDisplay(baseUser = it, fontWeight = fontWeight, accountViewModel = accountViewModel) }
                 }
 
                 if (!isLast) {
@@ -395,6 +392,7 @@ fun ShortUsernameDisplay(
     baseUser: User,
     weight: Modifier = Modifier,
     fontWeight: FontWeight = FontWeight.Bold,
+    accountViewModel: AccountViewModel,
 ) {
     val userName by
         baseUser
@@ -404,7 +402,7 @@ fun ShortUsernameDisplay(
             .distinctUntilChanged()
             .observeAsState(baseUser.toBestShortFirstName())
 
-    Crossfade(targetState = userName, modifier = weight) {
+    CrossfadeIfEnabled(targetState = userName, modifier = weight, accountViewModel = accountViewModel) {
         CreateTextWithEmoji(
             text = it,
             tags = baseUser.info?.tags,
@@ -459,6 +457,7 @@ fun ChannelName(
     channelLastContent: String?,
     hasNewMessages: MutableState<Boolean>,
     loadProfilePicture: Boolean,
+    loadRobohash: Boolean,
     onClick: () -> Unit,
 ) {
     ChannelName(
@@ -466,9 +465,10 @@ fun ChannelName(
             RobohashFallbackAsyncImage(
                 robot = channelIdHex,
                 model = channelPicture,
-                contentDescription = stringResource(R.string.channel_image),
+                contentDescription = stringRes(R.string.channel_image),
                 modifier = AccountPictureModifier,
                 loadProfilePicture = loadProfilePicture,
+                loadRobohash = loadRobohash,
             )
         },
         channelTitle,
@@ -506,7 +506,7 @@ fun ChannelName(
                 )
             } else {
                 Text(
-                    stringResource(R.string.referenced_event_not_found),
+                    stringRes(R.string.referenced_event_not_found),
                     color = MaterialTheme.colorScheme.grayText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

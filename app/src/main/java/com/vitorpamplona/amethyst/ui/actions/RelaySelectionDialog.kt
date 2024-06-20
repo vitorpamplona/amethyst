@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.actions.relays.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
 import kotlinx.collections.immutable.ImmutableList
@@ -141,7 +142,7 @@ fun RelaySelectionDialog(
                 }
 
                 RelaySwitch(
-                    text = context.getString(R.string.select_deselect_all),
+                    text = stringRes(context, R.string.select_deselect_all),
                     checked = selected,
                     onClick = {
                         selected = !selected
@@ -185,25 +186,29 @@ fun RelaySelectionDialog(
                                         val msg =
                                             when (errorCode) {
                                                 Nip11Retriever.ErrorCode.FAIL_TO_ASSEMBLE_URL ->
-                                                    context.getString(
+                                                    stringRes(
+                                                        context,
                                                         R.string.relay_information_document_error_assemble_url,
                                                         url,
                                                         exceptionMessage,
                                                     )
                                                 Nip11Retriever.ErrorCode.FAIL_TO_REACH_SERVER ->
-                                                    context.getString(
+                                                    stringRes(
+                                                        context,
                                                         R.string.relay_information_document_error_assemble_url,
                                                         url,
                                                         exceptionMessage,
                                                     )
                                                 Nip11Retriever.ErrorCode.FAIL_TO_PARSE_RESULT ->
-                                                    context.getString(
+                                                    stringRes(
+                                                        context,
                                                         R.string.relay_information_document_error_assemble_url,
                                                         url,
                                                         exceptionMessage,
                                                     )
                                                 Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS ->
-                                                    context.getString(
+                                                    stringRes(
+                                                        context,
                                                         R.string.relay_information_document_error_assemble_url,
                                                         url,
                                                         exceptionMessage,
@@ -211,7 +216,7 @@ fun RelaySelectionDialog(
                                             }
 
                                         accountViewModel.toast(
-                                            context.getString(R.string.unable_to_download_relay_document),
+                                            stringRes(context, R.string.unable_to_download_relay_document),
                                             msg,
                                         )
                                     },

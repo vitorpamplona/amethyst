@@ -39,8 +39,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,6 +59,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.BundledInsert
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -93,11 +92,14 @@ fun UserReactionsRow(
 ) {
     Row(
         verticalAlignment = CenterVertically,
-        modifier = Modifier.clickable(onClick = onClick).padding(10.dp),
+        modifier =
+            Modifier
+                .clickable(onClick = onClick)
+                .padding(10.dp),
     ) {
         Row(verticalAlignment = CenterVertically, modifier = Modifier.width(68.dp)) {
             Text(
-                text = stringResource(id = R.string.today),
+                text = stringRes(id = R.string.today),
                 fontWeight = FontWeight.Bold,
             )
 
@@ -131,7 +133,7 @@ fun UserReactionsRow(
 private fun UserZapModel(model: UserReactionsViewModel) {
     Icon(
         imageVector = Icons.Default.Bolt,
-        contentDescription = stringResource(R.string.zaps),
+        contentDescription = stringRes(R.string.zaps),
         modifier = Size24Modifier,
         tint = BitcoinOrange,
     )
@@ -143,12 +145,7 @@ private fun UserZapModel(model: UserReactionsViewModel) {
 
 @Composable
 private fun UserReactionModel(model: UserReactionsViewModel) {
-    Icon(
-        painter = painterResource(R.drawable.ic_liked),
-        null,
-        modifier = Size20Modifier,
-        tint = Color.Unspecified,
-    )
+    LikedIcon(modifier = Size20Modifier)
 
     Spacer(modifier = StdHorzSpacer)
 
@@ -157,9 +154,7 @@ private fun UserReactionModel(model: UserReactionsViewModel) {
 
 @Composable
 private fun UserBoostModel(model: UserReactionsViewModel) {
-    Icon(
-        painter = painterResource(R.drawable.ic_retweeted),
-        null,
+    RepostedIcon(
         modifier = Size24Modifier,
         tint = Color.Unspecified,
     )
@@ -171,12 +166,7 @@ private fun UserBoostModel(model: UserReactionsViewModel) {
 
 @Composable
 private fun UserReplyModel(model: UserReactionsViewModel) {
-    Icon(
-        painter = painterResource(R.drawable.ic_comment),
-        null,
-        modifier = Size20Modifier,
-        tint = RoyalBlue,
-    )
+    CommentIcon(Size20Modifier, RoyalBlue)
 
     Spacer(modifier = StdHorzSpacer)
 
@@ -184,7 +174,9 @@ private fun UserReplyModel(model: UserReactionsViewModel) {
 }
 
 @Stable
-class UserReactionsViewModel(val account: Account) : ViewModel() {
+class UserReactionsViewModel(
+    val account: Account,
+) : ViewModel() {
     val user: User = account.userProfile()
 
     private var _reactions = MutableStateFlow<Map<String, Int>>(emptyMap())
@@ -213,11 +205,10 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
 
     var shouldShowDecimalsInAxis = false
 
-    fun formatDate(createAt: Long): String {
-        return sdf.format(
+    fun formatDate(createAt: Long): String =
+        sdf.format(
             Instant.ofEpochSecond(createAt).atZone(ZoneId.systemDefault()).toLocalDateTime(),
         )
-    }
 
     fun today() = sdf.format(LocalDateTime.now())
 
@@ -452,10 +443,10 @@ class UserReactionsViewModel(val account: Account) : ViewModel() {
         super.onCleared()
     }
 
-    class Factory(val account: Account) : ViewModelProvider.Factory {
-        override fun <UserReactionsViewModel : ViewModel> create(modelClass: Class<UserReactionsViewModel>): UserReactionsViewModel {
-            return UserReactionsViewModel(account) as UserReactionsViewModel
-        }
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <UserReactionsViewModel : ViewModel> create(modelClass: Class<UserReactionsViewModel>): UserReactionsViewModel = UserReactionsViewModel(account) as UserReactionsViewModel
     }
 }
 

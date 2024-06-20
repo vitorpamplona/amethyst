@@ -58,7 +58,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -70,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
@@ -93,7 +93,7 @@ fun NewMediaView(
     LaunchedEffect(uri) {
         val mediaType = resolver.getType(uri) ?: ""
         postViewModel.load(account, uri, mediaType) {
-            accountViewModel.toast(context.getString(R.string.failed_to_upload_media_no_details), it)
+            accountViewModel.toast(stringRes(context, R.string.failed_to_upload_media_no_details), it)
         }
     }
 
@@ -124,7 +124,8 @@ fun NewMediaView(
 
             Column(
                 modifier =
-                    Modifier.padding(start = 10.dp, end = 10.dp, top = 10.dp)
+                    Modifier
+                        .padding(start = 10.dp, end = 10.dp, top = 10.dp)
                         .fillMaxWidth()
                         .fillMaxHeight()
                         .imePadding(),
@@ -194,7 +195,7 @@ fun ImageVideoPost(
                 ServerOption(
                     Nip96MediaServers.ServerName(
                         "NIP95",
-                        stringResource(id = R.string.upload_server_relays_nip95),
+                        stringRes(id = R.string.upload_server_relays_nip95),
                     ),
                     true,
                 ),
@@ -209,7 +210,8 @@ fun ImageVideoPost(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .padding(bottom = 10.dp)
                 .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
     ) {
@@ -219,7 +221,8 @@ fun ImageVideoPost(
                 contentDescription = postViewModel.galleryUri.toString(),
                 contentScale = ContentScale.FillWidth,
                 modifier =
-                    Modifier.padding(top = 4.dp)
+                    Modifier
+                        .padding(top = 4.dp)
                         .fillMaxWidth()
                         .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
             )
@@ -265,7 +268,7 @@ fun ImageVideoPost(
         modifier = Modifier.fillMaxWidth(),
     ) {
         TextSpinner(
-            label = stringResource(id = R.string.file_server),
+            label = stringRes(id = R.string.file_server),
             placeholder =
                 fileServers
                     .firstOrNull { it.server == accountViewModel.account.defaultFileServer }
@@ -296,13 +299,13 @@ fun ImageVideoPost(
         modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
     ) {
         OutlinedTextField(
-            label = { Text(text = stringResource(R.string.content_description)) },
+            label = { Text(text = stringRes(R.string.content_description)) },
             modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
             value = postViewModel.alt,
             onValueChange = { postViewModel.alt = it },
             placeholder = {
                 Text(
-                    text = stringResource(R.string.content_description_example),
+                    text = stringRes(R.string.content_description_example),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },

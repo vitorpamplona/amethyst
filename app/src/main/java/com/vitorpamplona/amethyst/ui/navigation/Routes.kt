@@ -24,7 +24,6 @@ import android.os.Bundle
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavBackStackEntry
@@ -77,8 +76,7 @@ sealed class Route(
                         nullable = true
                         defaultValue = null
                     },
-                )
-                    .toImmutableList(),
+                ).toImmutableList(),
             contentDescriptor = R.string.route_home,
             hasNewItems = { accountViewModel, newNotes ->
                 HomeLatestItem.hasNewItems(accountViewModel, newNotes)
@@ -95,7 +93,7 @@ sealed class Route(
     object Search :
         Route(
             route = "Search",
-            icon = R.drawable.ic_search,
+            icon = R.drawable.ic_moments,
             contentDescriptor = R.string.route_search,
         )
 
@@ -212,8 +210,7 @@ sealed class Route(
                         nullable = true
                         defaultValue = null
                     },
-                )
-                    .toImmutableList(),
+                ).toImmutableList(),
         )
 
     object RoomByAuthor :
@@ -256,9 +253,7 @@ sealed class Route(
 open class LatestItem {
     var newestItemPerAccount: Map<String, Note?> = mapOf()
 
-    fun getNewestItem(account: Account): Note? {
-        return newestItemPerAccount[account.userProfile().pubkeyHex]
-    }
+    fun getNewestItem(account: Account): Note? = newestItemPerAccount[account.userProfile().pubkeyHex]
 
     fun clearNewestItem(account: Account) {
         val userHex = account.userProfile().pubkeyHex
@@ -279,9 +274,10 @@ open class LatestItem {
             if (newestItem == null || !account.isAcceptable(newestItem)) {
                 filterMore(filter.feed(), account).firstOrNull { it.createdAt() != null && account.isAcceptable(it) }
             } else {
-                filter.sort(
-                    filterMore(filter.applyFilter(newNotes), account) + newestItem,
-                ).firstOrNull { it.createdAt() != null && account.isAcceptable(it) }
+                filter
+                    .sort(
+                        filterMore(filter.applyFilter(newNotes), account) + newestItem,
+                    ).firstOrNull { it.createdAt() != null && account.isAcceptable(it) }
             }
 
         newestItemPerAccount = newestItemPerAccount + Pair(account.userProfile().pubkeyHex, newNewest)
@@ -292,16 +288,12 @@ open class LatestItem {
     open fun filterMore(
         newItems: Set<Note>,
         account: Account,
-    ): Set<Note> {
-        return newItems
-    }
+    ): Set<Note> = newItems
 
     open fun filterMore(
         newItems: List<Note>,
         account: Account,
-    ): List<Note> {
-        return newItems
-    }
+    ): List<Note> = newItems
 }
 
 object HomeLatestItem : LatestItem() {
@@ -382,16 +374,12 @@ object MessagesLatestItem : LatestItem() {
     override fun filterMore(
         newItems: Set<Note>,
         account: Account,
-    ): Set<Note> {
-        return newItems.filter { isNew(it, account) }.toSet()
-    }
+    ): Set<Note> = newItems.filter { isNew(it, account) }.toSet()
 
     override fun filterMore(
         newItems: List<Note>,
         account: Account,
-    ): List<Note> {
-        return newItems.filter { isNew(it, account) }
-    }
+    ): List<Note> = newItems.filter { isNew(it, account) }
 }
 
 fun getRouteWithArguments(navController: NavHostController): String? {
@@ -399,9 +387,7 @@ fun getRouteWithArguments(navController: NavHostController): String? {
     return getRouteWithArguments(currentEntry.destination, currentEntry.arguments)
 }
 
-fun getRouteWithArguments(navState: State<NavBackStackEntry?>): String? {
-    return navState.value?.let { getRouteWithArguments(it.destination, it.arguments) }
-}
+fun getRouteWithArguments(navState: State<NavBackStackEntry?>): String? = navState.value?.let { getRouteWithArguments(it.destination, it.arguments) }
 
 private fun getRouteWithArguments(
     destination: NavDestination,

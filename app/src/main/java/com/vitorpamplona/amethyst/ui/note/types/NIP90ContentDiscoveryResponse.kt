@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -35,17 +34,12 @@ import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
-import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.quartz.events.BaseTextNoteEvent
-import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.EmptyTagList
+import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun RenderNIP90ContentDiscoveryResponse(
@@ -59,39 +53,7 @@ fun RenderNIP90ContentDiscoveryResponse(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val noteEvent = note.event
-
-    val showReply by
-        remember(note) {
-            derivedStateOf {
-                noteEvent is BaseTextNoteEvent && !makeItShort && unPackReply && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
-            }
-        }
-
-    if (showReply) {
-        val replyingDirectlyTo =
-            remember(note) {
-                if (noteEvent is BaseTextNoteEvent) {
-                    val replyingTo = noteEvent.replyingToAddressOrEvent()
-                    if (replyingTo != null) {
-                        val newNote = accountViewModel.getNoteIfExists(replyingTo)
-                        if (newNote != null && newNote.channelHex() == null && newNote.event?.kind() != CommunityDefinitionEvent.KIND) {
-                            newNote
-                        } else {
-                            note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.KIND }
-                        }
-                    } else {
-                        note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.KIND }
-                    }
-                } else {
-                    note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.KIND }
-                }
-            }
-        if (replyingDirectlyTo != null && unPackReply) {
-            ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
-            Spacer(modifier = StdVertSpacer)
-        }
-    }
+    val noteEvent = note.event as? Event ?: return
 
     LoadDecryptedContent(
         note,
@@ -118,9 +80,6 @@ fun RenderNIP90ContentDiscoveryResponse(
                 }
             }
 
-        val isAuthorTheLoggedUser =
-            remember(note.event) { accountViewModel.isLoggedUser(note.author) }
-
         SensitivityWarning(
             note = note,
             accountViewModel = accountViewModel,
@@ -143,12 +102,8 @@ fun RenderNIP90ContentDiscoveryResponse(
             )
         }
 
-        if (note.event?.hasHashtags() == true) {
-            val hashtags =
-                remember(note.event) {
-                    note.event?.hashtags()?.toImmutableList() ?: persistentListOf()
-                }
-            DisplayUncitedHashtags(hashtags, eventContent, nav)
+        if (noteEvent.hasHashtags()) {
+            DisplayUncitedHashtags(noteEvent, eventContent, nav)
         }
     }
 }

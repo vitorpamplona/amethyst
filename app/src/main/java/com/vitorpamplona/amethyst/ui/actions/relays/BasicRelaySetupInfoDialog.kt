@@ -27,10 +27,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.actions.RelayInfoDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun BasicRelaySetupInfoDialog(
@@ -52,14 +54,10 @@ fun BasicRelaySetupInfoDialog(
         )
     }
 
-    val automaticallyShowProfilePicture =
-        remember {
-            accountViewModel.settings.showProfilePictures.value
-        }
-
     BasicRelaySetupInfoClickableRow(
         item = item,
-        loadProfilePicture = automaticallyShowProfilePicture,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         onDelete = onDelete,
         accountViewModel = accountViewModel,
         onClick = {
@@ -72,28 +70,32 @@ fun BasicRelaySetupInfoDialog(
                     val msg =
                         when (errorCode) {
                             Nip11Retriever.ErrorCode.FAIL_TO_ASSEMBLE_URL ->
-                                context.getString(
+                                stringRes(
+                                    context,
                                     R.string.relay_information_document_error_assemble_url,
                                     url,
                                     exceptionMessage,
                                 )
 
                             Nip11Retriever.ErrorCode.FAIL_TO_REACH_SERVER ->
-                                context.getString(
+                                stringRes(
+                                    context,
                                     R.string.relay_information_document_error_assemble_url,
                                     url,
                                     exceptionMessage,
                                 )
 
                             Nip11Retriever.ErrorCode.FAIL_TO_PARSE_RESULT ->
-                                context.getString(
+                                stringRes(
+                                    context,
                                     R.string.relay_information_document_error_assemble_url,
                                     url,
                                     exceptionMessage,
                                 )
 
                             Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS ->
-                                context.getString(
+                                stringRes(
+                                    context,
                                     R.string.relay_information_document_error_assemble_url,
                                     url,
                                     exceptionMessage,
@@ -101,7 +103,7 @@ fun BasicRelaySetupInfoDialog(
                         }
 
                     accountViewModel.toast(
-                        context.getString(R.string.unable_to_download_relay_document),
+                        stringRes(context, R.string.unable_to_download_relay_document),
                         msg,
                     )
                 },
