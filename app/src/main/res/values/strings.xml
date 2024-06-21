@@ -785,6 +785,8 @@
     <string name="like_description">Like</string>
     <string name="zap_description">Zap</string>
 
+    <string name="change_reaction">Change Quick Reactions</string>
+
     <string name="profile_image_of_user">Profile Picture of %1$s</string>
     <string name="relay_info">Relay %1$s</string>
     <string name="expand_relay_list">Expand relay list</string>

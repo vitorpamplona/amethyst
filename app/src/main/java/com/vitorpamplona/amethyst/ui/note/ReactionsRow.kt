@@ -822,7 +822,6 @@ fun BoostText(
     SlidingAnimationCount(boostState, grayTint, accountViewModel)
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LikeReaction(
     baseNote: Note,
@@ -1367,6 +1366,10 @@ fun ReactionChoicePopupContent(
                         toRemove = toRemove,
                     )
                 }
+
+                ClickableBox(modifier = reactionBox, onClick = onChangeAmount) {
+                    ChangeReactionIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText)
+                }
             }
         }
     }
@@ -1389,6 +1392,11 @@ fun ReactionChoicePopupPeeview() {
                 "\uD83D\uDE31",
                 "+",
                 "-",
+                "\uD83C\uDF89",
+                "\uD83E\uDD14",
+                "\uD83D\uDE31",
+                "\uD83E\uDD14",
+                "\uD83D\uDE31",
             ),
             onClick = {},
             onChangeAmount = {},

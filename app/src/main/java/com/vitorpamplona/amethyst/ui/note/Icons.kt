@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.AddReaction
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Clear
@@ -44,6 +45,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.AddReaction
 import androidx.compose.material.icons.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.PlayCircle
@@ -164,7 +166,20 @@ fun LikedIcon(
 ) {
     Icon(
         imageVector = Liked,
-        stringRes(id = R.string.like_description),
+        contentDescription = stringRes(id = R.string.like_description),
+        modifier = modifier,
+        tint = tint,
+    )
+}
+
+@Composable
+fun ChangeReactionIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+) {
+    Icon(
+        imageVector = Icons.Outlined.AddReaction,
+        contentDescription = stringRes(id = R.string.change_reaction),
         modifier = modifier,
         tint = tint,
     )
