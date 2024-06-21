@@ -48,15 +48,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
@@ -135,6 +132,8 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.TinyBorders
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.reactionBox
+import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
 import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -1305,7 +1304,6 @@ private fun BoostTypeChoicePopup(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ReactionChoicePopup(
     baseNote: Note,
@@ -1357,7 +1355,7 @@ fun ReactionChoicePopupContent(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         ) {
             FlowRow(
-                modifier = HalfPadding,
+                modifier = Modifier.padding(horizontal = 3.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -1394,72 +1392,60 @@ fun ReactionChoicePopupPeeview() {
             ),
             onClick = {},
             onChangeAmount = {},
-            toRemove = persistentSetOf(),
+            toRemove = persistentSetOf("\uD83D\uDE80"),
         )
     }
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 private fun ActionableReactionButton(
     reactionType: String,
     onClick: () -> Unit,
     onChangeAmount: () -> Unit,
     toRemove: ImmutableSet<String>,
 ) {
-    val thisModifier =
-        Modifier
-            .padding(horizontal = 8.dp, vertical = 5.dp)
-            .height(Size20dp)
-            .combinedClickable(
-                role = Role.Button,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = false, radius = Size24dp),
-                onClick = onClick,
-                onLongClick = onChangeAmount,
-            )
+    ClickableBox(
+        modifier = if (reactionType in toRemove) MaterialTheme.colorScheme.selectedReactionBoxModifier else reactionBox,
+        onClick = onClick,
+        onLongClick = onChangeAmount,
+    ) {
+        RenderReaction(reactionType)
+    }
+}
 
-    Row(thisModifier, verticalAlignment = Alignment.CenterVertically) {
-        if (reactionType.startsWith(":")) {
-            val noStartColon = reactionType.removePrefix(":")
-            val url = noStartColon.substringAfter(":")
+@Composable
+fun RenderReaction(reactionType: String) {
+    if (reactionType.startsWith(":")) {
+        val noStartColon = reactionType.removePrefix(":")
+        val url = noStartColon.substringAfter(":")
 
-            InLineIconRenderer(
-                persistentListOf(
-                    Nip30CustomEmoji.ImageUrlType(url),
-                ),
-                style = SpanStyle(color = MaterialTheme.colorScheme.onBackground),
-                maxLines = 1,
-            )
-        } else {
-            when (reactionType) {
-                "+" -> {
-                    LikedIcon(modifier = Modifier.size(20.dp))
-                }
-
-                "-" -> {
-                    Text(
-                        text = "\uD83D\uDC4E",
-                        color = MaterialTheme.colorScheme.onBackground,
-                        maxLines = 1,
-                    )
-                }
-                else -> {
-                    Text(
-                        "$reactionType",
-                        color = MaterialTheme.colorScheme.onBackground,
-                        maxLines = 1,
-                    )
-                }
+        InLineIconRenderer(
+            persistentListOf(
+                Nip30CustomEmoji.ImageUrlType(url),
+            ),
+            style = SpanStyle(color = MaterialTheme.colorScheme.onBackground),
+            maxLines = 1,
+        )
+    } else {
+        when (reactionType) {
+            "+" -> {
+                LikedIcon(modifier = Size20Modifier)
             }
-        }
 
-        if (reactionType in toRemove) {
-            Icon(
-                imageVector = Icons.Default.Cancel,
-                contentDescription = null,
-                modifier = Modifier.padding(start = 2.dp).size(14.dp),
-            )
+            "-" -> {
+                Text(
+                    text = "\uD83D\uDC4E",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                )
+            }
+            else -> {
+                Text(
+                    reactionType,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                )
+            }
         }
     }
 }

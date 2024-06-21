@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -161,6 +162,22 @@ val LightInnerPostBorderModifier =
         .fillMaxWidth()
         .clip(shape = QuoteBorder)
         .border(1.dp, LightSubtleBorder, QuoteBorder)
+
+val DarkSelectedReactionBoxModifier =
+    Modifier
+        .padding(horizontal = 3.dp, vertical = 6.dp)
+        .height(Size30dp)
+        .clip(shape = SmallBorder)
+        .background(DarkColorPalette.secondaryContainer)
+        .padding(5.dp)
+
+val LightSelectedReactionBoxModifier =
+    Modifier
+        .padding(horizontal = 3.dp, vertical = 6.dp)
+        .height(Size30dp)
+        .clip(shape = SmallBorder)
+        .background(LightColorPalette.secondaryContainer)
+        .padding(5.dp)
 
 val DarkChannelNotePictureModifier =
     Modifier
@@ -360,6 +377,9 @@ val ColorScheme.relayIconModifier: Modifier
 
 val ColorScheme.largeRelayIconModifier: Modifier
     get() = if (isLight) LightLargeRelayIconModifier else DarkLargeRelayIconModifier
+
+val ColorScheme.selectedReactionBoxModifier: Modifier
+    get() = if (isLight) LightSelectedReactionBoxModifier else DarkSelectedReactionBoxModifier
 
 val ColorScheme.chartStyle: ChartStyle
     get() {

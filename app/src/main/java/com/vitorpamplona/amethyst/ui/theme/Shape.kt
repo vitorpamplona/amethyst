@@ -268,3 +268,9 @@ val hashVerifierMark = Modifier.width(40.dp).height(40.dp).padding(10.dp)
 val noteComposeRelayBox = Modifier.width(55.dp).heightIn(min = 17.dp).padding(start = 2.dp, end = 1.dp)
 
 val previewCardImageModifier = Modifier.fillMaxWidth().heightIn(max = 200.dp).padding(bottom = 5.dp)
+
+val reactionBox =
+    Modifier
+        .padding(horizontal = 3.dp, vertical = 6.dp)
+        .height(Size30dp)
+        .padding(5.dp)
