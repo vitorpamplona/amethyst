@@ -451,6 +451,7 @@
     <string name="connectivity_type_never">从不</string>
     <string name="ui_feature_set_type_complete">完整版</string>
     <string name="ui_feature_set_type_simplified">简化版</string>
+    <string name="ui_feature_set_type_performance">极速版</string>
     <string name="system">系统</string>
     <string name="light">浅色</string>
     <string name="dark">深色</string>
