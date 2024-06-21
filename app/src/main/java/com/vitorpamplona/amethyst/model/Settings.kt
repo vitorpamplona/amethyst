@@ -62,7 +62,7 @@ enum class ConnectivityType(
     val resourceId: Int,
 ) {
     ALWAYS(null, 0, R.string.connectivity_type_always),
-    WIFI_ONLY(true, 1, R.string.connectivity_type_wifi_only),
+    WIFI_ONLY(true, 1, R.string.connectivity_type_unmetered_wifi_only),
     NEVER(false, 2, R.string.connectivity_type_never),
 }
 
