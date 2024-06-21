@@ -100,10 +100,10 @@ class NewMessageTagger(
                             val results = parseDirtyWordForKey(word)
                             when (val entity = results?.key?.entity) {
                                 is Nip19Bech32.NPub -> {
-                                    getNostrAddress(dao.getOrCreateUser(entity.hex).pubkeyNpub(), results.restOfWord)
+                                    getNostrAddress(dao.getOrCreateUser(entity.hex).toNProfile(), results.restOfWord)
                                 }
                                 is Nip19Bech32.NProfile -> {
-                                    getNostrAddress(dao.getOrCreateUser(entity.hex).pubkeyNpub(), results.restOfWord)
+                                    getNostrAddress(dao.getOrCreateUser(entity.hex).toNProfile(), results.restOfWord)
                                 }
 
                                 is Nip19Bech32.Note -> {
@@ -138,17 +138,15 @@ class NewMessageTagger(
                                     word
                                 }
                             }
-                        }
-                        .joinToString(" ")
-                }
-                .joinToString("\n")
+                        }.joinToString(" ")
+                }.joinToString("\n")
     }
 
     fun getNostrAddress(
         bechAddress: String,
         restOfTheWord: String?,
-    ): String {
-        return if (restOfTheWord.isNullOrEmpty()) {
+    ): String =
+        if (restOfTheWord.isNullOrEmpty()) {
             "nostr:$bechAddress"
         } else {
             if (Bech32.ALPHABET.contains(restOfTheWord.get(0), true)) {
@@ -157,9 +155,11 @@ class NewMessageTagger(
                 "nostr:${bechAddress}$restOfTheWord"
             }
         }
-    }
 
-    @Immutable data class DirtyKeyInfo(val key: Nip19Bech32.ParseReturn, val restOfWord: String?)
+    @Immutable data class DirtyKeyInfo(
+        val key: Nip19Bech32.ParseReturn,
+        val restOfWord: String?,
+    )
 
     fun parseDirtyWordForKey(mightBeAKey: String): DirtyKeyInfo? {
         var key = mightBeAKey

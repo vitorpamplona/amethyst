@@ -197,9 +197,11 @@ fun NoteDropDownMenu(
         DropdownMenuItem(
             text = { Text(stringRes(R.string.copy_user_pubkey)) },
             onClick = {
-                scope.launch(Dispatchers.IO) {
-                    clipboardManager.setText(AnnotatedString("nostr:${note.author?.pubkeyNpub()}"))
-                    onDismiss()
+                note.author?.let {
+                    scope.launch(Dispatchers.IO) {
+                        clipboardManager.setText(AnnotatedString("nostr:${it.pubkeyNpub()}"))
+                        onDismiss()
+                    }
                 }
             },
         )
@@ -207,7 +209,7 @@ fun NoteDropDownMenu(
             text = { Text(stringRes(R.string.copy_note_id)) },
             onClick = {
                 scope.launch(Dispatchers.IO) {
-                    clipboardManager.setText(AnnotatedString("nostr:" + note.toNEvent()))
+                    clipboardManager.setText(AnnotatedString(note.toNostrUri()))
                     onDismiss()
                 }
             },

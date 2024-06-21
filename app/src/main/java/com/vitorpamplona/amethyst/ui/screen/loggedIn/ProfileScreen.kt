@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.content.Intent
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -103,6 +104,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -136,6 +138,7 @@ import com.vitorpamplona.amethyst.ui.note.DrawPlayName
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.LightningAddressIcon
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.note.externalLinkForUser
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.qrcode.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.screen.FeedState
@@ -996,9 +999,8 @@ private fun DrawAdditionalInfo(
 
         if (dialogOpen) {
             ShowQRDialog(
-                user,
-                accountViewModel.settings.showProfilePictures.value,
-                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                user = user,
+                accountViewModel = accountViewModel,
                 onScan = {
                     dialogOpen = false
                     nav(it)
@@ -1866,6 +1868,32 @@ fun UserProfileDropDownMenu(
             text = { Text(stringRes(R.string.copy_user_id)) },
             onClick = {
                 clipboardManager.setText(AnnotatedString(user.pubkeyNpub()))
+                onDismiss()
+            },
+        )
+
+        val actContext = LocalContext.current
+
+        DropdownMenuItem(
+            text = { Text(stringRes(R.string.quick_action_share)) },
+            onClick = {
+                val sendIntent =
+                    Intent().apply {
+                        action = Intent.ACTION_SEND
+                        type = "text/plain"
+                        putExtra(
+                            Intent.EXTRA_TEXT,
+                            externalLinkForUser(user),
+                        )
+                        putExtra(
+                            Intent.EXTRA_TITLE,
+                            stringRes(actContext, R.string.quick_action_share_browser_link),
+                        )
+                    }
+
+                val shareIntent =
+                    Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
+                ContextCompat.startActivity(actContext, shareIntent, null)
                 onDismiss()
             },
         )

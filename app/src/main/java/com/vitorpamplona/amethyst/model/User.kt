@@ -34,7 +34,9 @@ import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Lud06
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toNpub
+import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ContactListEvent
@@ -49,10 +51,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import java.math.BigDecimal
 
 @Stable
-class User(val pubkeyHex: String) {
+class User(
+    val pubkeyHex: String,
+) {
     var info: UserMetadata? = null
 
     var latestMetadata: MetadataEvent? = null
+    var latestMetadataRelay: String? = null
     var latestContactList: ContactListEvent? = null
     var latestBookmarkList: BookmarkListEvent? = null
 
@@ -76,7 +81,16 @@ class User(val pubkeyHex: String) {
 
     fun pubkeyDisplayHex() = pubkeyNpub().toShortenHex()
 
-    fun toNostrUri() = "nostr:${pubkeyNpub()}"
+    fun toNProfile(): String {
+        val relayList = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(pubkeyHex))?.event as? AdvertisedRelayListEvent)?.writeRelays()
+
+        return Nip19Bech32.createNProfile(
+            pubkeyHex,
+            relayList?.take(3) ?: listOfNotNull(latestMetadataRelay),
+        )
+    }
+
+    fun toNostrUri() = "nostr:${toNProfile()}"
 
     override fun toString(): String = pubkeyHex
 
@@ -96,17 +110,11 @@ class User(val pubkeyHex: String) {
         return firstName
     }
 
-    fun toBestDisplayName(): String {
-        return info?.bestName() ?: pubkeyDisplayHex()
-    }
+    fun toBestDisplayName(): String = info?.bestName() ?: pubkeyDisplayHex()
 
-    fun nip05(): String? {
-        return info?.nip05
-    }
+    fun nip05(): String? = info?.nip05
 
-    fun profilePicture(): String? {
-        return info?.picture
-    }
+    fun profilePicture(): String? = info?.picture
 
     fun updateBookmark(event: BookmarkListEvent) {
         if (event.id == latestBookmarkList?.id) return
@@ -132,10 +140,18 @@ class User(val pubkeyHex: String) {
         // Update Followers of the past user list
         // Update Followers of the new contact list
         (oldContactListEvent)?.unverifiedFollowKeySet()?.forEach {
-            LocalCache.getUserIfExists(it)?.liveSet?.innerFollowers?.invalidateData()
+            LocalCache
+                .getUserIfExists(it)
+                ?.liveSet
+                ?.innerFollowers
+                ?.invalidateData()
         }
         (latestContactList)?.unverifiedFollowKeySet()?.forEach {
-            LocalCache.getUserIfExists(it)?.liveSet?.innerFollowers?.invalidateData()
+            LocalCache
+                .getUserIfExists(it)
+                ?.liveSet
+                ?.innerFollowers
+                ?.invalidateData()
         }
 
         liveSet?.innerRelays?.invalidateData()
@@ -198,25 +214,19 @@ class User(val pubkeyHex: String) {
         return amount
     }
 
-    fun reportsBy(user: User): Set<Note> {
-        return reports[user] ?: emptySet()
-    }
+    fun reportsBy(user: User): Set<Note> = reports[user] ?: emptySet()
 
-    fun countReportAuthorsBy(users: Set<HexKey>): Int {
-        return reports.count { it.key.pubkeyHex in users }
-    }
+    fun countReportAuthorsBy(users: Set<HexKey>): Int = reports.count { it.key.pubkeyHex in users }
 
-    fun reportsBy(users: Set<HexKey>): List<Note> {
-        return reports
+    fun reportsBy(users: Set<HexKey>): List<Note> =
+        reports
             .mapNotNull {
                 if (it.key.pubkeyHex in users) {
                     it.value
                 } else {
                     null
                 }
-            }
-            .flatten()
-    }
+            }.flatten()
 
     @Synchronized
     private fun getOrCreatePrivateChatroomSync(key: ChatroomKey): Chatroom {
@@ -235,9 +245,7 @@ class User(val pubkeyHex: String) {
         return getOrCreatePrivateChatroom(key)
     }
 
-    private fun getOrCreatePrivateChatroom(key: ChatroomKey): Chatroom {
-        return privateChatrooms[key] ?: getOrCreatePrivateChatroomSync(key)
-    }
+    private fun getOrCreatePrivateChatroom(key: ChatroomKey): Chatroom = privateChatrooms[key] ?: getOrCreatePrivateChatroomSync(key)
 
     fun addMessage(
         room: ChatroomKey,
@@ -326,13 +334,9 @@ class User(val pubkeyHex: String) {
         liveSet?.innerMetadata?.invalidateData()
     }
 
-    fun isFollowing(user: User): Boolean {
-        return latestContactList?.isTaggedUser(user.pubkeyHex) ?: false
-    }
+    fun isFollowing(user: User): Boolean = latestContactList?.isTaggedUser(user.pubkeyHex) ?: false
 
-    fun isFollowingHashtag(tag: String): Boolean {
-        return latestContactList?.isTaggedHash(tag) ?: false
-    }
+    fun isFollowingHashtag(tag: String): Boolean = latestContactList?.isTaggedHash(tag) ?: false
 
     fun isFollowingHashtagCached(tag: String): Boolean {
         return latestContactList?.verifiedFollowTagSet?.let {
@@ -362,37 +366,21 @@ class User(val pubkeyHex: String) {
             ?: false
     }
 
-    fun transientFollowCount(): Int? {
-        return latestContactList?.unverifiedFollowKeySet()?.size
-    }
+    fun transientFollowCount(): Int? = latestContactList?.unverifiedFollowKeySet()?.size
 
-    suspend fun transientFollowerCount(): Int {
-        return LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
-    }
+    suspend fun transientFollowerCount(): Int = LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
 
-    fun cachedFollowingKeySet(): Set<HexKey> {
-        return latestContactList?.verifiedFollowKeySet ?: emptySet()
-    }
+    fun cachedFollowingKeySet(): Set<HexKey> = latestContactList?.verifiedFollowKeySet ?: emptySet()
 
-    fun cachedFollowingTagSet(): Set<String> {
-        return latestContactList?.verifiedFollowTagSet ?: emptySet()
-    }
+    fun cachedFollowingTagSet(): Set<String> = latestContactList?.verifiedFollowTagSet ?: emptySet()
 
-    fun cachedFollowingGeohashSet(): Set<HexKey> {
-        return latestContactList?.verifiedFollowGeohashSet ?: emptySet()
-    }
+    fun cachedFollowingGeohashSet(): Set<HexKey> = latestContactList?.verifiedFollowGeohashSet ?: emptySet()
 
-    fun cachedFollowingCommunitiesSet(): Set<HexKey> {
-        return latestContactList?.verifiedFollowCommunitySet ?: emptySet()
-    }
+    fun cachedFollowingCommunitiesSet(): Set<HexKey> = latestContactList?.verifiedFollowCommunitySet ?: emptySet()
 
-    fun cachedFollowCount(): Int? {
-        return latestContactList?.verifiedFollowKeySet?.size
-    }
+    fun cachedFollowCount(): Int? = latestContactList?.verifiedFollowKeySet?.size
 
-    suspend fun cachedFollowerCount(): Int {
-        return LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
-    }
+    suspend fun cachedFollowerCount(): Int = LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
 
     fun hasSentMessagesTo(key: ChatroomKey?): Boolean {
         val messagesToUser = privateChatrooms[key] ?: return false
@@ -403,16 +391,13 @@ class User(val pubkeyHex: String) {
     fun hasReport(
         loggedIn: User,
         type: ReportEvent.ReportType,
-    ): Boolean {
-        return reports[loggedIn]?.firstOrNull {
+    ): Boolean =
+        reports[loggedIn]?.firstOrNull {
             it.event is ReportEvent &&
                 (it.event as ReportEvent).reportedAuthor().any { it.reportType == type }
         } != null
-    }
 
-    fun anyNameStartsWith(username: String): Boolean {
-        return info?.anyNameStartsWith(username) ?: false
-    }
+    fun anyNameStartsWith(username: String): Boolean = info?.anyNameStartsWith(username) ?: false
 
     var liveSet: UserLiveSet? = null
     var flowSet: UserFlowSet? = null
@@ -473,14 +458,14 @@ class User(val pubkeyHex: String) {
 }
 
 @Stable
-class UserFlowSet(u: User) {
+class UserFlowSet(
+    u: User,
+) {
     // Observers line up here.
     val follows = UserBundledRefresherFlow(u)
     val relays = UserBundledRefresherFlow(u)
 
-    fun isInUse(): Boolean {
-        return relays.stateFlow.subscriptionCount.value > 0 || follows.stateFlow.subscriptionCount.value > 0
-    }
+    fun isInUse(): Boolean = relays.stateFlow.subscriptionCount.value > 0 || follows.stateFlow.subscriptionCount.value > 0
 
     fun destroy() {
         relays.destroy()
@@ -489,7 +474,9 @@ class UserFlowSet(u: User) {
 }
 
 @Stable
-class UserLiveSet(u: User) {
+class UserLiveSet(
+    u: User,
+) {
     val innerMetadata = UserBundledRefresherLiveData(u)
 
     // UI Observers line up here.
@@ -521,8 +508,8 @@ class UserLiveSet(u: User) {
 
     val userMetadataInfo = innerMetadata.map { it.user.info }.distinctUntilChanged()
 
-    fun isInUse(): Boolean {
-        return metadata.hasObservers() ||
+    fun isInUse(): Boolean =
+        metadata.hasObservers() ||
             follows.hasObservers() ||
             followers.hasObservers() ||
             reports.hasObservers() ||
@@ -535,7 +522,6 @@ class UserLiveSet(u: User) {
             profilePictureChanges.hasObservers() ||
             nip05Changes.hasObservers() ||
             userMetadataInfo.hasObservers()
-    }
 
     fun destroy() {
         innerMetadata.destroy()
@@ -558,7 +544,9 @@ data class RelayInfo(
     var counter: Long,
 )
 
-class UserBundledRefresherLiveData(val user: User) : LiveData<UserState>(UserState(user)) {
+class UserBundledRefresherLiveData(
+    val user: User,
+) : LiveData<UserState>(UserState(user)) {
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(500, Dispatchers.IO)
 
@@ -585,7 +573,9 @@ class UserBundledRefresherLiveData(val user: User) : LiveData<UserState>(UserSta
 }
 
 @Stable
-class UserBundledRefresherFlow(val user: User) {
+class UserBundledRefresherFlow(
+    val user: User,
+) {
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(500, Dispatchers.IO)
     val stateFlow = MutableStateFlow(UserState(user))
@@ -605,7 +595,10 @@ class UserBundledRefresherFlow(val user: User) {
     }
 }
 
-class UserLoadingLiveData<Y>(val user: User, initialValue: Y?) : MediatorLiveData<Y>(initialValue) {
+class UserLoadingLiveData<Y>(
+    val user: User,
+    initialValue: Y?,
+) : MediatorLiveData<Y>(initialValue) {
     override fun onActive() {
         super.onActive()
         NostrSingleUserDataSource.add(user)
@@ -617,4 +610,6 @@ class UserLoadingLiveData<Y>(val user: User, initialValue: Y?) : MediatorLiveDat
     }
 }
 
-@Immutable class UserState(val user: User)
+@Immutable class UserState(
+    val user: User,
+)
