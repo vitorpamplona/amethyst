@@ -451,6 +451,7 @@
     <string name="connectivity_type_never">Nooit</string>
     <string name="ui_feature_set_type_complete">Voltooid</string>
     <string name="ui_feature_set_type_simplified">Vereenvoudigd</string>
+    <string name="ui_feature_set_type_performance">Prestaties</string>
     <string name="system">Systeem</string>
     <string name="light">Licht</string>
     <string name="dark">Donker</string>
@@ -515,6 +516,10 @@
     <string name="error_dialog_talk_to_user">Bericht de gebruiker</string>
     <string name="error_dialog_button_ok">Ok</string>
     <string name="relay_information_document_error_assemble_url">Mislukt om %1$s te bereiken: %2$s</string>
+    <string name="relay_information_document_error_failed_to_assemble_url">Fout bij het verzamelen van de NIP-11 url voor %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">Mislukt om %1$s te bereiken: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">Mislukt om het resultaat van %1$s te parsen: %2$s</string>
+    <string name="relay_information_document_error_failed_with_http">Relay wijst aanvraag %1$s af: %2$s</string>
     <string name="relay_information_document_error_reach_server">Mislukt om %1$s te bereiken: %2$s</string>
     <string name="relay_information_document_error_parse_result">Mislukt om het resultaat van %1$s te parsen: %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s mislukt met code %2$s</string>
