@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.service.relays.RelayPoolStatus
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.MediaServersListView
 import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
 import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -450,6 +451,7 @@ fun ListContent(
 
     val coroutineScope = rememberCoroutineScope()
     var wantsToEditRelays by remember { mutableStateOf(false) }
+    var editMediaServers by remember { mutableStateOf(false) }
 
     var backupDialogOpen by remember { mutableStateOf(false) }
     var checked by remember { mutableStateOf(accountViewModel.account.proxy != null) }
@@ -491,6 +493,16 @@ fun ListContent(
             onClick = {
                 coroutineScope.launch { drawerState.close() }
                 wantsToEditRelays = true
+            },
+        )
+
+        IconRow(
+            title = "Media Servers",
+            icon = androidx.media3.ui.R.drawable.exo_icon_repeat_all,
+            tint = MaterialTheme.colorScheme.onBackground,
+            onClick = {
+                coroutineScope.launch { drawerState.close() }
+                editMediaServers = true
             },
         )
 
@@ -559,6 +571,9 @@ fun ListContent(
 
     if (wantsToEditRelays) {
         AllRelayListView({ wantsToEditRelays = false }, accountViewModel = accountViewModel, nav = nav)
+    }
+    if (editMediaServers) {
+        MediaServersListView({ editMediaServers = false }, accountViewModel = accountViewModel, nav = nav)
     }
     if (backupDialogOpen) {
         AccountBackupDialog(accountViewModel, onClose = { backupDialogOpen = false })
