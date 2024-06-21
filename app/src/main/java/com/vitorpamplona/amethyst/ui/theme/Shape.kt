@@ -135,6 +135,7 @@ val Size22Modifier = Modifier.size(22.dp)
 val Size24Modifier = Modifier.size(24.dp)
 val Size25Modifier = Modifier.size(25.dp)
 val Size26Modifier = Modifier.size(26.dp)
+val Size28Modifier = Modifier.size(28.dp)
 val Size30Modifier = Modifier.size(30.dp)
 val Size35Modifier = Modifier.size(35.dp)
 val Size39Modifier = Modifier.size(39.dp)
@@ -271,6 +272,6 @@ val previewCardImageModifier = Modifier.fillMaxWidth().heightIn(max = 200.dp).pa
 
 val reactionBox =
     Modifier
-        .padding(horizontal = 3.dp, vertical = 6.dp)
-        .height(Size30dp)
+        .padding(horizontal = 6.dp, vertical = 6.dp)
+        .size(Size40dp)
         .padding(5.dp)

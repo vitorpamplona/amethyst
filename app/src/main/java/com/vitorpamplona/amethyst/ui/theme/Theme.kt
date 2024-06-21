@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -165,16 +164,16 @@ val LightInnerPostBorderModifier =
 
 val DarkSelectedReactionBoxModifier =
     Modifier
-        .padding(horizontal = 3.dp, vertical = 6.dp)
-        .height(Size30dp)
+        .padding(horizontal = 5.dp, vertical = 5.dp)
+        .size(Size40dp)
         .clip(shape = SmallBorder)
         .background(DarkColorPalette.secondaryContainer)
         .padding(5.dp)
 
 val LightSelectedReactionBoxModifier =
     Modifier
-        .padding(horizontal = 3.dp, vertical = 6.dp)
-        .height(Size30dp)
+        .padding(horizontal = 5.dp, vertical = 5.dp)
+        .size(Size40dp)
         .clip(shape = SmallBorder)
         .background(LightColorPalette.secondaryContainer)
         .padding(5.dp)

@@ -88,6 +88,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
@@ -127,6 +128,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
+import com.vitorpamplona.amethyst.ui.theme.Size28Modifier
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.TinyBorders
@@ -1354,7 +1356,7 @@ fun ReactionChoicePopupContent(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         ) {
             FlowRow(
-                modifier = Modifier.padding(horizontal = 3.dp),
+                modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -1368,7 +1370,7 @@ fun ReactionChoicePopupContent(
                 }
 
                 ClickableBox(modifier = reactionBox, onClick = onChangeAmount) {
-                    ChangeReactionIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText)
+                    ChangeReactionIcon(modifier = Size28Modifier, MaterialTheme.colorScheme.placeholderText)
                 }
             }
         }
@@ -1400,7 +1402,7 @@ fun ReactionChoicePopupPeeview() {
             ),
             onClick = {},
             onChangeAmount = {},
-            toRemove = persistentSetOf("\uD83D\uDE80"),
+            toRemove = persistentSetOf("\uD83D\uDE80", "\uD83E\uDD14", "\uD83D\uDE31"),
         )
     }
 }
@@ -1433,11 +1435,12 @@ fun RenderReaction(reactionType: String) {
             ),
             style = SpanStyle(color = MaterialTheme.colorScheme.onBackground),
             maxLines = 1,
+            fontSize = 22.sp,
         )
     } else {
         when (reactionType) {
             "+" -> {
-                LikedIcon(modifier = Size20Modifier)
+                LikedIcon(modifier = Size28Modifier)
             }
 
             "-" -> {
@@ -1445,6 +1448,7 @@ fun RenderReaction(reactionType: String) {
                     text = "\uD83D\uDC4E",
                     color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
+                    fontSize = 22.sp,
                 )
             }
             else -> {
@@ -1452,6 +1456,7 @@ fun RenderReaction(reactionType: String) {
                     reactionType,
                     color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
+                    fontSize = 22.sp,
                 )
             }
         }
