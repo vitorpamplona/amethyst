@@ -8,7 +8,7 @@
     <string name="show_anyway">Montrer quand même</string>
     <string name="post_was_hidden">Ce message a été masqué car il mentionne vos utilisateurs ou mots cachés</string>
     <string name="post_was_flagged_as_inappropriate_by">Post signalé inapproprié par</string>
-    <string name="post_not_found">Post non trouvé</string>
+    <string name="post_not_found">L\'événement est en cours de chargement ou ne peut pas être trouvé dans votre liste de relais</string>
     <string name="channel_image">Image du canal</string>
     <string name="referenced_event_not_found">référence de l\'évènement non trouvée</string>
     <string name="could_not_decrypt_the_message">Impossible de déchiffrer le message</string>
@@ -451,6 +451,7 @@
     <string name="connectivity_type_never">Jamais</string>
     <string name="ui_feature_set_type_complete">Complet</string>
     <string name="ui_feature_set_type_simplified">Simplifié</string>
+    <string name="ui_feature_set_type_performance">Performance</string>
     <string name="system">Système</string>
     <string name="light">Clair</string>
     <string name="dark">Sombre</string>

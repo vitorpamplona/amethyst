@@ -55,5 +55,7 @@ object TimeUtils {
 
     fun oneWeekAgo() = now() - ONE_WEEK
 
+    fun oneMonthAgo() = now() - ONE_MONTH
+
     fun randomWithTwoDays() = System.currentTimeMillis() / 1000 - CryptoUtils.randomInt(twoDays())
 }

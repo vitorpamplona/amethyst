@@ -60,17 +60,14 @@ class LiveActivitiesEvent(
 
     fun hosts() = tags.filter { it.size > 3 && it[0] == "p" && it[3].equals("Host", true) }.map { it[1] }
 
-    fun checkStatus(eventStatus: String?): String? {
-        return if (eventStatus == STATUS_LIVE && createdAt < TimeUtils.eightHoursAgo()) {
+    fun checkStatus(eventStatus: String?): String? =
+        if (eventStatus == STATUS_LIVE && createdAt < TimeUtils.eightHoursAgo()) {
             STATUS_ENDED
         } else {
             eventStatus
         }
-    }
 
-    fun participantsIntersect(keySet: Set<String>): Boolean {
-        return tags.any { it.size > 1 && it[0] == "p" && it[1] in keySet }
-    }
+    fun participantsIntersect(keySet: Set<String>): Boolean = keySet.contains(pubKey) || tags.any { it.size > 1 && it[0] == "p" && it[1] in keySet }
 
     companion object {
         const val KIND = 30311

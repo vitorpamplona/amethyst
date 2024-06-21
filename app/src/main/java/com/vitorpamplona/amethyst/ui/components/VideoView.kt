@@ -408,7 +408,15 @@ fun GetMediaItem(
     authorName: String?,
     inner: @Composable (State<MediaItem>) -> Unit,
 ) {
-    val data = remember(videoUri) { MediaItemData(videoUri, title, artworkUri, authorName) }
+    val data =
+        remember(videoUri) {
+            MediaItemData(
+                videoUri = videoUri,
+                authorName = authorName,
+                title = title,
+                artworkUri = artworkUri,
+            )
+        }
     val mediaItem by produceCachedState(cache = mediaItemCache, key = data)
 
     mediaItem?.let {

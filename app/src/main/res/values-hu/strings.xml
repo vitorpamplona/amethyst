@@ -113,6 +113,7 @@
     <string name="website_url">Oldalam URL-je</string>
     <string name="ln_address">LN Cím</string>
     <string name="ln_url_outdated">LN URL (elavult)</string>
+    <string name="save_to_gallery">Mentés a galériába</string>
     <string name="image_saved_to_the_gallery">A kép a galériába mentve</string>
     <string name="failed_to_save_the_image">Nem sikerült menteni a képet</string>
     <string name="upload_image">Kép feltöltése</string>
@@ -449,6 +450,7 @@
     <string name="connectivity_type_never">Soha</string>
     <string name="ui_feature_set_type_complete">Teljes</string>
     <string name="ui_feature_set_type_simplified">Egyszerűsített</string>
+    <string name="ui_feature_set_type_performance">Teljesítmény-beállítások</string>
     <string name="system">Rendszer</string>
     <string name="light">Világos</string>
     <string name="dark">Sötét</string>
@@ -500,6 +502,7 @@
     <string name="load_image_description">Mikor kell a képeket betölteni</string>
     <string name="copy_to_clipboard">Másolás a vágólapra</string>
     <string name="copy_npub_to_clipboard">Npub másolása a vágólapra</string>
+    <string name="share_or_save">Megosztás vagy Mentés</string>
     <string name="copy_url_to_clipboard">Az URL vágólapra másolása</string>
     <string name="copy_the_note_id_to_the_clipboard">A bejegyzésazonosító vágólapra másolása</string>
     <string name="created_at">Létrehozva</string>
@@ -512,6 +515,10 @@
     <string name="error_dialog_talk_to_user">Üzenet a Felhasználónak</string>
     <string name="error_dialog_button_ok">Ok</string>
     <string name="relay_information_document_error_assemble_url">Nem sikerült elérni %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_assemble_url">Nem sikerült összeállítani a NIP-11 URL-t a következőhöz: %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">Nem sikerült elérni %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">Nem sikerült a válasz elemzése a %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_with_http">A csomópont elutasította a(z) %1$s kérést: %2$s</string>
     <string name="relay_information_document_error_reach_server">Nem sikerült elérni %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">Nem sikerült az eredmény elemzése a %1$s: %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s hiba a következő kóddal %2$s</string>

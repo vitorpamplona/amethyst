@@ -34,6 +34,8 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -47,10 +49,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
@@ -1323,16 +1328,25 @@ fun ReactionChoicePopup(
         offset = IntOffset(0, iconSizePx),
         onDismissRequest = { onDismiss() },
     ) {
-        FlowRow(horizontalArrangement = Arrangement.Center) {
-            account.reactionChoices.forEach { reactionType ->
-                ActionableReactionButton(
-                    baseNote,
-                    reactionType,
-                    accountViewModel,
-                    onDismiss,
-                    onChangeAmount,
-                    toRemove,
-                )
+        ElevatedCard(
+            Modifier
+                .border(width = 1.dp, color = MaterialTheme.colorScheme.outline, shape = RoundedCornerShape(5.dp)),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            Box(modifier = Modifier.padding(5.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.Center) {
+                    account.reactionChoices.forEach { reactionType ->
+                        ActionableReactionButton(
+                            baseNote,
+                            reactionType,
+                            accountViewModel,
+                            onDismiss,
+                            onChangeAmount,
+                            toRemove,
+                        )
+                    }
+                }
             }
         }
     }
@@ -1348,24 +1362,11 @@ private fun ActionableReactionButton(
     onChangeAmount: () -> Unit,
     toRemove: ImmutableSet<String>,
 ) {
-    Button(
-        modifier = Modifier.padding(horizontal = 3.dp),
-        onClick = {
-            accountViewModel.reactToOrDelete(
-                baseNote,
-                reactionType,
-            )
-            onDismiss()
-        },
-        shape = ButtonBorder,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-            ),
-    ) {
-        val thisModifier =
-            remember(reactionType) {
-                Modifier.combinedClickable(
+    val thisModifier =
+        remember(reactionType) {
+            Modifier
+                .padding(horizontal = 3.dp)
+                .combinedClickable(
                     onClick = {
                         accountViewModel.reactToOrDelete(
                             baseNote,
@@ -1375,59 +1376,60 @@ private fun ActionableReactionButton(
                     },
                     onLongClick = { onChangeAmount() },
                 )
+                .padding(5.dp)
+        }
+
+    val removeSymbol =
+        remember(reactionType) {
+            if (reactionType in toRemove) {
+                " ✖"
+            } else {
+                ""
             }
+        }
 
-        val removeSymbol =
-            remember(reactionType) {
-                if (reactionType in toRemove) {
-                    " ✖"
-                } else {
-                    ""
-                }
-            }
+    if (reactionType.startsWith(":")) {
+        val noStartColon = reactionType.removePrefix(":")
+        val url = noStartColon.substringAfter(":")
 
-        if (reactionType.startsWith(":")) {
-            val noStartColon = reactionType.removePrefix(":")
-            val url = noStartColon.substringAfter(":")
-
-            val renderable =
-                persistentListOf(
-                    Nip30CustomEmoji.ImageUrlType(url),
-                    Nip30CustomEmoji.TextType(removeSymbol),
-                )
-
-            InLineIconRenderer(
-                renderable,
-                style = SpanStyle(color = Color.White),
-                maxLines = 1,
+        val renderable =
+            persistentListOf(
+                Nip30CustomEmoji.ImageUrlType(url),
+                Nip30CustomEmoji.TextType(removeSymbol),
             )
-        } else {
-            when (reactionType) {
-                "+" -> {
-                    LikedIcon(modifier = thisModifier.size(16.dp), tint = Color.White)
 
-                    Text(
-                        text = removeSymbol,
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        modifier = thisModifier,
-                    )
-                }
-                "-" ->
-                    Text(
-                        text = "\uD83D\uDC4E$removeSymbol",
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        modifier = thisModifier,
-                    )
-                else ->
-                    Text(
-                        "$reactionType$removeSymbol",
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        modifier = thisModifier,
-                    )
+        InLineIconRenderer(
+            renderable,
+            style = SpanStyle(color = Color.White),
+            maxLines = 1,
+            modifier = thisModifier,
+        )
+    } else {
+        when (reactionType) {
+            "+" -> {
+                LikedIcon(modifier = thisModifier.size(16.dp), tint = Color.White)
+
+                Text(
+                    text = removeSymbol,
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    modifier = thisModifier,
+                )
             }
+            "-" ->
+                Text(
+                    text = "\uD83D\uDC4E$removeSymbol",
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    modifier = thisModifier,
+                )
+            else ->
+                Text(
+                    "$reactionType$removeSymbol",
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    modifier = thisModifier,
+                )
         }
     }
 }

@@ -40,6 +40,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -112,6 +113,8 @@ fun AllRelayListView(
                             Text(
                                 text = stringRes(R.string.relay_settings),
                                 style = MaterialTheme.typography.titleLarge,
+                                overflow = TextOverflow.Ellipsis,
+                                maxLines = 1,
                             )
 
                             SaveButton(

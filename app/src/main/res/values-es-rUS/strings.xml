@@ -113,6 +113,7 @@
     <string name="website_url">URL del sitio web</string>
     <string name="ln_address">Dirección de Lightning</string>
     <string name="ln_url_outdated">URL de Lightning (obsoleta)</string>
+    <string name="save_to_gallery">Guardar en la galería</string>
     <string name="image_saved_to_the_gallery">Imagen guardada en la galería</string>
     <string name="failed_to_save_the_image">Error al guardar la imagen</string>
     <string name="upload_image">Subir imagen</string>
@@ -407,6 +408,7 @@
     <string name="languages">Idiomas</string>
     <string name="tags">Etiquetas</string>
     <string name="posting_policy">Política de publicación</string>
+    <string name="relay_error_messages">Errores y avisos de este relé</string>
     <string name="message_length">Longitud del mensaje</string>
     <string name="subscriptions">Suscripciones</string>
     <string name="filters">Filtros</string>
@@ -449,6 +451,7 @@
     <string name="connectivity_type_never">Nunca</string>
     <string name="ui_feature_set_type_complete">Completo</string>
     <string name="ui_feature_set_type_simplified">Simplificado</string>
+    <string name="ui_feature_set_type_performance">Rendimiento</string>
     <string name="system">Sistema</string>
     <string name="light">Claro</string>
     <string name="dark">Oscuro</string>
@@ -500,6 +503,7 @@
     <string name="load_image_description">Cuándo cargar imágenes</string>
     <string name="copy_to_clipboard">Copiar al portapapeles</string>
     <string name="copy_npub_to_clipboard">Copiar npub al portapapeles</string>
+    <string name="share_or_save">Compartir o guardar</string>
     <string name="copy_url_to_clipboard">Copiar URL al portapapeles</string>
     <string name="copy_the_note_id_to_the_clipboard">Copiar ID de la nota al portapapeles</string>
     <string name="created_at">Creado</string>
@@ -512,6 +516,10 @@
     <string name="error_dialog_talk_to_user">Mensaje para el usuario</string>
     <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">No se pudo llegar a %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_assemble_url">Error al ensamblar la url NIP-11 para %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">No se pudo contactar %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">Error al analizar la respuesta de %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_with_http">El relé rechazó la solicitud %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">No se pudo llegar a %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">Error al analizar el resultado de %1$s: %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s falló con el código %2$s</string>
