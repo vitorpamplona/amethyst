@@ -414,7 +414,7 @@ fun WatchBookmarksFollowsAndAccount(
                         isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
                         isLoggedUser = accountViewModel.isLoggedUser(note.author),
                         isSensitive = note.event?.isSensitive() ?: false,
-                        showSensitiveContent = showSensitiveContent,
+                        showSensitiveContent = showSensitiveContent.value,
                     )
 
                 launch(Dispatchers.Main) {

@@ -26,17 +26,15 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import kotlinx.coroutines.CancellationException
 
-class HiddenAccountsFeedFilter(val account: Account) : FeedFilter<User>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex
-    }
+class HiddenAccountsFeedFilter(
+    val account: Account,
+) : FeedFilter<User>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex
 
-    override fun showHiddenKey(): Boolean {
-        return true
-    }
+    override fun showHiddenKey(): Boolean = true
 
-    override fun feed(): List<User> {
-        return account.flowHiddenUsers.value.hiddenUsers.reversed().mapNotNull {
+    override fun feed(): List<User> =
+        account.flowHiddenUsers.value.hiddenUsers.reversed().mapNotNull {
             try {
                 LocalCache.getOrCreateUser(it)
             } catch (e: Exception) {
@@ -45,33 +43,26 @@ class HiddenAccountsFeedFilter(val account: Account) : FeedFilter<User>() {
                 null
             }
         }
-    }
 }
 
-class HiddenWordsFeedFilter(val account: Account) : FeedFilter<String>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex
-    }
+class HiddenWordsFeedFilter(
+    val account: Account,
+) : FeedFilter<String>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex
 
-    override fun showHiddenKey(): Boolean {
-        return true
-    }
+    override fun showHiddenKey(): Boolean = true
 
-    override fun feed(): List<String> {
-        return account.flowHiddenUsers.value.hiddenWords.toList()
-    }
+    override fun feed(): List<String> =
+        account.flowHiddenUsers.value.hiddenWords
+            .toList()
 }
 
-class SpammerAccountsFeedFilter(val account: Account) : FeedFilter<User>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex
-    }
+class SpammerAccountsFeedFilter(
+    val account: Account,
+) : FeedFilter<User>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex
 
-    override fun showHiddenKey(): Boolean {
-        return true
-    }
+    override fun showHiddenKey(): Boolean = true
 
-    override fun feed(): List<User> {
-        return (account.transientHiddenUsers).map { LocalCache.getOrCreateUser(it) }
-    }
+    override fun feed(): List<User> = account.transientHiddenUsers.value.map { LocalCache.getOrCreateUser(it) }
 }

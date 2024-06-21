@@ -97,6 +97,7 @@ import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.relays.Client
 import com.vitorpamplona.amethyst.service.relays.RelayPool
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -758,6 +759,7 @@ class FollowListViewModel(
 
     private val _kind3GlobalPeopleRoutes =
         combineTransform(livePeopleListsFlow, liveKind3FollowsFlow) { myLivePeopleListsFlow, myLiveKind3FollowsFlow ->
+            checkNotInMainThread()
             emit(
                 listOf(listOf(kind3Follow, globalFollow), myLivePeopleListsFlow, myLiveKind3FollowsFlow, listOf(muteListFollow))
                     .flatten()
@@ -768,6 +770,7 @@ class FollowListViewModel(
 
     private val _kind3GlobalPeople =
         combineTransform(livePeopleListsFlow, liveKind3FollowsFlow) { myLivePeopleListsFlow, myLiveKind3FollowsFlow ->
+            checkNotInMainThread()
             emit(
                 listOf(listOf(kind3Follow, globalFollow), myLivePeopleListsFlow, listOf(muteListFollow))
                     .flatten()
