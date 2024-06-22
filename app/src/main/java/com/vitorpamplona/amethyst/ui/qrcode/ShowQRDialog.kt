@@ -45,16 +45,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
+import com.vitorpamplona.amethyst.ui.components.DisplayNIP05
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.components.mockAccountViewModel
+import com.vitorpamplona.amethyst.ui.components.nip05VerificationAsAState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.events.UserMetadata
@@ -62,21 +68,20 @@ import com.vitorpamplona.quartz.events.UserMetadata
 @Preview
 @Composable
 fun ShowQRDialogPreview() {
-    val user = User("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
-
-    user.info =
+    val accountViewModel = mockAccountViewModel()
+    accountViewModel.userProfile().info =
         UserMetadata().apply {
             name = "My Name"
             picture = "Picture"
+            nip05 = null
             banner = "http://banner.com/test"
             website = "http://mywebsite.com/test"
             about = "This is the about me"
         }
 
     ShowQRDialog(
-        user = user,
-        loadProfilePicture = false,
-        loadRobohash = false,
+        user = accountViewModel.userProfile(),
+        accountViewModel = accountViewModel,
         onScan = {},
         onClose = {},
     )
@@ -85,8 +90,7 @@ fun ShowQRDialogPreview() {
 @Composable
 fun ShowQRDialog(
     user: User,
-    loadProfilePicture: Boolean,
-    loadRobohash: Boolean,
+    accountViewModel: AccountViewModel,
     onScan: (String) -> Unit,
     onClose: () -> Unit,
 ) {
@@ -126,8 +130,8 @@ fun ShowQRDialog(
                                             .height(100.dp)
                                             .clip(shape = CircleShape)
                                             .border(3.dp, MaterialTheme.colorScheme.background, CircleShape),
-                                    loadProfilePicture = loadProfilePicture,
-                                    loadRobohash = loadRobohash,
+                                    loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                                    loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                                 )
                             }
                             Row(
@@ -141,13 +145,34 @@ fun ShowQRDialog(
                                     fontSize = 18.sp,
                                 )
                             }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                            ) {
+                                val nip05 = user.nip05()
+                                if (nip05 != null) {
+                                    val nip05Verified =
+                                        nip05VerificationAsAState(user.info!!, user.pubkeyHex, accountViewModel)
+
+                                    DisplayNIP05(nip05, nip05Verified, accountViewModel)
+                                } else {
+                                    Text(
+                                        text = user.pubkeyDisplayHex(),
+                                        fontSize = 14.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
                         }
 
                         Row(
                             horizontalArrangement = Arrangement.Center,
                             modifier = Modifier.fillMaxWidth().padding(horizontal = Size35dp),
                         ) {
-                            QrCodeDrawer("nostr:${user.pubkeyNpub()}")
+                            QrCodeDrawer(user.toNostrUri())
                         }
 
                         Row(modifier = Modifier.padding(horizontal = 30.dp)) {

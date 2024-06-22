@@ -179,9 +179,7 @@ object Client : RelayPool.Listener {
         subscriptions = subscriptions.minus(subscriptionId)
     }
 
-    fun isActive(subscriptionId: String): Boolean {
-        return subscriptions.contains(subscriptionId)
-    }
+    fun isActive(subscriptionId: String): Boolean = subscriptions.contains(subscriptionId)
 
     @OptIn(DelicateCoroutinesApi::class)
     override fun onEvent(
@@ -205,9 +203,9 @@ object Client : RelayPool.Listener {
     ) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
-        GlobalScope.launch(Dispatchers.Default) {
-            listeners.forEach { it.onRelayStateChange(type, relay, channel) }
-        }
+        // GlobalScope.launch(Dispatchers.Default) {
+        listeners.forEach { it.onRelayStateChange(type, relay, channel) }
+        // }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -249,21 +247,15 @@ object Client : RelayPool.Listener {
         listeners = listeners.plus(listener)
     }
 
-    fun isSubscribed(listener: Listener): Boolean {
-        return listeners.contains(listener)
-    }
+    fun isSubscribed(listener: Listener): Boolean = listeners.contains(listener)
 
     fun unsubscribe(listener: Listener) {
         listeners = listeners.minus(listener)
     }
 
-    fun allSubscriptions(): Map<String, List<TypedFilter>> {
-        return subscriptions
-    }
+    fun allSubscriptions(): Map<String, List<TypedFilter>> = subscriptions
 
-    fun getSubscriptionFilters(subId: String): List<TypedFilter> {
-        return subscriptions[subId] ?: emptyList()
-    }
+    fun getSubscriptionFilters(subId: String): List<TypedFilter> = subscriptions[subId] ?: emptyList()
 
     abstract class Listener {
         /** A new message was received */

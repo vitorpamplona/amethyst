@@ -277,8 +277,7 @@ private fun RenderReactionOption(
                     width = 1.dp,
                     color = MaterialTheme.colorScheme.surfaceDim,
                     shape = RoundedCornerShape(8.dp),
-                )
-                .padding(8.dp),
+                ).padding(8.dp),
     ) {
         if (reactionType.startsWith(":")) {
             val noStartColon = reactionType.removePrefix(":")
@@ -298,13 +297,15 @@ private fun RenderReactionOption(
         } else {
             when (reactionType) {
                 "+" -> {
-                    LikedIcon(modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onBackground)
+                    Row {
+                        LikedIcon(modifier = Modifier.size(20.dp), tint = Color.Unspecified)
 
-                    Text(
-                        text = " ✖",
-                        color = MaterialTheme.colorScheme.onBackground,
-                        textAlign = TextAlign.Center,
-                    )
+                        Text(
+                            text = " ✖",
+                            color = MaterialTheme.colorScheme.onBackground,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
                 "-" ->
                     Text(

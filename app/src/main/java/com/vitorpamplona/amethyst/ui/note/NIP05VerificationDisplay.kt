@@ -310,7 +310,7 @@ fun DisplayStatus(
 }
 
 @Composable
-private fun DisplayNIP05(
+fun DisplayNIP05(
     nip05: String,
     nip05Verified: MutableState<Boolean?>,
     accountViewModel: AccountViewModel,

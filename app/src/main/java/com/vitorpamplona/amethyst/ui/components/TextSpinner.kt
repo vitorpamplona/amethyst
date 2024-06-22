@@ -77,6 +77,7 @@ fun TextSpinner(
             readOnly = true,
             label = { label?.let { Text(it) } },
             modifier = modifier,
+            singleLine = true,
         )
     }
 }
@@ -200,4 +201,7 @@ fun <T> SpinnerSelectionDialog(
     }
 }
 
-@Immutable data class TitleExplainer(val title: String, val explainer: String? = null)
+@Immutable data class TitleExplainer(
+    val title: String,
+    val explainer: String? = null,
+)

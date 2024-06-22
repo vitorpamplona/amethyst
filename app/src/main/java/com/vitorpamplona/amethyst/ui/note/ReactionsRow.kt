@@ -35,7 +35,6 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -49,7 +48,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -85,10 +83,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
@@ -112,6 +112,7 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DarkerGreen
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.NoSoTinyBorders
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowExpandButton
@@ -127,14 +128,20 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
+import com.vitorpamplona.amethyst.ui.theme.Size28Modifier
+import com.vitorpamplona.amethyst.ui.theme.SmallBorder
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.TinyBorders
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.reactionBox
+import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
 import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
@@ -817,7 +824,6 @@ fun BoostText(
     SlidingAnimationCount(boostState, grayTint, accountViewModel)
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LikeReaction(
     baseNote: Note,
@@ -831,29 +837,21 @@ fun LikeReaction(
     var wantsToChangeReactionSymbol by remember { mutableStateOf(false) }
     var wantsToReact by remember { mutableStateOf(false) }
 
-    Box(
-        contentAlignment = Center,
-        modifier =
-            Modifier
-                .combinedClickable(
-                    role = Role.Button,
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = rememberRipple(bounded = false, radius = Size24dp),
-                    onClick = {
-                        likeClick(
-                            accountViewModel,
-                            baseNote,
-                            onMultipleChoices = { wantsToReact = true },
-                            onWantsToSignReaction = { accountViewModel.reactToOrDelete(baseNote) },
-                        )
-                    },
-                    onLongClick = { wantsToChangeReactionSymbol = true },
-                ),
+    ClickableBox(
+        onClick = {
+            likeClick(
+                accountViewModel,
+                baseNote,
+                onMultipleChoices = { wantsToReact = true },
+                onWantsToSignReaction = { accountViewModel.reactToOrDelete(baseNote) },
+            )
+        },
+        onLongClick = { wantsToChangeReactionSymbol = true },
     ) {
         ObserveLikeIcon(baseNote, accountViewModel) { reactionType ->
-            CrossfadeIfEnabled(targetState = reactionType, label = "LikeIcon", accountViewModel = accountViewModel) {
-                if (it != null) {
-                    RenderReactionType(it, heartSizeModifier, iconFontSize)
+            CrossfadeIfEnabled(targetState = reactionType, contentAlignment = Center, label = "LikeIcon", accountViewModel = accountViewModel) {
+                if (reactionType != null) {
+                    RenderReactionType(reactionType, heartSizeModifier, iconFontSize)
                 } else {
                     LikeIcon(heartSizeModifier, grayTint)
                 }
@@ -1307,7 +1305,6 @@ private fun BoostTypeChoicePopup(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ReactionChoicePopup(
     baseNote: Note,
@@ -1320,6 +1317,7 @@ fun ReactionChoicePopup(
     val account = accountState?.account ?: return
 
     val toRemove = remember { baseNote.reactedBy(account.userProfile()).toImmutableSet() }
+    val reactions = remember { account.reactionChoices.toImmutableList() }
 
     val iconSizePx = with(LocalDensity.current) { -iconSize.toPx().toInt() }
 
@@ -1328,108 +1326,139 @@ fun ReactionChoicePopup(
         offset = IntOffset(0, iconSizePx),
         onDismissRequest = { onDismiss() },
     ) {
+        ReactionChoicePopupContent(
+            reactions,
+            toRemove = toRemove,
+            onClick = { reactionType ->
+                accountViewModel.reactToOrDelete(
+                    baseNote,
+                    reactionType,
+                )
+                onDismiss()
+            },
+            onChangeAmount,
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ReactionChoicePopupContent(
+    listOfReactions: ImmutableList<String>,
+    toRemove: ImmutableSet<String>,
+    onClick: (reactionType: String) -> Unit,
+    onChangeAmount: () -> Unit,
+) {
+    Box(HalfPadding, contentAlignment = Center) {
         ElevatedCard(
-            Modifier
-                .border(width = 1.dp, color = MaterialTheme.colorScheme.outline, shape = RoundedCornerShape(5.dp)),
+            shape = SmallBorder,
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 8.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         ) {
-            Box(modifier = Modifier.padding(5.dp)) {
-                FlowRow(horizontalArrangement = Arrangement.Center) {
-                    account.reactionChoices.forEach { reactionType ->
-                        ActionableReactionButton(
-                            baseNote,
-                            reactionType,
-                            accountViewModel,
-                            onDismiss,
-                            onChangeAmount,
-                            toRemove,
-                        )
-                    }
+            FlowRow(
+                modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                listOfReactions.forEach { reactionType ->
+                    ActionableReactionButton(
+                        reactionType = reactionType,
+                        onClick = { onClick(reactionType) },
+                        onChangeAmount = onChangeAmount,
+                        toRemove = toRemove,
+                    )
+                }
+
+                ClickableBox(modifier = reactionBox, onClick = onChangeAmount) {
+                    ChangeReactionIcon(modifier = Size28Modifier, MaterialTheme.colorScheme.placeholderText)
                 }
             }
         }
     }
 }
 
+@Preview()
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
+fun ReactionChoicePopupPeeview() {
+    ThemeComparisonColumn {
+        ReactionChoicePopupContent(
+            persistentListOf(
+                "\uD83D\uDE80",
+                "\uD83E\uDEC2",
+                "\uD83D\uDC40",
+                "\uD83D\uDE02",
+                "\uD83C\uDF89",
+                "\uD83E\uDD14",
+                "\uD83D\uDE31",
+                "\uD83E\uDD14",
+                "\uD83D\uDE31",
+                "+",
+                "-",
+                "\uD83C\uDF89",
+                "\uD83E\uDD14",
+                "\uD83D\uDE31",
+                "\uD83E\uDD14",
+                "\uD83D\uDE31",
+            ),
+            onClick = {},
+            onChangeAmount = {},
+            toRemove = persistentSetOf("\uD83D\uDE80", "\uD83E\uDD14", "\uD83D\uDE31"),
+        )
+    }
+}
+
+@Composable
 private fun ActionableReactionButton(
-    baseNote: Note,
     reactionType: String,
-    accountViewModel: AccountViewModel,
-    onDismiss: () -> Unit,
+    onClick: () -> Unit,
     onChangeAmount: () -> Unit,
     toRemove: ImmutableSet<String>,
 ) {
-    val thisModifier =
-        remember(reactionType) {
-            Modifier
-                .padding(horizontal = 3.dp)
-                .combinedClickable(
-                    onClick = {
-                        accountViewModel.reactToOrDelete(
-                            baseNote,
-                            reactionType,
-                        )
-                        onDismiss()
-                    },
-                    onLongClick = { onChangeAmount() },
-                )
-                .padding(5.dp)
-        }
+    ClickableBox(
+        modifier = if (reactionType in toRemove) MaterialTheme.colorScheme.selectedReactionBoxModifier else reactionBox,
+        onClick = onClick,
+        onLongClick = onChangeAmount,
+    ) {
+        RenderReaction(reactionType)
+    }
+}
 
-    val removeSymbol =
-        remember(reactionType) {
-            if (reactionType in toRemove) {
-                " ✖"
-            } else {
-                ""
-            }
-        }
-
+@Composable
+fun RenderReaction(reactionType: String) {
     if (reactionType.startsWith(":")) {
         val noStartColon = reactionType.removePrefix(":")
         val url = noStartColon.substringAfter(":")
 
-        val renderable =
+        InLineIconRenderer(
             persistentListOf(
                 Nip30CustomEmoji.ImageUrlType(url),
-                Nip30CustomEmoji.TextType(removeSymbol),
-            )
-
-        InLineIconRenderer(
-            renderable,
-            style = SpanStyle(color = Color.White),
+            ),
+            style = SpanStyle(color = MaterialTheme.colorScheme.onBackground),
             maxLines = 1,
-            modifier = thisModifier,
+            fontSize = 22.sp,
         )
     } else {
         when (reactionType) {
             "+" -> {
-                LikedIcon(modifier = thisModifier.size(16.dp), tint = Color.White)
+                LikedIcon(modifier = Size28Modifier)
+            }
 
+            "-" -> {
                 Text(
-                    text = removeSymbol,
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                    modifier = thisModifier,
+                    text = "\uD83D\uDC4E",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    fontSize = 22.sp,
                 )
             }
-            "-" ->
+            else -> {
                 Text(
-                    text = "\uD83D\uDC4E$removeSymbol",
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                    modifier = thisModifier,
+                    reactionType,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    fontSize = 22.sp,
                 )
-            else ->
-                Text(
-                    "$reactionType$removeSymbol",
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                    modifier = thisModifier,
-                )
+            }
         }
     }
 }

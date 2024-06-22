@@ -169,8 +169,7 @@ fun DrawerContent(
             BottomContent(
                 accountViewModel.account.userProfile(),
                 drawerState,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                accountViewModel,
                 nav,
             )
         }
@@ -756,8 +755,7 @@ fun IconRowRelays(
 fun BottomContent(
     user: User,
     drawerState: DrawerState,
-    loadProfilePicture: Boolean,
-    loadRobohash: Boolean,
+    accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -815,8 +813,7 @@ fun BottomContent(
     if (dialogOpen) {
         ShowQRDialog(
             user,
-            loadProfilePicture = loadProfilePicture,
-            loadRobohash = loadRobohash,
+            accountViewModel,
             onScan = {
                 dialogOpen = false
                 coroutineScope.launch { drawerState.close() }

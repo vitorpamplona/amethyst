@@ -26,7 +26,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.asFlow
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.switchMap
@@ -194,7 +193,7 @@ class Account(
     var backupContactList: ContactListEvent? = null,
     var proxy: Proxy? = null,
     var proxyPort: Int = 9050,
-    var showSensitiveContent: Boolean? = null,
+    var showSensitiveContent: MutableStateFlow<Boolean?> = MutableStateFlow(null),
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: Boolean = true,
     var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>(),
@@ -202,7 +201,7 @@ class Account(
     var pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
     val scope: CoroutineScope = Amethyst.instance.applicationIOScope,
 ) {
-    var transientHiddenUsers: Set<String> = setOf()
+    var transientHiddenUsers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf())
 
     data class PaymentRequest(
         val relayUrl: String,
@@ -238,6 +237,8 @@ class Account(
             getPrivateOutboxRelayListFlow(),
             userProfile().flow().relays.stateFlow,
         ) { nip65RelayList, dmRelayList, searchRelayList, privateOutBox, userProfile ->
+            checkNotInMainThread()
+
             val baseRelaySet = activeRelays() ?: convertLocalRelays()
             val newDMRelaySet = (dmRelayList.note.event as? ChatMessageRelayListEvent)?.relays()?.map { RelayUrlFormatter.normalize(it) }?.toSet() ?: emptySet()
             val searchRelaySet = (searchRelayList.note.event as? SearchRelayListEvent)?.relays()?.map { RelayUrlFormatter.normalize(it) }?.toSet() ?: Constants.defaultSearchRelaySet
@@ -358,6 +359,7 @@ class Account(
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveKind3FollowsFlow: Flow<LiveFollowLists> =
         userProfile().flow().follows.stateFlow.transformLatest {
+            checkNotInMainThread()
             emit(
                 LiveFollowLists(
                     it.user.cachedFollowingKeySet(),
@@ -394,6 +396,7 @@ class Account(
         peopleListFollowsSource: Flow<ListNameNotePair>,
     ): Flow<LiveFollowLists?> =
         combineTransform(kind3FollowsSource, peopleListFollowsSource) { kind3Follows, peopleListFollows ->
+            checkNotInMainThread()
             if (peopleListFollows.listName == GLOBAL_FOLLOWS) {
                 emit(null)
             } else if (peopleListFollows.listName == KIND3_FOLLOWS) {
@@ -500,10 +503,11 @@ class Account(
 
     val flowHiddenUsers: StateFlow<LiveHiddenUsers> by lazy {
         combineTransform(
-            live.asFlow(),
+            transientHiddenUsers,
+            showSensitiveContent,
             getBlockListNote().flow().metadata.stateFlow,
             getMuteListNote().flow().metadata.stateFlow,
-        ) { localLive, blockList, muteList ->
+        ) { transientHiddenUsers, showSensitiveContent, blockList, muteList ->
             checkNotInMainThread()
 
             val resultBlockList =
@@ -532,8 +536,8 @@ class Account(
                 LiveHiddenUsers(
                     hiddenUsers = (resultBlockList.users + resultMuteList.users),
                     hiddenWords = hiddenWords,
-                    spammers = localLive.account.transientHiddenUsers,
-                    showSensitiveContent = localLive.account.showSensitiveContent,
+                    spammers = transientHiddenUsers,
+                    showSensitiveContent = showSensitiveContent,
                 ),
             )
         }.stateIn(
@@ -542,8 +546,8 @@ class Account(
             LiveHiddenUsers(
                 hiddenUsers = setOf(),
                 hiddenWords = setOf(),
-                spammers = transientHiddenUsers,
-                showSensitiveContent = showSensitiveContent,
+                spammers = transientHiddenUsers.value,
+                showSensitiveContent = showSensitiveContent.value,
             ),
         )
     }
@@ -596,7 +600,9 @@ class Account(
         filterSpamFromStrangers = filterSpam
         LocalCache.antiSpam.active = filterSpamFromStrangers
         if (!filterSpamFromStrangers) {
-            transientHiddenUsers = setOf()
+            transientHiddenUsers.update {
+                emptySet()
+            }
         }
         live.invalidateData()
         saveable.invalidateData()
@@ -2377,7 +2383,9 @@ class Account(
             }
         }
 
-        transientHiddenUsers = (transientHiddenUsers - pubkeyHex)
+        transientHiddenUsers.update {
+            it - pubkeyHex
+        }
         live.invalidateData()
         saveable.invalidateData()
     }
@@ -2889,7 +2897,9 @@ class Account(
     }
 
     fun updateShowSensitiveContent(show: Boolean?) {
-        showSensitiveContent = show
+        showSensitiveContent.update {
+            show
+        }
         saveable.invalidateData()
         live.invalidateData()
     }
@@ -2928,10 +2938,12 @@ class Account(
             // imports transient blocks due to spam.
             LocalCache.antiSpam.liveSpam.observeForever {
                 GlobalScope.launch(Dispatchers.IO) {
-                    it.cache.spamMessages.snapshot().values.forEach {
-                        if (it.pubkeyHex !in transientHiddenUsers && it.duplicatedMessages.size >= 5) {
-                            if (it.pubkeyHex != userProfile().pubkeyHex && it.pubkeyHex !in followingKeySet()) {
-                                transientHiddenUsers = (transientHiddenUsers + it.pubkeyHex)
+                    it.cache.spamMessages.snapshot().values.forEach { spammer ->
+                        if (spammer.pubkeyHex !in transientHiddenUsers.value && spammer.duplicatedMessages.size >= 5) {
+                            if (spammer.pubkeyHex != userProfile().pubkeyHex && spammer.pubkeyHex !in followingKeySet()) {
+                                transientHiddenUsers.update {
+                                    it + spammer.pubkeyHex
+                                }
                                 live.invalidateData()
                             }
                         }
