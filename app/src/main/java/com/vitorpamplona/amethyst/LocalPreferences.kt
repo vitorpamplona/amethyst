@@ -75,7 +75,7 @@ private object PrefKeys {
     const val SAVED_ACCOUNTS = "all_saved_accounts"
     const val NOSTR_PRIVKEY = "nostr_privkey"
     const val NOSTR_PUBKEY = "nostr_pubkey"
-    const val RELAYS = "com/vitorpamplona/ammolite/relays/relays"
+    const val RELAYS = "relays"
     const val DONT_TRANSLATE_FROM = "dontTranslateFrom"
     const val LOCAL_RELAY_SERVERS = "localRelayServers"
     const val LANGUAGE_PREFS = "languagePreferences"
