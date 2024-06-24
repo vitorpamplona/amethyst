@@ -46,11 +46,11 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: Debug APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: amethyst/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v2
         with:
           name: Build Reports
-          path: app/build/reports
+          path: amethyst/build/reports
 
