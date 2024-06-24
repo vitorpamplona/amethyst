@@ -55,6 +55,7 @@ dependencies {
     androidTestImplementation libs.androidx.benchmark.junit4
     androidTestImplementation project(path: ':quartz')
     androidTestImplementation project(path: ':commons')
+    androidTestImplementation project(path: ':ammolite')
 
     androidTestImplementation libs.androidx.compose.foundation
 
