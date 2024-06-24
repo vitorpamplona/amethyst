@@ -25,19 +25,35 @@ import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import kotlin.coroutines.resume
 
 class RegisterAccounts(
     private val accounts: List<AccountInfo>,
 ) {
-    private fun recursiveAuthCreation(
+    val tag =
+        if (BuildConfig.FLAVOR == "play") {
+            "RegisterAccounts FirebaseMsgService"
+        } else {
+            "RegisterAccounts UnifiedPushService"
+        }
+
+    private suspend fun signAllAuths(
         notificationToken: String,
         remainingTos: List<Pair<Account, String>>,
         output: MutableList<RelayAuthEvent>,
@@ -48,12 +64,32 @@ class RegisterAccounts(
             return
         }
 
-        val next = remainingTos.first()
+        coroutineScope {
+            val jobs =
+                remainingTos.map { accountRelayPair ->
+                    async {
+                        val result =
+                            withTimeoutOrNull(10000) {
+                                suspendCancellableCoroutine { continuation ->
+                                    accountRelayPair.first.createAuthEvent(accountRelayPair.second, notificationToken) { result ->
+                                        continuation.resume(result)
+                                    }
+                                }
+                            }
 
-        next.first.createAuthEvent(next.second, notificationToken) {
-            output.add(it)
-            recursiveAuthCreation(notificationToken, remainingTos.filter { next != it }, output, onReady)
+                        if (result != null) {
+                            output.add(result)
+                        }
+                    }
+                }
+
+            // runs in parallel to avoid overcrowding Amber.
+            withTimeoutOrNull(15000) {
+                jobs.joinAll()
+            }
         }
+
+        onReady(output)
     }
 
     // creates proof that it controls all accounts
@@ -63,25 +99,48 @@ class RegisterAccounts(
         onReady: (List<RelayAuthEvent>) -> Unit,
     ) {
         val readyToSend =
-            accounts.mapNotNull {
-                val acc = LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)
-                if (acc != null && acc.isWriteable()) {
-                    val readRelays =
-                        acc.userProfile().latestContactList?.relays() ?: acc.backupContactList?.relays()
+            accounts
+                .map {
+                    Log.d(tag, "Register Account ${it.npub}")
 
-                    val relayToUse = readRelays?.firstNotNullOfOrNull { if (it.value.read) it.key else null }
-                    if (relayToUse != null) {
-                        Pair(acc, relayToUse)
+                    val acc = LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)
+
+                    if (acc != null && acc.isWriteable()) {
+                        val nip65Read =
+                            (
+                                LocalCache
+                                    .getAddressableNoteIfExists(
+                                        AdvertisedRelayListEvent.createAddressTag(acc.userProfile().pubkeyHex),
+                                    )?.event as? AdvertisedRelayListEvent
+                            )?.readRelays() ?: acc.backupNIP65RelayList?.readRelays() ?: emptyList<String>()
+
+                        Log.d(tag, "Register Account ${acc.userProfile().toBestDisplayName()} NIP65 Reads ${nip65Read.joinToString(", ")}")
+
+                        val nip17Read =
+                            (
+                                LocalCache
+                                    .getAddressableNoteIfExists(
+                                        ChatMessageRelayListEvent.createAddressTag(acc.userProfile().pubkeyHex),
+                                    )?.event as? ChatMessageRelayListEvent
+                            )?.relays() ?: acc.backupDMRelayList?.relays() ?: emptyList<String>()
+
+                        Log.d(tag, "Register Account ${acc.userProfile().toBestDisplayName()} NIP17 Reads ${nip17Read.joinToString(", ")}")
+
+                        val kind3Relays = (acc.userProfile().latestContactList?.relays() ?: acc.backupContactList?.relays())
+                        val readKind3Relays = kind3Relays?.mapNotNull { if (it.value.read) it.key else null } ?: emptyList<String>()
+
+                        Log.d(tag, "Register Account ${acc.userProfile().toBestDisplayName()} Kind3 Reads ${readKind3Relays.joinToString(", ")}")
+
+                        (nip65Read + nip17Read + readKind3Relays).map {
+                            Pair(acc, it)
+                        }
                     } else {
-                        null
+                        emptyList<Pair<Account, String>>()
                     }
-                } else {
-                    null
-                }
-            }
+                }.flatten()
 
         val listOfAuthEvents = mutableListOf<RelayAuthEvent>()
-        recursiveAuthCreation(
+        signAllAuths(
             notificationToken,
             readyToSend,
             listOfAuthEvents,
@@ -101,7 +160,8 @@ class RegisterAccounts(
             val body = jsonObject.toRequestBody(mediaType)
 
             val request =
-                Request.Builder()
+                Request
+                    .Builder()
                     .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                     .url("https://push.amethyst.social/register")
                     .post(body)
@@ -112,12 +172,6 @@ class RegisterAccounts(
             val isSucess = client.newCall(request).execute().use { it.isSuccessful }
         } catch (e: java.lang.Exception) {
             if (e is CancellationException) throw e
-            val tag =
-                if (BuildConfig.FLAVOR == "play") {
-                    "FirebaseMsgService"
-                } else {
-                    "UnifiedPushService"
-                }
             Log.e(tag, "Unable to register with push server", e)
         }
     }

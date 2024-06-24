@@ -42,6 +42,8 @@ import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.encoders.toNpub
+import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.LnZapEvent
@@ -90,6 +92,8 @@ private object PrefKeys {
     const val DEFAULT_DISCOVERY_FOLLOW_LIST = "defaultDiscoveryFollowList"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer"
     const val LATEST_CONTACT_LIST = "latestContactList"
+    const val LATEST_DM_RELAY_LIST = "latestDMRelayList"
+    const val LATEST_NIP65_RELAY_LIST = "latestNIP65RelayList"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
     const val HIDE_NIP_17_WARNING_DIALOG = "hide_nip24_warning_dialog" // delete later
@@ -311,10 +315,33 @@ object LocalPreferences {
                         PrefKeys.ZAP_PAYMENT_REQUEST_SERVER,
                         Event.mapper.writeValueAsString(account.zapPaymentRequest),
                     )
-                    putString(
-                        PrefKeys.LATEST_CONTACT_LIST,
-                        Event.mapper.writeValueAsString(account.backupContactList),
-                    )
+                    if (account.backupContactList != null) {
+                        putString(
+                            PrefKeys.LATEST_CONTACT_LIST,
+                            Event.mapper.writeValueAsString(account.backupContactList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_CONTACT_LIST)
+                    }
+
+                    if (account.backupDMRelayList != null) {
+                        putString(
+                            PrefKeys.LATEST_DM_RELAY_LIST,
+                            Event.mapper.writeValueAsString(account.backupDMRelayList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_DM_RELAY_LIST)
+                    }
+
+                    if (account.backupNIP65RelayList != null) {
+                        putString(
+                            PrefKeys.LATEST_NIP65_RELAY_LIST,
+                            Event.mapper.writeValueAsString(account.backupNIP65RelayList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_NIP65_RELAY_LIST)
+                    }
+
                     putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, account.hideDeleteRequestDialog)
                     putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, account.hideNIP17WarningDialog)
                     putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, account.hideBlockAlertDialog)
@@ -471,8 +498,8 @@ object LocalPreferences {
                 val latestContactList =
                     try {
                         getString(PrefKeys.LATEST_CONTACT_LIST, null)?.let {
-                            println("Decoding Contact List: " + it)
-                            if (it != null) {
+                            if (it != "null") {
+                                println("Decoding Contact List: $it")
                                 Event.fromJson(it) as ContactListEvent?
                             } else {
                                 null
@@ -483,6 +510,46 @@ object LocalPreferences {
                         Log.w(
                             "LocalPreferences",
                             "Error Decoding Contact List ${getString(PrefKeys.LATEST_CONTACT_LIST, null)}",
+                            e,
+                        )
+                        null
+                    }
+
+                val latestDmRelayList =
+                    try {
+                        getString(PrefKeys.LATEST_DM_RELAY_LIST, null)?.let {
+                            if (it != "null") {
+                                println("Decoding DM Relay List: $it")
+                                Event.fromJson(it) as ChatMessageRelayListEvent?
+                            } else {
+                                null
+                            }
+                        }
+                    } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
+                        Log.w(
+                            "LocalPreferences",
+                            "Error Decoding DM Relay List ${getString(PrefKeys.LATEST_DM_RELAY_LIST, null)}",
+                            e,
+                        )
+                        null
+                    }
+
+                val latestNip65RelayList =
+                    try {
+                        getString(PrefKeys.LATEST_NIP65_RELAY_LIST, null)?.let {
+                            if (it != "null") {
+                                println("Decoding NIP65 Relay List: $it")
+                                Event.fromJson(it) as AdvertisedRelayListEvent?
+                            } else {
+                                null
+                            }
+                        }
+                    } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
+                        Log.w(
+                            "LocalPreferences",
+                            "Error Decoding NIP65 Relay List ${getString(PrefKeys.LATEST_NIP65_RELAY_LIST, null)}",
                             e,
                         )
                         null
@@ -502,7 +569,7 @@ object LocalPreferences {
                         if (e is CancellationException) throw e
                         Log.w(
                             "LocalPreferences",
-                            "Error Decoding Contact List ${getString(PrefKeys.LATEST_CONTACT_LIST, null)}",
+                            "Error Decoding Contact List ${getString(PrefKeys.PENDING_ATTESTATIONS, null)}",
                             e,
                         )
                         null
@@ -595,6 +662,8 @@ object LocalPreferences {
                         hideBlockAlertDialog = hideBlockAlertDialog,
                         hideNIP17WarningDialog = hideNIP17WarningDialog,
                         backupContactList = latestContactList,
+                        backupNIP65RelayList = latestNip65RelayList,
+                        backupDMRelayList = latestDmRelayList,
                         proxy = proxy,
                         proxyPort = proxyPort,
                         showSensitiveContent = MutableStateFlow(showSensitiveContent),

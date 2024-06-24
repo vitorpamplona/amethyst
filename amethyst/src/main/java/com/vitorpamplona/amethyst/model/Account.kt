@@ -116,6 +116,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flattenMerge
@@ -192,6 +193,8 @@ class Account(
     var hideBlockAlertDialog: Boolean = false,
     var hideNIP17WarningDialog: Boolean = false,
     var backupContactList: ContactListEvent? = null,
+    var backupDMRelayList: ChatMessageRelayListEvent? = null,
+    var backupNIP65RelayList: AdvertisedRelayListEvent? = null,
     var proxy: Proxy? = null,
     var proxyPort: Int = 9050,
     var showSensitiveContent: MutableStateFlow<Boolean?> = MutableStateFlow(null),
@@ -269,7 +272,9 @@ class Account(
                 if (mappedRelaySet.none { it.url == newUrl }) {
                     mappedRelaySet = mappedRelaySet +
                         RelaySetupInfo(
-                            newUrl, true, true,
+                            newUrl,
+                            true,
+                            true,
                             setOf(
                                 FeedType.PRIVATE_DMS,
                             ),
@@ -294,7 +299,9 @@ class Account(
                 if (mappedRelaySet.none { it.url == newUrl }) {
                     mappedRelaySet = mappedRelaySet +
                         RelaySetupInfo(
-                            newUrl, true, false,
+                            newUrl,
+                            true,
+                            false,
                             setOf(
                                 FeedType.SEARCH,
                             ),
@@ -319,9 +326,14 @@ class Account(
                 if (mappedRelaySet.none { it.url == newUrl }) {
                     mappedRelaySet = mappedRelaySet +
                         RelaySetupInfo(
-                            newUrl, true, true,
+                            newUrl,
+                            true,
+                            true,
                             setOf(
-                                FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS,
+                                FeedType.FOLLOWS,
+                                FeedType.PUBLIC_CHATS,
+                                FeedType.GLOBAL,
+                                FeedType.PRIVATE_DMS,
                             ),
                         )
                 }
@@ -344,9 +356,14 @@ class Account(
                 if (mappedRelaySet.none { it.url == newUrl }) {
                     mappedRelaySet = mappedRelaySet +
                         RelaySetupInfo(
-                            newUrl, true, true,
+                            newUrl,
+                            true,
+                            true,
                             setOf(
-                                FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS,
+                                FeedType.FOLLOWS,
+                                FeedType.PUBLIC_CHATS,
+                                FeedType.GLOBAL,
+                                FeedType.PRIVATE_DMS,
                             ),
                         )
                 }
@@ -363,10 +380,14 @@ class Account(
                         val write = nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
 
                         RelaySetupInfo(
-                            relay.url, true, relay.write || write,
+                            relay.url,
+                            true,
+                            relay.write || write,
                             relay.feedTypes +
                                 setOf(
-                                    FeedType.FOLLOWS, FeedType.GLOBAL, FeedType.PUBLIC_CHATS,
+                                    FeedType.FOLLOWS,
+                                    FeedType.GLOBAL,
+                                    FeedType.PUBLIC_CHATS,
                                 ),
                         )
                     } else {
@@ -380,9 +401,12 @@ class Account(
 
                     mappedRelaySet = mappedRelaySet +
                         RelaySetupInfo(
-                            newNip65Setup.relayUrl, true, write,
+                            newNip65Setup.relayUrl,
+                            true,
+                            write,
                             setOf(
-                                FeedType.FOLLOWS, FeedType.PUBLIC_CHATS,
+                                FeedType.FOLLOWS,
+                                FeedType.PUBLIC_CHATS,
                             ),
                         )
                 }
@@ -2635,6 +2659,26 @@ class Account(
         }
     }
 
+    private fun updateDMRelayList(newDMRelayList: ChatMessageRelayListEvent?) {
+        if (newDMRelayList == null || newDMRelayList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupDMRelayList?.id != newDMRelayList.id) {
+            backupDMRelayList = newDMRelayList
+            saveable.invalidateData()
+        }
+    }
+
+    private fun updateNIP65RelayList(newNIP65RelayList: AdvertisedRelayListEvent?) {
+        if (newNIP65RelayList == null || newNIP65RelayList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupNIP65RelayList?.id != newNIP65RelayList.id) {
+            backupNIP65RelayList = newNIP65RelayList
+            saveable.invalidateData()
+        }
+    }
+
     // Takes a User's relay list and adds the types of feeds they are active for.
     fun activeRelays(): Array<RelaySetupInfo>? {
         val usersRelayList =
@@ -2968,8 +3012,32 @@ class Account(
     suspend fun registerObservers() =
         withContext(Dispatchers.Main) {
             // saves contact list for the next time.
-            userProfile().live().follows.observeForever {
-                GlobalScope.launch(Dispatchers.IO) { updateContactListTo(userProfile().latestContactList) }
+            scope.launch {
+                Log.d("AccountRegisterObservers", "Kind 3 Collector Start")
+                userProfile().flow().follows.stateFlow.collect {
+                    Log.d("AccountRegisterObservers", "Updating Kind 3 ${userProfile().toBestDisplayName()}")
+                    updateContactListTo(userProfile().latestContactList)
+                }
+            }
+
+            scope.launch {
+                Log.d("AccountRegisterObservers", "NIP-17 Relay List Collector Start")
+                getDMRelayListFlow().collect {
+                    Log.d("AccountRegisterObservers", "Updating DM Relay List for ${userProfile().toBestDisplayName()}")
+                    (it.note.event as? ChatMessageRelayListEvent)?.let {
+                        updateDMRelayList(it)
+                    }
+                }
+            }
+
+            scope.launch {
+                Log.d("AccountRegisterObservers", "NIP-65 Relay List Collector Start")
+                getNIP65RelayListFlow().collect {
+                    Log.d("AccountRegisterObservers", "Updating NIP-65 List for ${userProfile().toBestDisplayName()}")
+                    (it.note.event as? AdvertisedRelayListEvent)?.let {
+                        updateNIP65RelayList(it)
+                    }
+                }
             }
 
             // imports transient blocks due to spam.
@@ -2990,13 +3058,23 @@ class Account(
         }
 
     init {
-        Log.d("Init", "Account")
+        Log.d("Account", "Init")
         backupContactList?.let {
             println("Loading saved contacts ${it.toJson()}")
 
             if (userProfile().latestContactList == null) {
                 GlobalScope.launch(Dispatchers.IO) { LocalCache.consume(it) }
             }
+        }
+
+        backupDMRelayList?.let {
+            println("Loading DM Relay List ${it.toJson()}")
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
+        }
+
+        backupNIP65RelayList?.let {
+            println("Loading saved contacts ${it.toJson()}")
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
         }
     }
 }
