@@ -27,10 +27,10 @@ import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.distinctUntilChanged
 import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.relays.EOSETime
-import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
+import com.vitorpamplona.ammolite.relays.BundledUpdate
+import com.vitorpamplona.ammolite.relays.EOSETime
+import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Lud06

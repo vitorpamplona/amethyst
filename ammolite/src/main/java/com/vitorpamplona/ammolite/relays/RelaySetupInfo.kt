@@ -18,30 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.relays
+package com.vitorpamplona.ammolite.relays
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
-import com.vitorpamplona.ammolite.relays.RelayStat
 
 @Immutable
-data class BasicRelaySetupInfo(
-    val url: String,
-    val relayStat: RelayStat,
-    val paidRelay: Boolean = false,
-) {
-    val briefInfo: RelayBriefInfoCache.RelayBriefInfo = RelayBriefInfoCache.RelayBriefInfo(url)
-}
-
-@Immutable
-data class Kind3BasicRelaySetupInfo(
+data class RelaySetupInfo(
     val url: String,
     val read: Boolean,
     val write: Boolean,
     val feedTypes: Set<FeedType>,
-    val relayStat: RelayStat,
-    val paidRelay: Boolean = false,
-) {
-    val briefInfo: RelayBriefInfoCache.RelayBriefInfo = RelayBriefInfoCache.RelayBriefInfo(url)
-}
+)

@@ -24,7 +24,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
-import com.vitorpamplona.amethyst.service.relays.RelayStats
+import com.vitorpamplona.ammolite.relays.RelayStats
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import kotlinx.coroutines.Dispatchers

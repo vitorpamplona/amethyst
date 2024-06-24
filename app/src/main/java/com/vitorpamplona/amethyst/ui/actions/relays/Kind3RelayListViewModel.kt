@@ -23,11 +23,11 @@ package com.vitorpamplona.amethyst.ui.actions.relays
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
-import com.vitorpamplona.amethyst.service.relays.Constants
-import com.vitorpamplona.amethyst.service.relays.FeedType
-import com.vitorpamplona.amethyst.service.relays.RelayStats
+import com.vitorpamplona.ammolite.relays.Constants
+import com.vitorpamplona.ammolite.relays.FeedType
+import com.vitorpamplona.ammolite.relays.RelaySetupInfo
+import com.vitorpamplona.ammolite.relays.RelayStats
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers

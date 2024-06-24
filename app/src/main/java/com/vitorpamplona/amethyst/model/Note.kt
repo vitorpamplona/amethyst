@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.util.LruCache
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
@@ -29,18 +28,18 @@ import androidx.lifecycle.distinctUntilChanged
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
-import com.vitorpamplona.amethyst.service.relays.EOSETime
-import com.vitorpamplona.amethyst.service.relays.Relay
 import com.vitorpamplona.amethyst.ui.actions.relays.updated
-import com.vitorpamplona.amethyst.ui.components.BundledUpdate
 import com.vitorpamplona.amethyst.ui.note.combineWith
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
+import com.vitorpamplona.ammolite.relays.BundledUpdate
+import com.vitorpamplona.ammolite.relays.EOSETime
+import com.vitorpamplona.ammolite.relays.Relay
+import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
-import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.encoders.toNote
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
@@ -1010,24 +1009,3 @@ class NoteLoadingLiveData<Y>(
 @Immutable class NoteState(
     val note: Note,
 )
-
-object RelayBriefInfoCache {
-    val cache = LruCache<String, RelayBriefInfo?>(50)
-
-    @Immutable
-    class RelayBriefInfo(
-        val url: String,
-    ) {
-        val displayUrl: String = RelayUrlFormatter.displayUrl(url).intern()
-        val favIcon: String = "https://$displayUrl/favicon.ico".intern()
-    }
-
-    fun get(url: String): RelayBriefInfo {
-        val info = cache[url]
-        if (info != null) return info
-
-        val newInfo = RelayBriefInfo(url)
-        cache.put(url, newInfo)
-        return newInfo
-    }
-}

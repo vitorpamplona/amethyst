@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relays
+package com.vitorpamplona.ammolite.relays
 
-import com.vitorpamplona.amethyst.model.RelaySetupInfo
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 
 object Constants {

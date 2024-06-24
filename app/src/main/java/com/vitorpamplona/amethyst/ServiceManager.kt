@@ -46,7 +46,7 @@ import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
-import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
@@ -60,10 +60,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import okhttp3.Interceptor
-import okhttp3.Request
-import okhttp3.Response
-import java.io.IOException
 
 @Stable
 class ServiceManager {
@@ -90,7 +86,7 @@ class ServiceManager {
 
         // Resets Proxy Use
         HttpClientManager.setDefaultProxy(account?.proxy)
-        HttpClientManager.setDefaultInterceptor(DefaultContentTypeInterceptor())
+        HttpClientManager.setDefaultUserAgent("Amethyst/${BuildConfig.VERSION_NAME}")
         LocalCache.antiSpam.active = account?.filterSpamFromStrangers ?: true
         Coil.setImageLoader {
             Amethyst.instance
@@ -252,18 +248,5 @@ class ServiceManager {
     fun pauseForGoodAndClearAccount() {
         account = null
         forceRestart(null, false, true)
-    }
-}
-
-class DefaultContentTypeInterceptor : Interceptor {
-    @Throws(IOException::class)
-    override fun intercept(chain: Interceptor.Chain): Response {
-        val originalRequest: Request = chain.request()
-        val requestWithUserAgent: Request =
-            originalRequest
-                .newBuilder()
-                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
-                .build()
-        return chain.proceed(requestWithUserAgent)
     }
 }

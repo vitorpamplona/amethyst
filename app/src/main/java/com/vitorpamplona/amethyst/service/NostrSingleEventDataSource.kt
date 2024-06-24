@@ -23,10 +23,10 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relays.EOSETime
-import com.vitorpamplona.amethyst.service.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.amethyst.service.relays.JsonFilter
-import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.EOSETime
+import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
+import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
@@ -43,7 +43,7 @@ import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteModificationEvent
 
-object NostrSingleEventDataSource : NostrDataSource("SingleEventFeed") {
+object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
     private var eventsToWatch = setOf<Note>()
     private var addressesToWatch = setOf<Note>()
 

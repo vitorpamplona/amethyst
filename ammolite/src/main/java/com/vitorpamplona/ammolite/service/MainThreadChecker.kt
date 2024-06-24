@@ -18,30 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.relays
+package com.vitorpamplona.ammolite.service
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
-import com.vitorpamplona.ammolite.relays.RelayStat
+import android.os.Looper
+import com.vitorpamplona.ammolite.BuildConfig
 
-@Immutable
-data class BasicRelaySetupInfo(
-    val url: String,
-    val relayStat: RelayStat,
-    val paidRelay: Boolean = false,
-) {
-    val briefInfo: RelayBriefInfoCache.RelayBriefInfo = RelayBriefInfoCache.RelayBriefInfo(url)
+fun checkNotInMainThread() {
+    if (BuildConfig.DEBUG && isMainThread()) {
+        throw OnMainThreadException("It should not be in the MainThread")
+    }
 }
 
-@Immutable
-data class Kind3BasicRelaySetupInfo(
-    val url: String,
-    val read: Boolean,
-    val write: Boolean,
-    val feedTypes: Set<FeedType>,
-    val relayStat: RelayStat,
-    val paidRelay: Boolean = false,
-) {
-    val briefInfo: RelayBriefInfoCache.RelayBriefInfo = RelayBriefInfoCache.RelayBriefInfo(url)
-}
+fun isMainThread() = Looper.myLooper() == Looper.getMainLooper()
+
+class OnMainThreadException(str: String) : RuntimeException(str)

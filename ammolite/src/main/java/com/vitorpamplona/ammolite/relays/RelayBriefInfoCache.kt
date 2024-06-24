@@ -18,30 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.relays
+package com.vitorpamplona.ammolite.relays
 
+import android.util.LruCache
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
-import com.vitorpamplona.ammolite.relays.RelayStat
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 
-@Immutable
-data class BasicRelaySetupInfo(
-    val url: String,
-    val relayStat: RelayStat,
-    val paidRelay: Boolean = false,
-) {
-    val briefInfo: RelayBriefInfoCache.RelayBriefInfo = RelayBriefInfoCache.RelayBriefInfo(url)
-}
+object RelayBriefInfoCache {
+    val cache = LruCache<String, RelayBriefInfo?>(50)
 
-@Immutable
-data class Kind3BasicRelaySetupInfo(
-    val url: String,
-    val read: Boolean,
-    val write: Boolean,
-    val feedTypes: Set<FeedType>,
-    val relayStat: RelayStat,
-    val paidRelay: Boolean = false,
-) {
-    val briefInfo: RelayBriefInfoCache.RelayBriefInfo = RelayBriefInfoCache.RelayBriefInfo(url)
+    @Immutable
+    class RelayBriefInfo(
+        val url: String,
+    ) {
+        val displayUrl: String = RelayUrlFormatter.displayUrl(url).intern()
+        val favIcon: String = "https://$displayUrl/favicon.ico".intern()
+    }
+
+    fun get(url: String): RelayBriefInfo {
+        val info = cache[url]
+        if (info != null) return info
+
+        val newInfo = RelayBriefInfo(url)
+        cache.put(url, newInfo)
+        return newInfo
+    }
 }

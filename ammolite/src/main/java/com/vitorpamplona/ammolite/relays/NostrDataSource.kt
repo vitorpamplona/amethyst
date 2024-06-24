@@ -18,15 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.ammolite.relays
 
 import android.util.Log
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relays.Client
-import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.service.relays.Subscription
-import com.vitorpamplona.amethyst.ui.components.BundledUpdate
-import com.vitorpamplona.quartz.events.AddressableEvent
+import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
@@ -279,20 +274,20 @@ abstract class NostrDataSource(val debugName: String) {
         event: Event,
         relay: Relay,
     ) {
-        LocalCache.verifyAndConsume(event, relay)
+//        LocalCache.verifyAndConsume(event, relay)
     }
 
     open fun markAsSeenOnRelay(
         eventId: String,
         relay: Relay,
     ) {
-        val note = LocalCache.getNoteIfExists(eventId)
-        val noteEvent = note?.event
-        if (noteEvent is AddressableEvent) {
-            LocalCache.getAddressableNoteIfExists(noteEvent.address().toTag())?.addRelay(relay)
-        } else {
-            note?.addRelay(relay)
-        }
+//        val note = LocalCache.getNoteIfExists(eventId)
+//        val noteEvent = note?.event
+//        if (noteEvent is AddressableEvent) {
+//            LocalCache.getAddressableNoteIfExists(noteEvent.address().toTag())?.addRelay(relay)
+//        } else {
+//            note?.addRelay(relay)
+//        }
     }
 
     open fun markAsEOSE(

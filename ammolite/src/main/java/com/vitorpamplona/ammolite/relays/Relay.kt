@@ -18,14 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relays
+package com.vitorpamplona.ammolite.relays
 
 import android.util.Log
-import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
-import com.vitorpamplona.amethyst.model.RelaySetupInfo
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.ammolite.BuildConfig
 import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
@@ -123,7 +121,7 @@ class Relay(
             val request =
                 Request
                     .Builder()
-                    .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+                    .header("User-Agent", HttpClientManager.getDefaultUserAgentHeader())
                     .url(url.trim())
                     .build()
 
