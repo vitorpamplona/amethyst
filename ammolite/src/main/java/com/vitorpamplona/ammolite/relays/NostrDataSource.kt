@@ -25,6 +25,7 @@ import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.SupervisorJob
@@ -152,6 +153,7 @@ abstract class NostrDataSource(val debugName: String) {
         resetFilters()
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     open fun stop() {
         active = false
         println("DataSource: ${this.javaClass.simpleName} Stop")
@@ -202,7 +204,7 @@ abstract class NostrDataSource(val debugName: String) {
         scope.launch(Dispatchers.IO) { resetFiltersSuspend() }
     }
 
-    fun resetFiltersSuspend() {
+    private fun resetFiltersSuspend() {
         println("DataSource: ${this.javaClass.simpleName} resetFiltersSuspend $active")
         checkNotInMainThread()
 
@@ -273,22 +275,12 @@ abstract class NostrDataSource(val debugName: String) {
     open fun consume(
         event: Event,
         relay: Relay,
-    ) {
-//        LocalCache.verifyAndConsume(event, relay)
-    }
+    ) = Unit
 
     open fun markAsSeenOnRelay(
         eventId: String,
         relay: Relay,
-    ) {
-//        val note = LocalCache.getNoteIfExists(eventId)
-//        val noteEvent = note?.event
-//        if (noteEvent is AddressableEvent) {
-//            LocalCache.getAddressableNoteIfExists(noteEvent.address().toTag())?.addRelay(relay)
-//        } else {
-//            note?.addRelay(relay)
-//        }
-    }
+    ) = Unit
 
     open fun markAsEOSE(
         subscriptionId: String,
