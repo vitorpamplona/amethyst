@@ -56,7 +56,6 @@
     <string name="in_channel">"চ্যানেলের ভেতর "</string>
     <string name="profile_banner">প্রোফাইলের ব্যানার</string>
     <string name="payment_successful">সফলভাবে মূল্য পরিশোধিত হয়েছে</string>
-    <string name="error_parsing_error_message">Error parsing error message</string>
     <string name="following">" অনুসরণ"</string>
     <string name="followers">" অনুসারী"</string>
     <string name="profile">প্রোফাইল</string>
@@ -187,9 +186,6 @@
     <string name="nip_05">নস্টার ঠিকানা</string>
     <string name="never">কখনো না</string>
     <string name="now">এখন</string>
-    <string name="h">h</string>
-    <string name="m">m</string>
-    <string name="d">d</string>
     <string name="nudity">নগ্নতা</string>
     <string name="profanity_hateful_speech">অশ্লীলতা / বিদ্বেষপূর্ণ বক্তব্য</string>
     <string name="report_hateful_speech">বিদ্বেষপূর্ণ বক্তব্য হিসেবে অভিযোগ জানান</string>
@@ -461,7 +457,6 @@
     <string name="rules">নিয়ম</string>
     <string name="login_with_external_signer">Amber দিয়ে লগইন করুন</string>
     <string name="status_update">আপনার স্ট্যাটাস আপডেট করুন</string>
-    <string name="lightning_wallets_not_found">Error parsing error message</string>
     <string name="poll_zap_value_min_max_explainer">জ্যাপের পরিমাণ দ্বারা ভোটসংখ্যা গোণা হয়। আপনি স্প্যামার এড়াতে একটি সর্বনিম্ন পরিমাণ এবং একটি বড়ো জ্যাপার দ্বারা পোল দখল এড়াতে সর্বোচ্চ পরিমাণ স্যাট নির্ধারণ করতে পারেন। প্রতিটি ভোটের মূল্য একই পরিমাণে রয়েছে তা নিশ্চিত করতে উভয় ক্ষেত্রেই একই পরিমাণ ব্যবহার করুন। যেকোনো পরিমাণ গ্রহণ করতে এটি খালি ছেড়ে দিন।</string>
     <string name="error_dialog_zap_error">জ্যাপ পাঠানো যায় নি</string>
     <string name="error_dialog_talk_to_user">ব্যবহারকারীকে বার্তা দিন</string>
@@ -490,10 +485,8 @@
     <string name="wallet_number">ওয়ালেট %1$s</string>
     <string name="error_opening_external_signer">স্বাক্ষরের অ্যাপ খোলা যাচ্ছে না</string>
     <string name="sign_request_rejected">স্বাক্ষরের অনুরোধ প্রত্যাখ্যান করা হয়েছে</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">শর্ত</string>
     <string name="classifieds_category">ক্যাটাগরি</string>
-    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_condition_new">নতুন</string>
     <string name="classifieds_condition_good">ভাল</string>
     <string name="classifieds_condition_fair">ন্যায্য</string>

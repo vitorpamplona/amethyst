@@ -103,7 +103,6 @@
     <string name="add_a_relay">添加中继器</string>
     <string name="display_name">显示名称</string>
     <string name="my_display_name">我的显示名称</string>
-    <string name="my_awesome_name">Ostrich McAwesome</string>
     <string name="welcome">欢迎！</string>
     <string name="username">用户名</string>
     <string name="my_username">我的用户名</string>
@@ -304,7 +303,6 @@
     <string name="poll_zap_value_min">打闪最低金额</string>
     <string name="poll_zap_value_max">打闪最高金额</string>
     <string name="poll_consensus_threshold">共识</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">后关闭</string>
     <string name="poll_closing_time_days">天</string>
     <string name="poll_unable_to_vote">无法投票</string>
@@ -387,7 +385,6 @@
     <string name="warn_when_posts_have_reports_from_your_follows">当帖子有你的关注的报告时警告</string>
     <string name="new_reaction_symbol">新回应符号</string>
     <string name="no_reaction_type_setup_long_press_to_change">未选择回应类型。长按可更改</string>
-    <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">为这个帖子添加目标聪金额。支持的客户端可以将此显示为奖励捐赠的进度条</string>
     <string name="zapraiser_target_amount_in_sats">目标聪金额</string>
     <string name="sats_to_complete">Zapraiser 位于 %1$s。距离目标%2$s聪</string>
@@ -536,7 +533,6 @@
     <string name="missing_lud16">打闪设置缺失</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">用户 %1$s 尚未设置接收聪的闪电地址</string>
     <string name="zap_split_weight">百分比</string>
-    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">与此用户拆分打闪</string>
     <string name="forwarding_zaps_to">将打闪转发到</string>
     <string name="lightning_wallets_not_found2">找不到闪电钱包</string>
@@ -603,11 +599,9 @@
     <string name="hi_there_is_this_still_available">你好，这个还能买到吗？</string>
     <string name="classifieds">出售物品</string>
     <string name="classifieds_title">标题</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">条件</string>
     <string name="classifieds_category">分类</string>
     <string name="classifieds_price">价格（聪）</string>
-    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">地点</string>
     <string name="classifieds_location_placeholder">市，省，国家</string>
     <string name="classifieds_condition_new">全新</string>
@@ -671,7 +665,6 @@
     <string name="add_bitcoin_invoice">比特币发票</string>
     <string name="cancel_bitcoin_invoice">取消比特币发票</string>
     <string name="cancel_classifieds">取消出售物品</string>
-    <string name="add_zapraiser">Zapraiser</string>
     <string name="cancel_zapraiser">取消 Zapraiser</string>
     <string name="add_location">地点</string>
     <string name="remove_location">移除地点</string>

@@ -14,7 +14,6 @@
     <string name="could_not_decrypt_the_message">Kunde inte dekryptera meddelandet</string>
     <string name="group_picture">Grupp bild</string>
     <string name="explicit_content">Explicit Innehåll</string>
-    <string name="spam">Spam</string>
     <string name="spam_description">Antal skräpposthändelser från detta relä</string>
     <string name="impersonation">Imitation</string>
     <string name="illegal_behavior">Olagligt beteende</string>
@@ -45,13 +44,11 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Logga in med en privat nyckel för att kunna sluta följa</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Du använder en offentlig nyckel, och offentliga nycklar är endast läsbara. Logga in med en privat nyckel för att kunna dölja ett ord eller en mening</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Du använder en offentlig nyckel, och offentliga nycklar är endast läsbara. Logga in med en privat nyckel för att kunna visa ett ord eller en mening</string>
-    <string name="zaps">Zaps</string>
     <string name="view_count">Antal visningar</string>
     <string name="boost">Boosta</string>
     <string name="boosted">boostad</string>
     <string name="edited">redigerat</string>
     <string name="edited_number">redigering #%1$s</string>
-    <string name="original">original</string>
     <string name="quote">Citera</string>
     <string name="fork">Förgrening</string>
     <string name="propose_an_edit">Föreslå en redigering</string>
@@ -92,7 +89,6 @@
     <string name="failed_to_upload_the_image">Det gick inte att ladda upp bilden</string>
     <string name="relay_address">Relä Adress</string>
     <string name="posts">Inlägg</string>
-    <string name="bytes">Bytes</string>
     <string name="errors">Fel</string>
     <string name="errors_description">Antal anslutningsfel under denna session</string>
     <string name="home_feed">Hem Flöde</string>
@@ -108,8 +104,6 @@
     <string name="username">Användarnamn</string>
     <string name="my_username">Mitt användarnamn</string>
     <string name="about_me">Om mig</string>
-    <string name="avatar_url">Avatar URL</string>
-    <string name="banner_url">Banner URL</string>
     <string name="website_url">Websida URL</string>
     <string name="ln_address">LN Adress</string>
     <string name="ln_url_outdated">LN URL (Utdaterad)</string>
@@ -150,7 +144,6 @@
     <string name="unblock_user">Sluta blockera Användare</string>
     <string name="npub_hex_username">"npub, hex, användarnamn "</string>
     <string name="clear">Rensa</string>
-    <string name="app_logo">App Logo</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex privat nyckel</string>
     <string name="ncryptsec_password">lösenord för att öppna nyckeln</string>
     <string name="show_password">Visa lösenord</string>
@@ -199,9 +192,6 @@
     <string name="nip_05">Nostr-adress</string>
     <string name="never">aldrig</string>
     <string name="now">nu</string>
-    <string name="h">h</string>
-    <string name="m">m</string>
-    <string name="d">d</string>
     <string name="nudity">Naket</string>
     <string name="profanity_hateful_speech">Svordomar / Hatiskt tal</string>
     <string name="report_hateful_speech">Anmäl hattal</string>
@@ -286,7 +276,6 @@
     <string name="remove_from_public_bookmarks">Ta bort från Publika Bokmärken</string>
     <string name="wallet_connect_service">Wallet Connect Tjänst</string>
     <string name="wallet_connect_service_explainer">Tillåter en Nostr Secret att betala zaps utan att lämna appen. Håll hemligheten säker och använd ett privat relä om möjligt</string>
-    <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>
     <string name="wallet_connect_service_relay">Wallet Connect relä</string>
     <string name="wallet_connect_service_secret">Wallet Connect hemlighet</string>
     <string name="wallet_connect_service_show_secret">Visa secret key</string>
@@ -302,7 +291,6 @@
     <string name="poll_zap_value_min">Minsta Zap</string>
     <string name="poll_zap_value_max">Maximal Zap</string>
     <string name="poll_consensus_threshold">Konsensus</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Avsluta efter</string>
     <string name="poll_closing_time_days">dagar</string>
     <string name="poll_unable_to_vote">Kunde inte rösta</string>
@@ -347,7 +335,6 @@
     <string name="no">Nej</string>
     <string name="follow_list_selection">Följ lista</string>
     <string name="follow_list_kind3follows">Alla följare</string>
-    <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Tyst listan</string>
     <string name="connect_through_your_orbot_setup_markdown">            ## Anslut genom Tor med Orbot
             \n\n1. Installera [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
@@ -356,7 +343,6 @@
             \n4. Ändra vid behov porten i Orbot
             \n5. Konfigurera Socks-porten på den här skärmen
             \n6. Tryck på knappen Aktivera för att använda Orbot som proxy</string>
-    <string name="orbot_socks_port">Orbot Socks Port</string>
     <string name="invalid_port_number">Ogiltigt portnummer</string>
     <string name="use_orbot">Använd Orbot</string>
     <string name="disconnect_from_your_orbot_setup">Koppla ifrån Tor/Orbot</string>
@@ -364,7 +350,6 @@
     <string name="app_notification_dms_channel_description">Meddelar dig när ett privat meddelande kommer</string>
     <string name="app_notification_zaps_channel_name">Zaps Mottaget</string>
     <string name="app_notification_zaps_channel_description">Meddela dig när någon zappar dig</string>
-    <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">Från %1$s</string>
     <string name="app_notification_zaps_channel_message_for">till %1$s</string>
     <string name="reply_notify">Meddela: </string>
@@ -394,7 +379,6 @@
     <string name="read_from_relay_description">Mängden data i byte som mottogs från detta relä, inklusive filter och händelser</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Ett fel inträffade vid försök att hämta information från Relay %1$s</string>
     <string name="owner">Ägare</string>
-    <string name="version">Version</string>
     <string name="software">Programvara</string>
     <string name="contact">Kontakt</string>
     <string name="supports">Stödda NIPs</string>
@@ -416,15 +400,12 @@
     <string name="minimum_pow">Minsta PoW</string>
     <string name="auth">Autentisering</string>
     <string name="payment">Betalning</string>
-    <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Inlösen</string>
     <string name="cashu_redeem_to_zap">Skicka till Zap Plånbok</string>
     <string name="cashu_redeem_to_cashu">Öppna i Cashu Plånbok</string>
     <string name="cashu_copy_token">Kopiera Token</string>
     <string name="no_lightning_address_set">Ingen Lightning-adress angiven</string>
     <string name="copied_token_to_clipboard">Kopierade token till urklipp</string>
-    <string name="live_stream_live_tag">LIVE</string>
-    <string name="live_stream_offline_tag">OFFLINE</string>
     <string name="live_stream_ended_tag">SLUTADE</string>
     <string name="live_stream_planned_tag">PLANERAD</string>
     <string name="live_stream_is_offline">Direktsändning är offline</string>
@@ -434,7 +415,6 @@
     <string name="relay_setup">Reläer</string>
     <string name="discover_content">Upptäckt av anteckningar</string>
     <string name="discover_marketplace">Marknadsplats</string>
-    <string name="discover_live">Live</string>
     <string name="discover_community">Gemenskap</string>
     <string name="discover_chat">Chattar</string>
     <string name="community_approved_posts">Godkända Inlägg</string>
@@ -449,7 +429,6 @@
     <string name="ui_feature_set_type_complete">Slutförd</string>
     <string name="ui_feature_set_type_simplified">Förenklad</string>
     <string name="ui_feature_set_type_performance">Prestanda</string>
-    <string name="system">System</string>
     <string name="light">Ljus</string>
     <string name="dark">Mörk</string>
     <string name="application_preferences">Applikationsinställningar</string>
@@ -533,7 +512,6 @@
     <string name="missing_lud16">Saknad lightning-konfiguration</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Användaren %1$s har inte ställt in en blixtfakturaadress för att ta emot satoshis</string>
     <string name="zap_split_weight">Procent</string>
-    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Delar zaps med</string>
     <string name="forwarding_zaps_to">Vidarebefordrar zaps till</string>
     <string name="lightning_wallets_not_found2">Blixtpengar hittades inte</string>
@@ -600,11 +578,9 @@
     <string name="hi_there_is_this_still_available">Hallå där, är detta fortfarande tillgängligt?</string>
     <string name="classifieds">Sälj en artikel</string>
     <string name="classifieds_title">Titel</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Skick</string>
     <string name="classifieds_category">Kategori</string>
     <string name="classifieds_price">Pris (i Sats)</string>
-    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">Plats</string>
     <string name="classifieds_location_placeholder">Stad, Region, Land</string>
     <string name="classifieds_condition_new">Ny</string>
@@ -657,7 +633,6 @@
     <string name="reply_description">Svara</string>
     <string name="boost_or_quote_description">Boosta eller citera</string>
     <string name="like_description">Gilla</string>
-    <string name="zap_description">Zap</string>
     <string name="profile_image_of_user">%1$s Profilbild</string>
     <string name="relay_info">Relä %1$s</string>
     <string name="expand_relay_list">Expandera relälistan</string>
@@ -712,16 +687,12 @@
     <string name="donate_now">Donera nu</string>
     <string name="brought_to_you_by">tillhandahölls av:</string>
     <string name="this_version_brought_to_you_by">Denna version tillhandahölls av:</string>
-    <string name="version_name">Version %1$s</string>
     <string name="thank_you">Tack!</string>
     <string name="max_limit">Maximal gräns</string>
     <string name="restricted_writes">Begränsade skrivningar</string>
     <string name="forked_from">Forkad från</string>
-    <string name="forked_tag">FORK</string>
-    <string name="git_repository">Git Repository: %1$s</string>
     <string name="git_web_address">Webbplats:</string>
     <string name="git_clone_address">Klona:</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Tidsstämpel Bevis</string>
     <string name="ots_info_description">Det finns bevis på att detta inlägg signerades någon gång före %1$s. Beviset stämplades i Bitcoin-blockchainen vid det datumet och den tiden.</string>
     <string name="edit_post">Redigera inlägg</string>

@@ -81,7 +81,6 @@
     <string name="failed_to_upload_the_image">فشل تحميل الصورة</string>
     <string name="relay_address"> عنوان الخادم (Relay Adress)</string>
     <string name="posts">المنشورات</string>
-    <string name="bytes">Bytes</string>
     <string name="errors">الأخطاء</string>
     <string name="home_feed">المنشورات الرئيسية</string>
     <string name="private_message_feed"> الرسائل الخاصة</string>
@@ -282,7 +281,6 @@
     <string name="poll_zap_value_min">الحد الأدنى</string>
     <string name="poll_zap_value_max">الحد الاقصى</string>
     <string name="poll_consensus_threshold">توافق الآراء</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">إغلاق بعد</string>
     <string name="poll_closing_time_days">أيام</string>
     <string name="poll_unable_to_vote">تعذر التصويت</string>
@@ -370,14 +368,11 @@
     <string name="minimum_pow">الحد الأدنى لل PoW</string>
     <string name="auth">المصادقة</string>
     <string name="payment">الدفع</string>
-    <string name="cashu">Cashu Token</string>
     <string name="cashu_copy_token">تسخ الtoken</string>
     <string name="copied_token_to_clipboard">نسخ الtoken من المحفظة</string>
     <string name="are_you_sure_you_want_to_log_out">تسجيل الخروج سوف يؤدي الى جميع المعلومات المحلية الخاصة بك. تأكد من وجود نسخة احتياطية لمفاتحك السرية لتجنب فقدان حسابك.
  هل تريد الاستمرار؟</string>
     <string name="followed_tags">العلامات المُتابعة</string>
-    <string name="relay_setup">Relays</string>
-    <string name="discover_live">Live</string>
     <string name="discover_community">مجتمع</string>
     <string name="discover_chat">االدردشات</string>
     <string name="community_approved_posts">المنشورات الموافق عليها</string>
@@ -469,7 +464,6 @@
 مثل [Nfty](https://ntfy.sh/).
 بعد تثبيتك التطبيق قم باختياره من الإعدادات</string>
     <string name="classifieds_title">العنوان</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">الشرط</string>
     <string name="classifieds_category">الفئة</string>
     <string name="classifieds_location">الموقع الجغرافيّ</string>

@@ -12,7 +12,6 @@
     <string name="could_not_decrypt_the_message">Tidak dapat mendekripsi pesan</string>
     <string name="group_picture">Gambar Grup</string>
     <string name="explicit_content">Konten Eksplisit</string>
-    <string name="spam">Spam</string>
     <string name="impersonation">Identitas palsu</string>
     <string name="illegal_behavior">Perilaku Ilegal</string>
     <string name="unknown">Tidak dikenal</string>
@@ -55,7 +54,6 @@
     <string name="followers">" Pengikut"</string>
     <string name="profile">Profil</string>
     <string name="security_filters">Filter keamanan</string>
-    <string name="log_out">Logout</string>
     <string name="show_more">Perlihatkan lebih banyak</string>
     <string name="lightning_invoice">Invoice Lightning</string>
     <string name="pay">Bayar</string>
@@ -90,7 +88,6 @@
     <string name="add_a_relay">Tambah Relay</string>
     <string name="display_name">Nama Tampilan</string>
     <string name="my_display_name">Nama tampilan saya</string>
-    <string name="username">Username</string>
     <string name="my_username">Username saya</string>
     <string name="about_me">Tentang saya</string>
     <string name="avatar_url">URL avatar</string>
@@ -143,7 +140,6 @@
     <string name="terms_of_use">ketentuan penggunaan</string>
     <string name="acceptance_of_terms_is_required">Persetujuan aturan penggunaan diperlukan</string>
     <string name="key_is_required">Kunci diperlukan</string>
-    <string name="login">Login</string>
     <string name="generate_a_new_key">Buat kunci baru</string>
     <string name="loading_feed">Memuat umpan</string>
     <string name="loading_account">Memuat akun</string>
@@ -174,7 +170,6 @@
     <string name="never">jangan pernah</string>
     <string name="now">sekarang</string>
     <string name="h">j</string>
-    <string name="m">m</string>
     <string name="d">h</string>
     <string name="nudity">Ketelanjangan</string>
     <string name="profanity_hateful_speech">Kata-kata kotor / Ujaran kebencian</string>
@@ -256,7 +251,6 @@
     <string name="wallet_connect_service_show_secret">Tampilkan kunci rahasia</string>
     <string name="wallet_connect_service_secret_placeholder">Kunci rahasia nsec / hex</string>
     <string name="pledge_amount_in_sats">Jumlah Ikrar dalam Sat</string>
-    <string name="post_poll">Post Poll</string>
     <string name="poll_heading_required">Kolom-kolom wajib:</string>
     <string name="poll_zap_recipients">Penerima Zap</string>
     <string name="poll_primary_description">Deskripsi poll utama…</string>
@@ -297,9 +291,7 @@
     <string name="zap_type_private_explainer">Pengirim dan Penerima bisa melihat satu sama lain dan membaca pesannya</string>
     <string name="zap_type_anonymous">Anonim</string>
     <string name="zap_type_anonymous_explainer">Publik dan Penerima tidak mengetahui siapa yang mengirim pembayaran</string>
-    <string name="zap_type_nonzap">Non-Zap</string>
     <string name="zap_type_nonzap_explainer">Tidak ada jejak di Nostr, hanya di Lightning</string>
-    <string name="file_server">File Server</string>
     <string name="zap_forward_lnAddress">LnAddress atau @Pengguna</string>
     <string name="upload_server_relays_nip95">Relay-relay anda (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">File dihosting oleh relay Anda. NIP Baru: periksa apakah relay mendukung</string>
@@ -311,7 +303,6 @@
     <string name="no">Tidak</string>
     <string name="follow_list_selection">Daftar Ikut</string>
     <string name="follow_list_kind3follows">Semua Pengikut</string>
-    <string name="follow_list_global">Global</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Hubung melalui Tor dengan Orbit
         \n\n1. Install [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. Mulai Orbot
@@ -328,7 +319,6 @@
     <string name="app_notification_dms_channel_description">Memberi tahu Anda ketika pesan pribadi tiba</string>
     <string name="app_notification_zaps_channel_name">Zap Diterima</string>
     <string name="app_notification_zaps_channel_description">Memberi Tahu anda saat seseorang memberi zap</string>
-    <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">Dari %1$s</string>
     <string name="app_notification_zaps_channel_message_for">untuk %1$s</string>
     <string name="reply_notify">Memberitahu: </string>
@@ -375,14 +365,11 @@
     <string name="maximum_event_tags">Tag Event Maksimum</string>
     <string name="content_length">Panjang konten</string>
     <string name="minimum_pow">PoW Minimum</string>
-    <string name="auth">Auth</string>
     <string name="payment">Pembayaran</string>
     <string name="cashu">Token Cashu</string>
-    <string name="cashu_redeem">Redeem</string>
     <string name="no_lightning_address_set">Tidak ada Alamat Lightning yang ditetapkan</string>
     <string name="copied_token_to_clipboard">Token disalin ke papan klip</string>
     <string name="live_stream_live_tag">LANGSUNG</string>
-    <string name="live_stream_offline_tag">OFFLINE</string>
     <string name="live_stream_ended_tag">BERAKHIR</string>
     <string name="live_stream_planned_tag">DIJADWALKAN</string>
     <string name="live_stream_is_offline">Livestream Offline</string>
@@ -390,7 +377,6 @@
     <string name="are_you_sure_you_want_to_log_out">Keluar akan menghapus semua informasi yang disimpan secara lokal.
 Pastikan kunci pribadi Anda telah simpan untuk menghindari kehilangan akun Anda. Apakah Anda ingin melanjutkan?</string>
     <string name="followed_tags">Tags yang Diikuti</string>
-    <string name="relay_setup">Relays</string>
     <string name="discover_live">Langsung</string>
     <string name="discover_community">Komunitas</string>
     <string name="discover_chat">Obrolan</string>
@@ -424,7 +410,6 @@ Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="nip05_failed">Verifikasi alamat Nostr gagal</string>
     <string name="nip05_checking">Memeriksa alamat Nostr</string>
     <string name="select_deselect_all">Pilih/Batal semua</string>
-    <string name="default_relays">Default</string>
     <string name="select_a_relay_to_continue">Pilih relay untuk melanjutkan</string>
     <string name="zap_forward_title">Teruskan Zap ke:</string>
     <string name="zap_forward_explainer">Klien yang didukung akan mengalihkan zap ke LNAddress atau Profil Pengguna dibawah ini</string>
@@ -460,16 +445,13 @@ Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="poll_zap_value_min_max_explainer">Suara ditimbang berdasarkan jumlah zap. Anda dapat menetapkan jumlah minimum untuk menghindari spammer dan jumlah maksimum untuk menghindari zappers besar mengambil alih jajak pendapat. Gunakan jumlah yang sama di kedua kolom untuk memastikan setiap suara bernilai sama. Biarkan kosong untuk menerima jumlah berapa pun.</string>
     <string name="error_dialog_zap_error">Tidak dapat mengirim zap</string>
     <string name="error_dialog_talk_to_user">Kirim pesan ke Pengguna</string>
-    <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">Gagal menghubungi %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">Gagal menghubungi %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">Gagal menguraikan hasil dari %1$s: %2$s</string>
     <string name="relay_information_document_error_http_status">%1$s gagal dengan kode %2$s</string>
     <string name="active_for">Aktif selama: </string>
     <string name="active_for_home">Beranda</string>
-    <string name="active_for_msg">DMs</string>
     <string name="active_for_chats">Obrolan</string>
-    <string name="active_for_global">Global</string>
     <string name="active_for_search">Cari</string>
     <string name="zap_split_title">Pisah dan alihkan Zap</string>
     <string name="zap_split_explainer">Klien yang didukung akan memisah dan mengalihkan zap kepada user yang ditambahkan disini</string>
@@ -478,7 +460,6 @@ Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="missing_lud16">Lightning tidak tersedia</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">%1$s belum mengatur alamat lightning untuk menerima sat</string>
     <string name="zap_split_weight">Persentase</string>
-    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Memisahkan Zap dengan</string>
     <string name="forwarding_zaps_to">Mengalihkan Zap ke</string>
     <string name="lightning_wallets_not_found2">Dompet Lightning tidak ditemukan</string>

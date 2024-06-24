@@ -53,7 +53,6 @@
     <string name="edited_number">編輯 #%1$s</string>
     <string name="original">原版</string>
     <string name="quote">引用</string>
-    <string name="fork">Fork</string>
     <string name="propose_an_edit">提議編輯</string>
     <string name="new_amount_in_sats">新的聰金額</string>
     <string name="add">添加</string>
@@ -103,7 +102,6 @@
     <string name="add_a_relay">添加中繼器</string>
     <string name="display_name">顯示名稱</string>
     <string name="my_display_name">我的顯示名稱</string>
-    <string name="my_awesome_name">Ostrich McAwesome</string>
     <string name="welcome">歡迎！</string>
     <string name="username">用户名</string>
     <string name="my_username">我的用户名</string>
@@ -303,7 +301,6 @@
     <string name="poll_zap_value_min">打閃最低金額</string>
     <string name="poll_zap_value_max">打閃最高金額</string>
     <string name="poll_consensus_threshold">共識</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">後關閉</string>
     <string name="poll_closing_time_days">天</string>
     <string name="poll_unable_to_vote">無法投票</string>
@@ -386,7 +383,6 @@
     <string name="warn_when_posts_have_reports_from_your_follows">當帖子有你的關注的報告時警告</string>
     <string name="new_reaction_symbol">新回應符號</string>
     <string name="no_reaction_type_setup_long_press_to_change">未選擇回應類型。長按可更改</string>
-    <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">為這個帖子添加目標聰金額。支持的客戶端可以將此顯示為獎勵捐贈的進度條</string>
     <string name="zapraiser_target_amount_in_sats">目標聰金額</string>
     <string name="sats_to_complete">Zapraiser 位於 %1$s。距離目標%2$s聰</string>
@@ -528,7 +524,6 @@
     <string name="missing_lud16">閃電設置缺失</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">用户 %1$s 尚未設置接收聰的閃電地址</string>
     <string name="zap_split_weight">百分比</string>
-    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">與此用戶拆分打閃</string>
     <string name="forwarding_zaps_to">將打閃轉發到</string>
     <string name="lightning_wallets_not_found2">找不到閃電錢包</string>
@@ -595,11 +590,9 @@
     <string name="hi_there_is_this_still_available">你好，這個還能買到嗎？</string>
     <string name="classifieds">出售物品</string>
     <string name="classifieds_title">標題</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">狀態</string>
     <string name="classifieds_category">類別</string>
     <string name="classifieds_price">價格（聰）</string>
-    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">地點</string>
     <string name="classifieds_location_placeholder">市，州，國家</string>
     <string name="classifieds_condition_new">全新</string>
@@ -663,7 +656,6 @@
     <string name="add_bitcoin_invoice">比特幣發票</string>
     <string name="cancel_bitcoin_invoice">取消比特幣發票</string>
     <string name="cancel_classifieds">取消出售物品</string>
-    <string name="add_zapraiser">Zapraiser</string>
     <string name="cancel_zapraiser">取消 Zapraiser</string>
     <string name="add_location">地點</string>
     <string name="remove_location">移除地點</string>
@@ -711,11 +703,7 @@
     <string name="thank_you">謝謝！</string>
     <string name="max_limit">最大上限</string>
     <string name="restricted_writes">寫入限制</string>
-    <string name="forked_from">Forked from</string>
-    <string name="forked_tag">FORK</string>
-    <string name="git_repository">Git Repository: %1$s</string>
     <string name="git_web_address">網址</string>
-    <string name="git_clone_address">Clone:</string>
     <string name="existed_since">OTS：%1$s</string>
     <string name="ots_info_title">時間戳證明</string>
     <string name="ots_info_description">有在 %1$s 之前的某個時間簽署了此帖子的證明。此證明是在那個日期和時間在比特幣區塊鏈中記錄的時間戳。</string>
