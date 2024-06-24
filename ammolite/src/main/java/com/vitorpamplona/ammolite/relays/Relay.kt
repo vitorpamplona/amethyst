@@ -316,6 +316,11 @@ class Relay(
                     }
 
                     Log.w("Relay", "Relay on OK $url, $eventId, $success, $message")
+
+                    if (!success) {
+                        RelayStats.newNotice(url, "Failed to receive $eventId: $message")
+                    }
+
                     it.onSendResponse(this@Relay, eventId, success, message)
                 }
             "AUTH" ->
