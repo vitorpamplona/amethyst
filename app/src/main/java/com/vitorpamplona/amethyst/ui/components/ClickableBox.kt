@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.ripple.rememberRipple
@@ -33,7 +35,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size24dp
 
 @Composable
 fun ClickableBox(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
     content: @Composable () -> Unit,
 ) {
@@ -43,6 +45,28 @@ fun ClickableBox(
             interactionSource = remember { MutableInteractionSource() },
             indication = rememberRipple(bounded = false, radius = Size24dp),
             onClick = onClick,
+        ),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ClickableBox(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier.combinedClickable(
+            role = Role.Button,
+            interactionSource = remember { MutableInteractionSource() },
+            indication = rememberRipple(bounded = false, radius = Size24dp),
+            onClick = onClick,
+            onLongClick = onLongClick,
         ),
         contentAlignment = Alignment.Center,
     ) {

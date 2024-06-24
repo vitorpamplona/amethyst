@@ -451,7 +451,7 @@
     <string name="connectivity_type_never">कभी नहीं</string>
     <string name="ui_feature_set_type_complete">सम्पूर्ण</string>
     <string name="ui_feature_set_type_simplified">सरलीकृत</string>
-    <string name="ui_feature_set_type_performance">प्रदर्शन</string>
+    <string name="ui_feature_set_type_performance">वेगवान</string>
     <string name="system">यन्त्रव्यवस्था</string>
     <string name="light">प्रकाशवान</string>
     <string name="dark">अन्धकारमय</string>

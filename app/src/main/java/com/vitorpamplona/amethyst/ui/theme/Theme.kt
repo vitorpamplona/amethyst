@@ -94,17 +94,11 @@ private val LightLessImportantLink = LightColorPalette.primary.copy(alpha = 0.52
 private val DarkMediumImportantLink = DarkColorPalette.primary.copy(alpha = 0.32f)
 private val LightMediumImportantLink = LightColorPalette.primary.copy(alpha = 0.32f)
 
-private val DarkVeryImportantLink = DarkColorPalette.primary.copy(alpha = 0.12f)
-private val LightVeryImportantLink = LightColorPalette.primary.copy(alpha = 0.12f)
-
 private val DarkGrayText = DarkColorPalette.onSurface.copy(alpha = 0.52f)
 private val LightGrayText = LightColorPalette.onSurface.copy(alpha = 0.52f)
 
 private val DarkPlaceholderText = DarkColorPalette.onSurface.copy(alpha = 0.32f)
 private val LightPlaceholderText = LightColorPalette.onSurface.copy(alpha = 0.32f)
-
-private val DarkPlaceholderTextColorFilter = ColorFilter.tint(DarkPlaceholderText)
-private val LightPlaceholderTextColorFilter = ColorFilter.tint(LightPlaceholderText)
 
 private val DarkOnBackgroundColorFilter = ColorFilter.tint(DarkColorPalette.onBackground)
 private val LightOnBackgroundColorFilter = ColorFilter.tint(LightColorPalette.onBackground)
@@ -115,19 +109,8 @@ private val LightSubtleButton = LightColorPalette.onSurface.copy(alpha = 0.22f)
 private val DarkSubtleBorder = DarkColorPalette.onSurface.copy(alpha = 0.12f)
 private val LightSubtleBorder = LightColorPalette.onSurface.copy(alpha = 0.12f)
 
-private val DarkReplyItemBackground = DarkColorPalette.onSurface.copy(alpha = 0.05f)
-private val LightReplyItemBackground = LightColorPalette.onSurface.copy(alpha = 0.05f)
-
-private val DarkZapraiserBackground =
-    BitcoinOrange.copy(0.52f).compositeOver(DarkColorPalette.background)
-private val LightZapraiserBackground =
-    BitcoinOrange.copy(0.52f).compositeOver(LightColorPalette.background)
-
 private val DarkOverPictureBackground = DarkColorPalette.background.copy(0.62f)
 private val LightOverPictureBackground = LightColorPalette.background.copy(0.62f)
-
-val RepostPictureBorderDark = Modifier.border(2.dp, DarkColorPalette.background, CircleShape)
-val RepostPictureBorderLight = Modifier.border(2.dp, LightColorPalette.background, CircleShape)
 
 val DarkImageModifier =
     Modifier
@@ -179,6 +162,22 @@ val LightInnerPostBorderModifier =
         .clip(shape = QuoteBorder)
         .border(1.dp, LightSubtleBorder, QuoteBorder)
 
+val DarkSelectedReactionBoxModifier =
+    Modifier
+        .padding(horizontal = 5.dp, vertical = 5.dp)
+        .size(Size40dp)
+        .clip(shape = SmallBorder)
+        .background(DarkColorPalette.secondaryContainer)
+        .padding(5.dp)
+
+val LightSelectedReactionBoxModifier =
+    Modifier
+        .padding(horizontal = 5.dp, vertical = 5.dp)
+        .size(Size40dp)
+        .clip(shape = SmallBorder)
+        .background(LightColorPalette.secondaryContainer)
+        .padding(5.dp)
+
 val DarkChannelNotePictureModifier =
     Modifier
         .size(30.dp)
@@ -223,16 +222,6 @@ val LightLargeRelayIconModifier =
 val DarkLargeRelayIconModifier =
     Modifier
         .size(Size55dp)
-        .clip(shape = CircleShape)
-
-val LightBottomIconModifier =
-    Modifier
-        .size(Size10dp)
-        .clip(shape = CircleShape)
-
-val DarkBottomIconModifier =
-    Modifier
-        .size(Size10dp)
         .clip(shape = CircleShape)
 
 val RichTextDefaults = RichTextStyle().resolveDefaults()
@@ -319,9 +308,6 @@ val ColorScheme.isLight: Boolean
 val ColorScheme.newItemBackgroundColor: Color
     get() = if (isLight) LightNewItemBackground else DarkNewItemBackground
 
-val ColorScheme.replyBackground: Color
-    get() = if (isLight) LightReplyItemBackground else DarkReplyItemBackground
-
 val ColorScheme.selectedNote: Color
     get() = if (isLight) LightSelectedNote else DarkSelectedNote
 
@@ -331,22 +317,14 @@ val ColorScheme.secondaryButtonBackground: Color
 val ColorScheme.lessImportantLink: Color
     get() = if (isLight) LightLessImportantLink else DarkLessImportantLink
 
-val ColorScheme.zapraiserBackground: Color
-    get() = if (isLight) LightZapraiserBackground else DarkZapraiserBackground
-
 val ColorScheme.mediumImportanceLink: Color
     get() = if (isLight) LightMediumImportantLink else DarkMediumImportantLink
-val ColorScheme.veryImportantLink: Color
-    get() = if (isLight) LightVeryImportantLink else DarkVeryImportantLink
 
 val ColorScheme.placeholderText: Color
     get() = if (isLight) LightPlaceholderText else DarkPlaceholderText
 
 val ColorScheme.nip05: Color
     get() = if (isLight) Nip05EmailColorLight else Nip05EmailColorDark
-
-val ColorScheme.placeholderTextColorFilter: ColorFilter
-    get() = if (isLight) LightPlaceholderTextColorFilter else DarkPlaceholderTextColorFilter
 
 val ColorScheme.onBackgroundColorFilter: ColorFilter
     get() = if (isLight) LightOnBackgroundColorFilter else DarkOnBackgroundColorFilter
@@ -375,9 +353,6 @@ val ColorScheme.allGoodColor: Color
 val ColorScheme.markdownStyle: RichTextStyle
     get() = if (isLight) MarkDownStyleOnLight else MarkDownStyleOnDark
 
-val ColorScheme.repostProfileBorder: Modifier
-    get() = if (isLight) RepostPictureBorderLight else RepostPictureBorderDark
-
 val ColorScheme.imageModifier: Modifier
     get() = if (isLight) LightImageModifier else DarkImageModifier
 
@@ -402,8 +377,8 @@ val ColorScheme.relayIconModifier: Modifier
 val ColorScheme.largeRelayIconModifier: Modifier
     get() = if (isLight) LightLargeRelayIconModifier else DarkLargeRelayIconModifier
 
-val ColorScheme.bottomIconModifier: Modifier
-    get() = if (isLight) LightBottomIconModifier else DarkBottomIconModifier
+val ColorScheme.selectedReactionBoxModifier: Modifier
+    get() = if (isLight) LightSelectedReactionBoxModifier else DarkSelectedReactionBoxModifier
 
 val ColorScheme.chartStyle: ChartStyle
     get() {

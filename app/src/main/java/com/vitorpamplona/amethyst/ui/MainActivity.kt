@@ -186,8 +186,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun updateNetworkCapabilities(networkCapabilities: NetworkCapabilities): Boolean {
-        val isOnMobileData = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
-        val isOnWifi = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+        val unmetered = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+
+        val isOnMobileData = !unmetered || networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+        val isOnWifi = unmetered && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
 
         var changedNetwork = false
 

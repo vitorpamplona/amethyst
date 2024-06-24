@@ -145,10 +145,12 @@ import com.vitorpamplona.quartz.events.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 
@@ -758,16 +760,18 @@ class FollowListViewModel(
 
     private val _kind3GlobalPeopleRoutes =
         combineTransform(livePeopleListsFlow, liveKind3FollowsFlow) { myLivePeopleListsFlow, myLiveKind3FollowsFlow ->
+            checkNotInMainThread()
             emit(
                 listOf(listOf(kind3Follow, globalFollow), myLivePeopleListsFlow, myLiveKind3FollowsFlow, listOf(muteListFollow))
                     .flatten()
                     .toImmutableList(),
             )
         }
-    val kind3GlobalPeopleRoutes = _kind3GlobalPeopleRoutes.stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
+    val kind3GlobalPeopleRoutes = _kind3GlobalPeopleRoutes.flowOn(Dispatchers.IO).stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
 
     private val _kind3GlobalPeople =
         combineTransform(livePeopleListsFlow, liveKind3FollowsFlow) { myLivePeopleListsFlow, myLiveKind3FollowsFlow ->
+            checkNotInMainThread()
             emit(
                 listOf(listOf(kind3Follow, globalFollow), myLivePeopleListsFlow, listOf(muteListFollow))
                     .flatten()
@@ -775,7 +779,7 @@ class FollowListViewModel(
             )
         }
 
-    val kind3GlobalPeople = _kind3GlobalPeople.stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
+    val kind3GlobalPeople = _kind3GlobalPeople.flowOn(Dispatchers.IO).stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
 
     class Factory(
         val account: Account,

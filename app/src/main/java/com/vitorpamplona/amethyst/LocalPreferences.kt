@@ -328,10 +328,10 @@ object LocalPreferences {
                     )
                     putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, account.hasDonatedInVersion)
 
-                    if (account.showSensitiveContent == null) {
+                    if (account.showSensitiveContent.value == null) {
                         remove(PrefKeys.SHOW_SENSITIVE_CONTENT)
                     } else {
-                        putBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, account.showSensitiveContent!!)
+                        putBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, account.showSensitiveContent.value!!)
                     }
 
                     putString(
@@ -597,7 +597,7 @@ object LocalPreferences {
                         backupContactList = latestContactList,
                         proxy = proxy,
                         proxyPort = proxyPort,
-                        showSensitiveContent = showSensitiveContent,
+                        showSensitiveContent = MutableStateFlow(showSensitiveContent),
                         warnAboutPostsWithReports = warnAboutReports,
                         filterSpamFromStrangers = filterSpam,
                         lastReadPerRoute = lastReadPerRoute,

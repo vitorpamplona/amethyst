@@ -84,6 +84,7 @@ import androidx.core.graphics.ColorUtils
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -95,7 +96,6 @@ import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 private fun lightenColor(
@@ -108,6 +108,10 @@ private fun lightenColor(
     hslOut[2] += amount
     argb = ColorUtils.HSLToColor(hslOut)
     return Color(argb)
+}
+
+val externalLinkForUser = { user: User ->
+    "https://njump.me/${user.toNProfile()}"
 }
 
 val externalLinkForNote = { note: Note ->
@@ -298,10 +302,12 @@ private fun RenderMainPopup(
                         Icons.Default.AlternateEmail,
                         stringRes(R.string.quick_action_copy_user_id),
                     ) {
-                        scope.launch(Dispatchers.IO) {
-                            clipboardManager.setText(AnnotatedString("nostr:${note.author?.pubkeyNpub()}"))
-                            showToast(R.string.copied_user_id_to_clipboard)
-                            onDismiss()
+                        note.author?.let {
+                            scope.launch {
+                                clipboardManager.setText(AnnotatedString(it.toNostrUri()))
+                                showToast(R.string.copied_user_id_to_clipboard)
+                                onDismiss()
+                            }
                         }
                     }
                     VerticalDivider(color = primaryLight)
@@ -309,8 +315,8 @@ private fun RenderMainPopup(
                         Icons.Default.FormatQuote,
                         stringRes(R.string.quick_action_copy_note_id),
                     ) {
-                        scope.launch(Dispatchers.IO) {
-                            clipboardManager.setText(AnnotatedString("nostr:${note.toNEvent()}"))
+                        scope.launch {
+                            clipboardManager.setText(AnnotatedString(note.toNostrUri()))
                             showToast(R.string.copied_note_id_to_clipboard)
                             onDismiss()
                         }

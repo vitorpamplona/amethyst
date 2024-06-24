@@ -53,6 +53,7 @@ import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.AddressableEvent
+import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
@@ -88,7 +89,7 @@ enum class UserSuggestionAnchor {
 }
 
 @Stable
-open class NewPostViewModel() : ViewModel() {
+open class NewPostViewModel : ViewModel() {
     var draftTag: String by mutableStateOf(UUID.randomUUID().toString())
 
     var accountViewModel: AccountViewModel? = null
@@ -175,17 +176,11 @@ open class NewPostViewModel() : ViewModel() {
 
     val draftTextChanges = Channel<String>(Channel.CONFLATED)
 
-    fun lnAddress(): String? {
-        return account?.userProfile()?.info?.lnAddress()
-    }
+    fun lnAddress(): String? = account?.userProfile()?.info?.lnAddress()
 
-    fun hasLnAddress(): Boolean {
-        return account?.userProfile()?.info?.lnAddress() != null
-    }
+    fun hasLnAddress(): Boolean = account?.userProfile()?.info?.lnAddress() != null
 
-    fun user(): User? {
-        return account?.userProfile()
-    }
+    fun user(): User? = account?.userProfile()
 
     open fun load(
         accountViewModel: AccountViewModel,
@@ -368,15 +363,21 @@ open class NewPostViewModel() : ViewModel() {
         }
 
         originalNote =
-            draftEvent.tags().filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "reply" }.map {
-                LocalCache.checkGetOrCreateNote(it[1])
-            }.firstOrNull()
+            draftEvent
+                .tags()
+                .filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "reply" }
+                .map {
+                    LocalCache.checkGetOrCreateNote(it[1])
+                }.firstOrNull()
 
         if (originalNote == null) {
             originalNote =
-                draftEvent.tags().filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "root" }.map {
-                    LocalCache.checkGetOrCreateNote(it[1])
-                }.firstOrNull()
+                draftEvent
+                    .tags()
+                    .filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "root" }
+                    .map {
+                        LocalCache.checkGetOrCreateNote(it[1])
+                    }.firstOrNull()
         }
 
         canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channelHex() == null
@@ -403,12 +404,45 @@ open class NewPostViewModel() : ViewModel() {
 
         wantsProduct = draftEvent.kind() == 30402
 
-        title = TextFieldValue(draftEvent.tags().filter { it.size > 1 && it[0] == "title" }.map { it[1] }?.firstOrNull() ?: "")
-        price = TextFieldValue(draftEvent.tags().filter { it.size > 1 && it[0] == "price" }.map { it[1] }?.firstOrNull() ?: "")
-        category = TextFieldValue(draftEvent.tags().filter { it.size > 1 && it[0] == "t" }.map { it[1] }?.firstOrNull() ?: "")
-        locationText = TextFieldValue(draftEvent.tags().filter { it.size > 1 && it[0] == "location" }.map { it[1] }?.firstOrNull() ?: "")
+        title =
+            TextFieldValue(
+                draftEvent
+                    .tags()
+                    .filter { it.size > 1 && it[0] == "title" }
+                    .map { it[1] }
+                    ?.firstOrNull() ?: "",
+            )
+        price =
+            TextFieldValue(
+                draftEvent
+                    .tags()
+                    .filter { it.size > 1 && it[0] == "price" }
+                    .map { it[1] }
+                    ?.firstOrNull() ?: "",
+            )
+        category =
+            TextFieldValue(
+                draftEvent
+                    .tags()
+                    .filter { it.size > 1 && it[0] == "t" }
+                    .map { it[1] }
+                    ?.firstOrNull() ?: "",
+            )
+        locationText =
+            TextFieldValue(
+                draftEvent
+                    .tags()
+                    .filter { it.size > 1 && it[0] == "location" }
+                    .map { it[1] }
+                    ?.firstOrNull() ?: "",
+            )
         condition = ClassifiedsEvent.CONDITION.entries.firstOrNull {
-            it.value == draftEvent.tags().filter { it.size > 1 && it[0] == "condition" }.map { it[1] }.firstOrNull()
+            it.value ==
+                draftEvent
+                    .tags()
+                    .filter { it.size > 1 && it[0] == "condition" }
+                    .map { it[1] }
+                    .firstOrNull()
         } ?: ClassifiedsEvent.CONDITION.USED_LIKE_NEW
 
         wantsDirectMessage = draftEvent is PrivateDmEvent || draftEvent is ChatMessageEvent
@@ -479,7 +513,8 @@ open class NewPostViewModel() : ViewModel() {
                     if (split.percentage > 0.00001) {
                         val homeRelay =
                             accountViewModel?.getRelayListFor(split.key)?.writeRelays()?.firstOrNull()
-                                ?: split.key.relaysBeingUsed.keys.firstOrNull { !it.contains("localhost") }
+                                ?: split.key.relaysBeingUsed.keys
+                                    .firstOrNull { !it.contains("localhost") }
 
                         ZapSplitSetup(
                             lnAddressOrPubKeyHex = split.key.pubkeyHex,
@@ -851,9 +886,7 @@ open class NewPostViewModel() : ViewModel() {
         }
     }
 
-    open fun findUrlInMessage(): String? {
-        return RichTextParser().parseValidUrls(message.text).firstOrNull()
-    }
+    open fun findUrlInMessage(): String? = RichTextParser().parseValidUrls(message.text).firstOrNull()
 
     open fun removeFromReplyList(userToRemove: User) {
         pTags = pTags?.filter { it != userToRemove }
@@ -869,14 +902,18 @@ open class NewPostViewModel() : ViewModel() {
 
         if (it.selection.collapsed) {
             val lastWord =
-                it.text.substring(0, it.selection.end).substringAfterLast("\n").substringAfterLast(" ")
+                it.text
+                    .substring(0, it.selection.end)
+                    .substringAfterLast("\n")
+                    .substringAfterLast(" ")
             userSuggestionAnchor = it.selection
             userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
             if (lastWord.startsWith("@") && lastWord.length > 2) {
                 NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
                 viewModelScope.launch(Dispatchers.IO) {
                     userSuggestions =
-                        LocalCache.findUsersStartingWith(lastWord.removePrefix("@"))
+                        LocalCache
+                            .findUsersStartingWith(lastWord.removePrefix("@"))
                             .sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() }, { it.pubkeyHex }))
                             .reversed()
                 }
@@ -894,14 +931,18 @@ open class NewPostViewModel() : ViewModel() {
 
         if (it.selection.collapsed) {
             val lastWord =
-                it.text.substring(0, it.selection.end).substringAfterLast("\n").substringAfterLast(" ")
+                it.text
+                    .substring(0, it.selection.end)
+                    .substringAfterLast("\n")
+                    .substringAfterLast(" ")
             userSuggestionAnchor = it.selection
             userSuggestionsMainMessage = UserSuggestionAnchor.TO_USERS
             if (lastWord.startsWith("@") && lastWord.length > 2) {
                 NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
                 viewModelScope.launch(Dispatchers.IO) {
                     userSuggestions =
-                        LocalCache.findUsersStartingWith(lastWord.removePrefix("@"))
+                        LocalCache
+                            .findUsersStartingWith(lastWord.removePrefix("@"))
                             .sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() }, { it.pubkeyHex }))
                             .reversed()
                 }
@@ -928,15 +969,15 @@ open class NewPostViewModel() : ViewModel() {
                 NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
                 viewModelScope.launch(Dispatchers.IO) {
                     userSuggestions =
-                        LocalCache.findUsersStartingWith(lastWord.removePrefix("@"))
+                        LocalCache
+                            .findUsersStartingWith(lastWord.removePrefix("@"))
                             .sortedWith(
                                 compareBy(
                                     { account?.isFollowing(it) },
                                     { it.toBestDisplayName() },
                                     { it.pubkeyHex },
                                 ),
-                            )
-                            .reversed()
+                            ).reversed()
                 }
             } else {
                 NostrSearchEventOrUserDataSource.clear()
@@ -949,7 +990,10 @@ open class NewPostViewModel() : ViewModel() {
         userSuggestionAnchor?.let {
             if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
                 val lastWord =
-                    message.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
+                    message.text
+                        .substring(0, it.end)
+                        .substringAfterLast("\n")
+                        .substringAfterLast(" ")
                 val lastWordStart = it.end - lastWord.length
                 val wordToInsert = "@${item.pubkeyNpub()}"
 
@@ -963,7 +1007,10 @@ open class NewPostViewModel() : ViewModel() {
                 forwardZapToEditting = TextFieldValue("")
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.TO_USERS) {
                 val lastWord =
-                    toUsers.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
+                    toUsers.text
+                        .substring(0, it.end)
+                        .substringAfterLast("\n")
+                        .substringAfterLast(" ")
                 val lastWordStart = it.end - lastWord.length
                 val wordToInsert = "@${item.pubkeyNpub()}"
 
@@ -972,6 +1019,9 @@ open class NewPostViewModel() : ViewModel() {
                         toUsers.text.replaceRange(lastWordStart, it.end, wordToInsert),
                         TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length),
                     )
+
+                val relayList = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(item.pubkeyHex))?.event as? AdvertisedRelayListEvent)?.readRelays()
+                nip17 = relayList != null
             }
 
             userSuggestionAnchor = null
@@ -982,12 +1032,10 @@ open class NewPostViewModel() : ViewModel() {
         saveDraft()
     }
 
-    private fun newStateMapPollOptions(): SnapshotStateMap<Int, String> {
-        return mutableStateMapOf(Pair(0, ""), Pair(1, ""))
-    }
+    private fun newStateMapPollOptions(): SnapshotStateMap<Int, String> = mutableStateMapOf(Pair(0, ""), Pair(1, ""))
 
-    fun canPost(): Boolean {
-        return message.text.isNotBlank() &&
+    fun canPost(): Boolean =
+        message.text.isNotBlank() &&
             !isUploadingImage &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount != null) &&
@@ -1009,7 +1057,6 @@ open class NewPostViewModel() : ViewModel() {
                     )
             ) &&
             contentToAddUrl == null
-    }
 
     suspend fun createNIP94Record(
         uploadingResult: Nip96Uploader.PartialEvent,
@@ -1020,11 +1067,20 @@ open class NewPostViewModel() : ViewModel() {
         // Images don't seem to be ready immediately after upload
         val imageUrl = uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "url" }?.get(1)
         val remoteMimeType =
-            uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "m" }?.get(1)?.ifBlank { null }
+            uploadingResult.tags
+                ?.firstOrNull { it.size > 1 && it[0] == "m" }
+                ?.get(1)
+                ?.ifBlank { null }
         val originalHash =
-            uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "ox" }?.get(1)?.ifBlank { null }
+            uploadingResult.tags
+                ?.firstOrNull { it.size > 1 && it[0] == "ox" }
+                ?.get(1)
+                ?.ifBlank { null }
         val dim =
-            uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "dim" }?.get(1)?.ifBlank { null }
+            uploadingResult.tags
+                ?.firstOrNull { it.size > 1 && it[0] == "dim" }
+                ?.get(1)
+                ?.ifBlank { null }
         val magnet =
             uploadingResult.tags
                 ?.firstOrNull { it.size > 1 && it[0] == "magnet" }
@@ -1270,7 +1326,9 @@ open class NewPostViewModel() : ViewModel() {
     }
 }
 
-enum class GeohashPrecision(val digits: Int) {
+enum class GeohashPrecision(
+    val digits: Int,
+) {
     KM_5000_X_5000(1), // 5,000km	×	5,000km
     KM_1250_X_625(2), // 1,250km	×	625km
     KM_156_X_156(3), //   156km	×	156km

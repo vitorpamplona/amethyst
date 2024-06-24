@@ -511,6 +511,7 @@
     <string name="settings">Settings</string>
     <string name="connectivity_type_always">Always</string>
     <string name="connectivity_type_wifi_only">Wifi-only</string>
+    <string name="connectivity_type_unmetered_wifi_only">Unmetered WiFi</string>
     <string name="connectivity_type_never">Never</string>
 
     <string name="ui_feature_set_type_complete">Complete</string>
@@ -784,6 +785,8 @@
     <string name="boost_or_quote_description">Boost Or Quote</string>
     <string name="like_description">Like</string>
     <string name="zap_description">Zap</string>
+
+    <string name="change_reaction">Change Quick Reactions</string>
 
     <string name="profile_image_of_user">Profile Picture of %1$s</string>
     <string name="relay_info">Relay %1$s</string>

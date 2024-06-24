@@ -111,6 +111,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.joinAll
@@ -308,22 +309,19 @@ class AccountViewModel(
         noteIsHiddenFlows.get(note)
             ?: combineTransform(
                 account.flowHiddenUsers,
-                account.liveKind3FollowsFlow,
+                account.liveKind3Follows,
                 note.flow().metadata.stateFlow,
                 note.flow().reports.stateFlow,
             ) { hiddenUsers, followingUsers, metadata, reports ->
-                val isAcceptable =
-                    withContext(Dispatchers.IO) {
-                        isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.users)
-                    }
-                emit(isAcceptable)
-            }.stateIn(
-                viewModelScope,
-                SharingStarted.Eagerly,
-                NoteComposeReportState(),
-            ).also {
-                noteIsHiddenFlows.put(note, it)
-            }
+                emit(isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.users))
+            }.flowOn(Dispatchers.Default)
+                .stateIn(
+                    viewModelScope,
+                    SharingStarted.Eagerly,
+                    NoteComposeReportState(),
+                ).also {
+                    noteIsHiddenFlows.put(note, it)
+                }
 
     private val noteMustShowExpandButtonFlows = LruCache<Note, StateFlow<Boolean>>(300)
 

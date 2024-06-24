@@ -39,7 +39,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -97,10 +97,9 @@ fun SensitivityWarning(
     accountViewModel: AccountViewModel,
     content: @Composable () -> Unit,
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val accountState = accountViewModel.account.showSensitiveContent.collectAsStateWithLifecycle()
 
-    var showContentWarningNote by
-        remember(accountState) { mutableStateOf(accountState?.account?.showSensitiveContent != true) }
+    var showContentWarningNote by remember(accountState) { mutableStateOf(accountState.value != true) }
 
     CrossfadeIfEnabled(targetState = showContentWarningNote, accountViewModel = accountViewModel) {
         if (it) {
@@ -118,18 +117,26 @@ fun ContentWarningNote(onDismiss: () -> Unit) {
             Column(modifier = Modifier.padding(start = 10.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                     Box(
-                        Modifier.height(80.dp).width(90.dp),
+                        Modifier
+                            .height(80.dp)
+                            .width(90.dp),
                     ) {
                         Icon(
                             imageVector = Icons.Default.Visibility,
                             contentDescription = stringRes(R.string.content_warning),
-                            modifier = Modifier.size(70.dp).align(Alignment.BottomStart),
+                            modifier =
+                                Modifier
+                                    .size(70.dp)
+                                    .align(Alignment.BottomStart),
                             tint = MaterialTheme.colorScheme.onBackground,
                         )
                         Icon(
                             imageVector = Icons.Rounded.Warning,
                             contentDescription = stringRes(R.string.content_warning),
-                            modifier = Modifier.size(30.dp).align(Alignment.TopEnd),
+                            modifier =
+                                Modifier
+                                    .size(30.dp)
+                                    .align(Alignment.TopEnd),
                             tint = MaterialTheme.colorScheme.onBackground,
                         )
                     }
