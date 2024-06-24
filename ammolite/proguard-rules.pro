@@ -21,3 +21,4 @@
 #-renamesourcefileattribute SourceFile
 
 -keep class com.vitorpamplona.ammolite.service.** { *; }
+-keep class com.vitorpamplona.ammolite.relays.** { *; }
