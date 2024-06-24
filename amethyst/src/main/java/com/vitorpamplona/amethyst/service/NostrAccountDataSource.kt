@@ -316,15 +316,17 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                     val noteEvent = note?.event as? GiftWrapEvent
                     if (noteEvent != null) {
                         if (relay.brief !in note.relays) {
-                            LocalCache.justConsume(noteEvent, relay)
                             noteEvent.cachedGift(account.signer) {
+                                LocalCache.justConsume(noteEvent, relay)
                                 this.consume(it, relay)
                             }
                         }
                     } else {
                         // new event
-                        event.cachedGift(account.signer) { this.consume(it, relay) }
-                        LocalCache.justConsume(event, relay)
+                        event.cachedGift(account.signer) {
+                            LocalCache.justConsume(event, relay)
+                            this.consume(it, relay)
+                        }
                     }
                 }
 
@@ -335,15 +337,17 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                     if (noteEvent != null) {
                         if (relay.brief !in note.relays) {
                             // adds the relay to seal and inner chat
-                            LocalCache.consume(noteEvent, relay)
                             noteEvent.cachedGossip(account.signer) {
+                                LocalCache.consume(noteEvent, relay)
                                 LocalCache.justConsume(it, relay)
                             }
                         }
                     } else {
                         // new event
-                        event.cachedGossip(account.signer) { LocalCache.justConsume(it, relay) }
-                        LocalCache.justConsume(event, relay)
+                        event.cachedGossip(account.signer) {
+                            LocalCache.justConsume(event, relay)
+                            LocalCache.justConsume(it, relay)
+                        }
                     }
                 }
 
@@ -377,24 +381,21 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         super.markAsSeenOnRelay(eventId, relay)
 
         val note = LocalCache.getNoteIfExists(eventId) ?: return
-        val privKey = account.keyPair.privKey ?: return
-
         val noteEvent = note.event ?: return
-        markInnerAsSeenOnRelay(noteEvent, privKey, relay)
+        markInnerAsSeenOnRelay(noteEvent, relay)
     }
 
     private fun markInnerAsSeenOnRelay(
         noteEvent: EventInterface,
-        privKey: ByteArray,
         relay: Relay,
     ) {
         LocalCache.getNoteIfExists(noteEvent.id())?.addRelay(relay)
 
         if (noteEvent is GiftWrapEvent) {
-            noteEvent.cachedGift(account.signer) { gift -> markInnerAsSeenOnRelay(gift, privKey, relay) }
+            noteEvent.cachedGift(account.signer) { gift -> markInnerAsSeenOnRelay(gift, relay) }
         } else if (noteEvent is SealedGossipEvent) {
             noteEvent.cachedGossip(account.signer) { rumor ->
-                markInnerAsSeenOnRelay(rumor, privKey, relay)
+                markInnerAsSeenOnRelay(rumor, relay)
             }
         }
     }
