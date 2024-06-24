@@ -60,4 +60,4 @@ tasks.register('installGitHook', Copy) {
     into { new File(rootProject.rootDir, '.git/hooks') }
     fileMode 0777
 }
-tasks.getByPath(':app:preBuild').dependsOn installGitHook
+tasks.getByPath(':amethyst:preBuild').dependsOn installGitHook

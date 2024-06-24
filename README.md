@@ -226,7 +226,7 @@ openssl base64 < <my-release-key.keystore> | tr -d '\n' | tee some_signing_key.j
     - `KEY_PASSWORD` <- `<your password>`
     - `KEY_STORE_PASSWORD` <- `<your key store password>`
     - `SIGNING_KEY` <- the data from `<my-release-key.keystore>`
-3. Change the `versionCode` and `versionName` on `app/build.gradle`
+3. Change the `versionCode` and `versionName` on `amethyst/build.gradle`
 4. Commit and push.
 5. Tag the commit with `v{x.x.x}`
 6. Let the [Create Release GitHub Action](https://github.com/vitorpamplona/amethyst/actions/workflows/create-release.yml) build a new `aab` file.

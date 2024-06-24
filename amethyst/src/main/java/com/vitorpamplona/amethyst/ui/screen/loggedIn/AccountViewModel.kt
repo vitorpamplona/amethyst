@@ -924,6 +924,8 @@ class AccountViewModel(
                         userMetadata.nip05LastVerificationTime = 0
                         userMetadata.nip05Verified = false
 
+                        Log.d("NIP05 Error", it)
+
                         onResult(userMetadata.nip05Verified)
                     },
                 )
