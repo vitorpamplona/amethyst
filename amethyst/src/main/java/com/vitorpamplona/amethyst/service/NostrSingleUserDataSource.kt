@@ -26,6 +26,7 @@ import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.ammolite.relays.JsonFilter
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.StatusEvent
@@ -68,7 +69,7 @@ object NostrSingleUserDataSource : AmethystNostrDataSource("SingleUserFeed") {
                         types = EVENT_FINDER_TYPES,
                         filter =
                             JsonFilter(
-                                kinds = listOf(MetadataEvent.KIND, StatusEvent.KIND, AdvertisedRelayListEvent.KIND),
+                                kinds = listOf(MetadataEvent.KIND, StatusEvent.KIND, AdvertisedRelayListEvent.KIND, ChatMessageRelayListEvent.KIND),
                                 authors = groupIds,
                                 since = minEOSEs,
                             ),
