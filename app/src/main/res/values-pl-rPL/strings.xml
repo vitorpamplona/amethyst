@@ -86,7 +86,7 @@
     <string name="about_us">"Informacja o grupie.. "</string>
     <string name="what_s_on_your_mind">Co masz na myśli?</string>
     <string name="post">Wyślij</string>
-    <string name="save">Zapisz</string>
+    <string name="save">OK</string>
     <string name="create">Utwórz</string>
     <string name="cancel">Anuluj</string>
     <string name="failed_to_upload_the_image">Nie udało się przesłać obrazu</string>
@@ -385,7 +385,7 @@
     <string name="recommended_apps">Zalecenia: </string>
     <string name="filter_spam_from_strangers">Filtruj spam z nieznajomych</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Ostrzegaj, gdy posty zostały zgłoszone przez osoby które obserwujesz</string>
-    <string name="new_reaction_symbol">Nowy Symbol reakcji</string>
+    <string name="new_reaction_symbol">Nowy Symbol Odzewu</string>
     <string name="no_reaction_type_setup_long_press_to_change">Brak wstępnie wybranych typów reakcji dla tego użytkownika. Przytrzymaj przycisk serce, aby zmienić</string>
     <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">Dodaje docelową liczbę satów do podniesienia dla tego wpisu. W zależności od aplikacji może być pokazywany to jako pasek postępu, aby zachęcić do darowizn</string>
@@ -448,6 +448,7 @@
     <string name="settings">Ustawienia</string>
     <string name="connectivity_type_always">Zawsze</string>
     <string name="connectivity_type_wifi_only">Tylko WiFi</string>
+    <string name="connectivity_type_unmetered_wifi_only">Nielimitowany Wi-Fi</string>
     <string name="connectivity_type_never">Nigdy</string>
     <string name="ui_feature_set_type_complete">Kompletny</string>
     <string name="ui_feature_set_type_simplified">Uproszczony</string>
@@ -585,7 +586,7 @@
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Nie można utworzyć faktury przed wysłaniem zapa. Element pr nie został znaleziony w powstałym JSON.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nie można utworzyć faktury od %1$s: Element pr nie został znaleziony w powstałym JSON.</string>
     <string name="read_only_user">\"Tylko do odczytu\"</string>
-    <string name="no_reactions_setup">Nie ustawiono reakcji</string>
+    <string name="no_reactions_setup">Nie ustawiono odzewu</string>
     <string name="select_push_server">Wybierz aplikację UnifiedPush</string>
     <string name="push_server_title">Powiadomienia</string>
     <string name="push_server_explainer">Z zainstalowanych aplikacji UnifiedPush</string>
@@ -655,12 +656,13 @@
     <string name="new_post">Nowy post</string>
     <string name="new_short">Nowe Króciaki: zdjęcia lub filmiki</string>
     <string name="new_community_note">Nowy wpis w społeczności</string>
-    <string name="open_all_reactions_to_this_post">Otwórz wszystkie reakcje na ten post</string>
-    <string name="close_all_reactions_to_this_post">Zamknij wszystkie reakcje na ten post</string>
+    <string name="open_all_reactions_to_this_post">Otwórz wszystkie odzewy na ten post</string>
+    <string name="close_all_reactions_to_this_post">Zamknij wszystkie odzewy na ten post</string>
     <string name="reply_description">Odpowiedz</string>
     <string name="boost_or_quote_description">Zrepostuj lub Zacytuj</string>
     <string name="like_description">Lubię</string>
     <string name="zap_description">Zap</string>
+    <string name="change_reaction">Zmień odzew</string>
     <string name="profile_image_of_user">Zdjęcie profilowe %1$s</string>
     <string name="relay_info">Transmiter %1$s</string>
     <string name="expand_relay_list">Rozwiń listę transmiterów</string>

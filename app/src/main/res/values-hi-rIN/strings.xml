@@ -448,6 +448,7 @@
     <string name="settings">स्थापना विकल्प</string>
     <string name="connectivity_type_always">सर्वदा</string>
     <string name="connectivity_type_wifi_only">केवल वै॰फै॰</string>
+    <string name="connectivity_type_unmetered_wifi_only">मात्रांकन रहित वैफै॰</string>
     <string name="connectivity_type_never">कभी नहीं</string>
     <string name="ui_feature_set_type_complete">सम्पूर्ण</string>
     <string name="ui_feature_set_type_simplified">सरलीकृत</string>
@@ -661,6 +662,7 @@
     <string name="boost_or_quote_description">उद्धृत करें अथवा टीका लिखें</string>
     <string name="like_description">इष्ट</string>
     <string name="zap_description">ज्साप</string>
+    <string name="change_reaction">शीघ्र प्रतिक्रियाओं का परिवर्तन करें</string>
     <string name="profile_image_of_user">%1$s का परिचय चित्र</string>
     <string name="relay_info">पुनःप्रसारक %1$s</string>
     <string name="expand_relay_list">पुनःप्रसारक सूची का विस्तारण करें</string>
