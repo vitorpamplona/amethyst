@@ -45,7 +45,6 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">เข้าสู่ระบบด้วย private key เพื่อเลิกติดตาม</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">เข้าสู่ระบบด้วย private key เพื่อเพิ่มการซ่อนข้อความ</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">เข้าสู่ระบบด้วย private key เพื่อแก้ไขการซ่อนข้อความ</string>
-    <string name="zaps">Zaps</string>
     <string name="view_count">ยอดเข้าชม</string>
     <string name="boost">แชร์</string>
     <string name="boosted">แชร์</string>
@@ -151,7 +150,6 @@
     <string name="npub_hex_username">"npub, ชื่อผู้ใช้, ข้อความ"</string>
     <string name="clear">เคลียร์</string>
     <string name="app_logo">โลโก้</string>
-    <string name="nsec_npub_hex_private_key">nsec.. or npub..</string>
     <string name="ncryptsec_password">รหัสสำหรับเปิดใช้ nsec</string>
     <string name="show_password">แสดงรหัสผ่าน</string>
     <string name="hide_password">ซ่อนรหัสผ่าน</string>
@@ -287,11 +285,8 @@
     <string name="remove_from_public_bookmarks">ลบออกจากบุ๊คมาร์คสาธรณะ</string>
     <string name="wallet_connect_service">บริการเชื่อมต่อ wallet</string>
     <string name="wallet_connect_service_explainer">อนุญาตให้ Nostr Secret จ่าย zaps โดยไม่ต้องออกจากแอป เพื่อรักษาความลับให้ปลอดภัยและใช้รีเลย์ส่วนตัวหากเป็นไปได้</string>
-    <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>
     <string name="wallet_connect_service_relay">บริการเชื่อมต่อ wallet</string>
-    <string name="wallet_connect_service_secret">Wallet Connect Secret</string>
     <string name="wallet_connect_service_show_secret">แสดง secret key</string>
-    <string name="wallet_connect_service_secret_placeholder">nsec / hex private key</string>
     <string name="pledge_amount_in_sats">จำนวนเงินที่นำเข้าในหน่วย sat</string>
     <string name="post_poll">สร้างโพลล์</string>
     <string name="poll_heading_required">ส่วนที่จำเป็น:</string>
@@ -303,7 +298,6 @@
     <string name="poll_zap_value_min">Zap ขั้นต่ำ</string>
     <string name="poll_zap_value_max">Zap สูงสุด</string>
     <string name="poll_consensus_threshold">ฉันทามติ</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">ปิดหลังจาก</string>
     <string name="poll_closing_time_days">วัน</string>
     <string name="poll_unable_to_vote">ไม่สามารถโหวต</string>
@@ -366,7 +360,6 @@
     <string name="app_notification_dms_channel_description">แจ้งเตือนฉันเมื่อข้อความส่วนตัวมาถึง</string>
     <string name="app_notification_zaps_channel_name">ได้รับ Zaps</string>
     <string name="app_notification_zaps_channel_description">แจ้งเตือนเมื่อมีคน zaps</string>
-    <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">จาก %1$s</string>
     <string name="app_notification_zaps_channel_message_for">ถึง %1$s</string>
     <string name="reply_notify">การแจ้งเตือน: </string>
@@ -449,7 +442,6 @@
     <string name="connectivity_type_wifi_only">Wifi เท่านั้น</string>
     <string name="connectivity_type_never">ไม่ต้องแสดง</string>
     <string name="ui_feature_set_type_complete">เสร็จสมบูรณ์</string>
-    <string name="ui_feature_set_type_simplified">Simplified</string>
     <string name="system">ระบบ(ค่าพื้นฐาน)</string>
     <string name="light">สว่าง</string>
     <string name="dark">มืด</string>
@@ -461,7 +453,6 @@
     <string name="automatically_show_url_preview">การแสดงตัวอย่าง URL</string>
     <string name="automatically_hide_nav_bars">การไถฟีดแบบลื่นไหล</string>
     <string name="automatically_hide_nav_bars_description">ซ่อนแถบเมนูขณะเลื่อนฟีด</string>
-    <string name="ui_style">UI Mode</string>
     <string name="ui_style_description">เลือกรูปแบบการโพสต์</string>
     <string name="load_image">โหลดรูปภาพ</string>
     <string name="spamming_users">แสปม</string>
@@ -530,7 +521,6 @@
     <string name="missing_lud16">ไม่พบการตั้งค่า Lightning</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">ผู้ใช้ %1$s ไม่ได้ตั้งค่า lightning address เพื่อรับ sats</string>
     <string name="zap_split_weight">เปอร์เซ็นต์</string>
-    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">แบ่ง Zaps กับ</string>
     <string name="forwarding_zaps_to">ส่งต่อ Zaps ไปยัง</string>
     <string name="lightning_wallets_not_found2">ไม่พบกระเป๋า Lightning</string>
@@ -595,11 +585,9 @@
     <string name="hi_there_is_this_still_available">สวัสดี! สิ่งนี้ยังมีอยู่ไหม?</string>
     <string name="classifieds">ขายบางอย่าง</string>
     <string name="classifieds_title">ชื่อ</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">สภาพ</string>
     <string name="classifieds_category">หมวดหมู่</string>
     <string name="classifieds_price">ราคา (หน่วย Sats)</string>
-    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">ตำแหน่ง</string>
     <string name="classifieds_location_placeholder">เมือง, รัฐ, ประเทศ</string>
     <string name="classifieds_condition_new">ใหม่</string>
@@ -642,7 +630,6 @@
     <string name="route_messages">ข้อความ</string>
     <string name="route_notifications">การแจ้งเตือน</string>
     <string name="route_global">ทั่วโลก</string>
-    <string name="route_video">Shorts</string>
     <string name="route_security_filters">ตัวกรองความปลอดภัย</string>
     <string name="new_post">โพสต์ใหม่</string>
     <string name="new_short">สร้าง Shorts: รูปภาพ/วิดีโอ</string>
@@ -652,7 +639,6 @@
     <string name="reply_description">ตอบกลับ</string>
     <string name="boost_or_quote_description">แชร์/โควท</string>
     <string name="like_description">ไลค์</string>
-    <string name="zap_description">Zap</string>
     <string name="profile_image_of_user">รูปโปร์ไฟล์ของ %1$s</string>
     <string name="relay_info">รีเลย์ %1$s</string>
     <string name="expand_relay_list">แสดงรายการรีเลย์</string>
@@ -660,14 +646,12 @@
     <string name="relay_list_selector">ตัวเลือกรายการรีเลย์</string>
     <string name="poll">โพลล์</string>
     <string name="disable_poll">ยกเลิกโพลล์</string>
-    <string name="add_bitcoin_invoice">Bitcoin Invoice</string>
     <string name="cancel_bitcoin_invoice">ยกเลิก Bitcoin Invoice</string>
     <string name="cancel_classifieds">ยกเลิกการขายสิ่งนี้</string>
     <string name="add_zapraiser">ระดมทุน</string>
     <string name="cancel_zapraiser">ยกเลิกการระดมทุน</string>
     <string name="add_location">ตำแหน่ง</string>
     <string name="remove_location">ลบตำแหน่งออก</string>
-    <string name="add_zap_split">Zap splits</string>
     <string name="cancel_zap_split">ยกเลิก Zap split</string>
     <string name="add_content_warning">เพิ่มคําเตือนเนื้อหา</string>
     <string name="remove_content_warning">ลบคําเตือนเนื้อหา</string>
@@ -709,14 +693,11 @@
     <string name="this_version_brought_to_you_by">เวอร์ชันนี้นำเสนอโดย:</string>
     <string name="version_name">เวอร์ชัน %1$s</string>
     <string name="thank_you">ขอบคุณ!</string>
-    <string name="max_limit">Max Limit</string>
     <string name="restricted_writes">การเขียนที่ถูกจำกัด</string>
     <string name="forked_from">คัดลอกมาจาก</string>
     <string name="forked_tag">คัดลอก</string>
-    <string name="git_repository">Git Repository: %1$s</string>
     <string name="git_web_address">เว็บไซน์</string>
     <string name="git_clone_address">สำเนา:</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Timestamp ถูกยืนยัน</string>
     <string name="ots_info_description">มีหลักฐานว่าโพสต์นี้มีการลงนามก่อน %1$s หลักฐานถูกประทับตราใน Bitcoin blockchain ณ วันและเวลาดังกล่าว</string>
     <string name="edit_post">แก้ไขโพสต์</string>
@@ -725,8 +706,6 @@
     <string name="message_to_author_placeholder">แก้ไขด่วน</string>
     <string name="accept_the_suggestion">ยอมรับการแนะนำนี้</string>
     <string name="accessibility_download_for_offline">ดาวน์โหลด</string>
-    <string name="accessibility_lyrics_on">Lyrics on</string>
-    <string name="accessibility_lyrics_off">Lyrics off</string>
     <string name="accessibility_turn_on_sealed_message">ปิดผนึกข้อความแล้ว คลิกเพื่อเปิดข้อความ</string>
     <string name="accessibility_turn_off_sealed_message">เปิดผนึกข้อความไว้ คลิกเพื่อปิด</string>
     <string name="accessibility_send">ส่ง</string>
@@ -738,7 +717,6 @@
     <string name="it_s_not_possible_to_react_to_a_draft_note">ไม่สามารถกดรีแอคโน้ตฉบับร่างได้</string>
     <string name="it_s_not_possible_to_zap_to_a_draft_note">ไม่สามารถ zap โน้ตฉบับร่างได้</string>
     <string name="draft_note">โน๊ตฉบับร่าง</string>
-    <string name="load_from_text">From Msg</string>
     <string name="dvm_looking_for_app">กำลังค้นหาแอพพลิเคชั่น Dvm</string>
     <string name="dvm_waiting_status">ส่งคำขอเรียบร้อย และกำลังรอการตอบกลับ</string>
     <string name="dvm_requesting_job">กำลังรองานจาก DVM</string>

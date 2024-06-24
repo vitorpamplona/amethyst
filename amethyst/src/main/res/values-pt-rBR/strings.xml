@@ -14,7 +14,6 @@
     <string name="could_not_decrypt_the_message">Não foi possível descriptografar a mensagem</string>
     <string name="group_picture">Imagem do grupo</string>
     <string name="explicit_content">Conteúdo explícito</string>
-    <string name="spam">Spam</string>
     <string name="spam_description">O número de eventos de spam vindo deste relé</string>
     <string name="impersonation">Representação</string>
     <string name="illegal_behavior">Comportamento ilegal</string>
@@ -45,13 +44,11 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Faça login com uma chave privada para poder remover seguidores</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Você está usando uma chave pública e as chaves públicas são somente de leitura. Faça login com uma chave privada para poder ocultar uma palavra ou frase.</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Você está usando uma chave pública e as chaves públicas são somente de leitura. Faça login com uma chave privada para poder mostrar uma palavra ou frase.</string>
-    <string name="zaps">Zaps</string>
     <string name="view_count">Contagem de visualizações</string>
     <string name="boost">Impulsionar</string>
     <string name="boosted">impulsionado</string>
     <string name="edited">editado</string>
     <string name="edited_number">edição #%1$s</string>
-    <string name="original">original</string>
     <string name="quote">Citar</string>
     <string name="fork">Garfo</string>
     <string name="propose_an_edit">Propor uma Edição</string>
@@ -92,7 +89,6 @@
     <string name="failed_to_upload_the_image">Falha ao enviar imagem</string>
     <string name="relay_address">Endereço do Relay</string>
     <string name="posts">Postagens</string>
-    <string name="bytes">Bytes</string>
     <string name="errors">Erros</string>
     <string name="errors_description">O número de erros de conexão nesta sessão</string>
     <string name="home_feed">Feed principal</string>
@@ -134,7 +130,6 @@
     <string name="follows">"Seguindo"</string>
     <string name="reports">"Denúncias"</string>
     <string name="more_options">Mais opções</string>
-    <string name="relays">" Relays"</string>
     <string name="website">Site</string>
     <string name="lightning_address">Endereço Lightning</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Copiar a chave Nsec (sua senha) para backup</string>
@@ -199,9 +194,6 @@
     <string name="nip_05">Endereço Nostr</string>
     <string name="never">nunca</string>
     <string name="now">agora</string>
-    <string name="h">h</string>
-    <string name="m">m</string>
-    <string name="d">d</string>
     <string name="nudity">Nudez</string>
     <string name="profanity_hateful_speech">Palavrões / Discurso de ódio</string>
     <string name="report_hateful_speech">Denunciar discurso de ódio</string>
@@ -302,7 +294,6 @@
     <string name="poll_zap_value_min">Zap mínimo</string>
     <string name="poll_zap_value_max">Zap máximo</string>
     <string name="poll_consensus_threshold">Consenso</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Fechar depois</string>
     <string name="poll_closing_time_days">dias</string>
     <string name="poll_unable_to_vote">Impossibilitado de votar</string>
@@ -347,7 +338,6 @@
     <string name="no">Não</string>
     <string name="follow_list_selection">Lista de seguidores</string>
     <string name="follow_list_kind3follows">Seguindo</string>
-    <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Lista Silenciada</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Conecte-se através do Tor com o Orbot
         \n\n1. Instale o [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
@@ -365,7 +355,6 @@
     <string name="app_notification_dms_channel_description">Notifica você quando chega uma mensagem privada</string>
     <string name="app_notification_zaps_channel_name">Zaps Recebidos</string>
     <string name="app_notification_zaps_channel_description">Notifica quando alguém te manda um zap</string>
-    <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">De %1$s</string>
     <string name="app_notification_zaps_channel_message_for">por %1$s</string>
     <string name="reply_notify">Notificar: </string>
@@ -432,7 +421,6 @@
     <string name="live_stream_has_ended">Transmissão ao vivo encerrada</string>
     <string name="are_you_sure_you_want_to_log_out">Sair exclui todas as suas informações locais. Certifique-se de fazer backup de suas chaves privadas para evitar a perda de sua conta. Você quer continuar?</string>
     <string name="followed_tags">Tags Seguidas</string>
-    <string name="relay_setup">Relays</string>
     <string name="discover_content">Descoberta de Notas</string>
     <string name="discover_marketplace">Mercado</string>
     <string name="discover_live">Ao vivo</string>
@@ -464,7 +452,6 @@
     <string name="ui_style">Modo de interface</string>
     <string name="ui_style_description">Escolha o estilo da publicação</string>
     <string name="load_image">Carregar imagem</string>
-    <string name="spamming_users">Spammers</string>
     <string name="muted_button">Silenciado. Clique para ativar o som</string>
     <string name="mute_button">Som ligado. Clique para silenciar</string>
     <string name="search_button">Pesquise registros locais e remotos</string>
@@ -512,7 +499,6 @@
     <string name="poll_zap_value_min_max_explainer">Os votos são ponderados pelo valor do zap. Você pode definir um valor mínimo para evitar spammers e um valor máximo para evitar que grandes zappers assumam o controle da enquete. Use o mesmo valor em ambos os campos para garantir que cada voto tenha o mesmo valor. Deixe em branco para aceitar qualquer valor.</string>
     <string name="error_dialog_zap_error">Não foi possível enviar o Zap</string>
     <string name="error_dialog_talk_to_user">Mensagem ao usuário</string>
-    <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">Falha ao acessar %1$s: %2$s</string>
     <string name="relay_information_document_error_failed_to_assemble_url">Falha ao montar NIP-11 url para %1$s: %2$s</string>
     <string name="relay_information_document_error_failed_to_reach_server">Falha ao acessar %1$s: %2$s</string>
@@ -525,7 +511,6 @@
     <string name="active_for_home">Início</string>
     <string name="active_for_msg">Mensagens diretas</string>
     <string name="active_for_chats">Bate-papos</string>
-    <string name="active_for_global">Global</string>
     <string name="active_for_search">Pesquisa</string>
     <string name="zap_split_title">Dividir e encaminhar Zaps</string>
     <string name="zap_split_explainer">Os clientes que suportam dividirão e encaminharão zaps para os usuários adicionados aqui em vez dos seus</string>
@@ -534,7 +519,6 @@
     <string name="missing_lud16">Configuração Lightning ausente</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">O usuário %1$s não possui um endereço lightning configurado para receber sats</string>
     <string name="zap_split_weight">Percentual</string>
-    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Dividindo zaps com</string>
     <string name="forwarding_zaps_to">Encaminhando zaps para</string>
     <string name="lightning_wallets_not_found2">Carteira Lightning não encontrada</string>
@@ -601,11 +585,9 @@
     <string name="hi_there_is_this_still_available">Olá, ainda está disponível?</string>
     <string name="classifieds">Vender um Item</string>
     <string name="classifieds_title">Título</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Condição</string>
     <string name="classifieds_category">Categoria</string>
     <string name="classifieds_price">Preço (em Sats)</string>
-    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">Localização</string>
     <string name="classifieds_location_placeholder">Cidade, Estado, País</string>
     <string name="classifieds_condition_new">Novo</string>
@@ -624,7 +606,6 @@
     <string name="classifieds_category_books">Livros</string>
     <string name="classifieds_category_pets">Animais de Estimação</string>
     <string name="classifieds_category_sports">Esportes</string>
-    <string name="classifieds_category_fitness">Fitness</string>
     <string name="classifieds_category_art">Arte</string>
     <string name="classifieds_category_crafts">Artesanato</string>
     <string name="classifieds_category_home">Casa</string>
@@ -647,7 +628,6 @@
     <string name="route_discover">Descobrir</string>
     <string name="route_messages">Mensagens</string>
     <string name="route_notifications">Notificações</string>
-    <string name="route_global">Global</string>
     <string name="route_video">Vídeos Curtos</string>
     <string name="route_security_filters">Filtros de Segurança</string>
     <string name="new_post">Novo Post</string>
@@ -658,7 +638,6 @@
     <string name="reply_description">Responder</string>
     <string name="boost_or_quote_description">Impulsionar ou Citar</string>
     <string name="like_description">Gostar</string>
-    <string name="zap_description">Zap</string>
     <string name="profile_image_of_user">Foto de perfil de %1$s</string>
     <string name="relay_info">Repassar %1$s</string>
     <string name="expand_relay_list">Expandir lista de repasse</string>
@@ -718,11 +697,9 @@
     <string name="max_limit">Limite máximo</string>
     <string name="restricted_writes">Gravações Restritas</string>
     <string name="forked_from">Forkado de</string>
-    <string name="forked_tag">FORK</string>
     <string name="git_repository">Repositório Git: %1$s</string>
     <string name="git_web_address">Site:</string>
     <string name="git_clone_address">Clonar:</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Prova de Carimbo de data/hora</string>
     <string name="ots_info_description">Há prova de que esta postagem foi assinada antes de %1$s. A prova foi carimbada no blockchain do Bitcoin naquela data e hora.</string>
     <string name="edit_post">Editar postagem</string>

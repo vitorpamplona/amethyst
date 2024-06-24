@@ -14,7 +14,6 @@
     <string name="could_not_decrypt_the_message">No se pudo desencriptar el mensaje</string>
     <string name="group_picture">Imagen de grupo</string>
     <string name="explicit_content">Contenido explícito</string>
-    <string name="spam">Spam</string>
     <string name="spam_description">El número de eventos de spam procedentes de este relé</string>
     <string name="impersonation">Suplantación de identidad</string>
     <string name="illegal_behavior">Comportamiento ilegal</string>
@@ -45,13 +44,11 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para poder dejar de seguir a otros usuarios.</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para poder ocultar una palabra o frase.</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para poder mostrar una palabra o frase.</string>
-    <string name="zaps">Zaps</string>
     <string name="view_count">Total de visualizaciones</string>
     <string name="boost">Impulsar</string>
     <string name="boosted">Impulsada</string>
     <string name="edited">editada</string>
     <string name="edited_number">edición #%1$s</string>
-    <string name="original">original</string>
     <string name="quote">Citar</string>
     <string name="fork">Bifurcar</string>
     <string name="propose_an_edit">Proponer una edición</string>
@@ -92,7 +89,6 @@
     <string name="failed_to_upload_the_image">No se pudo cargar la imagen</string>
     <string name="relay_address">Dirección del relé</string>
     <string name="posts">Publicaciones</string>
-    <string name="bytes">Bytes</string>
     <string name="errors">Errores</string>
     <string name="errors_description">El número de errores de conexión en esta sesión</string>
     <string name="home_feed">Tus noticias</string>
@@ -199,9 +195,6 @@
     <string name="nip_05">Dirección de Nostr</string>
     <string name="never">nunca</string>
     <string name="now">ahora</string>
-    <string name="h">h</string>
-    <string name="m">m</string>
-    <string name="d">d</string>
     <string name="nudity">Desnudos</string>
     <string name="profanity_hateful_speech">Blasfemias / Discurso de odio</string>
     <string name="report_hateful_speech">Denuncia discurso de odio</string>
@@ -227,7 +220,6 @@
     <string name="biometric_authentication_failed">Autenticación fallida</string>
     <string name="biometric_authentication_failed_explainer">El sistema biométrico no pudo autenticar al propietario de este teléfono</string>
     <string name="biometric_authentication_failed_explainer_with_error">El sistema biométrico no pudo autenticar al propietario de este teléfono. Error: %1$s</string>
-    <string name="biometric_error">Error</string>
     <string name="badge_created_by">"Credo por %1$s"</string>
     <string name="badge_award_image_for">"Imagen del Badge para %1$s"</string>
     <string name="new_badge_award_notif">Has recibido un nuevo Badge</string>
@@ -304,7 +296,6 @@
     <string name="poll_zap_value_min">Zap mínimo</string>
     <string name="poll_zap_value_max">Zap máximo</string>
     <string name="poll_consensus_threshold">Consenso</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Cerrar después de</string>
     <string name="poll_closing_time_days">días</string>
     <string name="poll_unable_to_vote">No se puede votar</string>
@@ -335,7 +326,6 @@
     <string name="zap_type_private_explainer">El remitente y el destinatario pueden verse entre sí y leer el mensaje</string>
     <string name="zap_type_anonymous">Anónimo</string>
     <string name="zap_type_anonymous_explainer">El receptor y el público no saben quién envió el pago</string>
-    <string name="zap_type_nonzap">Non-Zap</string>
     <string name="zap_type_nonzap_explainer">No hay rastro en Nostr, solo en Lightning</string>
     <string name="file_server">Servidor de archivos</string>
     <string name="zap_forward_lnAddress">Dirección o @usuario de Lightning</string>
@@ -346,10 +336,8 @@
     <string name="do_you_really_want_to_disable_tor_title">¿Desconectarse de tu Orbot/Tor?</string>
     <string name="do_you_really_want_to_disable_tor_text">Los datos se transferirán de inmediato en la red normal</string>
     <string name="yes">Sí</string>
-    <string name="no">No</string>
     <string name="follow_list_selection">Lista de seguidos</string>
     <string name="follow_list_kind3follows">Todos los seguidos</string>
-    <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Lista de silenciados</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Conéctate a través de Tor con Orbot
         \n\n1. Instala [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android).
@@ -367,7 +355,6 @@
     <string name="app_notification_dms_channel_description">Te notifica cuando llega un mensaje privado</string>
     <string name="app_notification_zaps_channel_name">Zaps recibidos</string>
     <string name="app_notification_zaps_channel_description">Te notifica cuando alguien te zapea</string>
-    <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">De %1$s</string>
     <string name="app_notification_zaps_channel_message_for">por %1$s</string>
     <string name="reply_notify">Notificar: </string>
@@ -387,7 +374,6 @@
     <string name="warn_when_posts_have_reports_from_your_follows">Avisar cuando las publicaciones tengan reportes de tus seguidos</string>
     <string name="new_reaction_symbol">Nuevo símbolo de reacción</string>
     <string name="no_reaction_type_setup_long_press_to_change">No hay tipos de reacción preseleccionados para este usuario. Deja presionado el botón de corazón para cambiarlos.</string>
-    <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">Añade una meta de sats para recaudar por esta publicación. Los clientes compatibles pueden mostrarla como una barra de progreso para incentivar las donaciones.</string>
     <string name="zapraiser_target_amount_in_sats">Cantidad objetivo en sats</string>
     <string name="sats_to_complete">Zapraiser en %1$s. %2$s sats hasta la meta</string>
@@ -398,7 +384,6 @@
     <string name="an_error_occurred_trying_to_get_relay_information">Se ha producido un error al intentar obtener información sobre el relé de %1$s</string>
     <string name="owner">Propietario</string>
     <string name="version">Versión</string>
-    <string name="software">Software</string>
     <string name="contact">Contacto</string>
     <string name="supports">NIP compatibles</string>
     <string name="admission_fees">Tasas de admisión</string>
@@ -417,7 +402,6 @@
     <string name="maximum_event_tags">Etiquetas de evento máximas</string>
     <string name="content_length">Longitud del contenido</string>
     <string name="minimum_pow">PoW mínima</string>
-    <string name="auth">Auth</string>
     <string name="payment">Pago</string>
     <string name="cashu">Token de Cashu</string>
     <string name="cashu_redeem">Canjear</string>
@@ -439,7 +423,6 @@
     <string name="discover_marketplace">Mercado</string>
     <string name="discover_live">En vivo</string>
     <string name="discover_community">Comunidad</string>
-    <string name="discover_chat">Chats</string>
     <string name="community_approved_posts">Publicaciones aprobadas</string>
     <string name="groups_no_descriptor">Este grupo no tiene descripción ni reglas. Habla con el propietario para agregar una.</string>
     <string name="community_no_descriptor">Esta comunidad no tiene descripción. Habla con el propietario para agregar una.</string>
@@ -466,7 +449,6 @@
     <string name="ui_style">Modo de interfaz</string>
     <string name="ui_style_description">Elegir el estilo de publicación</string>
     <string name="load_image">Cargar imagen</string>
-    <string name="spamming_users">Spammers</string>
     <string name="muted_button">Silenciado. Hacer clic para reactivar el sonido.</string>
     <string name="mute_button">Sonido activado. Hacer clic para silenciar.</string>
     <string name="search_button">Buscar grabaciones locales y remotas</string>
@@ -514,7 +496,6 @@
     <string name="poll_zap_value_min_max_explainer">Los votos se calculan según la cantidad de zaps. Puedes establecer una cantidad mínima para evitar spammers y una máxima para que los zappers grandes no puedan dominar la encuesta. Usa la misma cantidad en ambos campos para asegurarte de que cada voto tenga el mismo valor. Déjalos vacíos para aceptar cualquier cantidad.</string>
     <string name="error_dialog_zap_error">No se pudo enviar el zap</string>
     <string name="error_dialog_talk_to_user">Mensaje para el usuario</string>
-    <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">No se pudo llegar a %1$s: %2$s</string>
     <string name="relay_information_document_error_failed_to_assemble_url">Error al ensamblar la url NIP-11 para %1$s: %2$s</string>
     <string name="relay_information_document_error_failed_to_reach_server">No se pudo contactar %1$s: %2$s</string>
@@ -526,8 +507,6 @@
     <string name="active_for">Activo para: </string>
     <string name="active_for_home">Inicio</string>
     <string name="active_for_msg">Mensajes directos</string>
-    <string name="active_for_chats">Chats</string>
-    <string name="active_for_global">Global</string>
     <string name="active_for_search">Búsqueda</string>
     <string name="zap_split_title">Dividir y reenviar zaps</string>
     <string name="zap_split_explainer">Los clientes compatibles dividirán y reenviarán los zaps a los usuarios que se agreguen aquí en lugar de enviártelos a ti.</string>
@@ -536,7 +515,6 @@
     <string name="missing_lud16">Lightning no está configurado</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">El usuario %1$s no tiene una dirección de Lightning configurada para recibir sats.</string>
     <string name="zap_split_weight">Porcentaje</string>
-    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Dividir zaps con</string>
     <string name="forwarding_zaps_to">Reenviar zaps a</string>
     <string name="lightning_wallets_not_found2">No se encontraron billeteras de Lightning</string>
@@ -589,7 +567,6 @@
     <string name="select_push_server">Seleccionar una aplicación UnifiedPush</string>
     <string name="push_server_title">Notificación push</string>
     <string name="push_server_explainer">De aplicaciones UnifiedPush instaladas</string>
-    <string name="push_server_none"></string>
     <string name="push_server_none_explainer">Desactiva las notificaciones push</string>
     <string name="push_server_uses_app_explainer">Usa la app %1$s</string>
     <string name="push_server_install_app">Configuración de notificaciones push</string>
@@ -603,11 +580,9 @@
     <string name="hi_there_is_this_still_available">Hola, ¿esto todavía está disponible?</string>
     <string name="classifieds">Vender un artículo</string>
     <string name="classifieds_title">Título</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Estado</string>
     <string name="classifieds_category">Categoría</string>
     <string name="classifieds_price">Precio (en sats)</string>
-    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">Ubicación</string>
     <string name="classifieds_location_placeholder">Ciudad, estado, país.</string>
     <string name="classifieds_condition_new">Nuevo</string>
@@ -649,7 +624,6 @@
     <string name="route_discover">Descubrir</string>
     <string name="route_messages">Mensajes</string>
     <string name="route_notifications">Notificaciones</string>
-    <string name="route_global">Global</string>
     <string name="route_video">Cortos</string>
     <string name="route_security_filters">Filtros de seguridad</string>
     <string name="new_post">Nueva publicación</string>
@@ -660,7 +634,6 @@
     <string name="reply_description">Responder</string>
     <string name="boost_or_quote_description">Impulsar o citar</string>
     <string name="like_description">Me gusta</string>
-    <string name="zap_description">Zap</string>
     <string name="profile_image_of_user">Imagen de perfil de %1$s</string>
     <string name="relay_info">Relé %1$s</string>
     <string name="expand_relay_list">Ampliar lista de relés</string>
@@ -671,7 +644,6 @@
     <string name="add_bitcoin_invoice">Factura de Bitcoin</string>
     <string name="cancel_bitcoin_invoice">Cancelar factura de Bitcoin</string>
     <string name="cancel_classifieds">Cancelar la venta de un artículo</string>
-    <string name="add_zapraiser">Zapraiser</string>
     <string name="cancel_zapraiser">Cancelar zapraiser</string>
     <string name="add_location">Ubicación</string>
     <string name="remove_location">Eliminar ubicación</string>
@@ -722,9 +694,7 @@
     <string name="forked_from">Bifurcación de</string>
     <string name="forked_tag">BIFURCACIÓN</string>
     <string name="git_repository">Repositorio Git: %1$s</string>
-    <string name="git_web_address">Web:</string>
     <string name="git_clone_address">Clon:</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Prueba de marca de tiempo</string>
     <string name="ots_info_description">Hay prueba de que esta publicación se firmó en algún momento antes de %1$s. La prueba se marcó en la cadena de bloques de Bitcoin en esa fecha y hora.</string>
     <string name="edit_post">Editar publicación</string>
