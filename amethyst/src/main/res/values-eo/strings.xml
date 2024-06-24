@@ -170,8 +170,6 @@
     <string name="nip_05">Adreso de Nostr</string>
     <string name="never">neniam</string>
     <string name="now">nun</string>
-    <string name="h">h</string>
-    <string name="m">m</string>
     <string name="d">t</string>
     <string name="nudity">Nudeco</string>
     <string name="profanity_hateful_speech">Blasfemo / Malama Parolado</string>
@@ -367,7 +365,6 @@
     <string name="maximum_event_tags">Maksimumaj etikedoj de evento</string>
     <string name="content_length">Longo de enhavo</string>
     <string name="minimum_pow">Minimuma PoW</string>
-    <string name="auth">Auth</string>
     <string name="payment">Pago</string>
     <string name="cashu">Cashu Signo</string>
     <string name="cashu_redeem">Elpagi</string>

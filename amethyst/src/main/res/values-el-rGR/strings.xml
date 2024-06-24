@@ -38,7 +38,6 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Συνδεθείτε με το \"Μυστικό Κλειδί\" σας για να σταματήσετε να ακολουθείτε κάποιον</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Συνδεθείτε με το \"Μυστικό Κλειδί\" σας ώστε να μπορείτε να αποκλείετε ανεπιθύμητες λέξεις ή φράσεις</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Συνδεθείτε με το \"Μυστικό Κλειδί\" σας ώστε να μπορείτε να αναζητάτε συγκεκριμένες λέξεις ή φράσεις</string>
-    <string name="zaps">Zaps</string>
     <string name="view_count">Προβολή μετρήσεων</string>
     <string name="boost">Προώθηση</string>
     <string name="boosted">προωθημένο</string>
@@ -80,7 +79,6 @@
     <string name="failed_to_upload_the_image">Αποτυχία μεταφόρτωσης εικόνας</string>
     <string name="relay_address">Διεύθυνση Διαμοιραστή</string>
     <string name="posts">Δημοσιεύσεις</string>
-    <string name="bytes">Bytes</string>
     <string name="errors">Σφάλματα</string>
     <string name="home_feed">Ροή Αρχικής Σελίδας</string>
     <string name="private_message_feed">Ροή Προσωπικών Μηνυμάτων</string>
@@ -173,9 +171,6 @@
     <string name="nip_05">Διεύθυνση Nostr</string>
     <string name="never">ποτέ</string>
     <string name="now">τώρα</string>
-    <string name="h">h</string>
-    <string name="m">m</string>
-    <string name="d">d</string>
     <string name="nudity">Γυμνό</string>
     <string name="profanity_hateful_speech">Ασέβεια / Ρητορική μίσους</string>
     <string name="report_hateful_speech">Αναφορά Ρητορικής μίσους</string>
@@ -266,7 +261,6 @@
     <string name="poll_zap_value_min">Ελάχιστο Zap</string>
     <string name="poll_zap_value_max">Μέγιστο Zap</string>
     <string name="poll_consensus_threshold">Συναίνεση</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Λήξη μετά από</string>
     <string name="poll_closing_time_days">ημέρες</string>
     <string name="poll_unable_to_vote">Αδυναμία ψηφοφορίας</string>
@@ -297,7 +291,6 @@
     <string name="zap_type_private_explainer">Μόνο ο αποστολέας και ο παραλήπτης μπορούν να δουν ο ένας τον άλλο και να διαβάσουν το μήνυμα</string>
     <string name="zap_type_anonymous">Ανώνυμα</string>
     <string name="zap_type_anonymous_explainer">Ο παραλήπτης και το κοινό δε γνωρίζουν ποιός έστειλε την πληρωμή</string>
-    <string name="zap_type_nonzap">Non-Zap</string>
     <string name="zap_type_nonzap_explainer">Δεν αφήνει ίχνος στο Nostr, παρά μόνο στο Lightning</string>
     <string name="file_server">Εξυπηρετητής Αρχείων</string>
     <string name="zap_forward_lnAddress">LnAddress (διεύθυνση Lightning) ή @Χρήστης</string>
@@ -328,7 +321,6 @@
     <string name="app_notification_dms_channel_description">Σας ειδοποιεί όταν φτάνει ένα ιδιωτικό μήνυμα</string>
     <string name="app_notification_zaps_channel_name">Ληφθέντα Zaps</string>
     <string name="app_notification_zaps_channel_description">Σας ειδοποιεί όταν κάποιος σας zapάρει</string>
-    <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">Από %1$s</string>
     <string name="app_notification_zaps_channel_message_for">για %1$s</string>
     <string name="reply_notify">Ειδοποίηση: </string>
@@ -348,7 +340,6 @@
     <string name="warn_when_posts_have_reports_from_your_follows">Προειδοποίηση όταν δημοσιεύσεις έχουν αναφορές από αυτούς που ακολουθείτε</string>
     <string name="new_reaction_symbol">Νέο εικονίδιο Αντίδρασης</string>
     <string name="no_reaction_type_setup_long_press_to_change">Δεν έχουν επιλεγεί εικονίδια αντίδρασης. Πατήστε παρατεταμένα το κουμπί της καρδιάς για αλλαγή</string>
-    <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">Θέτει τον στόχο του ποσού σε sats (υποδιαίρεση του Bitcoin, 1 Bitcoin = 100.000.000 sats) που θέλετε να συγκεντρώσετε για αυτή τη δημοσίευση. Οι Nostr clients που υποστηρίζουν τη λειτουργία zapraiser ίσως δείχνουν μια μπάρα προόδου του στόχου σας ώστε να ενισχύσουν πιθανές δωρεές</string>
     <string name="zapraiser_target_amount_in_sats">Το ποσό του στόχου σας σε sats</string>
     <string name="sats_to_complete">Zapraiser στο %1$s. %2$s sats ως την επίτευξη του στόχου</string>
@@ -377,7 +368,6 @@
     <string name="minimum_pow">Ελάχιστη Απόδειξη Έργου (PoW - Proof of Work)</string>
     <string name="auth">Πιστοποίηση</string>
     <string name="payment">Πληρωμή</string>
-    <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Εξαργύρωση Cashu</string>
     <string name="no_lightning_address_set">Δεν έχει οριστεί διεύθυνση Lightning</string>
     <string name="copied_token_to_clipboard">Το token αντιγράφηκε στο πρόχειρο</string>
@@ -459,7 +449,6 @@
 Η επιλογή με τα περισσότερα zaps (δηλαδή τα περισσότερα sats) είναι η επικρατέστερη. Μπορείτε να ορίσετε ένα ελάχιστο ποσό zap για να αποφύγετε την ψήφο spammers αλλά και ένα μέγιστο ποσό ώστε να αποφύγετε μεγάλους zappers (χρήστες που στέλνουν zaps) που επιθυμούν να χειραγωγήσουν την ψηφοφορία. Χρησιμοποιήστε το ίδιο ποσό και στα δύο πεδία για να βεβαιωθείτε ότι κάθε ψήφος αποτιμάται το ίδιο. Ή αφήστε τα πεδία κενά για να αποδεχτείτε οποιοδήποτε ποσό.</string>
     <string name="error_dialog_zap_error">Αδυναμία αποστολής zap</string>
     <string name="error_dialog_talk_to_user">Μήνυμα στον Χρήστη</string>
-    <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">Αποτυχία εύρεσης %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">Αποτυχία εύρεσης %1$s: %2$s</string>
     <string name="relay_information_document_error_parse_result">Αποτυχία ανάλυσης αποτελέσματος από %1$s: %2$s</string>
@@ -477,7 +466,6 @@
     <string name="missing_lud16">Λείπει η ρύθμιση lightning (LN)</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Ο Χρήστης %1$s δεν έχει ορίσει διεύθυνση LN (lightning) για να λαμβάνει sats</string>
     <string name="zap_split_weight">Ποσοστό</string>
-    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Διαχωρισμός zaps με</string>
     <string name="forwarding_zaps_to">Προώθηση zaps σε</string>
     <string name="lightning_wallets_not_found2">Δε βρέθηκαν πορτοφόλια Lightning</string>

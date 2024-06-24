@@ -174,7 +174,6 @@
     <string name="never">ei koskaan</string>
     <string name="now">nyt</string>
     <string name="h">t</string>
-    <string name="m">m</string>
     <string name="d">pv</string>
     <string name="nudity">Alastomuus</string>
     <string name="profanity_hateful_speech">Loukkaava kielenkäyttö / vihapuhe</string>
@@ -266,7 +265,6 @@
     <string name="poll_zap_value_min">Vähimmäiszap</string>
     <string name="poll_zap_value_max">Enimmäiszap</string>
     <string name="poll_consensus_threshold">Konsensus</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Sulje äänestys</string>
     <string name="poll_closing_time_days">päivän kuluttua</string>
     <string name="poll_unable_to_vote">Ei voi äänestää</string>
@@ -329,7 +327,6 @@
     <string name="app_notification_dms_channel_description">Ilmoittaa sinulle, kun yksityinen viesti saapuu</string>
     <string name="app_notification_zaps_channel_name">Saapuneet Zapit</string>
     <string name="app_notification_zaps_channel_description">Ilmoittaa sinulle, kun joku zappaa sinua</string>
-    <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">Lähettäjä: %1$s</string>
     <string name="app_notification_zaps_channel_message_for">saaja: %1$s</string>
     <string name="reply_notify">Ilmoitus: </string>
@@ -385,7 +382,6 @@
     <string name="cashu_copy_token">Kopioi tunnus</string>
     <string name="no_lightning_address_set">Ei Lightning-osoitetta asetettuna</string>
     <string name="copied_token_to_clipboard">Kopioitu tunnus leikepöydälle</string>
-    <string name="live_stream_live_tag">LIVE</string>
     <string name="live_stream_offline_tag">POISSA</string>
     <string name="live_stream_ended_tag">PÄÄTTYNYT</string>
     <string name="live_stream_planned_tag">AJOITETTU</string>
@@ -395,7 +391,6 @@
     <string name="followed_tags">Seuratut tagit</string>
     <string name="relay_setup">Releet</string>
     <string name="discover_marketplace">Markkinapaikka</string>
-    <string name="discover_live">Live</string>
     <string name="discover_community">Yhteisö</string>
     <string name="discover_chat">Keskustelut</string>
     <string name="community_approved_posts">Hyväksytyt viestit</string>
@@ -482,7 +477,6 @@
     <string name="missing_lud16">Lightning asetukset puuttuvat</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Käyttäjällä %1$s ei ole Lightning-osoitetta määritettynä vastaanottamaan satseja</string>
     <string name="zap_split_weight">Prosenttiosuus</string>
-    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Zappien jakaminen</string>
     <string name="forwarding_zaps_to">Ohjaa zappit kohteeseen</string>
     <string name="lightning_wallets_not_found2">Lightning-lompakkoja ei löytynyt</string>
@@ -503,12 +497,10 @@
     <string name="error_dialog_pay_withdraw_error">Ei voitu perua</string>
     <string name="error_parsing_nip47_title">Wallet Connectin asennus epäonnistui</string>
     <string name="error_parsing_nip47">Virhe jäsennettäessä NIP-47 yhteyttä. Tarkista, onko tämä oikein lompakon tarjoajallasi: %1$s. Virhe: %2$s</string>
-    <string name="error_parsing_nip47_no_error">Error parsing NIP-47 connection string. Check if this is correct with your Wallet provider: %1$s.</string>
     <string name="cashu_failed_redemption">Cashu epäonnistui lunastuksessa</string>
     <string name="cashu_failed_redemption_explainer_error_msg">Paja (mint) antoi seuraavan virheilmoituksen: %1$s</string>
     <string name="cashu_failed_redemption_explainer_already_spent">Cashu tunnukset on jo käytetty.</string>
     <string name="cashu_successful_redemption">Cashu vastaanotettu</string>
-    <string name="cashu_successful_redemption_explainer">%1$s sats were sent to your wallet. (Fees: %2$s sats)</string>
     <string name="cashu_no_wallet_found">Yhteensopivaa Cashu-lompakkoa ei löytynyt järjestelmästä</string>
     <string name="error_unable_to_fetch_invoice">Laskua ei voi noutaa vastaanottimen palvelimilta</string>
     <string name="wallet_connect_pay_invoice_error_error">Lompakkosi yhteyden tarjoaja palautti seuraavan virheen: %1$s</string>
@@ -542,11 +534,9 @@
     <string name="hi_there_is_this_still_available">Hei, onko tämä vielä saatavilla?</string>
     <string name="classifieds">Myy esine</string>
     <string name="classifieds_title">Otsikko</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Kunto</string>
     <string name="classifieds_category">Kategoria</string>
     <string name="classifieds_price">Hinta (satseissa)</string>
-    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">Sijainti</string>
     <string name="classifieds_location_placeholder">Kaupunki, osavaltio, maa</string>
     <string name="classifieds_condition_new">Uusi</string>

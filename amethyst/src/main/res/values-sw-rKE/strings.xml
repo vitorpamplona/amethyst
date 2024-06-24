@@ -36,7 +36,6 @@
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Ingia kwa kutumia ufunguo wa Faragha ili uweze kutuma Zaps</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Ingia kwa kutumia Ufunguo wa Faragha ili uweze Kufuata</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Ingia kwa kutumia Ufunguo wa Faragha ili uweze Kuacha Kufuata</string>
-    <string name="zaps">Zaps</string>
     <string name="view_count">Idadi ya maoni</string>
     <string name="boost">Kuongeza</string>
     <string name="boosted">imeimarishwa</string>
@@ -114,9 +113,7 @@
     <string name="notes">Vidokezo</string>
     <string name="replies">Majibu</string>
     <string name="follows">"Anafuata"</string>
-    <string name="reports">"Reports"</string>
     <string name="more_options">Chaguo Zaidi</string>
-    <string name="relays">" Relays"</string>
     <string name="website">Tovuti</string>
     <string name="lightning_address">Anwani ya Umeme</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Hunakili Kitambulisho cha Nsec (nywila yako) kwenye ubao wa kunakili kwa ajili ya nakala rudufu</string>
@@ -161,7 +158,6 @@
     <string name="public_chat">Mazungumzo ya Umma</string>
     <string name="posts_received">machapisho yamepokelewa</string>
     <string name="remove">Ondoa</string>
-    <string name="translations_auto">Auto</string>
     <string name="translations_translated_from">imetafsiriwa kutoka</string>
     <string name="translations_to">kwa</string>
     <string name="translations_show_in_lang_first">Onyesha kwa %1$s kwanza</string>
@@ -170,9 +166,6 @@
     <string name="nip_05">Anwani ya Nostr</string>
     <string name="never">kamwe</string>
     <string name="now">sasa</string>
-    <string name="h">h</string>
-    <string name="m">m</string>
-    <string name="d">d</string>
     <string name="nudity">Uchi</string>
     <string name="profanity_hateful_speech">Lugha chafu / Maneno yenye chuki</string>
     <string name="report_hateful_speech">Ripoti Lugha yenye chuki</string>
@@ -261,7 +254,6 @@
     <string name="poll_zap_value_min">Kima cha Chini cha Zaps</string>
     <string name="poll_zap_value_max">Kima cha Juu cha Zaps</string>
     <string name="poll_consensus_threshold">Uamuzi</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Funga baada ya</string>
     <string name="poll_closing_time_days">siku</string>
     <string name="poll_zap_amount">Kiasi cha Zaps</string>
@@ -319,7 +311,6 @@
     <string name="app_notification_dms_channel_description">Inakuarifu wakati ujumbe binafsi unapowasili</string>
     <string name="app_notification_zaps_channel_name">Zaps Zilizopokelewa</string>
     <string name="app_notification_zaps_channel_description">Inakuarifu wakati mtu anapokuzap</string>
-    <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">Kutoka kwa %1$s</string>
     <string name="app_notification_zaps_channel_message_for">kwa %1$s</string>
     <string name="reply_notify">Taarifa: </string>
@@ -368,7 +359,6 @@
     <string name="minimum_pow">PoW ya Chini</string>
     <string name="auth">Uthibitishaji</string>
     <string name="payment">Malipo</string>
-    <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Kukomboa</string>
     <string name="no_lightning_address_set">Hakuna Anwani ya Lightning Imewekwa</string>
     <string name="copied_token_to_clipboard">Kitufe kimekopwa kwenye ubao wa kunakili</string>
@@ -452,7 +442,6 @@
     <string name="relay_information_document_error_http_status">%1$s imeshindwa kwa kutumia msimbo %2$s</string>
     <string name="active_for">Inatumika kwa: </string>
     <string name="active_for_home">Nyumbani</string>
-    <string name="active_for_msg">DMs</string>
     <string name="active_for_chats">Soga</string>
     <string name="active_for_global">Ulimwenguni</string>
     <string name="active_for_search">Tafuta</string>

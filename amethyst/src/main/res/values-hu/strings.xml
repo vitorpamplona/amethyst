@@ -14,7 +14,6 @@
     <string name="could_not_decrypt_the_message">Az üzenet dekódolása sikertelen</string>
     <string name="group_picture">Csoport Kép</string>
     <string name="explicit_content">Szókimondó tartalom</string>
-    <string name="spam">Spam</string>
     <string name="spam_description">Ebből a csomópontból érkező spam események száma</string>
     <string name="impersonation">Megszemélyesítés</string>
     <string name="illegal_behavior">Illegális viselkedés</string>
@@ -53,7 +52,6 @@
     <string name="edited_number">szerkesztés #%1$s</string>
     <string name="original">eredeti</string>
     <string name="quote">Idézet</string>
-    <string name="fork">Fork</string>
     <string name="propose_an_edit">Szerkesztési javaslat</string>
     <string name="new_amount_in_sats">Új összeg sats-ban</string>
     <string name="add">Hozzáad</string>
@@ -303,7 +301,6 @@
     <string name="poll_zap_value_min">Minimum Zap</string>
     <string name="poll_zap_value_max">Maximum Zap</string>
     <string name="poll_consensus_threshold">Konszenzus</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Szavazás lezárása</string>
     <string name="poll_closing_time_days">napok</string>
     <string name="poll_unable_to_vote">Nem lehet szavazni</string>
@@ -366,7 +363,6 @@
     <string name="app_notification_dms_channel_description">Értesítést küld, amikor privát üzeneted érkezik</string>
     <string name="app_notification_zaps_channel_name">Zap-et kaptál</string>
     <string name="app_notification_zaps_channel_description">Értesítést küld, amikor valaki neked Zap-et küldött</string>
-    <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">%1$s -tól</string>
     <string name="app_notification_zaps_channel_message_for">%1$s -ért</string>
     <string name="reply_notify">Értesítés: </string>
@@ -418,7 +414,6 @@
     <string name="minimum_pow">Minimális PoW</string>
     <string name="auth">Azonosítás</string>
     <string name="payment">Fizetés</string>
-    <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Beváltás</string>
     <string name="cashu_redeem_to_zap">Küldje a Zap tárcába</string>
     <string name="cashu_redeem_to_cashu">Nyissa meg a Cashu tárcában</string>
@@ -535,7 +530,6 @@
     <string name="missing_lud16">Hiányzó lightning beállítás</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">A %1$s felhasználó a sat fogadáshoz nem rendelkezik LN cím beállítással</string>
     <string name="zap_split_weight">Százalék</string>
-    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Zap-ek megosztása</string>
     <string name="forwarding_zaps_to">Zap-ek továbbítása</string>
     <string name="lightning_wallets_not_found2">Lightning tárca nem található</string>
@@ -602,11 +596,9 @@
     <string name="hi_there_is_this_still_available">Szia, ez még aktuális?</string>
     <string name="classifieds">Elem eladása</string>
     <string name="classifieds_title">Cím</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Állapot</string>
     <string name="classifieds_category">Kategória</string>
     <string name="classifieds_price">Ár (satoshiban)</string>
-    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">Helyszín</string>
     <string name="classifieds_location_placeholder">Város, állam, ország</string>
     <string name="classifieds_condition_new">Új</string>
@@ -625,7 +617,6 @@
     <string name="classifieds_category_books">Könyvek</string>
     <string name="classifieds_category_pets">Háziállatok</string>
     <string name="classifieds_category_sports">Sport</string>
-    <string name="classifieds_category_fitness">Fitness</string>
     <string name="classifieds_category_art">Művészet</string>
     <string name="classifieds_category_crafts">Iparművészet</string>
     <string name="classifieds_category_home">Otthon</string>
@@ -658,8 +649,6 @@
     <string name="close_all_reactions_to_this_post">Zárja be a bejegyzésre adott összes reakciót</string>
     <string name="reply_description">Válasz</string>
     <string name="boost_or_quote_description">Megosztás vagy Idézés</string>
-    <string name="like_description">Like</string>
-    <string name="zap_description">Zap</string>
     <string name="profile_image_of_user">%1$s profilképe</string>
     <string name="relay_info">%1$s csomópont</string>
     <string name="expand_relay_list">Csomópont lista kibontása</string>
@@ -716,14 +705,10 @@
     <string name="this_version_brought_to_you_by">Ezt a verziót hozta neked:</string>
     <string name="version_name">%1$s verzió</string>
     <string name="thank_you">Köszönöm!</string>
-    <string name="max_limit">Max Limit</string>
     <string name="restricted_writes">Korlátozott írások</string>
     <string name="forked_from">Fork-olva innen</string>
-    <string name="forked_tag">FORK</string>
     <string name="git_repository">Git-tár: %1$s</string>
-    <string name="git_web_address">Web:</string>
     <string name="git_clone_address">Klónoz:</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Időbélyeg igazolás</string>
     <string name="ots_info_description">Bizonyíték van arra, hogy ezt a bejegyzést valamikor %1$s előtt írták alá. A bizonyítékot ezen a napon és időpontban a Bitcoin blokkláncába bélyegezték.</string>
     <string name="edit_post">Bejegyzés szerkesztése</string>
