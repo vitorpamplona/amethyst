@@ -63,3 +63,4 @@
 -keep class com.vitorpamplona.quartz.events.** { *; }
 -keep class com.vitorpamplona.amethyst.model.** { *; }
 -keep class com.vitorpamplona.amethyst.service.** { *; }
+-keep class com.vitorpamplona.ammolite.service.** { *; }
