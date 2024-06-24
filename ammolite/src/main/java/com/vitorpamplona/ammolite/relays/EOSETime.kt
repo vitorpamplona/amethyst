@@ -18,15 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.ammolite.relays
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.service.relays.FeedType
-
-@Immutable
-data class RelaySetupInfo(
-    val url: String,
-    val read: Boolean,
-    val write: Boolean,
-    val feedTypes: Set<FeedType>,
-)
+class EOSETime(var time: Long) {
+    override fun toString(): String {
+        return time.toString()
+    }
+}

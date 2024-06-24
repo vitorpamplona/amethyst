@@ -22,13 +22,13 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
-import com.vitorpamplona.amethyst.service.relays.FeedType
-import com.vitorpamplona.amethyst.service.relays.JsonFilter
-import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.FeedType
+import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 
-object NostrChatroomDataSource : NostrDataSource("ChatroomFeed") {
+object NostrChatroomDataSource : AmethystNostrDataSource("ChatroomFeed") {
     lateinit var account: Account
     private var withRoom: ChatroomKey? = null
 

@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.amethyst.service.relays.FeedType
-import com.vitorpamplona.amethyst.service.relays.JsonFilter
-import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
+import com.vitorpamplona.ammolite.relays.FeedType
+import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.Hex
@@ -52,7 +52,7 @@ import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 import kotlin.coroutines.cancellation.CancellationException
 
-object NostrSearchEventOrUserDataSource : NostrDataSource("SearchEventFeed") {
+object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFeed") {
     private var searchString: String? = null
 
     private fun createAnythingWithIDFilter(): List<TypedFilter>? {

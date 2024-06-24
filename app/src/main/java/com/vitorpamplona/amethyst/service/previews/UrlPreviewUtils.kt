@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.service.previews
 
 import com.vitorpamplona.amethyst.commons.preview.MetaTag
 import com.vitorpamplona.amethyst.commons.preview.MetaTagsParser
-import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.ammolite.service.HttpClientManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType

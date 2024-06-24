@@ -21,16 +21,16 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relays.EOSETime
-import com.vitorpamplona.amethyst.service.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.amethyst.service.relays.JsonFilter
-import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.EOSETime
+import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
+import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 
-object NostrSingleUserDataSource : NostrDataSource("SingleUserFeed") {
+object NostrSingleUserDataSource : AmethystNostrDataSource("SingleUserFeed") {
     private var usersToWatch = setOf<User>()
 
     fun createUserMetadataFilter(): List<TypedFilter>? {

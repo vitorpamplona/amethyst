@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
-import com.vitorpamplona.amethyst.service.HttpClientManager
+import com.vitorpamplona.ammolite.service.HttpClientManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import java.net.HttpURLConnection

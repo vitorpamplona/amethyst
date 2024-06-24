@@ -18,11 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relays
+package com.vitorpamplona.ammolite.relays
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.RelaySetupInfo
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -63,6 +62,8 @@ object RelayPool : Relay.Listener {
     fun getRelays(url: String): List<Relay> {
         return relays.filter { it.url == url }
     }
+
+    fun getAll() = relays
 
     fun getOrCreateRelay(
         url: String,
@@ -221,6 +222,23 @@ object RelayPool : Relay.Listener {
             relay: Relay,
             description: String,
         )
+
+        fun onSend(
+            relay: Relay,
+            msg: String,
+            success: Boolean,
+        )
+
+        fun onBeforeSend(
+            relay: Relay,
+            event: EventInterface,
+        )
+
+        fun onError(
+            error: Error,
+            subscriptionId: String,
+            relay: Relay,
+        )
     }
 
     override fun onEvent(
@@ -237,6 +255,7 @@ object RelayPool : Relay.Listener {
         subscriptionId: String,
         error: Error,
     ) {
+        listeners.forEach { it.onError(error, subscriptionId, relay) }
         updateStatus()
     }
 
@@ -272,6 +291,21 @@ object RelayPool : Relay.Listener {
         description: String,
     ) {
         listeners.forEach { it.onNotify(relay, description) }
+    }
+
+    override fun onSend(
+        relay: Relay,
+        msg: String,
+        success: Boolean,
+    ) {
+        listeners.forEach { it.onSend(relay, msg, success) }
+    }
+
+    override fun onBeforeSend(
+        relay: Relay,
+        event: EventInterface,
+    ) {
+        listeners.forEach { it.onBeforeSend(relay, event) }
     }
 
     private fun updateStatus() {

@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.ui.actions.relays
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
-import com.vitorpamplona.amethyst.service.relays.FeedType
-import com.vitorpamplona.amethyst.service.relays.RelayStat
+import com.vitorpamplona.ammolite.relays.FeedType
+import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
+import com.vitorpamplona.ammolite.relays.RelayStat
 
 @Immutable
 data class BasicRelaySetupInfo(

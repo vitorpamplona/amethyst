@@ -21,12 +21,7 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import com.vitorpamplona.amethyst.model.User
-
-class EOSETime(var time: Long) {
-    override fun toString(): String {
-        return time.toString()
-    }
-}
+import com.vitorpamplona.ammolite.relays.EOSETime
 
 class EOSERelayList(var relayList: Map<String, EOSETime> = emptyMap()) {
     fun addOrUpdate(

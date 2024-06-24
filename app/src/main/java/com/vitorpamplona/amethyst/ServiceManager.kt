@@ -30,7 +30,6 @@ import coil.decode.SvgDecoder
 import coil.size.Precision
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -47,7 +46,8 @@ import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
-import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.ammolite.relays.Client
+import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.encoders.toHexKey
@@ -86,6 +86,7 @@ class ServiceManager {
 
         // Resets Proxy Use
         HttpClientManager.setDefaultProxy(account?.proxy)
+        HttpClientManager.setDefaultUserAgent("Amethyst/${BuildConfig.VERSION_NAME}")
         LocalCache.antiSpam.active = account?.filterSpamFromStrangers ?: true
         Coil.setImageLoader {
             Amethyst.instance

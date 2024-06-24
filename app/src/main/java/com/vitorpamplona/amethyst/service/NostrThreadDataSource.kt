@@ -21,11 +21,11 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.ThreadAssembler
-import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.amethyst.service.relays.JsonFilter
-import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
+import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.TypedFilter
 
-object NostrThreadDataSource : NostrDataSource("SingleThreadFeed") {
+object NostrThreadDataSource : AmethystNostrDataSource("SingleThreadFeed") {
     private var eventToWatch: String? = null
 
     fun createLoadEventsIfNotLoadedFilter(): TypedFilter? {

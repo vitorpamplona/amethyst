@@ -33,7 +33,7 @@ import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.service.HttpClientManager
+import com.vitorpamplona.ammolite.service.HttpClientManager
 
 /**
  * HLS LiveStreams cannot use cache.

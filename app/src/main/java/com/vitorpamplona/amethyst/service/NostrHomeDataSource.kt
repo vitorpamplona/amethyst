@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
-import com.vitorpamplona.amethyst.service.relays.FeedType
-import com.vitorpamplona.amethyst.service.relays.JsonFilter
-import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.FeedType
+import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
@@ -45,7 +45,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-object NostrHomeDataSource : NostrDataSource("HomeFeed") {
+object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
     lateinit var account: Account
 
     val scope = Amethyst.instance.applicationIOScope

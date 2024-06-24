@@ -35,13 +35,14 @@ import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.relays.Client
-import com.vitorpamplona.amethyst.service.relays.Constants
-import com.vitorpamplona.amethyst.service.relays.FeedType
-import com.vitorpamplona.amethyst.service.relays.JsonFilter
-import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.service.relays.TypedFilter
-import com.vitorpamplona.amethyst.ui.components.BundledUpdate
+import com.vitorpamplona.ammolite.relays.BundledUpdate
+import com.vitorpamplona.ammolite.relays.Client
+import com.vitorpamplona.ammolite.relays.Constants
+import com.vitorpamplona.ammolite.relays.FeedType
+import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.Relay
+import com.vitorpamplona.ammolite.relays.RelaySetupInfo
+import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -266,7 +267,13 @@ class Account(
 
             newDMRelaySet.forEach { newUrl ->
                 if (mappedRelaySet.none { it.url == newUrl }) {
-                    mappedRelaySet = mappedRelaySet + RelaySetupInfo(newUrl, true, true, setOf(FeedType.PRIVATE_DMS))
+                    mappedRelaySet = mappedRelaySet +
+                        RelaySetupInfo(
+                            newUrl, true, true,
+                            setOf(
+                                FeedType.PRIVATE_DMS,
+                            ),
+                        )
                 }
             }
 
@@ -285,7 +292,13 @@ class Account(
 
             searchRelaySet.forEach { newUrl ->
                 if (mappedRelaySet.none { it.url == newUrl }) {
-                    mappedRelaySet = mappedRelaySet + RelaySetupInfo(newUrl, true, false, setOf(FeedType.SEARCH))
+                    mappedRelaySet = mappedRelaySet +
+                        RelaySetupInfo(
+                            newUrl, true, false,
+                            setOf(
+                                FeedType.SEARCH,
+                            ),
+                        )
                 }
             }
 
@@ -304,7 +317,13 @@ class Account(
 
             privateOutboxRelaySet.forEach { newUrl ->
                 if (mappedRelaySet.none { it.url == newUrl }) {
-                    mappedRelaySet = mappedRelaySet + RelaySetupInfo(newUrl, true, true, setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
+                    mappedRelaySet = mappedRelaySet +
+                        RelaySetupInfo(
+                            newUrl, true, true,
+                            setOf(
+                                FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS,
+                            ),
+                        )
                 }
             }
 
@@ -323,7 +342,13 @@ class Account(
 
             localRelayServers.forEach { newUrl ->
                 if (mappedRelaySet.none { it.url == newUrl }) {
-                    mappedRelaySet = mappedRelaySet + RelaySetupInfo(newUrl, true, true, setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
+                    mappedRelaySet = mappedRelaySet +
+                        RelaySetupInfo(
+                            newUrl, true, true,
+                            setOf(
+                                FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS,
+                            ),
+                        )
                 }
             }
 
@@ -337,7 +362,13 @@ class Account(
                     if (nip65setup != null) {
                         val write = nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
 
-                        RelaySetupInfo(relay.url, true, relay.write || write, relay.feedTypes + setOf(FeedType.FOLLOWS, FeedType.GLOBAL, FeedType.PUBLIC_CHATS))
+                        RelaySetupInfo(
+                            relay.url, true, relay.write || write,
+                            relay.feedTypes +
+                                setOf(
+                                    FeedType.FOLLOWS, FeedType.GLOBAL, FeedType.PUBLIC_CHATS,
+                                ),
+                        )
                     } else {
                         relay
                     }
@@ -347,7 +378,13 @@ class Account(
                 if (mappedRelaySet.none { it.url == newNip65Setup.relayUrl }) {
                     val write = newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
 
-                    mappedRelaySet = mappedRelaySet + RelaySetupInfo(newNip65Setup.relayUrl, true, write, setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS))
+                    mappedRelaySet = mappedRelaySet +
+                        RelaySetupInfo(
+                            newNip65Setup.relayUrl, true, write,
+                            setOf(
+                                FeedType.FOLLOWS, FeedType.PUBLIC_CHATS,
+                            ),
+                        )
                 }
             }
 

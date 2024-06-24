@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.ots
 
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.service.HttpClientManager
+import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.ots.ICalendarAsyncSubmit
 import com.vitorpamplona.quartz.ots.StreamDeserializationContext
 import com.vitorpamplona.quartz.ots.Timestamp

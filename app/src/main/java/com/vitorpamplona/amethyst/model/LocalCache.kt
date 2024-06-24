@@ -29,8 +29,8 @@ import com.vitorpamplona.amethyst.commons.data.LargeCache
 import com.vitorpamplona.amethyst.model.observables.LatestByKindAndAuthor
 import com.vitorpamplona.amethyst.model.observables.LatestByKindWithETag
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.ui.components.BundledInsert
+import com.vitorpamplona.ammolite.relays.BundledInsert
+import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.HexValidator

@@ -18,11 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relays
+package com.vitorpamplona.ammolite.relays
 
 import android.util.Log
-import com.vitorpamplona.amethyst.model.RelaySetupInfo
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -50,7 +49,7 @@ object Client : RelayPool.Listener {
 
         if (onlyIfChanged) {
             if (!isSameRelaySetConfig(relays)) {
-                if (this.relays.isNotEmpty()) {
+                if (Client.relays.isNotEmpty()) {
                     RelayPool.disconnect()
                     RelayPool.unregister(this)
                     RelayPool.unloadRelays()
@@ -61,11 +60,11 @@ object Client : RelayPool.Listener {
                     RelayPool.register(this)
                     RelayPool.loadRelays(newRelays)
                     RelayPool.requestAndWatch()
-                    this.relays = newRelays.toTypedArray()
+                    Client.relays = newRelays.toTypedArray()
                 }
             }
         } else {
-            if (this.relays.isNotEmpty()) {
+            if (Client.relays.isNotEmpty()) {
                 RelayPool.disconnect()
                 RelayPool.unregister(this)
                 RelayPool.unloadRelays()
@@ -76,7 +75,7 @@ object Client : RelayPool.Listener {
                 RelayPool.register(this)
                 RelayPool.loadRelays(newRelays)
                 RelayPool.requestAndWatch()
-                this.relays = newRelays.toTypedArray()
+                Client.relays = newRelays.toTypedArray()
             }
         }
     }
@@ -195,7 +194,6 @@ object Client : RelayPool.Listener {
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onRelayStateChange(
         type: Relay.StateType,
         relay: Relay,
@@ -208,7 +206,6 @@ object Client : RelayPool.Listener {
         // }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onSendResponse(
         eventId: String,
         success: Boolean,
@@ -222,7 +219,6 @@ object Client : RelayPool.Listener {
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onAuth(
         relay: Relay,
         challenge: String,
@@ -240,6 +236,35 @@ object Client : RelayPool.Listener {
         // May need to add a processing queue if processing new events become too costly.
         GlobalScope.launch(Dispatchers.Default) {
             listeners.forEach { it.onNotify(relay, description) }
+        }
+    }
+
+    override fun onSend(
+        relay: Relay,
+        msg: String,
+        success: Boolean,
+    ) {
+        GlobalScope.launch(Dispatchers.Default) {
+            listeners.forEach { it.onSend(relay, msg, success) }
+        }
+    }
+
+    override fun onBeforeSend(
+        relay: Relay,
+        event: EventInterface,
+    ) {
+        GlobalScope.launch(Dispatchers.Default) {
+            listeners.forEach { it.onBeforeSend(relay, event) }
+        }
+    }
+
+    override fun onError(
+        error: Error,
+        subscriptionId: String,
+        relay: Relay,
+    ) {
+        GlobalScope.launch(Dispatchers.Default) {
+            listeners.forEach { it.onError(error, subscriptionId, relay) }
         }
     }
 
@@ -289,6 +314,23 @@ object Client : RelayPool.Listener {
         open fun onNotify(
             relay: Relay,
             description: String,
+        ) = Unit
+
+        open fun onSend(
+            relay: Relay,
+            msg: String,
+            success: Boolean,
+        ) = Unit
+
+        open fun onBeforeSend(
+            relay: Relay,
+            event: EventInterface,
+        ) = Unit
+
+        open fun onError(
+            error: Error,
+            subscriptionId: String,
+            relay: Relay,
         ) = Unit
     }
 }

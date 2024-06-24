@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.service.relays.Client
-import com.vitorpamplona.amethyst.service.relays.FeedType
-import com.vitorpamplona.amethyst.service.relays.JsonFilter
-import com.vitorpamplona.amethyst.service.relays.Relay
-import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.Client
+import com.vitorpamplona.ammolite.relays.FeedType
+import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.Relay
+import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import com.vitorpamplona.quartz.signers.NostrSigner
@@ -34,7 +34,7 @@ class NostrLnZapPaymentResponseDataSource(
     private val toUserHex: String,
     private val replyingToHex: String,
     private val authSigner: NostrSigner,
-) : NostrDataSource("LnZapPaymentResponseFeed") {
+) : AmethystNostrDataSource("LnZapPaymentResponseFeed") {
     val feedTypes = setOf(FeedType.WALLET_CONNECT)
 
     private fun createWalletConnectServiceWatcher(): TypedFilter {

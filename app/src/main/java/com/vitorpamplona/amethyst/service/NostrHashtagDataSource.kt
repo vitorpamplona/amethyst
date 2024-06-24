@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.amethyst.service.relays.JsonFilter
-import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
+import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
@@ -34,7 +34,7 @@ import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 
-object NostrHashtagDataSource : NostrDataSource("SingleHashtagFeed") {
+object NostrHashtagDataSource : AmethystNostrDataSource("SingleHashtagFeed") {
     private var hashtagToWatch: String? = null
 
     fun createLoadHashtagFilter(): TypedFilter? {

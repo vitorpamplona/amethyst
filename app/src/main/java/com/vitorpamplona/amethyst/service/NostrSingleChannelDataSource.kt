@@ -23,14 +23,14 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.PublicChatChannel
-import com.vitorpamplona.amethyst.service.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.amethyst.service.relays.FeedType
-import com.vitorpamplona.amethyst.service.relays.JsonFilter
-import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
+import com.vitorpamplona.ammolite.relays.FeedType
+import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 
-object NostrSingleChannelDataSource : NostrDataSource("SingleChannelFeed") {
+object NostrSingleChannelDataSource : AmethystNostrDataSource("SingleChannelFeed") {
     private var channelsToWatch = setOf<Channel>()
 
     private fun createMetadataChangeFilter(): TypedFilter? {

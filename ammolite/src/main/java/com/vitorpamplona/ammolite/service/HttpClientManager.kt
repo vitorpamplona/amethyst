@@ -18,10 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.ammolite.service
 
 import android.util.Log
-import com.vitorpamplona.amethyst.BuildConfig
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -40,6 +39,7 @@ object HttpClientManager {
     private var defaultTimeout = DEFAULT_TIMEOUT_ON_WIFI
     private var defaultHttpClient: OkHttpClient? = null
     private var defaultHttpClientWithoutProxy: OkHttpClient? = null
+    private var userAgent: String = "Amethyst"
 
     // fires off every time value of the property changes
     private var internalProxy: Proxy? by
@@ -73,6 +73,14 @@ object HttpClientManager {
         }
     }
 
+    fun setDefaultUserAgent(userAgentHeader: String) {
+        Log.d("HttpClient", "Changing userAgent")
+        this.userAgent = userAgentHeader
+        this.defaultHttpClient = buildHttpClient(internalProxy, defaultTimeout)
+    }
+
+    fun getDefaultUserAgentHeader() = this.userAgent
+
     private fun buildHttpClient(
         proxy: Proxy?,
         timeout: Duration,
@@ -84,20 +92,22 @@ object HttpClientManager {
             .readTimeout(duration)
             .connectTimeout(duration)
             .writeTimeout(duration)
-            .addInterceptor(DefaultContentTypeInterceptor())
+            .addInterceptor(DefaultContentTypeInterceptor(userAgent))
             .followRedirects(true)
             .followSslRedirects(true)
             .build()
     }
 
-    class DefaultContentTypeInterceptor : Interceptor {
+    class DefaultContentTypeInterceptor(
+        private val userAgentHeader: String,
+    ) : Interceptor {
         @Throws(IOException::class)
         override fun intercept(chain: Interceptor.Chain): Response {
             val originalRequest: Request = chain.request()
             val requestWithUserAgent: Request =
                 originalRequest
                     .newBuilder()
-                    .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+                    .header("User-Agent", userAgentHeader)
                     .build()
             return chain.proceed(requestWithUserAgent)
         }

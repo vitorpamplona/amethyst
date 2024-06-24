@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.amethyst.service.relays.JsonFilter
-import com.vitorpamplona.amethyst.service.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
+import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.AppRecommendationEvent
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
@@ -43,7 +43,7 @@ import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 
-object NostrUserProfileDataSource : NostrDataSource("UserProfileFeed") {
+object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
     var user: User? = null
 
     fun loadUserProfile(user: User?) {

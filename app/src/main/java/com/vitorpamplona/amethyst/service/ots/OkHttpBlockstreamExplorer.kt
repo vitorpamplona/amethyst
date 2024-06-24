@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service.ots
 import android.util.Log
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.service.HttpClientManager
+import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.ots.BitcoinExplorer
 import com.vitorpamplona.quartz.ots.BlockHeader
 import com.vitorpamplona.quartz.ots.exceptions.UrlException

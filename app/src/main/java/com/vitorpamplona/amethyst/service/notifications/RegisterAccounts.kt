@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.HttpClientManager
+import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
