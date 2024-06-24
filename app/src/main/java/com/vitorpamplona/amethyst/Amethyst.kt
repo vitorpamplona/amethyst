@@ -70,6 +70,7 @@ class Amethyst : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
         instance = this
 
         OtsEvent.otsInstance = OpenTimestamps(OkHttpBlockstreamExplorer(), OkHttpCalendarBuilder())

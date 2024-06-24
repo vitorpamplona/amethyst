@@ -24,8 +24,8 @@ import android.util.Log
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.model.RelayBriefInfoCache
 import com.vitorpamplona.amethyst.model.RelaySetupInfo
-import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
@@ -452,6 +452,10 @@ class Relay(
     fun sendOverride(signedEvent: EventInterface) {
         checkNotInMainThread()
 
+        listeners.forEach { listener ->
+            listener.onBeforeSend(this@Relay, signedEvent)
+        }
+
         if (signedEvent is RelayAuthEvent) {
             sendAuth(signedEvent)
         } else {
@@ -461,6 +465,10 @@ class Relay(
 
     fun send(signedEvent: EventInterface) {
         checkNotInMainThread()
+
+        listeners.forEach { listener ->
+            listener.onBeforeSend(this@Relay, signedEvent)
+        }
 
         if (signedEvent is RelayAuthEvent) {
             sendAuth(signedEvent)
@@ -496,6 +504,10 @@ class Relay(
         if (isConnected()) {
             if (isReady) {
                 writeToSocket("""["EVENT",${signedEvent.toJson()}]""")
+            } else {
+                synchronized(sendWhenReady) {
+                    sendWhenReady.add(signedEvent)
+                }
             }
         } else {
             // sends all filters after connection is successful.
@@ -512,7 +524,10 @@ class Relay(
         socket?.let {
             checkNotInMainThread()
 
-            it.send(str)
+            val result = it.send(str)
+            listeners.forEach { listener ->
+                listener.onSend(this@Relay, str, result)
+            }
             RelayStats.addBytesSent(url, str.bytesUsedInMemory())
 
             if (BuildConfig.DEBUG) {
@@ -587,6 +602,17 @@ class Relay(
         fun onNotify(
             relay: Relay,
             description: String,
+        )
+
+        fun onSend(
+            relay: Relay,
+            msg: String,
+            success: Boolean,
+        )
+
+        fun onBeforeSend(
+            relay: Relay,
+            event: EventInterface,
         )
     }
 }

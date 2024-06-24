@@ -32,7 +32,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.net.toFile
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.service.HttpClientManager
+import com.vitorpamplona.ammolite.service.HttpClientManager
 import kotlinx.coroutines.CancellationException
 import okhttp3.Call
 import okhttp3.Callback

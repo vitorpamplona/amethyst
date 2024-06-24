@@ -64,6 +64,8 @@ object RelayPool : Relay.Listener {
         return relays.filter { it.url == url }
     }
 
+    fun getAll() = relays
+
     fun getOrCreateRelay(
         url: String,
         feedTypes: Set<FeedType>? = null,
@@ -221,6 +223,23 @@ object RelayPool : Relay.Listener {
             relay: Relay,
             description: String,
         )
+
+        fun onSend(
+            relay: Relay,
+            msg: String,
+            success: Boolean,
+        )
+
+        fun onBeforeSend(
+            relay: Relay,
+            event: EventInterface,
+        )
+
+        fun onError(
+            error: Error,
+            subscriptionId: String,
+            relay: Relay,
+        )
     }
 
     override fun onEvent(
@@ -237,6 +256,7 @@ object RelayPool : Relay.Listener {
         subscriptionId: String,
         error: Error,
     ) {
+        listeners.forEach { it.onError(error, subscriptionId, relay) }
         updateStatus()
     }
 
@@ -272,6 +292,21 @@ object RelayPool : Relay.Listener {
         description: String,
     ) {
         listeners.forEach { it.onNotify(relay, description) }
+    }
+
+    override fun onSend(
+        relay: Relay,
+        msg: String,
+        success: Boolean,
+    ) {
+        listeners.forEach { it.onSend(relay, msg, success) }
+    }
+
+    override fun onBeforeSend(
+        relay: Relay,
+        event: EventInterface,
+    ) {
+        listeners.forEach { it.onBeforeSend(relay, event) }
     }
 
     private fun updateStatus() {

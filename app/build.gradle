@@ -165,6 +165,7 @@ dependencies {
 
     implementation project(path: ':quartz')
     implementation project(path: ':commons')
+    implementation project(path: ':ammolite')
     implementation libs.androidx.core.ktx
     implementation libs.androidx.activity.compose
 

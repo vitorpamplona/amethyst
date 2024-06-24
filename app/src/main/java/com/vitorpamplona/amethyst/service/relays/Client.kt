@@ -234,6 +234,7 @@ object Client : RelayPool.Listener {
         GlobalScope.launch(Dispatchers.Default) { listeners.forEach { it.onAuth(relay, challenge) } }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onNotify(
         relay: Relay,
         description: String,
@@ -242,6 +243,38 @@ object Client : RelayPool.Listener {
         // May need to add a processing queue if processing new events become too costly.
         GlobalScope.launch(Dispatchers.Default) {
             listeners.forEach { it.onNotify(relay, description) }
+        }
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun onSend(
+        relay: Relay,
+        msg: String,
+        success: Boolean,
+    ) {
+        GlobalScope.launch(Dispatchers.Default) {
+            listeners.forEach { it.onSend(relay, msg, success) }
+        }
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun onBeforeSend(
+        relay: Relay,
+        event: EventInterface,
+    ) {
+        GlobalScope.launch(Dispatchers.Default) {
+            listeners.forEach { it.onBeforeSend(relay, event) }
+        }
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun onError(
+        error: Error,
+        subscriptionId: String,
+        relay: Relay,
+    ) {
+        GlobalScope.launch(Dispatchers.Default) {
+            listeners.forEach { it.onError(error, subscriptionId, relay) }
         }
     }
 
@@ -297,6 +330,23 @@ object Client : RelayPool.Listener {
         open fun onNotify(
             relay: Relay,
             description: String,
+        ) = Unit
+
+        open fun onSend(
+            relay: Relay,
+            msg: String,
+            success: Boolean,
+        ) = Unit
+
+        open fun onBeforeSend(
+            relay: Relay,
+            event: EventInterface,
+        ) = Unit
+
+        open fun onError(
+            error: Error,
+            subscriptionId: String,
+            relay: Relay,
         ) = Unit
     }
 }

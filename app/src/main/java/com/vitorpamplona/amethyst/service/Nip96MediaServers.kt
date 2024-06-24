@@ -24,6 +24,7 @@ import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.ammolite.service.HttpClientManager
 import kotlinx.coroutines.CancellationException
 import okhttp3.Request
 

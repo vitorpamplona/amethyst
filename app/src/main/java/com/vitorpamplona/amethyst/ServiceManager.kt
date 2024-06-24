@@ -30,7 +30,6 @@ import coil.decode.SvgDecoder
 import coil.size.Precision
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.HttpClientManager
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -48,6 +47,7 @@ import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.service.relays.Client
+import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.encoders.toHexKey
@@ -60,6 +60,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import okhttp3.Interceptor
+import okhttp3.Request
+import okhttp3.Response
+import java.io.IOException
 
 @Stable
 class ServiceManager {
@@ -86,6 +90,7 @@ class ServiceManager {
 
         // Resets Proxy Use
         HttpClientManager.setDefaultProxy(account?.proxy)
+        HttpClientManager.setDefaultInterceptor(DefaultContentTypeInterceptor())
         LocalCache.antiSpam.active = account?.filterSpamFromStrangers ?: true
         Coil.setImageLoader {
             Amethyst.instance
@@ -247,5 +252,18 @@ class ServiceManager {
     fun pauseForGoodAndClearAccount() {
         account = null
         forceRestart(null, false, true)
+    }
+}
+
+class DefaultContentTypeInterceptor : Interceptor {
+    @Throws(IOException::class)
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val originalRequest: Request = chain.request()
+        val requestWithUserAgent: Request =
+            originalRequest
+                .newBuilder()
+                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+                .build()
+        return chain.proceed(requestWithUserAgent)
     }
 }

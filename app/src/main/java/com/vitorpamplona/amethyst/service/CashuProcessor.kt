@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.events.Event
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request

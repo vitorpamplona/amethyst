@@ -18,10 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.ammolite.service
 
 import android.util.Log
-import com.vitorpamplona.amethyst.BuildConfig
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -40,6 +39,7 @@ object HttpClientManager {
     private var defaultTimeout = DEFAULT_TIMEOUT_ON_WIFI
     private var defaultHttpClient: OkHttpClient? = null
     private var defaultHttpClientWithoutProxy: OkHttpClient? = null
+    private var internalInterceptor: Interceptor = DefaultContentTypeInterceptor()
 
     // fires off every time value of the property changes
     private var internalProxy: Proxy? by
@@ -73,6 +73,12 @@ object HttpClientManager {
         }
     }
 
+    fun setDefaultInterceptor(interceptor: Interceptor) {
+        Log.d("HttpClient", "Changing interceptor")
+        this.internalInterceptor = interceptor
+        this.defaultHttpClient = buildHttpClient(internalProxy, defaultTimeout)
+    }
+
     private fun buildHttpClient(
         proxy: Proxy?,
         timeout: Duration,
@@ -84,7 +90,7 @@ object HttpClientManager {
             .readTimeout(duration)
             .connectTimeout(duration)
             .writeTimeout(duration)
-            .addInterceptor(DefaultContentTypeInterceptor())
+            .addInterceptor(internalInterceptor)
             .followRedirects(true)
             .followSslRedirects(true)
             .build()
@@ -97,7 +103,7 @@ object HttpClientManager {
             val requestWithUserAgent: Request =
                 originalRequest
                     .newBuilder()
-                    .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+                    .header("User-Agent", "Amethyst")
                     .build()
             return chain.proceed(requestWithUserAgent)
         }
