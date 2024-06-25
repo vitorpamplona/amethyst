@@ -75,7 +75,7 @@ import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
-import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size5Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -219,7 +219,7 @@ fun NormalChatNote(
                     grayTint = MaterialTheme.colorScheme.placeholderText,
                     accountViewModel = accountViewModel,
                     showCounter = false,
-                    iconSizeModifier = Size15Modifier,
+                    iconSizeModifier = Size18Modifier,
                 ) {
                     onWantsToReply(note)
                 }
