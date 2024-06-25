@@ -258,7 +258,7 @@ fun LocalImageView(
                             content.isVerified?.let {
                                 AnimatedVisibility(
                                     visible = controllerVisible.value,
-                                    modifier = Modifier,
+                                    modifier = Modifier.align(Alignment.TopEnd),
                                     enter = remember { fadeIn() },
                                     exit = remember { fadeOut() },
                                 ) {
