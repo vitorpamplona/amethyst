@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
@@ -42,7 +42,7 @@ class NostrLnZapPaymentResponseDataSource(
         return TypedFilter(
             types = feedTypes,
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(LnZapPaymentResponseEvent.KIND),
                     authors = listOf(fromServiceHex),
                     tags =

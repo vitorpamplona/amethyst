@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
@@ -66,15 +66,24 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     }
 
     fun createMarketplaceFilter(): List<TypedFilter> {
-        val follows = account.liveDiscoveryFollowLists.value?.users?.toList()
-        val hashToLoad = account.liveDiscoveryFollowLists.value?.hashtags?.toList()
-        val geohashToLoad = account.liveDiscoveryFollowLists.value?.geotags?.toList()
+        val follows =
+            account.liveDiscoveryFollowLists.value
+                ?.users
+                ?.toList()
+        val hashToLoad =
+            account.liveDiscoveryFollowLists.value
+                ?.hashtags
+                ?.toList()
+        val geohashToLoad =
+            account.liveDiscoveryFollowLists.value
+                ?.geotags
+                ?.toList()
 
         return listOfNotNull(
             TypedFilter(
                 types = setOf(FeedType.GLOBAL),
                 filter =
-                    JsonFilter(
+                    Filter(
                         authors = follows,
                         kinds = listOf(ClassifiedsEvent.KIND),
                         limit = 300,
@@ -89,7 +98,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                 TypedFilter(
                     types = setOf(FeedType.GLOBAL),
                     filter =
-                        JsonFilter(
+                        Filter(
                             kinds = listOf(ClassifiedsEvent.KIND),
                             tags =
                                 mapOf(
@@ -111,7 +120,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                 TypedFilter(
                     types = setOf(FeedType.GLOBAL),
                     filter =
-                        JsonFilter(
+                        Filter(
                             kinds = listOf(ClassifiedsEvent.KIND),
                             tags =
                                 mapOf(
@@ -132,12 +141,12 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
         )
     }
 
-    fun createNIP89Filter(kTags: List<String>): List<TypedFilter> {
-        return listOfNotNull(
+    fun createNIP89Filter(kTags: List<String>): List<TypedFilter> =
+        listOfNotNull(
             TypedFilter(
                 types = setOf(FeedType.GLOBAL),
                 filter =
-                    JsonFilter(
+                    Filter(
                         kinds = listOf(AppDefinitionEvent.KIND),
                         limit = 300,
                         tags = mapOf("k" to kTags),
@@ -149,16 +158,18 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                     ),
             ),
         )
-    }
 
     fun createLiveStreamFilter(): List<TypedFilter> {
-        val follows = account.liveDiscoveryFollowLists.value?.users?.toList()
+        val follows =
+            account.liveDiscoveryFollowLists.value
+                ?.users
+                ?.toList()
 
         return listOfNotNull(
             TypedFilter(
                 types = setOf(FeedType.GLOBAL),
                 filter =
-                    JsonFilter(
+                    Filter(
                         authors = follows,
                         kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND),
                         limit = 300,
@@ -173,7 +184,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                 TypedFilter(
                     types = setOf(FeedType.GLOBAL),
                     filter =
-                        JsonFilter(
+                        Filter(
                             tags = mapOf("p" to it),
                             kinds = listOf(LiveActivitiesEvent.KIND),
                             limit = 100,
@@ -189,14 +200,17 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     }
 
     fun createPublicChatFilter(): List<TypedFilter> {
-        val follows = account.liveDiscoveryFollowLists.value?.users?.toList()
+        val follows =
+            account.liveDiscoveryFollowLists.value
+                ?.users
+                ?.toList()
         val followChats = account.selectedChatsFollowList().toList()
 
         return listOfNotNull(
             TypedFilter(
                 types = setOf(FeedType.PUBLIC_CHATS),
                 filter =
-                    JsonFilter(
+                    Filter(
                         authors = follows,
                         kinds = listOf(ChannelMessageEvent.KIND),
                         limit = 500,
@@ -211,7 +225,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                 TypedFilter(
                     types = setOf(FeedType.PUBLIC_CHATS),
                     filter =
-                        JsonFilter(
+                        Filter(
                             ids = followChats,
                             kinds = listOf(ChannelCreateEvent.KIND, ChannelMessageEvent.KIND),
                             limit = 300,
@@ -229,12 +243,15 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     }
 
     fun createCommunitiesFilter(): TypedFilter {
-        val follows = account.liveDiscoveryFollowLists.value?.users?.toList()
+        val follows =
+            account.liveDiscoveryFollowLists.value
+                ?.users
+                ?.toList()
 
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                JsonFilter(
+                Filter(
                     authors = follows,
                     kinds = listOf(CommunityDefinitionEvent.KIND, CommunityPostApprovalEvent.KIND),
                     limit = 300,
@@ -248,14 +265,17 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     }
 
     fun createLiveStreamTagsFilter(): TypedFilter? {
-        val hashToLoad = account.liveDiscoveryFollowLists.value?.hashtags?.toList()
+        val hashToLoad =
+            account.liveDiscoveryFollowLists.value
+                ?.hashtags
+                ?.toList()
 
         if (hashToLoad.isNullOrEmpty()) return null
 
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND),
                     tags =
                         mapOf(
@@ -275,14 +295,17 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     }
 
     fun createLiveStreamGeohashesFilter(): TypedFilter? {
-        val hashToLoad = account.liveDiscoveryFollowLists.value?.geotags?.toList()
+        val hashToLoad =
+            account.liveDiscoveryFollowLists.value
+                ?.geotags
+                ?.toList()
 
         if (hashToLoad.isNullOrEmpty()) return null
 
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND),
                     tags =
                         mapOf(
@@ -302,14 +325,17 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     }
 
     fun createPublicChatsTagsFilter(): TypedFilter? {
-        val hashToLoad = account.liveDiscoveryFollowLists.value?.hashtags?.toList()
+        val hashToLoad =
+            account.liveDiscoveryFollowLists.value
+                ?.hashtags
+                ?.toList()
 
         if (hashToLoad.isNullOrEmpty()) return null
 
         return TypedFilter(
             types = setOf(FeedType.PUBLIC_CHATS),
             filter =
-                JsonFilter(
+                Filter(
                     kinds =
                         listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND, ChannelMessageEvent.KIND),
                     tags =
@@ -330,14 +356,17 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     }
 
     fun createPublicChatsGeohashesFilter(): TypedFilter? {
-        val hashToLoad = account.liveDiscoveryFollowLists.value?.geotags?.toList()
+        val hashToLoad =
+            account.liveDiscoveryFollowLists.value
+                ?.geotags
+                ?.toList()
 
         if (hashToLoad.isNullOrEmpty()) return null
 
         return TypedFilter(
             types = setOf(FeedType.PUBLIC_CHATS),
             filter =
-                JsonFilter(
+                Filter(
                     kinds =
                         listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND, ChannelMessageEvent.KIND),
                     tags =
@@ -358,14 +387,17 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     }
 
     fun createCommunitiesTagsFilter(): TypedFilter? {
-        val hashToLoad = account.liveDiscoveryFollowLists.value?.hashtags?.toList()
+        val hashToLoad =
+            account.liveDiscoveryFollowLists.value
+                ?.hashtags
+                ?.toList()
 
         if (hashToLoad.isNullOrEmpty()) return null
 
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(CommunityDefinitionEvent.KIND, CommunityPostApprovalEvent.KIND),
                     tags =
                         mapOf(
@@ -385,14 +417,17 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     }
 
     fun createCommunitiesGeohashesFilter(): TypedFilter? {
-        val hashToLoad = account.liveDiscoveryFollowLists.value?.geotags?.toList()
+        val hashToLoad =
+            account.liveDiscoveryFollowLists.value
+                ?.geotags
+                ?.toList()
 
         if (hashToLoad.isNullOrEmpty()) return null
 
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(CommunityDefinitionEvent.KIND, CommunityPostApprovalEvent.KIND),
                     tags =
                         mapOf(
@@ -437,8 +472,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                         createPublicChatsTagsFilter(),
                         createPublicChatsGeohashesFilter(),
                     ),
-                )
-                .toList()
+                ).toList()
                 .ifEmpty { null }
     }
 }

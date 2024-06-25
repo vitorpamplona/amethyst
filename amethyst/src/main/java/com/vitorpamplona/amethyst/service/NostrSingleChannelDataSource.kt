@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
@@ -44,7 +44,7 @@ object NostrSingleChannelDataSource : AmethystNostrDataSource("SingleChannelFeed
         return TypedFilter(
             types = setOf(FeedType.PUBLIC_CHATS),
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(ChannelMetadataEvent.KIND),
                     tags = mapOf("e" to reactionsToWatch),
                 ),
@@ -65,7 +65,7 @@ object NostrSingleChannelDataSource : AmethystNostrDataSource("SingleChannelFeed
         return TypedFilter(
             types = EVENT_FINDER_TYPES,
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(ChannelCreateEvent.KIND),
                     ids = interestedEvents.toList(),
                 ),
@@ -88,7 +88,7 @@ object NostrSingleChannelDataSource : AmethystNostrDataSource("SingleChannelFeed
                 TypedFilter(
                     types = EVENT_FINDER_TYPES,
                     filter =
-                        JsonFilter(
+                        Filter(
                             kinds = listOf(aTag.kind),
                             tags = mapOf("d" to listOf(aTag.dTag)),
                             authors = listOf(aTag.pubKeyHex),

@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
@@ -38,7 +38,7 @@ object NostrCommunityDataSource : AmethystNostrDataSource("SingleCommunityFeed")
         return TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                JsonFilter(
+                Filter(
                     authors =
                         community
                             .moderators()

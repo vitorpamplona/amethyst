@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
@@ -80,7 +80,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
         return TypedFilter(
             types = setOf(if (follows == null) FeedType.GLOBAL else FeedType.FOLLOWS),
             filter =
-                JsonFilter(
+                Filter(
                     kinds =
                         listOf(
                             TextNoteEvent.KIND,
@@ -116,7 +116,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
         return TypedFilter(
             types = setOf(FeedType.FOLLOWS),
             filter =
-                JsonFilter(
+                Filter(
                     kinds =
                         listOf(
                             TextNoteEvent.KIND,
@@ -155,7 +155,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
         return TypedFilter(
             types = setOf(FeedType.FOLLOWS),
             filter =
-                JsonFilter(
+                Filter(
                     kinds =
                         listOf(
                             TextNoteEvent.KIND,
@@ -194,7 +194,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
         return TypedFilter(
             types = setOf(FeedType.FOLLOWS),
             filter =
-                JsonFilter(
+                Filter(
                     kinds =
                         listOf(
                             TextNoteEvent.KIND,
@@ -238,7 +238,6 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                 createFollowCommunitiesFilter(),
                 createFollowTagsFilter(),
                 createFollowGeohashesFilter(),
-            )
-                .ifEmpty { null }
+            ).ifEmpty { null }
     }
 }

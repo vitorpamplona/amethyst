@@ -28,7 +28,7 @@ import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.EOSETime
 import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -81,7 +81,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(ContactListEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     limit = 1,
@@ -92,7 +92,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(MetadataEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     limit = 1,
@@ -103,7 +103,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(StatusEvent.KIND, AdvertisedRelayListEvent.KIND, ChatMessageRelayListEvent.KIND, SearchRelayListEvent.KIND, PrivateOutboxRelayListEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     limit = 10,
@@ -115,7 +115,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         return TypedFilter(
             types = EVENT_FINDER_TYPES,
             filter =
-                JsonFilter(
+                Filter(
                     kinds =
                         listOf(
                             MetadataEvent.KIND,
@@ -138,7 +138,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(BookmarkListEvent.KIND, PeopleListEvent.KIND, MuteListEvent.KIND, BadgeProfilesEvent.KIND, EmojiPackSelectionEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     limit = 100,
@@ -149,7 +149,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(DraftEvent.KIND, ReportEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     since =
@@ -164,7 +164,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                JsonFilter(
+                Filter(
                     authors = listOf(account.userProfile().pubkeyHex),
                     limit = 400,
                 ),
@@ -181,7 +181,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         return TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                JsonFilter(
+                Filter(
                     kinds =
                         listOf(
                             TextNoteEvent.KIND,
@@ -214,7 +214,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         return TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                JsonFilter(
+                Filter(
                     kinds =
                         listOf(
                             GitReplyEvent.KIND,
@@ -236,7 +236,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(GiftWrapEvent.KIND),
                     tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
                     since =

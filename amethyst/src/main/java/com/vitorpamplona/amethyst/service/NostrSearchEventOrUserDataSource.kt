@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
@@ -95,7 +95,7 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                             TypedFilter(
                                 types = COMMON_FEED_TYPES,
                                 filter =
-                                    JsonFilter(
+                                    Filter(
                                         kinds = listOf(MetadataEvent.KIND, aTag.kind),
                                         authors = listOfNotNull(aTag.pubKeyHex),
                                         // just to be sure
@@ -110,7 +110,7 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                         TypedFilter(
                             types = COMMON_FEED_TYPES,
                             filter =
-                                JsonFilter(
+                                Filter(
                                     ids = listOfNotNull(hexToWatch),
                                 ),
                         ),
@@ -118,7 +118,7 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                         TypedFilter(
                             types = COMMON_FEED_TYPES,
                             filter =
-                                JsonFilter(
+                                Filter(
                                     kinds = listOf(MetadataEvent.KIND),
                                     authors = listOfNotNull(hexToWatch),
                                     // just to be sure
@@ -135,7 +135,7 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                 TypedFilter(
                     types = setOf(FeedType.SEARCH),
                     filter =
-                        JsonFilter(
+                        Filter(
                             kinds = listOf(MetadataEvent.KIND),
                             search = mySearchString,
                             limit = 1000,
@@ -144,7 +144,7 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                 TypedFilter(
                     types = setOf(FeedType.SEARCH),
                     filter =
-                        JsonFilter(
+                        Filter(
                             kinds =
                                 listOf(
                                     TextNoteEvent.KIND,
@@ -165,7 +165,7 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                 TypedFilter(
                     types = setOf(FeedType.SEARCH),
                     filter =
-                        JsonFilter(
+                        Filter(
                             kinds =
                                 listOf(
                                     ChannelMetadataEvent.KIND,

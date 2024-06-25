@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
@@ -64,12 +64,15 @@ object NostrVideoDataSource : AmethystNostrDataSource("VideoFeed") {
     }
 
     fun createContextualFilter(): TypedFilter {
-        val follows = account.liveStoriesFollowLists.value?.users?.toList()
+        val follows =
+            account.liveStoriesFollowLists.value
+                ?.users
+                ?.toList()
 
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                JsonFilter(
+                Filter(
                     authors = follows,
                     kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
                     limit = 200,
@@ -84,14 +87,17 @@ object NostrVideoDataSource : AmethystNostrDataSource("VideoFeed") {
     }
 
     fun createFollowTagsFilter(): TypedFilter? {
-        val hashToLoad = account.liveStoriesFollowLists.value?.hashtags?.toList() ?: return null
+        val hashToLoad =
+            account.liveStoriesFollowLists.value
+                ?.hashtags
+                ?.toList() ?: return null
 
         if (hashToLoad.isEmpty()) return null
 
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
                     tags =
                         mapOf(
@@ -112,14 +118,17 @@ object NostrVideoDataSource : AmethystNostrDataSource("VideoFeed") {
     }
 
     fun createFollowGeohashesFilter(): TypedFilter? {
-        val hashToLoad = account.liveStoriesFollowLists.value?.geotags?.toList() ?: return null
+        val hashToLoad =
+            account.liveStoriesFollowLists.value
+                ?.geotags
+                ?.toList() ?: return null
 
         if (hashToLoad.isEmpty()) return null
 
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
                     tags =
                         mapOf(
@@ -155,7 +164,6 @@ object NostrVideoDataSource : AmethystNostrDataSource("VideoFeed") {
                 createContextualFilter(),
                 createFollowTagsFilter(),
                 createFollowGeohashesFilter(),
-            )
-                .ifEmpty { null }
+            ).ifEmpty { null }
     }
 }

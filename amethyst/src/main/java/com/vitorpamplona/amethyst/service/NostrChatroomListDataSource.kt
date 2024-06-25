@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
@@ -41,11 +41,14 @@ object NostrChatroomListDataSource : AmethystNostrDataSource("MailBoxFeed") {
         TypedFilter(
             types = setOf(FeedType.PRIVATE_DMS),
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(PrivateDmEvent.KIND),
                     tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
                     since =
-                        latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
+                        latestEOSEs.users[account.userProfile()]
+                            ?.followList
+                            ?.get(chatRoomList)
+                            ?.relayList,
                 ),
         )
 
@@ -53,11 +56,14 @@ object NostrChatroomListDataSource : AmethystNostrDataSource("MailBoxFeed") {
         TypedFilter(
             types = setOf(FeedType.PRIVATE_DMS),
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(PrivateDmEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     since =
-                        latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
+                        latestEOSEs.users[account.userProfile()]
+                            ?.followList
+                            ?.get(chatRoomList)
+                            ?.relayList,
                 ),
         )
 
@@ -65,11 +71,14 @@ object NostrChatroomListDataSource : AmethystNostrDataSource("MailBoxFeed") {
         TypedFilter(
             types = setOf(FeedType.PUBLIC_CHATS),
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     since =
-                        latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
+                        latestEOSEs.users[account.userProfile()]
+                            ?.followList
+                            ?.get(chatRoomList)
+                            ?.relayList,
                 ),
         )
 
@@ -82,11 +91,14 @@ object NostrChatroomListDataSource : AmethystNostrDataSource("MailBoxFeed") {
             // Metadata comes from any relay
             types = EVENT_FINDER_TYPES,
             filter =
-                JsonFilter(
+                Filter(
                     kinds = listOf(ChannelCreateEvent.KIND),
                     ids = followingEvents.toList(),
                     since =
-                        latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
+                        latestEOSEs.users[account.userProfile()]
+                            ?.followList
+                            ?.get(chatRoomList)
+                            ?.relayList,
                 ),
         )
     }
@@ -101,7 +113,7 @@ object NostrChatroomListDataSource : AmethystNostrDataSource("MailBoxFeed") {
                 // Metadata comes from any relay
                 types = EVENT_FINDER_TYPES,
                 filter =
-                    JsonFilter(
+                    Filter(
                         kinds = listOf(ChannelMetadataEvent.KIND),
                         tags = mapOf("e" to listOf(it)),
                         limit = 1,
@@ -119,11 +131,14 @@ object NostrChatroomListDataSource : AmethystNostrDataSource("MailBoxFeed") {
             TypedFilter(
                 types = setOf(FeedType.PUBLIC_CHATS),
                 filter =
-                    JsonFilter(
+                    Filter(
                         kinds = listOf(ChannelMessageEvent.KIND),
                         tags = mapOf("e" to listOf(it)),
                         since =
-                            latestEOSEs.users[account.userProfile()]?.followList?.get(chatRoomList)?.relayList,
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(chatRoomList)
+                                ?.relayList,
                         // Remember to consider spam that is being removed from the UI
                         limit = 50,
                     ),
@@ -149,8 +164,7 @@ object NostrChatroomListDataSource : AmethystNostrDataSource("MailBoxFeed") {
                 list,
                 createLastChannelInfoFilter(),
                 createLastMessageOfEachChannelFilter(),
-            )
-                .flatten()
+            ).flatten()
                 .ifEmpty { null }
     }
 }

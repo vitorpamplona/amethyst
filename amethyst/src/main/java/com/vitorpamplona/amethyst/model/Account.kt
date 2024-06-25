@@ -39,7 +39,7 @@ import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.ammolite.relays.TypedFilter
@@ -116,7 +116,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flattenMerge
@@ -1060,7 +1059,7 @@ class Account(
                             listOf(
                                 TypedFilter(
                                     setOf(FeedType.FOLLOWS, FeedType.PRIVATE_DMS, FeedType.GLOBAL),
-                                    JsonFilter(
+                                    Filter(
                                         ids = listOf(it.id),
                                     ),
                                 ),

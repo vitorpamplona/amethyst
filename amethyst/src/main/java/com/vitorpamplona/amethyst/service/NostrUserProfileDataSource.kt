@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.AppRecommendationEvent
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
@@ -55,7 +55,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    JsonFilter(
+                    Filter(
                         kinds = listOf(MetadataEvent.KIND),
                         authors = listOf(it.pubkeyHex),
                         limit = 1,
@@ -68,7 +68,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    JsonFilter(
+                    Filter(
                         kinds =
                             listOf(
                                 TextNoteEvent.KIND,
@@ -93,7 +93,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    JsonFilter(
+                    Filter(
                         kinds = listOf(LnZapEvent.KIND),
                         tags = mapOf("p" to listOf(it.pubkeyHex)),
                         limit = 200,
@@ -106,7 +106,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    JsonFilter(
+                    Filter(
                         kinds = listOf(ContactListEvent.KIND),
                         authors = listOf(it.pubkeyHex),
                         limit = 1,
@@ -119,7 +119,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    JsonFilter(
+                    Filter(
                         kinds = listOf(ContactListEvent.KIND),
                         tags = mapOf("p" to listOf(it.pubkeyHex)),
                     ),
@@ -131,7 +131,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    JsonFilter(
+                    Filter(
                         kinds = listOf(BadgeProfilesEvent.KIND),
                         authors = listOf(it.pubkeyHex),
                         limit = 1,
@@ -144,7 +144,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    JsonFilter(
+                    Filter(
                         kinds =
                             listOf(BookmarkListEvent.KIND, PeopleListEvent.KIND, AppRecommendationEvent.KIND),
                         authors = listOf(it.pubkeyHex),
@@ -158,7 +158,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    JsonFilter(
+                    Filter(
                         kinds = listOf(BadgeAwardEvent.KIND),
                         tags = mapOf("p" to listOf(it.pubkeyHex)),
                         limit = 20,

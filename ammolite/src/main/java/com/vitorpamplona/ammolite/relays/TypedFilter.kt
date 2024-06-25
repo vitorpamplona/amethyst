@@ -22,5 +22,5 @@ package com.vitorpamplona.ammolite.relays
 
 class TypedFilter(
     val types: Set<FeedType>,
-    val filter: JsonFilter,
+    val filter: Filter,
 )

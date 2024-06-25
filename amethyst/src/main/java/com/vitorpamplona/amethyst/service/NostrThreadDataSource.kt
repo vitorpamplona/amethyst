@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.ThreadAssembler
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.JsonFilter
+import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.TypedFilter
 
 object NostrThreadDataSource : AmethystNostrDataSource("SingleThreadFeed") {
@@ -45,7 +45,7 @@ object NostrThreadDataSource : AmethystNostrDataSource("SingleThreadFeed") {
         return TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                JsonFilter(
+                Filter(
                     ids = eventsToLoad.toList(),
                 ),
         )

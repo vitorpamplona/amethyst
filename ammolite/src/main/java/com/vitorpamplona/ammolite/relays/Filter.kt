@@ -22,7 +22,7 @@ package com.vitorpamplona.ammolite.relays
 
 import com.vitorpamplona.quartz.events.Event
 
-class JsonFilter(
+class Filter(
     val ids: List<String>? = null,
     val authors: List<String>? = null,
     val kinds: List<Int>? = null,
@@ -83,5 +83,21 @@ class JsonFilter(
                 search?.run { put("search", search) }
             }
         return Event.mapper.writeValueAsString(filter)
+    }
+
+    fun match(
+        event: Event,
+        forRelay: String? = null,
+    ): Boolean {
+        if (ids?.any { event.id == it } == false) return false
+        if (kinds?.any { event.kind == it } == false) return false
+        if (authors?.any { event.pubKey == it } == false) return false
+        tags?.forEach { tag ->
+            if (!event.tags.any { it.first() == tag.key && it[1] in tag.value }) return false
+        }
+        if (event.createdAt !in (since?.get(forRelay)?.time ?: Long.MIN_VALUE)..(until ?: Long.MAX_VALUE)) {
+            return false
+        }
+        return true
     }
 }
