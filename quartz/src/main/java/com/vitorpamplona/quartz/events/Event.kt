@@ -121,6 +121,8 @@ open class Event(
 
     override fun taggedUrls() = tags.filter { it.size > 1 && it[0] == "r" }.map { it[1] }
 
+    override fun firstTagFor(vararg key: String) = tags.firstOrNull { it.size > 1 && it[0] in key }?.let { it[1] }
+
     override fun firstTaggedUser() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.let { it[1] }
 
     override fun firstTaggedEvent() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.let { it[1] }

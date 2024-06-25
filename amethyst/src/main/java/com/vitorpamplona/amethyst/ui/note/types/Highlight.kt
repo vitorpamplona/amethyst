@@ -40,19 +40,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
+import com.vitorpamplona.amethyst.ui.components.DisplayEvent
+import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.components.RenderUserAsClickableText
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.HighlightEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.net.URL
 
 @Composable
@@ -72,6 +80,7 @@ fun RenderHighlight(
         authorHex = noteEvent.author(),
         url = noteEvent.inUrl(),
         postAddress = noteEvent.inPost(),
+        postVersion = noteEvent.inPostVersion(),
         makeItShort = makeItShort,
         canPreview = canPreview,
         quotesLeft = quotesLeft,
@@ -81,12 +90,14 @@ fun RenderHighlight(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DisplayHighlight(
     highlight: String,
     authorHex: String?,
     url: String?,
     postAddress: ATag?,
+    postVersion: HexKey?,
     makeItShort: Boolean,
     canPreview: Boolean,
     quotesLeft: Int,
@@ -112,54 +123,151 @@ fun DisplayHighlight(
         nav = nav,
     )
 
-    DisplayQuoteAuthor(authorHex ?: "", url, postAddress, accountViewModel, nav)
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun DisplayQuoteAuthor(
-    authorHex: String,
-    url: String?,
-    postAddress: ATag?,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    var userBase by remember { mutableStateOf<User?>(accountViewModel.getUserIfExists(authorHex)) }
-
-    if (userBase == null) {
-        LaunchedEffect(Unit) {
-            accountViewModel.checkGetOrCreateUser(authorHex) { newUserBase ->
-                userBase = newUserBase
-            }
-        }
-    }
-
     val spaceWidth = measureSpaceWidth(textStyle = LocalTextStyle.current)
 
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(spaceWidth),
         verticalArrangement = Arrangement.Center,
     ) {
-        userBase?.let { userBase ->
-            val userMetadata by userBase.live().userMetadataInfo.observeAsState()
-
-            CreateClickableTextWithEmoji(
-                clickablePart = userMetadata?.bestName() ?: userBase.pubkeyDisplayHex(),
-                maxLines = 1,
-                route = "User/${userBase.pubkeyHex}",
-                nav = nav,
-                tags = userMetadata?.tags,
-            )
-        }
-
-        url?.let { url -> LoadAndDisplayUrl(url) }
-
-        postAddress?.let { address -> LoadAndDisplayPost(address, accountViewModel, nav) }
+        DisplayQuoteAuthor(
+            authorHex = authorHex,
+            url = url,
+            postAddress = postAddress,
+            postVersion = postVersion,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }
 
 @Composable
-fun LoadAndDisplayUrl(url: String) {
+private fun DisplayQuoteAuthor(
+    authorHex: String?,
+    url: String?,
+    postAddress: ATag?,
+    postVersion: HexKey?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    var userBase by remember { mutableStateOf<User?>(authorHex?.let { accountViewModel.getUserIfExists(it) }) }
+
+    if (userBase == null && authorHex != null) {
+        LaunchedEffect(authorHex) {
+            accountViewModel.checkGetOrCreateUser(authorHex) { newUserBase ->
+                userBase = newUserBase
+            }
+        }
+    }
+
+    var addressable by remember {
+        mutableStateOf<AddressableNote?>(postAddress?.let { accountViewModel.getAddressableNoteIfExists(it.toTag()) })
+    }
+
+    if (addressable == null && postAddress != null) {
+        LaunchedEffect(key1 = postAddress) {
+            val newNote =
+                withContext(Dispatchers.IO) {
+                    accountViewModel.getOrCreateAddressableNote(postAddress)
+                }
+            if (addressable != newNote) {
+                addressable = newNote
+            }
+        }
+    }
+
+    var version by remember {
+        mutableStateOf<Note?>(postVersion?.let { accountViewModel.getNoteIfExists(it) })
+    }
+
+    if (version == null && postVersion != null) {
+        LaunchedEffect(key1 = postVersion) {
+            val newNote =
+                withContext(Dispatchers.IO) {
+                    accountViewModel.getOrCreateNote(postVersion)
+                }
+            if (version != newNote) {
+                version = newNote
+            }
+        }
+    }
+
+    if (addressable != null) {
+        addressable?.let {
+            DisplayEntryForNote(it, userBase, accountViewModel, nav)
+        }
+    } else if (version != null) {
+        version?.let {
+            DisplayEntryForNote(it, userBase, accountViewModel, nav)
+        }
+    } else if (url != null) {
+        DisplayEntryForAUrl(url, userBase, accountViewModel, nav)
+    } else if (userBase != null) {
+        userBase?.let {
+            DisplayEntryForUser(it, accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
+fun DisplayEntryForUser(
+    userBase: User,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val userMetadata by userBase.live().userMetadataInfo.observeAsState()
+
+    CreateClickableTextWithEmoji(
+        clickablePart = userMetadata?.bestName() ?: userBase.pubkeyDisplayHex(),
+        maxLines = 1,
+        route = "User/${userBase.pubkeyHex}",
+        nav = nav,
+        tags = userMetadata?.tags,
+    )
+}
+
+@Composable
+fun DisplayEntryForNote(
+    note: Note,
+    userBase: User?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val noteState by note.live().metadata.observeAsState()
+
+    val author = userBase ?: noteState?.note?.author
+
+    if (author != null) {
+        RenderUserAsClickableText(author, null, nav)
+    }
+
+    val noteEvent = noteState?.note?.event as? BaseTextNoteEvent ?: return
+
+    val description = noteEvent.firstTagFor("title", "subject", "alt")
+
+    Text("-", maxLines = 1)
+
+    if (description != null) {
+        ClickableText(
+            text = AnnotatedString(description),
+            onClick = { routeFor(note, accountViewModel.userProfile())?.let { nav(it) } },
+            style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
+        )
+    } else {
+        DisplayEvent(noteEvent.id, noteEvent.kind, "", accountViewModel, nav)
+    }
+}
+
+@Composable
+fun DisplayEntryForAUrl(
+    url: String,
+    userBase: User?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    if (userBase != null) {
+        DisplayEntryForUser(userBase, accountViewModel, nav)
+    }
+
     val validatedUrl =
         remember {
             try {
@@ -171,7 +279,9 @@ fun LoadAndDisplayUrl(url: String) {
         }
 
     validatedUrl?.host?.let { host ->
-        Text("-", maxLines = 1)
+        if (userBase != null) {
+            Text("-", maxLines = 1)
+        }
         ClickableUrl(urlText = host, url = url)
     }
 }
@@ -195,6 +305,24 @@ private fun LoadAndDisplayPost(
                     style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun LoadAndDisplayPostVersion(
+    postEvent: HexKey,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    LoadNote(baseNoteHex = postEvent, accountViewModel) { baseNote ->
+        baseNote?.let { note ->
+            val noteState by note.live().metadata.observeAsState()
+            val noteEvent = noteState?.note?.event as? BaseTextNoteEvent ?: return@LoadNote
+
+            Text("-", maxLines = 1)
+
+            DisplayEvent(noteEvent.id, noteEvent.kind, "", accountViewModel, nav)
         }
     }
 }

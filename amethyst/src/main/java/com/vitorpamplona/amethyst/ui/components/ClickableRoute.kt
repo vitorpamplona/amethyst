@@ -138,7 +138,7 @@ private fun LoadAndDisplayEvent(
 }
 
 @Composable
-private fun DisplayEvent(
+fun DisplayEvent(
     hex: HexKey,
     kind: Int?,
     additionalChars: String?,
@@ -293,7 +293,7 @@ public fun DisplayUser(
 }
 
 @Composable
-private fun RenderUserAsClickableText(
+public fun RenderUserAsClickableText(
     baseUser: User,
     additionalChars: String?,
     nav: (String) -> Unit,
