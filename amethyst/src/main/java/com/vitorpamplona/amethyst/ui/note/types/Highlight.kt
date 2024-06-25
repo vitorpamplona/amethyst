@@ -46,19 +46,16 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayEvent
-import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RenderUserAsClickableText
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
-import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.HighlightEvent
-import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
@@ -283,46 +280,5 @@ fun DisplayEntryForAUrl(
             Text("-", maxLines = 1)
         }
         ClickableUrl(urlText = host, url = url)
-    }
-}
-
-@Composable
-private fun LoadAndDisplayPost(
-    postAddress: ATag,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    LoadAddressableNote(aTag = postAddress, accountViewModel) { aTag ->
-        aTag?.let { note ->
-            val noteState by note.live().metadata.observeAsState()
-            val noteEvent = noteState?.note?.event as? LongTextNoteEvent ?: return@LoadAddressableNote
-
-            noteEvent.title()?.let {
-                Text("-", maxLines = 1)
-                ClickableText(
-                    text = AnnotatedString(it),
-                    onClick = { routeFor(note, accountViewModel.userProfile())?.let { nav(it) } },
-                    style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LoadAndDisplayPostVersion(
-    postEvent: HexKey,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    LoadNote(baseNoteHex = postEvent, accountViewModel) { baseNote ->
-        baseNote?.let { note ->
-            val noteState by note.live().metadata.observeAsState()
-            val noteEvent = noteState?.note?.event as? BaseTextNoteEvent ?: return@LoadNote
-
-            Text("-", maxLines = 1)
-
-            DisplayEvent(noteEvent.id, noteEvent.kind, "", accountViewModel, nav)
-        }
     }
 }
