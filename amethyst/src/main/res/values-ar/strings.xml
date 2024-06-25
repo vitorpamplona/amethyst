@@ -3,8 +3,10 @@
     <string name="point_to_the_qr_code">أشر إلى رمز (QR Code)</string>
     <string name="show_qr">أظهر QR</string>
     <string name="profile_image">صورة الملف الشخصي</string>
+    <string name="your_profile_image">صورة ملفك الشخصي</string>
     <string name="scan_qr">مسح رمز ال QR</string>
     <string name="show_anyway">عرض على أي حال</string>
+    <string name="post_was_hidden">تم إخفاء هذا المنشور لأنه يشير إلى المستخدمين الذين قمت بإخفائهم أو الكلمات التي قمت بإخفائها</string>
     <string name="post_was_flagged_as_inappropriate_by">تم وضع علامة على المنشور على أنه غير لائق بواسطة</string>
     <string name="post_not_found">المنشور غير موجود</string>
     <string name="channel_image">صورة القناة</string>
@@ -464,6 +466,7 @@
 مثل [Nfty](https://ntfy.sh/).
 بعد تثبيتك التطبيق قم باختياره من الإعدادات</string>
     <string name="classifieds_title">العنوان</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">الشرط</string>
     <string name="classifieds_category">الفئة</string>
     <string name="classifieds_location">الموقع الجغرافيّ</string>
