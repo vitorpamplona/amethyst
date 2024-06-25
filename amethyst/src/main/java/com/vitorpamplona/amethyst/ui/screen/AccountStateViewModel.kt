@@ -33,7 +33,6 @@ import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.crypto.nip06.Nip06
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.bechToBytes
@@ -129,8 +128,8 @@ class AccountStateViewModel : ViewModel() {
                     proxyPort = proxyPort,
                     signer = NostrSignerInternal(keyPair),
                 )
-            } else if (key.contains(" ") && Nip06().isValidMnemonic(key)) {
-                val keyPair = KeyPair(privKey = Nip06().privateKeyFromMnemonic(key))
+            } else if (key.contains(" ") && CryptoUtils.isValidMnemonic(key)) {
+                val keyPair = KeyPair(privKey = CryptoUtils.privateKeyFromMnemonic(key))
                 Account(
                     keyPair,
                     proxy = proxy,

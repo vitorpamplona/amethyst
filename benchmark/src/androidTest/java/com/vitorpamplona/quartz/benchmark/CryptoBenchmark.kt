@@ -50,7 +50,7 @@ class CryptoBenchmark {
         val keyPair2 = KeyPair()
 
         benchmarkRule.measureRepeated {
-            assertNotNull(CryptoUtils.getSharedSecretNIP44v1(keyPair1.privKey!!, keyPair2.pubKey))
+            assertNotNull(CryptoUtils.nip44.v1.getSharedSecret(keyPair1.privKey!!, keyPair2.pubKey))
         }
     }
 
@@ -70,7 +70,7 @@ class CryptoBenchmark {
         val keyPair2 = KeyPair()
 
         benchmarkRule.measureRepeated {
-            assertNotNull(CryptoUtils.computeSharedSecretNIP44v1(keyPair1.privKey!!, keyPair2.pubKey))
+            assertNotNull(CryptoUtils.nip44.v1.computeSharedSecret(keyPair1.privKey!!, keyPair2.pubKey))
         }
     }
 

@@ -18,15 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz
+package com.vitorpamplona.quartz.events
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.LnZapEvent
-import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent.Companion.createEncryptionPrivateKey
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import junit.framework.TestCase.assertNotNull

@@ -18,13 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.crypto
+package com.vitorpamplona.quartz.crypto.nip44
 
 import java.nio.ByteBuffer
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-class Hkdf(val algorithm: String = "HmacSHA256", val hashLen: Int = 32) {
+class Hkdf(
+    val algorithm: String = "HmacSHA256",
+    val hashLen: Int = 32,
+) {
     fun extract(
         key: ByteArray,
         salt: ByteArray,

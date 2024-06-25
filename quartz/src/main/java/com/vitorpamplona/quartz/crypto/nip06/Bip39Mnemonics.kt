@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.crypto.nip06
 
-import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.crypto.PBKDF
+import com.vitorpamplona.quartz.crypto.nip49.PBKDF
+import java.security.MessageDigest
 
 // CODE FROM: https://github.com/ACINQ/bitcoin-kmp/
 
@@ -37,6 +37,11 @@ object Bip39Mnemonics {
         return zeroes + digits
     }
 
+    fun sha256(data: ByteArray): ByteArray {
+        // Creates a new buffer every time
+        return MessageDigest.getInstance("SHA-256").digest(data)
+    }
+
     private fun toBinary(x: ByteArray): List<Boolean> = x.map(Bip39Mnemonics::toBinary).flatten()
 
     private fun fromBinary(bin: List<Boolean>): Int = bin.fold(0) { acc, flag -> if (flag) 2 * acc + 1 else 2 * acc }
@@ -45,13 +50,12 @@ object Bip39Mnemonics {
         items: List<Boolean>,
         size: Int,
         acc: List<List<Boolean>> = emptyList(),
-    ): List<List<Boolean>> {
-        return when {
+    ): List<List<Boolean>> =
+        when {
             items.isEmpty() -> acc
             items.size < size -> acc + listOf(items)
             else -> group(items.drop(size), size, acc + listOf(items.take(size)))
         }
-    }
 
     /**
      * @param mnemonics list of mnemonic words
@@ -80,20 +84,19 @@ object Bip39Mnemonics {
         val databits = bits.subList(0, bitlength)
         val checksumbits = bits.subList(bitlength, bits.size)
         val data = group(databits, 8).map { fromBinary(it) }.map { it.toByte() }.toByteArray()
-        val check = toBinary(CryptoUtils.sha256(data)).take(data.size / 4)
+        val check = toBinary(sha256(data)).take(data.size / 4)
         require(check == checksumbits) { "invalid checksum" }
     }
 
     fun validate(mnemonics: String): Unit = validate(mnemonics.split(" "))
 
-    fun isValid(mnemonics: String): Boolean {
-        return try {
+    fun isValid(mnemonics: String): Boolean =
+        try {
             validate(mnemonics)
             true
         } catch (e: Exception) {
             false
         }
-    }
 
     /**
      * BIP39 entropy encoding
@@ -108,7 +111,7 @@ object Bip39Mnemonics {
         wordlist: Array<String>,
     ): List<String> {
         require(wordlist.size == 2048) { "invalid word list (size should be 2048)" }
-        val digits = toBinary(entropy) + toBinary(CryptoUtils.sha256(entropy)).take(entropy.size / 4)
+        val digits = toBinary(entropy) + toBinary(sha256(entropy)).take(entropy.size / 4)
 
         return group(digits, 11).map(Bip39Mnemonics::fromBinary).map { wordlist[it] }
     }

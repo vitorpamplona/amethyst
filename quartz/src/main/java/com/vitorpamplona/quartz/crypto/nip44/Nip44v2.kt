@@ -18,11 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.crypto
+package com.vitorpamplona.quartz.crypto.nip44
 
 import android.util.Log
 import com.goterl.lazysodium.LazySodiumAndroid
 import com.goterl.lazysodium.SodiumAndroid
+import com.vitorpamplona.quartz.crypto.SharedKeyCache
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.toHexKey
 import fr.acinq.secp256k1.Secp256k1
@@ -33,7 +34,10 @@ import java.util.Base64
 import kotlin.math.floor
 import kotlin.math.log2
 
-class Nip44v2(val secp256k1: Secp256k1, val random: SecureRandom) {
+class Nip44v2(
+    val secp256k1: Secp256k1,
+    val random: SecureRandom,
+) {
     private val sharedKeyCache = SharedKeyCache()
 
     private val libSodium = SodiumAndroid()
@@ -55,9 +59,7 @@ class Nip44v2(val secp256k1: Secp256k1, val random: SecureRandom) {
         msg: String,
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): EncryptedInfo {
-        return encrypt(msg, getConversationKey(privateKey, pubKey))
-    }
+    ): EncryptedInfo = encrypt(msg, getConversationKey(privateKey, pubKey))
 
     fun encrypt(
         plaintext: String,
@@ -99,17 +101,13 @@ class Nip44v2(val secp256k1: Secp256k1, val random: SecureRandom) {
         payload: String,
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): String? {
-        return decrypt(payload, getConversationKey(privateKey, pubKey))
-    }
+    ): String? = decrypt(payload, getConversationKey(privateKey, pubKey))
 
     fun decrypt(
         decoded: EncryptedInfo,
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): String? {
-        return decrypt(decoded, getConversationKey(privateKey, pubKey))
-    }
+    ): String? = decrypt(decoded, getConversationKey(privateKey, pubKey))
 
     fun decrypt(
         payload: String,
@@ -173,7 +171,11 @@ class Nip44v2(val secp256k1: Secp256k1, val random: SecureRandom) {
         check(unpaddedLen <= maxPlaintextSize) { "Message is too long ($unpaddedLen): $plaintext" }
 
         val prefix =
-            ByteBuffer.allocate(2).order(ByteOrder.BIG_ENDIAN).putShort(unpaddedLen.toShort()).array()
+            ByteBuffer
+                .allocate(2)
+                .order(ByteOrder.BIG_ENDIAN)
+                .putShort(unpaddedLen.toShort())
+                .array()
         val suffix = ByteArray(calcPaddedLen(unpaddedLen) - unpaddedLen)
         return ByteBuffer.wrap(prefix + unpadded + suffix).array()
     }
@@ -182,13 +184,12 @@ class Nip44v2(val secp256k1: Secp256k1, val random: SecureRandom) {
         byte1: Byte,
         byte2: Byte,
         bigEndian: Boolean,
-    ): Int {
-        return if (bigEndian) {
+    ): Int =
+        if (bigEndian) {
             (byte1.toInt() and 0xFF shl 8 or (byte2.toInt() and 0xFF))
         } else {
             (byte2.toInt() and 0xFF shl 8 or (byte1.toInt() and 0xFF))
         }
-    }
 
     fun unpad(padded: ByteArray): String {
         val unpaddedLen: Int = bytesToInt(padded[0], padded[1], true)
@@ -273,11 +274,11 @@ class Nip44v2(val secp256k1: Secp256k1, val random: SecureRandom) {
             }
         }
 
-        fun encodePayload(): String {
-            return Base64.getEncoder()
+        fun encodePayload(): String =
+            Base64
+                .getEncoder()
                 .encodeToString(
                     byteArrayOf(V.toByte()) + nonce + ciphertext + mac,
                 )
-        }
     }
 }

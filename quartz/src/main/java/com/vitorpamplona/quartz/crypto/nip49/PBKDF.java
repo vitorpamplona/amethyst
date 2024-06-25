@@ -1,6 +1,6 @@
 // Copyright (C) 2011 - Will Glozer.  All rights reserved.
 
-package com.vitorpamplona.quartz.crypto;
+package com.vitorpamplona.quartz.crypto.nip49;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;

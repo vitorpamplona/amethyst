@@ -31,7 +31,9 @@ import com.vitorpamplona.quartz.events.EventFactory
 import com.vitorpamplona.quartz.events.LnZapPrivateEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 
-class NostrSignerInternal(val keyPair: KeyPair) : NostrSigner(keyPair.pubKey.toHexKey()) {
+class NostrSignerInternal(
+    val keyPair: KeyPair,
+) : NostrSigner(keyPair.pubKey.toHexKey()) {
     override fun <T : Event> sign(
         createdAt: Long,
         kind: Int,
@@ -52,10 +54,9 @@ class NostrSignerInternal(val keyPair: KeyPair) : NostrSigner(keyPair.pubKey.toH
     fun isUnsignedPrivateEvent(
         kind: Int,
         tags: Array<Array<String>>,
-    ): Boolean {
-        return kind == LnZapRequestEvent.KIND &&
+    ): Boolean =
+        kind == LnZapRequestEvent.KIND &&
             tags.any { t -> t.size > 1 && t[0] == "anon" && t[1].isBlank() }
-    }
 
     fun <T : Event> signNormal(
         createdAt: Long,
@@ -123,12 +124,12 @@ class NostrSignerInternal(val keyPair: KeyPair) : NostrSigner(keyPair.pubKey.toH
         if (keyPair.privKey == null) return
 
         onReady(
-            CryptoUtils.encryptNIP44v2(
-                decryptedContent,
-                keyPair.privKey,
-                toPublicKey.hexToByteArray(),
-            )
-                .encodePayload(),
+            CryptoUtils
+                .encryptNIP44(
+                    decryptedContent,
+                    keyPair.privKey,
+                    toPublicKey.hexToByteArray(),
+                ).encodePayload(),
         )
     }
 
@@ -139,12 +140,12 @@ class NostrSignerInternal(val keyPair: KeyPair) : NostrSigner(keyPair.pubKey.toH
     ) {
         if (keyPair.privKey == null) return
 
-        CryptoUtils.decryptNIP44(
-            payload = encryptedContent,
-            privateKey = keyPair.privKey,
-            pubKey = fromPublicKey.hexToByteArray(),
-        )
-            ?.let { onReady(it) }
+        CryptoUtils
+            .decryptNIP44(
+                payload = encryptedContent,
+                privateKey = keyPair.privKey,
+                pubKey = fromPublicKey.hexToByteArray(),
+            )?.let { onReady(it) }
     }
 
     private fun <T> signPrivateZap(

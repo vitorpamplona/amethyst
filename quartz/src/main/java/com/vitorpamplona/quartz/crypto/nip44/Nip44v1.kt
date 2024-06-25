@@ -18,20 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.crypto
+package com.vitorpamplona.quartz.crypto.nip44
 
 import android.util.Log
+import com.goterl.lazysodium.SodiumAndroid
+import com.goterl.lazysodium.utils.Key
+import com.vitorpamplona.quartz.crypto.SharedKeyCache
 import com.vitorpamplona.quartz.encoders.Hex
 import fr.acinq.secp256k1.Secp256k1
+import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
-import javax.crypto.Cipher
-import javax.crypto.spec.IvParameterSpec
-import javax.crypto.spec.SecretKeySpec
 
-class Nip04(val secp256k1: Secp256k1, val random: SecureRandom) {
+class Nip44v1(
+    val secp256k1: Secp256k1,
+    val random: SecureRandom,
+) {
     private val sharedKeyCache = SharedKeyCache()
     private val h02 = Hex.decode("02")
+    private val libSodium = SodiumAndroid()
 
     fun clearCache() {
         sharedKeyCache.clearCache()
@@ -41,71 +46,68 @@ class Nip04(val secp256k1: Secp256k1, val random: SecureRandom) {
         msg: String,
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): String {
-        return encrypt(msg, getSharedSecret(privateKey, pubKey)).encodeToNIP04()
+    ): EncryptedInfo {
+        val sharedSecret = getSharedSecret(privateKey, pubKey)
+        return encrypt(msg, sharedSecret)
     }
 
     fun encrypt(
         msg: String,
         sharedSecret: ByteArray,
     ): EncryptedInfo {
-        val iv = ByteArray(16)
-        random.nextBytes(iv)
+        val nonce = ByteArray(24)
+        random.nextBytes(nonce)
 
-        val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-        cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(sharedSecret, "AES"), IvParameterSpec(iv))
-        // val ivBase64 = Base64.getEncoder().encodeToString(iv)
-        val encryptedMsg = cipher.doFinal(msg.toByteArray())
-        // val encryptedMsgBase64 = Base64.getEncoder().encodeToString(encryptedMsg)
-        return EncryptedInfo(encryptedMsg, iv)
+        val cipher =
+            cryptoStreamXChaCha20Xor(
+                libSodium = libSodium,
+                messageBytes = msg.toByteArray(),
+                nonce = nonce,
+                key = Key.fromBytes(sharedSecret),
+            )
+
+        return EncryptedInfo(
+            ciphertext = cipher ?: ByteArray(0),
+            nonce = nonce,
+        )
     }
 
     fun decrypt(
-        msg: String,
+        payload: String,
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): String {
+    ): String? {
         val sharedSecret = getSharedSecret(privateKey, pubKey)
-        return decrypt(msg, sharedSecret)
+        return decrypt(payload, sharedSecret)
     }
 
     fun decrypt(
         encryptedInfo: EncryptedInfo,
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): String {
+    ): String? {
         val sharedSecret = getSharedSecret(privateKey, pubKey)
-        return decrypt(encryptedInfo.ciphertext, encryptedInfo.nonce, sharedSecret)
+        return decrypt(encryptedInfo, sharedSecret)
     }
 
     fun decrypt(
-        msg: String,
+        payload: String,
         sharedSecret: ByteArray,
-    ): String {
-        val decoded = EncryptedInfo.decodeFromNIP04(msg)
-        check(decoded != null) { "Unable to decode msg $msg as NIP04" }
-        return decrypt(decoded.ciphertext, decoded.nonce, sharedSecret)
+    ): String? {
+        val encryptedInfo = EncryptedInfo.decodePayload(payload) ?: return null
+        return decrypt(encryptedInfo, sharedSecret)
     }
 
     fun decrypt(
-        cipher: String,
-        nonce: String,
+        encryptedInfo: EncryptedInfo,
         sharedSecret: ByteArray,
-    ): String {
-        val iv = Base64.getDecoder().decode(nonce)
-        val encryptedMsg = Base64.getDecoder().decode(cipher)
-        return decrypt(encryptedMsg, iv, sharedSecret)
-    }
-
-    fun decrypt(
-        encryptedMsg: ByteArray,
-        iv: ByteArray,
-        sharedSecret: ByteArray,
-    ): String {
-        val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-        cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(sharedSecret, "AES"), IvParameterSpec(iv))
-        return String(cipher.doFinal(encryptedMsg))
-    }
+    ): String? =
+        cryptoStreamXChaCha20Xor(
+            libSodium = libSodium,
+            messageBytes = encryptedInfo.ciphertext,
+            nonce = encryptedInfo.nonce,
+            key = Key.fromBytes(sharedSecret),
+        )?.decodeToString()
 
     fun getSharedSecret(
         privateKey: ByteArray,
@@ -123,54 +125,43 @@ class Nip04(val secp256k1: Secp256k1, val random: SecureRandom) {
     fun computeSharedSecret(
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): ByteArray = secp256k1.pubKeyTweakMul(h02 + pubKey, privateKey).copyOfRange(1, 33)
+    ): ByteArray =
+        sha256(
+            secp256k1.pubKeyTweakMul(h02 + pubKey, privateKey).copyOfRange(1, 33),
+        )
+
+    fun sha256(data: ByteArray): ByteArray {
+        // Creates a new buffer every time
+        return MessageDigest.getInstance("SHA-256").digest(data)
+    }
 
     class EncryptedInfo(
         val ciphertext: ByteArray,
         val nonce: ByteArray,
     ) {
         companion object {
-            const val V: Int = 0
+            const val V: Int = 1
 
             fun decodePayload(payload: String): EncryptedInfo? {
                 return try {
                     val byteArray = Base64.getDecoder().decode(payload)
-                    check(byteArray[0].toInt() == Nip44v1.EncryptedInfo.V)
+                    check(byteArray[0].toInt() == V)
                     return EncryptedInfo(
                         nonce = byteArray.copyOfRange(1, 25),
                         ciphertext = byteArray.copyOfRange(25, byteArray.size),
                     )
                 } catch (e: Exception) {
-                    Log.w("NIP04", "Unable to Parse encrypted payload: $payload")
-                    null
-                }
-            }
-
-            fun decodeFromNIP04(payload: String): EncryptedInfo? {
-                return try {
-                    val parts = payload.split("?iv=")
-                    EncryptedInfo(
-                        ciphertext = Base64.getDecoder().decode(parts[0]),
-                        nonce = Base64.getDecoder().decode(parts[1]),
-                    )
-                } catch (e: Exception) {
-                    Log.w("NIP04", "Unable to Parse encrypted payload: $payload")
+                    Log.w("NIP44v1", "Unable to Parse encrypted payload: $payload")
                     null
                 }
             }
         }
 
-        fun encodePayload(): String {
-            return Base64.getEncoder()
+        fun encodePayload(): String =
+            Base64
+                .getEncoder()
                 .encodeToString(
                     byteArrayOf(V.toByte()) + nonce + ciphertext,
                 )
-        }
-
-        fun encodeToNIP04(): String {
-            val nonce = Base64.getEncoder().encodeToString(nonce)
-            val ciphertext = Base64.getEncoder().encodeToString(ciphertext)
-            return "$ciphertext?iv=$nonce"
-        }
     }
 }

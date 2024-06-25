@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.crypto
+package com.vitorpamplona.quartz.crypto.nip44
 
 import com.goterl.lazysodium.SodiumAndroid
 import com.goterl.lazysodium.utils.Key
@@ -66,9 +66,7 @@ fun cryptoStreamXchacha20Xor(
     messageLen: Long,
     nonce: ByteArray,
     key: ByteArray,
-): Int {
-    return cryptoStreamXchacha20XorIc(libSodium, cipher, message, messageLen, nonce, 0, key)
-}
+): Int = cryptoStreamXchacha20XorIc(libSodium, cipher, message, messageLen, nonce, 0, key)
 
 fun cryptoStreamXChaCha20Xor(
     libSodium: SodiumAndroid,

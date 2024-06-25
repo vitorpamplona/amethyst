@@ -18,39 +18,43 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.crypto.nip06
+package com.vitorpamplona.quartz.crypto.nip01
 
+import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.crypto.CryptoUtils.random
 import fr.acinq.secp256k1.Secp256k1
+import java.security.MessageDigest
+import java.security.SecureRandom
 
-class Nip06(
+class Nip01(
     val secp256k1: Secp256k1,
+    val random: SecureRandom,
 ) {
-    val derivation = Bip32SeedDerivation(secp256k1)
+    /** Provides a 32B "private key" aka random number */
+    fun privkeyCreate() = random(32)
 
-    // m/44'/1237'/<account>'/0/0
-    private val nip6Base: KeyPath =
-        KeyPath("")
-            .derive(Hardener.hardened(44L))
-            .derive(Hardener.hardened(1237L))
+    fun pubkeyCreate(privKey: ByteArray) = secp256k1.pubKeyCompress(secp256k1.pubkeyCreate(privKey)).copyOfRange(1, 33)
 
-    private fun nip6Path(account: Long): KeyPath =
-        nip6Base
-            .derive(Hardener.hardened(account))
-            .derive(0L)
-            .derive(0L)
+    fun sign(
+        data: ByteArray,
+        privKey: ByteArray,
+        auxrand32: ByteArray? = null,
+    ): ByteArray = secp256k1.signSchnorr(data, privKey, auxrand32)
 
-    fun isValidMnemonic(mnemonic: String): Boolean = Bip39Mnemonics.isValid(mnemonic)
+    fun verify(
+        signature: ByteArray,
+        hash: ByteArray,
+        pubKey: ByteArray,
+    ): Boolean = secp256k1.verifySchnorr(signature, hash, pubKey)
 
-    fun privateKeyFromSeed(
-        seed: ByteArray,
-        account: Long = 0,
-    ): ByteArray = derivation.derivePrivateKey(derivation.generate(seed), nip6Path(account))
-
-    fun privateKeyFromMnemonic(
-        mnemonic: String,
-        account: Long = 0,
-    ): ByteArray {
-        val seed = Bip39Mnemonics.toSeed(mnemonic, "")
-        return privateKeyFromSeed(seed, account)
+    fun sha256(data: ByteArray): ByteArray {
+        // Creates a new buffer every time
+        return MessageDigest.getInstance("SHA-256").digest(data)
     }
+
+    fun signString(
+        message: String,
+        privKey: ByteArray,
+        auxrand32: ByteArray = random(32),
+    ): ByteArray = sign(CryptoUtils.sha256(message.toByteArray()), privKey, auxrand32)
 }

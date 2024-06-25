@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.crypto
+package com.vitorpamplona.quartz.crypto.nip49
 
 import android.util.Log
 import com.goterl.lazysodium.LazySodiumAndroid
@@ -32,16 +32,17 @@ import fr.acinq.secp256k1.Secp256k1
 import java.security.SecureRandom
 import java.text.Normalizer
 
-class Nip49(val secp256k1: Secp256k1, val random: SecureRandom) {
+class Nip49(
+    val secp256k1: Secp256k1,
+    val random: SecureRandom,
+) {
     private val libSodium = SodiumAndroid()
     private val lazySodium = LazySodiumAndroid(libSodium)
 
     fun decrypt(
         nCryptSec: String,
         password: String,
-    ): HexKey {
-        return decrypt(EncryptedInfo.decodePayload(nCryptSec), password)
-    }
+    ): HexKey = decrypt(EncryptedInfo.decodePayload(nCryptSec), password)
 
     fun decrypt(
         encryptedInfo: EncryptedInfo?,
@@ -75,11 +76,9 @@ class Nip49(val secp256k1: Secp256k1, val random: SecureRandom) {
     fun encrypt(
         secretKeyHex: String,
         password: String,
-        logn: Int,
-        ksb: Byte,
-    ): String? {
-        return encrypt(secretKeyHex.hexToByteArray(), password, logn, ksb)
-    }
+        logn: Int = 16,
+        ksb: Byte = EncryptedInfo.CLIENT_DOES_NOT_TRACK,
+    ): String = encrypt(secretKeyHex.hexToByteArray(), password, logn, ksb)
 
     fun encrypt(
         secretKey: ByteArray,
@@ -104,9 +103,12 @@ class Nip49(val secp256k1: Secp256k1, val random: SecureRandom) {
         // byte[] ad, long adLen,
         // byte[] nSec, byte[] nPub, byte[] k
         lazySodium.cryptoAeadXChaCha20Poly1305IetfEncrypt(
-            ciphertext, longArrayOf(48),
-            secretKey, secretKey.size.toLong(),
-            byteArrayOf(ksb), 1,
+            ciphertext,
+            longArrayOf(48),
+            secretKey,
+            secretKey.size.toLong(),
+            byteArrayOf(ksb),
+            1,
             key,
             nonce,
             key,
@@ -163,8 +165,8 @@ class Nip49(val secp256k1: Secp256k1, val random: SecureRandom) {
         }
 
         // ln(n.toDouble()).toInt().toByte(),
-        fun encodePayload(): String {
-            return Bech32.encodeBytes(
+        fun encodePayload(): String =
+            Bech32.encodeBytes(
                 hrp = "ncryptsec",
                 byteArrayOf(
                     version,
@@ -172,6 +174,5 @@ class Nip49(val secp256k1: Secp256k1, val random: SecureRandom) {
                 ) + salt + nonce + keySecurity + encryptedKey,
                 Bech32.Encoding.Bech32,
             )
-        }
     }
 }

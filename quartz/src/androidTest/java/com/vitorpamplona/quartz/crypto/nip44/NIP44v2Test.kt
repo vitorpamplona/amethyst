@@ -18,12 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.crypto
+package com.vitorpamplona.quartz.crypto.nip44
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import fr.acinq.secp256k1.Secp256k1
@@ -79,8 +80,7 @@ class NIP44v2Test {
                         v.plaintext!!,
                         conversationKey1,
                         v.nonce!!.hexToByteArray(),
-                    )
-                    .encodePayload()
+                    ).encodePayload()
 
             assertEquals(v.payload, ciphertext)
 
@@ -107,8 +107,7 @@ class NIP44v2Test {
                         plaintext,
                         conversationKey,
                         v.nonce!!.hexToByteArray(),
-                    )
-                    .encodePayload()
+                    ).encodePayload()
 
             assertEquals(v.payloadSha256, sha256Hex(ciphertext.toByteArray(Charsets.UTF_8)))
 

@@ -18,18 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz
+package com.vitorpamplona.quartz.events
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.hexToByteArray
-import com.vitorpamplona.quartz.events.ChatMessageEvent
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.GiftWrapEvent
-import com.vitorpamplona.quartz.events.NIP17Factory
-import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -276,14 +271,12 @@ class GiftWrapEventTest {
             assertTrue(unwrappedMsgForReceiverByReceiver is SealedGossipEvent)
 
             if (unwrappedMsgForReceiverByReceiver is SealedGossipEvent) {
-                unwrappedMsgForReceiverByReceiver.cachedGossip(receiver) {
-                        unwrappedGossipToReceiverByReceiver ->
+                unwrappedMsgForReceiverByReceiver.cachedGossip(receiver) { unwrappedGossipToReceiverByReceiver ->
                     assertEquals("Hi There!", unwrappedGossipToReceiverByReceiver?.content)
                     countDownDecryptLatch.countDown()
                 }
 
-                unwrappedMsgForReceiverByReceiver.cachedGossip(sender) { unwrappedGossipToReceiverBySender,
-                    ->
+                unwrappedMsgForReceiverByReceiver.cachedGossip(sender) { unwrappedGossipToReceiverBySender ->
                     fail(
                         "Should not be able to decrypt msg for the receiver by the receiver but decrypted with the sender",
                     )
@@ -422,13 +415,11 @@ class GiftWrapEventTest {
             assertEquals(SealedGossipEvent.KIND, unwrappedMsgForSenderBySender.kind)
 
             if (unwrappedMsgForSenderBySender is SealedGossipEvent) {
-                unwrappedMsgForSenderBySender.cachedGossip(receiverA) { unwrappedGossipToSenderByReceiverA,
-                    ->
+                unwrappedMsgForSenderBySender.cachedGossip(receiverA) { unwrappedGossipToSenderByReceiverA ->
                     fail()
                 }
 
-                unwrappedMsgForSenderBySender.cachedGossip(receiverB) { unwrappedGossipToSenderByReceiverB,
-                    ->
+                unwrappedMsgForSenderBySender.cachedGossip(receiverB) { unwrappedGossipToSenderByReceiverB ->
                     fail()
                 }
 
@@ -459,21 +450,18 @@ class GiftWrapEventTest {
             assertEquals(SealedGossipEvent.KIND, unwrappedMsgForReceiverAByReceiverA.kind)
 
             if (unwrappedMsgForReceiverAByReceiverA is SealedGossipEvent) {
-                unwrappedMsgForReceiverAByReceiverA.cachedGossip(receiverA) {
-                        unwrappedGossipToReceiverAByReceiverA ->
+                unwrappedMsgForReceiverAByReceiverA.cachedGossip(receiverA) { unwrappedGossipToReceiverAByReceiverA ->
                     assertEquals(
                         "Who is going to the party tonight?",
                         unwrappedGossipToReceiverAByReceiverA.content,
                     )
                 }
 
-                unwrappedMsgForReceiverAByReceiverA.cachedGossip(sender) {
-                        unwrappedGossipToReceiverABySender ->
+                unwrappedMsgForReceiverAByReceiverA.cachedGossip(sender) { unwrappedGossipToReceiverABySender ->
                     fail()
                 }
 
-                unwrappedMsgForReceiverAByReceiverA.cachedGossip(receiverB) {
-                        unwrappedGossipToReceiverAByReceiverB ->
+                unwrappedMsgForReceiverAByReceiverA.cachedGossip(receiverB) { unwrappedGossipToReceiverAByReceiverB ->
                     fail()
                 }
             }
@@ -495,13 +483,11 @@ class GiftWrapEventTest {
             assertEquals(SealedGossipEvent.KIND, unwrappedMsgForReceiverBByReceiverB.kind)
 
             if (unwrappedMsgForReceiverBByReceiverB is SealedGossipEvent) {
-                unwrappedMsgForReceiverBByReceiverB.cachedGossip(receiverA) {
-                        unwrappedGossipToReceiverBByReceiverA ->
+                unwrappedMsgForReceiverBByReceiverB.cachedGossip(receiverA) { unwrappedGossipToReceiverBByReceiverA ->
                     fail()
                 }
 
-                unwrappedMsgForReceiverBByReceiverB.cachedGossip(receiverB) {
-                        unwrappedGossipToReceiverBByReceiverB ->
+                unwrappedMsgForReceiverBByReceiverB.cachedGossip(receiverB) { unwrappedGossipToReceiverBByReceiverB ->
                     assertEquals(
                         "Who is going to the party tonight?",
                         unwrappedGossipToReceiverBByReceiverB.content,
@@ -510,8 +496,7 @@ class GiftWrapEventTest {
                     countDownDecryptLatch.countDown()
                 }
 
-                unwrappedMsgForReceiverBByReceiverB.cachedGossip(sender) {
-                        unwrappedGossipToReceiverBBySender ->
+                unwrappedMsgForReceiverBByReceiverB.cachedGossip(sender) { unwrappedGossipToReceiverBBySender ->
                     fail()
                 }
             }
@@ -538,8 +523,7 @@ class GiftWrapEventTest {
                   ]
                ]
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         var gossip: Event? = null
 
@@ -573,8 +557,7 @@ class GiftWrapEventTest {
                    ]
                 ]
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         val privateKey = "409ff7654141eaa16cd2161fe5bd127aeaef71f270c67587474b78998a8e3533"
 
@@ -612,8 +595,7 @@ class GiftWrapEventTest {
                 "wss://relay.damus.io/"
               ]
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         val privateKey = "09e0051fdf5fdd9dd7a54713583006442cbdbf87bdcdab1a402f26e527d56771"
         var gossip: Event? = null
@@ -647,8 +629,7 @@ class GiftWrapEventTest {
                 ]
               ]
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         val privateKey = "09e0051fdf5fdd9dd7a54713583006442cbdbf87bdcdab1a402f26e527d56771"
 
@@ -687,8 +668,7 @@ class GiftWrapEventTest {
               "id": "d9fc85ece892ce45ffa737b3ddc0f8b752623181d75363b966191f8c03d2debe",
               "sig": "1b20416b83f4b5b8eead11e29c185f46b5e76d1960e4505210ddd00f7a6973cc11268f52a8989e3799b774d5f3a55db95bed4d66a1b6e88ab54becec5c771c17"
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         val privateKey = "7dd22cafc512c0bc363a259f6dcda515b13ae3351066d7976fd0bb79cbd0d700"
 
@@ -753,8 +733,7 @@ class GiftWrapEventTest {
               "id": "ae625fd43612127d63bfd1967ba32ae915100842a205fc2c3b3fc02ab3827f08",
               "sig": "2807a7ab5728984144676fd34686267cbe6fe38bc2f65a3640ba9243c13e8a1ae5a9a051e8852aa0c997a3623d7fa066cf2073a233c6d7db46fb1a0d4c01e5a3"
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         val wrap = Event.fromJson(msg) as GiftWrapEvent
         wrap.checkSignature()

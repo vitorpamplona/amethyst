@@ -22,42 +22,45 @@ package com.vitorpamplona.quartz.crypto.nip06
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.encoders.toHexKey
+import fr.acinq.secp256k1.Secp256k1
 import junit.framework.TestCase.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class Bip32SeedDerivationTest {
+    val seedDerivation = Bip32SeedDerivation(Secp256k1.get())
+
     val masterBitcoin =
-        Bip32SeedDerivation.generate(
+        seedDerivation.generate(
             Bip39Mnemonics.toSeed("gun please vital unable phone catalog explain raise erosion zoo truly exist", ""),
         )
 
     val nostrMnemonic0 =
-        Bip32SeedDerivation.generate(
+        seedDerivation.generate(
             Bip39Mnemonics.toSeed("leader monkey parrot ring guide accident before fence cannon height naive bean", ""),
         )
 
     val nostrMnemonic1 =
-        Bip32SeedDerivation.generate(
+        seedDerivation.generate(
             Bip39Mnemonics.toSeed("what bleak badge arrange retreat wolf trade produce cricket blur garlic valid proud rude strong choose busy staff weather area salt hollow arm fade", ""),
         )
 
     @Test
     fun restoreBIP44Wallet() {
-        val privateKey = Bip32SeedDerivation.derivePrivateKey(masterBitcoin, KeyPath("m/44'/1'/0'"))
+        val privateKey = seedDerivation.derivePrivateKey(masterBitcoin, KeyPath("m/44'/1'/0'"))
         assertEquals("50b3e7905c642309c8a8b73df5a49757a10f2bebb5804571b9db9004cce8a190", privateKey.toHexKey())
     }
 
     @Test
     fun restoreBIP49Wallet() {
-        val privateKey = Bip32SeedDerivation.derivePrivateKey(masterBitcoin, KeyPath("m/49'/1'/0'"))
+        val privateKey = seedDerivation.derivePrivateKey(masterBitcoin, KeyPath("m/49'/1'/0'"))
         assertEquals("154c02c0b66899291a19012207642ba096a2d3ebf51baf153c9495976feb1b30", privateKey.toHexKey())
     }
 
     @Test
     fun restoreBIP84Wallet() {
-        val privateKey = Bip32SeedDerivation.derivePrivateKey(masterBitcoin, KeyPath("m/84'/1'/0'"))
+        val privateKey = seedDerivation.derivePrivateKey(masterBitcoin, KeyPath("m/84'/1'/0'"))
         assertEquals("53e8c09a0e3ddcd8d68821c1e99e823966e99df91fb253e1f453a443ba543cb2", privateKey.toHexKey())
     }
 

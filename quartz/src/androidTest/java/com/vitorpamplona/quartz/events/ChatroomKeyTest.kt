@@ -18,48 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz
+package com.vitorpamplona.quartz.events
 
-import com.vitorpamplona.quartz.crypto.CryptoUtils
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.collections.immutable.persistentSetOf
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.junit.runner.RunWith
 
-class HexEncodingTest {
-    val testHex = "48a72b485d38338627ec9d427583551f9af4f016c739b8ec0d6313540a8b12cf"
-
+@RunWith(AndroidJUnit4::class)
+class ChatroomKeyTest {
     @Test
-    fun testHexEncodeDecodeOurs() {
-        assertEquals(
-            testHex,
-            com.vitorpamplona.quartz.encoders.Hex.encode(
-                com.vitorpamplona.quartz.encoders.Hex.decode(testHex),
-            ),
-        )
-    }
+    fun testEquals() {
+        val k1 = ChatroomKey(persistentSetOf("Key1", "Key2"))
+        val k2 = ChatroomKey(persistentSetOf("Key1", "Key2"))
 
-    @Test
-    fun testHexEncodeDecodeSecp256k1() {
-        assertEquals(
-            testHex,
-            fr.acinq.secp256k1.Hex.encode(
-                fr.acinq.secp256k1.Hex.decode(testHex),
-            ),
-        )
-    }
-
-    @Test
-    fun testRandoms() {
-        for (i in 0..1000) {
-            val bytes = CryptoUtils.privkeyCreate()
-            val hex = fr.acinq.secp256k1.Hex.encode(bytes)
-            assertEquals(
-                fr.acinq.secp256k1.Hex.encode(bytes),
-                com.vitorpamplona.quartz.encoders.Hex.encode(bytes),
-            )
-            assertEquals(
-                bytes.toList(),
-                com.vitorpamplona.quartz.encoders.Hex.decode(hex).toList(),
-            )
-        }
+        assertEquals(k1, k2)
+        assertEquals(k1.hashCode(), k2.hashCode())
     }
 }

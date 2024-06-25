@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.vitorpamplona.quartz.crypto;
+package com.vitorpamplona.quartz.crypto.nip49;
 
 import java.security.MessageDigest;
 import java.security.spec.KeySpec;
