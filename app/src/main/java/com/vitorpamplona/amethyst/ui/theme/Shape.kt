@@ -121,6 +121,9 @@ val HalfVertPadding = Modifier.padding(vertical = 5.dp)
 val HorzPadding = Modifier.padding(horizontal = 10.dp)
 val VertPadding = Modifier.padding(vertical = 10.dp)
 
+val DoubleHorzPadding = Modifier.padding(horizontal = 20.dp)
+val DoubleVertPadding = Modifier.padding(vertical = 20.dp)
+
 val MaxWidthWithHorzPadding = Modifier.fillMaxWidth().padding(horizontal = 10.dp)
 
 val Size5Modifier = Modifier.size(5.dp)

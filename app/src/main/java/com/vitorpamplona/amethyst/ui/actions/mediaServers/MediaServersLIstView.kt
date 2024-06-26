@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -53,11 +54,13 @@ import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.actions.relays.SettingsCategoryWithButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
 // TODO: Implement UI for Media servers view.
+@ExperimentalFoundationApi
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MediaServersListView(
@@ -115,75 +118,87 @@ fun MediaServersListView(
                 )
             },
         ) { padding ->
-            LazyColumn(
+            Column(
                 modifier =
                     Modifier
                         .fillMaxSize()
                         .padding(
-                            16.dp,
-                            padding.calculateTopPadding(),
-                            16.dp,
-                            padding.calculateBottomPadding(),
+                            start = 16.dp,
+                            top = padding.calculateTopPadding(),
+                            end = 16.dp,
+                            bottom = padding.calculateBottomPadding(),
                         ),
-                verticalArrangement = Arrangement.SpaceAround,
+                verticalArrangement = Arrangement.spacedBy(5.dp, alignment = Alignment.Top),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                contentPadding = FeedPadding,
             ) {
-                item {
-                    Text(
-                        "Set your preferred media upload servers.",
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.grayText,
-                    )
-                }
+                Text(
+                    "Set your preferred media upload servers.",
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.grayText,
+                )
 
-                if (mediaServersState.isEmpty()) {
-                    item {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .fillMaxWidth(0.2f),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(text = "You have no custom media servers set.")
-                        }
-                    }
-                } else {
-                    itemsIndexed(
-                        mediaServersState,
-                        key = { index: Int, server: Nip96MediaServers.ServerName ->
-                            server.baseUrl
-                        },
-                    ) { index, entry ->
-                        MediaServerEntry(serverEntry = entry) {
-                            mediaServersViewModel.removeServer(serverUrl = it)
-                        }
-                    }
-                }
+                HorizontalDivider(
+                    thickness = DividerThickness,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
 
-                item {
-                    SettingsCategoryWithButton(
-                        title = "Built-in Media Servers",
-                        action = {
-                            OutlinedButton(
-                                onClick = { },
-                            ) {
-                                Text(text = "Set as Default")
+                LazyColumn(
+//                    modifier =
+//                        Modifier
+//                            .padding(top = 10.dp),
+                    verticalArrangement = Arrangement.SpaceAround,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+//                    contentPadding = FeedPadding,
+                ) {
+                    if (mediaServersState.isEmpty()) {
+                        item {
+                            Text(
+                                text = "You have no custom media servers set.",
+                                modifier = DoubleVertPadding,
+                            )
+                        }
+                    } else {
+                        itemsIndexed(
+                            mediaServersState,
+                            key = { index: Int, server: Nip96MediaServers.ServerName ->
+                                server.baseUrl
+                            },
+                        ) { index, entry ->
+                            MediaServerEntry(serverEntry = entry) {
+                                mediaServersViewModel.removeServer(serverUrl = it)
                             }
-                        },
-                    )
-                }
-                Nip96MediaServers.DEFAULT.let {
-                    itemsIndexed(
-                        it,
-                        key = {
-                                index: Int, server: Nip96MediaServers.ServerName ->
-                            server.baseUrl
-                        },
-                    ) { index, server ->
-                        MediaServerEntry(serverEntry = server) {
+                        }
+                    }
+
+                    item {
+                        HorizontalDivider(
+                            thickness = DividerThickness,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+
+                        SettingsCategoryWithButton(
+                            title = "Built-in Media Servers",
+                            description = "These servers come by default with Amethyst.",
+                            action = {
+                                OutlinedButton(
+                                    onClick = { },
+                                ) {
+                                    Text(text = "Set as Default")
+                                }
+                            },
+                        )
+                    }
+                    Nip96MediaServers.DEFAULT.let {
+                        itemsIndexed(
+                            it,
+                            key = {
+                                    index: Int, server: Nip96MediaServers.ServerName ->
+                                server.baseUrl
+                            },
+                        ) { index, server ->
+                            MediaServerEntry(serverEntry = server) {
+                            }
                         }
                     }
                 }
@@ -209,7 +224,7 @@ fun MediaServerEntry(
             serverEntry.let {
                 Text(
                     text = it.name,
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                 )
                 Spacer(modifier = StdVertSpacer)
                 Text(
@@ -219,19 +234,20 @@ fun MediaServerEntry(
                 )
             }
         }
-        Column {
-            OutlinedButton(
-                onClick = {
-                    onDelete(serverEntry.baseUrl)
-                },
-            ) {
-                Text(text = "Delete")
-            }
-            OutlinedButton(
-                onClick = {},
-            ) {
-                Text(text = "Set Default")
-            }
+        OutlinedButton(
+            onClick = {
+                onDelete(serverEntry.baseUrl)
+            },
+        ) {
+            Text(text = "Delete")
         }
+        OutlinedButton(
+            onClick = {},
+        ) {
+            Text(text = "Set Default")
+        }
+//        Column {
+//
+//        }
     }
 }
