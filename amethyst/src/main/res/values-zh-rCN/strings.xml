@@ -303,6 +303,7 @@
     <string name="poll_zap_value_min">打闪最低金额</string>
     <string name="poll_zap_value_max">打闪最高金额</string>
     <string name="poll_consensus_threshold">共识</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">后关闭</string>
     <string name="poll_closing_time_days">天</string>
     <string name="poll_unable_to_vote">无法投票</string>
@@ -445,6 +446,7 @@
     <string name="settings">设置</string>
     <string name="connectivity_type_always">始终</string>
     <string name="connectivity_type_wifi_only">仅限 WiFi</string>
+    <string name="connectivity_type_unmetered_wifi_only">未计量的 WiFi</string>
     <string name="connectivity_type_never">从不</string>
     <string name="ui_feature_set_type_complete">完整版</string>
     <string name="ui_feature_set_type_simplified">简化版</string>
@@ -533,6 +535,7 @@
     <string name="missing_lud16">打闪设置缺失</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">用户 %1$s 尚未设置接收聪的闪电地址</string>
     <string name="zap_split_weight">百分比</string>
+    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">与此用户拆分打闪</string>
     <string name="forwarding_zaps_to">将打闪转发到</string>
     <string name="lightning_wallets_not_found2">找不到闪电钱包</string>
@@ -599,9 +602,11 @@
     <string name="hi_there_is_this_still_available">你好，这个还能买到吗？</string>
     <string name="classifieds">出售物品</string>
     <string name="classifieds_title">标题</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">条件</string>
     <string name="classifieds_category">分类</string>
     <string name="classifieds_price">价格（聪）</string>
+    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">地点</string>
     <string name="classifieds_location_placeholder">市，省，国家</string>
     <string name="classifieds_condition_new">全新</string>
@@ -655,6 +660,7 @@
     <string name="boost_or_quote_description">提升或引用</string>
     <string name="like_description">点赞</string>
     <string name="zap_description">打闪</string>
+    <string name="change_reaction">修改快速回应</string>
     <string name="profile_image_of_user">%1$s 的个人头像</string>
     <string name="relay_info">中继器 %1$s</string>
     <string name="expand_relay_list">展开中继列表</string>
