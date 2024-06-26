@@ -31,7 +31,9 @@ class RelayUrlFormatter {
         fun normalize(url: String): String {
             val newUrl =
                 if (!url.startsWith("wss://") && !url.startsWith("ws://")) {
-                    if (url.endsWith(".onion") || url.endsWith(".onion/")) {
+                    // TODO: How to identify relays on the local network?
+                    val isLocalHost = url.contains("127.0.0.1") || url.contains("localhost")
+                    if (url.endsWith(".onion") || url.endsWith(".onion/") || isLocalHost) {
                         "ws://${url.trim()}"
                     } else {
                         "wss://${url.trim()}"
