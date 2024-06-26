@@ -393,7 +393,6 @@ fun DisplayReplyingToNote(
             .heightIn(max = 100.dp)
             .verticalScroll(rememberScrollState())
             .animateContentSize(),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
         if (replyingNote != null) {
             Column(remember { Modifier.weight(1f) }) {
@@ -408,9 +407,9 @@ fun DisplayReplyingToNote(
                 )
             }
 
-            Column(Modifier.padding(end = 10.dp)) {
+            Column(Modifier.padding(start = 5.dp)) {
                 IconButton(
-                    modifier = Modifier.size(30.dp),
+                    modifier = Modifier.size(20.dp),
                     onClick = onCancel,
                 ) {
                     Icon(
@@ -418,8 +417,7 @@ fun DisplayReplyingToNote(
                         null,
                         modifier =
                             Modifier
-                                .padding(end = 5.dp)
-                                .size(30.dp),
+                                .size(20.dp),
                         tint = MaterialTheme.colorScheme.placeholderText,
                     )
                 }
