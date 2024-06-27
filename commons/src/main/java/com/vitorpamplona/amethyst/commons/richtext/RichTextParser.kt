@@ -41,7 +41,7 @@ import java.net.URL
 import java.util.regex.Pattern
 import kotlin.coroutines.cancellation.CancellationException
 
-class RichTextParser() {
+class RichTextParser {
     fun parseMediaUrl(
         fullUrl: String,
         eventTags: ImmutableListOfLists<String>,
@@ -168,15 +168,14 @@ class RichTextParser() {
 
     private fun isNumber(word: String) = numberPattern.matcher(word).matches()
 
-    private fun isPhoneNumberChar(c: Char): Boolean {
-        return when (c) {
+    private fun isPhoneNumberChar(c: Char): Boolean =
+        when (c) {
             in '0'..'9' -> true
             '-' -> true
             ' ' -> true
             '.' -> true
             else -> false
         }
-    }
 
     fun isPotentialPhoneNumber(word: String): Boolean {
         if (word.length !in 7..14) return false
@@ -191,13 +190,9 @@ class RichTextParser() {
         return isPotentialNumber
     }
 
-    fun isDate(word: String): Boolean {
-        return shortDatePattern.matcher(word).matches() || longDatePattern.matcher(word).matches()
-    }
+    fun isDate(word: String): Boolean = shortDatePattern.matcher(word).matches() || longDatePattern.matcher(word).matches()
 
-    private fun isArabic(text: String): Boolean {
-        return text.any { it in '\u0600'..'\u06FF' || it in '\u0750'..'\u077F' }
-    }
+    private fun isArabic(text: String): Boolean = text.any { it in '\u0600'..'\u06FF' || it in '\u0750'..'\u077F' }
 
     private fun wordIdentifier(
         word: String,
@@ -331,15 +326,14 @@ class RichTextParser() {
                     it.uppercase()
                 }
 
-        private fun removeQueryParamsForExtensionComparison(fullUrl: String): String {
-            return if (fullUrl.contains("?")) {
+        private fun removeQueryParamsForExtensionComparison(fullUrl: String): String =
+            if (fullUrl.contains("?")) {
                 fullUrl.split("?")[0].lowercase()
             } else if (fullUrl.contains("#")) {
                 fullUrl.split("#")[0].lowercase()
             } else {
                 fullUrl.lowercase()
             }
-        }
 
         fun isImageOrVideoUrl(url: String): Boolean {
             val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
@@ -358,8 +352,8 @@ class RichTextParser() {
             return videoExtensions.any { removedParamsFromUrl.endsWith(it) }
         }
 
-        fun isValidURL(url: String?): Boolean {
-            return try {
+        fun isValidURL(url: String?): Boolean =
+            try {
                 URL(url).toURI()
                 true
             } catch (e: MalformedURLException) {
@@ -367,7 +361,6 @@ class RichTextParser() {
             } catch (e: URISyntaxException) {
                 false
             }
-        }
 
         fun parseImageOrVideo(fullUrl: String): BaseMediaContent {
             val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)

@@ -564,7 +564,12 @@ fun HashTag(
 
     Text(
         text = annotatedTermsString,
-        modifier = remember { Modifier.clickable { nav("Hashtag/${segment.hashtag}") } },
+        modifier =
+            remember {
+                Modifier.clickable {
+                    nav("Hashtag/${segment.hashtag}")
+                }
+            },
         inlineContent =
             if (hashtagIcon != null) {
                 mapOf("inlineContent" to InlineIcon(hashtagIcon))
