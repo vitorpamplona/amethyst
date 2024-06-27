@@ -38,8 +38,13 @@ class Nip01(
     fun sign(
         data: ByteArray,
         privKey: ByteArray,
-        auxrand32: ByteArray? = null,
+        auxrand32: ByteArray? = random(32),
     ): ByteArray = secp256k1.signSchnorr(data, privKey, auxrand32)
+
+    fun signDeterministic(
+        data: ByteArray,
+        privKey: ByteArray,
+    ): ByteArray = secp256k1.signSchnorr(data, privKey, null)
 
     fun verify(
         signature: ByteArray,
