@@ -52,7 +52,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -81,6 +80,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -158,6 +158,7 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -390,7 +391,16 @@ fun NewPostView(
                                     }
                                 }
 
-                                MessageField(postViewModel)
+                                Row(
+                                    modifier = Modifier.padding(vertical = Size10dp),
+                                ) {
+                                    BaseUserPicture(
+                                        accountViewModel.userProfile(),
+                                        Size35dp,
+                                        accountViewModel = accountViewModel,
+                                    )
+                                    MessageField(postViewModel)
+                                }
 
                                 if (postViewModel.wantsPoll) {
                                     Row(
@@ -661,7 +671,7 @@ private fun MessageField(postViewModel: NewPostViewModel) {
         }
     }
 
-    OutlinedTextField(
+    MyTextField(
         value = postViewModel.message,
         onValueChange = { postViewModel.updateMessage(it) },
         keyboardOptions =
@@ -671,11 +681,7 @@ private fun MessageField(postViewModel: NewPostViewModel) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.surface,
-                    shape = RoundedCornerShape(8.dp),
-                ).focusRequester(focusRequester)
+                .focusRequester(focusRequester)
                 .onFocusChanged {
                     if (it.isFocused) {
                         keyboardController?.show()
@@ -699,6 +705,13 @@ private fun MessageField(postViewModel: NewPostViewModel) {
             ),
         visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
         textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+        contentPadding =
+            TextFieldDefaults.contentPaddingWithoutLabel(
+                start = 10.dp,
+                top = 5.dp,
+                end = 10.dp,
+                bottom = 5.dp,
+            ),
     )
 }
 

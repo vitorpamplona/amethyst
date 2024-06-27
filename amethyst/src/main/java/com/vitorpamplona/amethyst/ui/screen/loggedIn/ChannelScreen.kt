@@ -28,6 +28,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -60,6 +61,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TextFieldDefaults.contentPaddingWithLabel
+import androidx.compose.material3.TextFieldDefaults.contentPaddingWithoutLabel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -516,6 +519,22 @@ fun MyTextField(
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     shape: Shape = TextFieldDefaults.shape,
     colors: TextFieldColors = TextFieldDefaults.colors(),
+    contentPadding: PaddingValues =
+        if (label == null) {
+            TextFieldDefaults.contentPaddingWithoutLabel(
+                start = 10.dp,
+                top = 12.dp,
+                end = 10.dp,
+                bottom = 12.dp,
+            )
+        } else {
+            TextFieldDefaults.contentPaddingWithLabel(
+                start = 10.dp,
+                top = 12.dp,
+                end = 10.dp,
+                bottom = 12.dp,
+            )
+        },
 ) {
     // COPIED FROM TEXT FIELD
     // The only change is the contentPadding below
@@ -575,13 +594,7 @@ fun MyTextField(
                         isError = isError,
                         interactionSource = interactionSource,
                         colors = colors,
-                        contentPadding =
-                            TextFieldDefaults.contentPaddingWithoutLabel(
-                                start = 10.dp,
-                                top = 12.dp,
-                                end = 10.dp,
-                                bottom = 12.dp,
-                            ),
+                        contentPadding = contentPadding,
                     )
                 },
         )
