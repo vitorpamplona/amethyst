@@ -491,7 +491,7 @@ fun customZapClick(
     } else if (accountViewModel.account.zapAmountChoices.size == 1) {
         val amount = accountViewModel.account.zapAmountChoices.first()
 
-        if (amount > 600) {
+        if (amount > 1100) {
             accountViewModel.zap(
                 baseNote,
                 amount * 1000,
@@ -509,7 +509,7 @@ fun customZapClick(
             // recommends amounts for a monthly release.
         }
     } else if (accountViewModel.account.zapAmountChoices.size > 1) {
-        if (accountViewModel.account.zapAmountChoices.any { it > 600 }) {
+        if (accountViewModel.account.zapAmountChoices.any { it > 1100 }) {
             onMultipleChoices(accountViewModel.account.zapAmountChoices)
         } else {
             onMultipleChoices(listOf(1000L, 5_000L, 10_000L))
