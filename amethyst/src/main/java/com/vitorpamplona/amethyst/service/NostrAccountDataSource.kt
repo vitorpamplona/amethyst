@@ -122,7 +122,6 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                             ContactListEvent.KIND,
                             AdvertisedRelayListEvent.KIND,
                             ChatMessageRelayListEvent.KIND,
-                            PrivateOutboxRelayListEvent.KIND,
                             SearchRelayListEvent.KIND,
                             FileServersEvent.KIND,
                             MuteListEvent.KIND,

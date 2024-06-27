@@ -52,9 +52,7 @@ class Permission(
     val type: String,
     val kind: Int? = null,
 ) {
-    fun toJson(): String {
-        return "{\"type\":\"${type}\",\"kind\":$kind}"
-    }
+    fun toJson(): String = "{\"type\":\"${type}\",\"kind\":$kind}"
 }
 
 class Result(
@@ -89,9 +87,7 @@ class Result(
         /**
          * Parses the json with a string of events to an Array of Event objects.
          */
-        fun fromJsonArray(json: String): Array<Result> {
-            return mapper.readValue(json)
-        }
+        fun fromJsonArray(json: String): Array<Result> = mapper.readValue(json)
     }
 }
 
@@ -272,9 +268,7 @@ class ExternalSignerLauncher(
         signerType: SignerType,
         data: Array<out String>,
         columnName: String = "signature",
-    ): kotlin.Result<String?> {
-        return getDataFromResolver(signerType, data, columnName, contentResolver)
-    }
+    ): kotlin.Result<String?> = getDataFromResolver(signerType, data, columnName, contentResolver)
 
     private fun getDataFromResolver(
         signerType: SignerType,
@@ -298,8 +292,7 @@ class ExternalSignerLauncher(
                     "1",
                     null,
                     null,
-                )
-                .use {
+                ).use {
                     if (it == null) {
                         return kotlin.Result.success(null)
                     }
