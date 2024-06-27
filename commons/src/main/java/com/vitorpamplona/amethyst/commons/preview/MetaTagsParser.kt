@@ -154,6 +154,8 @@ object MetaTagsParser {
                     "039" to "'",
                     "8217" to "’",
                     "8216" to "‘",
+                    "8220" to "“",
+                    "8230" to "…",
                     "39" to "'",
                     "ldquo" to "“",
                     "rdquo" to "”",
