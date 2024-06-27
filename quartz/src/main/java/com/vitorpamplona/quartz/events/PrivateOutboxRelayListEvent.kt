@@ -41,27 +41,25 @@ class PrivateOutboxRelayListEvent(
 
     override fun dTag() = FIXED_D_TAG
 
-    fun relays(): List<String>? {
-        return tags.mapNotNull {
-            if (it.size > 1 && it[0] == "relay") {
-                it[1]
-            } else {
-                null
-            }
-        }.plus(
-            privateTagsCache?.mapNotNull {
+    fun relays(): List<String>? =
+        tags
+            .mapNotNull {
                 if (it.size > 1 && it[0] == "relay") {
                     it[1]
                 } else {
                     null
                 }
-            } ?: emptyList(),
-        ).ifEmpty { null }
-    }
+            }.plus(
+                privateTagsCache?.mapNotNull {
+                    if (it.size > 1 && it[0] == "relay") {
+                        it[1]
+                    } else {
+                        null
+                    }
+                } ?: emptyList(),
+            ).ifEmpty { null }
 
-    fun cachedPrivateTags(): Array<Array<String>>? {
-        return privateTagsCache
-    }
+    fun cachedPrivateTags(): Array<Array<String>>? = privateTagsCache
 
     fun privateTags(
         signer: NostrSigner,
@@ -79,11 +77,15 @@ class PrivateOutboxRelayListEvent(
 
         try {
             signer.nip44Decrypt(content, pubKey) {
-                privateTagsCache = mapper.readValue<Array<Array<String>>>(it)
-                privateTagsCache?.let { onReady(it) }
+                try {
+                    privateTagsCache = mapper.readValue<Array<Array<String>>>(it)
+                    privateTagsCache?.let { onReady(it) }
+                } catch (e: Throwable) {
+                    Log.w("PrivateOutboxRelayListEvent", "Error parsing the JSON: ${e.message}. Json `$it` from event `${toNostrUri()}`")
+                }
             }
         } catch (e: Throwable) {
-            Log.w("GeneralList", "Error parsing the JSON ${e.message}")
+            Log.w("PrivateOutboxRelayListEvent", "Error decrypting content: ${e.message}. Event: `${toNostrUri()}`")
         }
     }
 
@@ -92,13 +94,9 @@ class PrivateOutboxRelayListEvent(
         const val FIXED_D_TAG = ""
         val TAGS = arrayOf(arrayOf("alt", "Relay list to store private content from this author"))
 
-        fun createAddressATag(pubKey: HexKey): ATag {
-            return ATag(KIND, pubKey, FIXED_D_TAG, null)
-        }
+        fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, FIXED_D_TAG, null)
 
-        fun createAddressTag(pubKey: HexKey): String {
-            return ATag.assembleATag(KIND, pubKey, FIXED_D_TAG)
-        }
+        fun createAddressTag(pubKey: HexKey): String = ATag.assembleATag(KIND, pubKey, FIXED_D_TAG)
 
         fun encryptTags(
             privateTags: Array<Array<String>>? = null,
@@ -114,11 +112,11 @@ class PrivateOutboxRelayListEvent(
             )
         }
 
-        fun createTagArray(relays: List<String>): Array<Array<String>> {
-            return relays.map {
-                arrayOf("relay", it)
-            }.toTypedArray()
-        }
+        fun createTagArray(relays: List<String>): Array<Array<String>> =
+            relays
+                .map {
+                    arrayOf("relay", it)
+                }.toTypedArray()
 
         fun updateRelayList(
             earlierVersion: PrivateOutboxRelayListEvent,
@@ -128,11 +126,13 @@ class PrivateOutboxRelayListEvent(
             onReady: (PrivateOutboxRelayListEvent) -> Unit,
         ) {
             val tags =
-                earlierVersion.privateTagsCache?.filter { it[0] != "relay" }?.plus(
-                    relays.map {
-                        arrayOf("relay", it)
-                    },
-                )?.toTypedArray() ?: emptyArray()
+                earlierVersion.privateTagsCache
+                    ?.filter { it[0] != "relay" }
+                    ?.plus(
+                        relays.map {
+                            arrayOf("relay", it)
+                        },
+                    )?.toTypedArray() ?: emptyArray()
 
             encryptTags(tags, signer) {
                 signer.sign<PrivateOutboxRelayListEvent>(createdAt, KIND, TAGS, it) {

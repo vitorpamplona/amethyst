@@ -104,7 +104,14 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
             types = COMMON_FEED_TYPES,
             filter =
                 Filter(
-                    kinds = listOf(StatusEvent.KIND, AdvertisedRelayListEvent.KIND, ChatMessageRelayListEvent.KIND, SearchRelayListEvent.KIND, PrivateOutboxRelayListEvent.KIND),
+                    kinds =
+                        listOf(
+                            StatusEvent.KIND,
+                            AdvertisedRelayListEvent.KIND,
+                            ChatMessageRelayListEvent.KIND,
+                            SearchRelayListEvent.KIND,
+                            PrivateOutboxRelayListEvent.KIND,
+                        ),
                     authors = listOf(account.userProfile().pubkeyHex),
                     limit = 10,
                 ),
@@ -122,7 +129,6 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                             ContactListEvent.KIND,
                             AdvertisedRelayListEvent.KIND,
                             ChatMessageRelayListEvent.KIND,
-                            PrivateOutboxRelayListEvent.KIND,
                             SearchRelayListEvent.KIND,
                             FileServersEvent.KIND,
                             MuteListEvent.KIND,
