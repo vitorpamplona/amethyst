@@ -58,10 +58,11 @@ class MediaServersViewModel : ViewModel() {
     }
 
     fun addServer(serverUrl: String) {
-        val serverNameReference = URIReference.parse(serverUrl).host.value
+        val normalizedUrl = URIReference.parse(serverUrl.trim()).normalize().toString()
+        val serverNameReference = URIReference.parse(normalizedUrl).host.value
         _fileServers.update {
             it.plus(
-                Nip96MediaServers.ServerName(serverNameReference, serverUrl),
+                Nip96MediaServers.ServerName(serverNameReference, normalizedUrl),
             )
         }
         isModified = true
