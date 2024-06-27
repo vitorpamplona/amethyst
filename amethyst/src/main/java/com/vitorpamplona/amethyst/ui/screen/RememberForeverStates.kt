@@ -33,7 +33,10 @@ import kotlin.math.roundToInt
 
 private val savedScrollStates = mutableMapOf<String, ScrollState>()
 
-private data class ScrollState(val index: Int, val scrollOffsetFraction: Float)
+private data class ScrollState(
+    val index: Int,
+    val scrollOffsetFraction: Float,
+)
 
 object ScrollStateKeys {
     const val GLOBAL_SCREEN = "Global"
@@ -42,6 +45,8 @@ object ScrollStateKeys {
     const val DISCOVER_SCREEN = "Discover"
     val HOME_FOLLOWS = Route.Home.base + "Follows"
     val HOME_REPLIES = Route.Home.base + "FollowsReplies"
+
+    val DRAFTS = Route.Home.base + "Drafts"
 
     val DISCOVER_CONTENT = Route.Home.base + "DiscoverContent"
     val DISCOVER_MARKETPLACE = Route.Home.base + "Marketplace"

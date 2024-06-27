@@ -361,10 +361,8 @@ fun NoteDropDownMenu(
             DropdownMenuItem(
                 text = { Text(stringRes(R.string.request_deletion)) },
                 onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.delete(note)
-                        onDismiss()
-                    }
+                    accountViewModel.delete(note)
+                    onDismiss()
                 },
             )
         } else {

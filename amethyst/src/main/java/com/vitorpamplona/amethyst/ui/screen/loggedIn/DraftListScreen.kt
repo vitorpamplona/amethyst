@@ -20,15 +20,34 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteContainer
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.screen.FeedState
 import com.vitorpamplona.amethyst.ui.screen.NostrDraftEventsFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
+import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
+import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
+import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
+import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys.DRAFTS
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun DraftListScreen(
@@ -72,10 +91,56 @@ private fun RenderDraftListScreen(
         onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    RefresheableFeedView(
-        feedViewModel,
-        null,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
+    RefresheableBox(feedViewModel) {
+        SaveableFeedState(feedViewModel, DRAFTS) { listState ->
+            RenderFeedState(
+                feedViewModel,
+                accountViewModel,
+                listState,
+                nav,
+                null,
+                onLoaded = { DraftFeedLoaded(it, listState, null, accountViewModel, nav) },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun DraftFeedLoaded(
+    state: FeedState.Loaded,
+    listState: LazyListState,
+    routeForLastRead: String?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    LazyColumn(
+        contentPadding = FeedPadding,
+        state = listState,
+    ) {
+        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
+            SwipeToDeleteContainer(
+                modifier = Modifier.fillMaxWidth().animateContentSize(),
+                onStartToEnd = { accountViewModel.delete(item) },
+                onEndToStart = { accountViewModel.delete(item) },
+            ) {
+                Row(Modifier.fillMaxWidth().animateItemPlacement().background(MaterialTheme.colorScheme.background)) {
+                    NoteCompose(
+                        item,
+                        routeForLastRead = routeForLastRead,
+                        modifier = Modifier.fillMaxWidth(),
+                        isBoostedNote = false,
+                        isHiddenFeed = state.showHidden.value,
+                        quotesLeft = 3,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            }
+
+            HorizontalDivider(
+                thickness = DividerThickness,
+            )
+        }
+    }
 }
