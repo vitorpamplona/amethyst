@@ -58,8 +58,18 @@ class MediaServersViewModel : ViewModel() {
     }
 
     fun addServer(serverUrl: String) {
-        val normalizedUrl = URIReference.parse(serverUrl.trim()).normalize().toString()
-        val serverNameReference = URIReference.parse(normalizedUrl).host.value
+        val normalizedUrl =
+            try {
+                URIReference.parse(serverUrl.trim()).normalize().toString()
+            } catch (e: Exception) {
+                serverUrl
+            }
+        val serverNameReference =
+            try {
+                URIReference.parse(normalizedUrl).host.value
+            } catch (e: Exception) {
+                normalizedUrl.replaceFirstChar { it.uppercase() }
+            }
         _fileServers.update {
             it.plus(
                 Nip96MediaServers.ServerName(serverNameReference, normalizedUrl),
