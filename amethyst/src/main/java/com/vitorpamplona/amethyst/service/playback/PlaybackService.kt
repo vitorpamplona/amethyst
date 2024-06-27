@@ -23,51 +23,10 @@ package com.vitorpamplona.amethyst.service.playback
 import android.content.Intent
 import android.util.Log
 import androidx.annotation.OptIn
-import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.okhttp.OkHttpDataSource
-import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.exoplayer.source.MediaSource
-import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.ammolite.service.HttpClientManager
-
-/**
- * HLS LiveStreams cannot use cache.
- */
-@UnstableApi
-class CustomMediaSourceFactory() : MediaSource.Factory {
-    private var cachingFactory: MediaSource.Factory =
-        DefaultMediaSourceFactory(Amethyst.instance.videoCache.get(HttpClientManager.getHttpClient()))
-    private var nonCachingFactory: MediaSource.Factory =
-        DefaultMediaSourceFactory(OkHttpDataSource.Factory(HttpClientManager.getHttpClient()))
-
-    override fun setDrmSessionManagerProvider(drmSessionManagerProvider: DrmSessionManagerProvider): MediaSource.Factory {
-        cachingFactory.setDrmSessionManagerProvider(drmSessionManagerProvider)
-        nonCachingFactory.setDrmSessionManagerProvider(drmSessionManagerProvider)
-        return this
-    }
-
-    override fun setLoadErrorHandlingPolicy(loadErrorHandlingPolicy: LoadErrorHandlingPolicy): MediaSource.Factory {
-        cachingFactory.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
-        nonCachingFactory.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
-        return this
-    }
-
-    override fun getSupportedTypes(): IntArray {
-        return nonCachingFactory.supportedTypes
-    }
-
-    override fun createMediaSource(mediaItem: MediaItem): MediaSource {
-        if (mediaItem.mediaId.contains(".m3u8", true)) {
-            return nonCachingFactory.createMediaSource(mediaItem)
-        }
-        return cachingFactory.createMediaSource(mediaItem)
-    }
-}
 
 class PlaybackService : MediaSessionService() {
     private var videoViewedPositionCache = VideoViewedPositionCache()
@@ -75,18 +34,12 @@ class PlaybackService : MediaSessionService() {
     private var managerAllInOne: MultiPlayerPlaybackManager? = null
 
     @OptIn(UnstableApi::class)
-    fun newAllInOneDataSource(): MediaSource.Factory {
-        // This might be needed for live kit.
-        // return WssOrHttpFactory(HttpClientManager.getHttpClient())
-        return CustomMediaSourceFactory()
-    }
-
     fun lazyDS(): MultiPlayerPlaybackManager {
         managerAllInOne?.let {
             return it
         }
 
-        val newInstance = MultiPlayerPlaybackManager(newAllInOneDataSource(), videoViewedPositionCache)
+        val newInstance = MultiPlayerPlaybackManager(CustomMediaSourceFactory(), videoViewedPositionCache)
         managerAllInOne = newInstance
         return newInstance
     }
@@ -102,10 +55,11 @@ class PlaybackService : MediaSessionService() {
         HttpClientManager.proxyChangeListeners.add(this@PlaybackService::onProxyUpdated)
     }
 
+    @OptIn(UnstableApi::class)
     private fun onProxyUpdated() {
         val toDestroyAllInOne = managerAllInOne
 
-        managerAllInOne = MultiPlayerPlaybackManager(newAllInOneDataSource(), videoViewedPositionCache)
+        managerAllInOne = MultiPlayerPlaybackManager(CustomMediaSourceFactory(), videoViewedPositionCache)
 
         toDestroyAllInOne?.releaseAppPlayers()
     }

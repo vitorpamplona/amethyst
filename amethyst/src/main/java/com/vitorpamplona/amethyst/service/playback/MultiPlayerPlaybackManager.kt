@@ -68,14 +68,13 @@ class MultiPlayerPlaybackManager(
     private fun getCallbackIntent(
         callbackUri: String,
         applicationContext: Context,
-    ): PendingIntent {
-        return PendingIntent.getActivity(
+    ): PendingIntent =
+        PendingIntent.getActivity(
             applicationContext,
             0,
             Intent(Intent.ACTION_VIEW, callbackUri.toUri(), applicationContext, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-    }
 
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     fun getMediaSession(
@@ -86,8 +85,6 @@ class MultiPlayerPlaybackManager(
         applicationContext: Context,
     ): MediaSession {
         val existingSession = playingMap.get(id) ?: cache.get(id)
-        // avoids saving positions for live streams otherwise caching goes crazy
-        val mustCachePositions = !uri.contains(".m3u8", true)
         if (existingSession != null) return existingSession
 
         val player =
@@ -111,6 +108,9 @@ class MultiPlayerPlaybackManager(
 
         player.addListener(
             object : Player.Listener {
+                // avoids saving positions for live streams otherwise caching goes crazy
+                val mustCachePositions = !uri.contains(".m3u8", true)
+
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     if (isPlaying) {
                         player.setWakeMode(C.WAKE_MODE_NETWORK)
@@ -180,7 +180,5 @@ class MultiPlayerPlaybackManager(
         }
     }
 
-    fun playingContent(): Collection<MediaSession> {
-        return playingMap.values
-    }
+    fun playingContent(): Collection<MediaSession> = playingMap.values
 }
