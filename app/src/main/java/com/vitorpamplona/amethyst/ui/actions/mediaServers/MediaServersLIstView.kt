@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,9 +28,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -54,13 +58,12 @@ import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.actions.relays.SettingsCategoryWithButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertPadding
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
 // TODO: Implement UI for Media servers view.
-@ExperimentalFoundationApi
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MediaServersListView(
@@ -138,58 +141,31 @@ fun MediaServersListView(
                     color = MaterialTheme.colorScheme.grayText,
                 )
 
-                HorizontalDivider(
-                    thickness = DividerThickness,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-
                 LazyColumn(
-//                    modifier =
-//                        Modifier
-//                            .padding(top = 10.dp),
                     verticalArrangement = Arrangement.SpaceAround,
                     horizontalAlignment = Alignment.CenterHorizontally,
-//                    contentPadding = FeedPadding,
+                    contentPadding = FeedPadding,
                 ) {
-                    if (mediaServersState.isEmpty()) {
+                    renderMediaServerList(mediaServersState, mediaServersViewModel)
+
+                    Nip96MediaServers.DEFAULT.let {
                         item {
-                            Text(
-                                text = "You have no custom media servers set.",
-                                modifier = DoubleVertPadding,
+                            SettingsCategoryWithButton(
+                                title = "Built-in Media Servers",
+                                description = "Amethyst's default list. You can add them individually or add the list.",
+                                action = {
+                                    OutlinedButton(
+                                        onClick = {
+                                            it.forEach { server ->
+                                                mediaServersViewModel.addServer(server.baseUrl)
+                                            }
+                                        },
+                                    ) {
+                                        Text(text = "Use Default List")
+                                    }
+                                },
                             )
                         }
-                    } else {
-                        itemsIndexed(
-                            mediaServersState,
-                            key = { index: Int, server: Nip96MediaServers.ServerName ->
-                                server.baseUrl
-                            },
-                        ) { index, entry ->
-                            MediaServerEntry(serverEntry = entry) {
-                                mediaServersViewModel.removeServer(serverUrl = it)
-                            }
-                        }
-                    }
-
-                    item {
-                        HorizontalDivider(
-                            thickness = DividerThickness,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-
-                        SettingsCategoryWithButton(
-                            title = "Built-in Media Servers",
-                            description = "These servers come by default with Amethyst.",
-                            action = {
-                                OutlinedButton(
-                                    onClick = { },
-                                ) {
-                                    Text(text = "Set as Default")
-                                }
-                            },
-                        )
-                    }
-                    Nip96MediaServers.DEFAULT.let {
                         itemsIndexed(
                             it,
                             key = {
@@ -197,8 +173,13 @@ fun MediaServersListView(
                                 server.baseUrl
                             },
                         ) { index, server ->
-                            MediaServerEntry(serverEntry = server) {
-                            }
+                            MediaServerEntry(
+                                serverEntry = server,
+                                isAmethystDefault = true,
+                                onAddOrDelete = {
+                                    mediaServersViewModel.addServer(it)
+                                },
+                            )
                         }
                     }
                 }
@@ -207,14 +188,49 @@ fun MediaServersListView(
     }
 }
 
+fun LazyListScope.renderMediaServerList(
+    mediaServersState: List<Nip96MediaServers.ServerName>,
+    mediaServersViewModel: MediaServersViewModel,
+) {
+    if (mediaServersState.isEmpty()) {
+        item {
+            Text(
+                text = "You have no custom media servers set. You can use Amethyst's list, or add one below ↓",
+                modifier = DoubleVertPadding,
+            )
+        }
+    } else {
+        itemsIndexed(
+            mediaServersState,
+            key = { index: Int, server: Nip96MediaServers.ServerName ->
+                server.baseUrl
+            },
+        ) { index, entry ->
+            MediaServerEntry(serverEntry = entry) {
+                mediaServersViewModel.removeServer(serverUrl = it)
+            }
+        }
+    }
+
+    item {
+        Spacer(modifier = StdVertSpacer)
+        MediaServerEditField {
+            mediaServersViewModel.addServer(it)
+        }
+    }
+}
+
 @Composable
 fun MediaServerEntry(
     modifier: Modifier = Modifier,
     serverEntry: Nip96MediaServers.ServerName,
-    onDelete: (serverUrl: String) -> Unit,
+    isAmethystDefault: Boolean = false,
+    onAddOrDelete: (serverUrl: String) -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceAround,
     ) {
         Column(
             modifier =
@@ -234,20 +250,20 @@ fun MediaServerEntry(
                 )
             }
         }
-        OutlinedButton(
-            onClick = {
-                onDelete(serverEntry.baseUrl)
-            },
+
+        Row(
+            horizontalArrangement = Arrangement.End,
         ) {
-            Text(text = "Delete")
+            IconButton(
+                onClick = {
+                    onAddOrDelete(serverEntry.baseUrl)
+                },
+            ) {
+                Icon(
+                    imageVector = if (isAmethystDefault) Icons.Rounded.Add else Icons.Rounded.Delete,
+                    contentDescription = if (isAmethystDefault) "Add media server" else "Delete media server",
+                )
+            }
         }
-        OutlinedButton(
-            onClick = {},
-        ) {
-            Text(text = "Set Default")
-        }
-//        Column {
-//
-//        }
     }
 }
