@@ -821,7 +821,7 @@
     <string name="dm_relays_regular">Using Regular Relays</string>
     <string name="dm_relays_not_found">Set up your Private Inbox relays</string>
     <string name="dm_relays_not_found_description">This setting lets everybody know which relays to use when sending messages to you. Without them you might miss some messages.</string>
-    <string name="dm_relays_not_found_examples">Good options are:\n - inbox.nostr.wine (paid)\n - you.nostr1.com (personal relays - paid)</string>
+    <string name="dm_relays_not_found_examples">Good options are:\n - inbox.nostr.wine (paid)\n - auth.nostr1.com (free)\n - you.nostr1.com (personal relays - paid)</string>
     <string name="dm_relays_not_found_editing">Insert between 1–3 relays to serve as your private inbox. DM Inbox relays should accept any message from anyone, but only allow you to download them.</string>
     <string name="dm_relays_not_found_create_now">Set up now</string>
 
@@ -837,7 +837,7 @@
     <string name="public_notif_section">Public Inbox Relays</string>
     <string name="public_notif_section_explainer">This relay type receives all replies, comments, likes and zaps to your posts. They can be paid or free relays. Limits set by the relay operator can limit the notifications you receive for the good and for the bad. For example, if you are being attacked by comment spam, paid relays can filter the spam out. Insert between 1–3 relays.</string>
     <string name="private_inbox_section">DM Inbox Relays</string>
-    <string name="private_inbox_section_explainer">Insert between 1–3 relays to serve as your private inbox. Others will use these relays to send DMs to you. DM Inbox relays should accept any message from anyone, but only allow you to download them. Good options are:\n - inbox.nostr.wine (paid)\n - you.nostr1.com (personal relays - paid)</string>
+    <string name="private_inbox_section_explainer">Insert between 1–3 relays to serve as your private inbox. Others will use these relays to send DMs to you. DM Inbox relays should accept any message from anyone, but only allow you to download them. Good options are:\n - inbox.nostr.wine (paid)\n - auth.nostr1.com (free)\n - you.nostr1.com (personal relays - paid)</string>
     <string name="private_outbox_section">Private Relays</string>
     <string name="private_outbox_section_explainer">Insert between 1–3 relays to store events no one else can see, like your Drafts and/or app settings. Ideally, these relays are either local or require authentication before downloading each user\'s content.</string>
     <string name="kind_3_section">General Relays</string>
