@@ -161,14 +161,6 @@ fun GalleryCardCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-   /* baseNote.event?.let {
-        Text(text = it.id() + " " + it.firstTaggedUrl() + " ") // TODO why does it.taggedGalleryEntries() not return something? whats different?
-    } baseNote.event?.let {
-        for (entry in it.taggedGalleryEntries()) {
-            Text(text = entry.url + " " + entry.id)
-        }
-    }*/
-
     WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel) {
         CheckHiddenFeedWatchBlockAndReport(
             note = baseNote,
@@ -189,48 +181,6 @@ fun GalleryCardCompose(
     }
 }
 
-// TODO This is to large parts from the ChannelCardCompose
-
-/*@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun ProfileGallery(
-    baseNote: List<GalleryThumb>,
-    modifier: Modifier = Modifier,
-    parentBackgroundColor: MutableState<Color>? = null,
-    isHiddenFeed: Boolean = false,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    for (thumb in baseNotes) {
-        thumb.baseNote?.let {
-            WatchNoteEvent(baseNote = it, accountViewModel = accountViewModel) {
-                if (thumb.baseNote.event?.kind() == GalleryListEvent.KIND) {
-                    CheckHiddenFeedWatchBlockAndReport(
-                        note = thumb.baseNote,
-                        modifier = modifier,
-                        ignoreAllBlocksAndReports = isHiddenFeed,
-                        showHiddenWarning = false,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    ) { canPreview ->
-
-                        thumb.image?.let { it1 ->
-                            GalleryCard(
-                                baseNote = thumb.baseNote,
-                                url = it1,
-                                modifier = modifier,
-                                parentBackgroundColor = parentBackgroundColor,
-                                accountViewModel = accountViewModel,
-                                nav = nav,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-*/
 @Composable
 fun GalleryCard(
     baseNote: Note,
