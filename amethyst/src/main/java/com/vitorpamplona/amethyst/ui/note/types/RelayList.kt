@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
@@ -50,8 +51,14 @@ import com.vitorpamplona.amethyst.ui.note.AddRelayButton
 import com.vitorpamplona.amethyst.ui.note.RemoveRelayButton
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
+import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.RelaySetEvent
+import com.vitorpamplona.quartz.events.SearchRelayListEvent
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 
 @Composable
@@ -70,6 +77,119 @@ fun DisplayRelaySet(
             )
         }
 
+    DisplayRelaySet(
+        relays,
+        noteEvent.firstTagFor("title", "name") ?: "#${noteEvent.dTag()}",
+        noteEvent.description(),
+        backgroundColor,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
+fun DisplayNIP65RelayList(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val noteEvent = baseNote.event as? AdvertisedRelayListEvent ?: return
+
+    val writeRelays by
+        remember(baseNote) {
+            mutableStateOf(
+                noteEvent.writeRelays().map { RelayBriefInfoCache.RelayBriefInfo(it) }.toImmutableList(),
+            )
+        }
+
+    val readRelays by
+        remember(baseNote) {
+            mutableStateOf(
+                noteEvent.readRelays()?.map { RelayBriefInfoCache.RelayBriefInfo(it) }?.toImmutableList() ?: persistentListOf(),
+            )
+        }
+
+    DisplayRelaySet(
+        writeRelays,
+        stringRes(id = R.string.public_home_section),
+        null,
+        backgroundColor,
+        accountViewModel,
+        nav,
+    )
+
+    DisplayRelaySet(
+        readRelays,
+        stringRes(id = R.string.public_notif_section),
+        null,
+        backgroundColor,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
+fun DisplayDMRelayList(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val noteEvent = baseNote.event as? ChatMessageRelayListEvent ?: return
+
+    val relays by
+        remember(baseNote) {
+            mutableStateOf(
+                noteEvent.relays().map { RelayBriefInfoCache.RelayBriefInfo(it) }.toImmutableList(),
+            )
+        }
+
+    DisplayRelaySet(
+        relays,
+        stringRes(id = R.string.dm_relays_title),
+        null,
+        backgroundColor,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
+fun DisplaySearchRelayList(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val noteEvent = baseNote.event as? SearchRelayListEvent ?: return
+
+    val relays by
+        remember(baseNote) {
+            mutableStateOf(
+                noteEvent.relays().map { RelayBriefInfoCache.RelayBriefInfo(it) }.toImmutableList(),
+            )
+        }
+
+    DisplayRelaySet(
+        relays,
+        stringRes(id = R.string.search_relays_title),
+        null,
+        backgroundColor,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
+fun DisplayRelaySet(
+    relays: ImmutableList<RelayBriefInfoCache.RelayBriefInfo>,
+    relayListName: String,
+    relayDescription: String?,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
     var expanded by remember { mutableStateOf(false) }
 
     val toMembersShow =
@@ -78,10 +198,6 @@ fun DisplayRelaySet(
         } else {
             relays.take(3)
         }
-
-    val relayListName by remember { derivedStateOf { "#${noteEvent.dTag()}" } }
-
-    val relayDescription by remember { derivedStateOf { noteEvent.description() } }
 
     Text(
         text = relayListName,
@@ -156,11 +272,19 @@ private fun RelayOptionsAction(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val userStateRelayInfo by accountViewModel.account.userProfile().live().relayInfo.observeAsState()
+    val userStateRelayInfo by accountViewModel.account
+        .userProfile()
+        .live()
+        .relayInfo
+        .observeAsState()
     val isCurrentlyOnTheUsersList by
         remember(userStateRelayInfo) {
             derivedStateOf {
-                userStateRelayInfo?.user?.latestContactList?.relays()?.none { it.key == relay } == true
+                userStateRelayInfo
+                    ?.user
+                    ?.latestContactList
+                    ?.relays()
+                    ?.none { it.key == relay } == true
             }
         }
 
