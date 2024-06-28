@@ -184,6 +184,7 @@ class NewUserMetadataViewModel : ViewModel() {
                                         server = account.defaultFileServer,
                                         contentResolver = contentResolver,
                                         onProgress = {},
+                                        context = context,
                                     )
 
                             val url = result.tags?.firstOrNull { it.size > 1 && it[0] == "url" }?.get(1)

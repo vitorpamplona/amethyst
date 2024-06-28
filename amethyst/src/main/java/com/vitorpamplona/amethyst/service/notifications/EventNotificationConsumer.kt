@@ -205,38 +205,54 @@ class EventNotificationConsumer(
         event: LnZapEvent,
         acc: Account,
     ) {
+        Log.d("EventNotificationConsumer", "Notify Start ${event.toNostrUri()}")
         val noteZapEvent = LocalCache.getNoteIfExists(event.id) ?: return
+
+        Log.d("EventNotificationConsumer", "Notify Not Notified Yet")
 
         // old event being re-broadcast
         if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
+
+        Log.d("EventNotificationConsumer", "Notify Not an old event")
 
         val noteZapRequest = event.zapRequest?.id?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
         val noteZapped =
             event.zappedPost().firstOrNull()?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
 
+        Log.d("EventNotificationConsumer", "Notify ZapRequest $noteZapRequest zapped $noteZapped")
+
         if ((event.amount ?: BigDecimal.ZERO) < BigDecimal.TEN) return
+
+        Log.d("EventNotificationConsumer", "Notify Amount Bigger than 10")
 
         if (event.isTaggedUser(acc.userProfile().pubkeyHex)) {
             val amount = showAmount(event.amount)
+
+            Log.d("EventNotificationConsumer", "Notify Amount $amount")
+
             (noteZapRequest.event as? LnZapRequestEvent)?.let { event ->
                 acc.decryptZapContentAuthor(noteZapRequest) {
+                    Log.d("EventNotificationConsumer", "Notify Decrypted if Private Zap ${event.id}")
+
                     val author = LocalCache.getOrCreateUser(it.pubKey)
                     val senderInfo = Pair(author, it.content.ifBlank { null })
 
                     acc.decryptContent(noteZapped) {
+                        Log.d("EventNotificationConsumer", "Notify Decrypted if Private Note")
+
                         val zappedContent = it.split("\n").get(0)
 
                         val user = senderInfo.first.toBestDisplayName()
-                        var title =
-                            stringRes(applicationContext, R.string.app_notification_zaps_channel_message, amount)
+                        var title = stringRes(applicationContext, R.string.app_notification_zaps_channel_message, amount)
                         senderInfo.second?.ifBlank { null }?.let { title += " ($it)" }
+
                         var content =
                             stringRes(
                                 applicationContext,
                                 R.string.app_notification_zaps_channel_message_from,
                                 user,
                             )
-                        zappedContent?.let {
+                        zappedContent.let {
                             content +=
                                 " " +
                                 stringRes(
@@ -247,6 +263,9 @@ class EventNotificationConsumer(
                         }
                         val userPicture = senderInfo?.first?.profilePicture()
                         val noteUri = "nostr:Notifications"
+
+                        Log.d("EventNotificationConsumer", "Notify ${event.id} $content $title $noteUri")
+
                         notificationManager()
                             .sendZapNotification(
                                 event.id,

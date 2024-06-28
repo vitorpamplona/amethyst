@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service
 
 import android.content.ContentResolver
+import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
@@ -29,7 +30,9 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -48,7 +51,9 @@ val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 
 fun randomChars() = List(16) { charPool.random() }.joinToString("")
 
-class Nip96Uploader(val account: Account?) {
+class Nip96Uploader(
+    val account: Account?,
+) {
     suspend fun uploadImage(
         uri: Uri,
         contentType: String?,
@@ -58,6 +63,7 @@ class Nip96Uploader(val account: Account?) {
         server: Nip96MediaServers.ServerName,
         contentResolver: ContentResolver,
         onProgress: (percentage: Float) -> Unit,
+        context: Context,
     ): PartialEvent {
         val serverInfo =
             Nip96Retriever()
@@ -74,6 +80,7 @@ class Nip96Uploader(val account: Account?) {
             serverInfo,
             contentResolver,
             onProgress,
+            context,
         )
     }
 
@@ -86,6 +93,7 @@ class Nip96Uploader(val account: Account?) {
         server: Nip96Retriever.ServerInfo,
         contentResolver: ContentResolver,
         onProgress: (percentage: Float) -> Unit,
+        context: Context,
     ): PartialEvent {
         checkNotInMainThread()
 
@@ -111,6 +119,7 @@ class Nip96Uploader(val account: Account?) {
             sensitiveContent,
             server,
             onProgress,
+            context,
         )
     }
 
@@ -122,6 +131,7 @@ class Nip96Uploader(val account: Account?) {
         sensitiveContent: String?,
         server: Nip96Retriever.ServerInfo,
         onProgress: (percentage: Float) -> Unit,
+        context: Context,
     ): PartialEvent {
         checkNotInMainThread()
 
@@ -130,11 +140,11 @@ class Nip96Uploader(val account: Account?) {
             contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
         val client = HttpClientManager.getHttpClient()
-        val requestBody: RequestBody
         val requestBuilder = Request.Builder()
 
-        requestBody =
-            MultipartBody.Builder()
+        val requestBody: RequestBody =
+            MultipartBody
+                .Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart("expiration", "")
                 .addFormDataPart("size", length.toString())
@@ -142,8 +152,7 @@ class Nip96Uploader(val account: Account?) {
                     alt?.let { body.addFormDataPart("alt", it) }
                     sensitiveContent?.let { body.addFormDataPart("content-warning", it) }
                     contentType?.let { body.addFormDataPart("content_type", it) }
-                }
-                .addFormDataPart(
+                }.addFormDataPart(
                     "file",
                     "$fileName.$extension",
                     object : RequestBody() {
@@ -155,8 +164,7 @@ class Nip96Uploader(val account: Account?) {
                             inputStream.source().use(sink::writeAll)
                         }
                     },
-                )
-                .build()
+                ).build()
 
         nip98Header(server.apiUrl)?.let { requestBuilder.addHeader("Authorization", it) }
 
@@ -178,11 +186,16 @@ class Nip96Uploader(val account: Account?) {
                     } else if (result.status == "success" && result.nip94Event != null) {
                         return result.nip94Event
                     } else {
-                        throw RuntimeException("Failed to upload with message: ${result.message}")
+                        throw RuntimeException(stringRes(context, R.string.failed_to_upload_with_message, result.message))
                     }
                 }
             } else {
-                throw RuntimeException("Error Uploading image: ${response.code}")
+                val explanation = HttpStatusMessages.resourceIdFor(response.code)
+                if (explanation != null) {
+                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_with_message, stringRes(context, explanation)))
+                } else {
+                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_with_message, response.code))
+                }
             }
         }
     }
@@ -191,6 +204,7 @@ class Nip96Uploader(val account: Account?) {
         hash: String,
         contentType: String?,
         server: Nip96Retriever.ServerInfo,
+        context: Context,
     ): Boolean {
         val extension =
             contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
@@ -216,7 +230,12 @@ class Nip96Uploader(val account: Account?) {
                     return result.status == "success"
                 }
             } else {
-                throw RuntimeException("Error Uploading image: ${response.code}")
+                val explanation = HttpStatusMessages.resourceIdFor(response.code)
+                if (explanation != null) {
+                    throw RuntimeException(stringRes(context, R.string.failed_to_delete_with_message, stringRes(context, explanation)))
+                } else {
+                    throw RuntimeException(stringRes(context, R.string.failed_to_delete_with_message, response.code))
+                }
             }
         }
     }
@@ -233,7 +252,8 @@ class Nip96Uploader(val account: Account?) {
             onProgress((currentResult.percentage ?: 100) / 100f)
 
             val request: Request =
-                Request.Builder()
+                Request
+                    .Builder()
                     .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                     .url(result.processingUrl)
                     .build()
@@ -257,13 +277,12 @@ class Nip96Uploader(val account: Account?) {
         }
     }
 
-    suspend fun nip98Header(url: String): String? {
-        return withTimeoutOrNull(5000) {
+    suspend fun nip98Header(url: String): String? =
+        withTimeoutOrNull(5000) {
             suspendCancellableCoroutine { continuation ->
                 nip98Header(url, "POST") { authorizationToken -> continuation.resume(authorizationToken) }
             }
         }
-    }
 
     fun nip98Header(
         url: String,
