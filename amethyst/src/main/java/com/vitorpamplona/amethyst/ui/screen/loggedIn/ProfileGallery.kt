@@ -32,8 +32,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
@@ -63,7 +65,6 @@ import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.ClickableNote
 import com.vitorpamplona.amethyst.ui.note.LongPressToQuickAction
-import com.vitorpamplona.amethyst.ui.note.NormalChannelCard
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.calculateBackgroundColor
@@ -78,19 +79,18 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.quartz.events.GalleryListEvent
+import com.vitorpamplona.quartz.events.TextNoteEvent
 
 @Composable
-private fun RenderGalleryFeed(
+fun RenderGalleryFeed(
     viewModel: FeedViewModel,
     routeForLastRead: String?,
     forceEventKind: Int?,
-    listState: LazyListState,
+    listState: LazyGridState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
-
     CrossfadeIfEnabled(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),
@@ -126,12 +126,13 @@ private fun RenderGalleryFeed(
 private fun GalleryFeedLoaded(
     state: FeedState.Loaded,
     routeForLastRead: String?,
-    listState: LazyListState,
+    listState: LazyGridState,
     forceEventKind: Int?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    LazyColumn(
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(3),
         contentPadding = FeedPadding,
         state = listState,
     ) {
@@ -142,7 +143,7 @@ private fun GalleryFeedLoaded(
                 GalleryCardCompose(
                     baseNote = item,
                     routeForLastRead = routeForLastRead,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier,
                     forceEventKind = forceEventKind,
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -167,25 +168,30 @@ fun GalleryCardCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+   /* baseNote.event?.let {
+        Text(text = it.id() + " " + it.firstTaggedUrl() + " ") // TODO why does it.taggedGalleryEntries() not return something? whats different?
+    } baseNote.event?.let {
+        for (entry in it.taggedGalleryEntries()) {
+            Text(text = entry.url + " " + entry.id)
+        }
+    }*/
+
     WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel) {
-        if (forceEventKind == null || baseNote.event?.kind() == forceEventKind) {
-            CheckHiddenFeedWatchBlockAndReport(
-                note = baseNote,
+        CheckHiddenFeedWatchBlockAndReport(
+            note = baseNote,
+            modifier = modifier,
+            ignoreAllBlocksAndReports = isHiddenFeed,
+            showHiddenWarning = false,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        ) { canPreview ->
+            GalleryCard(
+                baseNote = baseNote,
                 modifier = modifier,
-                ignoreAllBlocksAndReports = isHiddenFeed,
-                showHiddenWarning = false,
+                parentBackgroundColor = parentBackgroundColor,
                 accountViewModel = accountViewModel,
                 nav = nav,
-            ) { canPreview ->
-                NormalChannelCard(
-                    baseNote = baseNote,
-                    routeForLastRead = routeForLastRead,
-                    modifier = modifier,
-                    parentBackgroundColor = parentBackgroundColor,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
+            )
         }
     }
 }
@@ -235,7 +241,6 @@ fun ProfileGallery(
 @Composable
 fun GalleryCard(
     baseNote: Note,
-    url: String,
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
@@ -246,7 +251,6 @@ fun GalleryCard(
 
         CheckNewAndRenderChannelCard(
             baseNote,
-            url,
             modifier,
             parentBackgroundColor,
             accountViewModel,
@@ -259,7 +263,6 @@ fun GalleryCard(
 @Composable
 private fun CheckNewAndRenderChannelCard(
     baseNote: Note,
-    url: String,
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
@@ -284,7 +287,6 @@ private fun CheckNewAndRenderChannelCard(
         // baseNote.event?.let { Text(text = it.pubKey()) }
         InnerGalleryCardWithReactions(
             baseNote = baseNote,
-            url = url,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -294,17 +296,15 @@ private fun CheckNewAndRenderChannelCard(
 @Composable
 fun InnerGalleryCardWithReactions(
     baseNote: Note,
-    url: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    InnerGalleryCardBox(baseNote, url, accountViewModel, nav)
+    InnerGalleryCardBox(baseNote, accountViewModel, nav)
 }
 
 @Composable
 fun InnerGalleryCardBox(
     baseNote: Note,
-    url: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -313,14 +313,13 @@ fun InnerGalleryCardBox(
             note = baseNote,
             accountViewModel = accountViewModel,
         ) {
-            RenderGalleryThumb(baseNote, url, accountViewModel, nav)
+            RenderGalleryThumb(baseNote, accountViewModel, nav)
         }
     }
 }
 
 @Immutable
 data class GalleryThumb(
-    val baseNote: Note?,
     val id: String?,
     val image: String?,
     val title: String?,
@@ -330,34 +329,31 @@ data class GalleryThumb(
 @Composable
 fun RenderGalleryThumb(
     baseNote: Note,
-    url: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val noteEvent = baseNote.event as? GalleryListEvent ?: return
+    val noteEvent = baseNote.event as? TextNoteEvent ?: return
 
     val card by
         baseNote
             .live()
             .metadata
             .map {
-                val noteEvent = baseNote.event as GalleryListEvent
+                val noteEvent = baseNote.event as TextNoteEvent
 
                 GalleryThumb(
-                    baseNote = baseNote,
                     id = "",
-                    image = url,
-                    title = "Hello",
+                    image = noteEvent.firstTaggedUrl(),
+                    title = noteEvent.content(),
                     // noteEvent?.title(),
                     // price = noteEvent?.price(),
                 )
             }.distinctUntilChanged()
             .observeAsState(
                 GalleryThumb(
-                    baseNote = baseNote,
                     id = "",
-                    image = "https://gokaygokay-aurasr.hf.space/file=/tmp/gradio/68292f324a38d7071453cf6912dfb1da9d1305c8/image3.png",
-                    title = "Hello",
+                    image = noteEvent.firstTaggedUrl(),
+                    title = noteEvent.content(),
                     // image = noteEvent.image(),
                     // title = noteEvent.title(),
                     // price = noteEvent.price(),
@@ -374,7 +370,6 @@ fun RenderGalleryThumbPreview() {
         InnerRenderGalleryThumb(
             card =
                 GalleryThumb(
-                    baseNote = null,
                     id = "",
                     image = null,
                     title = "Like New",

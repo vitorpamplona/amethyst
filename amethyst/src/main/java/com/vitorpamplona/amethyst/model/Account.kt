@@ -2226,7 +2226,6 @@ class Account(
             GalleryListEvent.removeReplaceable(
                 galleryentries,
                 note.address,
-                false,
                 signer,
             ) {
                 Client.send(it)
@@ -2236,7 +2235,6 @@ class Account(
             GalleryListEvent.removeEvent(
                 galleryentries,
                 note.idHex,
-                false,
                 signer,
             ) {
                 Client.send(it)

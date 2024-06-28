@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -1569,10 +1570,12 @@ fun TabGallery(
         Column(
             modifier = Modifier.padding(vertical = 0.dp),
         ) {
-            RefresheableFeedView(
+            var state = LazyGridState()
+            RenderGalleryFeed(
                 feedViewModel,
                 null,
-                enablePullRefresh = false,
+                0,
+                state,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

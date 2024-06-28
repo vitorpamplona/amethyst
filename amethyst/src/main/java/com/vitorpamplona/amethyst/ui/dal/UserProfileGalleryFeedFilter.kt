@@ -27,26 +27,26 @@ import com.vitorpamplona.amethyst.model.User
 
 class UserProfileGalleryFeedFilter(val user: User, val account: Account) : FeedFilter<Note>() {
     override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + user.pubkeyHex
+        return account.userProfile().pubkeyHex + "-Gallery-" + user.pubkeyHex
     }
 
     override fun feed(): List<Note> {
         val notes =
             user.latestGalleryList
-                ?.taggedEvents()
-                ?.mapNotNull { LocalCache.checkGetOrCreateNote(it) }
+                ?.taggedGalleryEntries()
+                ?.mapNotNull { LocalCache.checkGetOrCreateNote(it.id) }
                 ?.toSet()
                 ?: emptySet()
 
-        val addresses =
+        /*val addresses =
             user.latestGalleryList
                 ?.taggedAddresses()
                 ?.map { LocalCache.getOrCreateAddressableNote(it) }
                 ?.toSet()
-                ?: emptySet()
+                ?: emptySet() */
 
-        return (notes + addresses)
+        // .sortedWith(DefaultFeedOrder)
+        return (notes)
             .filter { account.isAcceptable(it) }
-            .sortedWith(DefaultFeedOrder)
     }
 }
