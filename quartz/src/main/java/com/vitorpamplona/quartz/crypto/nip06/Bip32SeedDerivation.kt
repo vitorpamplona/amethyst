@@ -20,14 +20,16 @@
  */
 package com.vitorpamplona.quartz.crypto.nip06
 
-import com.vitorpamplona.quartz.crypto.CryptoUtils
+import fr.acinq.secp256k1.Secp256k1
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
 /*
  Simplified from: https://github.com/ACINQ/bitcoin-kmp/
  */
-object Bip32SeedDerivation {
+class Bip32SeedDerivation(
+    val secp256k1: Secp256k1,
+) {
     class ExtendedPrivateKey(
         val secretkeybytes: ByteArray,
         val chaincode: ByteArray,
@@ -53,6 +55,15 @@ object Bip32SeedDerivation {
         return mac.doFinal(data)
     }
 
+    fun isPrivKeyValid(il: ByteArray): Boolean = secp256k1.secKeyVerify(il)
+
+    fun pubkeyCreateBitcoin(privKey: ByteArray) = secp256k1.pubKeyCompress(secp256k1.pubkeyCreate(privKey))
+
+    fun sum(
+        first: ByteArray,
+        second: ByteArray,
+    ): ByteArray = secp256k1.privKeyTweakAdd(first, second)
+
     fun derivePrivateKey(
         parent: ExtendedPrivateKey,
         index: Long,
@@ -62,17 +73,17 @@ object Bip32SeedDerivation {
                 val data = arrayOf(0.toByte()).toByteArray() + parent.secretkeybytes + writeInt32BE(index.toInt())
                 hmac512(parent.chaincode, data)
             } else {
-                val data = CryptoUtils.pubkeyCreateBitcoin(parent.secretkeybytes) + writeInt32BE(index.toInt())
+                val data = pubkeyCreateBitcoin(parent.secretkeybytes) + writeInt32BE(index.toInt())
                 hmac512(parent.chaincode, data)
             }
         val il = i.take(32).toByteArray()
         val ir = i.takeLast(32).toByteArray()
 
-        require(CryptoUtils.isPrivKeyValid(il)) { "cannot generate child private key: IL is invalid" }
+        require(isPrivKeyValid(il)) { "cannot generate child private key: IL is invalid" }
 
-        val key = CryptoUtils.sum(il, parent.secretkeybytes)
+        val key = sum(il, parent.secretkeybytes)
 
-        require(CryptoUtils.isPrivKeyValid(key)) { "cannot generate child private key: resulting private key is invalid" }
+        require(isPrivKeyValid(key)) { "cannot generate child private key: resulting private key is invalid" }
 
         return ExtendedPrivateKey(key, ir)
     }
@@ -94,7 +105,7 @@ object Bip32SeedDerivation {
     fun derivePrivateKey(
         parent: ExtendedPrivateKey,
         chain: List<Long>,
-    ): ExtendedPrivateKey = chain.fold(parent, Bip32SeedDerivation::derivePrivateKey)
+    ): ExtendedPrivateKey = chain.fold(parent, this::derivePrivateKey)
 
     fun derivePrivateKey(
         parent: ExtendedPrivateKey,

@@ -43,7 +43,7 @@ class CryptoUtilsTest {
         val publicKey = "765cd7cf91d3ad07423d114d5a39c61d52b2cdbc18ba055ddbbeec71fbe2aa2f"
 
         val key =
-            CryptoUtils.getSharedSecretNIP44v1(
+            CryptoUtils.nip44.v1.getSharedSecret(
                 privateKey = privateKey.hexToByteArray(),
                 pubKey = publicKey.hexToByteArray(),
             )
@@ -56,8 +56,8 @@ class CryptoUtilsTest {
         val sender = KeyPair()
         val receiver = KeyPair()
 
-        val sharedSecret1 = CryptoUtils.getSharedSecretNIP44v1(sender.privKey!!, receiver.pubKey)
-        val sharedSecret2 = CryptoUtils.getSharedSecretNIP44v1(receiver.privKey!!, sender.pubKey)
+        val sharedSecret1 = CryptoUtils.nip44.v1.getSharedSecret(sender.privKey!!, receiver.pubKey)
+        val sharedSecret2 = CryptoUtils.nip44.v1.getSharedSecret(receiver.privKey!!, sender.pubKey)
 
         assertEquals(sharedSecret1.toHexKey(), sharedSecret2.toHexKey())
 
@@ -88,8 +88,8 @@ class CryptoUtilsTest {
         val privateKey = CryptoUtils.privkeyCreate()
         val publicKey = CryptoUtils.pubkeyCreate(privateKey)
 
-        val encrypted = CryptoUtils.encryptNIP44v1(msg, privateKey, publicKey)
-        val decrypted = CryptoUtils.decryptNIP44v1(encrypted, privateKey, publicKey)
+        val encrypted = CryptoUtils.nip44.v1.encrypt(msg, privateKey, publicKey)
+        val decrypted = CryptoUtils.nip44.v1.decrypt(encrypted, privateKey, publicKey)
 
         assertEquals(msg, decrypted)
     }
@@ -113,10 +113,10 @@ class CryptoUtilsTest {
 
         val privateKey = CryptoUtils.privkeyCreate()
         val publicKey = CryptoUtils.pubkeyCreate(privateKey)
-        val sharedSecret = CryptoUtils.getSharedSecretNIP44v1(privateKey, publicKey)
+        val sharedSecret = CryptoUtils.nip44.v1.getSharedSecret(privateKey, publicKey)
 
-        val encrypted = CryptoUtils.encryptNIP44v1(msg, sharedSecret)
-        val decrypted = CryptoUtils.decryptNIP44v1(encrypted, sharedSecret)
+        val encrypted = CryptoUtils.nip44.v1.encrypt(msg, sharedSecret)
+        val decrypted = CryptoUtils.nip44.v1.decrypt(encrypted, sharedSecret)
 
         assertEquals(msg, decrypted)
     }

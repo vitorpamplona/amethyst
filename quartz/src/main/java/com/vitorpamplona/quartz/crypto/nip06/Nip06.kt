@@ -20,29 +20,31 @@
  */
 package com.vitorpamplona.quartz.crypto.nip06
 
-class Nip06 {
+import fr.acinq.secp256k1.Secp256k1
+
+class Nip06(
+    val secp256k1: Secp256k1,
+) {
+    val derivation = Bip32SeedDerivation(secp256k1)
+
     // m/44'/1237'/<account>'/0/0
     private val nip6Base: KeyPath =
         KeyPath("")
             .derive(Hardener.hardened(44L))
             .derive(Hardener.hardened(1237L))
 
-    private fun nip6Path(account: Long): KeyPath {
-        return nip6Base.derive(Hardener.hardened(account))
+    private fun nip6Path(account: Long): KeyPath =
+        nip6Base
+            .derive(Hardener.hardened(account))
             .derive(0L)
             .derive(0L)
-    }
 
-    fun isValidMnemonic(mnemonic: String): Boolean {
-        return Bip39Mnemonics.isValid(mnemonic)
-    }
+    fun isValidMnemonic(mnemonic: String): Boolean = Bip39Mnemonics.isValid(mnemonic)
 
     fun privateKeyFromSeed(
         seed: ByteArray,
         account: Long = 0,
-    ): ByteArray {
-        return Bip32SeedDerivation.derivePrivateKey(Bip32SeedDerivation.generate(seed), nip6Path(account))
-    }
+    ): ByteArray = derivation.derivePrivateKey(derivation.generate(seed), nip6Path(account))
 
     fun privateKeyFromMnemonic(
         mnemonic: String,

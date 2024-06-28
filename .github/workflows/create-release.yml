@@ -32,7 +32,7 @@ jobs:
       - name: Sign AAB (Google Play)
         uses: r0adkll/sign-android-release@v1
         with:
-          releaseDirectory: app/build/outputs/bundle/playRelease
+          releaseDirectory: amethyst/build/outputs/bundle/playRelease
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
           alias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
@@ -44,7 +44,7 @@ jobs:
       - name: Sign AAB (F-Droid)
         uses: r0adkll/sign-android-release@v1
         with:
-          releaseDirectory: app/build/outputs/bundle/fdroidRelease
+          releaseDirectory: amethyst/build/outputs/bundle/fdroidRelease
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
           alias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
@@ -59,7 +59,7 @@ jobs:
       - name: Sign APK (Google Play)
         uses: r0adkll/sign-android-release@v1
         with:
-          releaseDirectory: app/build/outputs/apk/play/release
+          releaseDirectory: amethyst/build/outputs/apk/play/release
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
           alias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
@@ -71,7 +71,7 @@ jobs:
       - name: Sign APK (F-Droid)
         uses: r0adkll/sign-android-release@v1
         with:
-          releaseDirectory: app/build/outputs/apk/fdroid/release
+          releaseDirectory: amethyst/build/outputs/apk/fdroid/release
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
           alias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
@@ -99,7 +99,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/play/release/app-play-universal-release-unsigned-signed.apk
+          asset_path: amethyst/build/outputs/apk/play/release/amethyst-play-universal-release-unsigned-signed.apk
           asset_name: amethyst-googleplay-universal-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
@@ -110,7 +110,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/play/release/app-play-x86-release-unsigned-signed.apk
+          asset_path: amethyst/build/outputs/apk/play/release/amethyst-play-x86-release-unsigned-signed.apk
           asset_name: amethyst-googleplay-x86-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
@@ -121,7 +121,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/play/release/app-play-x86_64-release-unsigned-signed.apk
+          asset_path: amethyst/build/outputs/apk/play/release/amethyst-play-x86_64-release-unsigned-signed.apk
           asset_name: amethyst-googleplay-x86_64-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
@@ -132,7 +132,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/play/release/app-play-arm64-v8a-release-unsigned-signed.apk
+          asset_path: amethyst/build/outputs/apk/play/release/amethyst-play-arm64-v8a-release-unsigned-signed.apk
           asset_name: amethyst-googleplay-arm64-v8a-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
@@ -143,7 +143,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/play/release/app-play-armeabi-v7a-release-unsigned-signed.apk
+          asset_path: amethyst/build/outputs/apk/play/release/amethyst-play-armeabi-v7a-release-unsigned-signed.apk
           asset_name: amethyst-googleplay-armeabi-v7a-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
@@ -155,7 +155,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-universal-release-unsigned-signed.apk
+          asset_path: amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-universal-release-unsigned-signed.apk
           asset_name: amethyst-fdroid-universal-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
@@ -166,7 +166,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-x86-release-unsigned-signed.apk
+          asset_path: amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-x86-release-unsigned-signed.apk
           asset_name: amethyst-fdroid-x86-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
@@ -177,7 +177,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-x86_64-release-unsigned-signed.apk
+          asset_path: amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-x86_64-release-unsigned-signed.apk
           asset_name: amethyst-fdroid-x86_64-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
@@ -188,7 +188,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-arm64-v8a-release-unsigned-signed.apk
+          asset_path: amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-arm64-v8a-release-unsigned-signed.apk
           asset_name: amethyst-fdroid-arm64-v8a-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
@@ -199,7 +199,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/fdroid/release/app-fdroid-armeabi-v7a-release-unsigned-signed.apk
+          asset_path: amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-armeabi-v7a-release-unsigned-signed.apk
           asset_name: amethyst-fdroid-armeabi-v7a-${{ github.ref_name }}.apk
           asset_content_type: application/zip
 
@@ -213,7 +213,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/bundle/playRelease/app-play-release.aab
+          asset_path: amethyst/build/outputs/bundle/playRelease/amethyst-play-release.aab
           asset_name: amethyst-googleplay-${{ github.ref_name }}.aab
           asset_content_type: application/zip
 
@@ -225,6 +225,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/bundle/fdroidRelease/app-fdroid-release.aab
+          asset_path: amethyst/build/outputs/bundle/fdroidRelease/amethyst-fdroid-release.aab
           asset_name: amethyst-fdroid-${{ github.ref_name }}.aab
           asset_content_type: application/zip

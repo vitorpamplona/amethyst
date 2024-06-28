@@ -42,6 +42,8 @@ class HighlightEvent(
 
     fun inPost() = firstTaggedAddress()
 
+    fun inPostVersion() = firstTaggedEvent()
+
     companion object {
         const val KIND = 9802
         const val ALT = "Highlight/quote event"

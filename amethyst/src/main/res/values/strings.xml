@@ -1,0 +1,941 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name_release" translatable="false">Amethyst</string>
+    <string name="app_name_debug" translatable="false">Amethyst Debug</string>
+    <string name="point_to_the_qr_code">Point to the QR Code</string>
+    <string name="show_qr">Show QR</string>
+    <string name="profile_image">Profile Picture</string>
+    <string name="your_profile_image">Your Profile Picture</string>
+    <string name="scan_qr">Scan QR</string>
+    <string name="show_anyway">Show Anyway</string>
+    <string name="post_was_hidden">This post was hidden because it mentions your hidden users or words</string>
+    <string name="post_was_flagged_as_inappropriate_by">Post was muted or reported by</string>
+    <string name="post_not_found">Event is loading or can\'t be found in your relay list</string>
+    <string name="channel_image">Channel Image</string>
+    <string name="referenced_event_not_found">Referenced event not found</string>
+    <string name="could_not_decrypt_the_message">Could not decrypt the message</string>
+    <string name="group_picture">Group Picture</string>
+    <string name="explicit_content">Explicit Content</string>
+    <string name="spam">Spam</string>
+    <string name="spam_description">The number of spamming events coming from this relay</string>
+    <string name="impersonation">Impersonation</string>
+    <string name="illegal_behavior">Illegal Behavior</string>
+    <string name="other">Other</string>
+    <string name="unknown">Unknown</string>
+    <string name="relay_icon">Relay Icon</string>
+    <string name="unknown_author">Unknown Author</string>
+    <string name="copy_text">Copy Text</string>
+    <string name="copy_user_pubkey">Copy Author ID</string>
+    <string name="copy_note_id">Copy Note ID</string>
+    <string name="broadcast">Broadcast</string>
+    <string name="timestamp_it">Timestamp it</string>
+    <string name="timestamp_pending">Timestamp: Pending Confirmations</string>
+    <string name="timestamp_pending_short">OTS: Pending</string>
+    <string name="request_deletion">Request Deletion</string>
+    <string name="block_report">Block / Report</string>
+    <string name="block_hide_user"><![CDATA[Block & Hide User]]></string>
+    <string name="report_spam_scam">Report Spam / Scam</string>
+    <string name="report_impersonation">Report Impersonation</string>
+    <string name="report_explicit_content">Report Explicit Content</string>
+    <string name="report_illegal_behaviour">Report Illegal Behaviour</string>
+    <string name="login_with_a_private_key_to_be_able_to_reply">You are using a public key and public keys are read-only. Login with a Private key to be able to reply</string>
+    <string name="login_with_a_private_key_to_be_able_to_boost_posts">You are using a public key and public keys are read-only. Login with a Private key to be able to boost posts</string>
+    <string name="login_with_a_private_key_to_like_posts">You are using a public key and public keys are read-only. Login with a Private key to like posts</string>
+    <string name="no_zap_amount_setup_long_press_to_change">No Zap Amount Setup. Long Press to change</string>
+    <string name="login_with_a_private_key_to_be_able_to_send_zaps">You are using a public key and public keys are read-only. Login with a Private key to be able to send zaps</string>
+    <string name="login_with_a_private_key_to_be_able_to_follow">You are using a public key and public keys are read-only. Login with a Private key to be able to follow</string>
+    <string name="login_with_a_private_key_to_be_able_to_unfollow">You are using a public key and public keys are read-only. Login with a Private key to be able to unfollow</string>
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">You are using a public key and public keys are read-only. Login with a Private key to be able to hide a word or sentence</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">You are using a public key and public keys are read-only. Login with a Private key to be able to show a word or sentence</string>
+
+
+    <string name="zaps">Zaps</string>
+    <string name="view_count">View count</string>
+    <string name="boost">Boost</string>
+    <string name="boosted">boosted</string>
+    <string name="edited">edited</string>
+    <string name="edited_number">edit #%1$s</string>
+    <string name="original">original</string>
+    <string name="quote">Quote</string>
+    <string name="fork">Fork</string>
+    <string name="propose_an_edit">Propose an Edit</string>
+    <string name="new_amount_in_sats">New Amount in Sats</string>
+    <string name="add">Add</string>
+    <string name="replying_to">"replying to "</string>
+    <string name="and">" and "</string>
+    <string name="in_channel">"in channel "</string>
+    <string name="profile_banner">Profile Banner</string>
+    <string name="payment_successful">Payment Successful</string>
+    <string name="error_parsing_error_message">Error parsing error message</string>
+    <string name="following">" Following"</string>
+    <string name="followers">" Followers"</string>
+    <string name="profile">Profile</string>
+    <string name="security_filters">Security Filters</string>
+    <string name="log_out">Logout</string>
+    <string name="show_more">Show More</string>
+    <string name="lightning_invoice">Lightning Invoice</string>
+    <string name="pay">Pay</string>
+    <string name="lightning_tips">Lightning Tips</string>
+    <string name="note_to_receiver">Note to Receiver</string>
+    <string name="thank_you_so_much">Thank you so much!</string>
+    <string name="amount_in_sats">Amount in Sats</string>
+    <string name="send_sats">Send Sats</string>
+    <string name="error_parsing_preview_for">"Error parsing preview for %1$s : %2$s"</string>
+    <string name="preview_card_image_for">"Preview Card Image for %1$s"</string>
+    <string name="new_channel">New Channel</string>
+    <string name="channel_name">Channel Name</string>
+    <string name="my_awesome_group">My Awesome Group</string>
+    <string name="picture_url">Picture Url</string>
+    <string name="description">Description</string>
+    <string name="about_us">"About us.. "</string>
+    <string name="what_s_on_your_mind">What\'s on your mind?</string>
+    <string name="post">Post</string>
+    <string name="save">Save</string>
+    <string name="create">Create</string>
+    <string name="cancel">Cancel</string>
+    <string name="failed_to_upload_the_image">Failed to upload the image</string>
+    <string name="relay_address">Relay Address</string>
+    <string name="posts">Posts</string>
+    <string name="bytes">Bytes</string>
+    <string name="errors">Errors</string>
+    <string name="errors_description">The number of connection errors in this session</string>
+    <string name="home_feed">Home Feed</string>
+    <string name="private_message_feed">Private Message Feed</string>
+    <string name="public_chat_feed">Public Chat Feed</string>
+    <string name="global_feed">Global Feed</string>
+    <string name="search_feed">Search Feed</string>
+    <string name="add_a_relay">Add a Relay</string>
+    <string name="display_name">Display Name</string>
+    <string name="my_display_name">My display name</string>
+    <string name="my_awesome_name">Ostrich McAwesome</string>
+    <string name="welcome">Welcome Ostrich!</string>
+    <string name="username">Username</string>
+    <string name="my_username">My username</string>
+    <string name="about_me">About me</string>
+    <string name="avatar_url">Avatar URL</string>
+    <string name="banner_url">Banner URL</string>
+    <string name="website_url">Website URL</string>
+    <string name="ln_address">LN Address</string>
+    <string name="ln_url_outdated">LN URL (outdated)</string>
+    <string name="save_to_gallery">Save to Gallery</string>
+    <string name="image_saved_to_the_gallery">Image saved to the gallery</string>
+    <string name="failed_to_save_the_image">Failed to save the image</string>
+    <string name="upload_image">Upload Image</string>
+    <string name="uploading">Uploading…</string>
+    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">User does not have a lightning address set up to receive sats</string>
+    <string name="reply_here">"reply here.. "</string>
+    <string name="copies_the_note_id_to_the_clipboard_for_sharing">Copies the Note ID to the clipboard for sharing in Nostr</string>
+    <string name="copy_channel_id_note_to_the_clipboard">Copy Channel ID (Note) to the Clipboard</string>
+    <string name="edits_the_channel_metadata">Edits the Channel Metadata</string>
+    <string name="join">Join</string>
+    <string name="known">Known</string>
+    <string name="new_requests">New Requests</string>
+    <string name="blocked_users">Blocked Users</string>
+    <string name="new_threads">New Threads</string>
+    <string name="conversations">Conversations</string>
+    <string name="notes">Notes</string>
+    <string name="replies">Replies</string>
+    <string name="follows">"Follows"</string>
+    <string name="reports">"Reports"</string>
+    <string name="more_options">More Options</string>
+    <string name="relays">" Relays"</string>
+    <string name="website">Website</string>
+    <string name="lightning_address">Lightning Address</string>
+    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Copies the Nsec ID (your password) to the clipboard for backup</string>
+    <string name="copy_private_key_to_the_clipboard">Copy Secret Key to the Clipboard</string>
+    <string name="copies_the_public_key_to_the_clipboard_for_sharing">Copies the public key to the clipboard for sharing</string>
+    <string name="copy_public_key_npub_to_the_clipboard">Copy Public Key (NPub) to the Clipboard</string>
+    <string name="send_a_direct_message">Send a Direct Message</string>
+    <string name="edits_the_user_s_metadata">Edits the User\'s Metadata</string>
+    <string name="follow">Follow</string>
+    <string name="follow_back">Follow back</string>
+    <string name="unblock">Unblock</string>
+    <string name="copy_user_id">Copy User ID</string>
+    <string name="unblock_user">Unblock User</string>
+    <string name="npub_hex_username">"npub, username, text"</string>
+    <string name="clear">Clear</string>
+    <string name="app_logo">App Logo</string>
+    <string name="nsec_npub_hex_private_key">nsec.. or npub..</string>
+    <string name="ncryptsec_password">password to open the key</string>
+    <string name="show_password">Show Password</string>
+    <string name="hide_password">Hide Password</string>
+    <string name="invalid_key">Invalid key</string>
+    <string name="invalid_key_with_message">Invalid key: %1$s</string>
+    <string name="i_accept_the">"I accept the "</string>
+    <string name="terms_of_use">terms of use</string>
+    <string name="acceptance_of_terms_is_required">Acceptance of terms is required</string>
+    <string name="password_is_required">Password is required</string>
+    <string name="key_is_required">Key is required</string>
+    <string name="name_is_required">A name is required</string>
+    <string name="login">Login</string>
+    <string name="sign_up">Sign Up</string>
+    <string name="create_account">Create Account</string>
+    <string name="how_should_we_call_you">How should we call you?</string>
+    <string name="don_t_have_an_account">Don\'t have a Nostr account?</string>
+    <string name="already_have_an_account">Already have a Nostr account?</string>
+    <string name="create_a_new_account">Create a new account</string>
+    <string name="generate_a_new_key">Generate a new key</string>
+    <string name="loading_feed">Loading feed</string>
+    <string name="loading_account">Loading account</string>
+    <string name="error_loading_replies">"Error loading replies: "</string>
+    <string name="try_again">Try again</string>
+    <string name="feed_is_empty">Feed is empty.</string>
+    <string name="refresh">Refresh</string>
+    <string name="created">created</string>
+    <string name="with_description_of">with description of</string>
+    <string name="and_picture">and picture</string>
+    <string name="changed_chat_name_to">changed chat name to</string>
+    <string name="description_to">description to</string>
+    <string name="and_picture_to">and picture to</string>
+    <string name="leave">Leave</string>
+    <string name="unfollow">Unfollow</string>
+    <string name="channel_created">Channel created</string>
+    <string name="channel_information_changed_to">"Channel Information changed to"</string>
+    <string name="public_chat">Public Chat</string>
+    <string name="posts_received">posts received</string>
+    <string name="remove">Remove</string>
+    <string name="sats" translatable="false">sats</string>
+    <string name="translations_auto">Auto</string>
+    <string name="translations_translated_from">translated from</string>
+    <string name="translations_to">to</string>
+    <string name="translations_show_in_lang_first">Show in %1$s first</string>
+    <string name="translations_always_translate_to_lang">Always translate to %1$s</string>
+    <string name="translations_never_translate_from_lang">Never translate from %1$s</string>
+    <string name="nip_05">Nostr Address</string>
+    <string name="lnurl" translatable="false">LNURL...</string>
+    <string name="never">never</string>
+    <string name="now">now</string>
+    <string name="h">h</string>
+    <string name="m">m</string>
+    <string name="d">d</string>
+    <string name="nudity">Nudity</string>
+    <string name="profanity_hateful_speech">Profanity / Hateful speech</string>
+    <string name="report_hateful_speech">Report Hateful speech</string>
+    <string name="report_nudity_porn">Report Nudity / Porn</string>
+    <string name="others">others</string>
+    <string name="mark_all_known_as_read">Mark all Known as read</string>
+    <string name="mark_all_new_as_read">Mark all New as read</string>
+    <string name="mark_all_as_read">Mark all as read</string>
+    <string name="backup_keys">Backup Keys</string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">
+        ## Key Backup and Safety Tips
+        \n\nYour account is secured by a secret key. The key is a long sequence of characters starting with **nsec1**. Anyone who has access to this secret key can post and change your identity.
+        \n\n- Do **not** put your secret key in any website or software you do not trust.
+        \n- Amethyst developers will **never** ask for your secret key.
+        \n- **Do** keep a secure backup of your secret key for account recovery. We recommend using a password manager.
+    </string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">
+        For additional security, you can encrypt your key with a password. This key starts with **ncryptsec1** and cannot be used without your password.
+        \n\nIf you lose your password, you will not be able to recover your key.
+    </string>
+
+    <string name="failed_to_encrypt_key">Failed to encrypt your private key</string>
+    <string name="secret_key_copied_to_clipboard">Secret key (nsec) copied to clipboard</string>
+    <string name="copy_my_secret_key">Copy my secret key</string>
+    <string name="encrypt_and_copy_my_secret_key">Encrypt and copy my secret key</string>
+    <string name="biometric_authentication_failed">Authentication failed</string>
+    <string name="biometric_authentication_failed_explainer">Biometrics failed to authenticate the owner of this phone</string>
+    <string name="biometric_authentication_failed_explainer_with_error">Biometrics failed to authenticate the owner of this phone. Error: %1$s</string>
+    <string name="biometric_error">Error</string>
+    <string name="badge_created_by">"Created by %1$s"</string>
+    <string name="badge_award_image_for">"Badge award image for %1$s"</string>
+    <string name="new_badge_award_notif">You Received a new Badge Award</string>
+    <string name="award_granted_to">Badge award granted to</string>
+    <string name="copied_note_text_to_clipboard">Copied note text to clipboard</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">Copied author’s @npub to clipboard</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Copied note ID (@note1) to clipboard</string>
+    <string name="select_text_dialog_top">Select Text</string>
+    <string name="github" translatable="false">Github Gist w/ Proof</string>
+    <string name="telegram" translatable="false">Telegram</string>
+    <string name="mastodon" translatable="false">Mastodon Post ID w/ Proof</string>
+    <string name="twitter" translatable="false">Twitter Status w/ Proof</string>
+    <string name="github_proof_url_template" translatable="false">https://gist.github.com/&lt;user&gt;/&lt;gist&gt;</string>
+    <string name="telegram_proof_url_template" translatable="false">https://t.me/&lt;proof post&gt;</string>
+    <string name="mastodon_proof_url_template" translatable="false">https://&lt;server&gt;/&lt;user&gt;/&lt;proof post&gt;</string>
+    <string name="twitter_proof_url_template" translatable="false">https://twitter.com/&lt;user&gt;/status/&lt;proof post&gt;</string>
+    <string name="private_conversation_notification">"&lt;Unable to decrypt private message&gt;\n\nYou were cited in a private/encrypted conversation between %1$s and %2$s."</string>
+    <string name="account_switch_add_account_dialog_title">Add New Account</string>
+    <string name="drawer_accounts">Accounts</string>
+    <string name="account_switch_select_account">Select Account</string>
+    <string name="account_switch_add_account_btn">Add New Account</string>
+    <string name="account_switch_active_account">Active account</string>
+    <string name="account_switch_has_private_key">Has private key</string>
+    <string name="account_switch_pubkey_only">Read only, no private key</string>
+    <string name="back">Back</string>
+    <string name="quick_action_select">Select</string>
+    <string name="quick_action_share_browser_link">Share Browser Link</string>
+    <string name="quick_action_share">Share</string>
+    <string name="quick_action_copy_user_id">Author ID</string>
+    <string name="quick_action_copy_note_id">Note ID</string>
+    <string name="quick_action_copy_text">Copy Text</string>
+    <string name="quick_action_delete">Delete</string>
+    <string name="quick_action_unfollow">Unfollow</string>
+    <string name="quick_action_follow">Follow</string>
+    <string name="quick_action_request_deletion_alert_title">Request Deletion</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst will request that your note be deleted from the relays you are currently connected to. There is no guarantee that your note will be permanently deleted from those relays, or from other relays where it may be stored.</string>
+    <string name="quick_action_block_dialog_btn">Block</string>
+    <string name="quick_action_delete_dialog_btn">Delete</string>
+    <string name="quick_action_block">Block</string>
+    <string name="quick_action_report">Report</string>
+    <string name="quick_action_delete_button">Delete</string>
+    <string name="quick_action_dont_show_again_button">Don\'t show again</string>
+    <string name="report_dialog_spam">Spam or scams</string>
+    <string name="report_dialog_profanity">Profanity or hateful conduct</string>
+    <string name="report_dialog_impersonation">Malicious impersonation</string>
+    <string name="report_dialog_nudity">Nudity or graphic content</string>
+    <string name="report_dialog_illegal">Illegal Behavior</string>
+    <string name="report_dialog_blocking_a_user">Blocking a user will hide their content in your app. Your notes are still publicly viewable, including to people you block. Blocked users are listed on the Security Filters screen.</string>
+    <string name="report_dialog_block_hide_user_btn"><![CDATA[Block & Hide User]]></string>
+    <string name="report_dialog_report_btn">Report Abuse</string>
+    <string name="report_dialog_reminder_public">All reports posted will be publicly visible.</string>
+    <string name="report_dialog_additional_reason_placeholder">Optionally provide additional context about your report…</string>
+    <string name="report_dialog_additional_reason_label">Additional Context</string>
+    <string name="report_dialog_select_reason_label">Reason</string>
+    <string name="report_dialog_select_reason_placeholder">Select a reason…</string>
+    <string name="report_dialog_post_report_btn">Post Report</string>
+    <string name="report_dialog_title">Block and Report</string>
+    <string name="block_only">Block</string>
+
+    <string name="bookmarks">Bookmarks</string>
+    <string name="drafts">Drafts</string>
+    <string name="private_bookmarks">Private Bookmarks</string>
+    <string name="public_bookmarks">Public Bookmarks</string>
+    <string name="add_to_private_bookmarks">Add to Private Bookmarks</string>
+    <string name="add_to_public_bookmarks">Add to Public Bookmarks</string>
+    <string name="remove_from_private_bookmarks">Remove from Private Bookmarks</string>
+    <string name="remove_from_public_bookmarks">Remove from Public Bookmarks</string>
+
+    <string name="wallet_connect_service">Wallet Connect Service</string>
+    <string name="wallet_connect_service_explainer">Authorizes a Nostr Secret to pay zaps without leaving the app. Keep the secret safe and use a private relay if possible</string>
+    <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>
+    <string name="wallet_connect_service_relay">Wallet Connect Relay</string>
+    <string name="wallet_connect_service_secret">Wallet Connect Secret</string>
+    <string name="wallet_connect_service_show_secret">Show secret key</string>
+    <string name="wallet_connect_service_secret_placeholder">nsec / hex private key</string>
+
+    <string name="pledge_amount_in_sats">Pledge Amount in Sats</string>
+    <string name="post_poll">Post Poll</string>
+    <string name="poll_heading_required">Required fields:</string>
+    <string name="poll_zap_recipients">Zap recipients</string>
+    <string name="poll_primary_description">Primary poll description…</string>
+    <string name="poll_option_index">Option %s</string>
+    <string name="poll_option_description">Poll option description</string>
+    <string name="poll_heading_optional">Optional fields:</string>
+    <string name="poll_zap_value_min">Zap minimum</string>
+    <string name="poll_zap_value_max">Zap maximum</string>
+    <string name="poll_consensus_threshold">Consensus</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_time">Close after</string>
+    <string name="poll_closing_time_days">days</string>
+    <string name="poll_unable_to_vote">Unable to vote</string>
+    <string name="poll_is_closed_explainer">Poll is closed to new votes</string>
+    <string name="poll_zap_amount">Zap amount</string>
+    <string name="one_vote_per_user_on_atomic_votes">Only one vote per user is allowed on this type of poll</string>
+
+    <string name="looking_for_event">"Looking for Event %1$s"</string>
+
+    <string name="custom_zaps_add_a_message">Add a public message</string>
+    <string name="custom_zaps_add_a_message_private">Add a private message</string>
+    <string name="custom_zaps_add_a_message_nonzap">Add an invoice message</string>
+
+    <string name="custom_zaps_add_a_message_example">Thank you for all your work!</string>
+
+    <string name="lightning_create_and_add_invoice">Create and Add</string>
+    <string name="poll_author_no_vote">Poll authors can\'t vote in their own polls.</string>
+    <string name="poll_hashtag" translatable="false">#zappoll</string>
+
+    <string name="hash_verification_info_title">What does this mean?</string>
+    <string name="hash_verification_passed">This content is the same since the post</string>
+    <string name="hash_verification_failed">This content has changed. The author might not have seen or approved the change</string>
+
+    <string name="content_description_add_image">Add Image</string>
+    <string name="content_description_add_video">Add Video</string>
+    <string name="content_description_add_document">Add Document</string>
+
+    <string name="add_content">Add to Message</string>
+    <string name="content_description">Description of the contents</string>
+    <string name="content_description_example">A blue boat in a white sandy beach at sunset</string>
+
+    <string name="zap_type">Zap Type</string>
+    <string name="zap_type_explainer">Zap Type for all options</string>
+
+    <string name="zap_type_public">Public</string>
+    <string name="zap_type_public_explainer">Everybody can see the transaction and message</string>
+
+    <string name="zap_type_private">Private</string>
+    <string name="zap_type_private_explainer">Sender and Receiver can see each other and read the message</string>
+
+    <string name="zap_type_anonymous">Anonymous</string>
+    <string name="zap_type_anonymous_explainer">Receiver and the public does not know who sent the payment</string>
+
+    <string name="zap_type_nonzap">Non-Zap</string>
+    <string name="zap_type_nonzap_explainer">No trace in Nostr, only in Lightning</string>
+
+
+    <string name="file_server">File Server</string>
+    <string name="zap_forward_lnAddress">LnAddress or @User</string>
+
+
+    <string name="media_servers">Media Servers</string>
+    <string name="set_preferred_media_servers">Set your preferred media upload servers.</string>
+    <string name="no_media_server_message">You have no custom media servers set. You can use Amethyst\'s list, or add one below ↓</string>
+    <string name="built_in_media_servers_title">Built-in Media Servers</string>
+    <string name="built_in_servers_description">Amethyst\'s default list. You can add them individually or add the list.</string>
+    <string name="use_default_servers">Use Default List</string>
+    <string name="add_media_server">Add media server</string>
+    <string name="delete_media_server">Delete media server</string>
+
+
+    <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>
+    <string name="upload_server_relays_nip95_explainer">Files are hosted by your relays. New NIP: check if they support</string>
+
+    <string name="connect_via_tor_short">Tor/Orbot setup</string>
+    <string name="connect_via_tor">Connect through your Orbot setup</string>
+
+    <string name="do_you_really_want_to_disable_tor_title">Disconnect from your Orbot/Tor?</string>
+    <string name="do_you_really_want_to_disable_tor_text">Your data will be immediately transferred in the regular network</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+
+
+    <string name="follow_list_selection">Follow List</string>
+    <string name="follow_list_kind3follows">All Follows</string>
+    <string name="follow_list_global">Global</string>
+    <string name="follow_list_mute_list">Mute List</string>
+    <string name="connect_through_your_orbot_setup_markdown">
+        ## Connect through Tor with Orbot
+        \n\n1. Install [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
+        \n2. Start Orbot
+        \n3. In Orbot, check the Socks port. The default uses 9050
+        \n4. If necessary change the port in Orbot
+        \n5. Configure the Socks port in this screen
+        \n6. Press the Activate button to use Orbot as a proxy
+    </string>
+    <string name="orbot_socks_port">Orbot Socks Port</string>
+    <string name="invalid_port_number">Invalid port number</string>
+    <string name="use_orbot">Use Orbot</string>
+    <string name="disconnect_from_your_orbot_setup">Disconnect Tor/Orbot</string>
+
+    <string name="app_notification_channel_id" translatable="false">DefaultChannelID</string>
+    <string name="app_notification_private_message" translatable="false">New notification arrived</string>
+
+    <string name="app_notification_dms_channel_id" translatable="false">PrivateMessagesID</string>
+    <string name="app_notification_dms_channel_name">Private Messages</string>
+    <string name="app_notification_dms_channel_description">Notifies you when a private message arrives</string>
+
+    <string name="app_notification_zaps_channel_id" translatable="false">ZapsID</string>
+    <string name="app_notification_zaps_channel_name">Zaps Received</string>
+    <string name="app_notification_zaps_channel_description">Notifies you when somebody zaps you</string>
+    <string name="app_notification_zaps_channel_message">%1$s sats</string>
+    <string name="app_notification_zaps_channel_message_from">From %1$s</string>
+    <string name="app_notification_zaps_channel_message_for">for %1$s</string>
+
+    <string name="reply_notify">Notify: </string>
+
+    <string name="channel_list_join_conversation">Join Conversation</string>
+    <string name="channel_list_user_or_group_id">User or Group\'s ID</string>
+    <string name="channel_list_user_or_group_id_demo">npub, nevent or hex</string>
+    <string name="channel_list_create_channel">Create</string>
+    <string name="channel_list_join_channel">Join</string>
+
+    <string name="today">Today</string>
+
+    <string name="content_warning">Content warning</string>
+    <string name="content_warning_explanation">This post contains sensitive content which some people may find offensive or disturbing</string>
+    <string name="content_warning_hide_all_sensitive_content">Always hide sensitive content</string>
+    <string name="content_warning_show_all_sensitive_content">Always show sensitive content</string>
+    <string name="content_warning_see_warnings">Always show content warnings</string>
+
+    <string name="recommended_apps">Recommends: </string>
+    <string name="filter_spam_from_strangers">Filter spam from strangers</string>
+    <string name="warn_when_posts_have_reports_from_your_follows">Warn when posts have reports from your follows</string>
+
+    <string name="new_reaction_symbol">New Reaction Symbol</string>
+    <string name="no_reaction_type_setup_long_press_to_change">No reaction types pre-selected for this user. Long press on the heart button to change</string>
+
+    <string name="zapraiser">Zapraiser</string>
+    <string name="zapraiser_explainer">Adds a target amount of sats to raise for this post. Supporting clients may show this as a progress bar to incentivize donations</string>
+    <string name="zapraiser_target_amount_in_sats">Target Amount in Sats</string>
+
+    <string name="sats_to_complete">Zapraiser at %1$s. %2$s sats to goal</string>
+    <string name="read_from_relay">Read from Relay</string>
+    <string name="write_to_relay">Write to Relay</string>
+    <string name="write_to_relay_description">The amount in bytes that was sent to this relay, including filters and events</string>
+    <string name="read_from_relay_description">The amount in bytes that was received from this relay, including filters and events</string>
+    <string name="an_error_occurred_trying_to_get_relay_information">An error occurred trying to get relay information from %1$s</string>
+    <string name="owner">Owner</string>
+    <string name="version">Version</string>
+    <string name="software">Software</string>
+    <string name="contact">Contact</string>
+    <string name="supports">Supported NIPs</string>
+    <string name="admission_fees">Admission Fees</string>
+    <string name="payments_url">Payments url</string>
+    <string name="limitations">Limitations</string>
+    <string name="countries">Countries</string>
+    <string name="languages">Languages</string>
+    <string name="tags">Tags</string>
+    <string name="posting_policy">Posting policy</string>
+    <string name="relay_error_messages">Errors and Notices from this Relay</string>
+    <string name="message_length">Message length</string>
+    <string name="subscriptions">Subscriptions</string>
+    <string name="filters">Filters</string>
+    <string name="subscription_id_length">Subscription id length</string>
+    <string name="minimum_prefix">Minimum prefix</string>
+    <string name="maximum_event_tags">Maximum event tags</string>
+    <string name="content_length">Content length</string>
+    <string name="minimum_pow">Minimum PoW</string>
+    <string name="auth">Auth</string>
+    <string name="payment">Payment</string>
+    <string name="cashu">Cashu Token</string>
+    <string name="cashu_redeem">Redeem</string>
+    <string name="cashu_redeem_to_zap">Send to Zap Wallet</string>
+    <string name="cashu_redeem_to_cashu">Open in Cashu Wallet</string>
+    <string name="cashu_copy_token">Copy Token</string>
+
+    <string name="no_lightning_address_set">No Lightning Address set</string>
+    <string name="copied_token_to_clipboard">Copied token to clipboard</string>
+
+    <string name="live_stream_live_tag">LIVE</string>
+    <string name="live_stream_offline_tag">OFFLINE</string>
+    <string name="live_stream_ended_tag">ENDED</string>
+    <string name="live_stream_planned_tag">SCHEDULED</string>
+
+    <string name="live_stream_is_offline">Livestream is Offline</string>
+    <string name="live_stream_has_ended">Livestream Ended</string>
+    <string name="are_you_sure_you_want_to_log_out">Logging out deletes all your local information. Make sure to have your private keys backed up to avoid losing your account. Do you want to continue?</string>
+    <string name="followed_tags">Followed Tags</string>
+
+    <string name="relay_setup">Relays</string>
+
+    <string name="discover_content">Note Discovery</string>
+    <string name="discover_marketplace">Marketplace</string>
+    <string name="discover_live">Live</string>
+    <string name="discover_community">Community</string>
+    <string name="discover_chat">Chats</string>
+    <string name="community_approved_posts">Approved Posts</string>
+
+    <string name="groups_no_descriptor">This group does not have a description or rules. Talk to the owner to add one</string>
+    <string name="community_no_descriptor">This community does not have a description. Talk to the owner to add one</string>
+
+    <string name="add_sensitive_content_label">Sensitive Content</string>
+    <string name="add_sensitive_content_description">Adds sensitive content warning before showing this content</string>
+    <string name="settings">Settings</string>
+    <string name="connectivity_type_always">Always</string>
+    <string name="connectivity_type_wifi_only">Wifi-only</string>
+    <string name="connectivity_type_unmetered_wifi_only">Unmetered WiFi</string>
+    <string name="connectivity_type_never">Never</string>
+
+    <string name="ui_feature_set_type_complete">Complete</string>
+    <string name="ui_feature_set_type_simplified">Simplified</string>
+    <string name="ui_feature_set_type_performance">Performance</string>
+
+    <string name="system">System</string>
+    <string name="light">Light</string>
+    <string name="dark">Dark</string>
+    <string name="application_preferences">Application Preferences</string>
+    <string name="language">Language</string>
+    <string name="theme">Theme</string>
+    <string name="automatically_load_images_gifs">Image Preview</string>
+    <string name="automatically_play_videos">Video Playback</string>
+    <string name="automatically_show_url_preview">URL Preview</string>
+    <string name="automatically_hide_nav_bars">Immersive Scrolling</string>
+    <string name="automatically_hide_nav_bars_description">Hide Nav Bars when Scrolling</string>
+
+    <string name="ui_style">UI Mode</string>
+    <string name="ui_style_description">Choose the post style</string>
+
+    <string name="load_image">Load Image</string>
+
+    <string name="spamming_users">Spammers</string>
+
+    <string name="muted_button">Muted. Click to unmute</string>
+    <string name="mute_button">Sound on. Click to mute</string>
+    <string name="search_button">Search local and remote records</string>
+
+    <string name="nip05_verified">Nostr address was verified</string>
+    <string name="nip05_failed">Nostr address failed verification</string>
+    <string name="nip05_checking">Checking Nostr address</string>
+    <string name="select_deselect_all">Select/Deselect all</string>
+    <string name="default_relays">Default</string>
+    <string name="select_a_relay_to_continue">Select a relay to continue</string>
+
+    <string name="zap_forward_title">Forward Zaps to:</string>
+    <string name="zap_forward_explainer">Supporting clients will forward zaps to the LNAddress or User Profile below instead of yours</string>
+
+    <string name="geohash_title">Expose Location as </string>
+    <string name="geohash_explainer">Adds a Geohash of your location to the post. The public will know you are within 5km (3mi) of the current location</string>
+
+    <string name="add_sensitive_content_explainer">Adds sensitive content warning before showing your content. This is ideal for any NSFW content or content some people may find offensive or disturbing</string>
+
+    <string name="new_feature_nip17_might_not_be_available_title">New Feature</string>
+    <string name="new_feature_nip17_might_not_be_available_description">Activating this mode requires Amethyst to send a NIP-17 message (GiftWrapped, Sealed Direct and Group Messages). NIP-17 is new and most clients have not implemented it yet. Make sure the receiver is using a compatible client.</string>
+    <string name="new_feature_nip17_activate">Activate</string>
+
+    <string name="messages_create_public_chat">Public</string>
+    <string name="messages_create_public_private_chat_description">New Public or Private Group</string>
+    <string name="messages_new_message">Private</string>
+    <string name="messages_new_message_to">To</string>
+    <string name="messages_new_message_subject">Subject</string>
+    <string name="messages_new_message_subject_caption">Topic of the conversation</string>
+    <string name="messages_new_message_to_caption">"@User1, @User2, @User3"</string>
+
+    <string name="messages_group_descriptor">Members of this group</string>
+    <string name="messages_new_subject_message">Explanation to members</string>
+    <string name="messages_new_subject_message_placeholder">Changing the name for the new goals.</string>
+
+    <string name="paste_from_clipboard">Paste from clipboard</string>
+
+    <string name="language_description">For the App\'s Interface</string>
+    <string name="theme_description">Dark, Light or System theme</string>
+    <string name="automatically_load_images_gifs_description">Automatically load images and GIFs</string>
+    <string name="automatically_play_videos_description">Automatically plays videos and GIFs</string>
+    <string name="automatically_show_url_preview_description">Show URL previews</string>
+    <string name="load_image_description">When to load images</string>
+
+    <string name="copy_to_clipboard">Copy to clipboard</string>
+    <string name="copy_npub_to_clipboard">Copy npub to clipboard</string>
+    <string name="share_or_save">Share or Save</string>
+    <string name="copy_url_to_clipboard">Copy URL to clipboard</string>
+    <string name="copy_the_note_id_to_the_clipboard">Copy Note ID to clipboard</string>
+
+    <string name="created_at">Created at</string>
+    <string name="rules">Rules</string>
+
+    <string name="login_with_external_signer">Login with Amber</string>
+
+    <string name="status_update">Update your status</string>
+
+    <string name="lightning_wallets_not_found">Error parsing error message</string>
+    <string name="poll_zap_value_min_max_explainer">Votes are weighted by the zap amount. You can set a minimum amount to avoid spammers and a maximum amount to avoid a large zappers taking over the poll. Use the same amount in both fields to make sure every vote is valued the same amount. Leave it empty to accept any amount.</string>
+
+    <string name="error_dialog_zap_error">Unable to send zap</string>
+    <string name="error_dialog_talk_to_user">Message the User</string>
+    <string name="error_dialog_button_ok">OK</string>
+
+    <string name="relay_information_document_error_assemble_url">Failed to reach %1$s: %2$s</string>
+
+    <string name="relay_information_document_error_failed_to_assemble_url">Failed to assemble NIP-11 url for %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">Failed to reach %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">Failed to parse response from %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_with_http">Relay declined request %1$s: %2$s</string>
+
+    <string name="relay_information_document_error_reach_server">Failed to reach %1$s: %2$s</string>
+    <string name="relay_information_document_error_parse_result">Failed to parse result from %1$s: %2$s</string>
+    <string name="relay_information_document_error_http_status">%1$s failed with code %2$s</string>
+    <string name="active_for">Active for: </string>
+
+    <string name="active_for_home">Home</string>
+    <string name="active_for_msg">DMs</string>
+    <string name="active_for_chats">Chats</string>
+    <string name="active_for_global">Global</string>
+    <string name="active_for_search">Search</string>
+
+    <string name="zap_split_title">Split and Forward Zaps</string>
+    <string name="zap_split_explainer">Supporting clients will split and forward zaps to the users added here instead of yours</string>
+    <string name="zap_split_search_and_add_user">Search and Add User</string>
+    <string name="zap_split_search_and_add_user_placeholder">Username or display name</string>
+    <string name="missing_lud16">Missing lightning setup</string>
+    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">User %1$s does not have a lightning address set up to receive sats</string>
+    <string name="zap_split_weight">Percentage</string>
+    <string name="zap_split_weight_placeholder">25</string>
+    <string name="splitting_zaps_with">Splitting zaps with</string>
+    <string name="forwarding_zaps_to">Forwarding zaps to</string>
+
+    <string name="lightning_wallets_not_found2">Lightning wallets not found</string>
+    <string name="paid">Paid</string>
+    <string name="wallet_number">Wallet %1$s</string>
+    <string name="error_opening_external_signer">Error opening signer app</string>
+    <string name="error_opening_external_signer_description">The signer app could not be found. Check if the app hasn\'t been uninstalled</string>
+    <string name="sign_request_rejected">Signer Application Rejected</string>
+    <string name="sign_request_rejected_description">Make sure the signer application has authorized this transaction</string>
+
+    <string name="no_wallet_found_with_error">No Wallets found to pay a lightning invoice (Error: %1$s). Please install a Lightning wallet to use zaps</string>
+    <string name="no_wallet_found">No Wallets found to pay a lightning invoice. Please install a Lightning wallet to use zaps</string>
+
+    <string name="hidden_words">Hidden Words</string>
+    <string name="hide_new_word_label">Hide new word or sentence</string>
+    <string name="automatically_show_profile_picture">Profile Picture</string>
+    <string name="automatically_show_profile_picture_description">Show Profile pictures</string>
+
+    <string name="select_an_option">Select an Option</string>
+
+    <string name="error_dialog_pay_invoice_error">Could not pay invoice</string>
+    <string name="error_dialog_pay_withdraw_error">Could not withdraw</string>
+
+    <string name="error_parsing_nip47_title">Could not setup Wallet Connect</string>
+    <string name="error_parsing_nip47">Error parsing NIP-47 connection string. Check if this is correct with your Wallet provider: %1$s. Error: %2$s</string>
+    <string name="error_parsing_nip47_no_error">Error parsing NIP-47 connection string. Check if this is correct with your Wallet provider: %1$s.</string>
+
+    <string name="cashu_failed_redemption">Could not redeem Cashu</string>
+    <string name="cashu_failed_redemption_explainer_error_msg">Mint provided the following error message: %1$s</string>
+    <string name="cashu_failed_redemption_explainer_already_spent">Cashu tokens already spent.</string>
+
+    <string name="cashu_successful_redemption">Cashu Received</string>
+    <string name="cashu_successful_redemption_explainer">%1$s sats were sent to your wallet. (Fees: %2$s sats)</string>
+    <string name="cashu_no_wallet_found">No compatible Cashu wallet found on system</string>
+
+    <string name="error_unable_to_fetch_invoice">Unable to fetch invoice from receiver\'s servers</string>
+
+    <string name="wallet_connect_pay_invoice_error_error">Your wallet connect provider returned the following error: %1$s</string>
+
+    <string name="could_not_connect_to_tor">Could not connect to Tor</string>
+    <string name="unable_to_download_relay_document">Download relay document unavailable</string>
+    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">Could not assemble LNUrl from Lightning Address \"%1$s\". Check the user\'s setup</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">The receiver\'s lightning service at %1$s is not available. It was calculated from the lightning address \"%2$s\". Error: %3$s. Check if the server is up and if the lightning address is correct</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Could not resolve %1$s. Check if you are connected, if the server is up and if the lightning address %2$s is correct</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Could not resolve %1$s. Check if you are connected, if the server is up and if the lightning address %2$s is correct.\n\nException was: %3$s</string>
+    <string name="could_not_fetch_invoice_from">Could not fetch invoice from %1$s</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Error Parsing JSON from Lightning Address. Check the user\'s lightning setup</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Error Parsing JSON from %1$s. Check the user\'s lightning setup</string>
+
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">Callback URL not found in the User\'s lightning address server configuration</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Callback URL not found from %1$s\'s response</string>
+
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Error Parsing JSON from Lightning Address\'s invoice fetch. Check the user\'s lightning setup</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Error Parsing JSON from %1$s\'s invoice fetch. Check the user\'s lightning setup</string>
+
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Incorrect invoice amount (%1$s sats) from %2$s. It should have been %3$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Unable to create a lightning invoice before sending the zap. The receiver\'s lightning wallet sent the following error: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Unable to create a lightning invoice. Message from %1$s: %2$s</string>
+
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Unable to create a lightning invoice before sending the zap. Element pr not found in the resulting JSON.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Unable to create a lightning invoice from %1$s: Element pr not found in the resulting JSON.</string>
+
+
+    <string name="read_only_user">Read-only user</string>
+    <string name="no_reactions_setup">No reactions setup</string>
+
+    <string name="select_push_server">Select a UnifiedPush App</string>
+    <string name="push_server_title">Push Notification</string>
+    <string name="push_server_explainer">From installed UnifiedPush apps</string>
+    <string name="push_server_none">None</string>
+    <string name="push_server_none_explainer">Disables Push Notifications</string>
+    <string name="push_server_uses_app_explainer">Uses app %1$s</string>
+
+    <string name="push_server_install_app">Push Notification Setup</string>
+    <string name="push_server_install_app_description">
+        To receive push notifications, install any app that supports [Unified Push](https://unifiedpush.org/), such as [Nfty](https://ntfy.sh/).
+        After installing, select the app you want to use in the Settings.
+    </string>
+
+    <string name="payment_required_title">Message from %1$s</string>
+    <string name="thread_title">Thread</string>
+    <string name="send_the_seller_a_message">Send the seller a message</string>
+    <string name="hi_seller_is_this_still_available">Hi %1$s, is this still available?</string>
+    <string name="hi_there_is_this_still_available">Hi there, is this still available?</string>
+
+    <string name="classifieds">Sell an Item</string>
+
+    <string name="classifieds_title">Title</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
+    <string name="classifieds_condition">Condition</string>
+    <string name="classifieds_category">Category</string>
+    <string name="classifieds_price">Price (in Sats)</string>
+    <string name="classifieds_price_placeholder">1000</string>
+    <string name="classifieds_location">Location</string>
+    <string name="classifieds_location_placeholder">City, State, Country</string>
+
+    <string name="classifieds_condition_new">New</string>
+    <string name="classifieds_condition_new_explainer">It\'s a brand new unit, in the original box</string>
+
+    <string name="classifieds_condition_like_new">Like New</string>
+    <string name="classifieds_condition_like_new_explainer">It\'s used, but there are no signs of usage</string>
+
+    <string name="classifieds_condition_good">Good</string>
+    <string name="classifieds_condition_good_explainer">It has some superficial usage marks</string>
+
+    <string name="classifieds_condition_fair">Fair</string>
+    <string name="classifieds_condition_fair_explainer">It is still in acceptable and functional shape</string>
+
+    <string name="classifieds_category_clothing">Clothing</string>
+    <string name="classifieds_category_accessories">Accessories</string>
+    <string name="classifieds_category_electronics">Electronics</string>
+    <string name="classifieds_category_furniture">Furniture</string>
+    <string name="classifieds_category_collectibles">Collectibles</string>
+    <string name="classifieds_category_books">Books</string>
+    <string name="classifieds_category_pets">Pets</string>
+    <string name="classifieds_category_sports">Sports</string>
+    <string name="classifieds_category_fitness">Fitness</string>
+    <string name="classifieds_category_art">Art</string>
+    <string name="classifieds_category_crafts">Crafts</string>
+    <string name="classifieds_category_home">Home</string>
+    <string name="classifieds_category_office">Office</string>
+    <string name="classifieds_category_food">Food</string>
+    <string name="classifieds_category_misc">Miscellaneous</string>
+    <string name="classifieds_category_other">Other</string>
+
+    <string name="failed_to_upload_media_no_details">Failed to upload media</string>
+    <string name="could_not_open_the_compressed_file">Could not open the compressed file</string>
+    <string name="error_when_compressing_media">Error when compressing media: %1$s</string>
+    <string name="failed_to_upload_media">Uploading error: %1$s</string>
+    <string name="server_did_not_provide_a_url_after_uploading">Server did not provide a URL after uploading</string>
+    <string name="could_not_download_from_the_server">Could not download uploaded media from the server</string>
+    <string name="could_not_prepare_local_file_to_upload">Could not prepare local file to upload: %1$s</string>
+    <string name="failed_to_upload_with_message">Failed to upload: %1$s</string>
+    <string name="failed_to_delete_with_message">Failed to delete: %1$s</string>
+
+    <string name="edit_draft">Edit draft</string>
+
+    <string name="login_with_qr_code">Login with QR Code</string>
+    <string name="route">Route</string>
+    <string name="route_home">Home</string>
+    <string name="route_search">Search</string>
+    <string name="route_discover">Discover</string>
+    <string name="route_messages">Messages</string>
+    <string name="route_notifications">Notifications</string>
+    <string name="route_global">Global</string>
+    <string name="route_video">Shorts</string>
+    <string name="route_security_filters">Security Filters</string>
+
+    <string name="new_post">New Post</string>
+    <string name="new_short">New Shorts: images or videos</string>
+    <string name="new_community_note">New Community Note</string>
+
+    <string name="open_all_reactions_to_this_post">Open all reactions to this post</string>
+    <string name="close_all_reactions_to_this_post">Close all reactions to this post</string>
+
+    <string name="reply_description">Reply</string>
+    <string name="boost_or_quote_description">Boost Or Quote</string>
+    <string name="like_description">Like</string>
+    <string name="zap_description">Zap</string>
+
+    <string name="change_reaction">Change Quick Reactions</string>
+
+    <string name="profile_image_of_user">Profile Picture of %1$s</string>
+    <string name="relay_info">Relay %1$s</string>
+    <string name="expand_relay_list">Expand relay list</string>
+    <string name="note_options">Note options</string>
+    <string name="relay_list_selector">Relay list selector</string>
+    <string name="poll">Poll</string>
+    <string name="disable_poll">Disable Poll</string>
+
+    <string name="add_bitcoin_invoice">Bitcoin Invoice</string>
+    <string name="cancel_bitcoin_invoice">Cancel Bitcoin Invoice</string>
+    <string name="cancel_classifieds">Cancel Sell an Item</string>
+
+    <string name="add_zapraiser">Zapraiser</string>
+    <string name="cancel_zapraiser">Cancel Zapraiser</string>
+
+    <string name="add_location">Location</string>
+    <string name="remove_location">Remove Location</string>
+
+    <string name="add_zap_split">Zap splits</string>
+    <string name="cancel_zap_split">Cancel Zap split</string>
+
+    <string name="add_content_warning">Add content warning</string>
+    <string name="remove_content_warning">Remove content warning</string>
+    <string name="show_npub_as_a_qr_code">Show npub as a QR code</string>
+
+    <string name="invalid_nip19_uri">Invalid address</string>
+    <string name="invalid_nip19_uri_description">Amethyst received a URI to open but that uri was invalid: %1$s</string>
+
+    <string name="dm_relays_title">DM Inbox Relays</string>
+    <string name="dm_relays_through">Relays: %1$s</string>
+    <string name="dm_relays_regular">Using Regular Relays</string>
+    <string name="dm_relays_not_found">Set up your Private Inbox relays</string>
+    <string name="dm_relays_not_found_description">This setting lets everybody know which relays to use when sending messages to you. Without them you might miss some messages.</string>
+    <string name="dm_relays_not_found_examples">Good options are:\n - inbox.nostr.wine (paid)\n - auth.nostr1.com (free)\n - you.nostr1.com (personal relays - paid)</string>
+    <string name="dm_relays_not_found_editing">Insert between 1–3 relays to serve as your private inbox. DM Inbox relays should accept any message from anyone, but only allow you to download them.</string>
+    <string name="dm_relays_not_found_create_now">Set up now</string>
+
+    <string name="search_relays_title">Search Relays</string>
+    <string name="search_relays_not_found">Set up your Search relays</string>
+    <string name="search_relays_not_found_description">Creating a relay list specifically designed for search and user tagging will improve these results.</string>
+    <string name="search_relays_not_found_editing">Insert between 1–3 relays to use when searching for content or tagging users. Make sure your chosen relays implement NIP-50</string>
+    <string name="search_relays_not_found_examples">Good options are:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+
+    <string name="relay_settings">Relay Settings</string>
+    <string name="public_home_section">Public Home Relays</string>
+    <string name="public_home_section_explainer">This relay type stores all your content. Amethyst will send your posts here and others will use these relays to find your content. Insert between 1–3 relays. They can be personal relays, paid relays or public relays.</string>
+    <string name="public_notif_section">Public Inbox Relays</string>
+    <string name="public_notif_section_explainer">This relay type receives all replies, comments, likes and zaps to your posts. They can be paid or free relays. Limits set by the relay operator can limit the notifications you receive for the good and for the bad. For example, if you are being attacked by comment spam, paid relays can filter the spam out. Insert between 1–3 relays.</string>
+    <string name="private_inbox_section">DM Inbox Relays</string>
+    <string name="private_inbox_section_explainer">Insert between 1–3 relays to serve as your private inbox. Others will use these relays to send DMs to you. DM Inbox relays should accept any message from anyone, but only allow you to download them. Good options are:\n - inbox.nostr.wine (paid)\n - auth.nostr1.com (free)\n - you.nostr1.com (personal relays - paid)</string>
+    <string name="private_outbox_section">Private Relays</string>
+    <string name="private_outbox_section_explainer">Insert between 1–3 relays to store events no one else can see, like your Drafts and/or app settings. Ideally, these relays are either local or require authentication before downloading each user\'s content.</string>
+    <string name="kind_3_section">General Relays</string>
+    <string name="kind_3_section_description">Amethyst uses these relays to download posts for you.</string>
+    <string name="search_section">Search Relays</string>
+    <string name="search_section_explainer">List of relays to use when searching content or users. Tagging and search will not work if no options are available. Make sure they implement NIP-50.</string>
+    <string name="local_section">Local Relays</string>
+    <string name="local_section_explainer">List of relays that are running in this device.</string>
+
+    <string name="zap_the_devs_title">Zap the Devs!</string>
+    <string name="zap_the_devs_description">Your donation helps us make a difference. Every sat counts!</string>
+    <string name="donate_now">Donate Now</string>
+    <string name="brought_to_you_by">was brought to you by:</string>
+    <string name="this_version_brought_to_you_by">This version was brought to you by:</string>
+    <string name="version_name">Version %1$s</string>
+    <string name="thank_you">Thank you!</string>
+    <string name="max_limit">Max Limit</string>
+    <string name="restricted_writes">Restricted Writes</string>
+    <string name="forked_from">Forked from</string>
+    <string name="forked_tag">FORK</string>
+    <string name="git_repository">Git Repository: %1$s</string>
+    <string name="git_web_address">Web:</string>
+    <string name="git_clone_address">Clone:</string>
+    <string name="existed_since">OTS: %1$s</string>
+
+    <string name="ots_info_title">Timestamp Proof</string>
+    <string name="ots_info_description">There\'s proof this post was signed sometime before %1$s. The proof was stamped in the Bitcoin blockchain at that date and time.</string>
+
+    <string name="edit_post">Edit Post</string>
+    <string name="proposal_to_edit">Proposal to improve a post</string>
+    <string name="message_to_author">Summary of changes</string>
+    <string name="message_to_author_placeholder">Quick fixes…</string>
+
+    <string name="accept_the_suggestion">Accept the Suggestion</string>
+
+    <string name="accessibility_download_for_offline">Download</string>
+    <string name="accessibility_lyrics_on">Lyrics on</string>
+    <string name="accessibility_lyrics_off">Lyrics off</string>
+    <string name="accessibility_turn_on_sealed_message">Sealed message off. Click to turn on sealed message</string>
+    <string name="accessibility_turn_off_sealed_message">Sealed message on. Click to turn off sealed message</string>
+    <string name="accessibility_send">Send</string>
+    <string name="accessibility_play_username">Play username as audio</string>
+    <string name="accessibility_scan_qr_code">Scan QR code</string>
+    <string name="accessibility_navigate_to_alby">Navigate to the third-party wallet provider Alby</string>
+    <string name="it_s_not_possible_to_reply_to_a_draft_note">It\'s not possible to reply a draft note</string>
+    <string name="it_s_not_possible_to_quote_to_a_draft_note">It\'s not possible to quote a draft note</string>
+    <string name="it_s_not_possible_to_react_to_a_draft_note">It\'s not possible to react a draft note</string>
+    <string name="it_s_not_possible_to_zap_to_a_draft_note">It\'s not possible to zap a draft note</string>
+    <string name="draft_note">Draft Note</string>
+
+    <string name="load_from_text">From Msg</string>
+
+    <string name="dvm_looking_for_app">Looking for Application</string>
+    <string name="dvm_waiting_status">Job Requested, waiting for a reply</string>
+    <string name="dvm_requesting_job">Requesting Job from DVM</string>
+    <string name="nwc_payment_request">Payment request sent, waiting for confirmation from your wallet</string>
+    <string name="dvm_waiting_to_confirm_payment">Waiting for DVM to confirm payment or send results</string>
+
+    <string name="http_status_400">Bad Request - The server can’t or won’t process the request.</string>
+    <string name="http_status_401">Unauthorized - The user doesn’t have valid authentication credentials</string>
+    <string name="http_status_402">Payment Required - The server requires payment to complete the request</string>
+    <string name="http_status_403">Forbidden - The user doesn’t have access rights to make the request</string>
+    <string name="http_status_404">Not Found - The server can’t find the requested address</string>
+    <string name="http_status_405">Method Not Allowed - The server supports the request method, but not the target resource</string>
+    <string name="http_status_406">Not Acceptable - The server doesn’t find any content that satisfies the request.</string>
+    <string name="http_status_407">Proxy Authentication Required - The user doesn’t have valid authentication credentials</string>
+    <string name="http_status_408">Request Timeout - The server timed out waiting for somebody else</string>
+    <string name="http_status_409">Conflict - The server can’t fulfill the request because there’s a conflict with the resource</string>
+    <string name="http_status_410">Gone - The content requested has been permanently deleted from the server and will not be reinstated</string>
+    <string name="http_status_411">Length Required - The server rejects the request because it requires a defined</string>
+    <string name="http_status_412">Precondition Failed - The request\'s preconditions in the header fields that the server fails to meet</string>
+    <string name="http_status_413">Payload Too Large - The request is larger than the server’s defined limits, and the server refuses to process it</string>
+    <string name="http_status_414">URI Too Long - The url requested by the client is too long for the server to process. </string>
+    <string name="http_status_415">Unsupported Media Type - The request uses a media format the server does not support</string>
+    <string name="http_status_416">Range Not Satisfiable - The server can’t fulfill the value indicated in the request’s Range header field. </string>
+    <string name="http_status_417">Expectation Failed - The server can’t meet the requirements indicated by the Expect request header field</string>
+    <string name="http_status_426">Upgrade Required -  The server refuses to process the request using the current protocol unless the client upgrades to a different protocol.</string>
+
+    <string name="http_status_500">Internal Server Error - The server has encountered an unexpected error and cannot complete the request</string>
+    <string name="http_status_501">Not Implemented - The server can’t fulfill the request or doesn’t recognize the request method</string>
+    <string name="http_status_502">Bad Gateway - The server acts as a gateway and got an invalid response from the host</string>
+    <string name="http_status_503">Service Unavailable - This often occurs when a server is overloaded or down for maintenance</string>
+    <string name="http_status_504">Gateway Timeout - The server was acting as a gateway or proxy and timed out, waiting for a response</string>
+    <string name="http_status_505">HTTP Version Not Supported - The server doesn’t support the HTTP version in the request</string>
+    <string name="http_status_506">Variant Also Negotiates - The server has an internal configuration error</string>
+    <string name="http_status_507">Insufficient Storage - The server doesn’t have enough storage to process the request successfully</string>
+    <string name="http_status_508">Loop Detected - The server detects an infinite loop while processing the request</string>
+    <string name="http_status_511">Network Authentication Required - The client must be authenticated to access the network</string>
+</resources>

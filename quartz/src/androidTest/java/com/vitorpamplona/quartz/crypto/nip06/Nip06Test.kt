@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.crypto.nip06
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.encoders.toHexKey
+import fr.acinq.secp256k1.Secp256k1
 import junit.framework.TestCase.assertEquals
 import org.junit.Ignore
 import org.junit.Test
@@ -29,6 +30,8 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class Nip06Test {
+    val nip06 = Nip06(Secp256k1.get())
+
     // private key (hex): 7f7ff03d123792d6ac594bfa67bf6d0c0ab55b6b1fdb6249303fe861f1ccba9a
     // nsec: nsec10allq0gjx7fddtzef0ax00mdps9t2kmtrldkyjfs8l5xruwvh2dq0lhhkp
     private val menemonic0 = "leader monkey parrot ring guide accident before fence cannon height naive bean"
@@ -43,26 +46,26 @@ class Nip06Test {
 
     @Test
     fun fromSeedNip06TestVector0() {
-        val privateKeyHex = Nip06().privateKeyFromMnemonic(menemonic0).toHexKey()
+        val privateKeyHex = nip06.privateKeyFromMnemonic(menemonic0).toHexKey()
         assertEquals("7f7ff03d123792d6ac594bfa67bf6d0c0ab55b6b1fdb6249303fe861f1ccba9a", privateKeyHex)
 
-        val privateKeyHex21 = Nip06().privateKeyFromMnemonic(menemonic0, 21).toHexKey()
+        val privateKeyHex21 = nip06.privateKeyFromMnemonic(menemonic0, 21).toHexKey()
         assertEquals("576390ec69951fcfbf159f2aac0965bb2e6d7a07da2334992af3225c57eaefca", privateKeyHex21)
     }
 
     @Test
     fun fromSeedNip06TestVector1() {
-        val privateKeyHex = Nip06().privateKeyFromMnemonic(menemonic1).toHexKey()
+        val privateKeyHex = nip06.privateKeyFromMnemonic(menemonic1).toHexKey()
         assertEquals("c15d739894c81a2fcfd3a2df85a0d2c0dbc47a280d092799f144d73d7ae78add", privateKeyHex)
 
-        val privateKeyHex21 = Nip06().privateKeyFromMnemonic(menemonic1, 42).toHexKey()
+        val privateKeyHex21 = nip06.privateKeyFromMnemonic(menemonic1, 42).toHexKey()
         assertEquals("ad993054383da74e955f8b86346365b5ffd6575992e1de3738dda9f94407052b", privateKeyHex21)
     }
 
     @Test
     @Ignore("Snort is not correctly implemented")
     fun fromSeedNip06FromSnort() {
-        val privateKeyNsec = Nip06().privateKeyFromMnemonic(snortTest).toHexKey()
+        val privateKeyNsec = nip06.privateKeyFromMnemonic(snortTest).toHexKey()
         assertEquals("nsec1ppw9ltr2x9qwg9a2qnmgv98tfruy2ejnja7me76mwmsreu3s8u2sscj5nt", privateKeyNsec)
     }
 }

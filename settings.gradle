@@ -28,7 +28,8 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Amethyst"
-include ':app'
+include ':amethyst'
 include ':benchmark'
 include ':quartz'
 include ':commons'
+include ':ammolite'
