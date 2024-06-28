@@ -20,13 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.Filter
-import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
-import com.vitorpamplona.quartz.events.RelayAuthEvent
 import com.vitorpamplona.quartz.signers.NostrSigner
 
 class NostrLnZapPaymentResponseDataSource(
@@ -61,19 +58,5 @@ class NostrLnZapPaymentResponseDataSource(
         val wc = createWalletConnectServiceWatcher()
 
         channel.typedFilters = listOfNotNull(wc).ifEmpty { null }
-    }
-
-    override fun auth(
-        relay: Relay,
-        challenge: String,
-    ) {
-        super.auth(relay, challenge)
-
-        RelayAuthEvent.create(relay.url, challenge, authSigner) {
-            Client.send(
-                it,
-                relay.url,
-            )
-        }
     }
 }
