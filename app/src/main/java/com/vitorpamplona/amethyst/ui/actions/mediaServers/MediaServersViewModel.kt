@@ -66,7 +66,7 @@ class MediaServersViewModel : ViewModel() {
             }
         val serverNameReference =
             try {
-                URIReference.parse(normalizedUrl).host.value
+                URIReference.parse(normalizedUrl).host.value.replaceFirstChar { it.uppercase() }
             } catch (e: Exception) {
                 normalizedUrl.replaceFirstChar { it.uppercase() }
             }
