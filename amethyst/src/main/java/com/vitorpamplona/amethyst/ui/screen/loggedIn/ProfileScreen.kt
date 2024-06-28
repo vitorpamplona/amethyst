@@ -148,6 +148,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileBookmarksFeedViewMod
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileConversationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileFollowersUserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileFollowsUserFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileGalleryFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileNewThreadsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileReportFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileZapsFeedViewModel
@@ -294,6 +295,16 @@ fun PrepareViewModels(
                 ),
         )
 
+    val galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel =
+        viewModel(
+            key = baseUser.pubkeyHex + "UserGalleryFeedViewModel",
+            factory =
+                NostrUserProfileGalleryFeedViewModel.Factory(
+                    baseUser,
+                    accountViewModel.account,
+                ),
+        )
+
     val reportsFeedViewModel: NostrUserProfileReportFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileReportFeedViewModel",
@@ -312,6 +323,7 @@ fun PrepareViewModels(
         appRecommendations,
         zapFeedViewModel,
         bookmarksFeedViewModel,
+        galleryFeedViewModel,
         reportsFeedViewModel,
         accountViewModel = accountViewModel,
         nav = nav,
@@ -328,6 +340,7 @@ fun ProfileScreen(
     appRecommendations: NostrUserAppRecommendationsFeedViewModel,
     zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
     bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel,
     reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -372,6 +385,7 @@ fun ProfileScreen(
         followersFeedViewModel,
         zapFeedViewModel,
         bookmarksFeedViewModel,
+        galleryFeedViewModel,
         reportsFeedViewModel,
         accountViewModel,
         nav,
@@ -388,6 +402,7 @@ private fun RenderSurface(
     followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
     bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel,
     reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -448,6 +463,7 @@ private fun RenderSurface(
                     followersFeedViewModel,
                     zapFeedViewModel,
                     bookmarksFeedViewModel,
+                    galleryFeedViewModel,
                     reportsFeedViewModel,
                     accountViewModel,
                     nav,
@@ -470,6 +486,7 @@ private fun RenderScreen(
     followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
     bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel,
     reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -501,6 +518,7 @@ private fun RenderScreen(
                 followersFeedViewModel,
                 zapFeedViewModel,
                 bookmarksFeedViewModel,
+                galleryFeedViewModel,
                 reportsFeedViewModel,
                 accountViewModel,
                 nav,
@@ -519,6 +537,7 @@ private fun CreateAndRenderPages(
     followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
     bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel,
     reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -533,7 +552,7 @@ private fun CreateAndRenderPages(
     when (page) {
         0 -> TabNotesNewThreads(threadsViewModel, accountViewModel, nav)
         1 -> TabNotesConversations(repliesViewModel, accountViewModel, nav)
-        2 -> Gallery(baseUser, followsFeedViewModel, accountViewModel, nav)
+        2 -> TabGallery(galleryFeedViewModel, accountViewModel, nav)
         3 -> TabFollows(baseUser, followsFeedViewModel, accountViewModel, nav)
         4 -> TabFollowers(baseUser, followersFeedViewModel, accountViewModel, nav)
         5 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
@@ -1537,7 +1556,31 @@ fun TabNotesConversations(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
+fun TabGallery(
+    feedViewModel: NostrUserProfileGalleryFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    LaunchedEffect(Unit) { feedViewModel.invalidateData() }
+
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp),
+        ) {
+            RefresheableFeedView(
+                feedViewModel,
+                null,
+                enablePullRefresh = false,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+    }
+}
+
+/*@Composable
 fun Gallery(
     baseUser: User,
     feedViewModel: UserFeedViewModel,
@@ -1579,7 +1622,7 @@ fun Gallery(
             }
         }
     }
-}
+} */
 
 @Composable
 fun TabFollowedTags(

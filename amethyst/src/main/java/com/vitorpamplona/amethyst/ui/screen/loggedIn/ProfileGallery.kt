@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +32,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +43,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,28 +53,149 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.ClickableNote
 import com.vitorpamplona.amethyst.ui.note.LongPressToQuickAction
+import com.vitorpamplona.amethyst.ui.note.NormalChannelCard
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.calculateBackgroundColor
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
+import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
+import com.vitorpamplona.amethyst.ui.screen.FeedError
+import com.vitorpamplona.amethyst.ui.screen.FeedState
+import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.LoadingFeed
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.quartz.events.GalleryListEvent
 
+@Composable
+private fun RenderGalleryFeed(
+    viewModel: FeedViewModel,
+    routeForLastRead: String?,
+    forceEventKind: Int?,
+    listState: LazyListState,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+
+    CrossfadeIfEnabled(
+        targetState = feedState,
+        animationSpec = tween(durationMillis = 100),
+        label = "RenderDiscoverFeed",
+        accountViewModel = accountViewModel,
+    ) { state ->
+        when (state) {
+            is FeedState.Empty -> {
+                FeedEmpty { viewModel.invalidateData() }
+            }
+            is FeedState.FeedError -> {
+                FeedError(state.errorMessage) { viewModel.invalidateData() }
+            }
+            is FeedState.Loaded -> {
+                GalleryFeedLoaded(
+                    state,
+                    routeForLastRead,
+                    listState,
+                    forceEventKind,
+                    accountViewModel,
+                    nav,
+                )
+            }
+            is FeedState.Loading -> {
+                LoadingFeed()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun GalleryFeedLoaded(
+    state: FeedState.Loaded,
+    routeForLastRead: String?,
+    listState: LazyListState,
+    forceEventKind: Int?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    LazyColumn(
+        contentPadding = FeedPadding,
+        state = listState,
+    ) {
+        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
+            val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
+
+            Row(defaultModifier) {
+                GalleryCardCompose(
+                    baseNote = item,
+                    routeForLastRead = routeForLastRead,
+                    modifier = Modifier.fillMaxWidth(),
+                    forceEventKind = forceEventKind,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+
+            HorizontalDivider(
+                thickness = DividerThickness,
+            )
+        }
+    }
+}
+
+@Composable
+fun GalleryCardCompose(
+    baseNote: Note,
+    routeForLastRead: String? = null,
+    modifier: Modifier = Modifier,
+    parentBackgroundColor: MutableState<Color>? = null,
+    forceEventKind: Int?,
+    isHiddenFeed: Boolean = false,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel) {
+        if (forceEventKind == null || baseNote.event?.kind() == forceEventKind) {
+            CheckHiddenFeedWatchBlockAndReport(
+                note = baseNote,
+                modifier = modifier,
+                ignoreAllBlocksAndReports = isHiddenFeed,
+                showHiddenWarning = false,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            ) { canPreview ->
+                NormalChannelCard(
+                    baseNote = baseNote,
+                    routeForLastRead = routeForLastRead,
+                    modifier = modifier,
+                    parentBackgroundColor = parentBackgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+        }
+    }
+}
+
 // TODO This is to large parts from the ChannelCardCompose
-// Why does it not be in a grid, like the marketplace
+
+/*@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProfileGallery(
-    baseNotes: List<GalleryThumb>,
+    baseNote: List<GalleryThumb>,
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     isHiddenFeed: Boolean = false,
@@ -103,7 +231,7 @@ fun ProfileGallery(
         }
     }
 }
-
+*/
 @Composable
 fun GalleryCard(
     baseNote: Note,
