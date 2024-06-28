@@ -22,15 +22,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -39,7 +36,6 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
@@ -51,8 +47,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,7 +58,7 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.ClickableNote
-import com.vitorpamplona.amethyst.ui.note.LongPressToQuickAction
+import com.vitorpamplona.amethyst.ui.note.LongPressToQuickActionGallery
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.calculateBackgroundColor
@@ -78,7 +72,6 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.quartz.events.TextNoteEvent
 
 @Composable
@@ -247,8 +240,7 @@ fun GalleryCard(
     nav: (String) -> Unit,
 ) {
     // baseNote.event?.let { Text(text = it.pubKey()) }
-    LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
-
+    LongPressToQuickActionGallery(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
         CheckNewAndRenderChannelCard(
             baseNote,
             modifier,
@@ -400,7 +392,7 @@ fun InnerRenderGalleryThumb(
             )
         } ?: run { DisplayGalleryAuthorBanner(note) }
 
-        Row(
+       /* Row(
             Modifier
                 .fillMaxWidth()
                 .background(Color.Black.copy(0.6f))
@@ -417,7 +409,7 @@ fun InnerRenderGalleryThumb(
                     modifier = Modifier.weight(1f),
                 )
             }
-            /*
+
             card.price?.let {
                 val priceTag =
                     remember(card) {
@@ -438,8 +430,8 @@ fun InnerRenderGalleryThumb(
                     overflow = TextOverflow.Ellipsis,
                     color = Color.White,
                 )
-            }*/
-        }
+            }
+        }*/
     }
 }
 

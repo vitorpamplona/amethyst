@@ -157,6 +157,7 @@ import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.SaveableGridFeedState
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -1571,14 +1572,17 @@ fun TabGallery(
             modifier = Modifier.padding(vertical = 0.dp),
         ) {
             var state = LazyGridState()
-            RenderGalleryFeed(
-                feedViewModel,
-                null,
-                0,
-                state,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+
+            SaveableGridFeedState(feedViewModel, scrollStateKey = "gallery") { listState ->
+                RenderGalleryFeed(
+                    feedViewModel,
+                    null,
+                    0,
+                    state,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
         }
     }
 }

@@ -60,7 +60,7 @@ class GalleryListEvent(
         ) {
             add(
                 earlierVersion,
-                arrayOf(arrayOf(tagName, url, tagValue)),
+                arrayOf(arrayOf(tagName, tagValue, url)),
                 signer,
                 createdAt,
                 onReady,
@@ -76,7 +76,7 @@ class GalleryListEvent(
         ) {
             create(
                 content = earlierVersion?.content ?: "",
-                tags = (earlierVersion?.tags ?: arrayOf(arrayOf("d", DEFAULT_D_TAG_GALLERY))).plus(listNewTags),
+                tags = listNewTags.plus(earlierVersion?.tags ?: arrayOf(arrayOf("d", DEFAULT_D_TAG_GALLERY))),
                 signer = signer,
                 createdAt = createdAt,
                 onReady = onReady,
@@ -86,23 +86,26 @@ class GalleryListEvent(
         fun removeEvent(
             earlierVersion: GalleryListEvent,
             eventId: HexKey,
+            url: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (GalleryListEvent) -> Unit,
-        ) = removeTag(earlierVersion, "e", eventId, signer, createdAt, onReady)
+        ) = removeTag(earlierVersion, "g", eventId, url, signer, createdAt, onReady)
 
         fun removeReplaceable(
             earlierVersion: GalleryListEvent,
             aTag: ATag,
+            url: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (GalleryListEvent) -> Unit,
-        ) = removeTag(earlierVersion, "a", aTag.toTag(), signer, createdAt, onReady)
+        ) = removeTag(earlierVersion, "g", aTag.toTag(), url, signer, createdAt, onReady)
 
         private fun removeTag(
             earlierVersion: GalleryListEvent,
             tagName: String,
             tagValue: HexKey,
+            url: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (GalleryListEvent) -> Unit,
@@ -111,7 +114,7 @@ class GalleryListEvent(
                 content = earlierVersion.content,
                 tags =
                     earlierVersion.tags
-                        .filter { it.size <= 1 || !(it[0] == tagName && it[1] == tagValue) }
+                        .filter { it.size <= 1 || !(it[0] == tagName && it[1] == tagValue && it[2] == url) }
                         .toTypedArray(),
                 signer = signer,
                 createdAt = createdAt,
@@ -134,31 +137,6 @@ class GalleryListEvent(
                 }
 
             signer.sign(createdAt, KIND, newTags, content, onReady)
-        }
-
-        fun create(
-            name: String = "",
-            images: List<String>? = null,
-            videos: List<String>? = null,
-            audios: List<String>? = null,
-            privEvents: List<String>? = null,
-            privUsers: List<String>? = null,
-            privAddresses: List<ATag>? = null,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (GalleryListEvent) -> Unit,
-        ) {
-            val tags = mutableListOf<Array<String>>()
-            tags.add(arrayOf("d", name))
-
-            images?.forEach { tags.add(arrayOf("g", it)) }
-            videos?.forEach { tags.add(arrayOf("g", it)) }
-            audios?.forEach { tags.add(arrayOf("g", it)) }
-            tags.add(arrayOf("alt", ALT))
-
-            createPrivateTags(privEvents, privUsers, privAddresses, signer) { content ->
-                signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
-            }
         }
     }
 }
