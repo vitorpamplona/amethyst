@@ -36,7 +36,7 @@ class MediaServersViewModel : ViewModel() {
 
     private val _fileServers = MutableStateFlow<List<Nip96MediaServers.ServerName>>(emptyList())
     val fileServers = _fileServers.asStateFlow()
-    var isModified = false
+    private var isModified = false
 
     fun load(account: Account) {
         this.account = account
@@ -108,7 +108,6 @@ class MediaServersViewModel : ViewModel() {
     }
 
     fun saveFileServers() {
-        // TODO: Add setting the default file server here.
         if (isModified) {
             viewModelScope.launch(Dispatchers.IO) {
                 val serverList = _fileServers.value.map { it.baseUrl }
