@@ -86,63 +86,37 @@ class GalleryListEvent(
         fun removeEvent(
             earlierVersion: GalleryListEvent,
             eventId: HexKey,
-            isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (GalleryListEvent) -> Unit,
-        ) = removeTag(earlierVersion, "e", eventId, isPrivate, signer, createdAt, onReady)
+        ) = removeTag(earlierVersion, "e", eventId, signer, createdAt, onReady)
 
         fun removeReplaceable(
             earlierVersion: GalleryListEvent,
             aTag: ATag,
-            isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (GalleryListEvent) -> Unit,
-        ) = removeTag(earlierVersion, "a", aTag.toTag(), isPrivate, signer, createdAt, onReady)
+        ) = removeTag(earlierVersion, "a", aTag.toTag(), signer, createdAt, onReady)
 
         private fun removeTag(
             earlierVersion: GalleryListEvent,
             tagName: String,
             tagValue: HexKey,
-            isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (GalleryListEvent) -> Unit,
         ) {
-            if (isPrivate) {
-                earlierVersion.privateTagsOrEmpty(signer) { privateTags ->
-                    encryptTags(
-                        privateTags =
-                            privateTags
-                                .filter { it.size <= 1 || !(it[0] == tagName && it[1] == tagValue) }
-                                .toTypedArray(),
-                        signer = signer,
-                    ) { encryptedTags ->
-                        create(
-                            content = encryptedTags,
-                            tags =
-                                earlierVersion.tags
-                                    .filter { it.size <= 1 || !(it[0] == tagName && it[1] == tagValue) }
-                                    .toTypedArray(),
-                            signer = signer,
-                            createdAt = createdAt,
-                            onReady = onReady,
-                        )
-                    }
-                }
-            } else {
-                create(
-                    content = earlierVersion.content,
-                    tags =
-                        earlierVersion.tags
-                            .filter { it.size <= 1 || !(it[0] == tagName && it[1] == tagValue) }
-                            .toTypedArray(),
-                    signer = signer,
-                    createdAt = createdAt,
-                    onReady = onReady,
-                )
-            }
+            create(
+                content = earlierVersion.content,
+                tags =
+                    earlierVersion.tags
+                        .filter { it.size <= 1 || !(it[0] == tagName && it[1] == tagValue) }
+                        .toTypedArray(),
+                signer = signer,
+                createdAt = createdAt,
+                onReady = onReady,
+            )
         }
 
         fun create(
@@ -177,9 +151,9 @@ class GalleryListEvent(
             val tags = mutableListOf<Array<String>>()
             tags.add(arrayOf("d", name))
 
-            images?.forEach { tags.add(arrayOf("image", it)) }
-            videos?.forEach { tags.add(arrayOf("video", it)) }
-            audios?.forEach { tags.add(arrayOf("audio", it)) }
+            images?.forEach { tags.add(arrayOf("g", it)) }
+            videos?.forEach { tags.add(arrayOf("g", it)) }
+            audios?.forEach { tags.add(arrayOf("g", it)) }
             tags.add(arrayOf("alt", ALT))
 
             createPrivateTags(privEvents, privUsers, privAddresses, signer) { content ->
