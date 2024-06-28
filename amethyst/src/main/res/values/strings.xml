@@ -760,6 +760,8 @@
     <string name="server_did_not_provide_a_url_after_uploading">Server did not provide a URL after uploading</string>
     <string name="could_not_download_from_the_server">Could not download uploaded media from the server</string>
     <string name="could_not_prepare_local_file_to_upload">Could not prepare local file to upload: %1$s</string>
+    <string name="failed_to_upload_with_message">Failed to upload: %1$s</string>
+    <string name="failed_to_delete_with_message">Failed to delete: %1$s</string>
 
     <string name="edit_draft">Edit draft</string>
 
@@ -895,4 +897,35 @@
     <string name="dvm_requesting_job">Requesting Job from DVM</string>
     <string name="nwc_payment_request">Payment request sent, waiting for confirmation from your wallet</string>
     <string name="dvm_waiting_to_confirm_payment">Waiting for DVM to confirm payment or send results</string>
+
+    <string name="http_status_400">Bad Request - The server can’t or won’t process the request.</string>
+    <string name="http_status_401">Unauthorized - The user doesn’t have valid authentication credentials</string>
+    <string name="http_status_402">Payment Required - The server requires payment to complete the request</string>
+    <string name="http_status_403">Forbidden - The user doesn’t have access rights to make the request</string>
+    <string name="http_status_404">Not Found - The server can’t find the requested address</string>
+    <string name="http_status_405">Method Not Allowed - The server supports the request method, but not the target resource</string>
+    <string name="http_status_406">Not Acceptable - The server doesn’t find any content that satisfies the request.</string>
+    <string name="http_status_407">Proxy Authentication Required - The user doesn’t have valid authentication credentials</string>
+    <string name="http_status_408">Request Timeout - The server timed out waiting for somebody else</string>
+    <string name="http_status_409">Conflict - The server can’t fulfill the request because there’s a conflict with the resource</string>
+    <string name="http_status_410">Gone - The content requested has been permanently deleted from the server and will not be reinstated</string>
+    <string name="http_status_411">Length Required - The server rejects the request because it requires a defined</string>
+    <string name="http_status_412">Precondition Failed - The request\'s preconditions in the header fields that the server fails to meet</string>
+    <string name="http_status_413">Payload Too Large - The request is larger than the server’s defined limits, and the server refuses to process it</string>
+    <string name="http_status_414">URI Too Long - The url requested by the client is too long for the server to process. </string>
+    <string name="http_status_415">Unsupported Media Type - The request uses a media format the server does not support</string>
+    <string name="http_status_416">Range Not Satisfiable - The server can’t fulfill the value indicated in the request’s Range header field. </string>
+    <string name="http_status_417">Expectation Failed - The server can’t meet the requirements indicated by the Expect request header field</string>
+    <string name="http_status_426">Upgrade Required -  The server refuses to process the request using the current protocol unless the client upgrades to a different protocol.</string>
+
+    <string name="http_status_500">Internal Server Error - The server has encountered an unexpected error and cannot complete the request</string>
+    <string name="http_status_501">Not Implemented - The server can’t fulfill the request or doesn’t recognize the request method</string>
+    <string name="http_status_502">Bad Gateway - The server acts as a gateway and got an invalid response from the host</string>
+    <string name="http_status_503">Service Unavailable - This often occurs when a server is overloaded or down for maintenance</string>
+    <string name="http_status_504">Gateway Timeout - The server was acting as a gateway or proxy and timed out, waiting for a response</string>
+    <string name="http_status_505">HTTP Version Not Supported - The server doesn’t support the HTTP version in the request</string>
+    <string name="http_status_506">Variant Also Negotiates - The server has an internal configuration error</string>
+    <string name="http_status_507">Insufficient Storage - The server doesn’t have enough storage to process the request successfully</string>
+    <string name="http_status_508">Loop Detected - The server detects an infinite loop while processing the request</string>
+    <string name="http_status_511">Network Authentication Required - The client must be authenticated to access the network</string>
 </resources>

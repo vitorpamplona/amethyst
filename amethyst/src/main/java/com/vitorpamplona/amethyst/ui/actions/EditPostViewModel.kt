@@ -53,7 +53,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
 @Stable
-open class EditPostViewModel() : ViewModel() {
+open class EditPostViewModel : ViewModel() {
     var accountViewModel: AccountViewModel? = null
     var account: Account? = null
 
@@ -185,6 +185,7 @@ open class EditPostViewModel() : ViewModel() {
                                                 server = server.server,
                                                 contentResolver = contentResolver,
                                                 onProgress = {},
+                                                context = context,
                                             )
 
                                     createNIP94Record(
@@ -235,13 +236,12 @@ open class EditPostViewModel() : ViewModel() {
         NostrSearchEventOrUserDataSource.clear()
     }
 
-    open fun findUrlInMessage(): String? {
-        return message.text.split('\n').firstNotNullOfOrNull { paragraph ->
+    open fun findUrlInMessage(): String? =
+        message.text.split('\n').firstNotNullOfOrNull { paragraph ->
             paragraph.split(' ').firstOrNull { word: String ->
                 RichTextParser.isValidURL(word) || RichTextParser.isUrlWithoutScheme(word)
             }
         }
-    }
 
     open fun updateMessage(it: TextFieldValue) {
         message = it
@@ -249,14 +249,18 @@ open class EditPostViewModel() : ViewModel() {
 
         if (it.selection.collapsed) {
             val lastWord =
-                it.text.substring(0, it.selection.end).substringAfterLast("\n").substringAfterLast(" ")
+                it.text
+                    .substring(0, it.selection.end)
+                    .substringAfterLast("\n")
+                    .substringAfterLast(" ")
             userSuggestionAnchor = it.selection
             userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
             if (lastWord.startsWith("@") && lastWord.length > 2) {
                 NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
                 viewModelScope.launch(Dispatchers.IO) {
                     userSuggestions =
-                        LocalCache.findUsersStartingWith(lastWord.removePrefix("@"))
+                        LocalCache
+                            .findUsersStartingWith(lastWord.removePrefix("@"))
                             .sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() }, { it.pubkeyHex }))
                             .reversed()
                 }
@@ -271,7 +275,10 @@ open class EditPostViewModel() : ViewModel() {
         userSuggestionAnchor?.let {
             if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
                 val lastWord =
-                    message.text.substring(0, it.end).substringAfterLast("\n").substringAfterLast(" ")
+                    message.text
+                        .substring(0, it.end)
+                        .substringAfterLast("\n")
+                        .substringAfterLast(" ")
                 val lastWordStart = it.end - lastWord.length
                 val wordToInsert = "@${item.pubkeyNpub()}"
 
@@ -288,12 +295,11 @@ open class EditPostViewModel() : ViewModel() {
         }
     }
 
-    fun canPost(): Boolean {
-        return message.text.isNotBlank() &&
+    fun canPost(): Boolean =
+        message.text.isNotBlank() &&
             !isUploadingImage &&
             !wantsInvoice &&
             contentToAddUrl == null
-    }
 
     suspend fun createNIP94Record(
         uploadingResult: Nip96Uploader.PartialEvent,
@@ -304,11 +310,20 @@ open class EditPostViewModel() : ViewModel() {
         // Images don't seem to be ready immediately after upload
         val imageUrl = uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "url" }?.get(1)
         val remoteMimeType =
-            uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "m" }?.get(1)?.ifBlank { null }
+            uploadingResult.tags
+                ?.firstOrNull { it.size > 1 && it[0] == "m" }
+                ?.get(1)
+                ?.ifBlank { null }
         val originalHash =
-            uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "ox" }?.get(1)?.ifBlank { null }
+            uploadingResult.tags
+                ?.firstOrNull { it.size > 1 && it[0] == "ox" }
+                ?.get(1)
+                ?.ifBlank { null }
         val dim =
-            uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "dim" }?.get(1)?.ifBlank { null }
+            uploadingResult.tags
+                ?.firstOrNull { it.size > 1 && it[0] == "dim" }
+                ?.get(1)
+                ?.ifBlank { null }
         val magnet =
             uploadingResult.tags
                 ?.firstOrNull { it.size > 1 && it[0] == "magnet" }

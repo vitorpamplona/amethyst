@@ -139,6 +139,7 @@ open class NewMediaModel : ViewModel() {
                                                 onProgress = { percent: Float ->
                                                     uploadingPercentage.value = 0.2f + (0.2f * percent)
                                                 },
+                                                context = context,
                                             )
 
                                     createNIP94Record(
