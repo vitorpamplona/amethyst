@@ -56,7 +56,7 @@ class Relay(
     val url: String,
     val read: Boolean = true,
     val write: Boolean = true,
-    val activeTypes: Set<FeedType> = FeedType.values().toSet(),
+    val activeTypes: Set<FeedType>,
 ) {
     companion object {
         // waits 3 minutes to reconnect once things fail

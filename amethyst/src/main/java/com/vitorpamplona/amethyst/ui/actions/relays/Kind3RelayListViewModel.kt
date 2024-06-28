@@ -25,6 +25,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.ammolite.relays.Constants
+import com.vitorpamplona.ammolite.relays.Constants.activeTypesGlobalChats
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.ammolite.relays.RelayStats
@@ -99,7 +100,7 @@ class Kind3RelayListViewModel : ViewModel() {
                                     .filter { defaultRelay -> defaultRelay.url == it.key }
                                     .firstOrNull()
                                     ?.feedTypes
-                                ?: FeedType.values().toSet().toImmutableSet()
+                                ?: activeTypesGlobalChats.toImmutableSet()
 
                         Kind3BasicRelaySetupInfo(
                             url = RelayUrlFormatter.normalize(it.key),
@@ -108,8 +109,7 @@ class Kind3RelayListViewModel : ViewModel() {
                             feedTypes = localInfoFeedTypes,
                             relayStat = RelayStats.get(it.key),
                         )
-                    }
-                    .distinctBy { it.url }
+                    }.distinctBy { it.url }
                     .sortedBy { it.relayStat.receivedBytes }
                     .reversed()
             } else {
@@ -122,8 +122,7 @@ class Kind3RelayListViewModel : ViewModel() {
                             feedTypes = it.feedTypes,
                             relayStat = RelayStats.get(it.url),
                         )
-                    }
-                    .distinctBy { it.url }
+                    }.distinctBy { it.url }
                     .sortedBy { it.relayStat.receivedBytes }
                     .reversed()
             }
@@ -134,16 +133,16 @@ class Kind3RelayListViewModel : ViewModel() {
         hasModified = true
 
         _relays.update {
-            defaultRelays.map {
-                Kind3BasicRelaySetupInfo(
-                    url = RelayUrlFormatter.normalize(it.url),
-                    read = it.read,
-                    write = it.write,
-                    feedTypes = it.feedTypes,
-                    relayStat = RelayStats.get(it.url),
-                )
-            }
-                .distinctBy { it.url }
+            defaultRelays
+                .map {
+                    Kind3BasicRelaySetupInfo(
+                        url = RelayUrlFormatter.normalize(it.url),
+                        read = it.read,
+                        write = it.write,
+                        feedTypes = it.feedTypes,
+                        relayStat = RelayStats.get(it.url),
+                    )
+                }.distinctBy { it.url }
                 .sortedBy { it.relayStat.receivedBytes }
                 .reversed()
         }
@@ -223,6 +222,4 @@ fun <T> Iterable<T>.updated(
 fun <T> togglePresenceInSet(
     set: Set<T>,
     item: T,
-): Set<T> {
-    return if (set.contains(item)) set.minus(item) else set.plus(item)
-}
+): Set<T> = if (set.contains(item)) set.minus(item) else set.plus(item)
