@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
 import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.events.GalleryListEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
@@ -146,7 +147,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
                 filter =
                     Filter(
                         kinds =
-                            listOf(BookmarkListEvent.KIND, PeopleListEvent.KIND, AppRecommendationEvent.KIND),
+                            listOf(BookmarkListEvent.KIND, PeopleListEvent.KIND, AppRecommendationEvent.KIND, GalleryListEvent.KIND),
                         authors = listOf(it.pubkeyHex),
                         limit = 100,
                     ),

@@ -269,7 +269,7 @@ private fun DialogContent(
                         contentDescription = stringRes(R.string.quick_action_share),
                     )
 
-                    ShareImageAction(popupExpanded = popupExpanded, myContent, onDismiss = { popupExpanded.value = false })
+                    ShareImageAction(accountViewModel = accountViewModel, popupExpanded = popupExpanded, myContent, onDismiss = { popupExpanded.value = false })
                 }
 
                 val localContext = LocalContext.current

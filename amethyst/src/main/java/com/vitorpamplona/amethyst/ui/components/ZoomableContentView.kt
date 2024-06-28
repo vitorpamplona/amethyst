@@ -138,6 +138,7 @@ fun ZoomableContentView(
                         roundedCorner = roundedCorner,
                         isFiniteHeight = isFiniteHeight,
                         nostrUriCallback = content.uri,
+                        nostrIdCallback = content.id,
                         onDialog = { dialogOpen = true },
                         accountViewModel = accountViewModel,
                     )
@@ -162,6 +163,7 @@ fun ZoomableContentView(
                         roundedCorner = roundedCorner,
                         isFiniteHeight = isFiniteHeight,
                         nostrUriCallback = content.uri,
+                        nostrIdCallback = content.id,
                         onDialog = { dialogOpen = true },
                         accountViewModel = accountViewModel,
                     )
@@ -596,22 +598,27 @@ fun DisplayBlurHash(
 
 @Composable
 fun ShareImageAction(
+    accountViewModel: AccountViewModel,
     popupExpanded: MutableState<Boolean>,
     content: BaseMediaContent,
     onDismiss: () -> Unit,
 ) {
     if (content is MediaUrlContent) {
         ShareImageAction(
+            accountViewModel = accountViewModel,
             popupExpanded = popupExpanded,
             videoUri = content.url,
             postNostrUri = content.uri,
+            postNostrid = content.id,
             onDismiss = onDismiss,
         )
     } else if (content is MediaPreloadedContent) {
         ShareImageAction(
+            accountViewModel = accountViewModel,
             popupExpanded = popupExpanded,
             videoUri = content.localFile?.toUri().toString(),
             postNostrUri = content.uri,
+            postNostrid = content.id,
             onDismiss = onDismiss,
         )
     }
@@ -620,9 +627,11 @@ fun ShareImageAction(
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ShareImageAction(
+    accountViewModel: AccountViewModel,
     popupExpanded: MutableState<Boolean>,
     videoUri: String?,
     postNostrUri: String?,
+    postNostrid: String?,
     onDismiss: () -> Unit,
 ) {
     DropdownMenu(
@@ -646,6 +655,23 @@ fun ShareImageAction(
                 text = { Text(stringRes(R.string.copy_the_note_id_to_the_clipboard)) },
                 onClick = {
                     clipboardManager.setText(AnnotatedString(it))
+                    onDismiss()
+                },
+            )
+        }
+
+        postNostrUri?.let {
+            DropdownMenuItem(
+                text = { Text(stringRes(R.string.add_media_to_gallery)) },
+                onClick = {
+                    if (videoUri != null) {
+                        if (postNostrid != null) {
+                            print("TODO")
+                            print(postNostrid)
+                            // TODO this still crashes
+                            accountViewModel.account.addToGallery(postNostrid, videoUri)
+                        }
+                    }
                     onDismiss()
                 },
             )

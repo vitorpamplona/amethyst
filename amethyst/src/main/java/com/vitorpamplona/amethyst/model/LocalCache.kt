@@ -75,6 +75,7 @@ import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileServersEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.events.GalleryListEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.GitIssueEvent
@@ -415,6 +416,19 @@ object LocalCache {
         if (user.latestBookmarkList == null || event.createdAt > user.latestBookmarkList!!.createdAt) {
             if (event.dTag() == "bookmark") {
                 user.updateBookmark(event)
+            }
+            // Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex} ${oldUser.toBestDisplayName()}")
+        } else {
+            // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()}
+            // ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
+        }
+    }
+
+    fun consume(event: GalleryListEvent) {
+        val user = getOrCreateUser(event.pubKey)
+        if (user.latestGalleryList == null || event.createdAt > user.latestGalleryList!!.createdAt) {
+            if (event.dTag() == "gallery") {
+                user.updateGallery(event)
             }
             // Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex} ${oldUser.toBestDisplayName()}")
         } else {
@@ -2523,6 +2537,7 @@ object LocalCache {
                 is DraftEvent -> consume(event, relay)
                 is EmojiPackEvent -> consume(event, relay)
                 is EmojiPackSelectionEvent -> consume(event, relay)
+                is GalleryListEvent -> consume(event)
                 is GenericRepostEvent -> {
                     event.containedPost()?.let { verifyAndConsume(it, relay) }
                     consume(event)

@@ -142,6 +142,7 @@ fun LoadThumbAndThenVideoView(
     roundedCorner: Boolean,
     isFiniteHeight: Boolean,
     nostrUriCallback: String? = null,
+    nostrIdCallback: String? = null,
     accountViewModel: AccountViewModel,
     onDialog: ((Boolean) -> Unit)? = null,
 ) {
@@ -176,6 +177,7 @@ fun LoadThumbAndThenVideoView(
                 artworkUri = thumbUri,
                 authorName = authorName,
                 nostrUriCallback = nostrUriCallback,
+                nostrIdCallback = nostrIdCallback,
                 accountViewModel = accountViewModel,
                 onDialog = onDialog,
             )
@@ -190,6 +192,7 @@ fun LoadThumbAndThenVideoView(
                 artworkUri = thumbUri,
                 authorName = authorName,
                 nostrUriCallback = nostrUriCallback,
+                nostrIdCallback = nostrIdCallback,
                 accountViewModel = accountViewModel,
                 onDialog = onDialog,
             )
@@ -211,6 +214,7 @@ fun VideoView(
     dimensions: String? = null,
     blurhash: String? = null,
     nostrUriCallback: String? = null,
+    nostrIdCallback: String? = null,
     onDialog: ((Boolean) -> Unit)? = null,
     onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
     accountViewModel: AccountViewModel,
@@ -252,6 +256,7 @@ fun VideoView(
                     artworkUri = artworkUri,
                     authorName = authorName,
                     nostrUriCallback = nostrUriCallback,
+                    nostrIDCallback = nostrIdCallback,
                     automaticallyStartPlayback = automaticallyStartPlayback,
                     onControllerVisibilityChanged = onControllerVisibilityChanged,
                     onDialog = onDialog,
@@ -305,6 +310,7 @@ fun VideoView(
                     artworkUri = artworkUri,
                     authorName = authorName,
                     nostrUriCallback = nostrUriCallback,
+                    nostrIDCallback = nostrIdCallback,
                     automaticallyStartPlayback = automaticallyStartPlayback,
                     onControllerVisibilityChanged = onControllerVisibilityChanged,
                     onDialog = onDialog,
@@ -329,6 +335,7 @@ fun VideoViewInner(
     artworkUri: String? = null,
     authorName: String? = null,
     nostrUriCallback: String? = null,
+    nostrIDCallback: String? = null,
     automaticallyStartPlayback: State<Boolean>,
     onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
     onDialog: ((Boolean) -> Unit)? = null,
@@ -350,6 +357,7 @@ fun VideoViewInner(
                     roundedCorner = roundedCorner,
                     isFiniteHeight = isFiniteHeight,
                     nostrUriCallback = nostrUriCallback,
+                    nostrIDCallback = nostrIDCallback,
                     waveform = waveform,
                     keepPlaying = keepPlaying,
                     automaticallyStartPlayback = automaticallyStartPlayback,
@@ -697,6 +705,7 @@ private fun RenderVideoPlayer(
     roundedCorner: Boolean,
     isFiniteHeight: Boolean,
     nostrUriCallback: String?,
+    nostrIDCallback: String?,
     waveform: ImmutableList<Int>? = null,
     keepPlaying: MutableState<Boolean>,
     automaticallyStartPlayback: State<Boolean>,
@@ -810,7 +819,7 @@ private fun RenderVideoPlayer(
         }
 
         AnimatedShareButton(controllerVisible, Modifier.align(Alignment.TopEnd).padding(end = Size165dp)) { popupExpanded, toggle ->
-            ShareImageAction(popupExpanded, videoUri, nostrUriCallback, toggle)
+            ShareImageAction(accountViewModel = accountViewModel, popupExpanded, videoUri, nostrUriCallback, nostrIDCallback, toggle)
         }
     }
 }

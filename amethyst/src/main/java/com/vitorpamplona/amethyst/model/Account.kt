@@ -71,6 +71,7 @@ import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileServersEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.events.GalleryListEvent
 import com.vitorpamplona.quartz.events.GeneralListEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
@@ -2193,6 +2194,53 @@ class Account(
             ) {
                 Client.send(it)
                 LocalCache.justConsume(it, null)
+            }
+        }
+    }
+
+    fun addToGallery(
+        idHex: String,
+        url: String,
+    ) {
+        if (!isWriteable()) return
+        GalleryListEvent.addEvent(
+            userProfile().latestGalleryList,
+            idHex,
+            url,
+            signer,
+        ) {
+            Client.send(it)
+            LocalCache.consume(it)
+        }
+    }
+
+    fun removeFromGallery(
+        note: Note,
+        url: String,
+    ) {
+        if (!isWriteable()) return
+
+        val galleryentries = userProfile().latestGalleryList ?: return
+
+        if (note is AddressableNote) {
+            GalleryListEvent.removeReplaceable(
+                galleryentries,
+                note.address,
+                false,
+                signer,
+            ) {
+                Client.send(it)
+                LocalCache.consume(it)
+            }
+        } else {
+            GalleryListEvent.removeEvent(
+                galleryentries,
+                note.idHex,
+                false,
+                signer,
+            ) {
+                Client.send(it)
+                LocalCache.consume(it)
             }
         }
     }

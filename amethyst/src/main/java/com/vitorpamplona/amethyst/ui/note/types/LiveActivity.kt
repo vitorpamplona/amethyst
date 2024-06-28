@@ -160,6 +160,7 @@ fun RenderLiveActivityEventInner(
                             isFiniteHeight = false,
                             accountViewModel = accountViewModel,
                             nostrUriCallback = "nostr:${baseNote.toNEvent()}",
+                            nostrIdCallback = baseNote.idHex,
                         )
                     }
                 } else {

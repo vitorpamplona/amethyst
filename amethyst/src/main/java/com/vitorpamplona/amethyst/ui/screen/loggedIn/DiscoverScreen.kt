@@ -119,13 +119,6 @@ fun DiscoverScreen(
                         AppDefinitionEvent.KIND,
                     ),
                     TabItem(
-                        R.string.discover_marketplace,
-                        discoveryMarketplaceFeedViewModel,
-                        Route.Discover.base + "Marketplace",
-                        ScrollStateKeys.DISCOVER_MARKETPLACE,
-                        ClassifiedsEvent.KIND,
-                    ),
-                    TabItem(
                         R.string.discover_live,
                         discoveryLiveFeedViewModel,
                         Route.Discover.base + "Live",
@@ -138,6 +131,13 @@ fun DiscoverScreen(
                         Route.Discover.base + "Community",
                         ScrollStateKeys.DISCOVER_COMMUNITY,
                         CommunityDefinitionEvent.KIND,
+                    ),
+                    TabItem(
+                        R.string.discover_marketplace,
+                        discoveryMarketplaceFeedViewModel,
+                        Route.Discover.base + "Marketplace",
+                        ScrollStateKeys.DISCOVER_MARKETPLACE,
+                        ClassifiedsEvent.KIND,
                     ),
                     TabItem(
                         R.string.discover_chat,
