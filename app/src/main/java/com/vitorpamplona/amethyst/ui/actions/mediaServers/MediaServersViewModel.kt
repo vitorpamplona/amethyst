@@ -57,6 +57,12 @@ class MediaServersViewModel : ViewModel() {
         }
     }
 
+    fun addServerList(serverList: List<String>) {
+        serverList.forEach { serverUrl ->
+            addServer(serverUrl)
+        }
+    }
+
     fun addServer(serverUrl: String) {
         val normalizedUrl =
             try {
@@ -66,9 +72,9 @@ class MediaServersViewModel : ViewModel() {
             }
         val serverNameReference =
             try {
-                URIReference.parse(normalizedUrl).host.value.replaceFirstChar { it.uppercase() }
+                URIReference.parse(normalizedUrl).host.value
             } catch (e: Exception) {
-                normalizedUrl.replaceFirstChar { it.uppercase() }
+                normalizedUrl
             }
         _fileServers.update {
             it.plus(
@@ -82,13 +88,15 @@ class MediaServersViewModel : ViewModel() {
         name: String = "",
         serverUrl: String,
     ) {
-        val serverName = if (name.isNotBlank()) name else URIReference.parse(serverUrl).host.value
-        _fileServers.update {
-            it.minus(
-                Nip96MediaServers.ServerName(serverName, serverUrl),
-            )
+        viewModelScope.launch {
+            val serverName = if (name.isNotBlank()) name else URIReference.parse(serverUrl).host.value
+            _fileServers.update {
+                it.minus(
+                    Nip96MediaServers.ServerName(serverName, serverUrl),
+                )
+            }
+            isModified = true
         }
-        isModified = true
     }
 
     fun removeAllServers() {
