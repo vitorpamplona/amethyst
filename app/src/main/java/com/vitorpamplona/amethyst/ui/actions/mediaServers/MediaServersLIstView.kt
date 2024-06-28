@@ -53,11 +53,13 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.actions.relays.SettingsCategoryWithButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertPadding
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -92,7 +94,7 @@ fun MediaServersListView(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = "Media Servers",
+                                text = stringRes(id = R.string.media_servers),
                                 style = MaterialTheme.typography.titleLarge,
                             )
                         }
@@ -135,7 +137,7 @@ fun MediaServersListView(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    "Set your preferred media upload servers.",
+                    stringRes(id = R.string.set_preferred_media_servers),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.grayText,
@@ -159,15 +161,15 @@ fun MediaServersListView(
                     Nip96MediaServers.DEFAULT.let {
                         item {
                             SettingsCategoryWithButton(
-                                title = "Built-in Media Servers",
-                                description = "Amethyst's default list. You can add them individually or add the list.",
+                                title = stringRes(id = R.string.built_in_media_servers_title),
+                                description = stringRes(id = R.string.built_in_servers_description),
                                 action = {
                                     OutlinedButton(
                                         onClick = {
                                             mediaServersViewModel.addServerList(it.map { s -> s.baseUrl })
                                         },
                                     ) {
-                                        Text(text = "Use Default List")
+                                        Text(text = stringRes(id = R.string.use_default_servers))
                                     }
                                 },
                             )
@@ -181,8 +183,8 @@ fun MediaServersListView(
                             MediaServerEntry(
                                 serverEntry = server,
                                 isAmethystDefault = true,
-                                onAddOrDelete = {
-                                    mediaServersViewModel.addServer(it)
+                                onAddOrDelete = { serverUrl ->
+                                    mediaServersViewModel.addServer(serverUrl)
                                 },
                             )
                         }
@@ -201,7 +203,7 @@ fun LazyListScope.renderMediaServerList(
     if (mediaServersState.isEmpty()) {
         item {
             Text(
-                text = "You have no custom media servers set. You can use Amethyst's list, or add one below ↓",
+                text = stringRes(id = R.string.no_media_server_message),
                 modifier = DoubleVertPadding,
             )
         }
@@ -237,7 +239,10 @@ fun MediaServerEntry(
     onAddOrDelete: (serverUrl: String) -> Unit,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().padding(vertical = 10.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceAround,
     ) {
@@ -270,7 +275,12 @@ fun MediaServerEntry(
             ) {
                 Icon(
                     imageVector = if (isAmethystDefault) Icons.Rounded.Add else Icons.Rounded.Delete,
-                    contentDescription = if (isAmethystDefault) "Add media server" else "Delete media server",
+                    contentDescription =
+                        if (isAmethystDefault) {
+                            stringRes(id = R.string.add_media_server)
+                        } else {
+                            stringRes(id = R.string.delete_media_server)
+                        },
                 )
             }
         }
