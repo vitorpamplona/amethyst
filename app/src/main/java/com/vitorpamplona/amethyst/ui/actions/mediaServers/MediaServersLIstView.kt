@@ -146,7 +146,15 @@ fun MediaServersListView(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     contentPadding = FeedPadding,
                 ) {
-                    renderMediaServerList(mediaServersState, mediaServersViewModel)
+                    renderMediaServerList(
+                        mediaServersState = mediaServersState,
+                        onAddServer = { server ->
+                            mediaServersViewModel.addServer(server)
+                        },
+                        onDeleteServer = {
+                            mediaServersViewModel.removeServer(serverUrl = it)
+                        },
+                    )
 
                     Nip96MediaServers.DEFAULT.let {
                         item {
@@ -156,9 +164,7 @@ fun MediaServersListView(
                                 action = {
                                     OutlinedButton(
                                         onClick = {
-                                            it.forEach { server ->
-                                                mediaServersViewModel.addServer(server.baseUrl)
-                                            }
+                                            mediaServersViewModel.addServerList(it.map { s -> s.baseUrl })
                                         },
                                     ) {
                                         Text(text = "Use Default List")
@@ -168,8 +174,7 @@ fun MediaServersListView(
                         }
                         itemsIndexed(
                             it,
-                            key = {
-                                    index: Int, server: Nip96MediaServers.ServerName ->
+                            key = { index: Int, server: Nip96MediaServers.ServerName ->
                                 server.baseUrl
                             },
                         ) { index, server ->
@@ -190,7 +195,8 @@ fun MediaServersListView(
 
 fun LazyListScope.renderMediaServerList(
     mediaServersState: List<Nip96MediaServers.ServerName>,
-    mediaServersViewModel: MediaServersViewModel,
+    onAddServer: (String) -> Unit,
+    onDeleteServer: (String) -> Unit,
 ) {
     if (mediaServersState.isEmpty()) {
         item {
@@ -206,16 +212,19 @@ fun LazyListScope.renderMediaServerList(
                 server.baseUrl
             },
         ) { index, entry ->
-            MediaServerEntry(serverEntry = entry) {
-                mediaServersViewModel.removeServer(serverUrl = it)
-            }
+            MediaServerEntry(
+                serverEntry = entry,
+                onAddOrDelete = {
+                    onDeleteServer(it)
+                },
+            )
         }
     }
 
     item {
         Spacer(modifier = StdVertSpacer)
         MediaServerEditField {
-            mediaServersViewModel.addServer(it)
+            onAddServer(it)
         }
     }
 }
@@ -239,7 +248,7 @@ fun MediaServerEntry(
         ) {
             serverEntry.let {
                 Text(
-                    text = it.name,
+                    text = it.name.replaceFirstChar(Char::titlecase),
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Spacer(modifier = StdVertSpacer)
