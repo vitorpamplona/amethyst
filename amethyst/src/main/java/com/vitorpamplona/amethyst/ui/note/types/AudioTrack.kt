@@ -212,7 +212,6 @@ fun AudioHeader(
                         isFiniteHeight = isFiniteHeight,
                         accountViewModel = accountViewModel,
                         nostrUriCallback = note.toNostrUri(),
-                        nostrIdCallback = note.idHex,
                     )
                 }
             }

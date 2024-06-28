@@ -669,6 +669,20 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) { account.addEmojiPack(usersEmojiList, emojiList) }
     }
 
+    fun addMediaToGallery(
+        hex: String,
+        url: String,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) { account.addToGallery(hex, url) }
+    }
+
+    fun removefromMediaGallery(
+        note: Note,
+        url: String,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) { account.removeFromGallery(note, url) }
+    }
+
     fun addPrivateBookmark(note: Note) {
         viewModelScope.launch(Dispatchers.IO) { account.addBookmark(note, true) }
     }

@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.hashVerifierMark
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -138,7 +139,6 @@ fun ZoomableContentView(
                         roundedCorner = roundedCorner,
                         isFiniteHeight = isFiniteHeight,
                         nostrUriCallback = content.uri,
-                        nostrIdCallback = content.id,
                         onDialog = { dialogOpen = true },
                         accountViewModel = accountViewModel,
                     )
@@ -163,7 +163,6 @@ fun ZoomableContentView(
                         roundedCorner = roundedCorner,
                         isFiniteHeight = isFiniteHeight,
                         nostrUriCallback = content.uri,
-                        nostrIdCallback = content.id,
                         onDialog = { dialogOpen = true },
                         accountViewModel = accountViewModel,
                     )
@@ -609,7 +608,6 @@ fun ShareImageAction(
             popupExpanded = popupExpanded,
             videoUri = content.url,
             postNostrUri = content.uri,
-            postNostrid = content.id,
             onDismiss = onDismiss,
         )
     } else if (content is MediaPreloadedContent) {
@@ -618,7 +616,6 @@ fun ShareImageAction(
             popupExpanded = popupExpanded,
             videoUri = content.localFile?.toUri().toString(),
             postNostrUri = content.uri,
-            postNostrid = content.id,
             onDismiss = onDismiss,
         )
     }
@@ -631,7 +628,6 @@ fun ShareImageAction(
     popupExpanded: MutableState<Boolean>,
     videoUri: String?,
     postNostrUri: String?,
-    postNostrid: String?,
     onDismiss: () -> Unit,
 ) {
     DropdownMenu(
@@ -665,13 +661,13 @@ fun ShareImageAction(
                 text = { Text(stringRes(R.string.add_media_to_gallery)) },
                 onClick = {
                     if (videoUri != null) {
-                        if (postNostrid != null) {
-                            print("TODO")
-                            print(postNostrid)
-                            // TODO this still crashes
-                            accountViewModel.account.addToGallery(postNostrid, videoUri)
+                        var n19 = Nip19Bech32.uriToRoute(postNostrUri)?.entity as? Nip19Bech32.NEvent
+                        if (n19 != null) {
+                            accountViewModel.addMediaToGallery(n19.hex, videoUri)
+                            accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
                         }
                     }
+
                     onDismiss()
                 },
             )

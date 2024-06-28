@@ -2203,6 +2203,7 @@ class Account(
         url: String,
     ) {
         if (!isWriteable()) return
+
         GalleryListEvent.addEvent(
             userProfile().latestGalleryList,
             idHex,
@@ -2226,7 +2227,7 @@ class Account(
             GalleryListEvent.removeReplaceable(
                 galleryentries,
                 note.address,
-                false,
+                url,
                 signer,
             ) {
                 Client.send(it)
@@ -2236,7 +2237,7 @@ class Account(
             GalleryListEvent.removeEvent(
                 galleryentries,
                 note.idHex,
-                false,
+                url,
                 signer,
             ) {
                 Client.send(it)

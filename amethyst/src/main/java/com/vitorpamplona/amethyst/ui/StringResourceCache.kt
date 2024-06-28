@@ -73,7 +73,7 @@ fun stringRes(
     return String
         .format(
             res.configuration.locales.get(0),
-            resourceCache.get(id) ?: res.getString(id),
+            resourceCache.get(id) ?: res.getString(id).also { resourceCache.put(id, it) },
             *args,
-        ).also { resourceCache.put(id, it) }
+        )
 }

@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -148,6 +149,7 @@ import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileBookmarksFeedViewMod
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileConversationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileFollowersUserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileFollowsUserFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileGalleryFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileNewThreadsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileReportFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileZapsFeedViewModel
@@ -155,6 +157,7 @@ import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.SaveableGridFeedState
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -294,6 +297,16 @@ fun PrepareViewModels(
                 ),
         )
 
+    val galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel =
+        viewModel(
+            key = baseUser.pubkeyHex + "UserGalleryFeedViewModel",
+            factory =
+                NostrUserProfileGalleryFeedViewModel.Factory(
+                    baseUser,
+                    accountViewModel.account,
+                ),
+        )
+
     val reportsFeedViewModel: NostrUserProfileReportFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileReportFeedViewModel",
@@ -312,6 +325,7 @@ fun PrepareViewModels(
         appRecommendations,
         zapFeedViewModel,
         bookmarksFeedViewModel,
+        galleryFeedViewModel,
         reportsFeedViewModel,
         accountViewModel = accountViewModel,
         nav = nav,
@@ -328,6 +342,7 @@ fun ProfileScreen(
     appRecommendations: NostrUserAppRecommendationsFeedViewModel,
     zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
     bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel,
     reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -372,6 +387,7 @@ fun ProfileScreen(
         followersFeedViewModel,
         zapFeedViewModel,
         bookmarksFeedViewModel,
+        galleryFeedViewModel,
         reportsFeedViewModel,
         accountViewModel,
         nav,
@@ -388,6 +404,7 @@ private fun RenderSurface(
     followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
     bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel,
     reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -448,6 +465,7 @@ private fun RenderSurface(
                     followersFeedViewModel,
                     zapFeedViewModel,
                     bookmarksFeedViewModel,
+                    galleryFeedViewModel,
                     reportsFeedViewModel,
                     accountViewModel,
                     nav,
@@ -470,6 +488,7 @@ private fun RenderScreen(
     followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
     bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel,
     reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -501,6 +520,7 @@ private fun RenderScreen(
                 followersFeedViewModel,
                 zapFeedViewModel,
                 bookmarksFeedViewModel,
+                galleryFeedViewModel,
                 reportsFeedViewModel,
                 accountViewModel,
                 nav,
@@ -519,6 +539,7 @@ private fun CreateAndRenderPages(
     followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
     bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel,
     reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -533,7 +554,7 @@ private fun CreateAndRenderPages(
     when (page) {
         0 -> TabNotesNewThreads(threadsViewModel, accountViewModel, nav)
         1 -> TabNotesConversations(repliesViewModel, accountViewModel, nav)
-        2 -> Gallery(baseUser, followsFeedViewModel, accountViewModel, nav)
+        2 -> TabGallery(galleryFeedViewModel, accountViewModel, nav)
         3 -> TabFollows(baseUser, followsFeedViewModel, accountViewModel, nav)
         4 -> TabFollowers(baseUser, followersFeedViewModel, accountViewModel, nav)
         5 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
@@ -1537,7 +1558,36 @@ fun TabNotesConversations(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
+fun TabGallery(
+    feedViewModel: NostrUserProfileGalleryFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    LaunchedEffect(Unit) { feedViewModel.invalidateData() }
+
+    Column(Modifier.fillMaxHeight()) {
+        Column(
+            modifier = Modifier.padding(vertical = 0.dp),
+        ) {
+            var state = LazyGridState()
+
+            SaveableGridFeedState(feedViewModel, scrollStateKey = "gallery") { listState ->
+                RenderGalleryFeed(
+                    feedViewModel,
+                    null,
+                    0,
+                    state,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+        }
+    }
+}
+
+/*@Composable
 fun Gallery(
     baseUser: User,
     feedViewModel: UserFeedViewModel,
@@ -1579,7 +1629,7 @@ fun Gallery(
             }
         }
     }
-}
+} */
 
 @Composable
 fun TabFollowedTags(

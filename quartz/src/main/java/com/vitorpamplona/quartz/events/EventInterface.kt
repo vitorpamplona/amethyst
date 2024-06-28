@@ -145,6 +145,8 @@ interface EventInterface {
 
     fun firstTaggedK(): Int?
 
+    fun taggedGalleryEntries(): List<GalleryUrl>
+
     fun taggedEmojis(): List<EmojiUrl>
 
     fun matchTag1With(text: String): Boolean

@@ -118,7 +118,8 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         )
 
     fun createOtherAccountsBaseFilter(): TypedFilter? {
-        if (otherAccounts.isEmpty()) return null
+        val otherAuthors = otherAccounts.filter { it != account.userProfile().pubkeyHex }
+        if (otherAuthors.isEmpty()) return null
         return TypedFilter(
             types = EVENT_FINDER_TYPES,
             filter =
@@ -134,7 +135,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                             MuteListEvent.KIND,
                             PeopleListEvent.KIND,
                         ),
-                    authors = otherAccounts.filter { it != account.userProfile().pubkeyHex },
+                    authors = otherAuthors,
                     limit = 100,
                 ),
         )

@@ -801,6 +801,7 @@ open class NewPostViewModel : ViewModel() {
                                                 server = server.server,
                                                 contentResolver = contentResolver,
                                                 onProgress = {},
+                                                context = context,
                                             )
 
                                     createNIP94Record(
