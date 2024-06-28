@@ -76,10 +76,13 @@ class MediaServersViewModel : ViewModel() {
             } catch (e: Exception) {
                 normalizedUrl
             }
-        _fileServers.update {
-            it.plus(
-                Nip96MediaServers.ServerName(serverNameReference, normalizedUrl),
-            )
+        val serverRef = Nip96MediaServers.ServerName(serverNameReference, normalizedUrl)
+        if (_fileServers.value.contains(serverRef)) {
+            return
+        } else {
+            _fileServers.update {
+                it.plus(serverRef)
+            }
         }
         isModified = true
     }
