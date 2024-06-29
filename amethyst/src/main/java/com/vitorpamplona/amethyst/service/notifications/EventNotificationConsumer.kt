@@ -55,11 +55,14 @@ class EventNotificationConsumer(
 
         // PushNotification Wraps don't include a receiver.
         // Test with all logged in accounts
+        var matchAccount = false
         LocalPreferences.allSavedAccounts().forEach {
-            if (it.hasPrivKey || it.loggedInWithExternalSigner) {
+            if (!matchAccount && it.hasPrivKey || it.loggedInWithExternalSigner) {
                 LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)?.let { acc ->
+                    Log.d("EventNotificationConsumer", "New Notification Testing if for ${it.npub}")
                     try {
                         consumeIfMatchesAccount(event, acc)
+                        matchAccount = true
                     } catch (e: Exception) {
                         // Not for this account.
                     }

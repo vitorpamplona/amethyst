@@ -118,8 +118,7 @@ class Nip44(
                 else -> null
             }
         } catch (e: Exception) {
-            Log.e("CryptoUtils", "Could not identify the version for NIP44 payload $json")
-            e.printStackTrace()
+            Log.e("CryptoUtils", "NIP44: Unable to find version and decrypt $json", e)
             null
         }
 
@@ -140,8 +139,7 @@ class Nip44(
                 else -> null
             }
         } catch (e: Exception) {
-            Log.e("CryptoUtils", "Could not identify the version for NIP44 payload $payload")
-            e.printStackTrace()
+            Log.e("CryptoUtils", "NIP44: Unable to find version and decrypt $payload", e)
             null
         }
     }
