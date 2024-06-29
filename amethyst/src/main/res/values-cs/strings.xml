@@ -732,4 +732,40 @@
     <string name="dvm_requesting_job">Žádost o práci od DVM</string>
     <string name="nwc_payment_request">Žádost o platbu odeslána, čeká se na potvrzení z vaší peněženky</string>
     <string name="dvm_waiting_to_confirm_payment">Čekání na potvrzení platby DVM nebo na zaslání výsledků</string>
+
+    <string name="http_status_400">Špatný požadavek - Server nemůže nebo nechce zpracovat požadavek.</string>
+    <string name="http_status_401">Neautorizovaný - Uživatel nemá platné přihlašovací údaje</string>
+    <string name="http_status_402">Požadována platba - Server vyžaduje platbu pro dokončení požadavku</string>
+    <string name="http_status_403">Zakázáno - Uživatel nemá přístupová práva k provedení požadavku</string>
+    <string name="http_status_404">Nenalezeno - Server nemůže najít požadovanou adresu</string>
+    <string name="http_status_405">Metoda není povolena - Server podporuje metodu požadavku, ale ne cílový zdroj</string>
+    <string name="http_status_406">Nepřijatelné - Server nenachází žádný obsah, který by vyhovoval požadavku.</string>
+    <string name="http_status_407">Vyžadováno ověření proxy - Uživatel nemá platné přihlašovací údaje</string>
+    <string name="http_status_408">Časový limit požadavku - Server čekal na někoho jiného příliš dlouho</string>
+    <string name="http_status_409">Konflikt - Server nemůže splnit požadavek, protože existuje konflikt se zdrojem</string>
+    <string name="http_status_410">Pryč - Požadovaný obsah byl trvale odstraněn ze serveru a nebude obnoven</string>
+    <string name="http_status_411">Požadována délka - Server odmítá požadavek, protože vyžaduje definovanou délku</string>
+    <string name="http_status_412">Předpoklad selhal - Předpoklady požadavku v hlavičkách, které server nesplňuje</string>
+    <string name="http_status_413">Příliš velký obsah - Požadavek je větší než definované limity serveru a server odmítá jej zpracovat</string>
+    <string name="http_status_414">Příliš dlouhá URI - URL požadovaná klientem je příliš dlouhá na to, aby ji server zpracoval.</string>
+    <string name="http_status_415">Nepodporovaný typ média - Požadavek používá formát média, který server nepodporuje</string>
+    <string name="http_status_416">Rozsah nesplnitelný - Server nemůže splnit hodnotu uvedenou v hlavičce rozsahu požadavku.</string>
+    <string name="http_status_417">Očekávání selhalo - Server nemůže splnit požadavky uvedené v hlavičce očekávání požadavku</string>
+    <string name="http_status_426">Vyžadována aktualizace - Server odmítá zpracovat požadavek s aktuálním protokolem, pokud klient neaktualizuje na jiný protokol.</string>
+
+    <string name="http_status_500">Interní chyba serveru - Server narazil na neočekávanou chybu a nemůže dokončit požadavek</string>
+    <string name="http_status_501">Nerealizováno - Server nemůže splnit požadavek nebo nerozpoznává metodu požadavku</string>
+    <string name="http_status_502">Špatná brána - Server funguje jako brána a obdržel neplatnou odpověď od hostitele</string>
+    <string name="http_status_503">Služba nedostupná - K tomu často dochází, když je server přetížený nebo je v údržbě</string>
+    <string name="http_status_504">Časový limit brány - Server fungoval jako brána nebo proxy a čekal na odpověď příliš dlouho</string>
+    <string name="http_status_505">Verze HTTP není podporována - Server nepodporuje verzi HTTP v požadavku</string>
+    <string name="http_status_506">Varianta také vyjednává - Server má interní konfigurační chybu</string>
+    <string name="http_status_507">Nedostatečné úložiště - Server nemá dostatek úložiště, aby úspěšně zpracoval požadavek</string>
+    <string name="http_status_508">Detekována smyčka - Server detekuje nekonečnou smyčku při zpracování požadavku</string>
+    <string name="http_status_511">Vyžadováno ověření sítě - Klient musí být autentizován, aby získal přístup k síti</string>
+
+    <string name="connectivity_type_unmetered_wifi_only">Neomezená WiFi</string>
+    <string name="failed_to_upload_with_message">Nahrání selhalo: %1$s</string>
+    <string name="failed_to_delete_with_message">Smazání selhalo: %1$s</string>
+    <string name="change_reaction">Změnit rychlé reakce</string>
 </resources>
