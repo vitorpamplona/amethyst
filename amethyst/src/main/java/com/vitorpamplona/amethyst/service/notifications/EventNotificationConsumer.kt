@@ -58,7 +58,11 @@ class EventNotificationConsumer(
         LocalPreferences.allSavedAccounts().forEach {
             if (it.hasPrivKey || it.loggedInWithExternalSigner) {
                 LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)?.let { acc ->
-                    consumeIfMatchesAccount(event, acc)
+                    try {
+                        consumeIfMatchesAccount(event, acc)
+                    } catch (e: Exception) {
+                        // Not for this account.
+                    }
                 }
             }
         }
@@ -71,7 +75,7 @@ class EventNotificationConsumer(
         pushWrappedEvent.cachedGift(account.signer) { notificationEvent ->
             val consumed = LocalCache.hasConsumed(notificationEvent)
             val verified = LocalCache.justVerify(notificationEvent)
-            Log.d("EventNotificationConsumer", "New Notification Arrived for ${account.userProfile().toBestDisplayName()} consumed= $consumed && verified= $verified")
+            Log.d("EventNotificationConsumer", "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${account.userProfile().toBestDisplayName()} consumed= $consumed && verified= $verified")
             if (!consumed && verified) {
                 Log.d("EventNotificationConsumer", "New Notification was verified")
                 unwrapAndConsume(notificationEvent, account) { innerEvent ->
