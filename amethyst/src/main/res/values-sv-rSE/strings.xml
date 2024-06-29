@@ -425,6 +425,7 @@
     <string name="settings">Inställningar</string>
     <string name="connectivity_type_always">Alltid</string>
     <string name="connectivity_type_wifi_only">Endast Wi-Fi</string>
+    <string name="connectivity_type_unmetered_wifi_only">Obegränsad WiFi</string>
     <string name="connectivity_type_never">Aldrig</string>
     <string name="ui_feature_set_type_complete">Slutförd</string>
     <string name="ui_feature_set_type_simplified">Förenklad</string>
@@ -614,6 +615,8 @@
     <string name="server_did_not_provide_a_url_after_uploading">Servern gav inte en URL efter uppladdning</string>
     <string name="could_not_download_from_the_server">Kunde inte ladda ner uppladdade medier från servern</string>
     <string name="could_not_prepare_local_file_to_upload">Kunde inte förbereda lokal fil att ladda upp: %1$s</string>
+    <string name="failed_to_upload_with_message">Uppladdning misslyckades: %1$s</string>
+    <string name="failed_to_delete_with_message">Radering misslyckades: %1$s</string>
     <string name="edit_draft">Redigera utkast</string>
     <string name="login_with_qr_code">Logga in med QR-kod</string>
     <string name="route">Rutt</string>
@@ -633,6 +636,7 @@
     <string name="reply_description">Svara</string>
     <string name="boost_or_quote_description">Boosta eller citera</string>
     <string name="like_description">Gilla</string>
+    <string name="change_reaction">Ändra Snabba Reaktioner</string>
     <string name="profile_image_of_user">%1$s Profilbild</string>
     <string name="relay_info">Relä %1$s</string>
     <string name="expand_relay_list">Expandera relälistan</string>
@@ -720,7 +724,6 @@
     <string name="dvm_requesting_job">Begär jobb från DVM</string>
     <string name="nwc_payment_request">Betalningsbegäran skickad, väntar på bekräftelse från din plånbok</string>
     <string name="dvm_waiting_to_confirm_payment">Väntar på att DVM ska bekräfta betalningen eller skicka resultaten</string>
-
     <string name="http_status_400">Felaktig begäran - Servern kan inte eller vill inte bearbeta begäran.</string>
     <string name="http_status_401">Obehörig - Användaren har inte giltiga autentiseringsuppgifter</string>
     <string name="http_status_402">Betalning krävs - Servern kräver betalning för att slutföra begäran</string>
@@ -740,7 +743,6 @@
     <string name="http_status_416">Område ej tillfredsställt - Servern kan inte uppfylla värdet som anges i begärans Range-huvudfält.</string>
     <string name="http_status_417">Förväntning misslyckades - Servern kan inte uppfylla kraven som anges av Expect-begärans huvudfält</string>
     <string name="http_status_426">Uppgradering krävs - Servern vägrar att bearbeta begäran med det nuvarande protokollet om inte klienten uppgraderar till ett annat protokoll.</string>
-
     <string name="http_status_500">Internt serverfel - Servern har stött på ett oväntat fel och kan inte slutföra begäran</string>
     <string name="http_status_501">Ej implementerad - Servern kan inte uppfylla begäran eller känner inte igen begärningsmetoden</string>
     <string name="http_status_502">Fel gateway - Servern agerar som en gateway och fick ett ogiltigt svar från värden</string>
@@ -751,9 +753,4 @@
     <string name="http_status_507">Otillräckligt lagringsutrymme - Servern har inte tillräckligt med lagringsutrymme för att bearbeta begäran framgångsrikt</string>
     <string name="http_status_508">Loop upptäckt - Servern upptäcker en oändlig loop medan den bearbetar begäran</string>
     <string name="http_status_511">Nätverksautentisering krävs - Klienten måste autentiseras för att få tillgång till nätverket</string>
-
-    <string name="connectivity_type_unmetered_wifi_only">Obegränsad WiFi</string>
-    <string name="failed_to_upload_with_message">Uppladdning misslyckades: %1$s</string>
-    <string name="failed_to_delete_with_message">Radering misslyckades: %1$s</string>
-    <string name="change_reaction">Ändra Snabba Reaktioner</string>
 </resources>

@@ -436,6 +436,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="settings">Einstellungen</string>
     <string name="connectivity_type_always">Immer</string>
     <string name="connectivity_type_wifi_only">Nur WLAN</string>
+    <string name="connectivity_type_unmetered_wifi_only">Unbegrenztes WLAN</string>
     <string name="connectivity_type_never">Nie</string>
     <string name="ui_feature_set_type_complete">Fertig</string>
     <string name="ui_feature_set_type_simplified">Vereinfacht</string>
@@ -621,6 +622,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="server_did_not_provide_a_url_after_uploading">Der Server hat nach dem Hochladen keine URL angegeben</string>
     <string name="could_not_download_from_the_server">Hochgeladene Medien konnten nicht vom Server heruntergeladen werden</string>
     <string name="could_not_prepare_local_file_to_upload">Lokale Datei konnte nicht zum Hochladen vorbereitet werden: %1$s</string>
+    <string name="failed_to_upload_with_message">Upload fehlgeschlagen: %1$s</string>
+    <string name="failed_to_delete_with_message">Löschen fehlgeschlagen: %1$s</string>
     <string name="edit_draft">Entwurf bearbeiten</string>
     <string name="login_with_qr_code">Einloggen mit QR-Code</string>
     <string name="route_home">Startseite</string>
@@ -638,6 +641,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="reply_description">Antworten</string>
     <string name="boost_or_quote_description">Boosten oder Zitieren</string>
     <string name="like_description">Gefällt mir</string>
+    <string name="change_reaction">Schnelle Reaktionen ändern</string>
     <string name="profile_image_of_user">Profilbild von %1$s</string>
     <string name="relay_info">%1$s weiterleiten</string>
     <string name="expand_relay_list">Rela-Liste erweitern</string>
@@ -725,7 +729,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="dvm_requesting_job">Anforderung eines Jobs von DVM</string>
     <string name="nwc_payment_request">Zahlungsanforderung gesendet, wartet auf Bestätigung Ihrer Geldbörse</string>
     <string name="dvm_waiting_to_confirm_payment">Warten auf Bestätigung der Zahlung durch DVM oder auf die Ergebnisse</string>
-
     <string name="http_status_400">Fehlerhafte Anfrage - Der Server kann oder will die Anfrage nicht verarbeiten.</string>
     <string name="http_status_401">Nicht autorisiert - Der Benutzer hat keine gültigen Authentifizierungsdaten</string>
     <string name="http_status_402">Zahlung erforderlich - Der Server verlangt eine Zahlung, um die Anfrage abzuschließen</string>
@@ -745,7 +748,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="http_status_416">Bereich nicht erfüllbar - Der Server kann den im Range-Header-Feld der Anfrage angegebenen Wert nicht erfüllen.</string>
     <string name="http_status_417">Erwartung fehlgeschlagen - Der Server kann die Anforderungen, die durch den Expect-Request-Header-Feld angegeben sind, nicht erfüllen</string>
     <string name="http_status_426">Upgrade erforderlich - Der Server weigert sich, die Anfrage mit dem aktuellen Protokoll zu verarbeiten, es sei denn, der Client wechselt zu einem anderen Protokoll.</string>
-
     <string name="http_status_500">Interner Serverfehler - Der Server hat einen unerwarteten Fehler festgestellt und kann die Anfrage nicht abschließen</string>
     <string name="http_status_501">Nicht implementiert - Der Server kann die Anfrage nicht erfüllen oder erkennt die Anfragemethode nicht</string>
     <string name="http_status_502">Schlechtes Gateway - Der Server agiert als Gateway und erhielt eine ungültige Antwort vom Host</string>
@@ -756,9 +758,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="http_status_507">Unzureichender Speicher - Der Server hat nicht genug Speicher, um die Anfrage erfolgreich zu verarbeiten</string>
     <string name="http_status_508">Schleife erkannt - Der Server erkennt eine Endlosschleife, während er die Anfrage bearbeitet</string>
     <string name="http_status_511">Netzwerk-Authentifizierung erforderlich - Der Client muss authentifiziert werden, um auf das Netzwerk zuzugreifen</string>
-
-    <string name="connectivity_type_unmetered_wifi_only">Unbegrenztes WLAN</string>
-    <string name="failed_to_upload_with_message">Upload fehlgeschlagen: %1$s</string>
-    <string name="failed_to_delete_with_message">Löschen fehlgeschlagen: %1$s</string>
-    <string name="change_reaction">Schnelle Reaktionen ändern</string>
 </resources>

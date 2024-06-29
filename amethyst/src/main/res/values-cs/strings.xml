@@ -437,6 +437,7 @@
     <string name="settings">Nastavení</string>
     <string name="connectivity_type_always">Vždy</string>
     <string name="connectivity_type_wifi_only">Pouze Wi-Fi</string>
+    <string name="connectivity_type_unmetered_wifi_only">Neomezená WiFi</string>
     <string name="connectivity_type_never">Nikdy</string>
     <string name="ui_feature_set_type_complete">Hotovo</string>
     <string name="ui_feature_set_type_simplified">Zjednodušené</string>
@@ -625,6 +626,8 @@
     <string name="server_did_not_provide_a_url_after_uploading">Server po nahrání neposkytl URL</string>
     <string name="could_not_download_from_the_server">Nepodařilo se stáhnout nahraná média ze serveru</string>
     <string name="could_not_prepare_local_file_to_upload">Nelze připravit místní soubor k nahrání: %1$s</string>
+    <string name="failed_to_upload_with_message">Nahrání selhalo: %1$s</string>
+    <string name="failed_to_delete_with_message">Smazání selhalo: %1$s</string>
     <string name="edit_draft">Upravit koncept</string>
     <string name="login_with_qr_code">Přihlášení pomocí QR kódu</string>
     <string name="route">Trasa</string>
@@ -644,6 +647,7 @@
     <string name="reply_description">Odpověď</string>
     <string name="boost_or_quote_description">Zvýšit nebo citovat</string>
     <string name="like_description">Olajkovat</string>
+    <string name="change_reaction">Změnit rychlé reakce</string>
     <string name="profile_image_of_user">Obrázek profilu %1$s</string>
     <string name="relay_info">Relé %1$s</string>
     <string name="expand_relay_list">Rozbalit seznam relací</string>
@@ -732,7 +736,6 @@
     <string name="dvm_requesting_job">Žádost o práci od DVM</string>
     <string name="nwc_payment_request">Žádost o platbu odeslána, čeká se na potvrzení z vaší peněženky</string>
     <string name="dvm_waiting_to_confirm_payment">Čekání na potvrzení platby DVM nebo na zaslání výsledků</string>
-
     <string name="http_status_400">Špatný požadavek - Server nemůže nebo nechce zpracovat požadavek.</string>
     <string name="http_status_401">Neautorizovaný - Uživatel nemá platné přihlašovací údaje</string>
     <string name="http_status_402">Požadována platba - Server vyžaduje platbu pro dokončení požadavku</string>
@@ -752,7 +755,6 @@
     <string name="http_status_416">Rozsah nesplnitelný - Server nemůže splnit hodnotu uvedenou v hlavičce rozsahu požadavku.</string>
     <string name="http_status_417">Očekávání selhalo - Server nemůže splnit požadavky uvedené v hlavičce očekávání požadavku</string>
     <string name="http_status_426">Vyžadována aktualizace - Server odmítá zpracovat požadavek s aktuálním protokolem, pokud klient neaktualizuje na jiný protokol.</string>
-
     <string name="http_status_500">Interní chyba serveru - Server narazil na neočekávanou chybu a nemůže dokončit požadavek</string>
     <string name="http_status_501">Nerealizováno - Server nemůže splnit požadavek nebo nerozpoznává metodu požadavku</string>
     <string name="http_status_502">Špatná brána - Server funguje jako brána a obdržel neplatnou odpověď od hostitele</string>
@@ -763,9 +765,4 @@
     <string name="http_status_507">Nedostatečné úložiště - Server nemá dostatek úložiště, aby úspěšně zpracoval požadavek</string>
     <string name="http_status_508">Detekována smyčka - Server detekuje nekonečnou smyčku při zpracování požadavku</string>
     <string name="http_status_511">Vyžadováno ověření sítě - Klient musí být autentizován, aby získal přístup k síti</string>
-
-    <string name="connectivity_type_unmetered_wifi_only">Neomezená WiFi</string>
-    <string name="failed_to_upload_with_message">Nahrání selhalo: %1$s</string>
-    <string name="failed_to_delete_with_message">Smazání selhalo: %1$s</string>
-    <string name="change_reaction">Změnit rychlé reakce</string>
 </resources>
