@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.ui.theme.largeRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.warningColor
 import com.vitorpamplona.ammolite.relays.Constants
+import com.vitorpamplona.ammolite.relays.Constants.activeTypesGlobalChats
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.ammolite.relays.RelayStat
@@ -753,7 +754,7 @@ fun Kind3RelayEditBox(
                             url = RelayUrlFormatter.normalize(url),
                             read = read,
                             write = write,
-                            feedTypes = FeedType.entries.toSet(),
+                            feedTypes = activeTypesGlobalChats,
                             relayStat = RelayStat(),
                         ),
                     )

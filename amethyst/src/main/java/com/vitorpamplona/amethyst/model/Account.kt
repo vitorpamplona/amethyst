@@ -2734,12 +2734,12 @@ class Account(
                 val url = RelayUrlFormatter.normalize(it.key)
 
                 val localFeedTypes =
-                    localRelays.firstOrNull { localRelay -> RelayUrlFormatter.normalize(localRelay.url) == url }?.feedTypes
+                    localRelays.firstOrNull { localRelay -> RelayUrlFormatter.normalize(localRelay.url) == url }?.feedTypes?.minus(setOf(FeedType.SEARCH, FeedType.WALLET_CONNECT))
                         ?: Constants.defaultRelays
                             .filter { defaultRelay -> defaultRelay.url == url }
                             .firstOrNull()
                             ?.feedTypes
-                        ?: FeedType.values().toSet()
+                        ?: Constants.activeTypesGlobalChats
 
                 RelaySetupInfo(url, it.value.read, it.value.write, localFeedTypes)
             } ?: return null
@@ -2747,7 +2747,7 @@ class Account(
         return usersRelayList.toTypedArray()
     }
 
-    fun convertLocalRelays(): Array<RelaySetupInfo> = localRelays.map { RelaySetupInfo(RelayUrlFormatter.normalize(it.url), it.read, it.write, it.feedTypes) }.toTypedArray()
+    fun convertLocalRelays(): Array<RelaySetupInfo> = localRelays.map { RelaySetupInfo(RelayUrlFormatter.normalize(it.url), it.read, it.write, it.feedTypes.minus(setOf(FeedType.SEARCH, FeedType.WALLET_CONNECT))) }.toTypedArray()
 
     fun activeGlobalRelays(): Array<String> =
         connectToRelays.value

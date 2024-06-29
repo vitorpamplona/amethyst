@@ -143,6 +143,7 @@ object MetaTagsParser {
                     "GT" to ">",
                     "nbsp" to " ",
                     "NBSP" to " ",
+                    "middot" to "·",
                 )
             val CHAR_REFS =
                 mapOf(
@@ -153,6 +154,8 @@ object MetaTagsParser {
                     "039" to "'",
                     "8217" to "’",
                     "8216" to "‘",
+                    "8220" to "“",
+                    "8230" to "…",
                     "39" to "'",
                     "ldquo" to "“",
                     "rdquo" to "”",
@@ -160,6 +163,7 @@ object MetaTagsParser {
                     "hellip" to "…",
                     "x27" to "'",
                     "nbsp" to " ",
+                    "x2d" to "-",
                 )
 
             fun replaceCharRefs(match: MatchResult): String {
