@@ -725,4 +725,40 @@ anz der Bedingungen ist erforderlich</string>
     <string name="dvm_requesting_job">Anforderung eines Jobs von DVM</string>
     <string name="nwc_payment_request">Zahlungsanforderung gesendet, wartet auf Bestätigung Ihrer Geldbörse</string>
     <string name="dvm_waiting_to_confirm_payment">Warten auf Bestätigung der Zahlung durch DVM oder auf die Ergebnisse</string>
+
+    <string name="http_status_400">Fehlerhafte Anfrage - Der Server kann oder will die Anfrage nicht verarbeiten.</string>
+    <string name="http_status_401">Nicht autorisiert - Der Benutzer hat keine gültigen Authentifizierungsdaten</string>
+    <string name="http_status_402">Zahlung erforderlich - Der Server verlangt eine Zahlung, um die Anfrage abzuschließen</string>
+    <string name="http_status_403">Verboten - Der Benutzer hat keine Zugriffsrechte, um die Anfrage zu stellen</string>
+    <string name="http_status_404">Nicht gefunden - Der Server kann die angeforderte Adresse nicht finden</string>
+    <string name="http_status_405">Methode nicht erlaubt - Der Server unterstützt die Anfragemethode, aber nicht die Zielressource</string>
+    <string name="http_status_406">Nicht akzeptabel - Der Server findet keinen Inhalt, der die Anfrage erfüllt.</string>
+    <string name="http_status_407">Proxy-Authentifizierung erforderlich - Der Benutzer hat keine gültigen Authentifizierungsdaten</string>
+    <string name="http_status_408">Anfrage-Timeout - Der Server hat zu lange auf jemanden anderen gewartet</string>
+    <string name="http_status_409">Konflikt - Der Server kann die Anfrage nicht erfüllen, da ein Konflikt mit der Ressource besteht</string>
+    <string name="http_status_410">Verschwunden - Der angeforderte Inhalt wurde dauerhaft vom Server gelöscht und wird nicht wiederhergestellt</string>
+    <string name="http_status_411">Länge erforderlich - Der Server lehnt die Anfrage ab, da er eine definierte Länge erfordert</string>
+    <string name="http_status_412">Vorbedingung fehlgeschlagen - Die Vorbedingungen der Anfrage in den Kopfzeilenfeldern, die der Server nicht erfüllt</string>
+    <string name="http_status_413">Nutzlast zu groß - Die Anfrage ist größer als die vom Server definierten Grenzen und der Server weigert sich, sie zu verarbeiten</string>
+    <string name="http_status_414">URI zu lang - Die vom Client angeforderte URL ist zu lang, um vom Server verarbeitet zu werden.</string>
+    <string name="http_status_415">Medientyp nicht unterstützt - Die Anfrage verwendet ein Medienformat, das der Server nicht unterstützt</string>
+    <string name="http_status_416">Bereich nicht erfüllbar - Der Server kann den im Range-Header-Feld der Anfrage angegebenen Wert nicht erfüllen.</string>
+    <string name="http_status_417">Erwartung fehlgeschlagen - Der Server kann die Anforderungen, die durch den Expect-Request-Header-Feld angegeben sind, nicht erfüllen</string>
+    <string name="http_status_426">Upgrade erforderlich - Der Server weigert sich, die Anfrage mit dem aktuellen Protokoll zu verarbeiten, es sei denn, der Client wechselt zu einem anderen Protokoll.</string>
+
+    <string name="http_status_500">Interner Serverfehler - Der Server hat einen unerwarteten Fehler festgestellt und kann die Anfrage nicht abschließen</string>
+    <string name="http_status_501">Nicht implementiert - Der Server kann die Anfrage nicht erfüllen oder erkennt die Anfragemethode nicht</string>
+    <string name="http_status_502">Schlechtes Gateway - Der Server agiert als Gateway und erhielt eine ungültige Antwort vom Host</string>
+    <string name="http_status_503">Dienst nicht verfügbar - Dies tritt häufig auf, wenn ein Server überlastet ist oder gewartet wird</string>
+    <string name="http_status_504">Gateway-Timeout - Der Server agierte als Gateway oder Proxy und hat zu lange auf eine Antwort gewartet</string>
+    <string name="http_status_505">HTTP-Version nicht unterstützt - Der Server unterstützt die HTTP-Version der Anfrage nicht</string>
+    <string name="http_status_506">Variante verhandelt auch - Der Server hat einen internen Konfigurationsfehler</string>
+    <string name="http_status_507">Unzureichender Speicher - Der Server hat nicht genug Speicher, um die Anfrage erfolgreich zu verarbeiten</string>
+    <string name="http_status_508">Schleife erkannt - Der Server erkennt eine Endlosschleife, während er die Anfrage bearbeitet</string>
+    <string name="http_status_511">Netzwerk-Authentifizierung erforderlich - Der Client muss authentifiziert werden, um auf das Netzwerk zuzugreifen</string>
+
+    <string name="connectivity_type_unmetered_wifi_only">Unbegrenztes WLAN</string>
+    <string name="failed_to_upload_with_message">Upload fehlgeschlagen: %1$s</string>
+    <string name="failed_to_delete_with_message">Löschen fehlgeschlagen: %1$s</string>
+    <string name="change_reaction">Schnelle Reaktionen ändern</string>
 </resources>
