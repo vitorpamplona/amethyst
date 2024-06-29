@@ -65,7 +65,6 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
-// TODO: Implement UI for Media servers view.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MediaServersListView(
