@@ -434,6 +434,7 @@
     <string name="settings">Configurações</string>
     <string name="connectivity_type_always">Sempre</string>
     <string name="connectivity_type_wifi_only">Somente wifi</string>
+    <string name="connectivity_type_unmetered_wifi_only">WiFi não medida</string>
     <string name="connectivity_type_never">Nunca</string>
     <string name="ui_feature_set_type_complete">Concluído</string>
     <string name="ui_feature_set_type_simplified">Simplificado</string>
@@ -620,6 +621,8 @@
     <string name="server_did_not_provide_a_url_after_uploading">O servidor não forneceu uma URL após o upload</string>
     <string name="could_not_download_from_the_server">Não foi possível baixar o arquivo de mídia carregado do servidor</string>
     <string name="could_not_prepare_local_file_to_upload">Não foi possível preparar o arquivo local para enviar: %1$s</string>
+    <string name="failed_to_upload_with_message">Falha ao enviar: %1$s</string>
+    <string name="failed_to_delete_with_message">Falha ao excluir: %1$s</string>
     <string name="edit_draft">Editar rascunho</string>
     <string name="login_with_qr_code">Entrar com Código QR</string>
     <string name="route">Rota</string>
@@ -638,6 +641,7 @@
     <string name="reply_description">Responder</string>
     <string name="boost_or_quote_description">Impulsionar ou Citar</string>
     <string name="like_description">Gostar</string>
+    <string name="change_reaction">Mudar reações rápidas</string>
     <string name="profile_image_of_user">Foto de perfil de %1$s</string>
     <string name="relay_info">Repassar %1$s</string>
     <string name="expand_relay_list">Expandir lista de repasse</string>
@@ -727,7 +731,6 @@
     <string name="dvm_requesting_job">Solicitando Trabalho ao DVM</string>
     <string name="nwc_payment_request">Pedido de pagamento enviado, aguardando confirmação da sua carteira</string>
     <string name="dvm_waiting_to_confirm_payment">Aguardando o DVM confirmar o pagamento ou enviar resultados</string>
-
     <string name="http_status_400">Requisição inválida - O servidor não pode ou não irá processar a requisição.</string>
     <string name="http_status_401">Não autorizado - O usuário não possui credenciais de autenticação válidas</string>
     <string name="http_status_402">Pagamento necessário - O servidor requer pagamento para completar a requisição</string>
@@ -747,7 +750,6 @@
     <string name="http_status_416">Faixa não satisfatória - O servidor não pode atender ao valor indicado no campo de cabeçalho Range da requisição.</string>
     <string name="http_status_417">Falha na expectativa - O servidor não pode atender aos requisitos indicados pelo campo de cabeçalho Expect da requisição</string>
     <string name="http_status_426">Atualização necessária - O servidor se recusa a processar a requisição com o protocolo atual, a menos que o cliente faça a atualização para um protocolo diferente.</string>
-
     <string name="http_status_500">Erro interno do servidor - O servidor encontrou um erro inesperado e não pode completar a requisição</string>
     <string name="http_status_501">Não implementado - O servidor não pode cumprir a requisição ou não reconhece o método da requisição</string>
     <string name="http_status_502">Gateway inválido - O servidor atua como um gateway e recebeu uma resposta inválida do host</string>
@@ -758,9 +760,4 @@
     <string name="http_status_507">Armazenamento insuficiente - O servidor não possui armazenamento suficiente para processar a requisição com sucesso</string>
     <string name="http_status_508">Loop detectado - O servidor detecta um loop infinito enquanto processa a requisição</string>
     <string name="http_status_511">Autenticação de rede necessária - O cliente deve ser autenticado para acessar a rede</string>
-
-    <string name="connectivity_type_unmetered_wifi_only">WiFi não medida</string>
-    <string name="failed_to_upload_with_message">Falha ao enviar: %1$s</string>
-    <string name="failed_to_delete_with_message">Falha ao excluir: %1$s</string>
-    <string name="change_reaction">Mudar reações rápidas</string>
 </resources>
