@@ -14,6 +14,7 @@
     <string name="could_not_decrypt_the_message">Nachricht konnte nicht entschlüsselt werden</string>
     <string name="group_picture">Gruppenbild</string>
     <string name="explicit_content">Anstößiger Inhalt</string>
+    <string name="spam">Spam</string>
     <string name="spam_description">Anzahl der Spam-Ereignisse von diesem Relais</string>
     <string name="impersonation">Vortäuschung</string>
     <string name="illegal_behavior">Illegales Verhalten</string>
@@ -44,11 +45,15 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um nicht mehr zu folgen</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Sie verwenden einen öffentlichen Schlüssel, und öffentliche Schlüssel sind nur lesbar. Melden Sie sich mit einem privaten Schlüssel an, um ein Wort oder einen Satz auszublenden</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um ein Wort oder einen Satz anzeigen zu können</string>
+    <string name="zaps">Zaps</string>
     <string name="view_count">Aufrufe</string>
+    <string name="boost">Boost</string>
+    <string name="boosted">boosted</string>
     <string name="edited">bearbeitet</string>
     <string name="edited_number">Bearbeitung #%1$s</string>
     <string name="original">Original</string>
     <string name="quote">Zitat</string>
+    <string name="fork">Fork</string>
     <string name="propose_an_edit">Eine Bearbeitung vorschlagen</string>
     <string name="new_amount_in_sats">Neuer Betrag in Sats</string>
     <string name="add">Hinzufügen</string>
@@ -87,6 +92,7 @@
     <string name="failed_to_upload_the_image">Fehler beim Hochladen des Bildes</string>
     <string name="relay_address">Relay-Adresse</string>
     <string name="posts">Beiträge</string>
+    <string name="bytes">Bytes</string>
     <string name="errors">Fehler</string>
     <string name="errors_description">Anzahl der Verbindungsfehler in dieser Sitzung</string>
     <string name="home_feed">Startseite</string>
@@ -97,6 +103,7 @@
     <string name="add_a_relay">Relay hinzufügen</string>
     <string name="display_name">Anzeigename</string>
     <string name="my_display_name">Mein Anzeigename</string>
+    <string name="my_awesome_name">Ostrich McAwesome</string>
     <string name="welcome">Willkommen Ostrich!</string>
     <string name="username">Benutzername</string>
     <string name="my_username">Mein Benutzername</string>
@@ -197,6 +204,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="never">nie</string>
     <string name="now">jetzt</string>
     <string name="h">s</string>
+    <string name="m">m</string>
     <string name="d">t</string>
     <string name="nudity">Nacktheit</string>
     <string name="profanity_hateful_speech">Beleidigungen / Hassrede</string>
@@ -300,6 +308,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="poll_zap_value_min">Mindest-Zap-Betrag</string>
     <string name="poll_zap_value_max">Maximaler Zap-Betrag</string>
     <string name="poll_consensus_threshold">Konsens</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Schließen nach</string>
     <string name="poll_closing_time_days">Tagen</string>
     <string name="poll_unable_to_vote">Konnte nicht abstimmen</string>
@@ -391,6 +400,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="read_from_relay_description">Die Menge in Bytes, die von diesem Relais empfangen wurde, einschließlich Filter und Ereignisse</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Ein Fehler ist beim Abrufen von Relay-Informationen von %1$s aufgetreten</string>
     <string name="owner">Inhaber</string>
+    <string name="version">Version</string>
     <string name="software">Programme</string>
     <string name="contact">Kontakt</string>
     <string name="supports">Unterstützte NIPs</string>
@@ -399,6 +409,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="limitations">Einschränkungen</string>
     <string name="countries">Länder</string>
     <string name="languages">Sprachen</string>
+    <string name="tags">Tags</string>
     <string name="posting_policy">Veröffentlichungsrichtlinie</string>
     <string name="relay_error_messages">Fehler und Hinweise von diesem Relais</string>
     <string name="message_length">Nachrichtenlänge</string>
@@ -418,6 +429,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="cashu_copy_token">Token kopieren</string>
     <string name="no_lightning_address_set">Keine Lightning-Adresse festgelegt</string>
     <string name="copied_token_to_clipboard">Token in die Zwischenablage kopiert</string>
+    <string name="live_stream_live_tag">LIVE</string>
+    <string name="live_stream_offline_tag">OFFLINE</string>
     <string name="live_stream_ended_tag">BEENDET</string>
     <string name="live_stream_planned_tag">GEPLANT</string>
     <string name="live_stream_is_offline">Livestream ist offline</string>
@@ -427,7 +440,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="relay_setup">Relais</string>
     <string name="discover_content">Notizen Entdeckung</string>
     <string name="discover_marketplace">Marktplatz</string>
+    <string name="discover_live">Live</string>
     <string name="discover_community">Gemeinschaft</string>
+    <string name="discover_chat">Plaudern</string>
     <string name="community_approved_posts">Genehmigte Beiträge</string>
     <string name="groups_no_descriptor">Diese Gruppe hat keine Beschreibung oder Regeln. Sprechen Sie mit dem Eigentümer, um eine hinzuzufügen.</string>
     <string name="community_no_descriptor">Diese Community hat keine Beschreibung. Sprechen Sie mit dem Eigentümer, um eine hinzuzufügen.</string>
@@ -441,6 +456,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="ui_feature_set_type_complete">Fertig</string>
     <string name="ui_feature_set_type_simplified">Vereinfacht</string>
     <string name="ui_feature_set_type_performance">Leistung</string>
+    <string name="system">System</string>
     <string name="light">Hell</string>
     <string name="dark">Dunkel</string>
     <string name="application_preferences">Anwendungseinstellungen</string>
@@ -502,6 +518,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="poll_zap_value_min_max_explainer">Die Abstimmungen werden nach der Höhe des Zaps gewichtet. Sie können einen Mindestbetrag festlegen, um Spam zu verhindern, und einen Höchstbetrag, um zu verhindern, dass große Zapper die Abstimmung dominieren. Verwenden Sie denselben Betrag in beiden Feldern, um sicherzustellen, dass jeder Stimme der gleiche Wert zukommt. Lassen Sie es leer, um jeden Betrag zu akzeptieren.</string>
     <string name="error_dialog_zap_error">Zap konnte nicht gesendet werden</string>
     <string name="error_dialog_talk_to_user">Mit dem Benutzer kommunizieren</string>
+    <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">Konnte %1$s nicht erreichen: %2$s</string>
     <string name="relay_information_document_error_failed_to_assemble_url">Fehler beim Zusammenstellen der NIP-11-URL für %1$s: %2$s</string>
     <string name="relay_information_document_error_failed_to_reach_server">Konnte %1$s nicht erreichen: %2$s</string>
@@ -513,6 +530,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="active_for">Aktiv für: </string>
     <string name="active_for_home">Startseite</string>
     <string name="active_for_msg">Nachrichten</string>
+    <string name="active_for_chats">Plaudern</string>
+    <string name="active_for_global">Global</string>
     <string name="active_for_search">Suche</string>
     <string name="zap_split_title">Zaps aufteilen und weiterleiten</string>
     <string name="zap_split_explainer">Unterstützende Clients werden Zaps an die hier hinzugefügten Benutzer aufteilen und weiterleiten, anstatt an Sie</string>
@@ -521,6 +540,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="missing_lud16">Fehlende Lightning-Konfiguration</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Benutzer %1$s hat keine Lightning-Adresse eingerichtet, um Sats zu empfangen</string>
     <string name="zap_split_weight">Prozent</string>
+    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Zaps aufteilen mit</string>
     <string name="forwarding_zaps_to">Zaps weiterleiten an</string>
     <string name="lightning_wallets_not_found2">Lightning-Wallets nicht gefunden</string>
@@ -587,9 +607,11 @@ anz der Bedingungen ist erforderlich</string>
     <string name="hi_there_is_this_still_available">Hallo, ist das noch verfügbar?</string>
     <string name="classifieds">Artikel verkaufen</string>
     <string name="classifieds_title">Titel</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Zustand</string>
     <string name="classifieds_category">Kategorie</string>
     <string name="classifieds_price">Preis (in Sats)</string>
+    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">Ort</string>
     <string name="classifieds_location_placeholder">Stadt, Staat, Land</string>
     <string name="classifieds_condition_new">Neu</string>
@@ -608,6 +630,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="classifieds_category_books">Bücher</string>
     <string name="classifieds_category_pets">Haustiere</string>
     <string name="classifieds_category_sports">Sport</string>
+    <string name="classifieds_category_fitness">Fitness</string>
     <string name="classifieds_category_art">Kunst</string>
     <string name="classifieds_category_crafts">Handwerk</string>
     <string name="classifieds_category_home">Zuhause</string>
@@ -626,11 +649,13 @@ anz der Bedingungen ist erforderlich</string>
     <string name="failed_to_delete_with_message">Löschen fehlgeschlagen: %1$s</string>
     <string name="edit_draft">Entwurf bearbeiten</string>
     <string name="login_with_qr_code">Einloggen mit QR-Code</string>
+    <string name="route">Route</string>
     <string name="route_home">Startseite</string>
     <string name="route_search">Suche</string>
     <string name="route_discover">Entdecken</string>
     <string name="route_messages">Nachrichten</string>
     <string name="route_notifications">Benachrichtigungen</string>
+    <string name="route_global">Global</string>
     <string name="route_video">Kurzfilme</string>
     <string name="route_security_filters">Sicherheitsfilter</string>
     <string name="new_post">Neuer Beitrag</string>
@@ -641,6 +666,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="reply_description">Antworten</string>
     <string name="boost_or_quote_description">Boosten oder Zitieren</string>
     <string name="like_description">Gefällt mir</string>
+    <string name="zap_description">Zap</string>
     <string name="change_reaction">Schnelle Reaktionen ändern</string>
     <string name="profile_image_of_user">Profilbild von %1$s</string>
     <string name="relay_info">%1$s weiterleiten</string>
@@ -696,12 +722,16 @@ anz der Bedingungen ist erforderlich</string>
     <string name="donate_now">Jetzt spenden</string>
     <string name="brought_to_you_by">wurde Ihnen präsentiert von:</string>
     <string name="this_version_brought_to_you_by">Diese Version wurde Ihnen präsentiert von:</string>
+    <string name="version_name">Version %1$s</string>
     <string name="thank_you">Vielen Dank!</string>
     <string name="max_limit">Maximallimit</string>
     <string name="restricted_writes">Eingeschränkte Schriften</string>
     <string name="forked_from">Geforkt von</string>
+    <string name="forked_tag">FORK</string>
+    <string name="git_repository">Git Repository: %1$s</string>
     <string name="git_web_address">Internet:</string>
     <string name="git_clone_address">Klonen:</string>
+    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Zeitstempel Beweis</string>
     <string name="ots_info_description">Es gibt einen Beweis, dass dieser Beitrag irgendwann vor %1$s signiert wurde. Der Beweis wurde zu diesem Datum und Uhrzeit in der Bitcoin-Blockchain gestempelt.</string>
     <string name="edit_post">Beitrag bearbeiten</string>
