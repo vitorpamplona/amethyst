@@ -720,4 +720,40 @@
     <string name="dvm_requesting_job">Begär jobb från DVM</string>
     <string name="nwc_payment_request">Betalningsbegäran skickad, väntar på bekräftelse från din plånbok</string>
     <string name="dvm_waiting_to_confirm_payment">Väntar på att DVM ska bekräfta betalningen eller skicka resultaten</string>
+
+    <string name="http_status_400">Felaktig begäran - Servern kan inte eller vill inte bearbeta begäran.</string>
+    <string name="http_status_401">Obehörig - Användaren har inte giltiga autentiseringsuppgifter</string>
+    <string name="http_status_402">Betalning krävs - Servern kräver betalning för att slutföra begäran</string>
+    <string name="http_status_403">Förbjuden - Användaren har inte rätt att göra begäran</string>
+    <string name="http_status_404">Ej hittad - Servern kan inte hitta den begärda adressen</string>
+    <string name="http_status_405">Metod ej tillåten - Servern stöder begärningsmetoden men inte målresursen</string>
+    <string name="http_status_406">Ej acceptabel - Servern hittar inget innehåll som uppfyller begäran.</string>
+    <string name="http_status_407">Proxyautentisering krävs - Användaren har inte giltiga autentiseringsuppgifter</string>
+    <string name="http_status_408">Begäran timeout - Servern väntade för länge på någon annan</string>
+    <string name="http_status_409">Konflikt - Servern kan inte uppfylla begäran på grund av en konflikt med resursen</string>
+    <string name="http_status_410">Borta - Det begärda innehållet har permanent raderats från servern och kommer inte att återställas</string>
+    <string name="http_status_411">Längd krävs - Servern avvisar begäran eftersom den kräver en definierad längd</string>
+    <string name="http_status_412">Förhandsvillkor misslyckades - Begärningens förhandsvillkor i huvudfält som servern inte uppfyller</string>
+    <string name="http_status_413">För stor last - Begäran är större än serverns definierade gränser och servern vägrar att bearbeta den</string>
+    <string name="http_status_414">URI för lång - URL som begärdes av klienten är för lång för servern att bearbeta.</string>
+    <string name="http_status_415">Osupporterat mediatyp - Begäran använder ett mediaformat som servern inte stöder</string>
+    <string name="http_status_416">Område ej tillfredsställt - Servern kan inte uppfylla värdet som anges i begärans Range-huvudfält.</string>
+    <string name="http_status_417">Förväntning misslyckades - Servern kan inte uppfylla kraven som anges av Expect-begärans huvudfält</string>
+    <string name="http_status_426">Uppgradering krävs - Servern vägrar att bearbeta begäran med det nuvarande protokollet om inte klienten uppgraderar till ett annat protokoll.</string>
+
+    <string name="http_status_500">Internt serverfel - Servern har stött på ett oväntat fel och kan inte slutföra begäran</string>
+    <string name="http_status_501">Ej implementerad - Servern kan inte uppfylla begäran eller känner inte igen begärningsmetoden</string>
+    <string name="http_status_502">Fel gateway - Servern agerar som en gateway och fick ett ogiltigt svar från värden</string>
+    <string name="http_status_503">Tjänst otillgänglig - Detta sker ofta när en server är överbelastad eller nere för underhåll</string>
+    <string name="http_status_504">Gateway timeout - Servern agerade som en gateway eller proxy och väntade för länge på ett svar</string>
+    <string name="http_status_505">HTTP-version ej stödd - Servern stöder inte HTTP-versionen i begäran</string>
+    <string name="http_status_506">Variant förhandlar också - Servern har ett internt konfigurationsfel</string>
+    <string name="http_status_507">Otillräckligt lagringsutrymme - Servern har inte tillräckligt med lagringsutrymme för att bearbeta begäran framgångsrikt</string>
+    <string name="http_status_508">Loop upptäckt - Servern upptäcker en oändlig loop medan den bearbetar begäran</string>
+    <string name="http_status_511">Nätverksautentisering krävs - Klienten måste autentiseras för att få tillgång till nätverket</string>
+
+    <string name="connectivity_type_unmetered_wifi_only">Obegränsad WiFi</string>
+    <string name="failed_to_upload_with_message">Uppladdning misslyckades: %1$s</string>
+    <string name="failed_to_delete_with_message">Radering misslyckades: %1$s</string>
+    <string name="change_reaction">Ändra Snabba Reaktioner</string>
 </resources>
