@@ -752,7 +752,7 @@
     <string name="http_status_508">Loop upptäckt - Servern upptäcker en oändlig loop medan den bearbetar begäran</string>
     <string name="http_status_511">Nätverksautentisering krävs - Klienten måste autentiseras för att få tillgång till nätverket</string>
 
-    <string name="connectivity_type_unmetered_wifi_only">Oläst WiFi</string>
+    <string name="connectivity_type_unmetered_wifi_only">Obegränsad WiFi</string>
     <string name="failed_to_upload_with_message">Uppladdning misslyckades: %1$s</string>
     <string name="failed_to_delete_with_message">Radering misslyckades: %1$s</string>
     <string name="change_reaction">Ändra Snabba Reaktioner</string>
