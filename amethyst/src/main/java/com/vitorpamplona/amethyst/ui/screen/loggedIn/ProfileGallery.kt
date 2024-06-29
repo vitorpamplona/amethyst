@@ -282,10 +282,9 @@ fun RenderGalleryThumb(
             .metadata
             .map {
                 val noteEvent = baseNote.event as TextNoteEvent
-
                 GalleryThumb(
                     id = "",
-                    image = noteEvent.firstTaggedUrl(),
+                    image = baseNote.headerImage,
                     title = noteEvent.content(),
                     // noteEvent?.title(),
                     // price = noteEvent?.price(),
@@ -294,7 +293,7 @@ fun RenderGalleryThumb(
             .observeAsState(
                 GalleryThumb(
                     id = "",
-                    image = noteEvent.firstTaggedUrl(),
+                    image = baseNote.headerImage,
                     title = noteEvent.content(),
                     // image = noteEvent.image(),
                     // title = noteEvent.title(),
@@ -341,6 +340,8 @@ fun InnerRenderGalleryThumb(
                 modifier = Modifier.fillMaxSize(),
             )
         } ?: run { DisplayGalleryAuthorBanner(note) }
+
+        // TODO what if video?
 
        /* Row(
             Modifier

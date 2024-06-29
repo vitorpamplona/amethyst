@@ -34,7 +34,7 @@ class UserProfileGalleryFeedFilter(val user: User, val account: Account) : FeedF
         val notes =
             user.latestGalleryList
                 ?.taggedGalleryEntries()
-                ?.mapNotNull { LocalCache.checkGetOrCreateNote(it.id) }
+                ?.map { Pair(LocalCache.getOrCreateNote(it.id), it.url) }
                 ?.toSet()
                 ?: emptySet()
 
@@ -46,7 +46,15 @@ class UserProfileGalleryFeedFilter(val user: User, val account: Account) : FeedF
                 ?: emptySet() */
 
         // .sortedWith(DefaultFeedOrder)
-        return (notes)
+
+        var finalnotes = setOf<Note>()
+        for (pair in notes) {
+            pair.first.headerImage = pair.second
+            finalnotes = finalnotes + pair.first
+        }
+        println(finalnotes)
+
+        return (finalnotes)
             .filter { account.isAcceptable(it) }
     }
 }
