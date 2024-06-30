@@ -53,6 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import coil.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVideoUrl
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -336,8 +337,7 @@ fun InnerRenderGalleryThumb(
         contentAlignment = BottomStart,
     ) {
         card.image?.let {
-            if (it.endsWith("mp4") || it.endsWith("mov") || it.endsWith("mpeg")) {
-                // TODO how to long press?
+            if (isVideoUrl(it)) {
                 VideoView(
                     videoUri = it,
                     mimeType = null,
