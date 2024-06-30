@@ -109,15 +109,13 @@ import com.vitorpamplona.amethyst.ui.note.MutedIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
-import com.vitorpamplona.amethyst.ui.theme.Size110dp
-import com.vitorpamplona.amethyst.ui.theme.Size165dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -204,6 +202,7 @@ fun VideoView(
     title: String? = null,
     thumb: VideoThumb? = null,
     roundedCorner: Boolean,
+    gallery: Boolean = false,
     isFiniteHeight: Boolean,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
@@ -247,6 +246,7 @@ fun VideoView(
                     title = title,
                     thumb = thumb,
                     roundedCorner = roundedCorner,
+                    gallery = gallery,
                     isFiniteHeight = isFiniteHeight,
                     waveform = waveform,
                     artworkUri = artworkUri,
@@ -324,6 +324,7 @@ fun VideoViewInner(
     title: String? = null,
     thumb: VideoThumb? = null,
     roundedCorner: Boolean,
+    gallery: Boolean = false,
     isFiniteHeight: Boolean,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
@@ -348,6 +349,7 @@ fun VideoViewInner(
                     controller = controller,
                     thumbData = thumb,
                     roundedCorner = roundedCorner,
+                    gallery = gallery,
                     isFiniteHeight = isFiniteHeight,
                     nostrUriCallback = nostrUriCallback,
                     waveform = waveform,
@@ -695,6 +697,7 @@ private fun RenderVideoPlayer(
     controller: MediaController,
     thumbData: VideoThumb?,
     roundedCorner: Boolean,
+    gallery: Boolean = false,
     isFiniteHeight: Boolean,
     nostrUriCallback: String?,
     waveform: ImmutableList<Int>? = null,
@@ -712,12 +715,17 @@ private fun RenderVideoPlayer(
 
     Box {
         val borders = MaterialTheme.colorScheme.imageModifier
-
+        val bordersSquare = MaterialTheme.colorScheme.videoGalleryModifier
         val myModifier =
             remember(controller) {
                 if (roundedCorner) {
                     modifier.then(
                         borders.defaultMinSize(minHeight = 75.dp).align(Alignment.Center),
+                    )
+                } else if (gallery) {
+                    Modifier
+                    modifier.then(
+                        bordersSquare.defaultMinSize(minHeight = 75.dp).align(Alignment.Center),
                     )
                 } else {
                     modifier.fillMaxWidth().defaultMinSize(minHeight = 75.dp).align(Alignment.Center)
@@ -737,6 +745,7 @@ private fun RenderVideoPlayer(
                     setBackgroundColor(Color.Transparent.toArgb())
                     setShutterBackgroundColor(Color.Transparent.toArgb())
                     controllerAutoShow = false
+                    useController = !gallery
                     thumbData?.thumb?.let { defaultArtwork = it }
                     hideController()
                     resizeMode =
@@ -745,7 +754,7 @@ private fun RenderVideoPlayer(
                         } else {
                             AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
                         }
-                    onDialog?.let { innerOnDialog ->
+                    /*onDialog?.let { innerOnDialog ->
                         setFullscreenButtonClickListener {
                             controller.pause()
                             innerOnDialog(it)
@@ -756,11 +765,11 @@ private fun RenderVideoPlayer(
                             controllerVisible.value = visible == View.VISIBLE
                             onControllerVisibilityChanged?.let { callback -> callback(visible == View.VISIBLE) }
                         },
-                    )
+                    ) */
                 }
             },
         )
-
+/*
         waveform?.let { Waveform(it, controller, remember { Modifier.align(Alignment.Center) }) }
 
         val startingMuteState = remember(controller) { controller.volume < 0.001 }
@@ -811,7 +820,7 @@ private fun RenderVideoPlayer(
 
         AnimatedShareButton(controllerVisible, Modifier.align(Alignment.TopEnd).padding(end = Size165dp)) { popupExpanded, toggle ->
             ShareImageAction(accountViewModel = accountViewModel, popupExpanded, videoUri, nostrUriCallback, toggle)
-        }
+        } */
     }
 }
 

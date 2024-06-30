@@ -56,6 +56,7 @@ import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.ClickableNote
 import com.vitorpamplona.amethyst.ui.note.LongPressToQuickActionGallery
@@ -301,12 +302,12 @@ fun RenderGalleryThumb(
                 ),
             )
 
-    InnerRenderGalleryThumb(card as GalleryThumb, baseNote)
+    InnerRenderGalleryThumb(card as GalleryThumb, baseNote, accountViewModel)
 }
 
 @Preview
 @Composable
-fun RenderGalleryThumbPreview() {
+fun RenderGalleryThumbPreview(accountViewModel: AccountViewModel) {
     Surface(Modifier.size(200.dp)) {
         InnerRenderGalleryThumb(
             card =
@@ -317,6 +318,7 @@ fun RenderGalleryThumbPreview() {
                     // price = Price("800000", "SATS", null),
                 ),
             note = Note("hex"),
+            accountViewModel = accountViewModel,
         )
     }
 }
@@ -325,6 +327,7 @@ fun RenderGalleryThumbPreview() {
 fun InnerRenderGalleryThumb(
     card: GalleryThumb,
     note: Note,
+    accountViewModel: AccountViewModel,
 ) {
     Box(
         Modifier
@@ -333,15 +336,31 @@ fun InnerRenderGalleryThumb(
         contentAlignment = BottomStart,
     ) {
         card.image?.let {
-            AsyncImage(
-                model = it,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        } ?: run { DisplayGalleryAuthorBanner(note) }
-
-        // TODO what if video?
+            if (it.endsWith("mp4") || it.endsWith("mov") || it.endsWith("mpeg")) {
+                // TODO how to long press?
+                VideoView(
+                    videoUri = it,
+                    mimeType = null,
+                    title = "",
+                    dimensions = "1x1",
+                    authorName = note.author?.toBestDisplayName(),
+                    roundedCorner = false,
+                    gallery = true,
+                    isFiniteHeight = false,
+                    alwaysShowVideo = true,
+                    accountViewModel = accountViewModel,
+                )
+            } else {
+                AsyncImage(
+                    model = it,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+            ?: run { DisplayGalleryAuthorBanner(note) }
+    }
 
        /* Row(
             Modifier
@@ -382,8 +401,8 @@ fun InnerRenderGalleryThumb(
                     color = Color.White,
                 )
             }
-        }*/
-    }
+        }
+    }*/
 }
 
 @Composable

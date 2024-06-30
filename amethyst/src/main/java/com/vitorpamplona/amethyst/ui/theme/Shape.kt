@@ -56,6 +56,7 @@ val TabRowHeight = Modifier
 val SmallBorder = RoundedCornerShape(7.dp)
 val SmallishBorder = RoundedCornerShape(9.dp)
 val QuoteBorder = RoundedCornerShape(15.dp)
+
 val ButtonBorder = RoundedCornerShape(20.dp)
 val EditFieldBorder = RoundedCornerShape(25.dp)
 

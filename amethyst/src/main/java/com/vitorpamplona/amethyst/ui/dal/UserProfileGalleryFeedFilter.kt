@@ -34,18 +34,20 @@ class UserProfileGalleryFeedFilter(val user: User, val account: Account) : FeedF
         val notes =
             user.latestGalleryList
                 ?.taggedGalleryEntries()
-                ?.map { Pair(LocalCache.getOrCreateNote(it.id), it.url) }
+                ?.map {
+                    Pair(
+                        // (
+                        //   if (ATag.isATag(it.id)) {
+                        //        ATag.parse(it.id, null)?.let { it1 -> LocalCache.getOrCreateAddressableNote(it1) }
+                        //    } else {
+                        LocalCache.getOrCreateNote(it.id),
+                        //    }
+                        // )!!
+                        it.url,
+                    )
+                }
                 ?.toSet()
                 ?: emptySet()
-
-        /*val addresses =
-            user.latestGalleryList
-                ?.taggedAddresses()
-                ?.map { LocalCache.getOrCreateAddressableNote(it) }
-                ?.toSet()
-                ?: emptySet() */
-
-        // .sortedWith(DefaultFeedOrder)
 
         var finalnotes = setOf<Note>()
         for (pair in notes) {
