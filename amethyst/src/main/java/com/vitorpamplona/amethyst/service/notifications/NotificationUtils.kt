@@ -90,6 +90,7 @@ object NotificationUtils {
         id: String,
         messageBody: String,
         messageTitle: String,
+        time: Long,
         pictureUrl: String?,
         uri: String,
         applicationContext: Context,
@@ -101,6 +102,7 @@ object NotificationUtils {
             id,
             messageBody,
             messageTitle,
+            time,
             pictureUrl,
             uri,
             channelId,
@@ -113,6 +115,7 @@ object NotificationUtils {
         id: String,
         messageBody: String,
         messageTitle: String,
+        time: Long,
         pictureUrl: String?,
         uri: String,
         applicationContext: Context,
@@ -124,6 +127,7 @@ object NotificationUtils {
             id,
             messageBody,
             messageTitle,
+            time,
             pictureUrl,
             uri,
             channelId,
@@ -136,6 +140,7 @@ object NotificationUtils {
         id: String,
         messageBody: String,
         messageTitle: String,
+        time: Long,
         pictureUrl: String?,
         uri: String,
         channelId: String,
@@ -151,6 +156,7 @@ object NotificationUtils {
                 id = id,
                 messageBody = messageBody,
                 messageTitle = messageTitle,
+                time = time,
                 picture = imageResult.drawable as? BitmapDrawable,
                 uri = uri,
                 channelId,
@@ -162,6 +168,7 @@ object NotificationUtils {
                 id = id,
                 messageBody = messageBody,
                 messageTitle = messageTitle,
+                time = time,
                 picture = null,
                 uri = uri,
                 channelId,
@@ -175,6 +182,7 @@ object NotificationUtils {
         id: String,
         messageBody: String,
         messageTitle: String,
+        time: Long,
         picture: BitmapDrawable?,
         uri: String,
         channelId: String,
@@ -218,6 +226,7 @@ object NotificationUtils {
                 .setContentIntent(contentPendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
+                .setWhen(time * 1000)
 
         // Build the notification
         val builder =
@@ -236,6 +245,7 @@ object NotificationUtils {
                 .setPublicVersion(builderPublic.build())
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
+                .setWhen(time * 1000)
 
         notify(notId, builder.build())
     }

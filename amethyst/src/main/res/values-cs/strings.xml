@@ -14,6 +14,7 @@
     <string name="could_not_decrypt_the_message">Nepodařilo se dešifrovat zprávu</string>
     <string name="group_picture">Obrázek skupiny</string>
     <string name="explicit_content">Explicitní obsah</string>
+    <string name="spam">Nevyžádaná pošta</string>
     <string name="spam_description">Počet spamových událostí z tohoto relé</string>
     <string name="impersonation">Zneužívání identity</string>
     <string name="illegal_behavior">Nezákonné jednání</string>
@@ -102,6 +103,7 @@
     <string name="add_a_relay">Přidat přeposílání</string>
     <string name="display_name">Zobrazované jméno</string>
     <string name="my_display_name">Moje zobrazované jméno</string>
+    <string name="my_awesome_name">Ostrich McAwesome</string>
     <string name="welcome">Vítejte Ostrich!</string>
     <string name="username">Uživatelské jméno</string>
     <string name="my_username">Moje uživatelské jméno</string>
@@ -197,6 +199,9 @@
     <string name="nip_05">Nostr Adresa</string>
     <string name="never">nikdy</string>
     <string name="now">nyní</string>
+    <string name="h">h</string>
+    <string name="m">m</string>
+    <string name="d">d</string>
     <string name="nudity">Nahota</string>
     <string name="profanity_hateful_speech">Neslušnost / Nenávistná řeč</string>
     <string name="report_hateful_speech">Nahlásit nenávistnou řeč</string>
@@ -297,6 +302,7 @@
     <string name="poll_zap_value_min">Minimální zaps</string>
     <string name="poll_zap_value_max">Maximální zaps</string>
     <string name="poll_consensus_threshold">Konsensus</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Uzavřít po</string>
     <string name="poll_closing_time_days">dnech</string>
     <string name="poll_unable_to_vote">Nebylo možné hlasovat</string>
@@ -359,6 +365,7 @@
     <string name="app_notification_dms_channel_description">Upozorní vás, když dorazí soukromá zpráva</string>
     <string name="app_notification_zaps_channel_name">Přijaté zapsy</string>
     <string name="app_notification_zaps_channel_description">Upozorní vás, když vás někdo zapsne</string>
+    <string name="app_notification_zaps_channel_message">%1$s satů</string>
     <string name="app_notification_zaps_channel_message_from">Od %1$s</string>
     <string name="app_notification_zaps_channel_message_for">pro %1$s</string>
     <string name="reply_notify">Upozornit: </string>
@@ -410,6 +417,7 @@
     <string name="minimum_pow">Minimální PoW</string>
     <string name="auth">Ověření</string>
     <string name="payment">Platba</string>
+    <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Vyměnit</string>
     <string name="cashu_redeem_to_zap">Poslat do Zap peněženky</string>
     <string name="cashu_redeem_to_cashu">Otevřít v Cashu Wallet</string>
@@ -417,6 +425,7 @@
     <string name="no_lightning_address_set">Není nastavena žádná Lightning adresa</string>
     <string name="copied_token_to_clipboard">Token zkopírován do schránky</string>
     <string name="live_stream_live_tag">ŽIVĚ</string>
+    <string name="live_stream_offline_tag">OFFLINE</string>
     <string name="live_stream_ended_tag">UKONČENO</string>
     <string name="live_stream_planned_tag">PLÁNOVÁNO</string>
     <string name="live_stream_is_offline">Živé vysílání je offline</string>
@@ -437,6 +446,7 @@
     <string name="settings">Nastavení</string>
     <string name="connectivity_type_always">Vždy</string>
     <string name="connectivity_type_wifi_only">Pouze Wi-Fi</string>
+    <string name="connectivity_type_unmetered_wifi_only">Neomezená WiFi</string>
     <string name="connectivity_type_never">Nikdy</string>
     <string name="ui_feature_set_type_complete">Hotovo</string>
     <string name="ui_feature_set_type_simplified">Zjednodušené</string>
@@ -503,6 +513,7 @@
     <string name="poll_zap_value_min_max_explainer">Hlasy jsou váženy podle hodnoty zapu. Můžete nastavit minimální částku, abyste se vyhnuli spammerům, a maximální částku, abyste zabránili velkým zapperům, kteří by mohli ovládnout hlasování. Použijte stejnou částku v obou polích, aby byla hodnota každého hlasu stejná. Nechte prázdné pro přijetí libovolné částky.</string>
     <string name="error_dialog_zap_error">Nelze odeslat zap</string>
     <string name="error_dialog_talk_to_user">Poslat zprávu uživateli</string>
+    <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">Nepodařilo se dosáhnout %1$s: %2$s</string>
     <string name="relay_information_document_error_failed_to_assemble_url">Nepodařilo se sestavit adresu URL NIP-11 pro %1$s: %2$s</string>
     <string name="relay_information_document_error_failed_to_reach_server">Nepodařilo se dosáhnout %1$s: %2$s</string>
@@ -524,6 +535,7 @@
     <string name="missing_lud16">Chybí nastavení blesku</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Uživatel %1$s nemá nastavenou bleskovou adresu pro přijímání satoshi</string>
     <string name="zap_split_weight">Procenta</string>
+    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Rozdělování Zapů s</string>
     <string name="forwarding_zaps_to">Přeposílání Zapů na</string>
     <string name="lightning_wallets_not_found2">Bleskové peněženky nenalezený</string>
@@ -590,9 +602,11 @@
     <string name="hi_there_is_this_still_available">Ahoj, je to stále k dispozici?</string>
     <string name="classifieds">Prodat předmět</string>
     <string name="classifieds_title">Název</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Stav</string>
     <string name="classifieds_category">Kategorie</string>
     <string name="classifieds_price">Cena (v Sats)</string>
+    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">Místo</string>
     <string name="classifieds_location_placeholder">Město, stát, země</string>
     <string name="classifieds_condition_new">Nový</string>
@@ -611,6 +625,7 @@
     <string name="classifieds_category_books">Knihy</string>
     <string name="classifieds_category_pets">Domácí zvířata</string>
     <string name="classifieds_category_sports">Sportovní</string>
+    <string name="classifieds_category_fitness">Fitness</string>
     <string name="classifieds_category_art">Umění</string>
     <string name="classifieds_category_crafts">Vyrobí</string>
     <string name="classifieds_category_home">Domovský</string>
@@ -625,6 +640,8 @@
     <string name="server_did_not_provide_a_url_after_uploading">Server po nahrání neposkytl URL</string>
     <string name="could_not_download_from_the_server">Nepodařilo se stáhnout nahraná média ze serveru</string>
     <string name="could_not_prepare_local_file_to_upload">Nelze připravit místní soubor k nahrání: %1$s</string>
+    <string name="failed_to_upload_with_message">Nahrání selhalo: %1$s</string>
+    <string name="failed_to_delete_with_message">Smazání selhalo: %1$s</string>
     <string name="edit_draft">Upravit koncept</string>
     <string name="login_with_qr_code">Přihlášení pomocí QR kódu</string>
     <string name="route">Trasa</string>
@@ -644,6 +661,8 @@
     <string name="reply_description">Odpověď</string>
     <string name="boost_or_quote_description">Zvýšit nebo citovat</string>
     <string name="like_description">Olajkovat</string>
+    <string name="zap_description">Zap</string>
+    <string name="change_reaction">Změnit rychlé reakce</string>
     <string name="profile_image_of_user">Obrázek profilu %1$s</string>
     <string name="relay_info">Relé %1$s</string>
     <string name="expand_relay_list">Rozbalit seznam relací</string>
@@ -658,6 +677,7 @@
     <string name="cancel_zapraiser">Zrušit Zap-zběrku</string>
     <string name="add_location">Místo</string>
     <string name="remove_location">Odstranit umístění</string>
+    <string name="add_zap_split">Zap splits</string>
     <string name="cancel_zap_split">Zrušit rozdělení Zap</string>
     <string name="add_content_warning">Přidat upozornění na obsah</string>
     <string name="remove_content_warning">Odstranit upozornění na obsah</string>
@@ -702,9 +722,11 @@
     <string name="max_limit">Maximální limit</string>
     <string name="restricted_writes">Omezené zápisy</string>
     <string name="forked_from">Rozštěpováno od</string>
+    <string name="forked_tag">FORK</string>
     <string name="git_repository">Git repositář: %1$s</string>
     <string name="git_web_address">Internet:</string>
     <string name="git_clone_address">Klon:</string>
+    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Důkaz časového razítka</string>
     <string name="ots_info_description">Existuje důkaz, že tento příspěvek byl podepsán někdy před %1$s. Důkaz byl označen v Bitcoin blockchainu v tomto datu a čase.</string>
     <string name="edit_post">Upravit příspěvek</string>
@@ -732,7 +754,6 @@
     <string name="dvm_requesting_job">Žádost o práci od DVM</string>
     <string name="nwc_payment_request">Žádost o platbu odeslána, čeká se na potvrzení z vaší peněženky</string>
     <string name="dvm_waiting_to_confirm_payment">Čekání na potvrzení platby DVM nebo na zaslání výsledků</string>
-
     <string name="http_status_400">Špatný požadavek - Server nemůže nebo nechce zpracovat požadavek.</string>
     <string name="http_status_401">Neautorizovaný - Uživatel nemá platné přihlašovací údaje</string>
     <string name="http_status_402">Požadována platba - Server vyžaduje platbu pro dokončení požadavku</string>
@@ -752,7 +773,6 @@
     <string name="http_status_416">Rozsah nesplnitelný - Server nemůže splnit hodnotu uvedenou v hlavičce rozsahu požadavku.</string>
     <string name="http_status_417">Očekávání selhalo - Server nemůže splnit požadavky uvedené v hlavičce očekávání požadavku</string>
     <string name="http_status_426">Vyžadována aktualizace - Server odmítá zpracovat požadavek s aktuálním protokolem, pokud klient neaktualizuje na jiný protokol.</string>
-
     <string name="http_status_500">Interní chyba serveru - Server narazil na neočekávanou chybu a nemůže dokončit požadavek</string>
     <string name="http_status_501">Nerealizováno - Server nemůže splnit požadavek nebo nerozpoznává metodu požadavku</string>
     <string name="http_status_502">Špatná brána - Server funguje jako brána a obdržel neplatnou odpověď od hostitele</string>
@@ -763,9 +783,4 @@
     <string name="http_status_507">Nedostatečné úložiště - Server nemá dostatek úložiště, aby úspěšně zpracoval požadavek</string>
     <string name="http_status_508">Detekována smyčka - Server detekuje nekonečnou smyčku při zpracování požadavku</string>
     <string name="http_status_511">Vyžadováno ověření sítě - Klient musí být autentizován, aby získal přístup k síti</string>
-
-    <string name="connectivity_type_unmetered_wifi_only">Neomezená WiFi</string>
-    <string name="failed_to_upload_with_message">Nahrání selhalo: %1$s</string>
-    <string name="failed_to_delete_with_message">Smazání selhalo: %1$s</string>
-    <string name="change_reaction">Změnit rychlé reakce</string>
 </resources>
