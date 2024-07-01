@@ -81,6 +81,21 @@ class RichTextParser {
         }
     }
 
+    private fun parseBase64Images(content: String): LinkedHashSet<String> {
+        val regex = "data:image/(${imageExtensions.joinToString(separator = "|") { it } });base64,[a-zA-Z0-9+/]+={0,2}"
+        val pattern = Pattern.compile(regex)
+        val matcher = pattern.matcher(content)
+
+        val base64Images = mutableListOf<String>()
+
+        // Find all matches and add them to the list
+        while (matcher.find()) {
+            base64Images.add(matcher.group())
+        }
+
+        return base64Images.mapTo(LinkedHashSet(base64Images.size)) { it }
+    }
+
     fun parseValidUrls(content: String): LinkedHashSet<String> {
         val urls = UrlDetector(content, UrlDetectorOptions.Default).detect()
 
@@ -112,13 +127,15 @@ class RichTextParser {
     ): RichTextViewerState {
         val urlSet = parseValidUrls(content)
 
+        val base64Images = parseBase64Images(content)
+
         val imagesForPager =
             urlSet.mapNotNull { fullUrl -> parseMediaUrl(fullUrl, tags, content, callbackUri) }.associateBy { it.url }
         val imageList = imagesForPager.values.toList()
 
         val emojiMap = Nip30CustomEmoji.createEmojiMap(tags)
 
-        val segments = findTextSegments(content, imagesForPager.keys, urlSet, emojiMap, tags)
+        val segments = findTextSegments(content, imagesForPager.keys, urlSet, emojiMap, tags, base64Images)
 
         return RichTextViewerState(
             urlSet.toImmutableSet(),
@@ -126,6 +143,7 @@ class RichTextParser {
             imageList.toImmutableList(),
             emojiMap.toImmutableMap(),
             segments,
+            base64Images.toImmutableSet(),
         )
     }
 
@@ -135,6 +153,7 @@ class RichTextParser {
         urls: Set<String>,
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
+        base64Images: Set<String>,
     ): ImmutableList<ParagraphState> {
         val lines = content.split('\n')
         val paragraphSegments = ArrayList<ParagraphState>(lines.size)
@@ -146,7 +165,7 @@ class RichTextParser {
             val wordList = paragraph.trimEnd().split(' ')
             val segments = ArrayList<Segment>(wordList.size)
             wordList.forEach { word ->
-                val wordSegment = wordIdentifier(word, images, urls, emojis, tags)
+                val wordSegment = wordIdentifier(word, images, urls, emojis, tags, base64Images)
                 if (wordSegment !is RegularTextSegment) {
                     isDirty = true
                 }
@@ -200,8 +219,11 @@ class RichTextParser {
         urls: Set<String>,
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
+        base64Images: Set<String>,
     ): Segment {
         if (word.isEmpty()) return RegularTextSegment(word)
+
+        if (base64Images.contains(word)) return Base64Segment(word)
 
         if (images.contains(word)) return ImageSegment(word)
 

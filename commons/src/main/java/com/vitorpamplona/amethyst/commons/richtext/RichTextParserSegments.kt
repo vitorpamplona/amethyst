@@ -32,6 +32,7 @@ data class RichTextViewerState(
     val imageList: ImmutableList<MediaUrlContent>,
     val customEmoji: ImmutableMap<String, String>,
     val paragraphs: ImmutableList<ParagraphState>,
+    val base64Images: ImmutableSet<String>,
 )
 
 @Immutable
@@ -66,6 +67,9 @@ class PhoneSegment(segment: String) : Segment(segment)
 
 @Immutable
 class BechSegment(segment: String) : Segment(segment)
+
+@Immutable
+class Base64Segment(segment: String) : Segment(segment)
 
 @Immutable
 open class HashIndexSegment(segment: String, val hex: String, val extras: String?) :

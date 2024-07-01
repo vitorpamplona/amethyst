@@ -43,9 +43,6 @@ class ExpandableTextCutOffCalculator {
                     newString.lastIndexOf(' ').let { if (it < 0) content.length else it }
                 val firstNewLineBeforeCut =
                     newString.lastIndexOf('\n').let { if (it < 0) content.length else it }
-                if (maxOf(firstSpaceBeforeCut, firstNewLineBeforeCut) == content.length && content.length > SHORT_TEXT_LENGTH) {
-                    return SHORT_TEXT_LENGTH
-                }
 
                 return maxOf(firstSpaceBeforeCut, firstNewLineBeforeCut)
             } else {
