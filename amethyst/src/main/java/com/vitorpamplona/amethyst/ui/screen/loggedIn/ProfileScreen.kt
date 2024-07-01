@@ -42,7 +42,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -153,11 +152,13 @@ import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileGalleryFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileNewThreadsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileReportFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileZapsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.SaveableGridFeedState
+import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -1567,24 +1568,22 @@ fun TabGallery(
 ) {
     LaunchedEffect(Unit) { feedViewModel.invalidateData() }
 
-    Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp),
-        ) {
-            var state = LazyGridState()
+    // Column(Modifier.fillMaxHeight()) {
 
-            SaveableGridFeedState(feedViewModel, scrollStateKey = "gallery") { listState ->
-                RenderGalleryFeed(
-                    feedViewModel,
-                    null,
-                    0,
-                    state,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
+    RefresheableBox(feedViewModel, true) {
+        SaveableGridFeedState(feedViewModel, scrollStateKey = ScrollStateKeys.PROFILE_GALLERY) { listState ->
+            RenderGalleryFeed(
+                feedViewModel,
+                null,
+                0,
+                listState,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
         }
     }
+
+    // }
 }
 
 /*@Composable

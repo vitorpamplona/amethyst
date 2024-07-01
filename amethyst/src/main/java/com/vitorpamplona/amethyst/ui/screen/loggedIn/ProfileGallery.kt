@@ -163,7 +163,7 @@ fun GalleryCardCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel) {
+    WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, shortPreview = true) {
         CheckHiddenFeedWatchBlockAndReport(
             note = baseNote,
             modifier = modifier,
@@ -228,7 +228,6 @@ private fun CheckNewAndRenderChannelCard(
         showPopup = showPopup,
         nav = nav,
     ) {
-        // baseNote.event?.let { Text(text = it.pubKey()) }
         InnerGalleryCardWithReactions(
             baseNote = baseNote,
             accountViewModel = accountViewModel,
@@ -342,7 +341,6 @@ fun InnerRenderGalleryThumb(
                     videoUri = it,
                     mimeType = null,
                     title = "",
-                    dimensions = "1x1",
                     authorName = note.author?.toBestDisplayName(),
                     roundedCorner = false,
                     gallery = true,
@@ -361,48 +359,6 @@ fun InnerRenderGalleryThumb(
         }
             ?: run { DisplayGalleryAuthorBanner(note) }
     }
-
-       /* Row(
-            Modifier
-                .fillMaxWidth()
-                .background(Color.Black.copy(0.6f))
-                .padding(Size5dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            card.title?.let {
-                Text(
-                    text = it,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = Color.White,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            card.price?.let {
-                val priceTag =
-                    remember(card) {
-                        val newAmount = it.amount.toBigDecimalOrNull()?.let { showAmountAxis(it) } ?: it.amount
-
-                        if (it.frequency != null && it.currency != null) {
-                            "$newAmount ${it.currency}/${it.frequency}"
-                        } else if (it.currency != null) {
-                            "$newAmount ${it.currency}"
-                        } else {
-                            newAmount
-                        }
-                    }
-
-                Text(
-                    text = priceTag,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = Color.White,
-                )
-            }
-        }
-    }*/
 }
 
 @Composable
