@@ -943,4 +943,6 @@
     <string name="http_status_507">Insufficient Storage - The server doesn’t have enough storage to process the request successfully</string>
     <string name="http_status_508">Loop Detected - The server detects an infinite loop while processing the request</string>
     <string name="http_status_511">Network Authentication Required - The client must be authenticated to access the network</string>
+
+    <string name="add_a_nip96_server">Add a NIP-96 Server</string>
 </resources>
