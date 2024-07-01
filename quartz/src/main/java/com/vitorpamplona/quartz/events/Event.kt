@@ -119,7 +119,7 @@ open class Event(
 
     override fun taggedEvents() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
 
-    override fun taggedGalleryEntries() = tags.filter { it.size > 2 && it[0] == "r" }.map { GalleryUrl(it[1], it[2]) }
+    override fun taggedGalleryEntries() = tags.filter { it.size > 2 && it[0] == "gallery" }.map { GalleryUrl(it[1], it[2]) }
 
     override fun taggedUrls() = tags.filter { it.size > 1 && it[0] == "r" }.map { it[1] }
 

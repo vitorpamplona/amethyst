@@ -47,7 +47,7 @@ class GalleryListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (GalleryListEvent) -> Unit,
-        ) = addTag(earlierVersion, "r", eventId, url, signer, createdAt, onReady)
+        ) = addTag(earlierVersion, "gallery", eventId, url, signer, createdAt, onReady)
 
         fun addTag(
             earlierVersion: GalleryListEvent?,
@@ -90,7 +90,7 @@ class GalleryListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (GalleryListEvent) -> Unit,
-        ) = removeTag(earlierVersion, "r", eventId, url, signer, createdAt, onReady)
+        ) = removeTag(earlierVersion, "gallery", eventId, url, signer, createdAt, onReady)
 
         fun removeReplaceable(
             earlierVersion: GalleryListEvent,
@@ -99,7 +99,7 @@ class GalleryListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (GalleryListEvent) -> Unit,
-        ) = removeTag(earlierVersion, "r", aTag.toTag(), url, signer, createdAt, onReady)
+        ) = removeTag(earlierVersion, "gallery", aTag.toTag(), url, signer, createdAt, onReady)
 
         private fun removeTag(
             earlierVersion: GalleryListEvent,
