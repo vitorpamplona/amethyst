@@ -48,7 +48,6 @@ import coil.fetch.FetchResult
 import coil.fetch.Fetcher
 import coil.request.ImageRequest
 import coil.request.Options
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.theme.isLight
@@ -183,10 +182,7 @@ class Base64Fetcher(
     override suspend fun fetch(): FetchResult {
         checkNotInMainThread()
 
-        var base64String = data.toString().removePrefix("data:image/jpeg;base64,")
-        RichTextParser.imageExtensions.forEach {
-            base64String = base64String.removePrefix("data:image/$it;base64,")
-        }
+        val base64String = data.toString().removePrefix("data:image/jpeg;base64,")
 
         val byteArray = Base64.getDecoder().decode(base64String)
         val bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
