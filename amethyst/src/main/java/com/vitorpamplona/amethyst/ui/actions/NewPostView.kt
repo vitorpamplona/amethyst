@@ -168,6 +168,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.FileServersEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
@@ -1620,8 +1621,25 @@ fun ImageVideoDescription(
     val isImage = mediaType.startsWith("image")
     val isVideo = mediaType.startsWith("video")
 
+    val listOfNip96ServersNote =
+        accountViewModel.account
+            .getFileServersNote()
+            .live()
+            .metadata
+            .observeAsState()
+
     val fileServers =
-        Nip96MediaServers.DEFAULT.map { ServerOption(it, false) } +
+        (
+            (listOfNip96ServersNote.value?.note?.event as? FileServersEvent)?.servers()?.map {
+                ServerOption(
+                    Nip96MediaServers.ServerName(
+                        it,
+                        it,
+                    ),
+                    false,
+                )
+            } ?: Nip96MediaServers.DEFAULT.map { ServerOption(it, false) }
+        ) +
             listOf(
                 ServerOption(
                     Nip96MediaServers.ServerName(
