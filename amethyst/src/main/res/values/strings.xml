@@ -379,6 +379,16 @@
     <string name="zap_forward_lnAddress">LnAddress or @User</string>
 
 
+    <string name="media_servers">Media Servers</string>
+    <string name="set_preferred_media_servers">Set your preferred media upload servers.</string>
+    <string name="no_media_server_message">You have no custom media servers set. You can use Amethyst\'s list, or add one below ↓</string>
+    <string name="built_in_media_servers_title">Built-in Media Servers</string>
+    <string name="built_in_servers_description">Amethyst\'s default list. You can add them individually or add the list.</string>
+    <string name="use_default_servers">Use Default List</string>
+    <string name="add_media_server">Add media server</string>
+    <string name="delete_media_server">Delete media server</string>
+
+
     <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Files are hosted by your relays. New NIP: check if they support</string>
 
