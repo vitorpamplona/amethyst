@@ -596,7 +596,7 @@ private fun CreateAndRenderTabs(
         listOf<@Composable (() -> Unit)?>(
             { Text(text = stringRes(R.string.notes)) },
             { Text(text = stringRes(R.string.replies)) },
-            { Text(text = "Gallery") },
+            { Text(text = stringRes(R.string.gallery)) },
             { FollowTabHeader(baseUser) },
             { FollowersTabHeader(baseUser) },
             { ZapTabHeader(baseUser) },
