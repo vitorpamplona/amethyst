@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import android.util.Base64
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -71,7 +70,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImagePainter
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
-import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.commons.compose.produceCachedState
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
@@ -86,7 +84,6 @@ import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.PhoneSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SchemelessUrlSegment
 import com.vitorpamplona.amethyst.commons.richtext.Segment
@@ -455,34 +452,18 @@ private fun RenderWordWithPreview(
 fun ImageFromBase64(base64String: String) {
     val context = LocalContext.current
 
-    var base64String2 = base64String.removePrefix("data:image/jpeg;base64,")
-    RichTextParser.imageExtensions.forEach {
-        base64String2 = base64String2.removePrefix("data:image/$it;base64,")
-    }
-
-    val imageBytes = runCatching { Base64.decode(base64String2, Base64.DEFAULT) }.getOrNull()
-
-    if (imageBytes == null) {
-        BlankNote()
-    } else {
-        val request =
-            ImageRequest.Builder(context)
-                .data(imageBytes)
-                .build()
-
-        SubcomposeAsyncImage(
-            model = request,
-            contentDescription = null,
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            when (painter.state) {
-                is AsyncImagePainter.State.Success -> {
-                    SubcomposeAsyncImageContent()
-                }
-
-                else -> BlankNote()
+    SubcomposeAsyncImage(
+        model = Base64Requester.imageRequest(context, base64String),
+        contentDescription = null,
+        contentScale = ContentScale.FillWidth,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        when (painter.state) {
+            is AsyncImagePainter.State.Success -> {
+                SubcomposeAsyncImageContent()
             }
+
+            else -> BlankNote()
         }
     }
 }
