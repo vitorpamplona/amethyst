@@ -110,6 +110,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                             AdvertisedRelayListEvent.KIND,
                             ChatMessageRelayListEvent.KIND,
                             SearchRelayListEvent.KIND,
+                            FileServersEvent.KIND,
                             PrivateOutboxRelayListEvent.KIND,
                         ),
                     authors = listOf(account.userProfile().pubkeyHex),
