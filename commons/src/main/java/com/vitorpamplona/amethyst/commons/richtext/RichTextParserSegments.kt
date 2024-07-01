@@ -32,7 +32,6 @@ data class RichTextViewerState(
     val imageList: ImmutableList<MediaUrlContent>,
     val customEmoji: ImmutableMap<String, String>,
     val paragraphs: ImmutableList<ParagraphState>,
-    val base64Images: ImmutableSet<String>,
 )
 
 @Immutable

@@ -127,15 +127,13 @@ class RichTextParser {
     ): RichTextViewerState {
         val urlSet = parseValidUrls(content)
 
-        val base64Images = parseBase64Images(content)
-
         val imagesForPager =
             urlSet.mapNotNull { fullUrl -> parseMediaUrl(fullUrl, tags, content, callbackUri) }.associateBy { it.url }
         val imageList = imagesForPager.values.toList()
 
         val emojiMap = Nip30CustomEmoji.createEmojiMap(tags)
 
-        val segments = findTextSegments(content, imagesForPager.keys, urlSet, emojiMap, tags, base64Images)
+        val segments = findTextSegments(content, imagesForPager.keys, urlSet, emojiMap, tags)
 
         return RichTextViewerState(
             urlSet.toImmutableSet(),
@@ -143,7 +141,6 @@ class RichTextParser {
             imageList.toImmutableList(),
             emojiMap.toImmutableMap(),
             segments,
-            base64Images.toImmutableSet(),
         )
     }
 
@@ -153,7 +150,6 @@ class RichTextParser {
         urls: Set<String>,
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
-        base64Images: Set<String>,
     ): ImmutableList<ParagraphState> {
         val lines = content.split('\n')
         val paragraphSegments = ArrayList<ParagraphState>(lines.size)
@@ -165,7 +161,7 @@ class RichTextParser {
             val wordList = paragraph.trimEnd().split(' ')
             val segments = ArrayList<Segment>(wordList.size)
             wordList.forEach { word ->
-                val wordSegment = wordIdentifier(word, images, urls, emojis, tags, base64Images)
+                val wordSegment = wordIdentifier(word, images, urls, emojis, tags)
                 if (wordSegment !is RegularTextSegment) {
                     isDirty = true
                 }
@@ -219,11 +215,15 @@ class RichTextParser {
         urls: Set<String>,
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
-        base64Images: Set<String>,
     ): Segment {
         if (word.isEmpty()) return RegularTextSegment(word)
 
-        if (base64Images.contains(word)) return Base64Segment(word)
+        if (word.startsWith("data:image")) {
+            val base64Images = parseBase64Images(word)
+            if (base64Images.isNotEmpty()) {
+                return Base64Segment(word)
+            }
+        }
 
         if (images.contains(word)) return ImageSegment(word)
 
