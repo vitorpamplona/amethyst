@@ -56,7 +56,7 @@ fun MediaServerEditField(
             ),
     ) {
         OutlinedTextField(
-            label = { Text(text = stringRes(R.string.add_a_relay)) },
+            label = { Text(text = stringRes(R.string.add_a_nip96_server)) },
             modifier = Modifier.weight(1f),
             value = url,
             onValueChange = { url = it },
