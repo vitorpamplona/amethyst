@@ -642,6 +642,8 @@
     <string name="server_did_not_provide_a_url_after_uploading">सेवासंगणक ने आरोहण पश्चात जालपता नहीं दिया</string>
     <string name="could_not_download_from_the_server">सेवासंगणक से आरोहणकृत चित्र चलचित्र का अवरोहण नहीं कर पाए</string>
     <string name="could_not_prepare_local_file_to_upload">स्थानीय अभिलेख अनुकूल नहीं बना सके आरोहण के लिए : %1$s</string>
+    <string name="failed_to_upload_with_message">आरोहण असफल : %1$s</string>
+    <string name="failed_to_delete_with_message">मिटाने में असफल : %1$s</string>
     <string name="edit_draft">पाण्डुलिपि का सम्पादन करें</string>
     <string name="login_with_qr_code">क्यूआर॰ क्रमचित्र के साथ प्रवेशांकन करें</string>
     <string name="route">मार्ग</string>
@@ -754,4 +756,22 @@
     <string name="dvm_requesting_job">डीवीएम॰ से कार्य का अनुरोध किया जा रहा है</string>
     <string name="nwc_payment_request">भुगतान अनुरोध भेजा गया। आपके धनकोष से पुष्टीकरण की प्रतीक्षा में</string>
     <string name="dvm_waiting_to_confirm_payment">डीवीएम॰ से भुगतान की पुष्टीकरण अथवा परिणाम भेजने की प्रतीक्षा में</string>
+    <string name="http_status_400">बुरा अनुरोध - सेवासंगणक इस अनुरोध पर काम नहीं कर सकता अथवा नहीं करेगा।</string>
+    <string name="http_status_401">अनधिकृत - उपयोगकर्ता के पास प्रमाणिकरण हेतु वैध परिचयपत्र उपलब्ध नहीं</string>
+    <string name="http_status_402">भुगतान अनिवार्य - अनुरोध पूरा करने के लिए सेवासंगणक को भुगतान की आवश्यकता है</string>
+    <string name="http_status_403">वर्जित - उपयोगकर्ता को यह अनुरोध करने का अधिकार नहीं</string>
+    <string name="http_status_404">अप्राप्त - याचित पता ढूँढने में सेवासंगणक असफल</string>
+    <string name="http_status_405">कार्य की अनुमति नहीं - सेवासंगणक याचित कार्य का आलम्बन करता है पर लक्ष्यांकित संसाधन को नहीं</string>
+    <string name="http_status_406">अस्वीकृत - सेवासंगणक कोई विषयवस्तु नहीं ढूँढ सका जिससे अनुरोध की पूर्ति हो सके।</string>
+    <string name="http_status_407">प्रतिनिधि प्रमाणिकरण आवश्यक - उपयोगकर्ता के पास प्रमाणिकरण हेतु वैध परिचयपत्र उपलब्ध नहीं</string>
+    <string name="http_status_408">अनुरोध समयसीमा समाप्त - सेवासंगणक समयसीमा पार किया किसी अन्य की प्रतीक्षा में।</string>
+    <string name="http_status_409">संघर्ष - सेवासंगणक अनुरोध की पूर्ति नहीं कर सकता क्योंकि संसाधन के साथ संघर्ष है</string>
+    <string name="http_status_410">विगत - याचित विषयवस्तु सेवासंगणक से सर्वदा के लिए मिटाया गया है तथा पुनर्स्थापित नहीं होगा</string>
+    <string name="http_status_411">लम्बाई आवश्यक - सेवासंगणक ने अनुरोध अस्वीकार किया क्योंकि इस के लिए स्पष्ट विषयवस्तु लम्बाई सूचक शीर्षक चाहिए</string>
+    <string name="http_status_412">पूर्वावस्था असफल - अनुरोध के शीर्षक प्रपत्रस्थानों में निर्दिष्ट पूर्वावस्थाओं की पूर्ति में सेवासंगणक असफल</string>
+    <string name="http_status_413">भार अत्याधिक - अनुरोध सेवासंगणक के निरूपित सीमाएँ से बडा है, तथा सेवासंगणक ने इस पर काम करना नकार दिया</string>
+    <string name="http_status_414">जालपता लम्बाई अत्याधिक - ग्राहक द्वारा अनुरोधित जालपता की लम्बाई सेवासंगणक के काम के लिए अत्याधिक है। </string>
+    <string name="http_status_415">अनावलम्बित माध्यम प्रकार - अनुरोध में प्रयुक्त माध्यम प्रकार सेवासंगणक द्वारा अवलम्बित नहीं</string>
+    <string name="http_status_416">विस्तार असाध्य - अनुरोध के विस्तार शीर्षक प्रपत्रस्थान में सूचित मूल्य की पूर्ति सेवासंगणक द्वारा असाध्य। </string>
+    <string name="http_status_417">अपेक्षा असफल - अनुरोध के अपेक्षा शीर्षक प्रपत्रस्थान में सूचित आवश्यकताओं की पूर्ति सेवासंगणक के लिए असाध्य</string>
 </resources>
