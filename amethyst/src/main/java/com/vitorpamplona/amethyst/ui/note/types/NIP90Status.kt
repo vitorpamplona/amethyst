@@ -22,24 +22,14 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.events.NIP90StatusEvent
 
 @Composable
 fun RenderNIP90Status(
     note: Note,
-    makeItShort: Boolean,
-    canPreview: Boolean,
-    quotesLeft: Int,
-    unPackReply: Boolean,
-    backgroundColor: MutableState<Color>,
-    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {

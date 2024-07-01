@@ -23,13 +23,11 @@ package com.vitorpamplona.amethyst.ui.note.types
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
@@ -44,9 +42,7 @@ fun RenderNIP90ContentDiscoveryResponse(
     makeItShort: Boolean,
     canPreview: Boolean,
     quotesLeft: Int,
-    unPackReply: Boolean,
     backgroundColor: MutableState<Color>,
-    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
