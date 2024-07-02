@@ -1953,6 +1953,13 @@ fun UserProfileDropDownMenu(
                     onDismiss()
                 },
             )
+            DropdownMenuItem(
+                text = { Text(stringRes(id = R.string.report_malware)) },
+                onClick = {
+                    accountViewModel.report(user, ReportEvent.ReportType.MALWARE)
+                    onDismiss()
+                },
+            )
         }
     }
 }
