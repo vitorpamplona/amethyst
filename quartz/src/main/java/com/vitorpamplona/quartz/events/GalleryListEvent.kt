@@ -37,8 +37,8 @@ class GalleryListEvent(
 ) : GeneralListEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = 10011
-        const val ALT = "Gallery List"
-        const val DEFAULT_D_TAG_GALLERY = "gallery"
+        const val ALT = "Profile Gallery"
+        const val GALLERYTAGNAME = "gallery"
 
         fun addEvent(
             earlierVersion: GalleryListEvent?,
@@ -47,7 +47,7 @@ class GalleryListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (GalleryListEvent) -> Unit,
-        ) = addTag(earlierVersion, "gallery", eventId, url, signer, createdAt, onReady)
+        ) = addTag(earlierVersion, GALLERYTAGNAME, eventId, url, signer, createdAt, onReady)
 
         fun addTag(
             earlierVersion: GalleryListEvent?,
@@ -76,7 +76,7 @@ class GalleryListEvent(
         ) {
             create(
                 content = earlierVersion?.content ?: "",
-                tags = listNewTags.plus(earlierVersion?.tags ?: arrayOf(arrayOf("d", DEFAULT_D_TAG_GALLERY))),
+                tags = listNewTags.plus(earlierVersion?.tags ?: arrayOf()),
                 signer = signer,
                 createdAt = createdAt,
                 onReady = onReady,
@@ -90,7 +90,7 @@ class GalleryListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (GalleryListEvent) -> Unit,
-        ) = removeTag(earlierVersion, "gallery", eventId, url, signer, createdAt, onReady)
+        ) = removeTag(earlierVersion, GALLERYTAGNAME, eventId, url, signer, createdAt, onReady)
 
         fun removeReplaceable(
             earlierVersion: GalleryListEvent,
@@ -99,7 +99,7 @@ class GalleryListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (GalleryListEvent) -> Unit,
-        ) = removeTag(earlierVersion, "gallery", aTag.toTag(), url, signer, createdAt, onReady)
+        ) = removeTag(earlierVersion, GALLERYTAGNAME, aTag.toTag(), url, signer, createdAt, onReady)
 
         private fun removeTag(
             earlierVersion: GalleryListEvent,
