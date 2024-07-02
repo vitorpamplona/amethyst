@@ -502,4 +502,5 @@
     <string name="close_all_reactions_to_this_post">إغلاق جميع ردود الفعل على هذا المنشور</string>
     <string name="reply_description">الرد</string>
     <string name="accessibility_scan_qr_code">مسح رمز ال QR</string>
+    <string name="dvm_looking_for_app">البحث عن تطبيق</string>
 </resources>

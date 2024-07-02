@@ -339,6 +339,14 @@
     <string name="zap_type_nonzap_explainer">Nostr 上没有痕迹，仅在闪电上</string>
     <string name="file_server">文件服务器</string>
     <string name="zap_forward_lnAddress">闪电地址或 @User</string>
+    <string name="media_servers">媒体服务器</string>
+    <string name="set_preferred_media_servers">设置首选媒体上传服务器。</string>
+    <string name="no_media_server_message">尚未设置自定义媒体服务器。可以使用默认的内置服务器列表或自行添加 ↓</string>
+    <string name="built_in_media_servers_title">内置媒体服务器</string>
+    <string name="built_in_servers_description">Amethyst 的默认列表。可单独添加或添加整个列表。</string>
+    <string name="use_default_servers">使用默认列表</string>
+    <string name="add_media_server">添加媒体服务器</string>
+    <string name="delete_media_server">删除媒体服务器</string>
     <string name="upload_server_relays_nip95">你的中继器 (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">文件由你的中继器托管。新的 NIP：检查它们是否支持</string>
     <string name="connect_via_tor_short">Tor/Orbot 设置</string>
@@ -785,4 +793,5 @@
     <string name="http_status_507">Insufficient Storage - 服务器没有足够的存储空间用于处理该请求。</string>
     <string name="http_status_508">Loop Detected - 服务器处理该请求时检测到死循环。</string>
     <string name="http_status_511">Network Authentication Required - 客户端必须通过认证才能访问该网络。</string>
+    <string name="add_a_nip96_server">添加 NIP-96 服务器</string>
 </resources>
