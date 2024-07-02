@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.events.GalleryListEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.ReportEvent
@@ -60,6 +61,7 @@ class User(
     var latestMetadataRelay: String? = null
     var latestContactList: ContactListEvent? = null
     var latestBookmarkList: BookmarkListEvent? = null
+    var latestGalleryList: GalleryListEvent? = null
 
     var reports = mapOf<User, Set<Note>>()
         private set
@@ -121,6 +123,13 @@ class User(
 
         latestBookmarkList = event
         liveSet?.innerBookmarks?.invalidateData()
+    }
+
+    fun updateGallery(event: GalleryListEvent) {
+        if (event.id == latestGalleryList?.id) return
+        print("GALLERY " + event.id())
+        latestGalleryList = event
+        liveSet?.innerGallery?.invalidateData()
     }
 
     fun clearEOSE() {
@@ -488,6 +497,7 @@ class UserLiveSet(
     val innerRelayInfo = UserBundledRefresherLiveData(u)
     val innerZaps = UserBundledRefresherLiveData(u)
     val innerBookmarks = UserBundledRefresherLiveData(u)
+    val innerGallery = UserBundledRefresherLiveData(u)
     val innerStatuses = UserBundledRefresherLiveData(u)
 
     // UI Observers line up here.
@@ -500,6 +510,7 @@ class UserLiveSet(
     val relayInfo = innerRelayInfo.map { it }
     val zaps = innerZaps.map { it }
     val bookmarks = innerBookmarks.map { it }
+    val gallery = innerGallery.map { it }
     val statuses = innerStatuses.map { it }
 
     val profilePictureChanges = innerMetadata.map { it.user.profilePicture() }.distinctUntilChanged()
@@ -517,7 +528,7 @@ class UserLiveSet(
             relays.hasObservers() ||
             relayInfo.hasObservers() ||
             zaps.hasObservers() ||
-            bookmarks.hasObservers() ||
+            bookmarks.hasObservers() || gallery.hasObservers() ||
             statuses.hasObservers() ||
             profilePictureChanges.hasObservers() ||
             nip05Changes.hasObservers() ||
@@ -533,6 +544,7 @@ class UserLiveSet(
         innerRelayInfo.destroy()
         innerZaps.destroy()
         innerBookmarks.destroy()
+        innerGallery.destroy()
         innerStatuses.destroy()
     }
 }

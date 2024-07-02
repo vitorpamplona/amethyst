@@ -45,6 +45,7 @@ object ScrollStateKeys {
     const val DISCOVER_SCREEN = "Discover"
     val HOME_FOLLOWS = Route.Home.base + "Follows"
     val HOME_REPLIES = Route.Home.base + "FollowsReplies"
+    val PROFILE_GALLERY = Route.Home.base + "ProfileGallery"
 
     val DRAFTS = Route.Home.base + "Drafts"
 

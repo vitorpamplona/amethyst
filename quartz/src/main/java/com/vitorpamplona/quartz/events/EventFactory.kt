@@ -97,6 +97,7 @@ class EventFactory {
             GitPatchEvent.KIND -> GitPatchEvent(id, pubKey, createdAt, tags, content, sig)
             GitRepositoryEvent.KIND -> GitRepositoryEvent(id, pubKey, createdAt, tags, content, sig)
             GoalEvent.KIND -> GoalEvent(id, pubKey, createdAt, tags, content, sig)
+            GalleryListEvent.KIND -> GalleryListEvent(id, pubKey, createdAt, tags, content, sig)
             HighlightEvent.KIND -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
             HTTPAuthorizationEvent.KIND ->
                 HTTPAuthorizationEvent(id, pubKey, createdAt, tags, content, sig)
