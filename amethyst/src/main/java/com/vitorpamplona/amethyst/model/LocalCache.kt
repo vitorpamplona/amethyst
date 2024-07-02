@@ -427,9 +427,7 @@ object LocalCache {
     fun consume(event: GalleryListEvent) {
         val user = getOrCreateUser(event.pubKey)
         if (user.latestGalleryList == null || event.createdAt > user.latestGalleryList!!.createdAt) {
-            if (event.dTag() == "gallery") {
-                user.updateGallery(event)
-            }
+            user.updateGallery(event)
             // Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex} ${oldUser.toBestDisplayName()}")
         } else {
             // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()}
