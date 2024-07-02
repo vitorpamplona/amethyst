@@ -23,11 +23,11 @@ package com.vitorpamplona.amethyst.ui.actions.mediaServers
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.encoders.HttpUrlFormatter
 
 @Composable
 fun MediaServerEditField(
@@ -47,6 +48,12 @@ fun MediaServerEditField(
     onAddServer: (String) -> Unit,
 ) {
     var url by remember { mutableStateOf("") }
+    val validUrl by
+        remember {
+            derivedStateOf {
+                url.isNotBlank() && HttpUrlFormatter.isValidUrl(url)
+            }
+        }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -73,20 +80,12 @@ fun MediaServerEditField(
         Button(
             onClick = {
                 if (url.isNotBlank() && url != "/") {
-                    onAddServer(url)
+                    onAddServer(HttpUrlFormatter.normalize(url))
                     url = ""
                 }
             },
             shape = ButtonBorder,
-            colors =
-                ButtonDefaults.buttonColors(
-                    containerColor =
-                        if (url.isNotBlank()) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.placeholderText
-                        },
-                ),
+            enabled = validUrl,
         ) {
             Text(text = stringRes(id = R.string.add), color = Color.White)
         }
