@@ -37,34 +37,30 @@ class FileServersEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     override fun dTag() = FIXED_D_TAG
 
-    fun servers(): List<String> {
-        return tags.mapNotNull {
-            if (it.size > 1 && it[0] == "relay") {
+    fun servers(): List<String> =
+        tags.mapNotNull {
+            if (it.size > 1 && it[0] == "server") {
                 it[1]
             } else {
                 null
             }
         }
-    }
 
     companion object {
         const val KIND = 10096
         const val FIXED_D_TAG = ""
         const val ALT = "File servers used by the author"
 
-        fun createAddressATag(pubKey: HexKey): ATag {
-            return ATag(KIND, pubKey, FIXED_D_TAG, null)
-        }
+        fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, FIXED_D_TAG, null)
 
-        fun createAddressTag(pubKey: HexKey): String {
-            return ATag.assembleATag(KIND, pubKey, FIXED_D_TAG)
-        }
+        fun createAddressTag(pubKey: HexKey): String = ATag.assembleATag(KIND, pubKey, FIXED_D_TAG)
 
-        fun createTagArray(servers: List<String>): Array<Array<String>> {
-            return servers.map {
-                arrayOf("server", it)
-            }.plusElement(arrayOf("alt", "Relay list to use for Search")).toTypedArray()
-        }
+        fun createTagArray(servers: List<String>): Array<Array<String>> =
+            servers
+                .map {
+                    arrayOf("server", it)
+                }.plusElement(arrayOf("alt", "Relay list to use for Search"))
+                .toTypedArray()
 
         fun updateRelayList(
             earlierVersion: FileServersEvent,
@@ -74,11 +70,13 @@ class FileServersEvent(
             onReady: (FileServersEvent) -> Unit,
         ) {
             val tags =
-                earlierVersion.tags.filter { it[0] != "server" }.plus(
-                    relays.map {
-                        arrayOf("server", it)
-                    },
-                ).toTypedArray()
+                earlierVersion.tags
+                    .filter { it[0] != "server" }
+                    .plus(
+                        relays.map {
+                            arrayOf("server", it)
+                        },
+                    ).toTypedArray()
 
             signer.sign(createdAt, KIND, tags, earlierVersion.content, onReady)
         }
