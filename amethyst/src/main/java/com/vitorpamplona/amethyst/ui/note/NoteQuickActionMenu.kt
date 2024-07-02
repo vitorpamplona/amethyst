@@ -165,12 +165,14 @@ fun LongPressToQuickActionGallery(
     content { popupExpanded.value = true }
 
     if (popupExpanded.value) {
-        NoteQuickActionMenuGallery(
-            note = baseNote,
-            onDismiss = { popupExpanded.value = false },
-            accountViewModel = accountViewModel,
-            nav = {},
-        )
+        if (baseNote.author == accountViewModel.account.userProfile()) {
+            NoteQuickActionMenuGallery(
+                note = baseNote,
+                onDismiss = { popupExpanded.value = false },
+                accountViewModel = accountViewModel,
+                nav = {},
+            )
+        }
     }
 }
 
