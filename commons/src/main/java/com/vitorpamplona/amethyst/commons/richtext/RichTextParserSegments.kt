@@ -68,6 +68,9 @@ class PhoneSegment(segment: String) : Segment(segment)
 class BechSegment(segment: String) : Segment(segment)
 
 @Immutable
+class Base64Segment(segment: String) : Segment(segment)
+
+@Immutable
 open class HashIndexSegment(segment: String, val hex: String, val extras: String?) :
     Segment(segment)
 
