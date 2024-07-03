@@ -100,7 +100,11 @@ fun RelayInformationDialog(
             ),
     ) {
         Surface {
-            val color = mutableStateOf(Color.Transparent)
+            val color =
+                remember {
+                    mutableStateOf(Color.Transparent)
+                }
+
             val context = LocalContext.current
 
             LazyColumn(
