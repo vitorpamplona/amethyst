@@ -100,7 +100,9 @@ class HomeNewThreadFeedFilter(
                 noteEvent is HighlightEvent ||
                 noteEvent is AudioTrackEvent ||
                 noteEvent is AudioHeaderEvent
-        ) && filterParams.match(noteEvent, isGlobalRelay) && it.isNewThread()
+        ) &&
+            filterParams.match(noteEvent, isGlobalRelay) &&
+            it.isNewThread()
     }
 
     override fun sort(collection: Set<Note>): List<Note> =
