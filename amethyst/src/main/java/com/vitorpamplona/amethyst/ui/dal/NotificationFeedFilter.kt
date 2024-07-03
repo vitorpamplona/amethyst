@@ -110,7 +110,9 @@ class NotificationFeedFilter(
             it.event !is LnZapRequestEvent &&
             it.event !is BadgeDefinitionEvent &&
             it.event !is BadgeProfilesEvent &&
-            it.event !is NIP90ContentDiscoveryResponseEvent && it.event !is NIP90StatusEvent && it.event !is NIP90ContentDiscoveryRequestEvent &&
+            it.event !is NIP90ContentDiscoveryResponseEvent &&
+            it.event !is NIP90StatusEvent &&
+            it.event !is NIP90ContentDiscoveryRequestEvent &&
             it.event !is GiftWrapEvent &&
             (it.event is LnZapEvent || notifAuthor != loggedInUserHex) &&
             (filterParams.isGlobal || filterParams.followLists?.users?.contains(notifAuthor) == true) &&
