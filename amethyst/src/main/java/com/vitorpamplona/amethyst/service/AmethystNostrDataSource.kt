@@ -26,7 +26,9 @@ import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.Event
 
-abstract class AmethystNostrDataSource(debugName: String) : NostrDataSource(debugName) {
+abstract class AmethystNostrDataSource(
+    debugName: String,
+) : NostrDataSource(debugName) {
     override fun consume(
         event: Event,
         relay: Relay,

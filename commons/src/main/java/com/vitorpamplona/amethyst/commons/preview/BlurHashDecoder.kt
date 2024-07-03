@@ -98,16 +98,12 @@ object BlurHashDecoder {
     private fun decode83At(
         str: String,
         at: Int = 0,
-    ): Int {
-        return charMap[str[at].code]
-    }
+    ): Int = charMap[str[at].code]
 
     private fun decode83Fixed2(
         str: String,
         from: Int = 0,
-    ): Int {
-        return charMap[str[from].code] * 83 + charMap[str[from + 1].code]
-    }
+    ): Int = charMap[str[from].code] * 83 + charMap[str[from + 1].code]
 
     private fun decode83(
         str: String,
@@ -328,9 +324,9 @@ object BlurHashDecoder {
             '|',
             '}',
             '~',
-        )
-            .mapIndexed { i, c -> c.code to i }
-            .toMap().let { charMap ->
+        ).mapIndexed { i, c -> c.code to i }
+            .toMap()
+            .let { charMap ->
                 Array(255) {
                     charMap[it] ?: 0
                 }

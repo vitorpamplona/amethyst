@@ -112,8 +112,7 @@ class Nip96Test {
             }
           }
         }
-        """
-            .trimIndent()
+        """.trimIndent()
 
     @Test()
     fun parseNostrBuild() {
@@ -132,7 +131,13 @@ class Nip96Test {
         assertEquals("https://nostr.build", info.plans["free"]?.url)
         assertEquals(26214400L, info.plans["free"]?.maxByteSize)
         assertEquals(listOf(0, 0), info.plans["free"]?.fileExpiration)
-        assertEquals(listOf("image", "video"), info.plans["free"]?.mediaTransformations?.keys?.sorted())
+        assertEquals(
+            listOf("image", "video"),
+            info.plans["free"]
+                ?.mediaTransformations
+                ?.keys
+                ?.sorted(),
+        )
 
         assertEquals(26843545600L, info.plans["creator"]?.maxByteSize)
         assertEquals(10737418240L, info.plans["professional"]?.maxByteSize)

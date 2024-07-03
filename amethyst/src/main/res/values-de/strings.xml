@@ -36,6 +36,7 @@
     <string name="report_impersonation">Vortäuschung melden</string>
     <string name="report_explicit_content">Anstößigen Inhalt melden</string>
     <string name="report_illegal_behaviour">Illegales Verhalten melden</string>
+    <string name="report_malware">Malware melden</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um antworten zu können</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um Beiträge boosten zu können</string>
     <string name="login_with_a_private_key_to_like_posts">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um Beiträge zu liken</string>
@@ -269,6 +270,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="report_dialog_impersonation">Bösartige Nachahmung</string>
     <string name="report_dialog_nudity">Nacktheit oder explizite Inhalte</string>
     <string name="report_dialog_illegal">Illegales Verhalten</string>
+    <string name="report_dialog_malware">Malware</string>
     <string name="report_dialog_blocking_a_user">Durch das Blockieren eines Benutzers werden deren Inhalte in Ihrer App ausgeblendet. Ihre Notizen sind weiterhin öffentlich sichtbar, auch für Personen, die Sie blockiert haben. Blockierte Benutzer werden auf dem Bildschirm \"Sicherheitsfilter\" aufgelistet.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Benutzer
 
@@ -343,6 +345,14 @@ anz der Bedingungen ist erforderlich</string>
     <string name="zap_type_nonzap_explainer">Keine Spur in Nostr, nur in Lightning</string>
     <string name="file_server">Dateiserver</string>
     <string name="zap_forward_lnAddress">LnAddress oder @Benutzer</string>
+    <string name="media_servers">Medienserver</string>
+    <string name="set_preferred_media_servers">Legen Sie Ihre bevorzugten Medienupload Server fest.</string>
+    <string name="no_media_server_message">Sie haben keine benutzerdefinierten Medienserver gesetzt. Sie können die Liste von Amethyst verwenden oder unten einen hinzufügen</string>
+    <string name="built_in_media_servers_title">Integrierte Medienserver</string>
+    <string name="built_in_servers_description">Amethysts Standardliste. Sie können sie einzeln hinzufügen oder die Liste hinzufügen.</string>
+    <string name="use_default_servers">Standardliste verwenden</string>
+    <string name="add_media_server">Medienserver hinzufügen</string>
+    <string name="delete_media_server">Medienserver löschen</string>
     <string name="upload_server_relays_nip95">Deine Relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Dateien werden von deinen Relays gehostet. Neuer NIP: Überprüfe, ob sie unterstützt werden</string>
     <string name="connect_via_tor_short">Tor/Orbot-Einrichtung</string>
@@ -788,4 +798,5 @@ anz der Bedingungen ist erforderlich</string>
     <string name="http_status_507">Unzureichender Speicher - Der Server hat nicht genug Speicher, um die Anfrage erfolgreich zu verarbeiten</string>
     <string name="http_status_508">Schleife erkannt - Der Server erkennt eine Endlosschleife, während er die Anfrage bearbeitet</string>
     <string name="http_status_511">Netzwerk-Authentifizierung erforderlich - Der Client muss authentifiziert werden, um auf das Netzwerk zuzugreifen</string>
+    <string name="add_a_nip96_server">NIP-96 Server hinzufügen</string>
 </resources>

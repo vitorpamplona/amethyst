@@ -27,7 +27,10 @@ import com.vitorpamplona.quartz.events.Event
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class LatestByKindAndAuthor<T : Event>(private val kind: Int, private val pubkey: String) {
+class LatestByKindAndAuthor<T : Event>(
+    private val kind: Int,
+    private val pubkey: String,
+) {
     private val _latest = MutableStateFlow<T?>(null)
     val latest = _latest.asStateFlow()
 
@@ -41,30 +44,30 @@ class LatestByKindAndAuthor<T : Event>(private val kind: Int, private val pubkey
         }
     }
 
-    fun canDelete(): Boolean {
-        return _latest.subscriptionCount.value == 0
-    }
+    fun canDelete(): Boolean = _latest.subscriptionCount.value == 0
 
     suspend fun init() {
         val latestNote =
             if ((kind in 10000..19999) || (kind in 30000..39999)) {
-                LocalCache.addressables.maxOrNullOf(
-                    filter = { idHex: String, note: AddressableNote ->
-                        note.event?.let {
-                            it.kind() == kind && it.pubKey() == pubkey
-                        } == true
-                    },
-                    comparator = CreatedAtComparatorAddresses,
-                )?.event as? T
+                LocalCache.addressables
+                    .maxOrNullOf(
+                        filter = { idHex: String, note: AddressableNote ->
+                            note.event?.let {
+                                it.kind() == kind && it.pubKey() == pubkey
+                            } == true
+                        },
+                        comparator = CreatedAtComparatorAddresses,
+                    )?.event as? T
             } else {
-                LocalCache.notes.maxOrNullOf(
-                    filter = { idHex: String, note: Note ->
-                        note.event?.let {
-                            it.kind() == kind && it.pubKey() == pubkey
-                        } == true
-                    },
-                    comparator = CreatedAtComparator,
-                )?.event as? T
+                LocalCache.notes
+                    .maxOrNullOf(
+                        filter = { idHex: String, note: Note ->
+                            note.event?.let {
+                                it.kind() == kind && it.pubKey() == pubkey
+                            } == true
+                        },
+                        comparator = CreatedAtComparator,
+                    )?.event as? T
             }
 
         _latest.tryEmit(latestNote)

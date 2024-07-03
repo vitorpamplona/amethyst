@@ -34,22 +34,27 @@ class NIP90StatusEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    class StatusCode(val code: String, val description: String)
+    class StatusCode(
+        val code: String,
+        val description: String,
+    )
 
-    class AmountInvoice(val amount: Long?, val lnInvoice: String?)
+    class AmountInvoice(
+        val amount: Long?,
+        val lnInvoice: String?,
+    )
 
-    fun status(): StatusCode? {
-        return tags.firstOrNull { it.size > 1 && it[0] == "status" }?.let {
+    fun status(): StatusCode? =
+        tags.firstOrNull { it.size > 1 && it[0] == "status" }?.let {
             if (it.size > 2 && content == "") {
                 StatusCode(it[1], it[2])
             } else {
                 StatusCode(it[1], content)
             }
         }
-    }
 
-    fun firstAmount(): AmountInvoice? {
-        return tags.firstOrNull { it.size > 1 && it[0] == "amount" }?.let {
+    fun firstAmount(): AmountInvoice? =
+        tags.firstOrNull { it.size > 1 && it[0] == "amount" }?.let {
             val amount = it[1].toLongOrNull()
             if (it.size > 2) {
                 if (it[2].isNotBlank()) {
@@ -65,7 +70,6 @@ class NIP90StatusEvent(
                 }
             }
         }
-    }
 
     companion object {
         const val KIND = 7000

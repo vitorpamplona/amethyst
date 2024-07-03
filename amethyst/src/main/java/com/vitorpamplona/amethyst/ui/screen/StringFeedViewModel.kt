@@ -41,20 +41,23 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class NostrHiddenWordsFeedViewModel(val account: Account) :
-    StringFeedViewModel(
+class NostrHiddenWordsFeedViewModel(
+    val account: Account,
+) : StringFeedViewModel(
         HiddenWordsFeedFilter(account),
     ) {
-    class Factory(val account: Account) : ViewModelProvider.Factory {
-        override fun <NostrHiddenWordsFeedViewModel : ViewModel> create(modelClass: Class<NostrHiddenWordsFeedViewModel>): NostrHiddenWordsFeedViewModel {
-            return NostrHiddenWordsFeedViewModel(account) as NostrHiddenWordsFeedViewModel
-        }
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <NostrHiddenWordsFeedViewModel : ViewModel> create(modelClass: Class<NostrHiddenWordsFeedViewModel>): NostrHiddenWordsFeedViewModel = NostrHiddenWordsFeedViewModel(account) as NostrHiddenWordsFeedViewModel
     }
 }
 
 @Stable
-open class StringFeedViewModel(val dataSource: FeedFilter<String>) :
-    ViewModel(), InvalidatableViewModel {
+open class StringFeedViewModel(
+    val dataSource: FeedFilter<String>,
+) : ViewModel(),
+    InvalidatableViewModel {
     private val _feedContent = MutableStateFlow<StringFeedState>(StringFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 

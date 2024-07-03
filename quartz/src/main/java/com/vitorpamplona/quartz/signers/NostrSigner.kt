@@ -27,7 +27,9 @@ import com.vitorpamplona.quartz.events.EventFactory
 import com.vitorpamplona.quartz.events.LnZapPrivateEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 
-abstract class NostrSigner(val pubKey: HexKey) {
+abstract class NostrSigner(
+    val pubKey: HexKey,
+) {
     abstract fun <T : Event> sign(
         createdAt: Long,
         kind: Int,

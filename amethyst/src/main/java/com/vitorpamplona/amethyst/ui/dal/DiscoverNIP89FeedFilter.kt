@@ -34,18 +34,13 @@ open class DiscoverNIP89FeedFilter(
     val lastAnnounced = 90 * 24 * 60 * 60 // 90 Days ago
     // TODO better than announced would be last active, as this requires the DVM provider to regularly update the NIP89 announcement
 
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + followList()
-    }
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList()
 
-    open fun followList(): String {
-        return account.defaultDiscoveryFollowList.value
-    }
+    open fun followList(): String = account.defaultDiscoveryFollowList.value
 
-    override fun showHiddenKey(): Boolean {
-        return followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+    override fun showHiddenKey(): Boolean =
+        followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
             followList() == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
-    }
 
     override fun feed(): List<Note> {
         val filterParams = buildFilterParams(account)
@@ -58,18 +53,15 @@ open class DiscoverNIP89FeedFilter(
         return sort(notes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection)
-    }
+    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
-    fun buildFilterParams(account: Account): FilterByListParams {
-        return FilterByListParams.create(
+    fun buildFilterParams(account: Account): FilterByListParams =
+        FilterByListParams.create(
             account.userProfile().pubkeyHex,
             account.defaultDiscoveryFollowList.value,
             account.liveDiscoveryFollowLists.value,
             account.flowHiddenUsers.value,
         )
-    }
 
     fun acceptDVM(note: Note): Boolean {
         val noteEvent = note.event
@@ -88,13 +80,10 @@ open class DiscoverNIP89FeedFilter(
             noteEvent.createdAt > TimeUtils.now() - lastAnnounced // && params.match(noteEvent)
     }
 
-    protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        return collection.filterTo(HashSet()) {
+    protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> =
+        collection.filterTo(HashSet()) {
             acceptDVM(it)
         }
-    }
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
-    }
+    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
 }

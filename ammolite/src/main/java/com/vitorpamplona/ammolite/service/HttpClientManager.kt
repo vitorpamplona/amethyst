@@ -59,9 +59,7 @@ object HttpClientManager {
         }
     }
 
-    fun getDefaultProxy(): Proxy? {
-        return this.internalProxy
-    }
+    fun getDefaultProxy(): Proxy? = this.internalProxy
 
     fun setDefaultTimeout(timeout: Duration) {
         Log.d("HttpClient", "Changing timeout to: $timeout")
@@ -87,7 +85,8 @@ object HttpClientManager {
     ): OkHttpClient {
         val seconds = if (proxy != null) timeout.seconds * 3 else timeout.seconds
         val duration = Duration.ofSeconds(seconds)
-        return OkHttpClient.Builder()
+        return OkHttpClient
+            .Builder()
             .proxy(proxy)
             .readTimeout(duration)
             .connectTimeout(duration)
@@ -123,8 +122,8 @@ object HttpClientManager {
         }
     }
 
-    fun getHttpClient(useProxy: Boolean = true): OkHttpClient {
-        return if (useProxy) {
+    fun getHttpClient(useProxy: Boolean = true): OkHttpClient =
+        if (useProxy) {
             if (this.defaultHttpClient == null) {
                 this.defaultHttpClient = buildHttpClient(internalProxy, defaultTimeout)
             }
@@ -135,13 +134,10 @@ object HttpClientManager {
             }
             defaultHttpClientWithoutProxy!!
         }
-    }
 
     fun initProxy(
         useProxy: Boolean,
         hostname: String,
         port: Int,
-    ): Proxy? {
-        return if (useProxy) Proxy(Proxy.Type.SOCKS, InetSocketAddress(hostname, port)) else null
-    }
+    ): Proxy? = if (useProxy) Proxy(Proxy.Type.SOCKS, InetSocketAddress(hostname, port)) else null
 }

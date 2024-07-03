@@ -123,4 +123,7 @@ class FileHeaderEvent(
     }
 }
 
-data class AESGCM(val key: String, val nonce: String)
+data class AESGCM(
+    val key: String,
+    val nonce: String,
+)

@@ -385,7 +385,12 @@ fun AppNavigation(
     val activity = LocalContext.current.getActivity()
 
     var currentIntentNextPage by remember {
-        mutableStateOf(activity.intent?.data?.toString()?.ifBlank { null })
+        mutableStateOf(
+            activity.intent
+                ?.data
+                ?.toString()
+                ?.ifBlank { null },
+        )
     }
 
     currentIntentNextPage?.let { intentNextPage ->

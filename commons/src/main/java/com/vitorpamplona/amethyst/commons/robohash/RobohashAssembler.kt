@@ -139,9 +139,7 @@ fun RobohashPreview() {
 }
 
 class RobohashAssembler {
-    private fun byteMod10(byte: Byte): Int {
-        return byte.toUByte().toInt() % 10
-    }
+    private fun byteMod10(byte: Byte): Int = byte.toUByte().toInt() % 10
 
     private fun reduce(
         start: Int,
@@ -153,15 +151,14 @@ class RobohashAssembler {
         g: Byte,
         b: Byte,
         makeLight: Boolean,
-    ): Color {
-        return if (makeLight) {
+    ): Color =
+        if (makeLight) {
             // > 150-256 color channels
             Color(reduce(150, r), reduce(150, g), reduce(150, b))
         } else {
             // < 50-100 color channels
             Color(reduce(50, r), reduce(50, g), reduce(50, b))
         }
-    }
 
     fun build(
         msg: String,
@@ -268,13 +265,14 @@ inline fun roboBuilder(
     name: String = "",
     autoMirror: Boolean = false,
     block: ImageVector.Builder.() -> Unit,
-) = ImageVector.Builder(
-    name = name,
-    defaultWidth = DefaultSize,
-    defaultHeight = DefaultSize,
-    viewportWidth = VIEWPORT_SIZE,
-    viewportHeight = VIEWPORT_SIZE,
-    autoMirror = autoMirror,
-).apply {
-    block()
-}.build()
+) = ImageVector
+    .Builder(
+        name = name,
+        defaultWidth = DefaultSize,
+        defaultHeight = DefaultSize,
+        viewportWidth = VIEWPORT_SIZE,
+        viewportHeight = VIEWPORT_SIZE,
+        autoMirror = autoMirror,
+    ).apply {
+        block()
+    }.build()

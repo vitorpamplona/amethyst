@@ -161,32 +161,31 @@ fun DrawScope.drawAllQrCodeDataBits(
                     second = bytes.height,
                 ),
         ),
-    )
-        .forEach { section ->
-            for (y in section.first.second until section.second.second) {
-                for (x in section.first.first until section.second.first) {
-                    if (bytes[x, y] == 1.toByte()) {
-                        drawPath(
-                            color = color,
-                            path =
-                                newPath {
-                                    addRect(
-                                        rect =
-                                            Rect(
-                                                offset =
-                                                    Offset(
-                                                        x = QR_MARGIN_PX + x * size.width,
-                                                        y = QR_MARGIN_PX + y * size.height,
-                                                    ),
-                                                size = size,
-                                            ),
-                                    )
-                                },
-                        )
-                    }
+    ).forEach { section ->
+        for (y in section.first.second until section.second.second) {
+            for (x in section.first.first until section.second.first) {
+                if (bytes[x, y] == 1.toByte()) {
+                    drawPath(
+                        color = color,
+                        path =
+                            newPath {
+                                addRect(
+                                    rect =
+                                        Rect(
+                                            offset =
+                                                Offset(
+                                                    x = QR_MARGIN_PX + x * size.width,
+                                                    y = QR_MARGIN_PX + y * size.height,
+                                                ),
+                                            size = size,
+                                        ),
+                                )
+                            },
+                    )
                 }
             }
         }
+    }
 }
 
 const val FINDER_PATTERN_ROW_COUNT = 7
@@ -216,15 +215,14 @@ internal fun DrawScope.drawQrCodeFinders(
         Offset(x = sideLength - (QR_MARGIN_PX + finderPatternSize.width), y = QR_MARGIN_PX),
         // Draw bottom finder pattern.
         Offset(x = QR_MARGIN_PX, y = sideLength - (QR_MARGIN_PX + finderPatternSize.height)),
-    )
-        .forEach { offset ->
-            drawQrCodeFinder(
-                topLeft = offset,
-                finderPatternSize = finderPatternSize,
-                cornerRadius = CornerRadius.Zero,
-                color = color,
-            )
-        }
+    ).forEach { offset ->
+        drawQrCodeFinder(
+            topLeft = offset,
+            finderPatternSize = finderPatternSize,
+            cornerRadius = CornerRadius.Zero,
+            color = color,
+        )
+    }
 }
 
 /** This func is responsible for drawing a single finder pattern, for a QR code */

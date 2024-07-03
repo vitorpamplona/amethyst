@@ -25,10 +25,10 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.events.AppRecommendationEvent
 
-class UserProfileAppRecommendationsFeedFilter(val user: User) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String {
-        return user.pubkeyHex
-    }
+class UserProfileAppRecommendationsFeedFilter(
+    val user: User,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = user.pubkeyHex
 
     override fun feed(): List<Note> {
         val recommendations =
@@ -39,13 +39,9 @@ class UserProfileAppRecommendationsFeedFilter(val user: User) : AdditiveFeedFilt
         return sort(recommendations)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection)
-    }
+    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
-    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        return collection.mapNotNull { filterMap(it) }.flatten().toSet()
-    }
+    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> = collection.mapNotNull { filterMap(it) }.flatten().toSet()
 
     fun filterMap(it: Note): List<Note>? {
         val noteEvent = it.event
@@ -58,7 +54,5 @@ class UserProfileAppRecommendationsFeedFilter(val user: User) : AdditiveFeedFilt
         return null
     }
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(DefaultFeedOrder)
-    }
+    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 }

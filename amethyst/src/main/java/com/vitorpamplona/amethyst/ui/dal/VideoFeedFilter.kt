@@ -31,15 +31,14 @@ import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
 
-class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + account.defaultStoriesFollowList.value
-    }
+class VideoFeedFilter(
+    val account: Account,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.defaultStoriesFollowList.value
 
-    override fun showHiddenKey(): Boolean {
-        return account.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+    override fun showHiddenKey(): Boolean =
+        account.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
             account.defaultStoriesFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
-    }
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
@@ -52,9 +51,7 @@ class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
         return sort(notes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection)
-    }
+    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val params = buildFilterParams(account)
@@ -78,16 +75,13 @@ class VideoFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
             account.isAcceptable(it)
     }
 
-    fun buildFilterParams(account: Account): FilterByListParams {
-        return FilterByListParams.create(
+    fun buildFilterParams(account: Account): FilterByListParams =
+        FilterByListParams.create(
             userHex = account.userProfile().pubkeyHex,
             selectedListName = account.defaultStoriesFollowList.value,
             followLists = account.liveStoriesFollowLists.value,
             hiddenUsers = account.flowHiddenUsers.value,
         )
-    }
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(DefaultFeedOrder)
-    }
+    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 }

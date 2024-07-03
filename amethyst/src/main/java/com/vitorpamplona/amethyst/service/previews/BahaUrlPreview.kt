@@ -22,7 +22,10 @@ package com.vitorpamplona.amethyst.service.previews
 
 import kotlinx.coroutines.CancellationException
 
-class BahaUrlPreview(val url: String, var callback: IUrlPreviewCallback?) {
+class BahaUrlPreview(
+    val url: String,
+    var callback: IUrlPreviewCallback?,
+) {
     suspend fun fetchUrlPreview(timeOut: Int = 30000) =
         try {
             fetch(timeOut)

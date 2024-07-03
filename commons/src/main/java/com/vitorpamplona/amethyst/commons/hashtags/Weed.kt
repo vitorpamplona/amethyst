@@ -542,8 +542,7 @@ public val CustomHashTagIcons.Weed: ImageVector
                     curveToRelative(-1.99f, 1.4f, -4.1f, 3.02f, -6.42f, 4.75f)
                     close()
                 }
-            }
-                .build()
+            }.build()
         return customHashTagIconsWeed!!
     }
 

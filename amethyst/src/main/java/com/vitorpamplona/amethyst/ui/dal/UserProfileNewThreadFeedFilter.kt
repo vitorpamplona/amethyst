@@ -37,11 +37,11 @@ import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 
-class UserProfileNewThreadFeedFilter(val user: User, val account: Account) :
-    AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + user.pubkeyHex
-    }
+class UserProfileNewThreadFeedFilter(
+    val user: User,
+    val account: Account,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + user.pubkeyHex
 
     override fun feed(): List<Note> {
         val notes =
@@ -57,16 +57,12 @@ class UserProfileNewThreadFeedFilter(val user: User, val account: Account) :
         return sort(notes + longFormNotes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection)
-    }
+    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
-    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        return collection.filterTo(HashSet()) { acceptableEvent(it) }
-    }
+    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> = collection.filterTo(HashSet()) { acceptableEvent(it) }
 
-    fun acceptableEvent(it: Note): Boolean {
-        return it.author == user &&
+    fun acceptableEvent(it: Note): Boolean =
+        it.author == user &&
             (
                 it.event is TextNoteEvent ||
                     it.event is ClassifiedsEvent ||
@@ -78,12 +74,11 @@ class UserProfileNewThreadFeedFilter(val user: User, val account: Account) :
                     it.event is HighlightEvent ||
                     it.event is AudioTrackEvent ||
                     it.event is AudioHeaderEvent
-            ) && it.isNewThread() && account.isAcceptable(it)
-    }
+            ) &&
+            it.isNewThread() &&
+            account.isAcceptable(it)
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(DefaultFeedOrder)
-    }
+    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 
     override fun limit() = 200
 }

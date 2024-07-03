@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Stable
-class Chatroom() {
+class Chatroom {
     var authors: Set<User> = setOf()
     var roomMessages: Set<Note> = setOf()
     var subject: String? = null
@@ -72,9 +72,7 @@ class Chatroom() {
         }
     }
 
-    fun senderIntersects(keySet: Set<HexKey>): Boolean {
-        return authors.any { it.pubkeyHex in keySet }
-    }
+    fun senderIntersects(keySet: Set<HexKey>): Boolean = authors.any { it.pubkeyHex in keySet }
 
     fun pruneMessagesToTheLatestOnly(): Set<Note> {
         val sorted = roomMessages.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()

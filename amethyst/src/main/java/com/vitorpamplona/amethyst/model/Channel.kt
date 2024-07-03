@@ -37,7 +37,9 @@ import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import kotlinx.coroutines.Dispatchers
 
 @Stable
-class PublicChatChannel(idHex: String) : Channel(idHex) {
+class PublicChatChannel(
+    idHex: String,
+) : Channel(idHex) {
     var info = ChannelCreateEvent.ChannelData(null, null, null)
 
     fun updateChannelInfo(
@@ -49,26 +51,22 @@ class PublicChatChannel(idHex: String) : Channel(idHex) {
         super.updateChannelInfo(creator, updatedAt)
     }
 
-    override fun toBestDisplayName(): String {
-        return info.name ?: super.toBestDisplayName()
-    }
+    override fun toBestDisplayName(): String = info.name ?: super.toBestDisplayName()
 
-    override fun summary(): String? {
-        return info.about
-    }
+    override fun summary(): String? = info.about
 
     override fun profilePicture(): String? {
         if (info.picture.isNullOrBlank()) return super.profilePicture()
         return info.picture ?: super.profilePicture()
     }
 
-    override fun anyNameStartsWith(prefix: String): Boolean {
-        return listOfNotNull(info.name, info.about).filter { it.contains(prefix, true) }.isNotEmpty()
-    }
+    override fun anyNameStartsWith(prefix: String): Boolean = listOfNotNull(info.name, info.about).filter { it.contains(prefix, true) }.isNotEmpty()
 }
 
 @Stable
-class LiveActivitiesChannel(val address: ATag) : Channel(address.toTag()) {
+class LiveActivitiesChannel(
+    val address: ATag,
+) : Channel(address.toTag()) {
     var info: LiveActivitiesEvent? = null
 
     override fun idNote() = address.toNAddr()
@@ -86,27 +84,22 @@ class LiveActivitiesChannel(val address: ATag) : Channel(address.toTag()) {
         super.updateChannelInfo(creator, updatedAt)
     }
 
-    override fun toBestDisplayName(): String {
-        return info?.title() ?: super.toBestDisplayName()
-    }
+    override fun toBestDisplayName(): String = info?.title() ?: super.toBestDisplayName()
 
-    override fun summary(): String? {
-        return info?.summary()
-    }
+    override fun summary(): String? = info?.summary()
 
-    override fun profilePicture(): String? {
-        return info?.image()?.ifBlank { null }
-    }
+    override fun profilePicture(): String? = info?.image()?.ifBlank { null }
 
-    override fun anyNameStartsWith(prefix: String): Boolean {
-        return listOfNotNull(info?.title(), info?.summary())
+    override fun anyNameStartsWith(prefix: String): Boolean =
+        listOfNotNull(info?.title(), info?.summary())
             .filter { it.contains(prefix, true) }
             .isNotEmpty()
-    }
 }
 
 @Stable
-abstract class Channel(val idHex: String) {
+abstract class Channel(
+    val idHex: String,
+) {
     var creator: User? = null
     var updatedMetadataAt: Long = 0
     val notes = LargeCache<HexKey, Note>()
@@ -118,21 +111,13 @@ abstract class Channel(val idHex: String) {
 
     open fun idDisplayNote() = idNote().toShortenHex()
 
-    open fun toBestDisplayName(): String {
-        return idDisplayNote()
-    }
+    open fun toBestDisplayName(): String = idDisplayNote()
 
-    open fun summary(): String? {
-        return null
-    }
+    open fun summary(): String? = null
 
-    open fun creatorName(): String? {
-        return creator?.toBestDisplayName()
-    }
+    open fun creatorName(): String? = creator?.toBestDisplayName()
 
-    open fun profilePicture(): String? {
-        return creator?.info?.banner
-    }
+    open fun profilePicture(): String? = creator?.info?.banner
 
     open fun updateChannelInfo(
         creator: User,
@@ -167,10 +152,10 @@ abstract class Channel(val idHex: String) {
 
     fun pruneOldAndHiddenMessages(account: Account): Set<Note> {
         val important =
-            notes.filter { key, it ->
-                it.author?.let { author -> account.isHidden(author) } == false
-            }
-                .sortedWith(DefaultFeedOrder)
+            notes
+                .filter { key, it ->
+                    it.author?.let { author -> account.isHidden(author) } == false
+                }.sortedWith(DefaultFeedOrder)
                 .take(500)
                 .toSet()
 
@@ -182,7 +167,9 @@ abstract class Channel(val idHex: String) {
     }
 }
 
-class ChannelLiveData(val channel: Channel) : LiveData<ChannelState>(ChannelState(channel)) {
+class ChannelLiveData(
+    val channel: Channel,
+) : LiveData<ChannelState>(ChannelState(channel)) {
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(300, Dispatchers.IO)
 
@@ -208,4 +195,6 @@ class ChannelLiveData(val channel: Channel) : LiveData<ChannelState>(ChannelStat
     }
 }
 
-class ChannelState(val channel: Channel)
+class ChannelState(
+    val channel: Channel,
+)

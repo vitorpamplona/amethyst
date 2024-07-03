@@ -26,7 +26,10 @@ import com.vitorpamplona.quartz.events.Event
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class LatestByKindWithETag<T : Event>(private val kind: Int, private val eTag: String) {
+class LatestByKindWithETag<T : Event>(
+    private val kind: Int,
+    private val eTag: String,
+) {
     private val _latest = MutableStateFlow<T?>(null)
     val latest = _latest.asStateFlow()
 
@@ -40,20 +43,19 @@ class LatestByKindWithETag<T : Event>(private val kind: Int, private val eTag: S
         }
     }
 
-    fun canDelete(): Boolean {
-        return _latest.subscriptionCount.value == 0
-    }
+    fun canDelete(): Boolean = _latest.subscriptionCount.value == 0
 
     suspend fun init() {
         val latestNote =
-            LocalCache.notes.maxOrNullOf(
-                filter = { idHex: String, note: Note ->
-                    note.event?.let {
-                        it.kind() == kind && it.isTaggedEvent(eTag)
-                    } == true
-                },
-                comparator = CreatedAtComparator,
-            )?.event as? T
+            LocalCache.notes
+                .maxOrNullOf(
+                    filter = { idHex: String, note: Note ->
+                        note.event?.let {
+                            it.kind() == kind && it.isTaggedEvent(eTag)
+                        } == true
+                    },
+                    comparator = CreatedAtComparator,
+                )?.event as? T
 
         _latest.tryEmit(latestNote)
     }

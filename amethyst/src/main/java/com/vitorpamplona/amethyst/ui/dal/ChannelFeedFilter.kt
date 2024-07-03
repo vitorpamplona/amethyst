@@ -24,27 +24,24 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 
-class ChannelFeedFilter(val channel: Channel, val account: Account) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String {
-        return channel.idHex
-    }
+class ChannelFeedFilter(
+    val channel: Channel,
+    val account: Account,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = channel.idHex
 
     // returns the last Note of each user.
-    override fun feed(): List<Note> {
-        return sort(
+    override fun feed(): List<Note> =
+        sort(
             channel.notes.filterIntoSet { key, it ->
                 account.isAcceptable(it)
             },
         )
-    }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return collection
+    override fun applyFilter(collection: Set<Note>): Set<Note> =
+        collection
             .filter { channel.notes.containsKey(it.idHex) && account.isAcceptable(it) }
             .toSet()
-    }
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(DefaultFeedOrder)
-    }
+    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 }

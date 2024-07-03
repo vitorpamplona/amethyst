@@ -36,6 +36,7 @@
     <string name="report_impersonation">Denunciar representação</string>
     <string name="report_explicit_content">Denunciar conteúdo explícito</string>
     <string name="report_illegal_behaviour">Denunciar comportamento ilegal</string>
+    <string name="report_malware">Reportar Malware</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Faça login com uma chave privada para poder responder</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Faça login com uma chave privada para poder impulsionar postagens</string>
     <string name="login_with_a_private_key_to_like_posts">Faça login com uma chave privada para curtir postagens</string>
@@ -265,6 +266,7 @@
     <string name="report_dialog_impersonation">Personificação maliciosa</string>
     <string name="report_dialog_nudity">Nudez ou conteúdo gráfico</string>
     <string name="report_dialog_illegal">Comportamento ilegal</string>
+    <string name="report_dialog_malware">Malware</string>
     <string name="report_dialog_blocking_a_user">Bloquear um usuário ocultará seu conteúdo em seu aplicativo. Suas anotações ainda podem ser visualizadas publicamente, inclusive para as pessoas que você bloquear. Os usuários bloqueados são listados na tela Filtros de segurança.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Bloquear e ocultar usuário]]></string>
     <string name="report_dialog_report_btn">Denunciar abuso</string>
@@ -337,6 +339,14 @@
     <string name="zap_type_nonzap_explainer">Nenhum traço no Nostr, apenas na Lightning</string>
     <string name="file_server">Servidor de arquivos</string>
     <string name="zap_forward_lnAddress">LnAddress ou @Usuário</string>
+    <string name="media_servers">Servidores de Mídia</string>
+    <string name="set_preferred_media_servers">Defina seus servidores de upload de mídia preferidos.</string>
+    <string name="no_media_server_message">Não há nenhum servidor de mídia personalizado. Você pode usar a lista do Amethyst, ou adicionar um abaixo</string>
+    <string name="built_in_media_servers_title">Servidores de Mídia Integrados</string>
+    <string name="built_in_servers_description">Lista padrão do Ametite. Você pode adicioná-los individualmente ou adicionar a lista.</string>
+    <string name="use_default_servers">Usar Lista Padrão</string>
+    <string name="add_media_server">Adicionar servidor de mídia</string>
+    <string name="delete_media_server">Apagar servidor de mídia</string>
     <string name="upload_server_relays_nip95">Seus relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Os arquivos são hospedados por seus relays. Novo NIP: verifique se eles suportam</string>
     <string name="connect_via_tor_short">Configuração do Tor/Orbot</string>
@@ -783,4 +793,5 @@
     <string name="http_status_507">Armazenamento insuficiente - O servidor não possui armazenamento suficiente para processar a requisição com sucesso</string>
     <string name="http_status_508">Loop detectado - O servidor detecta um loop infinito enquanto processa a requisição</string>
     <string name="http_status_511">Autenticação de rede necessária - O cliente deve ser autenticado para acessar a rede</string>
+    <string name="add_a_nip96_server">Adicionar um servidor NIP-96</string>
 </resources>

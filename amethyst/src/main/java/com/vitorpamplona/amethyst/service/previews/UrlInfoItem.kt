@@ -40,11 +40,7 @@ class UrlInfoItem(
             image
         }
 
-    fun fetchComplete(): Boolean {
-        return url.isNotEmpty() && image.isNotEmpty()
-    }
+    fun fetchComplete(): Boolean = url.isNotEmpty() && image.isNotEmpty()
 
-    fun allFetchComplete(): Boolean {
-        return title.isNotEmpty() && description.isNotEmpty() && image.isNotEmpty()
-    }
+    fun allFetchComplete(): Boolean = title.isNotEmpty() && description.isNotEmpty() && image.isNotEmpty()
 }

@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.jetbrainsKotlinAndroid)
@@ -6,11 +8,11 @@ plugins {
 
 android {
     namespace 'com.vitorpamplona.amethyst.benchmark'
-    compileSdk 34
+    compileSdk libs.versions.android.compileSdk.get().toInteger()
 
     defaultConfig {
-        minSdk 26
-        targetSdk 34
+        minSdk libs.versions.android.minSdk.get().toInteger()
+        targetSdk libs.versions.android.targetSdk.get().toInteger()
 
         // Enable measuring on an emulator, or devices with low battery
         testInstrumentationRunner 'androidx.benchmark.junit4.AndroidBenchmarkRunner'
@@ -20,9 +22,6 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = '17'
     }
 
     sourceSets.androidTest.assets.srcDirs += ["../quartz/src/androidTest/assets"]
@@ -44,6 +43,13 @@ android {
             initWith(getByName("release"))
             signingConfig signingConfigs.debug
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+        freeCompilerArgs.add("-Xstring-concat=inline")
     }
 }
 

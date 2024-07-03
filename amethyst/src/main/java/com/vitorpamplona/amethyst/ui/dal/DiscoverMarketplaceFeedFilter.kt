@@ -30,18 +30,13 @@ import com.vitorpamplona.quartz.events.PeopleListEvent
 open class DiscoverMarketplaceFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + followList()
-    }
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList()
 
-    open fun followList(): String {
-        return account.defaultDiscoveryFollowList.value
-    }
+    open fun followList(): String = account.defaultDiscoveryFollowList.value
 
-    override fun showHiddenKey(): Boolean {
-        return followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+    override fun showHiddenKey(): Boolean =
+        followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
             followList() == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
-    }
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
@@ -55,18 +50,15 @@ open class DiscoverMarketplaceFeedFilter(
         return sort(notes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection)
-    }
+    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
-    fun buildFilterParams(account: Account): FilterByListParams {
-        return FilterByListParams.create(
+    fun buildFilterParams(account: Account): FilterByListParams =
+        FilterByListParams.create(
             account.userProfile().pubkeyHex,
             account.defaultDiscoveryFollowList.value,
             account.liveDiscoveryFollowLists.value,
             account.flowHiddenUsers.value,
         )
-    }
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val params = buildFilterParams(account)
@@ -77,7 +69,5 @@ open class DiscoverMarketplaceFeedFilter(
         }
     }
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
-    }
+    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
 }

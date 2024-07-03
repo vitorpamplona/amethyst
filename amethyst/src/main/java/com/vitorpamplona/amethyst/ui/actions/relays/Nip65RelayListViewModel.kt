@@ -105,23 +105,29 @@ class Nip65RelayListViewModel : ViewModel() {
         _homeRelays.update {
             val relayList = account.getNIP65RelayList()?.writeRelays() ?: emptyList()
 
-            relayList.map { relayUrl ->
-                BasicRelaySetupInfo(
-                    RelayUrlFormatter.normalize(relayUrl),
-                    RelayStats.get(relayUrl),
-                )
-            }.distinctBy { it.url }.sortedBy { it.relayStat.receivedBytes }.reversed()
+            relayList
+                .map { relayUrl ->
+                    BasicRelaySetupInfo(
+                        RelayUrlFormatter.normalize(relayUrl),
+                        RelayStats.get(relayUrl),
+                    )
+                }.distinctBy { it.url }
+                .sortedBy { it.relayStat.receivedBytes }
+                .reversed()
         }
 
         _notificationRelays.update {
             val relayList = account.getNIP65RelayList()?.readRelays() ?: emptyList()
 
-            relayList.map { relayUrl ->
-                BasicRelaySetupInfo(
-                    RelayUrlFormatter.normalize(relayUrl),
-                    RelayStats.get(relayUrl),
-                )
-            }.distinctBy { it.url }.sortedBy { it.relayStat.receivedBytes }.reversed()
+            relayList
+                .map { relayUrl ->
+                    BasicRelaySetupInfo(
+                        RelayUrlFormatter.normalize(relayUrl),
+                        RelayStats.get(relayUrl),
+                    )
+                }.distinctBy { it.url }
+                .sortedBy { it.relayStat.receivedBytes }
+                .reversed()
         }
     }
 

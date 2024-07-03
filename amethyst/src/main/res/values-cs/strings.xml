@@ -36,6 +36,7 @@
     <string name="report_impersonation">Nahlásit zneužívání identity</string>
     <string name="report_explicit_content">Nahlásit explicitní obsah</string>
     <string name="report_illegal_behaviour">Nahlásit nezákonné jednání</string>
+    <string name="report_malware">Nahlásit malware</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Pro odpověď se přihlaste s privátním klíčem</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Pro zvýšení příspěvků se přihlaste s privátním klíčem</string>
     <string name="login_with_a_private_key_to_like_posts">Přihlásit se pomocí soukromého klíče pro označení příspěvků jako líbivé</string>
@@ -265,6 +266,7 @@
     <string name="report_dialog_impersonation">Zákeřná zneužití</string>
     <string name="report_dialog_nudity">Nahota nebo grafický obsah</string>
     <string name="report_dialog_illegal">Nelegální chování</string>
+    <string name="report_dialog_malware">Malware</string>
     <string name="report_dialog_blocking_a_user">Blokování uživatele skryje jejich obsah ve vaší aplikaci. Vaše poznámky jsou stále veřejně viditelné, včetně osob, které blokujete. Blokovaní uživatelé jsou uvedeni na obrazovce s bezpečnostními filtry.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Blokovat a skrýt uživatele]]></string>
     <string name="report_dialog_report_btn">Nahlásit zneužití</string>
@@ -337,6 +339,14 @@
     <string name="zap_type_nonzap_explainer">Žádná stopa v Nostr, pouze v Lightning</string>
     <string name="file_server">Souborový server</string>
     <string name="zap_forward_lnAddress">LnAddress nebo @Uživatel</string>
+    <string name="media_servers">Media Servery</string>
+    <string name="set_preferred_media_servers">Nastavte preferované servery pro nahrávání médií.</string>
+    <string name="no_media_server_message">Nemáte nastaveny žádné vlastní mediální servery. Můžete použít Amethystův seznam nebo přidat jeden níže</string>
+    <string name="built_in_media_servers_title">Integrované mediální servery</string>
+    <string name="built_in_servers_description">Výchozí seznam Amethysty. Můžete je přidat jednotlivě nebo přidat seznam.</string>
+    <string name="use_default_servers">Použít výchozí seznam</string>
+    <string name="add_media_server">Přidat server médií</string>
+    <string name="delete_media_server">Odstranit server médií</string>
     <string name="upload_server_relays_nip95">Vaše relé (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Soubory jsou hostovány vašimi relé. Nový NIP: zkontrolujte, zda je podporují</string>
     <string name="connect_via_tor_short">Nastavení Tor/Orbot</string>
@@ -783,4 +793,5 @@
     <string name="http_status_507">Nedostatečné úložiště - Server nemá dostatek úložiště, aby úspěšně zpracoval požadavek</string>
     <string name="http_status_508">Detekována smyčka - Server detekuje nekonečnou smyčku při zpracování požadavku</string>
     <string name="http_status_511">Vyžadováno ověření sítě - Klient musí být autentizován, aby získal přístup k síti</string>
+    <string name="add_a_nip96_server">Přidat NIP-96 server</string>
 </resources>

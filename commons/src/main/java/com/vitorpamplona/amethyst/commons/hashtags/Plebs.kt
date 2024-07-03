@@ -166,8 +166,7 @@ public val CustomHashTagIcons.Plebs: ImageVector
                     curveToRelative(23.685f, -4.025f, 130.22f, 11.249f, 120.457f, -7.015f)
                     close()
                 }
-            }
-                .build()
+            }.build()
         return customHashTagIconsPlebs!!
     }
 

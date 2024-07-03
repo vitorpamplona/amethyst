@@ -25,16 +25,15 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.events.DraftEvent
 
-class DraftEventsFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex
-    }
+class DraftEventsFeedFilter(
+    val account: Account,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return collection.filterTo(HashSet()) {
+    override fun applyFilter(collection: Set<Note>): Set<Note> =
+        collection.filterTo(HashSet()) {
             acceptableEvent(it)
         }
-    }
 
     override fun feed(): List<Note> {
         val drafts =
@@ -50,7 +49,5 @@ class DraftEventsFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
         return noteEvent is DraftEvent && noteEvent.pubKey == account.userProfile().pubkeyHex
     }
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(DefaultFeedOrder)
-    }
+    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 }

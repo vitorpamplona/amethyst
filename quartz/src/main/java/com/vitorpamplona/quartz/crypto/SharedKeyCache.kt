@@ -42,9 +42,7 @@ class SharedKeyCache {
     fun get(
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): ByteArray? {
-        return sharedKeyCache[combinedHashCode(privateKey, pubKey)]
-    }
+    ): ByteArray? = sharedKeyCache[combinedHashCode(privateKey, pubKey)]
 
     fun add(
         privateKey: ByteArray,

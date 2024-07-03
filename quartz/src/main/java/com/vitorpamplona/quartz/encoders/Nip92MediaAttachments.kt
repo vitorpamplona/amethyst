@@ -38,8 +38,8 @@ class Nip92MediaAttachments {
     fun createTag(
         imageUrl: String,
         tags: Array<Array<String>>,
-    ): Array<String> {
-        return arrayOf(
+    ): Array<String> =
+        arrayOf(
             IMETA,
             "url $imageUrl",
         ) +
@@ -54,23 +54,22 @@ class Nip92MediaAttachments {
                     null
                 }
             }
-    }
 
     fun parse(
         imageUrl: String,
         tags: Array<Array<String>>,
-    ): Map<String, String> {
-        return tags.firstOrNull {
-            it.size > 1 && it[0] == IMETA && it[1] == "url $imageUrl"
-        }?.let { tagList ->
-            tagList.associate { tag ->
-                val parts = tag.split(" ", limit = 2)
-                when (parts.size) {
-                    2 -> parts[0] to parts[1]
-                    1 -> parts[0] to ""
-                    else -> "" to ""
+    ): Map<String, String> =
+        tags
+            .firstOrNull {
+                it.size > 1 && it[0] == IMETA && it[1] == "url $imageUrl"
+            }?.let { tagList ->
+                tagList.associate { tag ->
+                    val parts = tag.split(" ", limit = 2)
+                    when (parts.size) {
+                        2 -> parts[0] to parts[1]
+                        1 -> parts[0] to ""
+                        else -> "" to ""
+                    }
                 }
-            }
-        } ?: emptyMap()
-    }
+            } ?: emptyMap()
 }

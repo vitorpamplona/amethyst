@@ -67,9 +67,7 @@ class CommunityListEvent(
         const val FIXED_D_TAG = ""
         const val ALT = "Community List"
 
-        fun blockListFor(pubKeyHex: HexKey): String {
-            return "$KIND:$pubKeyHex:"
-        }
+        fun blockListFor(pubKeyHex: HexKey): String = "$KIND:$pubKeyHex:"
 
         fun createListWithTag(
             key: String,
@@ -106,9 +104,7 @@ class CommunityListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (CommunityListEvent) -> Unit,
-        ) {
-            return createListWithTag("a", address.toTag(), isPrivate, signer, createdAt, onReady)
-        }
+        ) = createListWithTag("a", address.toTag(), isPrivate, signer, createdAt, onReady)
 
         fun addEvents(
             earlierVersion: CommunityListEvent,
@@ -157,9 +153,7 @@ class CommunityListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (CommunityListEvent) -> Unit,
-        ) {
-            return addTag(earlierVersion, "a", address.toTag(), isPrivate, signer, createdAt, onReady)
-        }
+        ) = addTag(earlierVersion, "a", address.toTag(), isPrivate, signer, createdAt, onReady)
 
         fun addTag(
             earlierVersion: CommunityListEvent,
@@ -207,9 +201,7 @@ class CommunityListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (CommunityListEvent) -> Unit,
-        ) {
-            return removeTag(earlierVersion, "a", address.toTag(), isPrivate, signer, createdAt, onReady)
-        }
+        ) = removeTag(earlierVersion, "a", address.toTag(), isPrivate, signer, createdAt, onReady)
 
         fun removeTag(
             earlierVersion: CommunityListEvent,

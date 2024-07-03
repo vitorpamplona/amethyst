@@ -35,56 +35,97 @@ data class RichTextViewerState(
 )
 
 @Immutable
-data class ParagraphState(val words: ImmutableList<Segment>, val isRTL: Boolean)
+data class ParagraphState(
+    val words: ImmutableList<Segment>,
+    val isRTL: Boolean,
+)
 
 @Immutable
-open class Segment(val segmentText: String)
+open class Segment(
+    val segmentText: String,
+)
 
 @Immutable
-class ImageSegment(segment: String) : Segment(segment)
+class ImageSegment(
+    segment: String,
+) : Segment(segment)
 
 @Immutable
-class LinkSegment(segment: String) : Segment(segment)
+class LinkSegment(
+    segment: String,
+) : Segment(segment)
 
 @Immutable
-class EmojiSegment(segment: String) : Segment(segment)
+class EmojiSegment(
+    segment: String,
+) : Segment(segment)
 
 @Immutable
-class InvoiceSegment(segment: String) : Segment(segment)
+class InvoiceSegment(
+    segment: String,
+) : Segment(segment)
 
 @Immutable
-class WithdrawSegment(segment: String) : Segment(segment)
+class WithdrawSegment(
+    segment: String,
+) : Segment(segment)
 
 @Immutable
-class CashuSegment(segment: String) : Segment(segment)
+class CashuSegment(
+    segment: String,
+) : Segment(segment)
 
 @Immutable
-class EmailSegment(segment: String) : Segment(segment)
+class EmailSegment(
+    segment: String,
+) : Segment(segment)
 
 @Immutable
-class PhoneSegment(segment: String) : Segment(segment)
+class PhoneSegment(
+    segment: String,
+) : Segment(segment)
 
 @Immutable
-class BechSegment(segment: String) : Segment(segment)
+class BechSegment(
+    segment: String,
+) : Segment(segment)
 
 @Immutable
-open class HashIndexSegment(segment: String, val hex: String, val extras: String?) :
-    Segment(segment)
+open class HashIndexSegment(
+    segment: String,
+    val hex: String,
+    val extras: String?,
+) : Segment(segment)
 
 @Immutable
-class HashIndexUserSegment(segment: String, hex: String, extras: String?) :
-    HashIndexSegment(segment, hex, extras)
+class HashIndexUserSegment(
+    segment: String,
+    hex: String,
+    extras: String?,
+) : HashIndexSegment(segment, hex, extras)
 
 @Immutable
-class HashIndexEventSegment(segment: String, hex: String, extras: String?) :
-    HashIndexSegment(segment, hex, extras)
+class HashIndexEventSegment(
+    segment: String,
+    hex: String,
+    extras: String?,
+) : HashIndexSegment(segment, hex, extras)
 
 @Immutable
-class HashTagSegment(segment: String, val hashtag: String, val extras: String?) : Segment(segment)
+class HashTagSegment(
+    segment: String,
+    val hashtag: String,
+    val extras: String?,
+) : Segment(segment)
 
 @Immutable
-class SchemelessUrlSegment(segment: String, val url: String, val extras: String?) :
-    Segment(segment)
+class SchemelessUrlSegment(
+    segment: String,
+    val url: String,
+    val extras: String?,
+) : Segment(segment)
 
 @Immutable
-class RegularTextSegment(segment: String) : Segment(segment)
+class RegularTextSegment(
+    segment: String,
+) : Segment(segment)

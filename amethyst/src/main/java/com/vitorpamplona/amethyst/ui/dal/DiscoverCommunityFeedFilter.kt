@@ -29,17 +29,16 @@ import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 
-open class DiscoverCommunityFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + account.defaultDiscoveryFollowList.value
-    }
+open class DiscoverCommunityFeedFilter(
+    val account: Account,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.defaultDiscoveryFollowList.value
 
-    override fun showHiddenKey(): Boolean {
-        return account.defaultDiscoveryFollowList.value ==
+    override fun showHiddenKey(): Boolean =
+        account.defaultDiscoveryFollowList.value ==
             PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
             account.defaultDiscoveryFollowList.value ==
             MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
-    }
 
     override fun feed(): List<Note> {
         val filterParams =
@@ -67,9 +66,7 @@ open class DiscoverCommunityFeedFilter(val account: Account) : AdditiveFeedFilte
         return sort(notes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection)
-    }
+    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         // here, we need to look for CommunityDefinition in new collection AND new CommunityDefinition from Post Approvals
@@ -81,28 +78,30 @@ open class DiscoverCommunityFeedFilter(val account: Account) : AdditiveFeedFilte
                 hiddenUsers = account.flowHiddenUsers.value,
             )
 
-        return collection.mapNotNull { note ->
-            // note event here will never be null
-            val noteEvent = note.event
-            if (noteEvent is CommunityDefinitionEvent && filterParams.match(noteEvent)) {
-                listOf(note)
-            } else if (noteEvent is CommunityPostApprovalEvent) {
-                noteEvent.communities().mapNotNull {
-                    val definitionNote = LocalCache.getOrCreateAddressableNote(it)
-                    val definitionEvent = definitionNote.event
+        return collection
+            .mapNotNull { note ->
+                // note event here will never be null
+                val noteEvent = note.event
+                if (noteEvent is CommunityDefinitionEvent && filterParams.match(noteEvent)) {
+                    listOf(note)
+                } else if (noteEvent is CommunityPostApprovalEvent) {
+                    noteEvent.communities().mapNotNull {
+                        val definitionNote = LocalCache.getOrCreateAddressableNote(it)
+                        val definitionEvent = definitionNote.event
 
-                    if (definitionEvent == null && shouldInclude(it, filterParams)) {
-                        definitionNote
-                    } else if (definitionEvent is CommunityDefinitionEvent && filterParams.match(definitionEvent)) {
-                        definitionNote
-                    } else {
-                        null
+                        if (definitionEvent == null && shouldInclude(it, filterParams)) {
+                            definitionNote
+                        } else if (definitionEvent is CommunityDefinitionEvent && filterParams.match(definitionEvent)) {
+                            definitionNote
+                        } else {
+                            null
+                        }
                     }
+                } else {
+                    null
                 }
-            } else {
-                null
-            }
-        }.flatten().toSet()
+            }.flatten()
+            .toSet()
     }
 
     private fun shouldInclude(
@@ -123,7 +122,6 @@ open class DiscoverCommunityFeedFilter(val account: Account) : AdditiveFeedFilte
                     { it.createdAt() },
                     { it.idHex },
                 ),
-            )
-            .reversed()
+            ).reversed()
     }
 }

@@ -46,9 +46,7 @@ class LnZapPaymentResponseEvent(
 
     fun requestId() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
 
-    fun talkingWith(oneSideHex: String): HexKey {
-        return if (pubKey == oneSideHex) requestAuthor() ?: pubKey else pubKey
-    }
+    fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) requestAuthor() ?: pubKey else pubKey
 
     private fun plainContent(
         signer: NostrSigner,
@@ -97,13 +95,21 @@ abstract class Response(
 
 // PayInvoice Call
 
-class PayInvoiceSuccessResponse(val result: PayInvoiceResultParams? = null) :
-    Response("pay_invoice") {
-    class PayInvoiceResultParams(val preimage: String)
+class PayInvoiceSuccessResponse(
+    val result: PayInvoiceResultParams? = null,
+) : Response("pay_invoice") {
+    class PayInvoiceResultParams(
+        val preimage: String,
+    )
 }
 
-class PayInvoiceErrorResponse(val error: PayInvoiceErrorParams? = null) : Response("pay_invoice") {
-    class PayInvoiceErrorParams(val code: ErrorType?, val message: String?)
+class PayInvoiceErrorResponse(
+    val error: PayInvoiceErrorParams? = null,
+) : Response("pay_invoice") {
+    class PayInvoiceErrorParams(
+        val code: ErrorType?,
+        val message: String?,
+    )
 
     enum class ErrorType {
         @JsonProperty(value = "RATE_LIMITED")

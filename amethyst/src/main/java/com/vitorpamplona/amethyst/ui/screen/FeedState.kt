@@ -34,5 +34,7 @@ sealed class FeedState {
 
     object Empty : FeedState()
 
-    class FeedError(val errorMessage: String) : FeedState()
+    class FeedError(
+        val errorMessage: String,
+    ) : FeedState()
 }

@@ -32,7 +32,10 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
-@Immutable data class Contact(val pubKeyHex: String, val relayUri: String?)
+@Immutable data class Contact(
+    val pubKeyHex: String,
+    val relayUri: String?,
+)
 
 @Stable
 class ContactListEvent(
@@ -391,7 +394,10 @@ class ContactListEvent(
         }
     }
 
-    data class ReadWrite(val read: Boolean, val write: Boolean)
+    data class ReadWrite(
+        val read: Boolean,
+        val write: Boolean,
+    )
 }
 
 @Stable
@@ -420,31 +426,20 @@ class UserMetadata {
     @Transient
     var tags: ImmutableListOfLists<String>? = null
 
-    fun anyName(): String? {
-        return displayName ?: name ?: username
-    }
+    fun anyName(): String? = displayName ?: name ?: username
 
-    fun anyNameStartsWith(prefix: String): Boolean {
-        return listOfNotNull(name, username, displayName, nip05, lud06, lud16).any {
+    fun anyNameStartsWith(prefix: String): Boolean =
+        listOfNotNull(name, username, displayName, nip05, lud06, lud16).any {
             it.contains(prefix, true)
         }
-    }
 
-    fun lnAddress(): String? {
-        return lud16 ?: lud06
-    }
+    fun lnAddress(): String? = lud16 ?: lud06
 
-    fun bestName(): String? {
-        return displayName ?: name ?: username
-    }
+    fun bestName(): String? = displayName ?: name ?: username
 
-    fun nip05(): String? {
-        return nip05
-    }
+    fun nip05(): String? = nip05
 
-    fun profilePicture(): String? {
-        return picture
-    }
+    fun profilePicture(): String? = picture
 
     fun cleanBlankNames() {
         if (picture?.isNotEmpty() == true) picture = picture?.trim()
@@ -473,10 +468,10 @@ class UserMetadata {
     }
 }
 
-@Stable class ImmutableListOfLists<T>(val lists: Array<Array<T>>)
+@Stable class ImmutableListOfLists<T>(
+    val lists: Array<Array<T>>,
+)
 
 val EmptyTagList = ImmutableListOfLists<String>(emptyArray())
 
-fun Array<Array<String>>.toImmutableListOfLists(): ImmutableListOfLists<String> {
-    return ImmutableListOfLists(this)
-}
+fun Array<Array<String>>.toImmutableListOfLists(): ImmutableListOfLists<String> = ImmutableListOfLists(this)

@@ -43,28 +43,48 @@ class HexBenchmark {
 
     @Test
     fun hexDecodeOurs() {
-        benchmarkRule.measureRepeated { com.vitorpamplona.quartz.encoders.Hex.decode(testHex) }
+        benchmarkRule.measureRepeated {
+            com.vitorpamplona.quartz.encoders.Hex
+                .decode(testHex)
+        }
     }
 
     @Test
     fun hexEncodeOurs() {
-        val bytes = com.vitorpamplona.quartz.encoders.Hex.decode(testHex)
+        val bytes =
+            com.vitorpamplona.quartz.encoders.Hex
+                .decode(testHex)
 
         benchmarkRule.measureRepeated {
-            assertEquals(testHex, com.vitorpamplona.quartz.encoders.Hex.encode(bytes))
+            assertEquals(
+                testHex,
+                com.vitorpamplona.quartz.encoders.Hex
+                    .encode(bytes),
+            )
         }
     }
 
     @Test
     fun hexDecodeBaseSecp() {
-        benchmarkRule.measureRepeated { fr.acinq.secp256k1.Hex.decode(testHex) }
+        benchmarkRule.measureRepeated {
+            fr.acinq.secp256k1.Hex
+                .decode(testHex)
+        }
     }
 
     @Test
     fun hexEncodeBaseSecp() {
-        val bytes = fr.acinq.secp256k1.Hex.decode(testHex)
+        val bytes =
+            fr.acinq.secp256k1.Hex
+                .decode(testHex)
 
-        benchmarkRule.measureRepeated { assertEquals(testHex, fr.acinq.secp256k1.Hex.encode(bytes)) }
+        benchmarkRule.measureRepeated {
+            assertEquals(
+                testHex,
+                fr.acinq.secp256k1.Hex
+                    .encode(bytes),
+            )
+        }
     }
 
     @Test

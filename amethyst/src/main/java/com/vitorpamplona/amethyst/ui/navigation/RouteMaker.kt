@@ -126,18 +126,10 @@ fun routeToMessage(
     user: User,
     draftMessage: String?,
     accountViewModel: AccountViewModel,
-): String {
-    return routeToMessage(user.pubkeyHex, draftMessage, accountViewModel)
-}
+): String = routeToMessage(user.pubkeyHex, draftMessage, accountViewModel)
 
-fun routeFor(note: Channel): String {
-    return "Channel/${note.idHex}"
-}
+fun routeFor(note: Channel): String = "Channel/${note.idHex}"
 
-fun routeFor(user: User): String {
-    return "User/${user.pubkeyHex}"
-}
+fun routeFor(user: User): String = "User/${user.pubkeyHex}"
 
-fun authorRouteFor(note: Note): String {
-    return "User/${note.author?.pubkeyHex}"
-}
+fun authorRouteFor(note: Note): String = "User/${note.author?.pubkeyHex}"

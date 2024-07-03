@@ -62,8 +62,7 @@ class ThreadAssembler {
                     } else {
                         null
                     }
-                }
-                ?.filterNotNull()
+                }?.filterNotNull()
 
         if (roots != null && roots.isNotEmpty()) {
             return roots[0]
@@ -148,9 +147,7 @@ class OnlyLatestVersionSet : MutableSet<Note> {
         }
     }
 
-    override fun addAll(elements: Collection<Note>): Boolean {
-        return elements.map { add(it) }.any()
-    }
+    override fun addAll(elements: Collection<Note>): Boolean = elements.map { add(it) }.any()
 
     override val size: Int
         get() = set.size
@@ -160,29 +157,17 @@ class OnlyLatestVersionSet : MutableSet<Note> {
         map.clear()
     }
 
-    override fun isEmpty(): Boolean {
-        return set.isEmpty()
-    }
+    override fun isEmpty(): Boolean = set.isEmpty()
 
-    override fun containsAll(elements: Collection<Note>): Boolean {
-        return set.containsAll(elements)
-    }
+    override fun containsAll(elements: Collection<Note>): Boolean = set.containsAll(elements)
 
-    override fun contains(element: Note): Boolean {
-        return set.contains(element)
-    }
+    override fun contains(element: Note): Boolean = set.contains(element)
 
-    override fun iterator(): MutableIterator<Note> {
-        return set.iterator()
-    }
+    override fun iterator(): MutableIterator<Note> = set.iterator()
 
-    override fun retainAll(elements: Collection<Note>): Boolean {
-        return set.retainAll(elements)
-    }
+    override fun retainAll(elements: Collection<Note>): Boolean = set.retainAll(elements)
 
-    override fun removeAll(elements: Collection<Note>): Boolean {
-        return elements.map { remove(it) }.any()
-    }
+    override fun removeAll(elements: Collection<Note>): Boolean = elements.map { remove(it) }.any()
 
     override fun remove(element: Note): Boolean {
         element.address()?.let {

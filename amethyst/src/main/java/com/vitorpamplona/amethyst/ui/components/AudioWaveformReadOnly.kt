@@ -101,11 +101,11 @@ fun AudioWaveformReadOnly(
                 minHeight = MIN_SPIKE_HEIGHT,
                 maxHeight = canvasSize.height.coerceAtLeast(MIN_SPIKE_HEIGHT),
             )
-        }
-            .map { animateFloatAsState(it, spikeAnimationSpec).value }
+        }.map { animateFloatAsState(it, spikeAnimationSpec).value }
     Canvas(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .requiredHeight(48.dp)
                 .graphicsLayer(alpha = DEFAULT_GRAPHICS_LAYER_ALPHA)
                 .then(modifier),
@@ -161,8 +161,7 @@ private fun List<Int>.toDrawableAmplitudes(
             AmplitudeType.Avg -> data.average()
             AmplitudeType.Max -> data.max()
             AmplitudeType.Min -> data.min()
-        }
-            .toFloat()
+        }.toFloat()
             .coerceIn(minHeight, maxHeight)
     }
     return when {
@@ -198,9 +197,7 @@ internal fun <T> Iterable<T>.chunkToSize(
 internal fun Iterable<Float>.normalize(
     min: Float,
     max: Float,
-): List<Float> {
-    return map { (max - min) * ((it - min()) / (max() - min())) + min }
-}
+): List<Float> = map { (max - min) * ((it - min()) / (max() - min())) + min }
 
 private fun Int.safeDiv(value: Int): Float {
     return if (value == 0) return 0F else this / value.toFloat()

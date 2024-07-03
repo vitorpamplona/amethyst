@@ -88,7 +88,8 @@ object ImageSaver {
         val client = HttpClientManager.getHttpClient()
 
         val request =
-            Request.Builder()
+            Request
+                .Builder()
                 .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                 .get()
                 .url(url)

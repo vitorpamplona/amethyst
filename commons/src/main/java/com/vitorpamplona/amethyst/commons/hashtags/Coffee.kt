@@ -344,8 +344,7 @@ public val CustomHashTagIcons.Coffee: ImageVector
                     curveTo(338.856f, -2.773f, 332.82f, 9.412f, 335.914f, 14.7f)
                     close()
                 }
-            }
-                .build()
+            }.build()
         return customHashTagIconsCoffee!!
     }
 

@@ -26,15 +26,22 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.Note
 import kotlinx.collections.immutable.ImmutableList
 
-@Immutable data class ZapReqResponse(val zapRequest: Note, val zapEvent: Note)
+@Immutable data class ZapReqResponse(
+    val zapRequest: Note,
+    val zapEvent: Note,
+)
 
 @Stable
 sealed class LnZapFeedState {
     object Loading : LnZapFeedState()
 
-    class Loaded(val feed: MutableState<ImmutableList<ZapReqResponse>>) : LnZapFeedState()
+    class Loaded(
+        val feed: MutableState<ImmutableList<ZapReqResponse>>,
+    ) : LnZapFeedState()
 
     object Empty : LnZapFeedState()
 
-    class FeedError(val errorMessage: String) : LnZapFeedState()
+    class FeedError(
+        val errorMessage: String,
+    ) : LnZapFeedState()
 }

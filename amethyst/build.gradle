@@ -2,16 +2,17 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
     alias(libs.plugins.googleServices)
+    alias(libs.plugins.jetbrainsComposeCompiler)
 }
 
 android {
     namespace 'com.vitorpamplona.amethyst'
-    compileSdk 34
+    compileSdk libs.versions.android.compileSdk.get().toInteger()
 
     defaultConfig {
         applicationId "com.vitorpamplona.amethyst"
-        minSdk 26
-        targetSdk 34
+        minSdk libs.versions.android.minSdk.get().toInteger()
+        targetSdk libs.versions.android.targetSdk.get().toInteger()
         versionCode 385
         versionName "0.88.8"
         buildConfigField "String", "RELEASE_NOTES_ID", "\"2a34cbadd03212c8162e1ff896ba12641821088a2ec8d5e40d54aa80c0510800\""
@@ -132,19 +133,11 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = '17'
-    }
-
     buildFeatures {
         compose true
         buildConfig true
     }
 
-    composeOptions {
-        // Should match compose version : https://developer.android.com/jetpack/androidx/releases/compose-kotlin
-        kotlinCompilerExtensionVersion "1.5.14"
-    }
     packagingOptions {
         resources {
             excludes += ['/META-INF/{AL2.0,LGPL2.1}', '**/libscrypt.dylib']
@@ -158,6 +151,16 @@ android {
     testOptions {
         unitTests.returnDefaultValues = true
     }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+    }
+}
+
+composeCompiler {
+    reportsDestination = layout.buildDirectory.dir("compose_compiler")
 }
 
 dependencies {
@@ -296,6 +299,7 @@ dependencies {
 import com.android.tools.profgen.ArtProfileKt
 import com.android.tools.profgen.ArtProfileSerializer
 import com.android.tools.profgen.DexFile
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 project.afterEvaluate {
     tasks.each { task ->

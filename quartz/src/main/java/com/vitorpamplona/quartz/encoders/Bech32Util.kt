@@ -51,7 +51,9 @@ object Bech32 {
     const val ALPHABET: String = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
     const val ALPHABET_UPPERCASE: String = "QPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L"
 
-    enum class Encoding(val constant: Int) {
+    enum class Encoding(
+        val constant: Int,
+    ) {
         Bech32(1),
         Bech32m(0x2bc830a3),
         Beck32WithoutChecksum(0),

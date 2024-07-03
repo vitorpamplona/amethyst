@@ -33,10 +33,11 @@ import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 
-class HashtagFeedFilter(val tag: String, val account: Account) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + tag
-    }
+class HashtagFeedFilter(
+    val tag: String,
+    val account: Account,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + tag
 
     override fun feed(): List<Note> {
         val notes =
@@ -47,19 +48,15 @@ class HashtagFeedFilter(val tag: String, val account: Account) : AdditiveFeedFil
         return sort(notes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection)
-    }
+    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
-    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        return collection.filterTo(HashSet<Note>()) { acceptableEvent(it, tag) }
-    }
+    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> = collection.filterTo(HashSet<Note>()) { acceptableEvent(it, tag) }
 
     fun acceptableEvent(
         it: Note,
         hashTag: String,
-    ): Boolean {
-        return (
+    ): Boolean =
+        (
             it.event is TextNoteEvent ||
                 it.event is RepostEvent ||
                 it.event is GenericRepostEvent ||
@@ -69,10 +66,9 @@ class HashtagFeedFilter(val tag: String, val account: Account) : AdditiveFeedFil
                 it.event is PrivateDmEvent ||
                 it.event is PollNoteEvent ||
                 it.event is AudioHeaderEvent
-        ) && it.event?.isTaggedHash(hashTag) == true && account.isAcceptable(it)
-    }
+        ) &&
+            it.event?.isTaggedHash(hashTag) == true &&
+            account.isAcceptable(it)
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(DefaultFeedOrder)
-    }
+    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 }

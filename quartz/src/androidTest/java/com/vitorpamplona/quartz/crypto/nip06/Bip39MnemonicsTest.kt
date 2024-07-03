@@ -37,7 +37,10 @@ class Bip39MnemonicsTest {
     private val tests =
         jacksonObjectMapper()
             .readTree(
-                InstrumentationRegistry.getInstrumentation().context.assets.open("bip39.vectors.json"),
+                InstrumentationRegistry
+                    .getInstrumentation()
+                    .context.assets
+                    .open("bip39.vectors.json"),
             )
 
     @Test

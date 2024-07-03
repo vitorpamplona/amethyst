@@ -2,6 +2,9 @@
 accompanistAdaptive = "0.34.0"
 activityCompose = "1.9.0"
 agp = "8.5.0"
+android-compileSdk = "34"
+android-minSdk = "26"
+android-targetSdk = "34"
 androidKotlinGeohash = "1.0"
 androidxJunit = "1.2.1"
 appcompat = "1.7.0"
@@ -20,7 +23,7 @@ gms = "4.4.2"
 jacksonModuleKotlin = "2.17.1"
 jna = "5.14.0"
 junit = "4.13.2"
-kotlin = "1.9.24"
+kotlin = "2.0.0"
 kotlinxCollectionsImmutable = "0.3.7"
 languageId = "17.0.5"
 lazysodiumAndroid = "5.1.0"
@@ -126,3 +129,4 @@ diffplugSpotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 googleServices = { id = "com.google.gms.google-services", version.ref = "gms" }
 jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 jetbrainsKotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+jetbrainsComposeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

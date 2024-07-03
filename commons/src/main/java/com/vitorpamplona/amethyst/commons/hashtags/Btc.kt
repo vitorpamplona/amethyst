@@ -118,8 +118,7 @@ public val CustomHashTagIcons.Btc: ImageVector
                     curveToRelative(3.1295f, 0.78f, 13.2078f, 2.2358f, 11.5799f, 8.7678f)
                     close()
                 }
-            }
-                .build()
+            }.build()
         return customHashTagIconsBtc!!
     }
 

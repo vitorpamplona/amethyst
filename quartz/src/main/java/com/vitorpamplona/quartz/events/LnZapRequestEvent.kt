@@ -75,9 +75,7 @@ class LnZapRequestEvent(
         return null
     }
 
-    fun cachedPrivateZap(): LnZapPrivateEvent? {
-        return privateZapEvent
-    }
+    fun cachedPrivateZap(): LnZapPrivateEvent? = privateZapEvent
 
     fun decryptPrivateZap(
         signer: NostrSigner,

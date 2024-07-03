@@ -29,17 +29,16 @@ import com.vitorpamplona.quartz.events.IsInPublicChatChannel
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 
-open class DiscoverChatFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + account.defaultDiscoveryFollowList.value
-    }
+open class DiscoverChatFeedFilter(
+    val account: Account,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.defaultDiscoveryFollowList.value
 
-    override fun showHiddenKey(): Boolean {
-        return account.defaultDiscoveryFollowList.value ==
+    override fun showHiddenKey(): Boolean =
+        account.defaultDiscoveryFollowList.value ==
             PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
             account.defaultDiscoveryFollowList.value ==
             MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
-    }
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
@@ -63,18 +62,15 @@ open class DiscoverChatFeedFilter(val account: Account) : AdditiveFeedFilter<Not
         return sort(allChannelNotes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection)
-    }
+    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
-    fun buildFilterParams(account: Account): FilterByListParams {
-        return FilterByListParams.create(
+    fun buildFilterParams(account: Account): FilterByListParams =
+        FilterByListParams.create(
             userHex = account.userProfile().pubkeyHex,
             selectedListName = account.defaultDiscoveryFollowList.value,
             followLists = account.liveDiscoveryFollowLists.value,
             hiddenUsers = account.flowHiddenUsers.value,
         )
-    }
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val params = buildFilterParams(account)
@@ -120,7 +116,6 @@ open class DiscoverChatFeedFilter(val account: Account) : AdditiveFeedFilter<Not
                     { it.createdAt() },
                     { it.idHex },
                 ),
-            )
-            .reversed()
+            ).reversed()
     }
 }

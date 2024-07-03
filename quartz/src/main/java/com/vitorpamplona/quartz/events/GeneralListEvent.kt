@@ -56,9 +56,7 @@ abstract class GeneralListEvent(
 
     fun nameOrTitle() = name() ?: title()
 
-    fun cachedPrivateTags(): Array<Array<String>>? {
-        return privateTagsCache
-    }
+    fun cachedPrivateTags(): Array<Array<String>>? = privateTagsCache
 
     fun filterTagList(
         key: String,
@@ -79,16 +77,14 @@ abstract class GeneralListEvent(
         isPrivate: Boolean,
         signer: NostrSigner,
         onReady: (Boolean) -> Unit,
-    ) {
-        return if (isPrivate) {
-            privateTagsOrEmpty(signer = signer) {
-                onReady(
-                    it.any { it.size > 1 && it[0] == key && it[1] == tag },
-                )
-            }
-        } else {
-            onReady(isTagged(key, tag))
+    ) = if (isPrivate) {
+        privateTagsOrEmpty(signer = signer) {
+            onReady(
+                it.any { it.size > 1 && it[0] == key && it[1] == tag },
+            )
         }
+    } else {
+        onReady(isTagged(key, tag))
     }
 
     fun privateTags(
@@ -147,24 +143,16 @@ abstract class GeneralListEvent(
         onReady: (List<ATag>) -> Unit,
     ) = privateTags(signer) { onReady(filterAddresses(it)) }
 
-    fun filterUsers(tags: Array<Array<String>>): List<String> {
-        return tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
-    }
+    fun filterUsers(tags: Array<Array<String>>): List<String> = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
 
-    fun filterHashtags(tags: Array<Array<String>>): List<String> {
-        return tags.filter { it.size > 1 && it[0] == "t" }.map { it[1] }
-    }
+    fun filterHashtags(tags: Array<Array<String>>): List<String> = tags.filter { it.size > 1 && it[0] == "t" }.map { it[1] }
 
-    fun filterGeohashes(tags: Array<Array<String>>): List<String> {
-        return tags.filter { it.size > 1 && it[0] == "g" }.map { it[1] }
-    }
+    fun filterGeohashes(tags: Array<Array<String>>): List<String> = tags.filter { it.size > 1 && it[0] == "g" }.map { it[1] }
 
-    fun filterEvents(tags: Array<Array<String>>): List<String> {
-        return tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
-    }
+    fun filterEvents(tags: Array<Array<String>>): List<String> = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
 
-    fun filterAddresses(tags: Array<Array<String>>): List<ATag> {
-        return tags
+    fun filterAddresses(tags: Array<Array<String>>): List<ATag> =
+        tags
             .filter { it.firstOrNull() == "a" }
             .mapNotNull {
                 val aTagValue = it.getOrNull(1)
@@ -172,7 +160,6 @@ abstract class GeneralListEvent(
 
                 if (aTagValue != null) ATag.parse(aTagValue, relay) else null
             }
-    }
 
     companion object {
         fun createPrivateTags(

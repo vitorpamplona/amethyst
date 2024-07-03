@@ -274,8 +274,7 @@ public val CustomHashTagIcons.Cashu: ImageVector
                     lineToRelative(-9.439f, -0.043f)
                     close()
                 }
-            }
-                .build()
+            }.build()
         return customHashTagIconsCashu!!
     }
 

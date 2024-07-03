@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.jetbrainsKotlinAndroid)
@@ -5,11 +7,11 @@ plugins {
 
 android {
     namespace 'com.vitorpamplona.quartz'
-    compileSdk 34
+    compileSdk libs.versions.android.compileSdk.get().toInteger()
 
     defaultConfig {
-        minSdk 26
-        targetSdk 34
+        minSdk libs.versions.android.minSdk.get().toInteger()
+        targetSdk libs.versions.android.targetSdk.get().toInteger()
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -29,14 +31,17 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = '17'
-        freeCompilerArgs += "-Xstring-concat=inline"
-    }
     packagingOptions {
         resources {
             excludes += ['**/libscrypt.dylib']
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+        freeCompilerArgs.add("-Xstring-concat=inline")
     }
 }
 
@@ -57,7 +62,7 @@ dependencies {
     implementation 'net.java.dev.jna:jna:5.14.0@aar'
 
     // Performant Parser of JSONs into Events
-    api(libs.jackson.module.kotlin)
+    api libs.jackson.module.kotlin
 
     // immutable collections to avoid recomposition
     api libs.kotlinx.collections.immutable
