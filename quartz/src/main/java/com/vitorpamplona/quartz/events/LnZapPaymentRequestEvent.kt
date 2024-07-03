@@ -44,9 +44,7 @@ class LnZapPaymentRequestEvent(
 
     fun walletServicePubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
 
-    fun talkingWith(oneSideHex: String): HexKey {
-        return if (pubKey == oneSideHex) walletServicePubKey() ?: pubKey else pubKey
-    }
+    fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) walletServicePubKey() ?: pubKey else pubKey
 
     fun lnInvoice(
         signer: NostrSigner,
@@ -97,16 +95,20 @@ class LnZapPaymentRequestEvent(
 
 // REQUEST OBJECTS
 
-abstract class Request(var method: String? = null)
+abstract class Request(
+    var method: String? = null,
+)
 
 // PayInvoice Call
-class PayInvoiceParams(var invoice: String? = null)
+class PayInvoiceParams(
+    var invoice: String? = null,
+)
 
-class PayInvoiceMethod(var params: PayInvoiceParams? = null) : Request("pay_invoice") {
+class PayInvoiceMethod(
+    var params: PayInvoiceParams? = null,
+) : Request("pay_invoice") {
     companion object {
-        fun create(bolt11: String): PayInvoiceMethod {
-            return PayInvoiceMethod(PayInvoiceParams(bolt11))
-        }
+        fun create(bolt11: String): PayInvoiceMethod = PayInvoiceMethod(PayInvoiceParams(bolt11))
     }
 }
 

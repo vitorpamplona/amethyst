@@ -154,8 +154,7 @@ public val CustomHashTagIcons.Footstr: ImageVector
                     curveToRelative(7.881f, -1.9f, 12.632f, -11.136f, 5.51f, -16.777f)
                     curveToRelative(-3.211f, -2.542f, -8.913f, -2.1f, -12.721f, -1.212f)
                 }
-            }
-                .build()
+            }.build()
         return customHashTagIconsFootStr!!
     }
 

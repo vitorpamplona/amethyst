@@ -59,9 +59,7 @@ class BlurHashFetcher(
             data: Uri,
             options: Options,
             imageLoader: ImageLoader,
-        ): Fetcher {
-            return BlurHashFetcher(options, data)
-        }
+        ): Fetcher = BlurHashFetcher(options, data)
     }
 }
 
@@ -72,7 +70,8 @@ object BlurHashRequester {
     ): ImageRequest {
         val encodedMessage = URLEncoder.encode(message, "utf-8")
 
-        return ImageRequest.Builder(context)
+        return ImageRequest
+            .Builder(context)
             .data("bluehash:$encodedMessage")
             .fetcherFactory(BlurHashFetcher.Factory)
             .build()

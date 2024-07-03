@@ -75,9 +75,21 @@ class ImageUploadTesting {
                 )
 
         val url = result.tags!!.first { it[0] == "url" }.get(1)
-        val size = result.tags!!.firstOrNull { it[0] == "size" }?.get(1)?.ifBlank { null }
-        val dim = result.tags!!.firstOrNull { it[0] == "dim" }?.get(1)?.ifBlank { null }
-        val hash = result.tags!!.firstOrNull { it[0] == "x" }?.get(1)?.ifBlank { null }
+        val size =
+            result.tags!!
+                .firstOrNull { it[0] == "size" }
+                ?.get(1)
+                ?.ifBlank { null }
+        val dim =
+            result.tags!!
+                .firstOrNull { it[0] == "dim" }
+                ?.get(1)
+                ?.ifBlank { null }
+        val hash =
+            result.tags!!
+                .firstOrNull { it[0] == "x" }
+                ?.get(1)
+                ?.ifBlank { null }
         val contentType = result.tags!!.first { it[0] == "m" }.get(1)
         val ox = result.tags!!.first { it[0] == "ox" }.get(1)
 

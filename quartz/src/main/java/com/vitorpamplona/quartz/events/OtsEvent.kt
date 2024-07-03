@@ -54,22 +54,17 @@ class OtsEvent(
 
     fun digest() = digestEvent()?.hexToByteArray()
 
-    fun otsByteArray(): ByteArray {
-        return Base64.getDecoder().decode(content)
-    }
+    fun otsByteArray(): ByteArray = Base64.getDecoder().decode(content)
 
-    fun cacheVerify(): Long? {
-        return if (verifiedTime != null) {
+    fun cacheVerify(): Long? =
+        if (verifiedTime != null) {
             verifiedTime
         } else {
             verifiedTime = verify()
             verifiedTime
         }
-    }
 
-    fun verify(): Long? {
-        return digestEvent()?.let { OtsEvent.verify(otsByteArray(), it) }
-    }
+    fun verify(): Long? = digestEvent()?.let { OtsEvent.verify(otsByteArray(), it) }
 
     fun info(): String {
         val detachedOts = DetachedTimestampFile.deserialize(otsByteArray())
@@ -111,16 +106,12 @@ class OtsEvent(
         fun verify(
             otsFile: String,
             eventId: HexKey,
-        ): Long? {
-            return verify(Base64.getDecoder().decode(otsFile), eventId)
-        }
+        ): Long? = verify(Base64.getDecoder().decode(otsFile), eventId)
 
         fun verify(
             otsFile: ByteArray,
             eventId: HexKey,
-        ): Long? {
-            return verify(DetachedTimestampFile.deserialize(otsFile), eventId)
-        }
+        ): Long? = verify(DetachedTimestampFile.deserialize(otsFile), eventId)
 
         fun verify(
             detachedOts: DetachedTimestampFile,

@@ -221,7 +221,8 @@ fun SummaryBar(model: UserReactionsViewModel) {
 
         Row(
             modifier =
-                Modifier.padding(vertical = 10.dp, horizontal = 20.dp)
+                Modifier
+                    .padding(vertical = 10.dp, horizontal = 20.dp)
                     .clickable(onClick = { showChart = !showChart }),
         ) {
             ProvideChartStyle(
@@ -264,39 +265,36 @@ private fun ObserveAndShowChart(
 }
 
 @Stable
-class LabelValueFormatter(val axisLabels: State<List<String>>) :
-    AxisValueFormatter<AxisPosition.Horizontal.Bottom> {
+class LabelValueFormatter(
+    val axisLabels: State<List<String>>,
+) : AxisValueFormatter<AxisPosition.Horizontal.Bottom> {
     override fun formatValue(
         value: Float,
         chartValues: ChartValues,
-    ): String {
-        return axisLabels.value[value.roundToInt()]
-    }
+    ): String = axisLabels.value[value.roundToInt()]
 }
 
 @Stable
-class CountAxisValueFormatter() : AxisValueFormatter<AxisPosition.Vertical.Start> {
+class CountAxisValueFormatter : AxisValueFormatter<AxisPosition.Vertical.Start> {
     override fun formatValue(
         value: Float,
         chartValues: ChartValues,
-    ): String {
-        return showCount(value.roundToInt())
-    }
+    ): String = showCount(value.roundToInt())
 }
 
 @Stable
-class AmountAxisValueFormatter(val showDecimals: Boolean) :
-    AxisValueFormatter<AxisPosition.Vertical.End> {
+class AmountAxisValueFormatter(
+    val showDecimals: Boolean,
+) : AxisValueFormatter<AxisPosition.Vertical.End> {
     override fun formatValue(
         value: Float,
         chartValues: ChartValues,
-    ): String {
-        return if (showDecimals) {
+    ): String =
+        if (showDecimals) {
             showAmount(value.toBigDecimal())
         } else {
             showAmountAxis(value.toBigDecimal())
         }
-    }
 }
 
 var dfG: DecimalFormat = DecimalFormat("#G")

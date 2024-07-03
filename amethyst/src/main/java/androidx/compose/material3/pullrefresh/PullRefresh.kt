@@ -118,7 +118,5 @@ private class PullRefreshNestedScrollConnection(
             else -> Offset.Zero
         }
 
-    override suspend fun onPreFling(available: Velocity): Velocity {
-        return Velocity(0f, onRelease(available.y))
-    }
+    override suspend fun onPreFling(available: Velocity): Velocity = Velocity(0f, onRelease(available.y))
 }

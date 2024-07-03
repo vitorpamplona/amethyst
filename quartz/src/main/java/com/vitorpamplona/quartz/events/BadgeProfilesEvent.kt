@@ -42,8 +42,6 @@ class BadgeProfilesEvent(
         private const val STANDARD_D_TAG = "profile_badges"
         private const val ALT = "List of accepted badges by the author"
 
-        fun createAddressTag(pubKey: HexKey): ATag {
-            return ATag(KIND, pubKey, STANDARD_D_TAG, null)
-        }
+        fun createAddressTag(pubKey: HexKey): ATag = ATag(KIND, pubKey, STANDARD_D_TAG, null)
     }
 }

@@ -35,12 +35,15 @@ import com.vitorpamplona.quartz.encoders.decodePublicKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import kotlin.coroutines.cancellation.CancellationException
 
-data class RangesChanges(val original: TextRange, val modified: TextRange)
+data class RangesChanges(
+    val original: TextRange,
+    val modified: TextRange,
+)
 
-class UrlUserTagTransformation(val color: Color) : VisualTransformation {
-    override fun filter(text: AnnotatedString): TransformedText {
-        return buildAnnotatedStringWithUrlHighlighting(text, color)
-    }
+class UrlUserTagTransformation(
+    val color: Color,
+) : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText = buildAnnotatedStringWithUrlHighlighting(text, color)
 }
 
 fun buildAnnotatedStringWithUrlHighlighting(

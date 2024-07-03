@@ -63,8 +63,7 @@ fun Modifier.pullRefreshIndicatorTransform(
             ) {
                 this@drawWithContent.drawContent()
             }
-        }
-        .graphicsLayer {
+        }.graphicsLayer {
             translationY = state.position - size.height
 
             if (scale && !state.refreshing) {

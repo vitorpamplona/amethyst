@@ -86,7 +86,11 @@ class PollNoteViewModel : ViewModel() {
             valueMinimumBD = valueMinimum?.let { BigDecimal(it) }
             valueMaximumBD = valueMaximum?.let { BigDecimal(it) }
             consensusThreshold =
-                pollEvent?.getTagLong(CONSENSUS_THRESHOLD)?.toFloat()?.div(100)?.toBigDecimal()
+                pollEvent
+                    ?.getTagLong(CONSENSUS_THRESHOLD)
+                    ?.toFloat()
+                    ?.div(100)
+                    ?.toBigDecimal()
             closedAt = pollEvent?.getTagLong(CLOSED_AT)
 
             totalZapped = BigDecimal.ZERO
@@ -138,7 +142,8 @@ class PollNoteViewModel : ViewModel() {
     fun isVoteAmountAtomic() = valueMaximum != null && valueMinimum != null && valueMinimum == valueMaximum
 
     fun isPollClosed(): Boolean =
-        closedAt?.let { // allow 2 minute leeway for zap to propagate
+        closedAt?.let {
+            // allow 2 minute leeway for zap to propagate
             pollNote?.createdAt()?.plus(it * (86400 + 120))!! < TimeUtils.now()
         } == true
 
@@ -221,17 +226,16 @@ class PollNoteViewModel : ViewModel() {
     fun cachedIsPollOptionZappedBy(
         option: Int,
         user: User,
-    ): Boolean {
-        return pollNote!!.zaps.any {
+    ): Boolean =
+        pollNote!!.zaps.any {
             val zapEvent = it.value?.event as? LnZapEvent
             val privateZapAuthor = (it.key.event as? LnZapRequestEvent)?.cachedPrivateZap()
             zapEvent?.zappedPollOption() == option &&
                 (it.key.author?.pubkeyHex == user.pubkeyHex || privateZapAuthor?.pubKey == user.pubkeyHex)
         }
-    }
 
-    private fun zappedPollOptionAmount(option: Int): BigDecimal {
-        return pollNote?.zaps?.values?.sumOf {
+    private fun zappedPollOptionAmount(option: Int): BigDecimal =
+        pollNote?.zaps?.values?.sumOf {
             val event = it?.event as? LnZapEvent
             val zapAmount = event?.amount ?: BigDecimal.ZERO
             val isValidAmount = isValidInputVoteAmount(event?.amount)
@@ -243,10 +247,9 @@ class PollNoteViewModel : ViewModel() {
             }
         }
             ?: BigDecimal.ZERO
-    }
 
-    private fun totalZapped(): BigDecimal {
-        return pollNote?.zaps?.values?.sumOf {
+    private fun totalZapped(): BigDecimal =
+        pollNote?.zaps?.values?.sumOf {
             val zapEvent = (it?.event as? LnZapEvent)
             val zapAmount = zapEvent?.amount ?: BigDecimal.ZERO
             val isValidAmount = isValidInputVoteAmount(zapEvent?.amount)
@@ -258,7 +261,6 @@ class PollNoteViewModel : ViewModel() {
             }
         }
             ?: BigDecimal.ZERO
-    }
 
     fun createZapOptionsThatMatchThePollingParameters(): List<Long> {
         val options =

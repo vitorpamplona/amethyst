@@ -34,12 +34,18 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
-abstract class NostrDataSource(val debugName: String) {
+abstract class NostrDataSource(
+    val debugName: String,
+) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private var subscriptions = mapOf<String, Subscription>()
 
-    data class Counter(val subscriptionId: String, val eventKind: Int, var counter: Int)
+    data class Counter(
+        val subscriptionId: String,
+        val eventKind: Int,
+        var counter: Int,
+    )
 
     private var eventCounter = mapOf<Int, Counter>()
     var changingFilters = AtomicBoolean()
@@ -58,9 +64,7 @@ abstract class NostrDataSource(val debugName: String) {
     fun hashCodeFields(
         str1: String,
         str2: Int,
-    ): Int {
-        return 31 * str1.hashCode() + str2.hashCode()
-    }
+    ): Int = 31 * str1.hashCode() + str2.hashCode()
 
     private val clientListener =
         object : Client.Listener() {

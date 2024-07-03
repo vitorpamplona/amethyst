@@ -73,12 +73,14 @@ class AudioTrackEvent(
                     cover?.let { arrayOf(COVER, it) },
                     subject?.let { arrayOf(SUBJECT, it) },
                     arrayOf("alt", ALT),
-                )
-                    .toTypedArray()
+                ).toTypedArray()
 
             signer.sign(createdAt, KIND, tags, "", onReady)
         }
     }
 }
 
-@Immutable data class Participant(val key: String, val role: String?)
+@Immutable data class Participant(
+    val key: String,
+    val role: String?,
+)

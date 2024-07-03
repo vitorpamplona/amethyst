@@ -33,7 +33,9 @@ import androidx.compose.runtime.mutableStateOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 
-class LocationUtil(context: Context) {
+class LocationUtil(
+    context: Context,
+) {
     companion object {
         const val MIN_TIME: Long = 1000L
         const val MIN_DISTANCE: Float = 0.0f
@@ -96,9 +98,7 @@ class LocationUtil(context: Context) {
 object CachedGeoLocations {
     val locationNames = LruCache<String, String>(20)
 
-    fun cached(geoHashStr: String): String? {
-        return locationNames[geoHashStr]
-    }
+    fun cached(geoHashStr: String): String? = locationNames[geoHashStr]
 
     suspend fun geoLocate(
         geoHashStr: String,

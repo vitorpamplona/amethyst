@@ -23,23 +23,18 @@ package com.vitorpamplona.quartz.encoders
 /** Makes the distinction between String and Hex * */
 typealias HexKey = String
 
-fun ByteArray.toHexKey(): HexKey {
-    return Hex.encode(this)
-}
+fun ByteArray.toHexKey(): HexKey = Hex.encode(this)
 
-fun HexKey.hexToByteArray(): ByteArray {
-    return Hex.decode(this)
-}
+fun HexKey.hexToByteArray(): ByteArray = Hex.decode(this)
 
 object HexValidator {
-    private fun isHexChar(c: Char): Boolean {
-        return when (c) {
+    private fun isHexChar(c: Char): Boolean =
+        when (c) {
             in '0'..'9' -> true
             in 'a'..'f' -> true
             in 'A'..'F' -> true
             else -> false
         }
-    }
 
     fun isHex(hex: String?): Boolean {
         if (hex == null) return false

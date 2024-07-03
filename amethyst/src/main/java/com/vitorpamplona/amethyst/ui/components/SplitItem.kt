@@ -25,12 +25,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlin.math.abs
 
-class SplitItem<T>(val key: T) {
+class SplitItem<T>(
+    val key: T,
+) {
     // 0 to 1
     var percentage by mutableStateOf(0f)
 }
 
-class Split<T>() {
+class Split<T> {
     var items: List<SplitItem<T>> by mutableStateOf(emptyList())
 
     fun addItem(

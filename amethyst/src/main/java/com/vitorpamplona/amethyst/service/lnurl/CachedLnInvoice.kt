@@ -27,14 +27,15 @@ import kotlinx.coroutines.CancellationException
 import java.text.NumberFormat
 
 @Stable
-data class InvoiceAmount(val invoice: String, val amount: String?)
+data class InvoiceAmount(
+    val invoice: String,
+    val amount: String?,
+)
 
 object CachedLnInvoiceParser {
     val lnInvoicesCache = LruCache<String, InvoiceAmount>(20)
 
-    fun cached(lnurl: String): InvoiceAmount? {
-        return lnInvoicesCache[lnurl]
-    }
+    fun cached(lnurl: String): InvoiceAmount? = lnInvoicesCache[lnurl]
 
     fun parse(lnbcWord: String): InvoiceAmount? {
         val myInvoice = LnInvoiceUtil.findInvoice(lnbcWord)

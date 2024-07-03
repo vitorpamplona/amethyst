@@ -167,7 +167,9 @@ fun interface BiFilter<K, V> {
     ): Boolean
 }
 
-class BiFilterCollector<K, V>(val filter: BiFilter<K, V>) : BiConsumer<K, V> {
+class BiFilterCollector<K, V>(
+    val filter: BiFilter<K, V>,
+) : BiConsumer<K, V> {
     var results: ArrayList<V> = ArrayList()
 
     override fun accept(
@@ -180,7 +182,9 @@ class BiFilterCollector<K, V>(val filter: BiFilter<K, V>) : BiConsumer<K, V> {
     }
 }
 
-class BiFilterUniqueCollector<K, V>(val filter: BiFilter<K, V>) : BiConsumer<K, V> {
+class BiFilterUniqueCollector<K, V>(
+    val filter: BiFilter<K, V>,
+) : BiConsumer<K, V> {
     var results: HashSet<V> = HashSet()
 
     override fun accept(
@@ -200,7 +204,9 @@ fun interface BiMapper<K, V, R> {
     ): R?
 }
 
-class BiMapCollector<K, V, R>(val mapper: BiMapper<K, V, R?>) : BiConsumer<K, V> {
+class BiMapCollector<K, V, R>(
+    val mapper: BiMapper<K, V, R?>,
+) : BiConsumer<K, V> {
     var results: ArrayList<R> = ArrayList()
 
     override fun accept(
@@ -214,7 +220,9 @@ class BiMapCollector<K, V, R>(val mapper: BiMapper<K, V, R?>) : BiConsumer<K, V>
     }
 }
 
-class BiMapUniqueCollector<K, V, R>(val mapper: BiMapper<K, V, R?>) : BiConsumer<K, V> {
+class BiMapUniqueCollector<K, V, R>(
+    val mapper: BiMapper<K, V, R?>,
+) : BiConsumer<K, V> {
     var results: HashSet<R> = HashSet()
 
     override fun accept(
@@ -228,7 +236,9 @@ class BiMapUniqueCollector<K, V, R>(val mapper: BiMapper<K, V, R?>) : BiConsumer
     }
 }
 
-class BiMapFlattenCollector<K, V, R>(val mapper: BiMapper<K, V, Collection<R>?>) : BiConsumer<K, V> {
+class BiMapFlattenCollector<K, V, R>(
+    val mapper: BiMapper<K, V, Collection<R>?>,
+) : BiConsumer<K, V> {
     var results: ArrayList<R> = ArrayList()
 
     override fun accept(
@@ -242,7 +252,9 @@ class BiMapFlattenCollector<K, V, R>(val mapper: BiMapper<K, V, Collection<R>?>)
     }
 }
 
-class BiMapFlattenUniqueCollector<K, V, R>(val mapper: BiMapper<K, V, Collection<R>?>) : BiConsumer<K, V> {
+class BiMapFlattenUniqueCollector<K, V, R>(
+    val mapper: BiMapper<K, V, Collection<R>?>,
+) : BiConsumer<K, V> {
     var results: HashSet<R> = HashSet()
 
     override fun accept(
@@ -263,7 +275,9 @@ fun interface BiNotNullMapper<K, V, R> {
     ): R
 }
 
-class BiNotNullMapCollector<K, V, R>(val mapper: BiNotNullMapper<K, V, R>) : BiConsumer<K, V> {
+class BiNotNullMapCollector<K, V, R>(
+    val mapper: BiNotNullMapper<K, V, R>,
+) : BiConsumer<K, V> {
     var results: ArrayList<R> = ArrayList()
 
     override fun accept(
@@ -281,7 +295,10 @@ fun interface BiSumOf<K, V> {
     ): Int
 }
 
-class BiMaxOfCollector<K, V>(val filter: BiFilter<K, V>, val comparator: Comparator<V>) : BiConsumer<K, V> {
+class BiMaxOfCollector<K, V>(
+    val filter: BiFilter<K, V>,
+    val comparator: Comparator<V>,
+) : BiConsumer<K, V> {
     var maxK: K? = null
     var maxV: V? = null
 
@@ -298,7 +315,9 @@ class BiMaxOfCollector<K, V>(val filter: BiFilter<K, V>, val comparator: Compara
     }
 }
 
-class BiSumOfCollector<K, V>(val mapper: BiSumOf<K, V>) : BiConsumer<K, V> {
+class BiSumOfCollector<K, V>(
+    val mapper: BiSumOf<K, V>,
+) : BiConsumer<K, V> {
     var sum = 0
 
     override fun accept(
@@ -316,7 +335,9 @@ fun interface BiSumOfLong<K, V> {
     ): Long
 }
 
-class BiSumOfLongCollector<K, V>(val mapper: BiSumOfLong<K, V>) : BiConsumer<K, V> {
+class BiSumOfLongCollector<K, V>(
+    val mapper: BiSumOfLong<K, V>,
+) : BiConsumer<K, V> {
     var sum = 0L
 
     override fun accept(
@@ -327,7 +348,9 @@ class BiSumOfLongCollector<K, V>(val mapper: BiSumOfLong<K, V>) : BiConsumer<K, 
     }
 }
 
-class BiGroupByCollector<K, V, R>(val mapper: BiNotNullMapper<K, V, R>) : BiConsumer<K, V> {
+class BiGroupByCollector<K, V, R>(
+    val mapper: BiNotNullMapper<K, V, R>,
+) : BiConsumer<K, V> {
     var results = HashMap<R, ArrayList<V>>()
 
     override fun accept(
@@ -347,7 +370,9 @@ class BiGroupByCollector<K, V, R>(val mapper: BiNotNullMapper<K, V, R>) : BiCons
     }
 }
 
-class BiCountByGroupCollector<K, V, R>(val mapper: BiNotNullMapper<K, V, R>) : BiConsumer<K, V> {
+class BiCountByGroupCollector<K, V, R>(
+    val mapper: BiNotNullMapper<K, V, R>,
+) : BiConsumer<K, V> {
     var results = HashMap<R, Int>()
 
     override fun accept(
@@ -365,7 +390,10 @@ class BiCountByGroupCollector<K, V, R>(val mapper: BiNotNullMapper<K, V, R>) : B
     }
 }
 
-class BiSumByGroupCollector<K, V, R>(val mapper: BiNotNullMapper<K, V, R>, val sumOf: BiNotNullMapper<K, V, Long>) : BiConsumer<K, V> {
+class BiSumByGroupCollector<K, V, R>(
+    val mapper: BiNotNullMapper<K, V, R>,
+    val sumOf: BiNotNullMapper<K, V, Long>,
+) : BiConsumer<K, V> {
     var results = HashMap<R, Long>()
 
     override fun accept(
@@ -383,7 +411,9 @@ class BiSumByGroupCollector<K, V, R>(val mapper: BiNotNullMapper<K, V, R>, val s
     }
 }
 
-class BiCountIfCollector<K, V>(val filter: BiFilter<K, V>) : BiConsumer<K, V> {
+class BiCountIfCollector<K, V>(
+    val filter: BiFilter<K, V>,
+) : BiConsumer<K, V> {
     var count = 0
 
     override fun accept(

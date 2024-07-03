@@ -134,9 +134,7 @@ class TextNoteEvent(
     }
 }
 
-fun findURLs(text: String): List<String> {
-    return UrlDetector(text, UrlDetectorOptions.Default).detect().map { it.originalUrl }
-}
+fun findURLs(text: String): List<String> = UrlDetector(text, UrlDetectorOptions.Default).detect().map { it.originalUrl }
 
 /**
  * Returns a list of NIP-10 marked tags that are also ordered at best effort to support the
@@ -163,13 +161,12 @@ fun List<String>.positionalMarkedTags(
         o2 == replyingTo -> -1 // reply event being responded to goes last
         else -> 0 // keep the relative order for any other tag
     }
-}
-    .map {
-        when (it) {
-            root -> arrayOf(tagName, it, "", "root")
-            replyingTo -> arrayOf(tagName, it, "", "reply")
-            forkedFrom -> arrayOf(tagName, it, "", "fork")
-            in directMentions -> arrayOf(tagName, it, "", "mention")
-            else -> arrayOf(tagName, it)
-        }
+}.map {
+    when (it) {
+        root -> arrayOf(tagName, it, "", "root")
+        replyingTo -> arrayOf(tagName, it, "", "reply")
+        forkedFrom -> arrayOf(tagName, it, "", "fork")
+        in directMentions -> arrayOf(tagName, it, "", "mention")
+        else -> arrayOf(tagName, it)
     }
+}

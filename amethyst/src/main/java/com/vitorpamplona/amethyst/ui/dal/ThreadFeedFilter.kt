@@ -29,10 +29,11 @@ import com.vitorpamplona.amethyst.model.ThreadLevelCalculator
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class ThreadFeedFilter(val account: Account, val noteId: String) : FeedFilter<Note>() {
-    override fun feedKey(): String {
-        return noteId
-    }
+class ThreadFeedFilter(
+    val account: Account,
+    val noteId: String,
+) : FeedFilter<Note>() {
+    override fun feedKey(): String = noteId
 
     override fun feed(): List<Note> {
         val cachedSignatures: MutableMap<Note, LevelSignature> = mutableMapOf()
@@ -44,14 +45,15 @@ class ThreadFeedFilter(val account: Account, val noteId: String) : FeedFilter<No
         // Currently orders by date of each event, descending, at each level of the reply stack
         val order =
             compareByDescending<Note> {
-                ThreadLevelCalculator.replyLevelSignature(
-                    it,
-                    eventsInHex,
-                    cachedSignatures,
-                    account.userProfile(),
-                    followingKeySet,
-                    now,
-                ).signature
+                ThreadLevelCalculator
+                    .replyLevelSignature(
+                        it,
+                        eventsInHex,
+                        cachedSignatures,
+                        account.userProfile(),
+                        followingKeySet,
+                        now,
+                    ).signature
             }
 
         return eventsToWatch.sortedWith(order)

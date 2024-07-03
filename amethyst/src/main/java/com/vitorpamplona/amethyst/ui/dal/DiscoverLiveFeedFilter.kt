@@ -34,18 +34,13 @@ import com.vitorpamplona.quartz.events.PeopleListEvent
 open class DiscoverLiveFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + followList()
-    }
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList()
 
-    open fun followList(): String {
-        return account.defaultDiscoveryFollowList.value
-    }
+    open fun followList(): String = account.defaultDiscoveryFollowList.value
 
-    override fun showHiddenKey(): Boolean {
-        return followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+    override fun showHiddenKey(): Boolean =
+        followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
             followList() == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
-    }
 
     override fun feed(): List<Note> {
         val allChannelNotes = LocalCache.channels.mapNotNull { _, channel -> LocalCache.getNoteIfExists(channel.idHex) }
@@ -56,9 +51,7 @@ open class DiscoverLiveFeedFilter(
         return sort(notes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection)
-    }
+    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val filterParams =
@@ -92,16 +85,14 @@ open class DiscoverLiveFeedFilter(
                     { (it.event as? LiveActivitiesEvent)?.starts() ?: it.createdAt() },
                     { it.idHex },
                 ),
-            )
-            .reversed()
+            ).reversed()
     }
 
-    fun convertStatusToOrder(status: String?): Int {
-        return when (status) {
+    fun convertStatusToOrder(status: String?): Int =
+        when (status) {
             STATUS_LIVE -> 2
             STATUS_PLANNED -> 1
             STATUS_ENDED -> 0
             else -> 0
         }
-    }
 }

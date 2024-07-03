@@ -66,9 +66,7 @@ class HumanName(
     var family: String? = null,
     var given: ArrayList<String> = arrayListOf(),
 ) {
-    fun assembleName(): String {
-        return given.joinToString(" ") + " " + family
-    }
+    fun assembleName(): String = given.joinToString(" ") + " " + family
 }
 
 class Bundle(

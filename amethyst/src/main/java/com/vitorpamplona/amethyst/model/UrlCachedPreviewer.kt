@@ -74,7 +74,6 @@ object UrlCachedPreviewer {
                     onReady(state)
                 }
             },
-        )
-            .fetchUrlPreview()
+        ).fetchUrlPreview()
     }
 }

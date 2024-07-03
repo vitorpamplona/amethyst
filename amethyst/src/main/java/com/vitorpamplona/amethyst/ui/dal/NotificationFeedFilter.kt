@@ -44,26 +44,24 @@ import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 
-class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + account.defaultNotificationFollowList.value
-    }
+class NotificationFeedFilter(
+    val account: Account,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.defaultNotificationFollowList.value
 
-    override fun showHiddenKey(): Boolean {
-        return account.defaultNotificationFollowList.value ==
+    override fun showHiddenKey(): Boolean =
+        account.defaultNotificationFollowList.value ==
             PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
             account.defaultNotificationFollowList.value ==
             MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
-    }
 
-    fun buildFilterParams(account: Account): FilterByListParams {
-        return FilterByListParams.create(
+    fun buildFilterParams(account: Account): FilterByListParams =
+        FilterByListParams.create(
             userHex = account.userProfile().pubkeyHex,
             selectedListName = account.defaultNotificationFollowList.value,
             followLists = account.liveNotificationFollowLists.value,
             hiddenUsers = account.flowHiddenUsers.value,
         )
-    }
 
     override fun feed(): List<Note> {
         val filterParams = buildFilterParams(account)
@@ -76,9 +74,7 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
         return sort(notifications)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection)
-    }
+    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val filterParams = buildFilterParams(account)
@@ -123,9 +119,7 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
             tagsAnEventByUser(it, loggedInUserHex)
     }
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(DefaultFeedOrder)
-    }
+    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 
     fun tagsAnEventByUser(
         note: Note,
@@ -153,11 +147,17 @@ class NotificationFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() 
         }
 
         if (event is ReactionEvent) {
-            return note.replyTo?.lastOrNull()?.author?.pubkeyHex == authorHex
+            return note.replyTo
+                ?.lastOrNull()
+                ?.author
+                ?.pubkeyHex == authorHex
         }
 
         if (event is RepostEvent || event is GenericRepostEvent) {
-            return note.replyTo?.lastOrNull()?.author?.pubkeyHex == authorHex
+            return note.replyTo
+                ?.lastOrNull()
+                ?.author
+                ?.pubkeyHex == authorHex
         }
 
         return true

@@ -35,18 +35,13 @@ open class NIP90ContentDiscoveryResponseFilter(
 ) : AdditiveFeedFilter<Note>() {
     var latestNote: Note? = null
 
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + request
-    }
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + request
 
-    open fun followList(): String {
-        return account.defaultDiscoveryFollowList.value
-    }
+    open fun followList(): String = account.defaultDiscoveryFollowList.value
 
-    override fun showHiddenKey(): Boolean {
-        return followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+    override fun showHiddenKey(): Boolean =
+        followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
             followList() == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
-    }
 
     fun acceptableEvent(note: Note): Boolean {
         val noteEvent = note.event
@@ -71,18 +66,15 @@ open class NIP90ContentDiscoveryResponseFilter(
         }
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection)
-    }
+    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
-    fun buildFilterParams(account: Account): FilterByListParams {
-        return FilterByListParams.create(
+    fun buildFilterParams(account: Account): FilterByListParams =
+        FilterByListParams.create(
             account.userProfile().pubkeyHex,
             account.defaultDiscoveryFollowList.value,
             account.liveDiscoveryFollowLists.value,
             account.flowHiddenUsers.value,
         )
-    }
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         // val params = buildFilterParams(account)
@@ -95,9 +87,11 @@ open class NIP90ContentDiscoveryResponseFilter(
 
         val noteEvent = latestNote?.event as? NIP90ContentDiscoveryResponseEvent ?: return setOf()
 
-        return noteEvent.innerTags().mapNotNull {
-            LocalCache.checkGetOrCreateNote(it)
-        }.toSet()
+        return noteEvent
+            .innerTags()
+            .mapNotNull {
+                LocalCache.checkGetOrCreateNote(it)
+            }.toSet()
     }
 
     override fun sort(collection: Set<Note>): List<Note> {

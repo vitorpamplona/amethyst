@@ -31,4 +31,6 @@ fun checkNotInMainThread() {
 
 fun isMainThread() = Looper.myLooper() == Looper.getMainLooper()
 
-class OnMainThreadException(str: String) : RuntimeException(str)
+class OnMainThreadException(
+    str: String,
+) : RuntimeException(str)

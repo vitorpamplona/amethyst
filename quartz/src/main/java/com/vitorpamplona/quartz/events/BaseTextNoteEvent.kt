@@ -192,10 +192,11 @@ open class BaseTextNoteEvent(
     fun tagsWithoutCitations(): List<String> {
         val repliesTo = replyTos()
         val tagAddresses =
-            taggedAddresses().filter {
-                it.kind != CommunityDefinitionEvent.KIND && (kind != WikiNoteEvent.KIND || it.kind != WikiNoteEvent.KIND)
-                // removes forks from itself.
-            }.map { it.toTag() }
+            taggedAddresses()
+                .filter {
+                    it.kind != CommunityDefinitionEvent.KIND && (kind != WikiNoteEvent.KIND || it.kind != WikiNoteEvent.KIND)
+                    // removes forks from itself.
+                }.map { it.toTag() }
         if (repliesTo.isEmpty() && tagAddresses.isEmpty()) return emptyList()
 
         val citations = findCitations()

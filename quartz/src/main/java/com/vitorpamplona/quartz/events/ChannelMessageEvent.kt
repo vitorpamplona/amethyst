@@ -34,7 +34,8 @@ class ChannelMessageEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig), IsInPublicChatChannel {
+) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    IsInPublicChatChannel {
     override fun channel() =
         tags.firstOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
             ?: tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)

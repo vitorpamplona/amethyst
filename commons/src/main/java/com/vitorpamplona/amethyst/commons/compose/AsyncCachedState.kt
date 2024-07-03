@@ -29,26 +29,24 @@ import androidx.compose.runtime.produceState
 fun <K, V> produceCachedStateAsync(
     cache: AsyncCachedState<K, V>,
     key: K,
-): State<V?> {
-    return produceState(initialValue = cache.cached(key), key1 = key) {
+): State<V?> =
+    produceState(initialValue = cache.cached(key), key1 = key) {
         cache.update(key) {
             value = it
         }
     }
-}
 
 @Composable
 fun <K, V> produceCachedStateAsync(
     cache: AsyncCachedState<K, V>,
     key: String,
     updateValue: K,
-): State<V?> {
-    return produceState(initialValue = cache.cached(updateValue), key1 = key) {
+): State<V?> =
+    produceState(initialValue = cache.cached(updateValue), key1 = key) {
         cache.update(updateValue) {
             value = it
         }
     }
-}
 
 interface AsyncCachedState<K, V> {
     fun cached(k: K): V?
@@ -59,12 +57,12 @@ interface AsyncCachedState<K, V> {
     )
 }
 
-abstract class GenericBaseCacheAsync<K, V>(capacity: Int) : AsyncCachedState<K, V> {
+abstract class GenericBaseCacheAsync<K, V>(
+    capacity: Int,
+) : AsyncCachedState<K, V> {
     private val cache = LruCache<K, V>(capacity)
 
-    override fun cached(k: K): V? {
-        return cache[k]
-    }
+    override fun cached(k: K): V? = cache[k]
 
     override suspend fun update(
         k: K,

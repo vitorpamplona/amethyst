@@ -42,7 +42,8 @@ class OkHttpBlockstreamExplorer : BitcoinExplorer {
         val url = "$BLOCKSTREAM_API_URL/block/$hash"
 
         val request =
-            Request.Builder()
+            Request
+                .Builder()
                 .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                 .header("Accept", "application/json")
                 .url(url)
@@ -79,7 +80,8 @@ class OkHttpBlockstreamExplorer : BitcoinExplorer {
         val url = "$BLOCKSTREAM_API_URL/block-height/$height"
 
         val request =
-            Request.Builder()
+            Request
+                .Builder()
                 .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                 .url(url)
                 .get()

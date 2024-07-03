@@ -33,7 +33,10 @@ import java.util.concurrent.BlockingQueue
 /**
  * For making async calls to a calendar server
  */
-class OkHttpCalendarAsyncSubmit(private val url: String, private val digest: ByteArray) : ICalendarAsyncSubmit {
+class OkHttpCalendarAsyncSubmit(
+    private val url: String,
+    private val digest: ByteArray,
+) : ICalendarAsyncSubmit {
     private var queue: BlockingQueue<Optional<Timestamp>>? = null
 
     fun setQueue(queue: BlockingQueue<Optional<Timestamp>>?) {
@@ -49,7 +52,8 @@ class OkHttpCalendarAsyncSubmit(private val url: String, private val digest: Byt
         val requestBody = digest.toRequestBody(mediaType)
 
         val request =
-            okhttp3.Request.Builder()
+            okhttp3.Request
+                .Builder()
                 .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                 .header("Accept", "application/vnd.opentimestamps.v1")
                 .header("Content-Type", "application/x-www-form-urlencoded")

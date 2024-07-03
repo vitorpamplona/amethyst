@@ -21,9 +21,7 @@
 package com.vitorpamplona.amethyst.ui.actions.relays
 
 class DMRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<String>? {
-        return account.getDMRelayList()?.relays()
-    }
+    override fun getRelayList(): List<String>? = account.getDMRelayList()?.relays()
 
     override fun saveRelayList(urlList: List<String>) {
         account.saveDMRelayList(urlList)

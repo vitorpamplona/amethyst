@@ -60,17 +60,21 @@ import java.time.format.DateTimeFormatter
 import kotlin.time.measureTimedValue
 
 @Stable
-class NotificationViewModel(val account: Account) :
-    CardFeedViewModel(NotificationFeedFilter(account)) {
-    class Factory(val account: Account) : ViewModelProvider.Factory {
-        override fun <NotificationViewModel : ViewModel> create(modelClass: Class<NotificationViewModel>): NotificationViewModel {
-            return NotificationViewModel(account) as NotificationViewModel
-        }
+class NotificationViewModel(
+    val account: Account,
+) : CardFeedViewModel(NotificationFeedFilter(account)) {
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <NotificationViewModel : ViewModel> create(modelClass: Class<NotificationViewModel>): NotificationViewModel = NotificationViewModel(account) as NotificationViewModel
     }
 }
 
 @Stable
-open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), InvalidatableViewModel {
+open class CardFeedViewModel(
+    val localFilter: FeedFilter<Note>,
+) : ViewModel(),
+    InvalidatableViewModel {
     private val _feedContent = MutableStateFlow<CardFeedState>(CardFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
@@ -167,7 +171,11 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
             .forEach { zapEvent ->
                 val zappedPost = zapEvent.replyTo?.lastOrNull()
                 if (zappedPost != null) {
-                    val zapRequest = zappedPost.zaps.filter { it.value == zapEvent }.keys.firstOrNull()
+                    val zapRequest =
+                        zappedPost.zaps
+                            .filter { it.value == zapEvent }
+                            .keys
+                            .firstOrNull()
                     if (zapRequest != null) {
                         // var newZapRequestEvent = LocalCache.checkPrivateZap(zapRequest.event as Event)
                         // zapRequest.event = newZapRequestEvent
@@ -182,7 +190,11 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
                             LocalCache.getUserIfExists(it) // don't create user if it doesn't exist
                         }
                     if (author != null) {
-                        val zapRequest = author.zaps.filter { it.value == zapEvent }.keys.firstOrNull()
+                        val zapRequest =
+                            author.zaps
+                                .filter { it.value == zapEvent }
+                                .keys
+                                .firstOrNull()
                         if (zapRequest != null) {
                             zapsPerUser
                                 .getOrPut(author, { mutableListOf() })
@@ -218,7 +230,8 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
                     val singleList =
                         (boostsInCard + zapsInCard.map { it.response } + reactionsInCard).groupBy {
                             sdf.format(
-                                Instant.ofEpochSecond(it.createdAt() ?: 0)
+                                Instant
+                                    .ofEpochSecond(it.createdAt() ?: 0)
                                     .atZone(ZoneId.systemDefault())
                                     .toLocalDateTime(),
                             )
@@ -242,10 +255,8 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
                                     zapsInCard.filter { it.response in chunk }.toImmutableList(),
                                 )
                             }
-                        }
-                        .flatten()
-                }
-                .flatten()
+                        }.flatten()
+                }.flatten()
 
         val userZaps =
             zapsPerUser
@@ -253,7 +264,8 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
                     val byDay =
                         user.value.groupBy {
                             sdf.format(
-                                Instant.ofEpochSecond(it.createdAt() ?: 0)
+                                Instant
+                                    .ofEpochSecond(it.createdAt() ?: 0)
                                     .atZone(ZoneId.systemDefault())
                                     .toLocalDateTime(),
                             )
@@ -268,8 +280,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
                                 .toImmutableList(),
                         )
                     }
-                }
-                .flatten()
+                }.flatten()
 
         val textNoteCards =
             notes
@@ -278,8 +289,7 @@ open class CardFeedViewModel(val localFilter: FeedFilter<Note>) : ViewModel(), I
                         it.event !is RepostEvent &&
                         it.event !is GenericRepostEvent &&
                         it.event !is LnZapEvent
-                }
-                .map {
+                }.map {
                     if (it.event is PrivateDmEvent || it.event is ChatMessageEvent) {
                         MessageSetCard(it)
                     } else if (it.event is BadgeAwardEvent) {
@@ -464,7 +474,10 @@ fun <T> equalImmutableLists(
 }
 
 @Immutable
-data class CombinedZap(val request: Note, val response: Note) {
+data class CombinedZap(
+    val request: Note,
+    val response: Note,
+) {
     fun createdAt() = response.createdAt()
 
     fun idHex() = response.idHex

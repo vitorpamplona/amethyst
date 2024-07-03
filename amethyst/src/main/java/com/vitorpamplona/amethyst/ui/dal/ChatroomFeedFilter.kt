@@ -24,12 +24,12 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.events.ChatroomKey
 
-class ChatroomFeedFilter(val withUser: ChatroomKey, val account: Account) :
-    AdditiveFeedFilter<Note>() {
+class ChatroomFeedFilter(
+    val withUser: ChatroomKey,
+    val account: Account,
+) : AdditiveFeedFilter<Note>() {
     // returns the last Note of each user.
-    override fun feedKey(): String {
-        return withUser.hashCode().toString()
-    }
+    override fun feedKey(): String = withUser.hashCode().toString()
 
     override fun feed(): List<Note> {
         val messages = account.userProfile().privateChatrooms[withUser] ?: return emptyList()
@@ -46,7 +46,5 @@ class ChatroomFeedFilter(val withUser: ChatroomKey, val account: Account) :
         return collection.filter { it in messages.roomMessages && account.isAcceptable(it) }.toSet()
     }
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(DefaultFeedOrder)
-    }
+    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 }

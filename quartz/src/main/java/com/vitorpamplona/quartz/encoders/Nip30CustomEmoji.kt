@@ -48,9 +48,7 @@ class Nip30CustomEmoji {
             return input.contains(":")
         }
 
-        fun createEmojiMap(tags: ImmutableListOfLists<String>): Map<String, String> {
-            return tags.lists.filter { it.size > 2 && it[0] == "emoji" }.associate { ":${it[1]}:" to it[2] }
-        }
+        fun createEmojiMap(tags: ImmutableListOfLists<String>): Map<String, String> = tags.lists.filter { it.size > 2 && it[0] == "emoji" }.associate { ":${it[1]}:" to it[2] }
 
         fun assembleAnnotatedList(
             input: String,
@@ -105,9 +103,13 @@ class Nip30CustomEmoji {
         }
     }
 
-    @Immutable open class Renderable()
+    @Immutable open class Renderable
 
-    @Immutable class TextType(val text: String) : Renderable()
+    @Immutable class TextType(
+        val text: String,
+    ) : Renderable()
 
-    @Immutable class ImageUrlType(val url: String) : Renderable()
+    @Immutable class ImageUrlType(
+        val url: String,
+    ) : Renderable()
 }

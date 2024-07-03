@@ -79,8 +79,7 @@ class ThreadAssemblerTest {
             {"id":"512962dbada5fd5015fc727a107d5c3f569662de67eab8e5da5a8065012cf11e","pubkey":"7fa56f5d6962ab1e3cd424e758c3002b8665f7b0d8dcee9fe9e288d7751ac194","created_at":1688194800,"kind":1,"tags":[["a","30023:6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93:1680612926599","","root"],["e","87a5bd25aa084cefb3357fc9c2a5b327254fab35fdd7b2d4bd0acddc63d0abe8","","reply"]],"content":"another one","sig":"b4bc4d8206a08de0a918043129b27c8863d17f60e4f58b4d2b535326625870d32640b04f247eb9eb5df1d62fe98c8e1b0341bdd119655553488300ec9d5b4036"},
             {"id":"ce6e32e3e17b6901d2cc70b60f3743e24f885bb6e9da6d88cff516079eac1883","pubkey":"726a1e261cc6474674e8285e3951b3bb139be9a773d1acf49dc868db861a1c11","created_at":1688234921,"kind":1,"tags":[["a","30023:6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93:1680612926599","","root"],["e","512962dbada5fd5015fc727a107d5c3f569662de67eab8e5da5a8065012cf11e","","reply"]],"content":"yet another one, testing 0.0.3","sig":"13bd41c4029c6a7ee41cb03d12e831e9e9b6e14d43a61c78a72657070b45385ba2ce98e8121049fbcbdb7b2dd777c36c7867ba70b5e6a4798a9b866910ae5b62"}
         ]
-        """
-            .trimIndent()
+        """.trimIndent()
 
     val header =
         """
@@ -111,8 +110,7 @@ class ThreadAssemblerTest {
             ["p","b9e76546ba06456ed301d9e52bc49fa48e70a6bf2282be7a1ae72947612023dc"]
           ]
         }
-        """
-            .trimIndent()
+        """.trimIndent()
 
     @Test
     fun threadOrderTest() =

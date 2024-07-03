@@ -56,10 +56,11 @@ class EmojiPackEvent(
 }
 
 @Immutable
-data class EmojiUrl(val code: String, val url: String) {
-    fun encode(): String {
-        return ":$code:$url"
-    }
+data class EmojiUrl(
+    val code: String,
+    val url: String,
+) {
+    fun encode(): String = ":$code:$url"
 
     companion object {
         fun decode(encodedEmojiSetup: String): EmojiUrl? {

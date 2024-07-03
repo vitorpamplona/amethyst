@@ -27,16 +27,20 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-data class LevelSignature(val signature: String, val createdAt: Long?, val author: User?)
+data class LevelSignature(
+    val signature: String,
+    val createdAt: Long?,
+    val author: User?,
+)
 
 object ThreadLevelCalculator {
     val levelFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd-HH:mm:ss")
 
-    private fun formattedDateTime(timestamp: Long): String {
-        return Instant.ofEpochSecond(timestamp)
+    private fun formattedDateTime(timestamp: Long): String =
+        Instant
+            .ofEpochSecond(timestamp)
             .atZone(ZoneId.systemDefault())
             .format(levelFormatter)
-    }
 
     /**
      * This method caches signatures during each execution to avoid recalculation in longer threads
@@ -76,8 +80,7 @@ object ThreadLevelCalculator {
                                 accountFollowingSet,
                                 now,
                             ).apply { cachedSignatures.put(it, this) }
-                    }
-                    .maxByOrNull { it.signature.length }
+                    }.maxByOrNull { it.signature.length }
             )
 
         val parentSignature = parent?.signature?.removeSuffix(";") ?: ""

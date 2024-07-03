@@ -29,9 +29,7 @@ object Constants {
         setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS, FeedType.GLOBAL)
     val activeTypesSearch = setOf(FeedType.SEARCH)
 
-    fun convertDefaultRelays(): Array<Relay> {
-        return defaultRelays.map { Relay(it.url, it.read, it.write, it.feedTypes) }.toTypedArray()
-    }
+    fun convertDefaultRelays(): Array<Relay> = defaultRelays.map { Relay(it.url, it.read, it.write, it.feedTypes) }.toTypedArray()
 
     val defaultRelays =
         arrayOf(

@@ -37,33 +37,29 @@ class SearchRelayListEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     override fun dTag() = FIXED_D_TAG
 
-    fun relays(): List<String> {
-        return tags.mapNotNull {
+    fun relays(): List<String> =
+        tags.mapNotNull {
             if (it.size > 1 && it[0] == "relay") {
                 it[1]
             } else {
                 null
             }
         }
-    }
 
     companion object {
         const val KIND = 10007
         const val FIXED_D_TAG = ""
 
-        fun createAddressATag(pubKey: HexKey): ATag {
-            return ATag(KIND, pubKey, FIXED_D_TAG, null)
-        }
+        fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, FIXED_D_TAG, null)
 
-        fun createAddressTag(pubKey: HexKey): String {
-            return ATag.assembleATag(KIND, pubKey, FIXED_D_TAG)
-        }
+        fun createAddressTag(pubKey: HexKey): String = ATag.assembleATag(KIND, pubKey, FIXED_D_TAG)
 
-        fun createTagArray(relays: List<String>): Array<Array<String>> {
-            return relays.map {
-                arrayOf("relay", it)
-            }.plusElement(arrayOf("alt", "Relay list to use for Search")).toTypedArray()
-        }
+        fun createTagArray(relays: List<String>): Array<Array<String>> =
+            relays
+                .map {
+                    arrayOf("relay", it)
+                }.plusElement(arrayOf("alt", "Relay list to use for Search"))
+                .toTypedArray()
 
         fun updateRelayList(
             earlierVersion: SearchRelayListEvent,
@@ -73,11 +69,13 @@ class SearchRelayListEvent(
             onReady: (SearchRelayListEvent) -> Unit,
         ) {
             val tags =
-                earlierVersion.tags.filter { it[0] != "relay" }.plus(
-                    relays.map {
-                        arrayOf("relay", it)
-                    },
-                ).toTypedArray()
+                earlierVersion.tags
+                    .filter { it[0] != "relay" }
+                    .plus(
+                        relays.map {
+                            arrayOf("relay", it)
+                        },
+                    ).toTypedArray()
 
             signer.sign(createdAt, KIND, tags, earlierVersion.content, onReady)
         }

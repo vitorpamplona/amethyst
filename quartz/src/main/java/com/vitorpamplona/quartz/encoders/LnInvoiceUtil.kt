@@ -205,7 +205,9 @@ object LnInvoiceUtil {
         return polymod(combined) == 1
     }
 
-    class AddressFormatException(message: String) : Exception(message)
+    class AddressFormatException(
+        message: String,
+    ) : Exception(message)
 
     fun decodeUnlimitedLength(invoice: String): Boolean {
         var lower = false
@@ -278,19 +280,16 @@ object LnInvoiceUtil {
     val OneNano = BigDecimal("0.000000001")
     val OnePico = BigDecimal("0.000000000001")
 
-    fun getAmountInSats(invoice: String): BigDecimal {
-        return getAmount(invoice).multiply(OneHundredK)
-    }
+    fun getAmountInSats(invoice: String): BigDecimal = getAmount(invoice).multiply(OneHundredK)
 
-    private fun multiplier(multiplier: String): BigDecimal {
-        return when (multiplier.lowercase()) {
+    private fun multiplier(multiplier: String): BigDecimal =
+        when (multiplier.lowercase()) {
             "m" -> OneMili
             "u" -> OneMicro
             "n" -> OneNano
             "p" -> OnePico
             else -> throw IllegalArgumentException("Invalid multiplier: $multiplier")
         }
-    }
 
     /**
      * Finds LN invoice in the provided input string and returns it. For example for input = "aaa bbb

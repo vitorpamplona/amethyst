@@ -32,7 +32,5 @@ class VideoViewedPositionCache {
         cachedPosition.put(uri, position)
     }
 
-    fun get(uri: String): Long? {
-        return cachedPosition.get(uri)
-    }
+    fun get(uri: String): Long? = cachedPosition.get(uri)
 }

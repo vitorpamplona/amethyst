@@ -25,14 +25,10 @@ import com.vitorpamplona.quartz.ots.ICalendar
 import com.vitorpamplona.quartz.ots.ICalendarAsyncSubmit
 
 class OkHttpCalendarBuilder : CalendarBuilder {
-    override fun newSyncCalendar(url: String): ICalendar {
-        return OkHttpCalendar(url)
-    }
+    override fun newSyncCalendar(url: String): ICalendar = OkHttpCalendar(url)
 
     override fun newAsyncCalendar(
         url: String,
         digest: ByteArray,
-    ): ICalendarAsyncSubmit {
-        return OkHttpCalendarAsyncSubmit(url, digest)
-    }
+    ): ICalendarAsyncSubmit = OkHttpCalendarAsyncSubmit(url, digest)
 }

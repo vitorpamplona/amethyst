@@ -68,8 +68,7 @@ class CommunityPostApprovalEvent(
                         it[0] == "e" ||
                             (it[0] == "a" && ATag.parse(it[1], null)?.kind != CommunityDefinitionEvent.KIND)
                     )
-            }
-            .map { it[1] }
+            }.map { it[1] }
 
     companion object {
         const val KIND = 4550

@@ -36,24 +36,22 @@ import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 
-class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + account.defaultHomeFollowList.value
-    }
+class HomeNewThreadFeedFilter(
+    val account: Account,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.defaultHomeFollowList.value
 
-    override fun showHiddenKey(): Boolean {
-        return account.defaultHomeFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+    override fun showHiddenKey(): Boolean =
+        account.defaultHomeFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
             account.defaultHomeFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
-    }
 
-    fun buildFilterParams(account: Account): FilterByListParams {
-        return FilterByListParams.create(
+    fun buildFilterParams(account: Account): FilterByListParams =
+        FilterByListParams.create(
             userHex = account.userProfile().pubkeyHex,
             selectedListName = account.defaultHomeFollowList.value,
             followLists = account.liveHomeFollowLists.value,
             hiddenUsers = account.flowHiddenUsers.value,
         )
-    }
 
     override fun feed(): List<Note> {
         val gRelays = account.activeGlobalRelays().toSet()
@@ -73,9 +71,7 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
         return sort(notes + longFormNotes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection)
-    }
+    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val gRelays = account.activeGlobalRelays().toSet()
@@ -107,13 +103,13 @@ class HomeNewThreadFeedFilter(val account: Account) : AdditiveFeedFilter<Note>()
         ) && filterParams.match(noteEvent, isGlobalRelay) && it.isNewThread()
     }
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.distinctBy {
-            if (it.event is RepostEvent || it.event is GenericRepostEvent) {
-                it.replyTo?.lastOrNull()?.idHex ?: it.idHex // only the most recent repost per feed.
-            } else {
-                it.idHex
-            }
-        }.sortedWith(DefaultFeedOrder)
-    }
+    override fun sort(collection: Set<Note>): List<Note> =
+        collection
+            .distinctBy {
+                if (it.event is RepostEvent || it.event is GenericRepostEvent) {
+                    it.replyTo?.lastOrNull()?.idHex ?: it.idHex // only the most recent repost per feed.
+                } else {
+                    it.idHex
+                }
+            }.sortedWith(DefaultFeedOrder)
 }

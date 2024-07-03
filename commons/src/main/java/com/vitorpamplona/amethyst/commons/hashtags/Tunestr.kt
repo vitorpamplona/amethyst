@@ -136,8 +136,7 @@ public val CustomHashTagIcons.Tunestr: ImageVector
                     curveTo(506.86f, 353.05f, 563.32f, 375.71f, 574.98f, 419.21f)
                     close()
                 }
-            }
-                .build()
+            }.build()
         return customHashTagIconsTunestr!!
     }
 

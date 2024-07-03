@@ -34,7 +34,8 @@ class WikiNoteEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig), AddressableEvent {
+) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    AddressableEvent {
     override fun dTag() = tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: ""
 
     override fun address() = ATag(kind, pubKey, dTag(), null)

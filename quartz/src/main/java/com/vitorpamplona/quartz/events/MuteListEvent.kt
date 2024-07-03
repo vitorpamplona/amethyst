@@ -71,9 +71,7 @@ class MuteListEvent(
         const val FIXED_D_TAG = ""
         const val ALT = "Mute List"
 
-        fun blockListFor(pubKeyHex: HexKey): String {
-            return "10000:$pubKeyHex:"
-        }
+        fun blockListFor(pubKeyHex: HexKey): String = "10000:$pubKeyHex:"
 
         fun createListWithTag(
             key: String,
@@ -110,9 +108,7 @@ class MuteListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (MuteListEvent) -> Unit,
-        ) {
-            return createListWithTag("p", pubKeyHex, isPrivate, signer, createdAt, onReady)
-        }
+        ) = createListWithTag("p", pubKeyHex, isPrivate, signer, createdAt, onReady)
 
         fun createListWithWord(
             word: String,
@@ -120,9 +116,7 @@ class MuteListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (MuteListEvent) -> Unit,
-        ) {
-            return createListWithTag("word", word, isPrivate, signer, createdAt, onReady)
-        }
+        ) = createListWithTag("word", word, isPrivate, signer, createdAt, onReady)
 
         fun addUsers(
             earlierVersion: MuteListEvent,
@@ -171,9 +165,7 @@ class MuteListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (MuteListEvent) -> Unit,
-        ) {
-            return addTag(earlierVersion, "word", word, isPrivate, signer, createdAt, onReady)
-        }
+        ) = addTag(earlierVersion, "word", word, isPrivate, signer, createdAt, onReady)
 
         fun addUser(
             earlierVersion: MuteListEvent,
@@ -182,9 +174,7 @@ class MuteListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (MuteListEvent) -> Unit,
-        ) {
-            return addTag(earlierVersion, "p", pubKeyHex, isPrivate, signer, createdAt, onReady)
-        }
+        ) = addTag(earlierVersion, "p", pubKeyHex, isPrivate, signer, createdAt, onReady)
 
         fun addTag(
             earlierVersion: MuteListEvent,
@@ -232,9 +222,7 @@ class MuteListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (MuteListEvent) -> Unit,
-        ) {
-            return removeTag(earlierVersion, "word", word, isPrivate, signer, createdAt, onReady)
-        }
+        ) = removeTag(earlierVersion, "word", word, isPrivate, signer, createdAt, onReady)
 
         fun removeUser(
             earlierVersion: MuteListEvent,
@@ -243,9 +231,7 @@ class MuteListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (MuteListEvent) -> Unit,
-        ) {
-            return removeTag(earlierVersion, "p", pubKeyHex, isPrivate, signer, createdAt, onReady)
-        }
+        ) = removeTag(earlierVersion, "p", pubKeyHex, isPrivate, signer, createdAt, onReady)
 
         fun removeTag(
             earlierVersion: MuteListEvent,

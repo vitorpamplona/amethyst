@@ -47,21 +47,13 @@ object RelayPool : Relay.Listener {
         MutableSharedFlow<RelayPoolStatus>(1, 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val statusFlow: SharedFlow<RelayPoolStatus> = _statusFlow.asSharedFlow()
 
-    fun availableRelays(): Int {
-        return relays.size
-    }
+    fun availableRelays(): Int = relays.size
 
-    fun connectedRelays(): Int {
-        return relays.count { it.isConnected() }
-    }
+    fun connectedRelays(): Int = relays.count { it.isConnected() }
 
-    fun getRelay(url: String): Relay? {
-        return relays.firstOrNull { it.url == url }
-    }
+    fun getRelay(url: String): Relay? = relays.firstOrNull { it.url == url }
 
-    fun getRelays(url: String): List<Relay> {
-        return relays.filter { it.url == url }
-    }
+    fun getRelays(url: String): List<Relay> = relays.filter { it.url == url }
 
     fun getAll() = relays
 

@@ -24,9 +24,12 @@ import org.czeal.rfc3986.URIReference
 
 class RelayUrlFormatter {
     companion object {
-        fun displayUrl(url: String): String {
-            return url.trim().removePrefix("wss://").removePrefix("ws://").removeSuffix("/")
-        }
+        fun displayUrl(url: String): String =
+            url
+                .trim()
+                .removePrefix("wss://")
+                .removePrefix("ws://")
+                .removeSuffix("/")
 
         fun normalize(url: String): String {
             val newUrl =
@@ -49,12 +52,11 @@ class RelayUrlFormatter {
             }
         }
 
-        fun getHttpsUrl(dirtyUrl: String): String {
-            return if (dirtyUrl.contains("://")) {
+        fun getHttpsUrl(dirtyUrl: String): String =
+            if (dirtyUrl.contains("://")) {
                 dirtyUrl.replace("wss://", "https://").replace("ws://", "http://")
             } else {
                 "https://$dirtyUrl"
             }
-        }
     }
 }

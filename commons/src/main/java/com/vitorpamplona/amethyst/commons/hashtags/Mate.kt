@@ -232,8 +232,7 @@ public val CustomHashTagIcons.Mate: ImageVector
                     curveToRelative(-2.036f, -1.667f, -3.397f, -3.386f, -4.315f, -3.471f)
                     close()
                 }
-            }
-                .build()
+            }.build()
         return customHashTagIconsMate!!
     }
 

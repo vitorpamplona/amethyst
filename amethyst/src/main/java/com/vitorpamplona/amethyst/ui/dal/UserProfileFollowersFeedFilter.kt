@@ -24,16 +24,16 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 
-class UserProfileFollowersFeedFilter(val user: User, val account: Account) : FeedFilter<User>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + user.pubkeyHex
-    }
+class UserProfileFollowersFeedFilter(
+    val user: User,
+    val account: Account,
+) : FeedFilter<User>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + user.pubkeyHex
 
-    override fun feed(): List<User> {
-        return LocalCache.users.filter { _, it ->
+    override fun feed(): List<User> =
+        LocalCache.users.filter { _, it ->
             it.isFollowing(user) && !account.isHidden(it)
         }
-    }
 
     override fun limit() = 400
 }

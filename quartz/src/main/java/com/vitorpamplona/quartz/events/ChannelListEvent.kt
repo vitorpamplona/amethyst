@@ -62,9 +62,7 @@ class ChannelListEvent(
         const val FIXED_D_TAG = ""
         const val ALT = "Public Chat List"
 
-        fun blockListFor(pubKeyHex: HexKey): String {
-            return "$KIND:$pubKeyHex:"
-        }
+        fun blockListFor(pubKeyHex: HexKey): String = "$KIND:$pubKeyHex:"
 
         fun createListWithTag(
             key: String,
@@ -101,9 +99,7 @@ class ChannelListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (ChannelListEvent) -> Unit,
-        ) {
-            return createListWithTag("e", eventId, isPrivate, signer, createdAt, onReady)
-        }
+        ) = createListWithTag("e", eventId, isPrivate, signer, createdAt, onReady)
 
         fun addEvents(
             earlierVersion: ChannelListEvent,
@@ -152,9 +148,7 @@ class ChannelListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (ChannelListEvent) -> Unit,
-        ) {
-            return addTag(earlierVersion, "e", event, isPrivate, signer, createdAt, onReady)
-        }
+        ) = addTag(earlierVersion, "e", event, isPrivate, signer, createdAt, onReady)
 
         fun addTag(
             earlierVersion: ChannelListEvent,
@@ -202,9 +196,7 @@ class ChannelListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (ChannelListEvent) -> Unit,
-        ) {
-            return removeTag(earlierVersion, "e", event, isPrivate, signer, createdAt, onReady)
-        }
+        ) = removeTag(earlierVersion, "e", event, isPrivate, signer, createdAt, onReady)
 
         fun removeTag(
             earlierVersion: ChannelListEvent,

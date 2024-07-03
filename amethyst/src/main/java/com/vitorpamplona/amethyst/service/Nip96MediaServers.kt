@@ -38,7 +38,10 @@ object Nip96MediaServers {
             ServerName("Void.cat", "https://void.cat"),
         )
 
-    data class ServerName(val name: String, val baseUrl: String)
+    data class ServerName(
+        val name: String,
+        val baseUrl: String,
+    )
 
     val cache: MutableMap<String, Nip96Retriever.ServerInfo> = mutableMapOf()
 
@@ -83,7 +86,8 @@ class Nip96Retriever {
         checkNotInMainThread()
 
         val request: Request =
-            Request.Builder()
+            Request
+                .Builder()
                 .header("Accept", "application/nostr+json")
                 .url(baseUrl.removeSuffix("/") + "/.well-known/nostr/nip96.json")
                 .build()

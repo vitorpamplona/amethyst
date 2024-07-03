@@ -54,7 +54,5 @@ class KeyPair(
         }
     }
 
-    override fun toString(): String {
-        return "KeyPair(privateKey=${privKey?.toHexKey()}, publicKey=${pubKey.toHexKey()}"
-    }
+    override fun toString(): String = "KeyPair(privateKey=${privKey?.toHexKey()}, publicKey=${pubKey.toHexKey()}"
 }

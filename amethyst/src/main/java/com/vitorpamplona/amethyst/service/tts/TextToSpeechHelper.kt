@@ -28,150 +28,152 @@ import androidx.lifecycle.LifecycleOwner
 import java.lang.ref.WeakReference
 import java.util.Locale
 
-class TextToSpeechHelper private constructor(private val context: WeakReference<Context>) :
-    LifecycleEventObserver {
-        private val appContext
-            get() = context.get()!!.applicationContext
+class TextToSpeechHelper private constructor(
+    private val context: WeakReference<Context>,
+) : LifecycleEventObserver {
+    private val appContext
+        get() = context.get()!!.applicationContext
 
-        private var message: String? = null
+    private var message: String? = null
 
-        private var ttsEngine: TextToSpeechEngine? = null
+    private var ttsEngine: TextToSpeechEngine? = null
 
-        private var onStart: (() -> Unit)? = null
+    private var onStart: (() -> Unit)? = null
 
-        private var onDoneListener: (() -> Unit)? = null
+    private var onDoneListener: (() -> Unit)? = null
 
-        private var onErrorListener: ((String) -> Unit)? = null
+    private var onErrorListener: ((String) -> Unit)? = null
 
-        private var onHighlightListener: ((Pair<Int, Int>) -> Unit)? = null
+    private var onHighlightListener: ((Pair<Int, Int>) -> Unit)? = null
 
-        private var customActionForDestroy: (() -> Unit)? = null
+    private var customActionForDestroy: (() -> Unit)? = null
 
-        init {
-            Log.d("Init", "Init TTS")
+    init {
+        Log.d("Init", "Init TTS")
+        initTTS()
+    }
+
+    fun registerLifecycle(owner: LifecycleOwner): TextToSpeechHelper {
+        owner.lifecycle.addObserver(this)
+        return this
+    }
+
+    private fun initTTS() =
+        context.get()?.run {
+            ttsEngine =
+                TextToSpeechEngine
+                    .getInstance()
+                    .setOnCompletionListener { onDoneListener?.invoke() }
+                    .setOnErrorListener { onErrorListener?.invoke(it) }
+                    .setOnStartListener { onStart?.invoke() }
+        }
+
+    fun speak(message: String): TextToSpeechHelper {
+        if (ttsEngine == null) {
             initTTS()
         }
+        this.message = message
 
-        fun registerLifecycle(owner: LifecycleOwner): TextToSpeechHelper {
-            owner.lifecycle.addObserver(this)
-            return this
+        ttsEngine?.initTTS(
+            appContext,
+            message,
+        )
+        return this
+    }
+
+    /**
+     * This method will highlight the text in the textView
+     *
+     * @exception Exception("Message can't be null for highlighting !! Call speak() first")
+     */
+    fun highlight(): TextToSpeechHelper {
+        if (message == null) {
+            throw Exception("Message can't be null for highlighting !! Call speak() first")
         }
+        ttsEngine?.setHighlightedMessage(message!!)
+        ttsEngine?.setOnHighlightListener { i, i2 -> onHighlightListener?.invoke(Pair(i, i2)) }
+        return this
+    }
 
-        private fun initTTS() =
-            context.get()?.run {
-                ttsEngine =
-                    TextToSpeechEngine.getInstance()
-                        .setOnCompletionListener { onDoneListener?.invoke() }
-                        .setOnErrorListener { onErrorListener?.invoke(it) }
-                        .setOnStartListener { onStart?.invoke() }
-            }
+    fun removeHighlight(): TextToSpeechHelper {
+        message = null
+        onHighlightListener = null
+        return this
+    }
 
-        fun speak(message: String): TextToSpeechHelper {
-            if (ttsEngine == null) {
-                initTTS()
-            }
-            this.message = message
+    fun destroy(action: (() -> Unit) = {}) {
+        ttsEngine?.destroy()
+        ttsEngine = null
+        action.invoke()
+        instance = null
+    }
 
-            ttsEngine?.initTTS(
-                appContext,
-                message,
-            )
-            return this
-        }
+    fun onStart(onStartListener: () -> Unit): TextToSpeechHelper {
+        this.onStart = onStartListener
+        return this
+    }
 
-        /**
-         * This method will highlight the text in the textView
-         *
-         * @exception Exception("Message can't be null for highlighting !! Call speak() first")
-         */
-        fun highlight(): TextToSpeechHelper {
-            if (message == null) {
-                throw Exception("Message can't be null for highlighting !! Call speak() first")
-            }
-            ttsEngine?.setHighlightedMessage(message!!)
-            ttsEngine?.setOnHighlightListener { i, i2 -> onHighlightListener?.invoke(Pair(i, i2)) }
-            return this
-        }
+    fun onDone(onCompleteListener: () -> Unit): TextToSpeechHelper {
+        this.onDoneListener = onCompleteListener
+        return this
+    }
 
-        fun removeHighlight(): TextToSpeechHelper {
-            message = null
-            onHighlightListener = null
-            return this
-        }
+    fun onError(onErrorListener: (String) -> Unit): TextToSpeechHelper {
+        this.onErrorListener = onErrorListener
+        return this
+    }
 
-        fun destroy(action: (() -> Unit) = {}) {
-            ttsEngine?.destroy()
-            ttsEngine = null
-            action.invoke()
-            instance = null
-        }
+    fun onHighlight(onHighlightListener: (Pair<Int, Int>) -> Unit): TextToSpeechHelper {
+        this.onHighlightListener = onHighlightListener
+        return this
+    }
 
-        fun onStart(onStartListener: () -> Unit): TextToSpeechHelper {
-            this.onStart = onStartListener
-            return this
-        }
+    fun setCustomActionForDestroy(action: () -> Unit): TextToSpeechHelper {
+        customActionForDestroy = action
+        return this
+    }
 
-        fun onDone(onCompleteListener: () -> Unit): TextToSpeechHelper {
-            this.onDoneListener = onCompleteListener
-            return this
-        }
+    fun setLanguage(locale: Locale): TextToSpeechHelper {
+        ttsEngine?.setLanguage(locale)
+        return this
+    }
 
-        fun onError(onErrorListener: (String) -> Unit): TextToSpeechHelper {
-            this.onErrorListener = onErrorListener
-            return this
-        }
+    fun setPitchAndSpeed(
+        pitch: Float = DEF_SPEECH_AND_PITCH,
+        speed: Float = DEF_SPEECH_AND_PITCH,
+    ): TextToSpeechHelper {
+        ttsEngine?.setPitchAndSpeed(pitch, speed)
+        return this
+    }
 
-        fun onHighlight(onHighlightListener: (Pair<Int, Int>) -> Unit): TextToSpeechHelper {
-            this.onHighlightListener = onHighlightListener
-            return this
-        }
+    fun resetPitchAndSpeed(): TextToSpeechHelper {
+        ttsEngine?.resetPitchAndSpeed()
+        return this
+    }
 
-        fun setCustomActionForDestroy(action: () -> Unit): TextToSpeechHelper {
-            customActionForDestroy = action
-            return this
-        }
+    companion object {
+        private var instance: TextToSpeechHelper? = null
 
-        fun setLanguage(locale: Locale): TextToSpeechHelper {
-            ttsEngine?.setLanguage(locale)
-            return this
-        }
-
-        fun setPitchAndSpeed(
-            pitch: Float = DEF_SPEECH_AND_PITCH,
-            speed: Float = DEF_SPEECH_AND_PITCH,
-        ): TextToSpeechHelper {
-            ttsEngine?.setPitchAndSpeed(pitch, speed)
-            return this
-        }
-
-        fun resetPitchAndSpeed(): TextToSpeechHelper {
-            ttsEngine?.resetPitchAndSpeed()
-            return this
-        }
-
-        companion object {
-            private var instance: TextToSpeechHelper? = null
-
-            fun getInstance(context: Context): TextToSpeechHelper {
-                synchronized(TextToSpeechHelper::class.java) {
-                    if (instance == null) {
-                        instance = TextToSpeechHelper(WeakReference(context))
-                    }
-                    return instance!!
+        fun getInstance(context: Context): TextToSpeechHelper {
+            synchronized(TextToSpeechHelper::class.java) {
+                if (instance == null) {
+                    instance = TextToSpeechHelper(WeakReference(context))
                 }
-            }
-        }
-
-        override fun onStateChanged(
-            source: LifecycleOwner,
-            event: Lifecycle.Event,
-        ) {
-            if (
-                event == Lifecycle.Event.ON_DESTROY ||
-                event == Lifecycle.Event.ON_STOP ||
-                event == Lifecycle.Event.ON_PAUSE
-            ) {
-                destroy { customActionForDestroy?.invoke() }
+                return instance!!
             }
         }
     }
+
+    override fun onStateChanged(
+        source: LifecycleOwner,
+        event: Lifecycle.Event,
+    ) {
+        if (
+            event == Lifecycle.Event.ON_DESTROY ||
+            event == Lifecycle.Event.ON_STOP ||
+            event == Lifecycle.Event.ON_PAUSE
+        ) {
+            destroy { customActionForDestroy?.invoke() }
+        }
+    }
+}

@@ -33,11 +33,11 @@ class Bip39KeyPathTest {
             .derive(Hardener.hardened(44L))
             .derive(Hardener.hardened(1237L))
 
-    private fun nip6Path(account: Long): KeyPath {
-        return nip6Base.derive(Hardener.hardened(account))
+    private fun nip6Path(account: Long): KeyPath =
+        nip6Base
+            .derive(Hardener.hardened(account))
             .derive(0L)
             .derive(0L)
-    }
 
     @Test
     fun testKeyPath() {

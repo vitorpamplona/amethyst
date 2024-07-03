@@ -22,9 +22,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 
-fun String.isUTF16Char(pos: Int): Boolean {
-    return Character.charCount(this.codePointAt(pos)) == 2
-}
+fun String.isUTF16Char(pos: Int): Boolean = Character.charCount(this.codePointAt(pos)) == 2
 
 fun String.firstFullCharOld(): String {
     return when (this.length) {

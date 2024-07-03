@@ -20,24 +20,20 @@
  */
 package com.vitorpamplona.quartz.crypto.nip06
 
-class KeyPath(val path: List<Long>) {
+class KeyPath(
+    val path: List<Long>,
+) {
     constructor(path: String) : this(computePath(path))
 
     val lastChildNumber: Long get() = if (path.isEmpty()) 0L else path.last()
 
     fun derive(number: Long): KeyPath = KeyPath(path + listOf(number))
 
-    fun append(index: Long): KeyPath {
-        return KeyPath(path + listOf(index))
-    }
+    fun append(index: Long): KeyPath = KeyPath(path + listOf(index))
 
-    fun append(indexes: List<Long>): KeyPath {
-        return KeyPath(path + indexes)
-    }
+    fun append(indexes: List<Long>): KeyPath = KeyPath(path + indexes)
 
-    fun append(that: KeyPath): KeyPath {
-        return KeyPath(path + that.path)
-    }
+    fun append(that: KeyPath): KeyPath = KeyPath(path + that.path)
 
     override fun toString(): String = asString('\'')
 

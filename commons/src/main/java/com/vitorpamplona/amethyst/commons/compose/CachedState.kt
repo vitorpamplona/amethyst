@@ -29,22 +29,20 @@ import androidx.compose.runtime.produceState
 fun <K, V> produceCachedState(
     cache: CachedState<K, V>,
     key: K,
-): State<V?> {
-    return produceState(initialValue = cache.cached(key), key1 = key) {
+): State<V?> =
+    produceState(initialValue = cache.cached(key), key1 = key) {
         value = cache.update(key)
     }
-}
 
 @Composable
 fun <K, V> produceCachedState(
     cache: CachedState<K, V>,
     key: String,
     updateValue: K,
-): State<V?> {
-    return produceState(initialValue = cache.cached(updateValue), key1 = key) {
+): State<V?> =
+    produceState(initialValue = cache.cached(updateValue), key1 = key) {
         value = cache.update(updateValue)
     }
-}
 
 interface CachedState<K, V> {
     fun cached(k: K): V?
@@ -52,12 +50,12 @@ interface CachedState<K, V> {
     suspend fun update(k: K): V?
 }
 
-abstract class GenericBaseCache<K, V>(capacity: Int) : CachedState<K, V> {
+abstract class GenericBaseCache<K, V>(
+    capacity: Int,
+) : CachedState<K, V> {
     private val cache = LruCache<K, V>(capacity)
 
-    override fun cached(k: K): V? {
-        return cache[k]
-    }
+    override fun cached(k: K): V? = cache[k]
 
     override suspend fun update(k: K): V? {
         cache[k]?.let { return it }

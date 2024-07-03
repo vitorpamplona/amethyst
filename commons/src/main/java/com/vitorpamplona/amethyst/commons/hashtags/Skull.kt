@@ -548,8 +548,7 @@ public val CustomHashTagIcons.Skull: ImageVector
                     curveToRelative(2.294f, -5.109f, 2.624f, -11.389f, 1.046f, -16.732f)
                     close()
                 }
-            }
-                .build()
+            }.build()
         return customHashTagIconsSkull!!
     }
 
