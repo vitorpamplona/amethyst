@@ -74,7 +74,9 @@ class UserProfileNewThreadFeedFilter(
                     it.event is HighlightEvent ||
                     it.event is AudioTrackEvent ||
                     it.event is AudioHeaderEvent
-            ) && it.isNewThread() && account.isAcceptable(it)
+            ) &&
+            it.isNewThread() &&
+            account.isAcceptable(it)
 
     override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 
