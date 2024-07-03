@@ -25,10 +25,11 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 
-class UserProfileGalleryFeedFilter(val user: User, val account: Account) : FeedFilter<Note>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-Gallery-" + user.pubkeyHex
-    }
+class UserProfileGalleryFeedFilter(
+    val user: User,
+    val account: Account,
+) : FeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-Gallery-" + user.pubkeyHex
 
     override fun feed(): List<Note> {
         val notes =
@@ -45,8 +46,7 @@ class UserProfileGalleryFeedFilter(val user: User, val account: Account) : FeedF
                         // )!!
                         it.url,
                     )
-                }
-                ?.toSet()
+                }?.toSet()
                 ?: emptySet()
 
         var finalnotes = setOf<Note>()

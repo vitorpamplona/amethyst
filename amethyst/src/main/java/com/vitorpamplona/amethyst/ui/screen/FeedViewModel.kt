@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileAppRecommendationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.UserProfileGalleryFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
@@ -245,6 +246,20 @@ class NostrUserProfileReportFeedViewModel(
         val user: User,
     ) : ViewModelProvider.Factory {
         override fun <NostrUserProfileReportFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileReportFeedViewModel>): NostrUserProfileReportFeedViewModel = NostrUserProfileReportFeedViewModel(user) as NostrUserProfileReportFeedViewModel
+    }
+}
+
+class NostrUserProfileGalleryFeedViewModel(
+    val user: User,
+    val account: Account,
+) : FeedViewModel(UserProfileGalleryFeedFilter(user, account)) {
+    class Factory(
+        val user: User,
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileGalleryFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileGalleryFeedViewModel>): NostrUserProfileGalleryFeedViewModel =
+            NostrUserProfileGalleryFeedViewModel(user, account)
+                as NostrUserProfileGalleryFeedViewModel
     }
 }
 

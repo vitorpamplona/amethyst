@@ -145,7 +145,7 @@ interface EventInterface {
 
     fun firstTaggedK(): Int?
 
-    fun taggedGalleryEntries(): List<GalleryUrl>
+    fun taggedGalleryEntries(): List<GalleryListEvent.GalleryUrl>
 
     fun taggedEmojis(): List<EmojiUrl>
 

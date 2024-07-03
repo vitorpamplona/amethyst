@@ -451,8 +451,7 @@ private fun RenderSurface(
                                         }
                                     }
                                 },
-                            )
-                            .fillMaxHeight()
+                            ).fillMaxHeight()
                     },
             ) {
                 RenderScreen(

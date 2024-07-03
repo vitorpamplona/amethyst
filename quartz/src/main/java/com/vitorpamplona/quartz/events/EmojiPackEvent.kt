@@ -73,21 +73,3 @@ data class EmojiUrl(
         }
     }
 }
-
-@Immutable
-data class GalleryUrl(val id: String, val url: String) {
-    fun encode(): String {
-        return ":$id:$url"
-    }
-
-    companion object {
-        fun decode(encodedGallerySetup: String): EmojiUrl? {
-            val emojiParts = encodedGallerySetup.split(":", limit = 3)
-            return if (emojiParts.size > 2) {
-                EmojiUrl(emojiParts[1], emojiParts[2])
-            } else {
-                null
-            }
-        }
-    }
-}
