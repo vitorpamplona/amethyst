@@ -8,11 +8,11 @@ plugins {
 
 android {
     namespace 'com.vitorpamplona.amethyst.benchmark'
-    compileSdk 34
+    compileSdk libs.versions.android.compileSdk.get().toInteger()
 
     defaultConfig {
-        minSdk 26
-        targetSdk 34
+        minSdk libs.versions.android.minSdk.get().toInteger()
+        targetSdk libs.versions.android.targetSdk.get().toInteger()
 
         // Enable measuring on an emulator, or devices with low battery
         testInstrumentationRunner 'androidx.benchmark.junit4.AndroidBenchmarkRunner'
