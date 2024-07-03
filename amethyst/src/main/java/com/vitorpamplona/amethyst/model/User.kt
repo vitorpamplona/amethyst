@@ -528,7 +528,8 @@ class UserLiveSet(
             relays.hasObservers() ||
             relayInfo.hasObservers() ||
             zaps.hasObservers() ||
-            bookmarks.hasObservers() || gallery.hasObservers() ||
+            bookmarks.hasObservers() ||
+            gallery.hasObservers() ||
             statuses.hasObservers() ||
             profilePictureChanges.hasObservers() ||
             nip05Changes.hasObservers() ||
