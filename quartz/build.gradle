@@ -62,7 +62,7 @@ dependencies {
     implementation 'net.java.dev.jna:jna:5.14.0@aar'
 
     // Performant Parser of JSONs into Events
-    api(libs.jackson.module.kotlin)
+    api libs.jackson.module.kotlin
 
     // immutable collections to avoid recomposition
     api libs.kotlinx.collections.immutable
