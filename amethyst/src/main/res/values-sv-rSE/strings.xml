@@ -36,6 +36,7 @@
     <string name="report_impersonation">Rapportera identitetsstöld</string>
     <string name="report_explicit_content">Rapportera explicit innehåll</string>
     <string name="report_illegal_behaviour">Rapportera olagligt beteende</string>
+    <string name="report_malware">Anmäl skadlig programvara</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Logga in med en privat nyckel för att kunna svara</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Logga in med en privat nyckel för att kunna boosta inlägg</string>
     <string name="login_with_a_private_key_to_like_posts">Logga in med en privat nyckel för att gilla inlägg</string>
@@ -265,6 +266,7 @@
     <string name="report_dialog_impersonation">Skadlig identitetsstöld</string>
     <string name="report_dialog_nudity">Nakenhet eller grafiskt innehåll</string>
     <string name="report_dialog_illegal">Olagligt beteende</string>
+    <string name="report_dialog_malware">Skadlig kod</string>
     <string name="report_dialog_blocking_a_user">Blockering av en användare kommer att dölja deras innehåll i din app. Dina anteckningar är fortfarande offentliga, inklusive för personer du blockerar. Blockerade användare listas på skärmen Säkerhetsfilter.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Blockera & Göm användare]]></string>
     <string name="report_dialog_report_btn">Rapportera missbruk</string>
@@ -337,6 +339,14 @@
     <string name="zap_type_nonzap_explainer">Inga spår i Nostr, bara i Lightning</string>
     <string name="file_server">Fil Server</string>
     <string name="zap_forward_lnAddress">LnAdress eller @Användare</string>
+    <string name="media_servers">Mediaservrar</string>
+    <string name="set_preferred_media_servers">Ställ in dina önskade mediauppladdningsservrar.</string>
+    <string name="no_media_server_message">Du har inga anpassade mediaservrar. Du kan använda Amethysts lista, eller lägga till en under ↓</string>
+    <string name="built_in_media_servers_title">Inbyggda mediaservrar</string>
+    <string name="built_in_servers_description">Amethysts standardlista. Du kan lägga till dem individuellt eller lägga till listan.</string>
+    <string name="use_default_servers">Använd standardlistan</string>
+    <string name="add_media_server">Lägg till mediaserver</string>
+    <string name="delete_media_server">Radera mediaserver</string>
     <string name="upload_server_relays_nip95">Dina Reläer (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Filer är värd för dina reläer. Nytt NIP: kontrollera om de stöder</string>
     <string name="connect_via_tor_short">Tor/Orbot Inställningar</string>
@@ -782,4 +792,5 @@
     <string name="http_status_507">Otillräckligt lagringsutrymme - Servern har inte tillräckligt med lagringsutrymme för att bearbeta begäran framgångsrikt</string>
     <string name="http_status_508">Loop upptäckt - Servern upptäcker en oändlig loop medan den bearbetar begäran</string>
     <string name="http_status_511">Nätverksautentisering krävs - Klienten måste autentiseras för att få tillgång till nätverket</string>
+    <string name="add_a_nip96_server">Lägg till en NIP-96 Server</string>
 </resources>
