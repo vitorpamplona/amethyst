@@ -38,6 +38,7 @@
     <string name="report_impersonation">Report Impersonation</string>
     <string name="report_explicit_content">Report Explicit Content</string>
     <string name="report_illegal_behaviour">Report Illegal Behaviour</string>
+    <string name="report_malware">Report Malware</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">You are using a public key and public keys are read-only. Login with a Private key to be able to reply</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">You are using a public key and public keys are read-only. Login with a Private key to be able to boost posts</string>
     <string name="login_with_a_private_key_to_like_posts">You are using a public key and public keys are read-only. Login with a Private key to like posts</string>
@@ -287,6 +288,7 @@
     <string name="report_dialog_impersonation">Malicious impersonation</string>
     <string name="report_dialog_nudity">Nudity or graphic content</string>
     <string name="report_dialog_illegal">Illegal Behavior</string>
+    <string name="report_dialog_malware">Malware</string>
     <string name="report_dialog_blocking_a_user">Blocking a user will hide their content in your app. Your notes are still publicly viewable, including to people you block. Blocked users are listed on the Security Filters screen.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Block & Hide User]]></string>
     <string name="report_dialog_report_btn">Report Abuse</string>

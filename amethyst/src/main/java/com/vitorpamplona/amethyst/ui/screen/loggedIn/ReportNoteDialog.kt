@@ -77,12 +77,10 @@ fun ReportNoteDialog(
         listOf(
             Pair(ReportEvent.ReportType.SPAM, stringRes(R.string.report_dialog_spam)),
             Pair(ReportEvent.ReportType.PROFANITY, stringRes(R.string.report_dialog_profanity)),
-            Pair(
-                ReportEvent.ReportType.IMPERSONATION,
-                stringRes(R.string.report_dialog_impersonation),
-            ),
+            Pair(ReportEvent.ReportType.IMPERSONATION, stringRes(R.string.report_dialog_impersonation)),
             Pair(ReportEvent.ReportType.NUDITY, stringRes(R.string.report_dialog_nudity)),
             Pair(ReportEvent.ReportType.ILLEGAL, stringRes(R.string.report_dialog_illegal)),
+            Pair(ReportEvent.ReportType.MALWARE, stringRes(R.string.report_malware)),
         )
 
     val reasonOptions = remember { reportTypes.map { TitleExplainer(it.second) }.toImmutableList() }

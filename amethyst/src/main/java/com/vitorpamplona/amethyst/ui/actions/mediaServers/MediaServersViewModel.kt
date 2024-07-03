@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
@@ -47,12 +48,17 @@ class MediaServersViewModel : ViewModel() {
         isModified = false
         _fileServers.update {
             val obtainedFileServers = obtainFileServers() ?: emptyList()
-            obtainedFileServers.map { serverUrl ->
-                Nip96MediaServers
-                    .ServerName(
-                        URIReference.parse(serverUrl).host.value,
-                        serverUrl,
-                    )
+            obtainedFileServers.mapNotNull { serverUrl ->
+                try {
+                    Nip96MediaServers
+                        .ServerName(
+                            URIReference.parse(serverUrl).host.value,
+                            serverUrl,
+                        )
+                } catch (e: Exception) {
+                    Log.d("MediaServersViewModel", "Invalid URL in NIP-96 server list")
+                    null
+                }
             }
         }
     }
