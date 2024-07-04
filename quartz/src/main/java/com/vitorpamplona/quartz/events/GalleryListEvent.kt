@@ -38,7 +38,7 @@ class GalleryListEvent(
     companion object {
         const val KIND = 10011
         const val ALT = "Profile Gallery"
-        const val GALLERYTAGNAME = "gallery"
+        const val GALLERYTAGNAME = "G"
 
         fun addEvent(
             earlierVersion: GalleryListEvent?,
