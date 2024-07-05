@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import android.util.Base64
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,8 +31,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.Icon
@@ -115,6 +112,7 @@ import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.withContext
 
 fun isMarkdown(content: String): Boolean =
     content.startsWith("> ") ||
@@ -454,13 +452,17 @@ private fun RenderWordWithPreview(
 @Composable
 fun ImageFromBase64(base64String: String) {
     val context = LocalContext.current
-
-    var base64String2 = base64String.removePrefix("data:image/jpeg;base64,")
-    RichTextParser.imageExtensions.forEach {
-        base64String2 = base64String2.removePrefix("data:image/$it;base64,")
+    var imageBytes by remember { mutableStateOf<ByteArray?>(null) }
+    LaunchedEffect(base64String) {
+        imageBytes =
+            withContext(Dispatchers.IO) {
+                var base64String2 = base64String.removePrefix("data:image/jpeg;base64,")
+                RichTextParser.imageExtensions.forEach {
+                    base64String2 = base64String2.removePrefix("data:image/$it;base64,")
+                }
+                runCatching { Base64.decode(base64String2, Base64.DEFAULT) }.getOrNull()
+            }
     }
-
-    val imageBytes = runCatching { Base64.decode(base64String2, Base64.DEFAULT) }.getOrNull()
 
     if (imageBytes == null) {
         BlankNote()
@@ -480,7 +482,6 @@ fun ImageFromBase64(base64String: String) {
                 is AsyncImagePainter.State.Success -> {
                     SubcomposeAsyncImageContent()
                 }
-
                 else -> BlankNote()
             }
         }
