@@ -24,47 +24,65 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.Relay
+import com.vitorpamplona.quartz.events.MuteListEvent
+import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 
 class UserProfileGalleryFeedFilter(
     val user: User,
     val account: Account,
-) : FeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-Gallery-" + user.pubkeyHex
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.defaultStoriesFollowList.value
+
+    override fun showHiddenKey(): Boolean =
+        account.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+            account.defaultStoriesFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
 
     override fun feed(): List<Note> {
+        val params = buildFilterParams(account)
+
         val notes =
-            user.latestGalleryList
-                ?.taggedGalleryEntries()
-                ?.map {
-                    Triple(
-                        // (
-                        //   if (ATag.isATag(it.id)) {
-                        //        ATag.parse(it.id, null)?.let { it1 -> LocalCache.getOrCreateAddressableNote(it1) }
-                        //    } else {
-                        LocalCache.getOrCreateNote(it.id),
-                        //    }
-                        // )!!
-                        it.url,
-                        it.relay,
-                    )
-                }?.toSet()
-                ?: emptySet()
+            LocalCache.notes.filterIntoSet { _, it ->
+                acceptableEvent(it, params, user)
+            }
 
         var finalnotes = setOf<Note>()
-        for (pair in notes) {
-            pair.first.headerImage = pair.second
-            if (pair.third != null) {
-                val relay = Relay(pair.third!!, true, false, setOf(FeedType.GLOBAL))
-                pair.first.createdAt()?.let { user.addRelayBeingUsed(relay, it) }
-                pair.first.addRelay(relay)
-            }
-            finalnotes = finalnotes + pair.first
+        for (item in notes) {
+            item.associatedNote = (item.event as ProfileGalleryEntryEvent).event()?.let { LocalCache.getOrCreateNote(it) }
+            finalnotes = finalnotes + item
         }
-        println(finalnotes)
 
-        return (finalnotes)
-            .filter { account.isAcceptable(it) }
+        return sort(finalnotes)
     }
+
+    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
+
+    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
+        val params = buildFilterParams(account)
+
+        return collection.filterTo(HashSet()) { acceptableEvent(it, params, user) }
+    }
+
+    fun acceptableEvent(
+        it: Note,
+        params: FilterByListParams,
+        user: User,
+    ): Boolean {
+        val noteEvent = it.event
+        return (
+            (it.event?.pubKey() == user.pubkeyHex && noteEvent is ProfileGalleryEntryEvent) && noteEvent.hasUrl() && noteEvent.hasEvent() // && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET))
+        ) &&
+            params.match(noteEvent) &&
+            account.isAcceptable(it)
+    }
+
+    fun buildFilterParams(account: Account): FilterByListParams =
+        FilterByListParams.create(
+            userHex = account.userProfile().pubkeyHex,
+            selectedListName = account.defaultStoriesFollowList.value,
+            followLists = account.liveStoriesFollowLists.value,
+            hiddenUsers = account.flowHiddenUsers.value,
+        )
+
+    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 }

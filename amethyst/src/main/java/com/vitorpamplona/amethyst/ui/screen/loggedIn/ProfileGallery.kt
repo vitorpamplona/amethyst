@@ -33,7 +33,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -74,7 +73,7 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
-import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 
 @Composable
 fun RenderGalleryFeed(
@@ -134,27 +133,45 @@ private fun GalleryFeedLoaded(
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
             val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
 
-            Row(defaultModifier) {
-                GalleryCardCompose(
-                    baseNote = item,
-                    routeForLastRead = routeForLastRead,
-                    modifier = Modifier,
-                    forceEventKind = forceEventKind,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
+            if (item.associatedNote != null) {
+                if (item.associatedNote!!.event != null) {
+                    if ((item.event as ProfileGalleryEntryEvent).hasUrl() &&
+                        (item.event as ProfileGalleryEntryEvent).hasEvent()
+                    ) {
+                        val image = (item.event as ProfileGalleryEntryEvent).url()
 
-            HorizontalDivider(
-                thickness = DividerThickness,
-            )
+                        Row(defaultModifier) {
+                            if (image != null) {
+                                GalleryCardCompose(
+                                    galleryNote = item,
+                                    image = image,
+                                    baseNote = item.associatedNote!!,
+                                    routeForLastRead = routeForLastRead,
+                                    modifier = Modifier,
+                                    forceEventKind = forceEventKind,
+                                    accountViewModel = accountViewModel,
+                                    nav = nav,
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(
+                            thickness = DividerThickness,
+                        )
+                    } else {
+                        accountViewModel.delete(item)
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
 fun GalleryCardCompose(
+    galleryNote: Note,
     baseNote: Note,
+    image: String,
     routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
@@ -172,8 +189,11 @@ fun GalleryCardCompose(
             accountViewModel = accountViewModel,
             nav = nav,
         ) { canPreview ->
+
             GalleryCard(
+                galleryNote = galleryNote,
                 baseNote = baseNote,
+                image = image,
                 modifier = modifier,
                 parentBackgroundColor = parentBackgroundColor,
                 accountViewModel = accountViewModel,
@@ -185,16 +205,19 @@ fun GalleryCardCompose(
 
 @Composable
 fun GalleryCard(
+    galleryNote: Note,
     baseNote: Note,
+    image: String,
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     // baseNote.event?.let { Text(text = it.pubKey()) }
-    LongPressToQuickActionGallery(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+    LongPressToQuickActionGallery(baseNote = galleryNote, accountViewModel = accountViewModel) { showPopup ->
         CheckNewAndRenderChannelCard(
             baseNote,
+            image,
             modifier,
             parentBackgroundColor,
             accountViewModel,
@@ -207,6 +230,7 @@ fun GalleryCard(
 @Composable
 private fun CheckNewAndRenderChannelCard(
     baseNote: Note,
+    image: String,
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
@@ -228,26 +252,14 @@ private fun CheckNewAndRenderChannelCard(
         showPopup = showPopup,
         nav = nav,
     ) {
-        InnerGalleryCardWithReactions(
-            baseNote = baseNote,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        InnerGalleryCardBox(baseNote, image, accountViewModel, nav)
     }
-}
-
-@Composable
-fun InnerGalleryCardWithReactions(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    InnerGalleryCardBox(baseNote, accountViewModel, nav)
 }
 
 @Composable
 fun InnerGalleryCardBox(
     baseNote: Note,
+    image: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -256,7 +268,7 @@ fun InnerGalleryCardBox(
             note = baseNote,
             accountViewModel = accountViewModel,
         ) {
-            RenderGalleryThumb(baseNote, accountViewModel, nav)
+            RenderGalleryThumb(baseNote, image, accountViewModel, nav)
         }
     }
 }
@@ -272,21 +284,19 @@ data class GalleryThumb(
 @Composable
 fun RenderGalleryThumb(
     baseNote: Note,
+    image: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val noteEvent = baseNote.event as? TextNoteEvent ?: return
-
     val card by
         baseNote
             .live()
             .metadata
             .map {
-                val noteEvent = baseNote.event as TextNoteEvent
                 GalleryThumb(
                     id = "",
-                    image = baseNote.headerImage,
-                    title = noteEvent.content(),
+                    image = image,
+                    title = "",
                     // noteEvent?.title(),
                     // price = noteEvent?.price(),
                 )
@@ -294,11 +304,8 @@ fun RenderGalleryThumb(
             .observeAsState(
                 GalleryThumb(
                     id = "",
-                    image = baseNote.headerImage,
-                    title = noteEvent.content(),
-                    // image = noteEvent.image(),
-                    // title = noteEvent.title(),
-                    // price = noteEvent.price(),
+                    image = image,
+                    title = "",
                 ),
             )
 

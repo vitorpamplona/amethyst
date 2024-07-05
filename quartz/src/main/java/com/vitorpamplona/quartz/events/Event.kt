@@ -119,11 +119,6 @@ open class Event(
 
     override fun taggedEvents() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
 
-    override fun taggedGalleryEntries() =
-        tags.filter { it.size > 2 && it[0] == GalleryListEvent.GALLERYTAGNAME }.map {
-            GalleryListEvent.GalleryUrl(it[1], it[2], it.getOrNull(3))
-        }
-
     override fun taggedUrls() = tags.filter { it.size > 1 && it[0] == "r" }.map { it[1] }
 
     override fun firstTagFor(vararg key: String) = tags.firstOrNull { it.size > 1 && it[0] in key }?.let { it[1] }

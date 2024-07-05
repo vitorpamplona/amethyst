@@ -671,11 +671,7 @@ fun DeleteFromGalleryDialog(
         buttonIcon = Icons.Default.Delete,
         buttonText = stringRes(R.string.quick_action_delete_dialog_btn),
         onClickDoOnce = {
-            note.headerImage.let {
-                if (it != null) {
-                    accountViewModel.removefromMediaGallery(note, it)
-                }
-            }
+            accountViewModel.removefromMediaGallery(note)
             onDismiss()
         },
         onDismiss = onDismiss,

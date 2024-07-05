@@ -71,7 +71,6 @@ import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileServersEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.events.GalleryListEvent
 import com.vitorpamplona.quartz.events.GeneralListEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
@@ -92,6 +91,7 @@ import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.Price
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import com.vitorpamplona.quartz.events.ReportEvent
@@ -2204,48 +2204,27 @@ class Account(
         relay: String?,
     ) {
         if (!isWriteable()) return
-
-        GalleryListEvent.addEvent(
-            userProfile().latestGalleryList,
-            idHex,
-            url,
-            relay,
-            signer,
-        ) {
-            Client.send(it)
-            LocalCache.consume(it)
+        ProfileGalleryEntryEvent.create(
+            url = url,
+            eventid = idHex,
+            /*magnetUri = magnetUri,
+            mimeType = headerInfo.mimeType,
+            hash = headerInfo.hash,
+            size = headerInfo.size.toString(),
+            dimensions = headerInfo.dim,
+            blurhash = headerInfo.blurHash,
+            alt = alt,
+            originalHash = originalHash,
+            sensitiveContent = sensitiveContent, */
+            signer = signer,
+        ) { event ->
+            Client.send(event)
+            LocalCache.consume(event, null)
         }
     }
 
-    fun removeFromGallery(
-        note: Note,
-        url: String,
-    ) {
-        if (!isWriteable()) return
-
-        val galleryentries = userProfile().latestGalleryList ?: return
-
-        if (note is AddressableNote) {
-            GalleryListEvent.removeReplaceable(
-                galleryentries,
-                note.address,
-                url,
-                signer,
-            ) {
-                Client.send(it)
-                LocalCache.consume(it)
-            }
-        } else {
-            GalleryListEvent.removeEvent(
-                galleryentries,
-                note.idHex,
-                url,
-                signer,
-            ) {
-                Client.send(it)
-                LocalCache.consume(it)
-            }
-        }
+    fun removeFromGallery(note: Note) {
+        delete(note)
     }
 
     fun addBookmark(

@@ -75,7 +75,6 @@ import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileServersEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.events.GalleryListEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.GitIssueEvent
@@ -104,6 +103,7 @@ import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RecommendRelayEvent
 import com.vitorpamplona.quartz.events.RelaySetEvent
@@ -417,17 +417,6 @@ object LocalCache {
             if (event.dTag() == "bookmark") {
                 user.updateBookmark(event)
             }
-            // Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex} ${oldUser.toBestDisplayName()}")
-        } else {
-            // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()}
-            // ${formattedDateTime(event.createdAt)} > ${formattedDateTime(oldUser.updatedAt)}")
-        }
-    }
-
-    fun consume(event: GalleryListEvent) {
-        val user = getOrCreateUser(event.pubKey)
-        if (user.latestGalleryList == null || event.createdAt > user.latestGalleryList!!.createdAt) {
-            user.updateGallery(event)
             // Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex} ${oldUser.toBestDisplayName()}")
         } else {
             // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()}
@@ -1681,6 +1670,26 @@ object LocalCache {
     }
 
     fun consume(
+        event: ProfileGalleryEntryEvent,
+        relay: Relay?,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(
         event: FileStorageHeaderEvent,
         relay: Relay?,
     ) {
@@ -2535,13 +2544,13 @@ object LocalCache {
                 is DraftEvent -> consume(event, relay)
                 is EmojiPackEvent -> consume(event, relay)
                 is EmojiPackSelectionEvent -> consume(event, relay)
-                is GalleryListEvent -> consume(event)
                 is GenericRepostEvent -> {
                     event.containedPost()?.let { verifyAndConsume(it, relay) }
                     consume(event)
                 }
                 is FhirResourceEvent -> consume(event, relay)
                 is FileHeaderEvent -> consume(event, relay)
+                is ProfileGalleryEntryEvent -> consume(event, relay)
                 is FileServersEvent -> consume(event, relay)
                 is FileStorageEvent -> consume(event, relay)
                 is FileStorageHeaderEvent -> consume(event, relay)

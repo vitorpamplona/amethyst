@@ -40,7 +40,6 @@ import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ContactListEvent
-import com.vitorpamplona.quartz.events.GalleryListEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.ReportEvent
@@ -61,7 +60,6 @@ class User(
     var latestMetadataRelay: String? = null
     var latestContactList: ContactListEvent? = null
     var latestBookmarkList: BookmarkListEvent? = null
-    var latestGalleryList: GalleryListEvent? = null
 
     var reports = mapOf<User, Set<Note>>()
         private set
@@ -123,13 +121,6 @@ class User(
 
         latestBookmarkList = event
         liveSet?.innerBookmarks?.invalidateData()
-    }
-
-    fun updateGallery(event: GalleryListEvent) {
-        if (event.id == latestGalleryList?.id) return
-        print("GALLERY " + event.id())
-        latestGalleryList = event
-        liveSet?.innerGallery?.invalidateData()
     }
 
     fun clearEOSE() {

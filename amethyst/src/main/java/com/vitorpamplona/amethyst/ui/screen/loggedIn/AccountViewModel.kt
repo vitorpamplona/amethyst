@@ -677,11 +677,8 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) { account.addToGallery(hex, url, relay) }
     }
 
-    fun removefromMediaGallery(
-        note: Note,
-        url: String,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) { account.removeFromGallery(note, url) }
+    fun removefromMediaGallery(note: Note) {
+        viewModelScope.launch(Dispatchers.IO) { account.removeFromGallery(note) }
     }
 
     fun addPrivateBookmark(note: Note) {

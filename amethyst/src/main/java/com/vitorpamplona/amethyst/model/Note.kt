@@ -139,7 +139,7 @@ open class Note(
     var relays = listOf<RelayBriefInfoCache.RelayBriefInfo>()
         private set
 
-    var headerImage: String? = null
+    var associatedNote: Note? = null
 
     var lastReactionsDownloadTime: Map<String, EOSETime> = emptyMap()
 
