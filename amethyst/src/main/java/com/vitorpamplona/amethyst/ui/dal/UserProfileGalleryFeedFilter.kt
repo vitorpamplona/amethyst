@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.ammolite.relays.FeedType
+import com.vitorpamplona.ammolite.relays.Relay
 
 class UserProfileGalleryFeedFilter(
     val user: User,
@@ -36,7 +38,7 @@ class UserProfileGalleryFeedFilter(
             user.latestGalleryList
                 ?.taggedGalleryEntries()
                 ?.map {
-                    Pair(
+                    Triple(
                         // (
                         //   if (ATag.isATag(it.id)) {
                         //        ATag.parse(it.id, null)?.let { it1 -> LocalCache.getOrCreateAddressableNote(it1) }
@@ -45,6 +47,7 @@ class UserProfileGalleryFeedFilter(
                         //    }
                         // )!!
                         it.url,
+                        it.relay,
                     )
                 }?.toSet()
                 ?: emptySet()
@@ -52,6 +55,11 @@ class UserProfileGalleryFeedFilter(
         var finalnotes = setOf<Note>()
         for (pair in notes) {
             pair.first.headerImage = pair.second
+            if (pair.third != null) {
+                val relay = Relay(pair.third!!, true, false, setOf(FeedType.GLOBAL))
+                pair.first.createdAt()?.let { user.addRelayBeingUsed(relay, it) }
+                pair.first.addRelay(relay)
+            }
             finalnotes = finalnotes + pair.first
         }
         println(finalnotes)
