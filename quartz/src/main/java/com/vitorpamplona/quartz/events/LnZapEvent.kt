@@ -33,7 +33,8 @@ class LnZapEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : LnZapEventInterface, Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    LnZapEventInterface {
     // This event is also kept in LocalCache (same object)
     @Transient val zapRequest: LnZapRequestEvent?
 
@@ -55,7 +56,11 @@ class LnZapEvent(
 
     override fun zappedPollOption(): Int? =
         try {
-            zapRequest?.tags?.firstOrNull { it.size > 1 && it[0] == POLL_OPTION }?.get(1)?.toInt()
+            zapRequest
+                ?.tags
+                ?.firstOrNull { it.size > 1 && it[0] == POLL_OPTION }
+                ?.get(1)
+                ?.toInt()
         } catch (e: Exception) {
             Log.e("LnZapEvent", "ZappedPollOption failed to parse", e)
             null
@@ -75,9 +80,7 @@ class LnZapEvent(
         }
     }
 
-    override fun content(): String {
-        return content
-    }
+    override fun content(): String = content
 
     fun lnInvoice() = tags.firstOrNull { it.size > 1 && it[0] == "bolt11" }?.get(1)
 
@@ -88,7 +91,7 @@ class LnZapEvent(
         const val ALT = "Zap event"
     }
 
-    enum class ZapType() {
+    enum class ZapType {
         PUBLIC,
         PRIVATE,
         ANONYMOUS,

@@ -21,9 +21,7 @@
 package com.vitorpamplona.amethyst.ui.actions.relays
 
 class PrivateOutboxRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<String>? {
-        return account.getPrivateOutboxRelayList()?.relays()
-    }
+    override fun getRelayList(): List<String>? = account.getPrivateOutboxRelayList()?.relays()
 
     override fun saveRelayList(urlList: List<String>) {
         account.savePrivateOutboxRelayList(urlList)

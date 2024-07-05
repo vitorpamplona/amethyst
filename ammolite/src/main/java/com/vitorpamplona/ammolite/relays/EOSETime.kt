@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.ammolite.relays
 
-class EOSETime(var time: Long) {
-    override fun toString(): String {
-        return time.toString()
-    }
+class EOSETime(
+    var time: Long,
+) {
+    override fun toString(): String = time.toString()
 }

@@ -312,7 +312,6 @@ object BlurHashDecoderOld {
             '|',
             '}',
             '~',
-        )
-            .mapIndexed { i, c -> c to i }
+        ).mapIndexed { i, c -> c to i }
             .toMap()
 }

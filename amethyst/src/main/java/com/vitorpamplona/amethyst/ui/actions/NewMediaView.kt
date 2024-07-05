@@ -49,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -71,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.events.FileServersEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -189,8 +191,25 @@ fun ImageVideoPost(
     postViewModel: NewMediaModel,
     accountViewModel: AccountViewModel,
 ) {
+    val listOfNip96ServersNote =
+        accountViewModel.account
+            .getFileServersNote()
+            .live()
+            .metadata
+            .observeAsState()
+
     val fileServers =
-        Nip96MediaServers.DEFAULT.map { ServerOption(it, false) } +
+        (
+            (listOfNip96ServersNote.value?.note?.event as? FileServersEvent)?.servers()?.map {
+                ServerOption(
+                    Nip96MediaServers.ServerName(
+                        it,
+                        it,
+                    ),
+                    false,
+                )
+            } ?: Nip96MediaServers.DEFAULT.map { ServerOption(it, false) }
+        ) +
             listOf(
                 ServerOption(
                     Nip96MediaServers.ServerName(

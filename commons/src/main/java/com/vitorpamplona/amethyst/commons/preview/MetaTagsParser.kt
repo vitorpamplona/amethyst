@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.commons.preview
 
 import kotlinx.collections.immutable.toImmutableMap
 
-data class MetaTag(private val attrs: Map<String, String>) {
+data class MetaTag(
+    private val attrs: Map<String, String>,
+) {
     /**
      * Returns a value of an attribute specified by its name (case insensitive), or empty string if it doesn't exist.
      */
@@ -51,9 +53,15 @@ object MetaTagsParser {
             }
         }
 
-    private data class RawTag(val isEnd: Boolean, val name: String, val attrPart: String)
+    private data class RawTag(
+        val isEnd: Boolean,
+        val name: String,
+        val attrPart: String,
+    )
 
-    private class TagScanner(private val input: String) {
+    private class TagScanner(
+        private val input: String,
+    ) {
         private var p = 0
 
         fun exhausted(): Boolean = p >= input.length

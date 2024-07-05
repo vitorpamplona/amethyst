@@ -681,8 +681,7 @@ class RichTextParserTest {
 
         🕵️ @nostrin "The Nostr Inspector"
         npub17m7f7q08k4x746s2v45eyvwppck32dcahw7uj2mu5txuswldgqkqw9zms7
-        """
-            .trimIndent()
+        """.trimIndent()
 
     @Test
     fun testTextToParse() {
@@ -4044,7 +4043,11 @@ class RichTextParserTest {
         org.junit.Assert.assertTrue(state.customEmoji.isEmpty())
         org.junit.Assert.assertEquals(
             "Hi, how are you doing? ",
-            state.paragraphs.firstOrNull()?.words?.firstOrNull()?.segmentText,
+            state.paragraphs
+                .firstOrNull()
+                ?.words
+                ?.firstOrNull()
+                ?.segmentText,
         )
     }
 
@@ -4071,8 +4074,7 @@ class RichTextParserTest {
             See how it can be done here: https://lnshort.it/live-stream-embeds/
 
             https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg
-            """
-                .trimIndent()
+            """.trimIndent()
 
         val state =
             RichTextParser()

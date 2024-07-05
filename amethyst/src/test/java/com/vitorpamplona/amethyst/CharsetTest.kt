@@ -104,8 +104,7 @@ class CharsetTest {
                     "\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2" +
                     "\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E\uDEC2\uD83E" +
                     "\uDEC2\uD83E\uDEC2"
-            )
-                .firstFullChar(),
+            ).firstFullChar(),
         )
     }
 }

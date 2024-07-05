@@ -71,7 +71,12 @@ suspend fun getDocument(
     timeOut: Int = 30000,
 ): UrlInfoItem =
     withContext(Dispatchers.IO) {
-        val request: Request = Request.Builder().url(url).get().build()
+        val request: Request =
+            Request
+                .Builder()
+                .url(url)
+                .get()
+                .build()
         HttpClientManager.getHttpClient().newCall(request).execute().use {
             checkNotInMainThread()
             if (it.isSuccessful) {
@@ -132,8 +137,8 @@ private val UNICODE_BOMS =
         "ffff0000".decodeHex(),
     )
 
-private fun BufferedSource.readBomAsCharset(): Charset? {
-    return when (select(UNICODE_BOMS)) {
+private fun BufferedSource.readBomAsCharset(): Charset? =
+    when (select(UNICODE_BOMS)) {
         0 -> Charsets.UTF_8
         1 -> Charsets.UTF_16BE
         2 -> Charsets.UTF_16LE
@@ -142,7 +147,6 @@ private fun BufferedSource.readBomAsCharset(): Charset? {
         -1 -> null
         else -> throw AssertionError()
     }
-}
 
 private val RE_CONTENT_TYPE_CHARSET = Regex("""charset=([^;]+)""")
 
@@ -158,7 +162,8 @@ private fun detectCharset(bodyBytes: ByteArray): Charset {
             }
         }
         if (meta.attr(ATTRIBUTE_VALUE_HTTP_EQUIV).lowercase() == "content-type") {
-            RE_CONTENT_TYPE_CHARSET.find(meta.attr(CONTENT))
+            RE_CONTENT_TYPE_CHARSET
+                .find(meta.attr(CONTENT))
                 ?.let {
                     runCatching { Charset.forName(it.groupValues[1]) }.getOrNull()
                 }?.let {

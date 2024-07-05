@@ -129,8 +129,7 @@ public val CustomHashTagIcons.Amethyst: ImageVector
                     curveTo(125.96f, 142.56f, 166.87f, 142.54f, 170.13f, 142.54f)
                     close()
                 }
-            }
-                .build()
+            }.build()
         return customHashTagIconsAmethyst!!
     }
 

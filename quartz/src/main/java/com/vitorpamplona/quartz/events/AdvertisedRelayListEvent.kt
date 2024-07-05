@@ -37,8 +37,8 @@ class AdvertisedRelayListEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     override fun dTag() = FIXED_D_TAG
 
-    fun relays(): List<AdvertisedRelayInfo> {
-        return tags.mapNotNull {
+    fun relays(): List<AdvertisedRelayInfo> =
+        tags.mapNotNull {
             if (it.size > 1 && it[0] == "r") {
                 val type =
                     when (it.getOrNull(2)) {
@@ -52,24 +52,23 @@ class AdvertisedRelayListEvent(
                 null
             }
         }
-    }
 
-    fun readRelays(): List<String>? {
-        return tags.mapNotNull {
-            if (it.size > 1 && it[0] == "r") {
-                when (it.getOrNull(2)) {
-                    "read" -> it[1]
-                    "write" -> null
-                    else -> it[1]
+    fun readRelays(): List<String>? =
+        tags
+            .mapNotNull {
+                if (it.size > 1 && it[0] == "r") {
+                    when (it.getOrNull(2)) {
+                        "read" -> it[1]
+                        "write" -> null
+                        else -> it[1]
+                    }
+                } else {
+                    null
                 }
-            } else {
-                null
-            }
-        }.ifEmpty { null }
-    }
+            }.ifEmpty { null }
 
-    fun writeRelays(): List<String> {
-        return tags.mapNotNull {
+    fun writeRelays(): List<String> =
+        tags.mapNotNull {
             if (it.size > 1 && it[0] == "r") {
                 when (it.getOrNull(2)) {
                     "read" -> null
@@ -80,20 +79,15 @@ class AdvertisedRelayListEvent(
                 null
             }
         }
-    }
 
     companion object {
         const val KIND = 10002
         const val FIXED_D_TAG = ""
         const val ALT = "Relay list to discover the user's content"
 
-        fun createAddressATag(pubKey: HexKey): ATag {
-            return ATag(KIND, pubKey, FIXED_D_TAG, null)
-        }
+        fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, FIXED_D_TAG, null)
 
-        fun createAddressTag(pubKey: HexKey): String {
-            return ATag.assembleATag(KIND, pubKey, FIXED_D_TAG)
-        }
+        fun createAddressTag(pubKey: HexKey): String = ATag.assembleATag(KIND, pubKey, FIXED_D_TAG)
 
         fun updateRelayList(
             earlierVersion: AdvertisedRelayListEvent,
@@ -103,9 +97,11 @@ class AdvertisedRelayListEvent(
             onReady: (AdvertisedRelayListEvent) -> Unit,
         ) {
             val tags =
-                earlierVersion.tags.filter { it[0] != "r" }.plus(
-                    relays.map(::createRelayTag),
-                ).toTypedArray()
+                earlierVersion.tags
+                    .filter { it[0] != "r" }
+                    .plus(
+                        relays.map(::createRelayTag),
+                    ).toTypedArray()
 
             signer.sign(createdAt, KIND, tags, earlierVersion.content, onReady)
         }
@@ -119,20 +115,18 @@ class AdvertisedRelayListEvent(
             create(relays, signer, createdAt, onReady)
         }
 
-        fun createRelayTag(relay: AdvertisedRelayInfo): Array<String> {
-            return if (relay.type == AdvertisedRelayType.BOTH) {
+        fun createRelayTag(relay: AdvertisedRelayInfo): Array<String> =
+            if (relay.type == AdvertisedRelayType.BOTH) {
                 arrayOf("r", relay.relayUrl)
             } else {
                 arrayOf("r", relay.relayUrl, relay.type.code)
             }
-        }
 
-        fun createTagArray(relays: List<AdvertisedRelayInfo>): Array<Array<String>> {
-            return relays
+        fun createTagArray(relays: List<AdvertisedRelayInfo>): Array<Array<String>> =
+            relays
                 .map(::createRelayTag)
                 .plusElement(arrayOf("alt", ALT))
                 .toTypedArray()
-        }
 
         fun create(
             list: List<AdvertisedRelayInfo>,
@@ -147,10 +141,15 @@ class AdvertisedRelayListEvent(
         }
     }
 
-    @Immutable data class AdvertisedRelayInfo(val relayUrl: String, val type: AdvertisedRelayType)
+    @Immutable data class AdvertisedRelayInfo(
+        val relayUrl: String,
+        val type: AdvertisedRelayType,
+    )
 
     @Immutable
-    enum class AdvertisedRelayType(val code: String) {
+    enum class AdvertisedRelayType(
+        val code: String,
+    ) {
         BOTH(""),
         READ("read"),
         WRITE("write"),

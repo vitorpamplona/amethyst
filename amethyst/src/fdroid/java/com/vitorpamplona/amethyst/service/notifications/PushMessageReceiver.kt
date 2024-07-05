@@ -126,8 +126,7 @@ class PushMessageReceiver : MessagingReceiver() {
         pushHandler.removeEndpoint()
     }
 
-    fun notificationManager(): NotificationManager {
-        return ContextCompat.getSystemService(appContext, NotificationManager::class.java)
+    fun notificationManager(): NotificationManager =
+        ContextCompat.getSystemService(appContext, NotificationManager::class.java)
             as NotificationManager
-    }
 }

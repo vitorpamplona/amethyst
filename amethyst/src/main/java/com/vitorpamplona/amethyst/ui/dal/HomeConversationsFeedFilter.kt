@@ -30,15 +30,14 @@ import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 
-class HomeConversationsFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + account.defaultHomeFollowList.value
-    }
+class HomeConversationsFeedFilter(
+    val account: Account,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.defaultHomeFollowList.value
 
-    override fun showHiddenKey(): Boolean {
-        return account.defaultHomeFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+    override fun showHiddenKey(): Boolean =
+        account.defaultHomeFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
             account.defaultHomeFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
-    }
 
     override fun feed(): List<Note> {
         val filterParams = buildFilterParams(account)
@@ -50,18 +49,15 @@ class HomeConversationsFeedFilter(val account: Account) : AdditiveFeedFilter<Not
         )
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection)
-    }
+    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
-    fun buildFilterParams(account: Account): FilterByListParams {
-        return FilterByListParams.create(
+    fun buildFilterParams(account: Account): FilterByListParams =
+        FilterByListParams.create(
             userHex = account.userProfile().pubkeyHex,
             selectedListName = account.defaultHomeFollowList.value,
             followLists = account.liveHomeFollowLists.value,
             hiddenUsers = account.flowHiddenUsers.value,
         )
-    }
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val filterParams = buildFilterParams(account)
@@ -74,16 +70,15 @@ class HomeConversationsFeedFilter(val account: Account) : AdditiveFeedFilter<Not
     fun acceptableEvent(
         it: Note,
         filterParams: FilterByListParams,
-    ): Boolean {
-        return (
+    ): Boolean =
+        (
             it.event is TextNoteEvent ||
                 it.event is PollNoteEvent ||
                 it.event is ChannelMessageEvent ||
                 it.event is LiveActivitiesChatMessageEvent
-        ) && filterParams.match(it.event) && !it.isNewThread()
-    }
+        ) &&
+            filterParams.match(it.event) &&
+            !it.isNewThread()
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(DefaultFeedOrder)
-    }
+    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 }

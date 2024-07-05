@@ -44,11 +44,7 @@ class WssDataStreamCollector : WebSocketListener() {
         wssData.removeAll(wssData)
     }
 
-    fun canStream(): Boolean {
-        return wssData.size > 0
-    }
+    fun canStream(): Boolean = wssData.size > 0
 
-    fun getNextStream(): ByteString {
-        return wssData.pollFirst()
-    }
+    fun getNextStream(): ByteString = wssData.pollFirst()
 }

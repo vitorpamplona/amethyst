@@ -32,37 +32,38 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 
 @Immutable
-abstract class Card() {
+abstract class Card {
     abstract fun createdAt(): Long
 
     abstract fun id(): String
 }
 
 @Immutable
-class BadgeCard(val note: Note) : Card() {
-    override fun createdAt(): Long {
-        return note.createdAt() ?: 0
-    }
+class BadgeCard(
+    val note: Note,
+) : Card() {
+    override fun createdAt(): Long = note.createdAt() ?: 0
 
     override fun id() = note.idHex
 }
 
 @Immutable
-class NoteCard(val note: Note) : Card() {
-    override fun createdAt(): Long {
-        return note.createdAt() ?: 0
-    }
+class NoteCard(
+    val note: Note,
+) : Card() {
+    override fun createdAt(): Long = note.createdAt() ?: 0
 
     override fun id() = note.idHex
 }
 
 @Immutable
-class ZapUserSetCard(val user: User, val zapEvents: ImmutableList<CombinedZap>) : Card() {
+class ZapUserSetCard(
+    val user: User,
+    val zapEvents: ImmutableList<CombinedZap>,
+) : Card() {
     val createdAt = zapEvents.maxOf { it.createdAt() ?: 0 }
 
-    override fun createdAt(): Long {
-        return createdAt
-    }
+    override fun createdAt(): Long = createdAt
 
     override fun id() = user.pubkeyHex + "U" + createdAt
 }
@@ -95,22 +96,19 @@ class MultiSetCard(
                     ?.content()
                     ?.firstFullCharOrEmoji(ImmutableListOfLists(it.event?.tags() ?: emptyArray()))
                     ?: "+"
-            }
-            .mapValues { it.value.toImmutableList() }
+            }.mapValues { it.value.toImmutableList() }
             .toImmutableMap()
 
-    override fun createdAt(): Long {
-        return maxCreatedAt
-    }
+    override fun createdAt(): Long = maxCreatedAt
 
     override fun id() = note.idHex + "X" + maxCreatedAt + "X" + minCreatedAt
 }
 
 @Immutable
-class MessageSetCard(val note: Note) : Card() {
-    override fun createdAt(): Long {
-        return note.createdAt() ?: 0
-    }
+class MessageSetCard(
+    val note: Note,
+) : Card() {
+    override fun createdAt(): Long = note.createdAt() ?: 0
 
     override fun id() = note.idHex
 }
@@ -120,10 +118,14 @@ sealed class CardFeedState {
     @Immutable object Loading : CardFeedState()
 
     @Stable
-    class Loaded(val feed: MutableState<ImmutableList<Card>>, val showHidden: MutableState<Boolean>) :
-        CardFeedState()
+    class Loaded(
+        val feed: MutableState<ImmutableList<Card>>,
+        val showHidden: MutableState<Boolean>,
+    ) : CardFeedState()
 
     @Immutable object Empty : CardFeedState()
 
-    @Immutable class FeedError(val errorMessage: String) : CardFeedState()
+    @Immutable class FeedError(
+        val errorMessage: String,
+    ) : CardFeedState()
 }

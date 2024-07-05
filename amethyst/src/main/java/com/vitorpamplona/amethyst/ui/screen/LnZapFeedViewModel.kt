@@ -41,17 +41,20 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class NostrUserProfileZapsFeedViewModel(user: User) :
-    LnZapFeedViewModel(UserProfileZapsFeedFilter(user)) {
-    class Factory(val user: User) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileZapsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileZapsFeedViewModel>): NostrUserProfileZapsFeedViewModel {
-            return NostrUserProfileZapsFeedViewModel(user) as NostrUserProfileZapsFeedViewModel
-        }
+class NostrUserProfileZapsFeedViewModel(
+    user: User,
+) : LnZapFeedViewModel(UserProfileZapsFeedFilter(user)) {
+    class Factory(
+        val user: User,
+    ) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileZapsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileZapsFeedViewModel>): NostrUserProfileZapsFeedViewModel = NostrUserProfileZapsFeedViewModel(user) as NostrUserProfileZapsFeedViewModel
     }
 }
 
 @Stable
-open class LnZapFeedViewModel(val dataSource: FeedFilter<ZapReqResponse>) : ViewModel() {
+open class LnZapFeedViewModel(
+    val dataSource: FeedFilter<ZapReqResponse>,
+) : ViewModel() {
     private val _feedContent = MutableStateFlow<LnZapFeedState>(LnZapFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 

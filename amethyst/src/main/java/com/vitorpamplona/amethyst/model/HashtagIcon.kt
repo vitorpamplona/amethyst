@@ -68,8 +68,8 @@ fun RenderHashTagIcons() {
     }
 }
 
-fun checkForHashtagWithIcon(tag: String): HashtagIcon? {
-    return when (tag.lowercase()) {
+fun checkForHashtagWithIcon(tag: String): HashtagIcon? =
+    when (tag.lowercase()) {
         "₿itcoin", "bitcoin", "btc", "timechain", "bitcoiner", "bitcoiners" -> bitcoin
         "nostr", "nostrich", "nostriches", "thenostr" -> nostr
         "lightning", "lightningnetwork" -> lightning
@@ -86,7 +86,6 @@ fun checkForHashtagWithIcon(tag: String): HashtagIcon? {
         "weed", "weedstr", "420", "cannabis", "marijuana" -> weed
         else -> null
     }
-}
 
 val bitcoin = HashtagIcon(CustomHashTagIcons.Btc, "Bitcoin", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
 val nostr = HashtagIcon(CustomHashTagIcons.Nostr, "Nostr", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))

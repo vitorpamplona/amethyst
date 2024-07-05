@@ -687,9 +687,7 @@ private fun RenderNoteRow(
                 makeItShort,
                 canPreview,
                 quotesLeft,
-                unPackReply,
                 backgroundColor,
-                editState,
                 accountViewModel,
                 nav,
             )
@@ -697,12 +695,6 @@ private fun RenderNoteRow(
         is NIP90StatusEvent ->
             RenderNIP90Status(
                 baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                unPackReply,
-                backgroundColor,
-                editState,
                 accountViewModel,
                 nav,
             )

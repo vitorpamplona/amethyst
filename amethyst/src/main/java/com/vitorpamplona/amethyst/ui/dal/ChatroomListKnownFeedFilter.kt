@@ -28,10 +28,10 @@ import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
 
-class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex
-    }
+class ChatroomListKnownFeedFilter(
+    val account: Account,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex
 
     // returns the last Note of each user.
     override fun feed(): List<Note> {
@@ -56,7 +56,8 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
                 .selectedChatsFollowList()
                 .mapNotNull { LocalCache.getChannelIfExists(it) }
                 .mapNotNull { it ->
-                    it.notes.filter { key, it -> account.isAcceptable(it) && it.event != null }
+                    it.notes
+                        .filter { key, it -> account.isAcceptable(it) && it.event != null }
                         .sortedWith(DefaultFeedOrder)
                         .firstOrNull()
                 }
@@ -136,7 +137,11 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
         account: Account,
     ): MutableMap<String, Note> {
         val followingChannels =
-            account.userProfile().latestContactList?.taggedEvents()?.toSet() ?: emptySet()
+            account
+                .userProfile()
+                .latestContactList
+                ?.taggedEvents()
+                ?.toSet() ?: emptySet()
         val newRelevantPublicMessages = mutableMapOf<String, Note>()
         newItems
             .filter { it.event is ChannelMessageEvent }
@@ -177,7 +182,8 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
                             newNote.author?.pubkeyHex == me.pubkeyHex ||
                                 room.senderIntersects(followingKeySet) ||
                                 me.hasSentMessagesTo(roomKey)
-                        ) && !account.isAllHidden(roomKey.users)
+                        ) &&
+                        !account.isAllHidden(roomKey.users)
                     ) {
                         val lastNote = newRelevantPrivateMessages.get(roomKey)
                         if (lastNote != null) {
@@ -193,7 +199,5 @@ class ChatroomListKnownFeedFilter(val account: Account) : AdditiveFeedFilter<Not
         return newRelevantPrivateMessages
     }
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(DefaultFeedOrder)
-    }
+    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 }

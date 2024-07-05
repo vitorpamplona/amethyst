@@ -35,8 +35,11 @@ import java.nio.charset.Charset
 @RunWith(AndroidJUnit4::class)
 class MetaTagsParserBenchmark {
     private val html =
-        getInstrumentation().context.assets.open("github_amethyst.html")
-            .readBytes().toString(Charset.forName("utf-8"))
+        getInstrumentation()
+            .context.assets
+            .open("github_amethyst.html")
+            .readBytes()
+            .toString(Charset.forName("utf-8"))
 
     @get:Rule
     val benchmarkRule = BenchmarkRule()

@@ -1,14 +1,18 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    alias(libs.plugins.jetbrainsComposeCompiler)
 }
 
 android {
     namespace 'com.vitorpamplona.amethyst.commons'
-    compileSdk 34
+    compileSdk libs.versions.android.compileSdk.get().toInteger()
 
     defaultConfig {
-        minSdk 26
+        minSdk libs.versions.android.minSdk.get().toInteger()
+        targetSdk libs.versions.android.targetSdk.get().toInteger()
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -28,18 +32,21 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = '17'
-        freeCompilerArgs += "-Xstring-concat=inline"
-    }
 
     buildFeatures {
         compose true
     }
-    composeOptions {
-        // Should match compose version : https://developer.android.com/jetpack/androidx/releases/compose-kotlin
-        kotlinCompilerExtensionVersion "1.5.14"
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+        freeCompilerArgs.add("-Xstring-concat=inline")
     }
+}
+
+composeCompiler {
+    reportsDestination = layout.buildDirectory.dir("compose_compiler")
 }
 
 dependencies {

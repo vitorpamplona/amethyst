@@ -55,15 +55,11 @@ object PushDistributorHandler : PushDistributorActions {
         endpointInternal = ""
     }
 
-    override fun getSavedDistributor(): String {
-        return unifiedPush.getSavedDistributor(appContext) ?: ""
-    }
+    override fun getSavedDistributor(): String = unifiedPush.getSavedDistributor(appContext) ?: ""
 
     fun savedDistributorExists(): Boolean = getSavedDistributor().isNotEmpty()
 
-    override fun getInstalledDistributors(): List<String> {
-        return unifiedPush.getDistributors(appContext)
-    }
+    override fun getInstalledDistributors(): List<String> = unifiedPush.getDistributors(appContext)
 
     fun formattedDistributorNames(): List<String> {
         val distributorsArray = getInstalledDistributors().toTypedArray()
@@ -87,8 +83,7 @@ object PushDistributorHandler : PushDistributorActions {
                         it
                     }
                         as String
-                }
-                .toTypedArray()
+                }.toTypedArray()
         return distributorsNameArray.toList()
     }
 

@@ -26,9 +26,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 object RelayStats {
     private val innerCache = mutableMapOf<String, RelayStat>()
 
-    fun get(url: String): RelayStat {
-        return innerCache.getOrPut(url) { RelayStat() }
-    }
+    fun get(url: String): RelayStat = innerCache.getOrPut(url) { RelayStat() }
 
     fun addBytesReceived(
         url: String,

@@ -26,7 +26,10 @@ import com.vitorpamplona.quartz.events.DeletionEvent
 import com.vitorpamplona.quartz.events.Event
 
 class DeletionIndex {
-    data class DeletionRequest(val reference: String, val publicKey: HexKey) : Comparable<DeletionRequest> {
+    data class DeletionRequest(
+        val reference: String,
+        val publicKey: HexKey,
+    ) : Comparable<DeletionRequest> {
         override fun compareTo(other: DeletionRequest): Int {
             val compared = reference.compareTo(other.reference)
 

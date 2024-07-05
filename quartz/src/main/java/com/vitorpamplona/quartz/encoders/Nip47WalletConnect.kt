@@ -52,5 +52,9 @@ class Nip47WalletConnect {
         }
     }
 
-    data class Nip47URI(val pubKeyHex: HexKey, val relayUri: String?, val secret: HexKey?)
+    data class Nip47URI(
+        val pubKeyHex: HexKey,
+        val relayUri: String?,
+        val secret: HexKey?,
+    )
 }

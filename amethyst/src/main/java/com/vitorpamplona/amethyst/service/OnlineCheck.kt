@@ -32,7 +32,10 @@ import okhttp3.Request
 import okio.ByteString.Companion.toByteString
 import kotlin.coroutines.cancellation.CancellationException
 
-@Immutable data class OnlineCheckResult(val timeInMs: Long, val online: Boolean)
+@Immutable data class OnlineCheckResult(
+    val timeInMs: Long,
+    val online: Boolean,
+)
 
 object OnlineChecker {
     val checkOnlineCache = LruCache<String, OnlineCheckResult>(100)
@@ -58,7 +61,8 @@ object OnlineChecker {
             val result =
                 if (url.startsWith("wss")) {
                     val request =
-                        Request.Builder()
+                        Request
+                            .Builder()
                             .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                             .url(url.replace("wss+livekit://", "wss://"))
                             .header("Upgrade", "websocket")
@@ -69,7 +73,9 @@ object OnlineChecker {
                             .build()
 
                     val client =
-                        HttpClientManager.getHttpClient().newBuilder()
+                        HttpClientManager
+                            .getHttpClient()
+                            .newBuilder()
                             .eventListener(EventListener.NONE)
                             .protocols(listOf(Protocol.HTTP_1_1))
                             .build()
@@ -80,7 +86,8 @@ object OnlineChecker {
                     }
                 } else {
                     val request =
-                        Request.Builder()
+                        Request
+                            .Builder()
                             .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                             .url(url)
                             .get()

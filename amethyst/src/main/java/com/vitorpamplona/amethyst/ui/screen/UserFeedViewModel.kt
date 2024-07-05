@@ -45,47 +45,59 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class NostrUserProfileFollowsUserFeedViewModel(val user: User, val account: Account) :
-    UserFeedViewModel(UserProfileFollowsFeedFilter(user, account)) {
-    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileFollowsUserFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileFollowsUserFeedViewModel>): NostrUserProfileFollowsUserFeedViewModel {
-            return NostrUserProfileFollowsUserFeedViewModel(user, account)
+class NostrUserProfileFollowsUserFeedViewModel(
+    val user: User,
+    val account: Account,
+) : UserFeedViewModel(UserProfileFollowsFeedFilter(user, account)) {
+    class Factory(
+        val user: User,
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileFollowsUserFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileFollowsUserFeedViewModel>): NostrUserProfileFollowsUserFeedViewModel =
+            NostrUserProfileFollowsUserFeedViewModel(user, account)
                 as NostrUserProfileFollowsUserFeedViewModel
-        }
     }
 }
 
-class NostrUserProfileFollowersUserFeedViewModel(val user: User, val account: Account) :
-    UserFeedViewModel(UserProfileFollowersFeedFilter(user, account)) {
-    class Factory(val user: User, val account: Account) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileFollowersUserFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileFollowersUserFeedViewModel>): NostrUserProfileFollowersUserFeedViewModel {
-            return NostrUserProfileFollowersUserFeedViewModel(user, account)
+class NostrUserProfileFollowersUserFeedViewModel(
+    val user: User,
+    val account: Account,
+) : UserFeedViewModel(UserProfileFollowersFeedFilter(user, account)) {
+    class Factory(
+        val user: User,
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileFollowersUserFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileFollowersUserFeedViewModel>): NostrUserProfileFollowersUserFeedViewModel =
+            NostrUserProfileFollowersUserFeedViewModel(user, account)
                 as NostrUserProfileFollowersUserFeedViewModel
-        }
     }
 }
 
-class NostrHiddenAccountsFeedViewModel(val account: Account) :
-    UserFeedViewModel(HiddenAccountsFeedFilter(account)) {
-    class Factory(val account: Account) : ViewModelProvider.Factory {
-        override fun <NostrHiddenAccountsFeedViewModel : ViewModel> create(modelClass: Class<NostrHiddenAccountsFeedViewModel>): NostrHiddenAccountsFeedViewModel {
-            return NostrHiddenAccountsFeedViewModel(account) as NostrHiddenAccountsFeedViewModel
-        }
+class NostrHiddenAccountsFeedViewModel(
+    val account: Account,
+) : UserFeedViewModel(HiddenAccountsFeedFilter(account)) {
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <NostrHiddenAccountsFeedViewModel : ViewModel> create(modelClass: Class<NostrHiddenAccountsFeedViewModel>): NostrHiddenAccountsFeedViewModel = NostrHiddenAccountsFeedViewModel(account) as NostrHiddenAccountsFeedViewModel
     }
 }
 
-class NostrSpammerAccountsFeedViewModel(val account: Account) :
-    UserFeedViewModel(SpammerAccountsFeedFilter(account)) {
-    class Factory(val account: Account) : ViewModelProvider.Factory {
-        override fun <NostrSpammerAccountsFeedViewModel : ViewModel> create(modelClass: Class<NostrSpammerAccountsFeedViewModel>): NostrSpammerAccountsFeedViewModel {
-            return NostrSpammerAccountsFeedViewModel(account) as NostrSpammerAccountsFeedViewModel
-        }
+class NostrSpammerAccountsFeedViewModel(
+    val account: Account,
+) : UserFeedViewModel(SpammerAccountsFeedFilter(account)) {
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <NostrSpammerAccountsFeedViewModel : ViewModel> create(modelClass: Class<NostrSpammerAccountsFeedViewModel>): NostrSpammerAccountsFeedViewModel = NostrSpammerAccountsFeedViewModel(account) as NostrSpammerAccountsFeedViewModel
     }
 }
 
 @Stable
-open class UserFeedViewModel(val dataSource: FeedFilter<User>) :
-    ViewModel(), InvalidatableViewModel {
+open class UserFeedViewModel(
+    val dataSource: FeedFilter<User>,
+) : ViewModel(),
+    InvalidatableViewModel {
     private val _feedContent = MutableStateFlow<UserFeedState>(UserFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 

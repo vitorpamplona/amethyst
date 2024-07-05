@@ -91,13 +91,12 @@ class FilterByListParams(
             selectedListName: String,
             followLists: Account.LiveFollowLists?,
             hiddenUsers: Account.LiveHiddenUsers,
-        ): FilterByListParams {
-            return FilterByListParams(
+        ): FilterByListParams =
+            FilterByListParams(
                 isGlobal = selectedListName == GLOBAL_FOLLOWS,
                 isHiddenList = showHiddenKey(selectedListName, userHex),
                 followLists = followLists,
                 hiddenLists = hiddenUsers,
             )
-        }
     }
 }

@@ -48,7 +48,8 @@ object LanguageTranslatorService {
     var executorService = Executors.newCachedThreadPool()
 
     private val options =
-        LanguageIdentificationOptions.Builder()
+        LanguageIdentificationOptions
+            .Builder()
             .setExecutor(executorService)
             .setConfidenceThreshold(0.6f)
             .build()
@@ -62,9 +63,7 @@ object LanguageTranslatorService {
 
     private val translators =
         object : LruCache<TranslatorOptions, Translator>(3) {
-            override fun create(options: TranslatorOptions): Translator {
-                return Translation.getClient(options)
-            }
+            override fun create(options: TranslatorOptions): Translator = Translation.getClient(options)
 
             override fun entryRemoved(
                 evicted: Boolean,
@@ -80,9 +79,7 @@ object LanguageTranslatorService {
         translators.evictAll()
     }
 
-    fun identifyLanguage(text: String): Task<String> {
-        return languageIdentification.identifyLanguage(text)
-    }
+    fun identifyLanguage(text: String): Task<String> = languageIdentification.identifyLanguage(text)
 
     fun translate(
         text: String,
@@ -98,7 +95,8 @@ object LanguageTranslatorService {
         }
 
         val options =
-            TranslatorOptions.Builder()
+            TranslatorOptions
+                .Builder()
                 .setExecutor(executorService)
                 .setSourceLanguage(sourceLangCode)
                 .setTargetLanguage(targetLangCode)
@@ -204,8 +202,8 @@ object LanguageTranslatorService {
         text: String,
         dontTranslateFrom: Set<String>,
         translateTo: String,
-    ): Task<ResultOrError> {
-        return identifyLanguage(text).onSuccessTask(executorService) {
+    ): Task<ResultOrError> =
+        identifyLanguage(text).onSuccessTask(executorService) {
             if (it.equals(translateTo, true)) {
                 Tasks.forCanceled()
             } else if (it != "und" && !dontTranslateFrom.contains(it)) {
@@ -214,5 +212,4 @@ object LanguageTranslatorService {
                 Tasks.forCanceled()
             }
         }
-    }
 }

@@ -32,7 +32,9 @@ import okhttp3.WebSocket
 import kotlin.math.min
 
 @OptIn(UnstableApi::class)
-class WssStreamDataSource(val httpClient: OkHttpClient) : BaseDataSource(true) {
+class WssStreamDataSource(
+    val httpClient: OkHttpClient,
+) : BaseDataSource(true) {
     val dataStreamCollector: WssDataStreamCollector = WssDataStreamCollector()
     var webSocketClient: WebSocket? = null
 
@@ -46,11 +48,14 @@ class WssStreamDataSource(val httpClient: OkHttpClient) : BaseDataSource(true) {
         // which collects the data for us (Previous class).
         webSocketClient =
             httpClient.newWebSocket(
-                Request.Builder().apply {
-                    dataSpec.httpRequestHeaders.forEach { entry ->
-                        addHeader(entry.key, entry.value)
-                    }
-                }.url(dataSpec.uri.toString()).build(),
+                Request
+                    .Builder()
+                    .apply {
+                        dataSpec.httpRequestHeaders.forEach { entry ->
+                            addHeader(entry.key, entry.value)
+                        }
+                    }.url(dataSpec.uri.toString())
+                    .build(),
                 dataStreamCollector,
             )
 
@@ -106,7 +111,9 @@ class WssStreamDataSource(val httpClient: OkHttpClient) : BaseDataSource(true) {
     }
 
     // Factory class for DataSource
-    class Factory(val okHttpClient: OkHttpClient) : DataSource.Factory {
+    class Factory(
+        val okHttpClient: OkHttpClient,
+    ) : DataSource.Factory {
         override fun createDataSource(): DataSource = WssStreamDataSource(okHttpClient)
     }
 }

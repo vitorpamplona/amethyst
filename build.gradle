@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     alias(libs.plugins.androidApplication) apply false
     alias(libs.plugins.jetbrainsKotlinAndroid) apply false
@@ -8,36 +6,17 @@ plugins {
     alias(libs.plugins.androidBenchmark) apply false
     alias(libs.plugins.diffplugSpotless) apply false
     alias(libs.plugins.googleServices) apply false
+    alias(libs.plugins.jetbrainsComposeCompiler) apply false
 }
 
 subprojects {
-    tasks.withType(KotlinCompile).configureEach {
-        kotlinOptions {
-            if (project.findProperty("composeCompilerReports") == "true") {
-                freeCompilerArgs += [
-                        "-P",
-                        "plugin:androidx.compose.compiler.plugins.kotlin:reportsDestination=" +
-                                project.buildDir.absolutePath + "/compose_compiler"
-                ]
-            }
-            if (project.findProperty("composeCompilerMetrics") == "true") {
-                freeCompilerArgs += [
-                        "-P",
-                        "plugin:androidx.compose.compiler.plugins.kotlin:metricsDestination=" +
-                                project.buildDir.absolutePath + "/compose_compiler"
-                ]
-            }
-        }
-    }
-
     apply plugin: 'com.diffplug.spotless'
     spotless {
         kotlin {
             target '**/*.kt'
-            targetExclude("$buildDir/**/*.kt")
+            targetExclude("$layout.buildDirectory/**/*.kt")
 
-            ktlint("1.1.0")
-            //ktfmt().googleStyle()
+            ktlint("1.3.1")
             licenseHeaderFile rootProject.file('spotless/copyright.kt'), "package|import|class|object|sealed|open|interface|abstract "
         }
 

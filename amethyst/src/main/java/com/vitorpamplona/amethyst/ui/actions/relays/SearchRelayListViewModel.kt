@@ -21,9 +21,7 @@
 package com.vitorpamplona.amethyst.ui.actions.relays
 
 class SearchRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<String>? {
-        return account.getSearchRelayList()?.relays()
-    }
+    override fun getRelayList(): List<String>? = account.getSearchRelayList()?.relays()
 
     override fun saveRelayList(urlList: List<String>) {
         account.saveSearchRelayList(urlList)

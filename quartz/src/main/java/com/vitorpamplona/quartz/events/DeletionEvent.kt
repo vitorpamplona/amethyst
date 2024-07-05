@@ -54,11 +54,12 @@ class DeletionEvent(
             val tags = mutableListOf<Array<String>>()
 
             val kinds =
-                deleteEvents.mapTo(HashSet()) {
-                    "${it.kind}"
-                }.map {
-                    arrayOf("k", it)
-                }
+                deleteEvents
+                    .mapTo(HashSet()) {
+                        "${it.kind}"
+                    }.map {
+                        arrayOf("k", it)
+                    }
 
             tags.addAll(deleteEvents.map { arrayOf("e", it.id) })
             tags.addAll(deleteEvents.mapNotNull { if (it is AddressableEvent) arrayOf("a", it.address().toTag()) else null })
@@ -78,11 +79,12 @@ class DeletionEvent(
             val tags = mutableListOf<Array<String>>()
 
             val kinds =
-                deleteEvents.mapTo(HashSet()) {
-                    "${it.kind}"
-                }.map {
-                    arrayOf("k", it)
-                }
+                deleteEvents
+                    .mapTo(HashSet()) {
+                        "${it.kind}"
+                    }.map {
+                        arrayOf("k", it)
+                    }
 
             tags.addAll(deleteEvents.map { arrayOf("e", it.id) })
             tags.addAll(kinds)

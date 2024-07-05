@@ -50,7 +50,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @Stable
-class RelayFeedViewModel : ViewModel(), InvalidatableViewModel {
+class RelayFeedViewModel :
+    ViewModel(),
+    InvalidatableViewModel {
     val order =
         compareByDescending<RelayInfo> { it.lastEvent }
             .thenByDescending { it.counter }

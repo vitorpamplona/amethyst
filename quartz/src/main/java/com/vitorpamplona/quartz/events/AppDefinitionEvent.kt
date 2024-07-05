@@ -58,31 +58,20 @@ class AppMetadata {
     @Transient
     var tags: ImmutableListOfLists<String>? = null
 
-    fun anyName(): String? {
-        return displayName ?: name ?: username
-    }
+    fun anyName(): String? = displayName ?: name ?: username
 
-    fun anyNameStartsWith(prefix: String): Boolean {
-        return listOfNotNull(name, username, displayName, nip05, lud06, lud16).any {
+    fun anyNameStartsWith(prefix: String): Boolean =
+        listOfNotNull(name, username, displayName, nip05, lud06, lud16).any {
             it.contains(prefix, true)
         }
-    }
 
-    fun lnAddress(): String? {
-        return lud16 ?: lud06
-    }
+    fun lnAddress(): String? = lud16 ?: lud06
 
-    fun bestName(): String? {
-        return displayName ?: name ?: username
-    }
+    fun bestName(): String? = displayName ?: name ?: username
 
-    fun nip05(): String? {
-        return nip05
-    }
+    fun nip05(): String? = nip05
 
-    fun profilePicture(): String? {
-        return picture
-    }
+    fun profilePicture(): String? = picture
 
     fun cleanBlankNames() {
         if (picture?.isNotEmpty() == true) picture = picture?.trim()

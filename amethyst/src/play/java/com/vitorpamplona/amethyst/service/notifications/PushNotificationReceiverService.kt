@@ -88,8 +88,7 @@ class PushNotificationReceiverService : FirebaseMessagingService() {
         }
     }
 
-    fun notificationManager(): NotificationManager {
-        return ContextCompat.getSystemService(applicationContext, NotificationManager::class.java)
+    fun notificationManager(): NotificationManager =
+        ContextCompat.getSystemService(applicationContext, NotificationManager::class.java)
             as NotificationManager
-    }
 }

@@ -28,15 +28,12 @@ object PackageUtils {
     private fun isPackageInstalled(
         context: Context,
         target: String,
-    ): Boolean {
-        return context.packageManager.getInstalledApplications(0).find { info ->
+    ): Boolean =
+        context.packageManager.getInstalledApplications(0).find { info ->
             info.packageName == target
         } != null
-    }
 
-    fun isOrbotInstalled(context: Context): Boolean {
-        return isPackageInstalled(context, "org.torproject.android")
-    }
+    fun isOrbotInstalled(context: Context): Boolean = isPackageInstalled(context, "org.torproject.android")
 
     fun isExternalSignerInstalled(context: Context): Boolean {
         val intent =

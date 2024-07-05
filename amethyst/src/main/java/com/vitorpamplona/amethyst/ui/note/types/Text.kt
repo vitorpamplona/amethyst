@@ -100,23 +100,24 @@ fun RenderTextEvent(
         note,
         accountViewModel,
     ) { body ->
-        val eventContent =
-            remember(note.event) {
-                val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
-                val newBody =
-                    if (editState.value is GenericLoadable.Loaded) {
-                        val state =
-                            (editState.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow
-                        state?.value?.event?.content() ?: body
-                    } else {
-                        body
-                    }
+        val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
+        val newBody =
+            if (editState.value is GenericLoadable.Loaded) {
+                (editState.value as? GenericLoadable.Loaded)
+                    ?.loaded
+                    ?.modificationToShow
+                    ?.value
+                    ?.event
+                    ?.content() ?: body
+            } else {
+                body
+            }
 
-                if (!subject.isNullOrBlank() && !newBody.split("\n")[0].contains(subject)) {
-                    "### $subject\n$newBody"
-                } else {
-                    newBody
-                }
+        val eventContent =
+            if (!subject.isNullOrBlank() && !newBody.split("\n")[0].startsWith(subject)) {
+                "### $subject\n$newBody"
+            } else {
+                newBody
             }
 
         if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
@@ -141,7 +142,14 @@ fun RenderTextEvent(
                     modifier = Modifier.fillMaxWidth(),
                     tags = tags,
                     backgroundColor = backgroundColor,
-                    id = note.idHex,
+                    id =
+                        if (editState.value is GenericLoadable.Loaded) {
+                            (editState.value as GenericLoadable.Loaded<EditState>)
+                                .loaded.modificationToShow.value
+                                ?.idHex ?: note.idHex
+                        } else {
+                            note.idHex
+                        },
                     callbackUri = note.toNostrUri(),
                     accountViewModel = accountViewModel,
                     nav = nav,

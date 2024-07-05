@@ -27,10 +27,10 @@ import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 
-class ChatroomListNewFeedFilter(val account: Account) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex
-    }
+class ChatroomListNewFeedFilter(
+    val account: Account,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex
 
     // returns the last Note of each user.
     override fun feed(): List<Note> {
@@ -137,7 +137,5 @@ class ChatroomListNewFeedFilter(val account: Account) : AdditiveFeedFilter<Note>
         return newRelevantPrivateMessages
     }
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(DefaultFeedOrder)
-    }
+    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 }

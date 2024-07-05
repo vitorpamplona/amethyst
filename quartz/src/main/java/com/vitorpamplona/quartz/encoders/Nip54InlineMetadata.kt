@@ -40,17 +40,18 @@ class Nip54InlineMetadata {
         tags: Array<Array<String>>,
     ): String {
         val extension =
-            tags.mapNotNull {
-                if (it.isNotEmpty() && it[0] != "url") {
-                    if (it.size > 1) {
-                        "${it[0]}=${URLEncoder.encode(it[1], "utf-8")}"
+            tags
+                .mapNotNull {
+                    if (it.isNotEmpty() && it[0] != "url") {
+                        if (it.size > 1) {
+                            "${it[0]}=${URLEncoder.encode(it[1], "utf-8")}"
+                        } else {
+                            "${it[0]}}="
+                        }
                     } else {
-                        "${it[0]}}="
+                        null
                     }
-                } else {
-                    null
-                }
-            }.joinToString("&")
+                }.joinToString("&")
 
         return if (imageUrl.contains("#")) {
             "$imageUrl&$extension"
@@ -59,14 +60,13 @@ class Nip54InlineMetadata {
         }
     }
 
-    fun parse(url: String): Map<String, String> {
-        return try {
+    fun parse(url: String): Map<String, String> =
+        try {
             fragments(URI(url))
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             emptyMap()
         }
-    }
 
     private fun fragments(uri: URI): Map<String, String> {
         if (uri.rawFragment == null) return emptyMap()

@@ -33,7 +33,10 @@ import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.events.Event
 import kotlinx.coroutines.Dispatchers
 
-data class Spammer(val pubkeyHex: HexKey, var duplicatedMessages: Set<HexKey>)
+data class Spammer(
+    val pubkeyHex: HexKey,
+    var duplicatedMessages: Set<HexKey>,
+)
 
 class AntiSpamFilter {
     val recentMessages = LruCache<Int, String>(1000)
@@ -109,7 +112,9 @@ class AntiSpamFilter {
 }
 
 @Stable
-class AntiSpamLiveData(val cache: AntiSpamFilter) : LiveData<AntiSpamState>(AntiSpamState(cache)) {
+class AntiSpamLiveData(
+    val cache: AntiSpamFilter,
+) : LiveData<AntiSpamState>(AntiSpamState(cache)) {
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(300, Dispatchers.IO)
 
@@ -126,4 +131,6 @@ class AntiSpamLiveData(val cache: AntiSpamFilter) : LiveData<AntiSpamState>(Anti
     }
 }
 
-class AntiSpamState(val cache: AntiSpamFilter)
+class AntiSpamState(
+    val cache: AntiSpamFilter,
+)

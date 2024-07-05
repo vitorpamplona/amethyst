@@ -59,12 +59,12 @@ class VideoCache {
     // This method should be called when proxy setting changes.
     fun renewCacheFactory(client: OkHttpClient) {
         cacheDataSourceFactory =
-            CacheDataSource.Factory()
+            CacheDataSource
+                .Factory()
                 .setCache(simpleCache)
                 .setUpstreamDataSourceFactory(
                     OkHttpDataSource.Factory(client),
-                )
-                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+                ).setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
     fun get(client: OkHttpClient): CacheDataSource.Factory {

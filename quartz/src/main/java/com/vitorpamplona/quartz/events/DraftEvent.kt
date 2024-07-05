@@ -41,13 +41,9 @@ class DraftEvent(
 
     fun isDeleted() = content == ""
 
-    fun preCachedDraft(signer: NostrSigner): Event? {
-        return cachedInnerEvent[signer.pubKey]
-    }
+    fun preCachedDraft(signer: NostrSigner): Event? = cachedInnerEvent[signer.pubKey]
 
-    fun preCachedDraft(pubKey: HexKey): Event? {
-        return cachedInnerEvent[pubKey]
-    }
+    fun preCachedDraft(pubKey: HexKey): Event? = cachedInnerEvent[pubKey]
 
     fun allCache() = cachedInnerEvent.values
 
@@ -114,9 +110,7 @@ class DraftEvent(
         fun createAddressTag(
             pubKey: HexKey,
             dTag: String,
-        ): String {
-            return ATag.assembleATag(KIND, pubKey, dTag)
-        }
+        ): String = ATag.assembleATag(KIND, pubKey, dTag)
 
         fun create(
             dTag: String,

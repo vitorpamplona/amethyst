@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.service.relays
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.ammolite.relays.EOSETime
 
-class EOSERelayList(var relayList: Map<String, EOSETime> = emptyMap()) {
+class EOSERelayList(
+    var relayList: Map<String, EOSETime> = emptyMap(),
+) {
     fun addOrUpdate(
         relayUrl: String,
         time: Long,
@@ -37,7 +39,9 @@ class EOSERelayList(var relayList: Map<String, EOSETime> = emptyMap()) {
     }
 }
 
-class EOSEFollowList(var followList: Map<String, EOSERelayList> = emptyMap()) {
+class EOSEFollowList(
+    var followList: Map<String, EOSERelayList> = emptyMap(),
+) {
     fun addOrUpdate(
         listCode: String,
         relayUrl: String,
@@ -54,7 +58,9 @@ class EOSEFollowList(var followList: Map<String, EOSERelayList> = emptyMap()) {
     }
 }
 
-class EOSEAccount(var users: Map<User, EOSEFollowList> = emptyMap()) {
+class EOSEAccount(
+    var users: Map<User, EOSEFollowList> = emptyMap(),
+) {
     fun addOrUpdate(
         user: User,
         listCode: String,

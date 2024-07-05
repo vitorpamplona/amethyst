@@ -524,9 +524,17 @@ class Relay(
     }
 
     private fun writeToSocket(str: String) {
+        if (socket == null) {
+            listeners.forEach { listener ->
+                listener.onError(
+                    this@Relay,
+                    "",
+                    Error("Failed to send $str. Relay is not connected."),
+                )
+            }
+        }
         socket?.let {
             checkNotInMainThread()
-
             val result = it.send(str)
             listeners.forEach { listener ->
                 listener.onSend(this@Relay, str, result)

@@ -160,7 +160,11 @@ fun HashtagActionOptions(
     tag: String,
     accountViewModel: AccountViewModel,
 ) {
-    val userState by accountViewModel.userProfile().live().follows.observeAsState()
+    val userState by accountViewModel
+        .userProfile()
+        .live()
+        .follows
+        .observeAsState()
     val isFollowingTag by
         remember(userState) {
             derivedStateOf { userState?.user?.isFollowingHashtagCached(tag) ?: false }

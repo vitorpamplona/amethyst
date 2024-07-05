@@ -236,10 +236,10 @@ fun MediaMetadataRetriever.prepareVideoHeight(): Int? {
     }
 }
 
-class ByteArrayMediaDataSource(var imageData: ByteArray) : MediaDataSource() {
-    override fun getSize(): Long {
-        return imageData.size.toLong()
-    }
+class ByteArrayMediaDataSource(
+    var imageData: ByteArray,
+) : MediaDataSource() {
+    override fun getSize(): Long = imageData.size.toLong()
 
     @Throws(IOException::class)
     override fun readAt(

@@ -206,7 +206,8 @@ fun LoadCityName(
                 val geoHash = runCatching { geohashStr.toGeoHash() }.getOrNull()
                 if (geoHash != null) {
                     val newCityName =
-                        CachedGeoLocations.geoLocate(geohashStr, geoHash.toLocation(), context)
+                        CachedGeoLocations
+                            .geoLocate(geohashStr, geoHash.toLocation(), context)
                             ?.ifBlank { null }
                     if (newCityName != null && newCityName != cityName) {
                         cityName = newCityName

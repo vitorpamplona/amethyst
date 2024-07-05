@@ -37,7 +37,8 @@ class PrivateDmEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig), ChatroomKeyable {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    ChatroomKeyable {
     @Transient private var decryptedContent: Map<HexKey, String> = mapOf()
 
     override fun isContentEncoded() = true
@@ -60,13 +61,9 @@ class PrivateDmEvent(
         }
     }
 
-    fun talkingWith(oneSideHex: String): HexKey {
-        return if (pubKey == oneSideHex) verifiedRecipientPubKey() ?: pubKey else pubKey
-    }
+    fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) verifiedRecipientPubKey() ?: pubKey else pubKey
 
-    override fun chatroomKey(toRemove: String): ChatroomKey {
-        return ChatroomKey(persistentSetOf(talkingWith(toRemove)))
-    }
+    override fun chatroomKey(toRemove: String): ChatroomKey = ChatroomKey(persistentSetOf(talkingWith(toRemove)))
 
     /**
      * To be fully compatible with nip-04, we read e-tags that are in violation to nip-18.
@@ -76,13 +73,9 @@ class PrivateDmEvent(
      */
     fun replyTo() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
 
-    fun with(pubkeyHex: String): Boolean {
-        return pubkeyHex == pubKey || tags.any { it.size > 1 && it[0] == "p" && it[1] == pubkeyHex }
-    }
+    fun with(pubkeyHex: String): Boolean = pubkeyHex == pubKey || tags.any { it.size > 1 && it[0] == "p" && it[1] == pubkeyHex }
 
-    fun cachedContentFor(signer: NostrSigner): String? {
-        return decryptedContent[signer.pubKey]
-    }
+    fun cachedContentFor(signer: NostrSigner): String? = decryptedContent[signer.pubKey]
 
     fun plainContent(
         signer: NostrSigner,
@@ -178,11 +171,10 @@ class PrivateDmEvent(
     }
 }
 
-fun geohashMipMap(geohash: String): Array<Array<String>> {
-    return geohash.indices
+fun geohashMipMap(geohash: String): Array<Array<String>> =
+    geohash.indices
         .asSequence()
         .map { arrayOf("g", geohash.substring(0, it + 1)) }
         .toList()
         .reversed()
         .toTypedArray()
-}

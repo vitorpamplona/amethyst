@@ -25,10 +25,11 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.events.ContactListEvent
 
-class UserProfileFollowsFeedFilter(val user: User, val account: Account) : FeedFilter<User>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + user.pubkeyHex
-    }
+class UserProfileFollowsFeedFilter(
+    val user: User,
+    val account: Account,
+) : FeedFilter<User>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + user.pubkeyHex
 
     val cache: MutableMap<ContactListEvent, List<User>> = mutableMapOf()
 

@@ -61,7 +61,8 @@ class Amethyst : Application() {
     }
 
     val coilCache: DiskCache by lazy {
-        DiskCache.Builder()
+        DiskCache
+            .Builder()
             .directory(applicationContext.safeCacheDir.resolve("image_cache"))
             .maxSizePercent(0.2)
             .maximumMaxSizeBytes(500L * 1024 * 1024) // 250MB
@@ -77,10 +78,18 @@ class Amethyst : Application() {
 
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(
-                ThreadPolicy.Builder().detectAll().penaltyLog().build(),
+                ThreadPolicy
+                    .Builder()
+                    .detectAll()
+                    .penaltyLog()
+                    .build(),
             )
             StrictMode.setVmPolicy(
-                VmPolicy.Builder().detectAll().penaltyLog().build(),
+                VmPolicy
+                    .Builder()
+                    .detectAll()
+                    .penaltyLog()
+                    .build(),
             )
         }
 
@@ -94,13 +103,9 @@ class Amethyst : Application() {
         }
     }
 
-    fun imageLoaderBuilder(): ImageLoader.Builder {
-        return ImageLoader.Builder(applicationContext).diskCache { coilCache }
-    }
+    fun imageLoaderBuilder(): ImageLoader.Builder = ImageLoader.Builder(applicationContext).diskCache { coilCache }
 
-    fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences {
-        return EncryptedStorage.preferences(instance, npub)
-    }
+    fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences = EncryptedStorage.preferences(instance, npub)
 
     companion object {
         lateinit var instance: Amethyst

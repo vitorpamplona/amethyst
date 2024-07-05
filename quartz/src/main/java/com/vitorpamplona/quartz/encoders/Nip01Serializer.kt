@@ -47,9 +47,12 @@ class Nip01Serializer {
         fun dump()
     }
 
-    class BufferedDigestWriter(val digest: MessageDigest) : Writer {
+    class BufferedDigestWriter(
+        val digest: MessageDigest,
+    ) : Writer {
         val utf8Encoder =
-            Charsets.UTF_8.newEncoder()
+            Charsets.UTF_8
+                .newEncoder()
                 .onMalformedInput(CodingErrorAction.IGNORE)
                 .onUnmappableCharacter(CodingErrorAction.IGNORE)
 
@@ -151,9 +154,7 @@ class Nip01Serializer {
             stringBuilder.append(value.toInt().toChar())
         }
 
-        override fun toString(): String {
-            return stringBuilder.toString()
-        }
+        override fun toString(): String = stringBuilder.toString()
 
         override fun dump() {
         }

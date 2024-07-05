@@ -37,17 +37,11 @@ import org.junit.Test
 class NewMessageTaggerKeyParseTest {
     val dao: Dao =
         object : Dao {
-            override suspend fun getOrCreateUser(hex: String): User {
-                return User(hex)
-            }
+            override suspend fun getOrCreateUser(hex: String): User = User(hex)
 
-            override suspend fun getOrCreateNote(hex: String): Note {
-                return Note(hex)
-            }
+            override suspend fun getOrCreateNote(hex: String): Note = Note(hex)
 
-            override suspend fun checkGetOrCreateAddressableNote(hex: String): Note? {
-                return Note(hex)
-            }
+            override suspend fun checkGetOrCreateAddressableNote(hex: String): Note? = Note(hex)
         }
 
     @Test

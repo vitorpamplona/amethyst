@@ -79,7 +79,9 @@ class ClassifiedsEvent(
             null
         }
 
-    enum class CONDITION(val value: String) {
+    enum class CONDITION(
+        val value: String,
+    ) {
         NEW("new"),
         USED_LIKE_NEW("like new"),
         USED_GOOD("good"),
@@ -202,4 +204,8 @@ class ClassifiedsEvent(
     }
 }
 
-data class Price(val amount: String, val currency: String?, val frequency: String?)
+data class Price(
+    val amount: String,
+    val currency: String?,
+    val frequency: String?,
+)

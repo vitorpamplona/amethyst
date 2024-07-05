@@ -78,12 +78,15 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
         _relays.update {
             val relayList = getRelayList() ?: emptyList()
 
-            relayList.map { relayUrl ->
-                BasicRelaySetupInfo(
-                    RelayUrlFormatter.normalize(relayUrl),
-                    RelayStats.get(relayUrl),
-                )
-            }.distinctBy { it.url }.sortedBy { it.relayStat.receivedBytes }.reversed()
+            relayList
+                .map { relayUrl ->
+                    BasicRelaySetupInfo(
+                        RelayUrlFormatter.normalize(relayUrl),
+                        RelayStats.get(relayUrl),
+                    )
+                }.distinctBy { it.url }
+                .sortedBy { it.relayStat.receivedBytes }
+                .reversed()
         }
     }
 

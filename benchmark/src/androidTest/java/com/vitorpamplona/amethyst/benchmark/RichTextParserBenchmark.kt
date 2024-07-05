@@ -59,11 +59,13 @@ class RichTextParserBenchmark {
     fun parseImageUrl() {
         benchmarkRule.measureRepeated {
             assertTrue(
-                RichTextParser().parseText(
-                    "first https://m.primal.net/HeKw.jpg second",
-                    EmptyTagList,
-                    null,
-                ).paragraphs[0].words[1] is ImageSegment,
+                RichTextParser()
+                    .parseText(
+                        "first https://m.primal.net/HeKw.jpg second",
+                        EmptyTagList,
+                        null,
+                    ).paragraphs[0]
+                    .words[1] is ImageSegment,
             )
         }
     }
@@ -72,11 +74,13 @@ class RichTextParserBenchmark {
     fun parseNoSchemeUrl() {
         benchmarkRule.measureRepeated {
             assertTrue(
-                RichTextParser().parseText(
-                    "first amethyst.social second",
-                    EmptyTagList,
-                    null,
-                ).paragraphs[0].words[1] is LinkSegment,
+                RichTextParser()
+                    .parseText(
+                        "first amethyst.social second",
+                        EmptyTagList,
+                        null,
+                    ).paragraphs[0]
+                    .words[1] is LinkSegment,
             )
         }
     }
@@ -85,11 +89,13 @@ class RichTextParserBenchmark {
     fun parseHashtag() {
         benchmarkRule.measureRepeated {
             assertTrue(
-                RichTextParser().parseText(
-                    "first #amethyst second",
-                    EmptyTagList,
-                    null,
-                ).paragraphs[0].words[1] is HashTagSegment,
+                RichTextParser()
+                    .parseText(
+                        "first #amethyst second",
+                        EmptyTagList,
+                        null,
+                    ).paragraphs[0]
+                    .words[1] is HashTagSegment,
             )
         }
     }

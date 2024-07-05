@@ -24,7 +24,7 @@ import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-class TlvBuilder() {
+class TlvBuilder {
     val outputStream = ByteArrayOutputStream()
 
     private fun add(
@@ -65,9 +65,7 @@ class TlvBuilder() {
         data: Int?,
     ) = data?.let { addInt(type, it) }
 
-    fun build(): ByteArray {
-        return outputStream.toByteArray()
-    }
+    fun build(): ByteArray = outputStream.toByteArray()
 }
 
 fun Int.to32BitByteArray(): ByteArray {
@@ -81,7 +79,9 @@ fun ByteArray.toInt32(): Int? {
     return ByteBuffer.wrap(this, 0, 4).order(ByteOrder.BIG_ENDIAN).int
 }
 
-class Tlv(val data: Map<Byte, List<ByteArray>>) {
+class Tlv(
+    val data: Map<Byte, List<ByteArray>>,
+) {
     fun asInt(type: Byte) = data[type]?.mapNotNull { it.toInt32() }
 
     fun asHex(type: Byte) = data[type]?.map { it.toHexKey().intern() }

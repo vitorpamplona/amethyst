@@ -27,10 +27,11 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 
-class CommunityFeedFilter(val note: AddressableNote, val account: Account) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String {
-        return account.userProfile().pubkeyHex + "-" + note.idHex
-    }
+class CommunityFeedFilter(
+    val note: AddressableNote,
+    val account: Account,
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + note.idHex
 
     override fun feed(): List<Note> {
         val myPubKey = account.userProfile().pubkeyHex
@@ -42,23 +43,23 @@ class CommunityFeedFilter(val note: AddressableNote, val account: Account) : Add
         return sort(result)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
-        return innerApplyFilter(collection)
-    }
+    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val myPubKey = account.userProfile().pubkeyHex
 
-        return collection.mapNotNull {
-            filterMap(it, myPubKey)
-        }.flatten().toSet()
+        return collection
+            .mapNotNull {
+                filterMap(it, myPubKey)
+            }.flatten()
+            .toSet()
     }
 
     private fun filterMap(
         note: Note,
         myPubKey: HexKey,
-    ): List<Note>? {
-        return if (
+    ): List<Note>? =
+        if (
             // Only Approvals
             note.event is CommunityPostApprovalEvent &&
             // Of the given community
@@ -74,9 +75,6 @@ class CommunityFeedFilter(val note: AddressableNote, val account: Account) : Add
         } else {
             null
         }
-    }
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.sortedWith(DefaultFeedOrder)
-    }
+    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 }
