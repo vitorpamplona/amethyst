@@ -38,29 +38,36 @@ class GalleryListEvent(
     companion object {
         const val KIND = 10011
         const val ALT = "Profile Gallery"
-        const val GALLERYTAGNAME = "G"
+        const val GALLERYTAGNAME = "url"
 
         fun addEvent(
             earlierVersion: GalleryListEvent?,
             eventId: HexKey,
             url: String,
+            relay: String?,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (GalleryListEvent) -> Unit,
-        ) = addTag(earlierVersion, GALLERYTAGNAME, eventId, url, signer, createdAt, onReady)
+        ) = addTag(earlierVersion, GALLERYTAGNAME, eventId, url, relay, signer, createdAt, onReady)
 
         fun addTag(
             earlierVersion: GalleryListEvent?,
             tagName: String,
-            tagValue: HexKey,
+            eventid: HexKey,
             url: String,
+            relay: String?,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (GalleryListEvent) -> Unit,
         ) {
+            var tags = arrayOf(tagName, url, eventid)
+            if (relay != null) {
+                tags + relay
+            }
+
             add(
                 earlierVersion,
-                arrayOf(arrayOf(tagName, tagValue, url)),
+                arrayOf(tags),
                 signer,
                 createdAt,
                 onReady,
@@ -104,7 +111,7 @@ class GalleryListEvent(
         private fun removeTag(
             earlierVersion: GalleryListEvent,
             tagName: String,
-            tagValue: HexKey,
+            eventid: HexKey,
             url: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
@@ -114,7 +121,7 @@ class GalleryListEvent(
                 content = earlierVersion.content,
                 tags =
                     earlierVersion.tags
-                        .filter { it.size <= 1 || !(it[0] == tagName && it[1] == tagValue && it[2] == url) }
+                        .filter { it.size <= 1 || !(it[0] == tagName && it[1] == url && it[2] == eventid) }
                         .toTypedArray(),
                 signer = signer,
                 createdAt = createdAt,
@@ -142,16 +149,17 @@ class GalleryListEvent(
 
     @Immutable
     data class GalleryUrl(
-        val id: String,
         val url: String,
+        val id: String,
+        val relay: String?,
     ) {
-        fun encode(): String = ":$id:$url"
+        fun encode(): String = ":$url:$id:$relay"
 
         companion object {
-            fun decode(encodedGallerySetup: String): EmojiUrl? {
-                val emojiParts = encodedGallerySetup.split(":", limit = 3)
-                return if (emojiParts.size > 2) {
-                    EmojiUrl(emojiParts[1], emojiParts[2])
+            fun decode(encodedGallerySetup: String): GalleryUrl? {
+                val galleryParts = encodedGallerySetup.split(":", limit = 3)
+                return if (galleryParts.size > 3) {
+                    GalleryUrl(galleryParts[1], galleryParts[2], galleryParts[3])
                 } else {
                     null
                 }

@@ -672,8 +672,9 @@ class AccountViewModel(
     fun addMediaToGallery(
         hex: String,
         url: String,
+        relay: String?,
     ) {
-        viewModelScope.launch(Dispatchers.IO) { account.addToGallery(hex, url) }
+        viewModelScope.launch(Dispatchers.IO) { account.addToGallery(hex, url, relay) }
     }
 
     fun removefromMediaGallery(

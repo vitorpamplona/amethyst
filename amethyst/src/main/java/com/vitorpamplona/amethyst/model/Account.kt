@@ -2201,6 +2201,7 @@ class Account(
     fun addToGallery(
         idHex: String,
         url: String,
+        relay: String?,
     ) {
         if (!isWriteable()) return
 
@@ -2208,6 +2209,7 @@ class Account(
             userProfile().latestGalleryList,
             idHex,
             url,
+            relay,
             signer,
         ) {
             Client.send(it)

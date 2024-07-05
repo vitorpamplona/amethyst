@@ -663,7 +663,7 @@ fun ShareImageAction(
                     if (videoUri != null) {
                         var n19 = Nip19Bech32.uriToRoute(postNostrUri)?.entity as? Nip19Bech32.NEvent
                         if (n19 != null) {
-                            accountViewModel.addMediaToGallery(n19.hex, videoUri)
+                            accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay[0]) // TODO Whole list or first?
                             accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
                         }
                     }
