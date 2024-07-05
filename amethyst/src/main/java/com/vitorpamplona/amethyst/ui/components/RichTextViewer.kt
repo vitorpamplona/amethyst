@@ -468,7 +468,8 @@ fun ImageFromBase64(base64String: String) {
         BlankNote()
     } else {
         val request =
-            ImageRequest.Builder(context)
+            ImageRequest
+                .Builder(context)
                 .data(imageBytes)
                 .build()
 

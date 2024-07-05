@@ -62,7 +62,9 @@ class GeoHashFeedFilter(
                 it.event is PrivateDmEvent ||
                 it.event is PollNoteEvent ||
                 it.event is AudioHeaderEvent
-        ) && it.event?.isTaggedGeoHash(geoTag) == true && account.isAcceptable(it)
+        ) &&
+            it.event?.isTaggedGeoHash(geoTag) == true &&
+            account.isAcceptable(it)
 
     override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 }
