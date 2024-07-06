@@ -1296,9 +1296,6 @@ open class NewPostViewModel : ViewModel() {
         val newEntries = keyList.zip(elementList) { key, content -> Pair(key, content) }
         this.clear()
         this.putAll(newEntries)
-
-        println("Keys collection size(after deletion) :${keys.size}")
-        println("Values collection size(after deletion) :${values.size}")
     }
 
     fun updatePollOption(
