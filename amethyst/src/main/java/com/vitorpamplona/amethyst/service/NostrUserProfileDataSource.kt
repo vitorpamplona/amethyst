@@ -84,7 +84,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
                                 WikiNoteEvent.KIND,
                             ),
                         authors = listOf(it.pubkeyHex),
-                        limit = 500,
+                        limit = 200,
                     ),
             )
         }

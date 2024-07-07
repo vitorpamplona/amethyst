@@ -133,45 +133,27 @@ private fun GalleryFeedLoaded(
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
             val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
 
-            if (item.associatedNote != null) {
-                if (item.associatedNote!!.event != null) {
-                    if ((item.event as ProfileGalleryEntryEvent).hasUrl() &&
-                        (item.event as ProfileGalleryEntryEvent).hasEvent()
-                    ) {
-                        val image = (item.event as ProfileGalleryEntryEvent).url()
-
-                        Row(defaultModifier) {
-                            if (image != null) {
-                                GalleryCardCompose(
-                                    galleryNote = item,
-                                    image = image,
-                                    baseNote = item.associatedNote!!,
-                                    routeForLastRead = routeForLastRead,
-                                    modifier = Modifier,
-                                    forceEventKind = forceEventKind,
-                                    accountViewModel = accountViewModel,
-                                    nav = nav,
-                                )
-                            }
-                        }
-
-                        HorizontalDivider(
-                            thickness = DividerThickness,
-                        )
-                    } else {
-                        accountViewModel.delete(item)
-                    }
-                }
+            Row(defaultModifier) {
+                GalleryCardCompose(
+                    baseNote = item,
+                    routeForLastRead = routeForLastRead,
+                    modifier = Modifier,
+                    forceEventKind = forceEventKind,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
             }
+
+            HorizontalDivider(
+                thickness = DividerThickness,
+            )
         }
     }
 }
 
 @Composable
 fun GalleryCardCompose(
-    galleryNote: Note,
     baseNote: Note,
-    image: String,
     routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
@@ -190,15 +172,22 @@ fun GalleryCardCompose(
             nav = nav,
         ) { canPreview ->
 
-            GalleryCard(
-                galleryNote = galleryNote,
-                baseNote = baseNote,
-                image = image,
-                modifier = modifier,
-                parentBackgroundColor = parentBackgroundColor,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+            if (baseNote.associatedNote != null) {
+                if (baseNote.associatedNote!!.event != null) {
+                    val image = (baseNote.associatedNote!!.event as ProfileGalleryEntryEvent).url()
+                    if (image != null) {
+                        GalleryCard(
+                            galleryNote = baseNote.associatedNote!!,
+                            baseNote = baseNote,
+                            image = image,
+                            modifier = modifier,
+                            parentBackgroundColor = parentBackgroundColor,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
+                }
+            }
         }
     }
 }

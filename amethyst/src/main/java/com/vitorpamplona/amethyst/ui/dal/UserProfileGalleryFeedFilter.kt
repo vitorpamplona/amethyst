@@ -32,7 +32,7 @@ class UserProfileGalleryFeedFilter(
     val user: User,
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.defaultStoriesFollowList.value
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + "ProfileGallery"
 
     override fun showHiddenKey(): Boolean =
         account.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
@@ -46,13 +46,17 @@ class UserProfileGalleryFeedFilter(
                 acceptableEvent(it, params, user)
             }
 
+        var sorted = sort(notes)
         var finalnotes = setOf<Note>()
-        for (item in notes) {
-            item.associatedNote = (item.event as ProfileGalleryEntryEvent).event()?.let { LocalCache.getOrCreateNote(it) }
-            finalnotes = finalnotes + item
+        for (item in sorted) {
+            val note = (item.event as ProfileGalleryEntryEvent).event()?.let { LocalCache.checkGetOrCreateNote(it) }
+            if (note != null) {
+                note.associatedNote = item
+                finalnotes = finalnotes + note
+            }
         }
 
-        return sort(finalnotes)
+        return finalnotes.toList()
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
