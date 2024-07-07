@@ -53,7 +53,9 @@ fun stringRes(
 ): String =
     String
         .format(
-            LocalConfiguration.current.locales.get(0),
+            LocalConfiguration.current.locales
+                .get(0)
+                .toString(),
             resourceCache.get(id) ?: stringResource(id),
             *args,
         ).also { resourceCache.put(id, it) }
