@@ -168,6 +168,10 @@ fun DiscoverScreen(
                     println("Discovery Start")
                     NostrDiscoveryDataSource.start()
                 }
+                if (event == Lifecycle.Event.ON_PAUSE) {
+                    println("Discovery Stop")
+                    NostrDiscoveryDataSource.stop()
+                }
             }
 
         lifeCycleOwner.lifecycle.addObserver(observer)
