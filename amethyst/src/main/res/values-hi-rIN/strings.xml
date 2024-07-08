@@ -36,6 +36,7 @@
     <string name="report_impersonation">पररूपण की सूचना दें</string>
     <string name="report_explicit_content">अभद्र विषयवस्तु की सूचना दें</string>
     <string name="report_illegal_behaviour">अवैध बरताव की सूचना दें</string>
+    <string name="report_malware">दुष्क्रमक की सूचना दें</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। उत्तर देने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। प्रकाशित पत्रों को उद्धृत करने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
     <string name="login_with_a_private_key_to_like_posts">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। प्रकाशित पत्रों को चाहने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
@@ -267,6 +268,7 @@
     <string name="report_dialog_impersonation">दुर्भावनापूर्ण पररूपण</string>
     <string name="report_dialog_nudity">नग्नता अथवा आपत्तिजनक विषयवस्तु</string>
     <string name="report_dialog_illegal">अवैध बरताव</string>
+    <string name="report_dialog_malware">दुष्क्रमक</string>
     <string name="report_dialog_blocking_a_user">उपयोगकर्ता को बाधित करने से उनका विषयवस्तु आपके लिए छिपाया जाएगा क्रमक में। आपके टीकाएँ सार्वजनिक रूप से दृश्य रहेंगे, उन जनों के लिए भी जिनहे आपने बाधित किया। बाधित उपयोगकर्ता सूचित हैं सुरक्षा छलनियाँ पटल पर।</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[उपयोगकर्ता को बाधित करें तथा छिपाएँ]]></string>
     <string name="report_dialog_report_btn">दुर्व्यवहार की सूचना दें</string>
@@ -339,6 +341,14 @@
     <string name="zap_type_nonzap_explainer">नोस्ट्र में कोई पदचिह्न नहीं, केवल लैटनिंग पर</string>
     <string name="file_server">अभिलेख सेवासंगणक</string>
     <string name="zap_forward_lnAddress">लै॰जाल पता अथवा @उपयोगकर्ता</string>
+    <string name="media_servers">प्रसारसंगणक</string>
+    <string name="set_preferred_media_servers">आपके प्रसारसंगणक आद्यताएँ स्थापित करें।</string>
+    <string name="no_media_server_message">आपका कोई विशिष्ट प्रसारसंगणक स्थापित नहीं। आप अमेथिस्ट की सूची का प्रयोग कर सकते हैं अथवा प्रसारसंगणक नीचे जोड सकते हैं ↓</string>
+    <string name="built_in_media_servers_title">अन्तर्निहित प्रसारसंगणक</string>
+    <string name="built_in_servers_description">अमेथिस्त की मूलविकल्प सूची। आप एक एक करके जोड सकते हैं अथवा सूची जोड सकते हैं।</string>
+    <string name="use_default_servers">मूलविकल्प सूची का प्रयोग करें</string>
+    <string name="add_media_server">प्रसारसंगणक जोडें</string>
+    <string name="delete_media_server">प्रसारसंगणक मिटाएँ</string>
     <string name="upload_server_relays_nip95">आपके पुनःप्रसारक (निप॰-९५)</string>
     <string name="upload_server_relays_nip95_explainer">अभिलेख आपके पुनःप्रसारक द्वारा रखे जाते हैं। नया निप॰: जाँच करें यदि वे अवलम्बन करते हैं</string>
     <string name="connect_via_tor_short">टोर / ओर्बोट स्थापन</string>
@@ -785,4 +795,5 @@
     <string name="http_status_507">स्मृतिस्थान का अभाव - सेवासंगणक में पर्याप्त स्मृतिस्थान उपलब्ध नहीं अनुरोध पर सफलतापूर्वक काम करने के लिए</string>
     <string name="http_status_508">क्रमचक्र दृष्ट - सेवासंगणक को अनन्त क्रमचक्र का पता चला अनुरोध पर काम करते हुए</string>
     <string name="http_status_511">जाल प्रमाणीकरण आवश्यक - जाल उपलब्ध होने के लिए ग्राहक का प्रमाणीकरण अनिवार्य</string>
+    <string name="add_a_nip96_server">निप॰-९६ सेवासंगणक जोडें</string>
 </resources>
