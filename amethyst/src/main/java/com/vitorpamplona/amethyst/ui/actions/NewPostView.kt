@@ -630,17 +630,21 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
 
 @Composable
 private fun PollField(postViewModel: NewPostViewModel) {
+    val optionsList = postViewModel.pollOptions
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
-        postViewModel.pollOptions.values.forEachIndexed { index, _ ->
-            NewPollOption(postViewModel, index)
+        optionsList.forEach { value ->
+            NewPollOption(postViewModel, value.key)
         }
 
         NewPollVoteValueRange(postViewModel)
 
         Button(
-            onClick = { postViewModel.pollOptions[postViewModel.pollOptions.size] = "" },
+            onClick = {
+                // postViewModel.pollOptions[postViewModel.pollOptions.size] = ""
+                optionsList[optionsList.size] = ""
+            },
             border =
                 BorderStroke(
                     1.dp,
