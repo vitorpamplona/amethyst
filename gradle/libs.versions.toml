@@ -47,8 +47,6 @@ zelory = "3.0.1"
 zoomable = "1.6.1"
 zxing = "3.5.3"
 zxingAndroidEmbedded = "4.3.0"
-material = "1.10.0"
-materialVersion = "1.12.0"
 
 [libraries]
 abedElazizShe-image-compressor = { group = "com.github.AbedElazizShe", name = "LightCompressor", version.ref = "lightcompressor" }
@@ -119,7 +117,6 @@ zelory-video-compressor = { group = "id.zelory", name = "compressor", version.re
 zoomable = { group = "net.engawapg.lib", name = "zoomable", version.ref = "zoomable" }
 zxing = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 zxing-embedded = { group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxingAndroidEmbedded" }
-material = { group = "com.google.android.material", name = "material", version.ref = "materialVersion" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
