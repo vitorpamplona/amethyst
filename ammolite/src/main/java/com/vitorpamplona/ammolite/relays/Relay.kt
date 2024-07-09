@@ -21,6 +21,7 @@
 package com.vitorpamplona.ammolite.relays
 
 import android.util.Log
+import com.vitorpamplona.ammolite.BuildConfig
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -308,10 +309,11 @@ class Relay(
                     val success = msgArray[2].asBoolean()
                     val message = if (msgArray.size() > 2) msgArray[3].asText() else ""
 
+                    Log.w("Relay", "Relay on OK $url, $eventId, $success, $message")
+
                     if (authResponse.containsKey(eventId)) {
                         val wasAlreadyAuthenticated = authResponse.get(eventId)
                         authResponse.put(eventId, success)
-                        println("AABBCC Auth Response $url $wasAlreadyAuthenticated $success")
                         if (wasAlreadyAuthenticated != true && success) {
                             renewFilters()
                             sendOutbox()
@@ -319,13 +321,10 @@ class Relay(
                     }
 
                     if (outboxCache.contains(eventId) && !message.startsWith("auth-required")) {
-                        Log.w("Relay", "Relay on OK $url with message `$message`")
                         synchronized(outboxCache) {
                             outboxCache.remove(eventId)
                         }
                     }
-
-                    Log.w("Relay", "Relay on OK $url, $eventId, $success, $message")
 
                     if (!success) {
                         RelayStats.newNotice(url, "Failed to receive $eventId: $message")
@@ -534,9 +533,9 @@ class Relay(
             }
             RelayStats.addBytesSent(url, str.bytesUsedInMemory())
 
-            // if (BuildConfig.DEBUG) {
-            Log.d("Relay", "Relay send $url $str")
-            // }
+            if (BuildConfig.DEBUG) {
+                Log.d("Relay", "Relay send $url $str")
+            }
         }
     }
 
