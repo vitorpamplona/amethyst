@@ -36,6 +36,7 @@
     <string name="report_impersonation">Zgłoś podszywanie się</string>
     <string name="report_explicit_content">Zgłoś niedozwoloną zawartość</string>
     <string name="report_illegal_behaviour">Zgłoś antyspołeczne działania</string>
+    <string name="report_malware">Zgłoś złośliwe oprogramowanie</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Używasz klucza publicznego, a klucze publiczne są tylko do odczytu. Zaloguj się za pomocą klucza prywatnego, aby móc odpowiedzieć</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Używasz klucza publicznego, a klucze publiczne są tylko do odczytu. Zaloguj się za pomocą klucza prywatnego, aby zwiększyć liczbę postów</string>
     <string name="login_with_a_private_key_to_like_posts">Używasz klucza publicznego, a klucze publiczne są tylko do odczytu. Zaloguj się za pomocą klucza prywatnego, aby polubić posty</string>
@@ -267,6 +268,7 @@
     <string name="report_dialog_impersonation">Złośliwe podszywanie się</string>
     <string name="report_dialog_nudity">Nagość lub obraźliwa grafika</string>
     <string name="report_dialog_illegal">Antyspołeczne zachowanie</string>
+    <string name="report_dialog_malware">Złośliwe oprogramowanie</string>
     <string name="report_dialog_blocking_a_user">Zablokowanie użytkownika ukryje jego zawartość w aplikacji. Twoje notatki są nadal widoczne publicznie, w tym dla osób, które blokujesz. Zablokowani użytkownicy są wymienieni na ekranie filtrów bezpieczeństwa.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Zablokuj i ukryj użytkownika]]></string>
     <string name="report_dialog_report_btn">Zgłoś nadużycie</string>
@@ -339,6 +341,14 @@
     <string name="zap_type_nonzap_explainer">Brak śladu w Nostr, tylko w Lightning</string>
     <string name="file_server">Serwer Plików</string>
     <string name="zap_forward_lnAddress">LnAdres lub @Użytkownik</string>
+    <string name="media_servers">Serwery Multimediów</string>
+    <string name="set_preferred_media_servers">Ustaw swoje preferowane serwery przesyłania multimediów.</string>
+    <string name="no_media_server_message">Nie masz ustawionych własnych serwerów multimediów. Możesz użyć listy Amethyst\'a lub dodać jeden poniżej ↓</string>
+    <string name="built_in_media_servers_title">Wbudowane serwery multimediów</string>
+    <string name="built_in_servers_description">Domyślna lista Amethyst-a. Możesz dodawać je pojedynczo lub dodać pełną listę.</string>
+    <string name="use_default_servers">Użyj domyślnej listy</string>
+    <string name="add_media_server">Dodaj serwer multimediów</string>
+    <string name="delete_media_server">Usuń serwer multimediów</string>
     <string name="upload_server_relays_nip95">Twoje transmitery (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Pliki są przechowywane przez Twoje retransmitery. Nowy NIP: sprawdź, czy jest obsługiwany</string>
     <string name="connect_via_tor_short">Tor/Orbot - Ustawienia</string>
@@ -426,6 +436,8 @@
     <string name="cashu_copy_token">Skopiuj token</string>
     <string name="no_lightning_address_set">Nie ustawiono adresu Lightning</string>
     <string name="copied_token_to_clipboard">Skopiowano token do schowka</string>
+    <string name="live_stream_live_tag">NA ŻYWO</string>
+    <string name="live_stream_offline_tag">OFFLINE</string>
     <string name="live_stream_ended_tag">Zakończony</string>
     <string name="live_stream_planned_tag">ZAPLANOWANE</string>
     <string name="live_stream_is_offline">Transmisja wyłączona</string>
@@ -776,4 +788,5 @@
     <string name="http_status_507">Niewystarczająca pojemność - serwer nie ma wystarczającej pojemność, aby pomyślnie przetworzyć żądanie</string>
     <string name="http_status_508">Wykryta pętla - serwer wykrywa nieskończoną pętlę podczas przetwarzania żądania</string>
     <string name="http_status_511">Wymagane uwierzytelnienie sieciowe - Klient musi być uwierzytelniony aby uzyskać dostęp do sieci</string>
+    <string name="add_a_nip96_server">Dodaj serwer NIP-96</string>
 </resources>

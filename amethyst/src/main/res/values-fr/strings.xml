@@ -36,6 +36,7 @@
     <string name="report_impersonation">Signaler une falsification d\'identité</string>
     <string name="report_explicit_content">Signaler un contenu choquant</string>
     <string name="report_illegal_behaviour">Signaler un comportement illégal</string>
+    <string name="report_malware">Signaler un programme malveillant</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Connectez vous avec une clé privée pour pouvoir répondre</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Connectez vous avec une clé privée pour pouvoir booster des posts</string>
     <string name="login_with_a_private_key_to_like_posts">Connectez vous avec une clé privée pour pouvoir aimer des posts</string>
@@ -267,6 +268,7 @@
     <string name="report_dialog_impersonation">Usurpation d\'identité</string>
     <string name="report_dialog_nudity">Nudité ou contenu graphique</string>
     <string name="report_dialog_illegal">Comportement illégal</string>
+    <string name="report_dialog_malware">Programme malveillant</string>
     <string name="report_dialog_blocking_a_user">Bloquer un utilisateur cachera son contenu dans votre application. Vos notes sont toujours visibles publiquement, y compris pour les personnes que vous bloquez. Les utilisateurs bloqués sont listés sur l\'écran Filtres de Sécurité.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Bloquer et Masquer l\'Utilisateur]]></string>
     <string name="report_dialog_report_btn">Signaler un Abus</string>
@@ -339,6 +341,14 @@
     <string name="zap_type_nonzap_explainer">Aucune trace sur Nostr, seulement sur le Lightning</string>
     <string name="file_server">Serveur fichier</string>
     <string name="zap_forward_lnAddress">Adresse LN ou @Utilisateur</string>
+    <string name="media_servers">Serveurs média</string>
+    <string name="set_preferred_media_servers">Définissez vos serveurs de téléversement de média préférés.</string>
+    <string name="no_media_server_message">Vous n\'avez pas de serveur média personnalisé. Vous pouvez utiliser la liste d\'Amethyst, ou en ajouter un ci-dessous</string>
+    <string name="built_in_media_servers_title">Serveurs média intégrés</string>
+    <string name="built_in_servers_description">Liste par défaut d\'Amethyst. Vous pouvez les ajouter individuellement ou ajouter la liste.</string>
+    <string name="use_default_servers">Utiliser la liste par défaut</string>
+    <string name="add_media_server">Ajouter un serveur média</string>
+    <string name="delete_media_server">Supprimer le serveur média</string>
     <string name="upload_server_relays_nip95">Vos relais (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Les fichiers sont hébergés par vos relais. Nouveau NIP: vérifiez s\'ils sont supportés</string>
     <string name="connect_via_tor_short">Configuration Tor/Orbot</string>
@@ -642,6 +652,8 @@
     <string name="server_did_not_provide_a_url_after_uploading">Le serveur n\'a pas fourni d\'URL après le téléversement</string>
     <string name="could_not_download_from_the_server">Impossible de télécharger le média depuis le serveur</string>
     <string name="could_not_prepare_local_file_to_upload">Impossible de préparer le fichier local à téléverser: %1$s</string>
+    <string name="failed_to_upload_with_message">Échec du téléversement: %1$s</string>
+    <string name="failed_to_delete_with_message">Échec de la suppression : %1$s</string>
     <string name="edit_draft">Modifier le brouillon</string>
     <string name="login_with_qr_code">Se connecter avec un QR Code</string>
     <string name="route">Route</string>
@@ -754,4 +766,5 @@
     <string name="dvm_requesting_job">Tâche demandée par DVM</string>
     <string name="nwc_payment_request">Demande de paiement envoyée, en attente de confirmation depuis votre portefeuille</string>
     <string name="dvm_waiting_to_confirm_payment">En attente que DVM confirme le paiement ou envoie les résultats</string>
+    <string name="add_a_nip96_server">Ajouter un serveur NIP-96</string>
 </resources>
