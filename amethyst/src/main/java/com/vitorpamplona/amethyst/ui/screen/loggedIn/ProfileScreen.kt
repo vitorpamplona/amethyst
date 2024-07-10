@@ -148,13 +148,17 @@ import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileBookmarksFeedViewMod
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileConversationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileFollowersUserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileFollowsUserFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileGalleryFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileNewThreadsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileReportFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileZapsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.SaveableGridFeedState
+import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -294,6 +298,16 @@ fun PrepareViewModels(
                 ),
         )
 
+    val galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel =
+        viewModel(
+            key = baseUser.pubkeyHex + "UserGalleryFeedViewModel",
+            factory =
+                NostrUserProfileGalleryFeedViewModel.Factory(
+                    baseUser,
+                    accountViewModel.account,
+                ),
+        )
+
     val reportsFeedViewModel: NostrUserProfileReportFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileReportFeedViewModel",
@@ -312,6 +326,7 @@ fun PrepareViewModels(
         appRecommendations,
         zapFeedViewModel,
         bookmarksFeedViewModel,
+        galleryFeedViewModel,
         reportsFeedViewModel,
         accountViewModel = accountViewModel,
         nav = nav,
@@ -328,6 +343,7 @@ fun ProfileScreen(
     appRecommendations: NostrUserAppRecommendationsFeedViewModel,
     zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
     bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel,
     reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -372,6 +388,7 @@ fun ProfileScreen(
         followersFeedViewModel,
         zapFeedViewModel,
         bookmarksFeedViewModel,
+        galleryFeedViewModel,
         reportsFeedViewModel,
         accountViewModel,
         nav,
@@ -388,6 +405,7 @@ private fun RenderSurface(
     followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
     bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel,
     reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -447,6 +465,7 @@ private fun RenderSurface(
                     followersFeedViewModel,
                     zapFeedViewModel,
                     bookmarksFeedViewModel,
+                    galleryFeedViewModel,
                     reportsFeedViewModel,
                     accountViewModel,
                     nav,
@@ -469,6 +488,7 @@ private fun RenderScreen(
     followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
     bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel,
     reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -500,6 +520,7 @@ private fun RenderScreen(
                 followersFeedViewModel,
                 zapFeedViewModel,
                 bookmarksFeedViewModel,
+                galleryFeedViewModel,
                 reportsFeedViewModel,
                 accountViewModel,
                 nav,
@@ -518,6 +539,7 @@ private fun CreateAndRenderPages(
     followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
     bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel,
     reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -532,13 +554,14 @@ private fun CreateAndRenderPages(
     when (page) {
         0 -> TabNotesNewThreads(threadsViewModel, accountViewModel, nav)
         1 -> TabNotesConversations(repliesViewModel, accountViewModel, nav)
-        2 -> TabFollows(baseUser, followsFeedViewModel, accountViewModel, nav)
-        3 -> TabFollowers(baseUser, followersFeedViewModel, accountViewModel, nav)
-        4 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
-        5 -> TabBookmarks(bookmarksFeedViewModel, accountViewModel, nav)
-        6 -> TabFollowedTags(baseUser, accountViewModel, nav)
-        7 -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
-        8 -> TabRelays(baseUser, accountViewModel, nav)
+        2 -> TabGallery(galleryFeedViewModel, accountViewModel, nav)
+        3 -> TabFollows(baseUser, followsFeedViewModel, accountViewModel, nav)
+        4 -> TabFollowers(baseUser, followersFeedViewModel, accountViewModel, nav)
+        5 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
+        6 -> TabBookmarks(bookmarksFeedViewModel, accountViewModel, nav)
+        7 -> TabFollowedTags(baseUser, accountViewModel, nav)
+        8 -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
+        9 -> TabRelays(baseUser, accountViewModel, nav)
     }
 }
 
@@ -573,6 +596,7 @@ private fun CreateAndRenderTabs(
         listOf<@Composable (() -> Unit)?>(
             { Text(text = stringRes(R.string.notes)) },
             { Text(text = stringRes(R.string.replies)) },
+            { Text(text = stringRes(R.string.gallery)) },
             { FollowTabHeader(baseUser) },
             { FollowersTabHeader(baseUser) },
             { ZapTabHeader(baseUser) },
@@ -1534,6 +1558,77 @@ fun TabNotesConversations(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun TabGallery(
+    feedViewModel: NostrUserProfileGalleryFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    LaunchedEffect(Unit) { feedViewModel.invalidateData() }
+
+    // Column(Modifier.fillMaxHeight()) {
+
+    RefresheableBox(feedViewModel, true) {
+        SaveableGridFeedState(feedViewModel, scrollStateKey = ScrollStateKeys.PROFILE_GALLERY) { listState ->
+            RenderGalleryFeed(
+                feedViewModel,
+                null,
+                0,
+                listState,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+    }
+
+    // }
+}
+
+/*@Composable
+fun Gallery(
+    baseUser: User,
+    feedViewModel: UserFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    WatchFollowChanges(baseUser, feedViewModel)
+
+    Column(Modifier.fillMaxHeight()) {
+        Column {
+            baseUser.latestGalleryList?.let {
+                // val note2 = getOrCreateAddressableNoteInternal(aTag)
+                val note = LocalCache.getOrCreateAddressableNote(it.address())
+                note.event = it
+                var notes = listOf<GalleryThumb>()
+                for (tag in note.event?.tags()!!) {
+                    if (tag.size > 2) {
+                        if (tag[0] == "g") {
+                            // TODO get the node by id on main thread. LoadNote does nothing.
+                            val thumb =
+                                GalleryThumb(
+                                    baseNote = note,
+                                    id = tag[2],
+                                    // TODO use the original note once it's loaded baseNote = basenote,
+                                    image = tag[1],
+                                    title = null,
+                                )
+                            notes = notes + thumb
+                            // }
+                        }
+                    }
+                    ProfileGallery(
+                        baseNotes = notes,
+                        modifier = Modifier,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            }
+        }
+    }
+} */
+
 @Composable
 fun TabFollowedTags(
     baseUser: User,
@@ -1545,7 +1640,11 @@ fun TabFollowedTags(
             baseUser.latestContactList?.unverifiedFollowTagSet()
         }
 
-    Column(Modifier.fillMaxHeight().padding(vertical = 0.dp)) {
+    Column(
+        Modifier
+            .fillMaxHeight()
+            .padding(vertical = 0.dp),
+    ) {
         items?.let {
             LazyColumn {
                 itemsIndexed(items) { index, hashtag ->

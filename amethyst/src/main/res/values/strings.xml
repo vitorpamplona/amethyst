@@ -10,6 +10,7 @@
     <string name="post_was_hidden">This post was hidden because it mentions your hidden users or words</string>
     <string name="post_was_flagged_as_inappropriate_by">Post was muted or reported by</string>
     <string name="post_not_found">Event is loading or can\'t be found in your relay list</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Channel Image</string>
     <string name="referenced_event_not_found">Referenced event not found</string>
     <string name="could_not_decrypt_the_message">Could not decrypt the message</string>
@@ -135,6 +136,7 @@
     <string name="conversations">Conversations</string>
     <string name="notes">Notes</string>
     <string name="replies">Replies</string>
+    <string name="gallery">Gallery</string>
     <string name="follows">"Follows"</string>
     <string name="reports">"Reports"</string>
     <string name="more_options">More Options</string>
@@ -271,6 +273,8 @@
     <string name="quick_action_delete">Delete</string>
     <string name="quick_action_unfollow">Unfollow</string>
     <string name="quick_action_follow">Follow</string>
+    <string name="quick_action_request_deletion_gallery_title">Delete from Gallery</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">Remove this media from your Gallery, you can readd it later</string>
     <string name="quick_action_request_deletion_alert_title">Request Deletion</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst will request that your note be deleted from the relays you are currently connected to. There is no guarantee that your note will be permanently deleted from those relays, or from other relays where it may be stored.</string>
     <string name="quick_action_block_dialog_btn">Block</string>
@@ -598,6 +602,7 @@
     <string name="share_or_save">Share or Save</string>
     <string name="copy_url_to_clipboard">Copy URL to clipboard</string>
     <string name="copy_the_note_id_to_the_clipboard">Copy Note ID to clipboard</string>
+    <string name="add_media_to_gallery">Add Media to Gallery</string>
 
     <string name="created_at">Created at</string>
     <string name="rules">Rules</string>

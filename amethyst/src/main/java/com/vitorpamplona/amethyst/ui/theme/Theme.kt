@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
@@ -124,6 +125,18 @@ val LightImageModifier =
         .clip(shape = QuoteBorder)
         .border(1.dp, LightSubtleBorder, QuoteBorder)
 
+val DarkVideoModifier =
+    Modifier
+        .fillMaxWidth()
+        .clip(shape = RectangleShape)
+        .border(1.dp, DarkSubtleBorder, RectangleShape)
+
+val LightVideoModifier =
+    Modifier
+        .fillMaxWidth()
+        .clip(shape = RectangleShape)
+        .border(1.dp, LightSubtleBorder, RectangleShape)
+
 val DarkProfile35dpModifier =
     Modifier
         .size(Size35dp)
@@ -147,6 +160,20 @@ val LightReplyBorderModifier =
         .fillMaxWidth()
         .clip(shape = QuoteBorder)
         .border(1.dp, LightSubtleBorder, QuoteBorder)
+
+val DarkVideoBorderModifier =
+    Modifier
+        .padding(top = 5.dp)
+        .fillMaxWidth()
+        .clip(shape = RectangleShape)
+        .border(1.dp, DarkSubtleBorder, RectangleShape)
+
+val LightVideoBorderModifier =
+    Modifier
+        .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
+        .fillMaxWidth()
+        .clip(shape = RectangleShape)
+        .border(1.dp, LightSubtleBorder, RectangleShape)
 
 val DarkInnerPostBorderModifier =
     Modifier
@@ -355,6 +382,9 @@ val ColorScheme.markdownStyle: RichTextStyle
 
 val ColorScheme.imageModifier: Modifier
     get() = if (isLight) LightImageModifier else DarkImageModifier
+
+val ColorScheme.videoGalleryModifier: Modifier
+    get() = if (isLight) LightVideoModifier else DarkVideoModifier
 
 val ColorScheme.profile35dpModifier: Modifier
     get() = if (isLight) LightProfile35dpModifier else DarkProfile35dpModifier

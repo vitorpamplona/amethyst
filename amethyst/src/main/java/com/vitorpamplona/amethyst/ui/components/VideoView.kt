@@ -118,6 +118,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -204,6 +205,7 @@ fun VideoView(
     title: String? = null,
     thumb: VideoThumb? = null,
     roundedCorner: Boolean,
+    gallery: Boolean = false,
     isFiniteHeight: Boolean,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
@@ -247,6 +249,7 @@ fun VideoView(
                     title = title,
                     thumb = thumb,
                     roundedCorner = roundedCorner,
+                    gallery = gallery,
                     isFiniteHeight = isFiniteHeight,
                     waveform = waveform,
                     artworkUri = artworkUri,
@@ -324,6 +327,7 @@ fun VideoViewInner(
     title: String? = null,
     thumb: VideoThumb? = null,
     roundedCorner: Boolean,
+    gallery: Boolean = false,
     isFiniteHeight: Boolean,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
@@ -348,6 +352,7 @@ fun VideoViewInner(
                     controller = controller,
                     thumbData = thumb,
                     roundedCorner = roundedCorner,
+                    gallery = gallery,
                     isFiniteHeight = isFiniteHeight,
                     nostrUriCallback = nostrUriCallback,
                     waveform = waveform,
@@ -695,6 +700,7 @@ private fun RenderVideoPlayer(
     controller: MediaController,
     thumbData: VideoThumb?,
     roundedCorner: Boolean,
+    gallery: Boolean = false,
     isFiniteHeight: Boolean,
     nostrUriCallback: String?,
     waveform: ImmutableList<Int>? = null,
@@ -712,12 +718,17 @@ private fun RenderVideoPlayer(
 
     Box {
         val borders = MaterialTheme.colorScheme.imageModifier
-
+        val bordersSquare = MaterialTheme.colorScheme.videoGalleryModifier
         val myModifier =
             remember(controller) {
                 if (roundedCorner) {
                     modifier.then(
                         borders.defaultMinSize(minHeight = 75.dp).align(Alignment.Center),
+                    )
+                } else if (gallery) {
+                    Modifier
+                    modifier.then(
+                        bordersSquare.defaultMinSize(minHeight = 75.dp).align(Alignment.Center),
                     )
                 } else {
                     modifier.fillMaxWidth().defaultMinSize(minHeight = 75.dp).align(Alignment.Center)
@@ -737,6 +748,7 @@ private fun RenderVideoPlayer(
                     setBackgroundColor(Color.Transparent.toArgb())
                     setShutterBackgroundColor(Color.Transparent.toArgb())
                     controllerAutoShow = false
+                    useController = !gallery
                     thumbData?.thumb?.let { defaultArtwork = it }
                     hideController()
                     resizeMode =
@@ -745,72 +757,77 @@ private fun RenderVideoPlayer(
                         } else {
                             AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
                         }
-                    onDialog?.let { innerOnDialog ->
-                        setFullscreenButtonClickListener {
-                            controller.pause()
-                            innerOnDialog(it)
+                    if (!gallery) {
+                        onDialog?.let { innerOnDialog ->
+                            setFullscreenButtonClickListener {
+                                controller.pause()
+                                innerOnDialog(it)
+                            }
                         }
+                        setControllerVisibilityListener(
+                            PlayerView.ControllerVisibilityListener { visible ->
+                                controllerVisible.value = visible == View.VISIBLE
+                                onControllerVisibilityChanged?.let { callback -> callback(visible == View.VISIBLE) }
+                            },
+                        )
                     }
-                    setControllerVisibilityListener(
-                        PlayerView.ControllerVisibilityListener { visible ->
-                            controllerVisible.value = visible == View.VISIBLE
-                            onControllerVisibilityChanged?.let { callback -> callback(visible == View.VISIBLE) }
-                        },
-                    )
                 }
             },
         )
 
         waveform?.let { Waveform(it, controller, remember { Modifier.align(Alignment.Center) }) }
+        if (!gallery) {
+            val startingMuteState = remember(controller) { controller.volume < 0.001 }
 
-        val startingMuteState = remember(controller) { controller.volume < 0.001 }
+            MuteButton(
+                controllerVisible,
+                startingMuteState,
+                Modifier.align(Alignment.TopEnd),
+            ) { mute: Boolean ->
+                // makes the new setting the default for new creations.
+                DEFAULT_MUTED_SETTING.value = mute
 
-        MuteButton(
-            controllerVisible,
-            startingMuteState,
-            Modifier.align(Alignment.TopEnd),
-        ) { mute: Boolean ->
-            // makes the new setting the default for new creations.
-            DEFAULT_MUTED_SETTING.value = mute
-
-            // if the user unmutes a video and it's not the current playing, switches to that one.
-            if (!mute && keepPlayingMutex != null && keepPlayingMutex != controller) {
-                keepPlayingMutex?.stop()
-                keepPlayingMutex?.release()
-                keepPlayingMutex = null
-            }
-
-            controller.volume = if (mute) 0f else 1f
-        }
-
-        KeepPlayingButton(
-            keepPlaying,
-            controllerVisible,
-            Modifier.align(Alignment.TopEnd).padding(end = Size55dp),
-        ) { newKeepPlaying: Boolean ->
-            // If something else is playing and the user marks this video to keep playing, stops the other
-            // one.
-            if (newKeepPlaying) {
-                if (keepPlayingMutex != null && keepPlayingMutex != controller) {
+                // if the user unmutes a video and it's not the current playing, switches to that one.
+                if (!mute && keepPlayingMutex != null && keepPlayingMutex != controller) {
                     keepPlayingMutex?.stop()
                     keepPlayingMutex?.release()
-                }
-                keepPlayingMutex = controller
-            } else {
-                if (keepPlayingMutex == controller) {
                     keepPlayingMutex = null
                 }
+
+                controller.volume = if (mute) 0f else 1f
             }
 
-            keepPlaying.value = newKeepPlaying
-        }
+            KeepPlayingButton(
+                keepPlaying,
+                controllerVisible,
+                Modifier.align(Alignment.TopEnd).padding(end = Size55dp),
+            ) { newKeepPlaying: Boolean ->
+                // If something else is playing and the user marks this video to keep playing, stops the other
+                // one.
+                if (newKeepPlaying) {
+                    if (keepPlayingMutex != null && keepPlayingMutex != controller) {
+                        keepPlayingMutex?.stop()
+                        keepPlayingMutex?.release()
+                    }
+                    keepPlayingMutex = controller
+                } else {
+                    if (keepPlayingMutex == controller) {
+                        keepPlayingMutex = null
+                    }
+                }
 
-        AnimatedSaveButton(controllerVisible, Modifier.align(Alignment.TopEnd).padding(end = Size110dp)) { context ->
-            saveImage(videoUri, mimeType, context, accountViewModel)
-        }
+                keepPlaying.value = newKeepPlaying
+            }
 
-        AnimatedShareButton(controllerVisible, Modifier.align(Alignment.TopEnd).padding(end = Size165dp)) { popupExpanded, toggle ->
-            ShareImageAction(popupExpanded, videoUri, nostrUriCallback, toggle)
+            AnimatedSaveButton(controllerVisible, Modifier.align(Alignment.TopEnd).padding(end = Size110dp)) { context ->
+                saveImage(videoUri, mimeType, context, accountViewModel)
+            }
+
+            AnimatedShareButton(controllerVisible, Modifier.align(Alignment.TopEnd).padding(end = Size165dp)) { popupExpanded, toggle ->
+                ShareImageAction(accountViewModel = accountViewModel, popupExpanded, videoUri, nostrUriCallback, toggle)
+            }
+        } else {
+            controller.volume = 0f
         }
     }
 }

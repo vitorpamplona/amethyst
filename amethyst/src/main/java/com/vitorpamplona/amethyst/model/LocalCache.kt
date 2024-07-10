@@ -103,6 +103,7 @@ import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RecommendRelayEvent
 import com.vitorpamplona.quartz.events.RelaySetEvent
@@ -1669,6 +1670,26 @@ object LocalCache {
     }
 
     fun consume(
+        event: ProfileGalleryEntryEvent,
+        relay: Relay?,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(
         event: FileStorageHeaderEvent,
         relay: Relay?,
     ) {
@@ -2529,6 +2550,7 @@ object LocalCache {
                 }
                 is FhirResourceEvent -> consume(event, relay)
                 is FileHeaderEvent -> consume(event, relay)
+                is ProfileGalleryEntryEvent -> consume(event, relay)
                 is FileServersEvent -> consume(event, relay)
                 is FileStorageEvent -> consume(event, relay)
                 is FileStorageHeaderEvent -> consume(event, relay)

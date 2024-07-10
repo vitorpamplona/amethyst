@@ -91,6 +91,7 @@ import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.Price
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import com.vitorpamplona.quartz.events.ReportEvent
@@ -2195,6 +2196,35 @@ class Account(
                 LocalCache.justConsume(it, null)
             }
         }
+    }
+
+    fun addToGallery(
+        idHex: String,
+        url: String,
+        relay: String?,
+    ) {
+        if (!isWriteable()) return
+        ProfileGalleryEntryEvent.create(
+            url = url,
+            eventid = idHex,
+            /*magnetUri = magnetUri,
+            mimeType = headerInfo.mimeType,
+            hash = headerInfo.hash,
+            size = headerInfo.size.toString(),
+            dimensions = headerInfo.dim,
+            blurhash = headerInfo.blurHash,
+            alt = alt,
+            originalHash = originalHash,
+            sensitiveContent = sensitiveContent, */
+            signer = signer,
+        ) { event ->
+            Client.send(event)
+            LocalCache.consume(event, null)
+        }
+    }
+
+    fun removeFromGallery(note: Note) {
+        delete(note)
     }
 
     fun addBookmark(
