@@ -346,7 +346,7 @@ open class Event(
         override fun deserialize(
             jp: JsonParser,
             ctxt: DeserializationContext,
-        ): Event = fromJson(jp.codec.readTree(jp))
+        ): Event = fromJson(jp.codec.readTree<JsonNode>(jp))
     }
 
     private class GossipDeserializer : StdDeserializer<Gossip>(Gossip::class.java) {
