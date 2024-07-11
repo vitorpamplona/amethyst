@@ -37,6 +37,7 @@ fun WatchNoteEvent(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
+    shortPreview: Boolean = false,
     onNoteEventFound: @Composable () -> Unit,
 ) {
     WatchNoteEvent(
@@ -54,6 +55,7 @@ fun WatchNoteEvent(
                             onLongClick = showPopup,
                         )
                     },
+                    shortPreview = shortPreview,
                 )
             }
         },

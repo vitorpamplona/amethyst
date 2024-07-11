@@ -85,6 +85,7 @@ class EventFactory {
             EmojiPackSelectionEvent.KIND ->
                 EmojiPackSelectionEvent(id, pubKey, createdAt, tags, content, sig)
             FileHeaderEvent.KIND -> FileHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+            ProfileGalleryEntryEvent.KIND -> ProfileGalleryEntryEvent(id, pubKey, createdAt, tags, content, sig)
             FileServersEvent.KIND -> FileServersEvent(id, pubKey, createdAt, tags, content, sig)
             FileStorageEvent.KIND -> FileStorageEvent(id, pubKey, createdAt, tags, content, sig)
             FileStorageHeaderEvent.KIND ->

@@ -155,6 +155,40 @@ fun LongPressToQuickAction(
 }
 
 @Composable
+fun LongPressToQuickActionGallery(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    content: @Composable (() -> Unit) -> Unit,
+) {
+    val popupExpanded = remember { mutableStateOf(false) }
+
+    content { popupExpanded.value = true }
+
+    if (popupExpanded.value) {
+        if (baseNote.author == accountViewModel.account.userProfile()) {
+            NoteQuickActionMenuGallery(
+                note = baseNote,
+                onDismiss = { popupExpanded.value = false },
+                accountViewModel = accountViewModel,
+                nav = {},
+            )
+        }
+    }
+}
+
+@Composable
+fun NoteQuickActionMenuGallery(
+    note: Note,
+    onDismiss: () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    DeleteFromGalleryDialog(note, accountViewModel) {
+        onDismiss()
+    }
+}
+
+@Composable
 fun NoteQuickActionMenu(
     note: Note,
     onDismiss: () -> Unit,
@@ -436,6 +470,169 @@ private fun RenderMainPopup(
 }
 
 @Composable
+private fun RenderDeleteFromGalleryPopup(
+    accountViewModel: AccountViewModel,
+    note: Note,
+    showDeleteAlertDialog: MutableState<Boolean>,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val primaryLight = lightenColor(MaterialTheme.colorScheme.primary, 0.1f)
+    val cardShape = RoundedCornerShape(5.dp)
+    val clipboardManager = LocalClipboardManager.current
+    val scope = rememberCoroutineScope()
+
+    val backgroundColor =
+        if (MaterialTheme.colorScheme.isLight) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.secondaryButtonBackground
+        }
+
+    val showToast = { stringRes: Int ->
+        scope.launch {
+            Toast
+                .makeText(
+                    context,
+                    stringRes(context, stringRes),
+                    Toast.LENGTH_SHORT,
+                ).show()
+        }
+    }
+
+    val isOwnNote = accountViewModel.isLoggedUser(note.author)
+    val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author)
+
+    Popup(onDismissRequest = onDismiss, alignment = Alignment.Center) {
+        Card(
+            modifier = Modifier.shadow(elevation = 6.dp, shape = cardShape),
+            shape = cardShape,
+            colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        ) {
+            Column(modifier = Modifier.width(IntrinsicSize.Min)) {
+                Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+                    NoteQuickActionItem(
+                        icon = Icons.Default.ContentCopy,
+                        label = stringRes(R.string.quick_action_copy_text),
+                    ) {
+                        accountViewModel.decrypt(note) {
+                            clipboardManager.setText(AnnotatedString(it))
+                            showToast(R.string.copied_note_text_to_clipboard)
+                        }
+
+                        onDismiss()
+                    }
+                    VerticalDivider(color = primaryLight)
+                    NoteQuickActionItem(
+                        Icons.Default.AlternateEmail,
+                        stringRes(R.string.quick_action_copy_user_id),
+                    ) {
+                        note.author?.let {
+                            scope.launch {
+                                clipboardManager.setText(AnnotatedString(it.toNostrUri()))
+                                showToast(R.string.copied_user_id_to_clipboard)
+                                onDismiss()
+                            }
+                        }
+                    }
+                    VerticalDivider(color = primaryLight)
+                    NoteQuickActionItem(
+                        Icons.Default.FormatQuote,
+                        stringRes(R.string.quick_action_copy_note_id),
+                    ) {
+                        scope.launch {
+                            clipboardManager.setText(AnnotatedString(note.toNostrUri()))
+                            showToast(R.string.copied_note_id_to_clipboard)
+                            onDismiss()
+                        }
+                    }
+                }
+                HorizontalDivider(
+                    color = primaryLight,
+                )
+                Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+                    if (isOwnNote) {
+                        NoteQuickActionItem(
+                            Icons.Default.Delete,
+                            stringRes(R.string.quick_action_delete),
+                        ) {
+                            if (accountViewModel.hideDeleteRequestDialog) {
+                                accountViewModel.delete(note)
+                                onDismiss()
+                            } else {
+                                showDeleteAlertDialog.value = true
+                            }
+                        }
+                    } else if (isFollowingUser) {
+                        NoteQuickActionItem(
+                            Icons.Default.PersonRemove,
+                            stringRes(R.string.quick_action_unfollow),
+                        ) {
+                            accountViewModel.unfollow(note.author!!)
+                            onDismiss()
+                        }
+                    } else {
+                        NoteQuickActionItem(
+                            Icons.Default.PersonAdd,
+                            stringRes(R.string.quick_action_follow),
+                        ) {
+                            accountViewModel.follow(note.author!!)
+                            onDismiss()
+                        }
+                    }
+
+                    VerticalDivider(color = primaryLight)
+                    NoteQuickActionItem(
+                        icon = ImageVector.vectorResource(id = R.drawable.relays),
+                        label = stringRes(R.string.broadcast),
+                    ) {
+                        accountViewModel.broadcast(note)
+                        // showSelectTextDialog = true
+                        onDismiss()
+                    }
+                    VerticalDivider(color = primaryLight)
+                    if (isOwnNote && note.isDraft()) {
+                        NoteQuickActionItem(
+                            Icons.Default.Edit,
+                            stringRes(R.string.edit_draft),
+                        ) {
+                            onDismiss()
+                        }
+                    } else {
+                        NoteQuickActionItem(
+                            icon = Icons.Default.Share,
+                            label = stringRes(R.string.quick_action_share),
+                        ) {
+                            val sendIntent =
+                                Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    type = "text/plain"
+                                    putExtra(
+                                        Intent.EXTRA_TEXT,
+                                        externalLinkForNote(note),
+                                    )
+                                    putExtra(
+                                        Intent.EXTRA_TITLE,
+                                        stringRes(context, R.string.quick_action_share_browser_link),
+                                    )
+                                }
+
+                            val shareIntent =
+                                Intent.createChooser(
+                                    sendIntent,
+                                    stringRes(context, R.string.quick_action_share),
+                                )
+                            ContextCompat.startActivity(context, shareIntent, null)
+                            onDismiss()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun NoteQuickActionItem(
     icon: ImageVector,
     label: String,
@@ -460,6 +657,25 @@ fun NoteQuickActionItem(
         )
         Text(text = label, fontSize = 12.sp, color = Color.White, textAlign = TextAlign.Center)
     }
+}
+
+@Composable
+fun DeleteFromGalleryDialog(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    onDismiss: () -> Unit,
+) {
+    QuickActionAlertDialogOneButton(
+        title = stringRes(R.string.quick_action_request_deletion_gallery_title),
+        textContent = stringRes(R.string.quick_action_request_deletion_gallery_alert_body),
+        buttonIcon = Icons.Default.Delete,
+        buttonText = stringRes(R.string.quick_action_delete_dialog_btn),
+        onClickDoOnce = {
+            accountViewModel.removefromMediaGallery(note)
+            onDismiss()
+        },
+        onDismiss = onDismiss,
+    )
 }
 
 @Composable
@@ -595,6 +811,98 @@ fun QuickActionAlertDialog(
                 TextButton(onClick = onClickDontShowAgain) {
                     Text(stringRes(R.string.quick_action_dont_show_again_button))
                 }
+                Button(
+                    onClick = onClickDoOnce,
+                    colors = buttonColors,
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        icon()
+                        Spacer(Modifier.width(8.dp))
+                        Text(buttonText)
+                    }
+                }
+            }
+        },
+    )
+}
+
+@Composable
+fun QuickActionAlertDialogOneButton(
+    title: String,
+    textContent: String,
+    buttonIcon: ImageVector,
+    buttonText: String,
+    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    onClickDoOnce: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    QuickActionAlertDialogOneButton(
+        title = title,
+        textContent = textContent,
+        icon = {
+            Icon(
+                imageVector = buttonIcon,
+                contentDescription = null,
+            )
+        },
+        buttonText = buttonText,
+        buttonColors = buttonColors,
+        onClickDoOnce = onClickDoOnce,
+        onDismiss = onDismiss,
+    )
+}
+
+@Composable
+fun QuickActionAlertDialogOneButton(
+    title: String,
+    textContent: String,
+    buttonIconResource: Int,
+    buttonText: String,
+    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    onClickDoOnce: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    QuickActionAlertDialogOneButton(
+        title = title,
+        textContent = textContent,
+        icon = {
+            Icon(
+                painter = painterResource(buttonIconResource),
+                contentDescription = null,
+            )
+        },
+        buttonText = buttonText,
+        buttonColors = buttonColors,
+        onClickDoOnce = onClickDoOnce,
+        onDismiss = onDismiss,
+    )
+}
+
+@Composable
+fun QuickActionAlertDialogOneButton(
+    title: String,
+    textContent: String,
+    icon: @Composable () -> Unit,
+    buttonText: String,
+    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    onClickDoOnce: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Text(textContent) },
+        confirmButton = {
+            Row(
+                modifier =
+                    Modifier
+                        .padding(all = 8.dp)
+                        .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
                 Button(
                     onClick = onClickDoOnce,
                     colors = buttonColors,

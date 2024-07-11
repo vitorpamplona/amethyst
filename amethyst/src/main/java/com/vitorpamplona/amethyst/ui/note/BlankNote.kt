@@ -59,6 +59,7 @@ fun BlankNotePreview() {
 fun BlankNote(
     modifier: Modifier = Modifier,
     idHex: String? = null,
+    shortPreview: Boolean = false,
 ) {
     Column(modifier = modifier) {
         Row {
@@ -75,7 +76,12 @@ fun BlankNote(
                     horizontalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        text = stringRes(R.string.post_not_found) + if (idHex != null) ": $idHex" else "",
+                        text =
+                            if (shortPreview) {
+                                stringRes(R.string.post_not_found_short)
+                            } else {
+                                stringRes(R.string.post_not_found) + if (idHex != null) ": $idHex" else ""
+                            },
                         modifier = Modifier.padding(30.dp),
                         color = Color.Gray,
                         textAlign = TextAlign.Center,

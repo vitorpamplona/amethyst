@@ -75,7 +75,7 @@ class Relay(
     private var afterEOSEPerSubscription = mutableMapOf<String, Boolean>()
 
     private val authResponse = mutableMapOf<HexKey, Boolean>()
-    private val sendWhenReady = mutableListOf<EventInterface>()
+    private val outboxCache = mutableMapOf<HexKey, EventInterface>()
 
     fun register(listener: Listener) {
         listeners = listeners.plus(listener)
@@ -93,6 +93,15 @@ class Relay(
 
             // Sends everything.
             renewFilters()
+            sendOutbox()
+        }
+    }
+
+    private fun sendOutbox() {
+        synchronized(outboxCache) {
+            outboxCache.values.forEach {
+                send(it)
+            }
         }
     }
 
@@ -156,13 +165,6 @@ class Relay(
 
             // Log.w("Relay", "Relay OnOpen, Loading All subscriptions $url")
             onConnected(this@Relay)
-
-            synchronized(sendWhenReady) {
-                sendWhenReady.forEach {
-                    send(it)
-                }
-                sendWhenReady.clear()
-            }
 
             listeners.forEach { it.onRelayStateChange(this@Relay, StateType.CONNECT, null) }
         }
@@ -307,15 +309,22 @@ class Relay(
                     val success = msgArray[2].asBoolean()
                     val message = if (msgArray.size() > 2) msgArray[3].asText() else ""
 
+                    Log.w("Relay", "Relay on OK $url, $eventId, $success, $message")
+
                     if (authResponse.containsKey(eventId)) {
                         val wasAlreadyAuthenticated = authResponse.get(eventId)
                         authResponse.put(eventId, success)
                         if (wasAlreadyAuthenticated != true && success) {
                             renewFilters()
+                            sendOutbox()
                         }
                     }
 
-                    Log.w("Relay", "Relay on OK $url, $eventId, $success, $message")
+                    if (outboxCache.contains(eventId) && !message.startsWith("auth-required")) {
+                        synchronized(outboxCache) {
+                            outboxCache.remove(eventId)
+                        }
+                    }
 
                     if (!success) {
                         RelayStats.newNotice(url, "Failed to receive $eventId: $message")
@@ -325,7 +334,7 @@ class Relay(
                 }
             "AUTH" ->
                 listeners.forEach {
-                    // Log.w("Relay", "Relay onAuth $url, ${msg[1].asString}")
+                    Log.w("Relay", "Relay onAuth $url, ${ msgArray[1].asText()}")
                     it.onAuth(this@Relay, msgArray[1].asText())
                 }
             "NOTIFY" ->
@@ -477,23 +486,7 @@ class Relay(
             sendAuth(signedEvent)
         } else {
             if (write) {
-                if (isConnected()) {
-                    if (isReady) {
-                        writeToSocket("""["EVENT",${signedEvent.toJson()}]""")
-                    } else {
-                        synchronized(sendWhenReady) {
-                            sendWhenReady.add(signedEvent)
-                        }
-                    }
-                } else {
-                    // sends all filters after connection is successful.
-                    connectAndRun {
-                        writeToSocket("""["EVENT",${signedEvent.toJson()}]""")
-
-                        // Sends everything.
-                        renewFilters()
-                    }
-                }
+                sendEvent(signedEvent)
             }
         }
     }
@@ -504,21 +497,20 @@ class Relay(
     }
 
     private fun sendEvent(signedEvent: EventInterface) {
+        synchronized(outboxCache) {
+            outboxCache.put(signedEvent.id(), signedEvent)
+        }
+
         if (isConnected()) {
             if (isReady) {
                 writeToSocket("""["EVENT",${signedEvent.toJson()}]""")
-            } else {
-                synchronized(sendWhenReady) {
-                    sendWhenReady.add(signedEvent)
-                }
             }
         } else {
             // sends all filters after connection is successful.
             connectAndRun {
-                writeToSocket("""["EVENT",${signedEvent.toJson()}]""")
-
                 // Sends everything.
                 renewFilters()
+                sendOutbox()
             }
         }
     }

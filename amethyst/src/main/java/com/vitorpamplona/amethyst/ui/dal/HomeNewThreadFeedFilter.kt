@@ -94,8 +94,8 @@ class HomeNewThreadFeedFilter(
                 noteEvent is ClassifiedsEvent ||
                 noteEvent is RepostEvent ||
                 noteEvent is GenericRepostEvent ||
-                noteEvent is LongTextNoteEvent ||
-                noteEvent is WikiNoteEvent ||
+                (noteEvent is LongTextNoteEvent && noteEvent.content.isNotEmpty()) ||
+                (noteEvent is WikiNoteEvent && noteEvent.content.isNotEmpty()) ||
                 noteEvent is PollNoteEvent ||
                 noteEvent is HighlightEvent ||
                 noteEvent is AudioTrackEvent ||

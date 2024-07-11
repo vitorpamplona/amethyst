@@ -1278,8 +1278,24 @@ open class NewPostViewModel : ViewModel() {
     }
 
     fun removePollOption(optionIndex: Int) {
-        pollOptions.remove(optionIndex)
+        pollOptions.removeOrdered(optionIndex)
         saveDraft()
+    }
+
+    private fun MutableMap<Int, String>.removeOrdered(index: Int) {
+        val keyList = keys
+        val elementList = values.toMutableList()
+        run stop@{
+            for (i in index until elementList.size) {
+                val nextIndex = i + 1
+                if (nextIndex == elementList.size) return@stop
+                elementList[i] = elementList[nextIndex].also { elementList[nextIndex] = "null" }
+            }
+        }
+        elementList.removeLast()
+        val newEntries = keyList.zip(elementList) { key, content -> Pair(key, content) }
+        this.clear()
+        this.putAll(newEntries)
     }
 
     fun updatePollOption(

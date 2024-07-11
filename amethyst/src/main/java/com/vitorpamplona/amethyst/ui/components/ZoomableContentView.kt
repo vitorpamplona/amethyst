@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.hashVerifierMark
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -596,12 +597,14 @@ fun DisplayBlurHash(
 
 @Composable
 fun ShareImageAction(
+    accountViewModel: AccountViewModel,
     popupExpanded: MutableState<Boolean>,
     content: BaseMediaContent,
     onDismiss: () -> Unit,
 ) {
     if (content is MediaUrlContent) {
         ShareImageAction(
+            accountViewModel = accountViewModel,
             popupExpanded = popupExpanded,
             videoUri = content.url,
             postNostrUri = content.uri,
@@ -609,6 +612,7 @@ fun ShareImageAction(
         )
     } else if (content is MediaPreloadedContent) {
         ShareImageAction(
+            accountViewModel = accountViewModel,
             popupExpanded = popupExpanded,
             videoUri = content.localFile?.toUri().toString(),
             postNostrUri = content.uri,
@@ -620,6 +624,7 @@ fun ShareImageAction(
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ShareImageAction(
+    accountViewModel: AccountViewModel,
     popupExpanded: MutableState<Boolean>,
     videoUri: String?,
     postNostrUri: String?,
@@ -646,6 +651,23 @@ fun ShareImageAction(
                 text = { Text(stringRes(R.string.copy_the_note_id_to_the_clipboard)) },
                 onClick = {
                     clipboardManager.setText(AnnotatedString(it))
+                    onDismiss()
+                },
+            )
+        }
+
+        postNostrUri?.let {
+            DropdownMenuItem(
+                text = { Text(stringRes(R.string.add_media_to_gallery)) },
+                onClick = {
+                    if (videoUri != null) {
+                        var n19 = Nip19Bech32.uriToRoute(postNostrUri)?.entity as? Nip19Bech32.NEvent
+                        if (n19 != null) {
+                            accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay[0]) // TODO Whole list or first?
+                            accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
+                        }
+                    }
+
                     onDismiss()
                 },
             )

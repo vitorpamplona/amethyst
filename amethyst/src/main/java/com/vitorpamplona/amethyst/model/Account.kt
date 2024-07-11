@@ -91,6 +91,7 @@ import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.Price
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import com.vitorpamplona.quartz.events.ReportEvent
@@ -118,7 +119,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flattenMerge
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
@@ -480,10 +481,9 @@ class Account(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val liveNotificationList: Flow<ListNameNotePair> by lazy {
-        defaultNotificationFollowList
-            .transformLatest { listName ->
-                emit(loadPeopleListFlowFromListName(listName))
-            }.flattenMerge()
+        defaultNotificationFollowList.flatMapLatest { listName ->
+            loadPeopleListFlowFromListName(listName)
+        }
     }
 
     val liveNotificationFollowLists: StateFlow<LiveFollowLists?> by lazy {
@@ -493,10 +493,9 @@ class Account(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val liveStoriesList: Flow<ListNameNotePair> by lazy {
-        defaultStoriesFollowList
-            .transformLatest { listName ->
-                emit(loadPeopleListFlowFromListName(listName))
-            }.flattenMerge()
+        defaultStoriesFollowList.flatMapLatest { listName ->
+            loadPeopleListFlowFromListName(listName)
+        }
     }
 
     val liveStoriesFollowLists: StateFlow<LiveFollowLists?> by lazy {
@@ -506,10 +505,9 @@ class Account(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val liveDiscoveryList: Flow<ListNameNotePair> by lazy {
-        defaultDiscoveryFollowList
-            .transformLatest { listName ->
-                emit(loadPeopleListFlowFromListName(listName))
-            }.flattenMerge()
+        defaultDiscoveryFollowList.flatMapLatest { listName ->
+            loadPeopleListFlowFromListName(listName)
+        }
     }
 
     val liveDiscoveryFollowLists: StateFlow<LiveFollowLists?> by lazy {
@@ -2195,6 +2193,35 @@ class Account(
                 LocalCache.justConsume(it, null)
             }
         }
+    }
+
+    fun addToGallery(
+        idHex: String,
+        url: String,
+        relay: String?,
+    ) {
+        if (!isWriteable()) return
+        ProfileGalleryEntryEvent.create(
+            url = url,
+            eventid = idHex,
+            /*magnetUri = magnetUri,
+            mimeType = headerInfo.mimeType,
+            hash = headerInfo.hash,
+            size = headerInfo.size.toString(),
+            dimensions = headerInfo.dim,
+            blurhash = headerInfo.blurHash,
+            alt = alt,
+            originalHash = originalHash,
+            sensitiveContent = sensitiveContent, */
+            signer = signer,
+        ) { event ->
+            Client.send(event)
+            LocalCache.consume(event, null)
+        }
+    }
+
+    fun removeFromGallery(note: Note) {
+        delete(note)
     }
 
     fun addBookmark(

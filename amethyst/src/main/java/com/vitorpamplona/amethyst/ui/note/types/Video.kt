@@ -86,6 +86,7 @@ fun VideoDisplay(
             val description = event.content.ifBlank { null } ?: event.alt()
             val isImage = event.mimeType()?.startsWith("image/") == true || RichTextParser.isImageUrl(fullUrl)
             val uri = note.toNostrUri()
+            val id = note.id()
             val mimeType = event.mimeType()
 
             mutableStateOf<BaseMediaContent>(

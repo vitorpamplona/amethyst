@@ -4,34 +4,47 @@ plugins {
     alias(libs.plugins.androidLibrary) apply false
     alias(libs.plugins.jetbrainsKotlinJvm) apply false
     alias(libs.plugins.androidBenchmark) apply false
-    alias(libs.plugins.diffplugSpotless) apply false
+    alias(libs.plugins.diffplugSpotless)
     alias(libs.plugins.googleServices) apply false
     alias(libs.plugins.jetbrainsComposeCompiler) apply false
 }
 
-subprojects {
+allprojects {
     apply plugin: 'com.diffplug.spotless'
-    spotless {
-        kotlin {
-            target '**/*.kt'
-            targetExclude("$layout.buildDirectory/**/*.kt")
 
-            ktlint("1.3.1")
-            licenseHeaderFile rootProject.file('spotless/copyright.kt'), "package|import|class|object|sealed|open|interface|abstract "
+    if (project === rootProject) {
+        spotless {
+            predeclareDeps()
         }
-
-        groovyGradle {
-            target '*.gradle'
+        spotlessPredeclare {
+            kotlin {
+                ktlint("1.3.1")
+            }
         }
+    } else {
+        spotless {
+            kotlin {
+                target '**/*.kt'
+                targetExclude("$layout.buildDirectory/**/*.kt")
 
-        afterEvaluate {
-            tasks.named("preBuild") {
-                dependsOn("spotlessApply")
+                ktlint("1.3.1")
+                licenseHeaderFile rootProject.file('spotless/copyright.kt'), "package|import|class|object|sealed|open|interface|abstract "
+            }
+
+            groovyGradle {
+                target '*.gradle'
             }
         }
     }
 }
 
+subprojects {
+    afterEvaluate {
+        tasks.named("preBuild") {
+            dependsOn("spotlessApply")
+        }
+    }
+}
 
 tasks.register('installGitHook', Copy) {
     from new File(rootProject.rootDir, 'git-hooks/pre-commit')

@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
+import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
@@ -153,6 +154,20 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             )
         }
 
+    fun createProfileGalleryFilter() =
+        user?.let {
+            TypedFilter(
+                types = COMMON_FEED_TYPES,
+                filter =
+                    Filter(
+                        kinds =
+                            listOf(ProfileGalleryEntryEvent.KIND),
+                        authors = listOf(it.pubkeyHex),
+                        limit = 1000,
+                    ),
+            )
+        }
+
     fun createReceivedAwardsFilter() =
         user?.let {
             TypedFilter(
@@ -173,6 +188,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             listOfNotNull(
                 createUserInfoFilter(),
                 createUserPostsFilter(),
+                createProfileGalleryFilter(),
                 createFollowFilter(),
                 createFollowersFilter(),
                 createUserReceivedZapsFilter(),
