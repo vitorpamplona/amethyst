@@ -43,14 +43,14 @@ class DeletionIndex {
 
     // stores a set of id OR atags (kind:pubkey:dtag) by pubkey with the created at of the deletion event.
     // Anything newer than the date should not be deleted.
-    private val deletedReferencesBefore = LargeCache<DeletionRequest, Long>()
+    private val deletedReferencesBefore = LargeCache<DeletionRequest, DeletionEvent>()
 
     fun add(event: DeletionEvent): Boolean {
         var atLeastOne = false
 
         event.tags.forEach {
             if (it.size > 1 && (it[0] == "a" || it[0] == "e")) {
-                if (add(it[1], event.pubKey, event.createdAt)) {
+                if (add(it[1], event.pubKey, event)) {
                     atLeastOne = true
                 }
             }
@@ -62,16 +62,32 @@ class DeletionIndex {
     private fun add(
         ref: String,
         byPubKey: HexKey,
-        createdAt: Long,
+        deletionEvent: DeletionEvent,
     ): Boolean {
         val key = DeletionRequest(ref, byPubKey)
-        val previousDeletionTime = deletedReferencesBefore.get(key)
+        val previousDeletionEvent = deletedReferencesBefore.get(key)
 
-        if (previousDeletionTime == null || createdAt > previousDeletionTime) {
-            deletedReferencesBefore.put(key, createdAt)
+        if (previousDeletionEvent == null || deletionEvent.createdAt > previousDeletionEvent.createdAt) {
+            deletedReferencesBefore.put(key, deletionEvent)
             return true
         }
         return false
+    }
+
+    fun hasBeenDeletedBy(event: Event): DeletionEvent? {
+        deletedReferencesBefore.get(DeletionRequest(event.id, event.pubKey))?.let {
+            return it
+        }
+
+        if (event is AddressableEvent) {
+            deletedReferencesBefore.get(DeletionRequest(event.addressTag(), event.pubKey))?.let {
+                if (event.createdAt <= it.createdAt) {
+                    return it
+                }
+            }
+        }
+
+        return null
     }
 
     fun hasBeenDeleted(event: Event): Boolean {
@@ -91,7 +107,7 @@ class DeletionIndex {
         key: DeletionRequest,
         createdAt: Long,
     ): Boolean {
-        val deletionTime = deletedReferencesBefore.get(key)
-        return deletionTime != null && createdAt <= deletionTime
+        val deletionEvent = deletedReferencesBefore.get(key)
+        return deletionEvent != null && createdAt <= deletionEvent.createdAt
     }
 }

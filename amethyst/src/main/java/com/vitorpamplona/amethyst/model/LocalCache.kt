@@ -1217,6 +1217,19 @@ object LocalCache {
                 .deleteEvents()
                 .mapNotNull { getNoteIfExists(it) }
                 .forEach { deleteNote ->
+                    val deleteNoteEvent = deleteNote.event
+                    if (deleteNoteEvent is AddressableEvent) {
+                        val addressableNote = getAddressableNoteIfExists(deleteNoteEvent.addressTag())
+                        if (addressableNote?.author?.pubkeyHex == event.pubKey && (addressableNote.createdAt() ?: 0) <= event.createdAt) {
+                            // Counts the replies
+                            deleteNote(addressableNote)
+
+                            addressables.remove(addressableNote.idHex)
+
+                            deletedAtLeastOne = true
+                        }
+                    }
+
                     // must be the same author
                     if (deleteNote.author?.pubkeyHex == event.pubKey) {
                         // reverts the add
@@ -2505,7 +2518,28 @@ object LocalCache {
         event: Event,
         relay: Relay?,
     ) {
-        if (deletionIndex.hasBeenDeleted(event)) return
+        if (deletionIndex.hasBeenDeleted(event)) {
+            // update relay with deletion event from another.
+            if (relay != null) {
+                deletionIndex.hasBeenDeletedBy(event)?.let {
+                    Log.d("LocalCache", "Updating ${relay.url} with a Deletion Event ${it.toJson()} because of ${event.toJson()}")
+                    relay.send(it)
+                }
+            }
+            return
+        }
+
+        if (event is AddressableEvent && relay != null) {
+            // updates relay with a new event.
+            getAddressableNoteIfExists(event.addressTag())?.let {
+                it.event?.let { existingEvent ->
+                    if (existingEvent.createdAt() > event.createdAt) {
+                        Log.d("LocalCache", "Updating ${relay.url} with a new version of ${event.toJson()} to ${existingEvent.toJson()}")
+                        relay.send(existingEvent)
+                    }
+                }
+            }
+        }
 
         checkNotInMainThread()
 
