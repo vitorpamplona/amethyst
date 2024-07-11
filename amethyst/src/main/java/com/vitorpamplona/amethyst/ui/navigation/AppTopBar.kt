@@ -893,7 +893,15 @@ fun RenderOption(option: Name) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(text = option.name(), color = MaterialTheme.colorScheme.onSurface)
+                val noteState by
+                    option.note
+                        .live()
+                        .metadata
+                        .observeAsState()
+
+                val name = (noteState?.note?.event as? PeopleListEvent)?.nameOrTitle() ?: option.note.dTag() ?: ""
+
+                Text(text = name, color = MaterialTheme.colorScheme.onSurface)
             }
         }
         is CommunityName -> {
