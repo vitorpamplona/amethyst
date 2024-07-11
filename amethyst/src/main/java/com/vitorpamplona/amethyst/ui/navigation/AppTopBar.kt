@@ -141,6 +141,7 @@ import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.RelayPool
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.events.DeletionEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -325,7 +326,10 @@ private fun DvmTopBar(
                             model = it,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(Size34dp).clip(shape = CircleShape),
+                            modifier =
+                                Modifier
+                                    .size(Size34dp)
+                                    .clip(shape = CircleShape),
                         )
                     } ?: run { NoteAuthorPicture(baseNote = appDefinitionNote, size = Size34dp, accountViewModel = accountViewModel) }
 
@@ -700,11 +704,26 @@ class FollowListViewModel(
         LocalCache.live.newEventBundles.transformLatest { newNotes ->
             val hasNewList =
                 newNotes.any {
-                    it.event?.pubKey() == account.userProfile().pubkeyHex &&
+                    val noteEvent = it.event
+
+                    noteEvent?.pubKey() == account.userProfile().pubkeyHex &&
                         (
-                            it.event is PeopleListEvent ||
-                                it.event is MuteListEvent ||
-                                it.event is ContactListEvent
+                            (
+                                noteEvent is PeopleListEvent ||
+                                    noteEvent is MuteListEvent ||
+                                    noteEvent is ContactListEvent
+                            ) ||
+                                (
+                                    noteEvent is DeletionEvent &&
+                                        (
+                                            noteEvent.deleteEvents().any {
+                                                LocalCache.getNoteIfExists(it)?.event is PeopleListEvent
+                                            } ||
+                                                noteEvent.deleteAddresses().any {
+                                                    it.kind == PeopleListEvent.KIND
+                                                }
+                                        )
+                                )
                         )
                 }
 
