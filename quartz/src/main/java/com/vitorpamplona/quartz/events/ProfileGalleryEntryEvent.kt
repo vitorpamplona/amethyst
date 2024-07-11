@@ -83,6 +83,7 @@ class ProfileGalleryEntryEvent(
         fun create(
             url: String,
             eventid: String? = null,
+            relayhint: String? = null,
             magnetUri: String? = null,
             mimeType: String? = null,
             alt: String? = null,
@@ -99,10 +100,13 @@ class ProfileGalleryEntryEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (ProfileGalleryEntryEvent) -> Unit,
         ) {
+            var etag = eventid?.let { arrayOf("e", it) }
+            relayhint?.let { etag = etag?.plus(it) }
+
             val tags =
                 listOfNotNull(
                     arrayOf(URL, url),
-                    eventid?.let { arrayOf("e", it) },
+                    eventid?.let { etag },
                     magnetUri?.let { arrayOf(MAGNET_URI, it) },
                     mimeType?.let { arrayOf(MIME_TYPE, it) },
                     alt?.ifBlank { null }?.let { arrayOf(ALT, it) } ?: arrayOf("alt", ALT_DESCRIPTION),

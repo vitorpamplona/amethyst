@@ -2204,6 +2204,7 @@ class Account(
         ProfileGalleryEntryEvent.create(
             url = url,
             eventid = idHex,
+            relayhint = relay,
             /*magnetUri = magnetUri,
             mimeType = headerInfo.mimeType,
             hash = headerInfo.hash,
