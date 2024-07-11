@@ -103,7 +103,6 @@ class ProfileGalleryEntryEvent(
             var etag = eventid?.let { arrayOf("e", it) }
             relayhint?.let { etag = etag?.plus(it) }
 
-            println("RELAYHINT: " + etag)
             val tags =
                 listOfNotNull(
                     arrayOf(URL, url),
