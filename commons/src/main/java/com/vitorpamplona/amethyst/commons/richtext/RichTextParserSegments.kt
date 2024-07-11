@@ -91,6 +91,10 @@ class BechSegment(
 ) : Segment(segment)
 
 @Immutable
+class Base64Segment(
+    segment: String,
+) : Segment(segment)
+
 open class HashIndexSegment(
     segment: String,
     val hex: String,

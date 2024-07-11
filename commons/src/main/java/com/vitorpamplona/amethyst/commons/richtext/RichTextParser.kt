@@ -81,6 +81,21 @@ class RichTextParser {
         }
     }
 
+    private fun parseBase64Images(content: String): LinkedHashSet<String> {
+        val regex = "data:image/(${imageExtensions.joinToString(separator = "|") { it } });base64,[a-zA-Z0-9+/]+={0,2}"
+        val pattern = Pattern.compile(regex)
+        val matcher = pattern.matcher(content)
+
+        val base64Images = mutableListOf<String>()
+
+        // Find all matches and add them to the list
+        while (matcher.find()) {
+            base64Images.add(matcher.group())
+        }
+
+        return base64Images.mapTo(LinkedHashSet(base64Images.size)) { it }
+    }
+
     fun parseValidUrls(content: String): LinkedHashSet<String> {
         val urls = UrlDetector(content, UrlDetectorOptions.Default).detect()
 
@@ -202,6 +217,13 @@ class RichTextParser {
         tags: ImmutableListOfLists<String>,
     ): Segment {
         if (word.isEmpty()) return RegularTextSegment(word)
+
+        if (word.startsWith("data:image")) {
+            val base64Images = parseBase64Images(word)
+            if (base64Images.isNotEmpty()) {
+                return Base64Segment(word)
+            }
+        }
 
         if (images.contains(word)) return ImageSegment(word)
 
