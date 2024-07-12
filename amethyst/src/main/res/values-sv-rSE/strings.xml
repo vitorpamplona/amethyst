@@ -9,6 +9,7 @@
     <string name="post_was_hidden">Detta inlägg doldes eftersom det nämner dina dolda användare eller ord</string>
     <string name="post_was_flagged_as_inappropriate_by">Inlägget flaggades som olämpligt av</string>
     <string name="post_not_found">Inlägg hittades inte</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Kanal bild</string>
     <string name="referenced_event_not_found">Refererad händelse hittades inte</string>
     <string name="could_not_decrypt_the_message">Kunde inte dekryptera meddelandet</string>
@@ -132,6 +133,7 @@
     <string name="conversations">Konversationer</string>
     <string name="notes">Anteckningar</string>
     <string name="replies">Svar</string>
+    <string name="gallery">Galleri</string>
     <string name="follows">"Följer"</string>
     <string name="reports">"Rapporter"</string>
     <string name="more_options">Fler alternativ</string>
@@ -253,6 +255,8 @@
     <string name="quick_action_delete">Radera</string>
     <string name="quick_action_unfollow">Sluta följa</string>
     <string name="quick_action_follow">Följ</string>
+    <string name="quick_action_request_deletion_gallery_title">Ta bort från galleriet</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">Ta bort detta media från ditt galleri, kan du lägga till det senare</string>
     <string name="quick_action_request_deletion_alert_title">Begär radering</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst kommer att begära att din anteckning tas bort från de reläer du för närvarande är ansluten till. Det finns ingen garanti för att din anteckning kommer att raderas permanent från dessa reläer eller från andra reläer där den kan lagras.</string>
     <string name="quick_action_block_dialog_btn">Blockera</string>
@@ -514,6 +518,7 @@
     <string name="share_or_save">Dela eller Spara</string>
     <string name="copy_url_to_clipboard">Kopiera URL till urklipp</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopiera anteckningens ID till urklipp</string>
+    <string name="add_media_to_gallery">Lägg till media i galleriet</string>
     <string name="created_at">Skapad den</string>
     <string name="rules">Regler</string>
     <string name="login_with_external_signer">Logga in med Amber</string>

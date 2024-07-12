@@ -9,6 +9,7 @@
     <string name="post_was_hidden">Esta postagem foi ocultada porque menciona seus usuários ou palavras ocultas</string>
     <string name="post_was_flagged_as_inappropriate_by">A postagem foi sinalizada como imprópria por</string>
     <string name="post_not_found">postagem não encontrada</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Imagem do Canal</string>
     <string name="referenced_event_not_found">Evento referenciado não encontrado</string>
     <string name="could_not_decrypt_the_message">Não foi possível descriptografar a mensagem</string>
@@ -132,6 +133,7 @@
     <string name="conversations">Conversas</string>
     <string name="notes">Notas</string>
     <string name="replies">Respostas</string>
+    <string name="gallery">Galeria</string>
     <string name="follows">"Seguindo"</string>
     <string name="reports">"Denúncias"</string>
     <string name="more_options">Mais opções</string>
@@ -253,6 +255,8 @@
     <string name="quick_action_delete">Excluir</string>
     <string name="quick_action_unfollow">Remover seguidor</string>
     <string name="quick_action_follow">Seguir</string>
+    <string name="quick_action_request_deletion_gallery_title">Excluir da Galeria</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">Remover essa mídia de sua galeria, você pode adicionar mais tarde</string>
     <string name="quick_action_request_deletion_alert_title">Pedir para excluir</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst solicitará que sua nota seja excluída dos relays aos quais você está conectado no momento. Não há garantia de que sua nota será excluída permanentemente desses relays ou de outros relays onde possa estar armazenada.</string>
     <string name="quick_action_block_dialog_btn">Bloquear</string>
@@ -515,6 +519,7 @@
     <string name="share_or_save">Compartilhar ou Salvar</string>
     <string name="copy_url_to_clipboard">Copiar URL para a área de transferência</string>
     <string name="copy_the_note_id_to_the_clipboard">Copiar ID da nota para a área de transferência</string>
+    <string name="add_media_to_gallery">Adicionar Mídia à Galeria</string>
     <string name="created_at">Criado em</string>
     <string name="rules">Regras</string>
     <string name="login_with_external_signer">Login com Amber</string>

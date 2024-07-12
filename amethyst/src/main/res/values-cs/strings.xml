@@ -9,6 +9,7 @@
     <string name="post_was_hidden">Tento příspěvek byl skryt, protože zmiňuje vaše skryté uživatele nebo slova</string>
     <string name="post_was_flagged_as_inappropriate_by">Příspěvek byl označen jako nevhodný uživatelem</string>
     <string name="post_not_found">Příspěvek nenalezen</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Obrázek kanálu</string>
     <string name="referenced_event_not_found">Odkazovaná událost nebyla nalezena</string>
     <string name="could_not_decrypt_the_message">Nepodařilo se dešifrovat zprávu</string>
@@ -132,6 +133,7 @@
     <string name="conversations">Konverzace</string>
     <string name="notes">Poznámky</string>
     <string name="replies">Odpovědi</string>
+    <string name="gallery">Galerie</string>
     <string name="follows">"Sleduje"</string>
     <string name="reports">"Zprávy"</string>
     <string name="more_options">Více možností</string>
@@ -253,6 +255,8 @@
     <string name="quick_action_delete">Smazat</string>
     <string name="quick_action_unfollow">Přestat sledovat</string>
     <string name="quick_action_follow">Sledovat</string>
+    <string name="quick_action_request_deletion_gallery_title">Odstranit z galerie</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">Odstraňte tato média z vaší galerie, můžete je přidat později</string>
     <string name="quick_action_request_deletion_alert_title">Požadavek na smazání</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst požádá o smazání vaší poznámky ze spojek, ke kterým jste v současnosti připojeni. Není zaručeno, že vaše poznámka bude trvale smazána z těchto spojek nebo z dalších spojek, kde může být uložena.</string>
     <string name="quick_action_block_dialog_btn">Blokovat</string>
@@ -515,6 +519,7 @@
     <string name="share_or_save">Sdílet nebo Uložit</string>
     <string name="copy_url_to_clipboard">Kopírovat URL do schránky</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopírovat ID poznámky do schránky</string>
+    <string name="add_media_to_gallery">Přidat média do galerie</string>
     <string name="created_at">Vytvořeno</string>
     <string name="rules">Pravidla</string>
     <string name="login_with_external_signer">Přihlásit se pomocí Amber</string>
