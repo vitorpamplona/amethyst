@@ -9,6 +9,7 @@
     <string name="post_was_hidden">Dieser Beitrag wurde ausgeblendet, weil er Ihre ausgeblendeten Benutzer oder Wörter erwähnt</string>
     <string name="post_was_flagged_as_inappropriate_by">Der Beitrag wurde als unangemessen gekennzeichnet von</string>
     <string name="post_not_found">Ereignis wird geladen oder kann nicht in deiner Relay-Liste gefunden werden</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Kanalbild</string>
     <string name="referenced_event_not_found">Referenziertes Ereignis nicht gefunden</string>
     <string name="could_not_decrypt_the_message">Nachricht konnte nicht entschlüsselt werden</string>
@@ -134,6 +135,7 @@ erie gespeichert</string>
     <string name="conversations">Unterhaltungen</string>
     <string name="notes">Notizen</string>
     <string name="replies">Antworten</string>
+    <string name="gallery">Galerie</string>
     <string name="follows">"Folgt"</string>
     <string name="reports">"Berichte"</string>
     <string name="more_options">Weitere Optionen</string>
@@ -257,6 +259,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="quick_action_delete">Löschen</string>
     <string name="quick_action_unfollow">Entfolgen</string>
     <string name="quick_action_follow">Folgen</string>
+    <string name="quick_action_request_deletion_gallery_title">Aus Galerie löschen</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">Entferne diese Medien von deiner Galerie, du kannst sie später hinzufügen</string>
     <string name="quick_action_request_deletion_alert_title">Löschung anfordern</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst wird beantragen, dass Ihre Notiz von den Relays gelöscht wird, mit denen Sie derzeit verbunden sind. Es gibt keine Garantie dafür, dass Ihre Notiz dauerhaft von diesen Relays oder anderen Relays, in denen sie gespeichert sein kann, gelöscht wird.</string>
     <string name="quick_action_block_dialog_btn">Blockieren</string>
@@ -520,6 +524,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="share_or_save">Teilen oder Speichern</string>
     <string name="copy_url_to_clipboard">URL in die Zwischenablage kopieren</string>
     <string name="copy_the_note_id_to_the_clipboard">Notiz-ID in die Zwischenablage kopieren</string>
+    <string name="add_media_to_gallery">Medien zur Galerie hinzufügen</string>
     <string name="created_at">Erstellt am</string>
     <string name="rules">Regeln</string>
     <string name="login_with_external_signer">Mit Amber anmelden</string>
