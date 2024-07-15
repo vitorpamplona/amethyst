@@ -9,6 +9,7 @@
     <string name="post_was_hidden">Ten post został ukryty, ponieważ dotyczy ukrytych użytkowników lub słów</string>
     <string name="post_was_flagged_as_inappropriate_by">Post został wyciszony lub zgłoszony przez</string>
     <string name="post_not_found">Wydarzenie jest wczytywane lub nie można go znaleźć na liście transmiterów</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Zdjęcie kanału</string>
     <string name="referenced_event_not_found">Przywołane zdarzenie nie zostało znalezione</string>
     <string name="could_not_decrypt_the_message">Nie można odszyfrować wiadomości</string>
@@ -132,6 +133,7 @@
     <string name="conversations">Rozmowy</string>
     <string name="notes">Wpisy</string>
     <string name="replies">Odpowiedzi</string>
+    <string name="gallery">Galeria</string>
     <string name="follows">"Obserwowani"</string>
     <string name="reports">"Zgłoszenia"</string>
     <string name="more_options">Więcej opcji</string>
@@ -255,6 +257,8 @@
     <string name="quick_action_delete">Usuń</string>
     <string name="quick_action_unfollow">Porzuć</string>
     <string name="quick_action_follow">Śledź</string>
+    <string name="quick_action_request_deletion_gallery_title">Usuń z Galerii</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">Usuń te media z galerii, możesz dodać je ponownie później</string>
     <string name="quick_action_request_deletion_alert_title">Poproś o usunięcie</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst poprosi o usunięcie Twojej notatki z aktualnie podłączonych transmiterów. Nie ma gwarancji, że Twoja notatka zostanie trwale usunięta z tych lub z innych transmiterów, gdzie może być przechowywana.</string>
     <string name="quick_action_block_dialog_btn">Zablokuj</string>
@@ -517,6 +521,7 @@
     <string name="share_or_save">Udostępnij lub Zapisz</string>
     <string name="copy_url_to_clipboard">Kopiuj adres URL do schowka</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopiuj ID wpisu do schowka</string>
+    <string name="add_media_to_gallery">Dodaj media do Galerii</string>
     <string name="created_at">Utworzono</string>
     <string name="rules">Zasady</string>
     <string name="login_with_external_signer">Zaloguj się za pomocą Amber</string>
@@ -536,6 +541,7 @@
     <string name="relay_information_document_error_http_status">%1$s nie powiódł się z kodem %2$s</string>
     <string name="active_for">Aktywny dla: </string>
     <string name="active_for_home">Strona główna</string>
+    <string name="active_for_msg">DMs</string>
     <string name="active_for_chats">Czaty</string>
     <string name="active_for_global">Wszystkie</string>
     <string name="active_for_search">Szukaj</string>
@@ -777,12 +783,15 @@
     <string name="http_status_409">Konflikt - serwer nie może spełnić żądania, ponieważ istnieje konflikt z zasobem</string>
     <string name="http_status_410">Przepadło - Żądana zawartość została trwale usunięta z serwera i nie zostanie przywrócona</string>
     <string name="http_status_411">Wymagana długość - serwer odrzuca żądanie, ponieważ wymaga zdefiniowanej</string>
+    <string name="http_status_413">Payload Zbyt duży - Żądanie jest większe niż określone limity serwera i serwer odmawia jego przetwarzania</string>
     <string name="http_status_414">URI Zbyt długi - URL klienta jest zbyt długi, aby serwer mógł go przetworzyć. </string>
     <string name="http_status_415">Nieobsługiwany format plików - żądanie używa formatu multimediów, którego serwer nie obsługuje</string>
     <string name="http_status_426">Wymagana aktualizacja - serwer odmawia przetwarzania żądania przy użyciu bieżącego protokołu, chyba że klient uaktualni go do innego protokołu.</string>
     <string name="http_status_500">Wewnętrzny błąd serwera - serwer napotkał nieoczekiwany błąd i nie może zakończyć żądania</string>
     <string name="http_status_501">Nie zaimplementowano - serwer nie może spełnić żądania lub nie rozpoznaje metody żądania</string>
+    <string name="http_status_502">Bad Bateway - serwer działa jako brama i otrzymał nieprawidłową odpowiedź od hosta</string>
     <string name="http_status_503">Usługa niedostępna - Często zdarza się, gdy serwer jest przeciążony lub wyłączony w celu konserwacji</string>
+    <string name="http_status_504">Limit czasu bramki - serwer działał jako brama lub serwer proxy i upłynął limit czasu, czekając na odpowiedź</string>
     <string name="http_status_505">Wersja HTTP nie jest obsługiwana - serwer nie obsługuje wersji HTTP w zapytaniu</string>
     <string name="http_status_506">Wariant również Negocjacje - serwer ma błąd konfiguracji wewnętrznej</string>
     <string name="http_status_507">Niewystarczająca pojemność - serwer nie ma wystarczającej pojemność, aby pomyślnie przetworzyć żądanie</string>
