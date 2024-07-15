@@ -152,7 +152,7 @@ fun ClickableUserPicture(
 ) {
     // BaseUser is the same reference as accountState.user
     val myModifier =
-        remember {
+        remember(baseUser) {
             if (onClick != null && onLongClick != null) {
                 Modifier
                     .size(size)
