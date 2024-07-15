@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.utils
 
 import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertTrue
 import org.junit.Test
 
 class MinimumRelayListProcessorTest {
@@ -48,10 +49,43 @@ class MinimumRelayListProcessorTest {
     }
 
     @Test
-    fun test1() {
-        assertEquals(
-            listOf("wss://relay1.com", "wss://relay4.com", "wss://relay2.com", "wss://relay5.com").toString(),
-            MinimumRelayListProcessor.reliableRelaySetFor(userList).toString(),
-        )
+    fun testProcessor() {
+        val recommendations = MinimumRelayListProcessor.reliableRelaySetFor(userList).toList()
+
+        val rec1 = recommendations[0]
+
+        assertEquals("wss://relay1.com", rec1.url)
+        assertEquals(true, rec1.requiredToNotMissEvents)
+        assertTrue("User1" in rec1.users)
+        assertTrue("User2" !in rec1.users)
+        assertTrue("User3" in rec1.users)
+        assertTrue("User4" in rec1.users)
+
+        val rec2 = recommendations[1]
+
+        assertEquals("wss://relay4.com", rec2.url)
+        assertEquals(true, rec2.requiredToNotMissEvents)
+        assertTrue("User1" !in rec2.users)
+        assertTrue("User2" in rec2.users)
+        assertTrue("User3" !in rec2.users) // already included in relay 1
+        assertTrue("User4" !in rec2.users) // already included in relay 1
+
+        val rec3 = recommendations[2]
+
+        assertEquals("wss://relay2.com", rec3.url)
+        assertEquals(false, rec3.requiredToNotMissEvents)
+        assertTrue("User1" in rec3.users)
+        assertTrue("User2" !in rec3.users)
+        assertTrue("User3" !in rec3.users)
+        assertTrue("User4" !in rec3.users) // already included in relay 1 and 2
+
+        val rec4 = recommendations[3]
+
+        assertEquals("wss://relay5.com", rec4.url)
+        assertEquals(false, rec4.requiredToNotMissEvents)
+        assertTrue("User1" !in rec4.users)
+        assertTrue("User2" in rec4.users)
+        assertTrue("User3" !in rec4.users)
+        assertTrue("User4" !in rec4.users)
     }
 }
