@@ -143,6 +143,31 @@ fun LazyListScope.renderKind3Items(
     }
 }
 
+fun LazyListScope.renderKind3ProposalItems(
+    feedState: List<Kind3RelayProposalSetupInfo>,
+    postViewModel: Kind3RelayListViewModel,
+    accountViewModel: AccountViewModel,
+    onClose: () -> Unit,
+    nav: (String) -> Unit,
+) {
+    itemsIndexed(feedState, key = { _, item -> "kind3proposal" + item.url }) { index, item ->
+        Kind3RelaySetupInfoProposalDialog(
+            item = item,
+            onAdd = {
+                postViewModel.addRelay(item)
+            },
+            accountViewModel = accountViewModel,
+            nav = {
+                onClose()
+                nav(it)
+            },
+        )
+        HorizontalDivider(
+            thickness = DividerThickness,
+        )
+    }
+}
+
 @Preview
 @Composable
 fun ServerConfigPreview() {

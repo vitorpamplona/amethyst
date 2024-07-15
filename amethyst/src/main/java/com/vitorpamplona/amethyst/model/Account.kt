@@ -108,6 +108,7 @@ import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.DualCase
+import com.vitorpamplona.quartz.utils.MinimumRelayListProcessor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -117,6 +118,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -474,9 +476,59 @@ class Account(
             }
         }
 
-    val liveHomeFollowLists: StateFlow<LiveFollowLists?> by lazy {
+    val liveHomeFollowListFlow: Flow<LiveFollowLists?> by lazy {
         combinePeopleListFlows(liveKind3FollowsFlow, liveHomeList)
-            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists())
+    }
+
+    val liveHomeFollowLists: StateFlow<LiveFollowLists?> by lazy {
+        liveHomeFollowListFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists())
+    }
+
+    fun relaysFromPeopleListFlows(
+        currentFollowList: LiveFollowLists,
+        relayUrlsToIgnore: Set<String>,
+    ): Flow<List<MinimumRelayListProcessor.RelayRecommendation>> =
+        combine(
+            currentFollowList.users.map {
+                getNIP65RelayListFlow(it)
+            },
+        ) { followsNIP65RelayLists ->
+            MinimumRelayListProcessor
+                .reliableRelaySetFor(
+                    followsNIP65RelayLists.mapNotNull {
+                        (it.note.event as? AdvertisedRelayListEvent)
+                    },
+                    relayUrlsToIgnore,
+                    hasOnionConnection = proxy != null,
+                ).sortedByDescending { it.users.size }
+        }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val liveHomeFollowRelayFlow: Flow<List<MinimumRelayListProcessor.RelayRecommendation>> by lazy {
+        combineTransform(liveHomeFollowListFlow, connectToRelaysFlow) { followList, existing ->
+            if (followList != null) {
+                emit(
+                    relaysFromPeopleListFlows(
+                        followList,
+                        existing.mapNotNullTo(HashSet()) {
+                            if (it.read && FeedType.FOLLOWS in it.feedTypes) {
+                                it.url
+                            } else {
+                                null
+                            }
+                        },
+                    ),
+                )
+            } else {
+                emit(MutableStateFlow(emptyList()))
+            }
+        }.flatMapLatest {
+            it
+        }
+    }
+
+    val liveHomeFollowRelays: StateFlow<List<MinimumRelayListProcessor.RelayRecommendation>> by lazy {
+        liveHomeFollowRelayFlow.stateIn(scope, SharingStarted.Eagerly, emptyList())
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -2924,14 +2976,14 @@ class Account(
         }
     }
 
-    fun getNIP65RelayListNote(): AddressableNote =
+    fun getNIP65RelayListNote(pubkey: HexKey = signer.pubKey): AddressableNote =
         LocalCache.getOrCreateAddressableNote(
-            AdvertisedRelayListEvent.createAddressATag(signer.pubKey),
+            AdvertisedRelayListEvent.createAddressATag(pubkey),
         )
 
-    fun getNIP65RelayListFlow(): StateFlow<NoteState> = getNIP65RelayListNote().flow().metadata.stateFlow
+    fun getNIP65RelayListFlow(pubkey: HexKey = signer.pubKey): StateFlow<NoteState> = getNIP65RelayListNote(pubkey).flow().metadata.stateFlow
 
-    fun getNIP65RelayList(): AdvertisedRelayListEvent? = getNIP65RelayListNote().event as? AdvertisedRelayListEvent
+    fun getNIP65RelayList(pubkey: HexKey = signer.pubKey): AdvertisedRelayListEvent? = getNIP65RelayListNote(pubkey).event as? AdvertisedRelayListEvent
 
     fun sendNip65RelayList(relays: List<AdvertisedRelayListEvent.AdvertisedRelayInfo>) {
         if (!isWriteable()) return

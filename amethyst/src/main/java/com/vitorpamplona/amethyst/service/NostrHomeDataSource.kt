@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
@@ -35,6 +36,7 @@ import com.vitorpamplona.quartz.events.HighlightEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
+import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.RepostEvent
@@ -106,6 +108,33 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                             ?.relayList,
                 ),
         )
+    }
+
+    fun createFollowMetadataAndReleaseFilter(): TypedFilter? {
+        val follows = account.liveHomeFollowLists.value?.users
+        val followSet = follows?.plus(account.userProfile().pubkeyHex)?.toList()?.ifEmpty { null }
+
+        return if (followSet != null) {
+            TypedFilter(
+                types = setOf(FeedType.FOLLOWS),
+                filter =
+                    Filter(
+                        kinds =
+                            listOf(
+                                MetadataEvent.KIND,
+                                AdvertisedRelayListEvent.KIND,
+                            ),
+                        authors = followSet,
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(account.defaultHomeFollowList.value)
+                                ?.relayList,
+                    ),
+            )
+        } else {
+            null
+        }
     }
 
     fun createFollowTagsFilter(): TypedFilter? {
@@ -235,6 +264,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
         followAccountChannel.typedFilters =
             listOfNotNull(
                 createFollowAccountsFilter(),
+                createFollowMetadataAndReleaseFilter(),
                 createFollowCommunitiesFilter(),
                 createFollowTagsFilter(),
                 createFollowGeohashesFilter(),

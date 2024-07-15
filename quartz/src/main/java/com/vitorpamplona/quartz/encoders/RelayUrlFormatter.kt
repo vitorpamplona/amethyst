@@ -31,12 +31,14 @@ class RelayUrlFormatter {
                 .removePrefix("ws://")
                 .removeSuffix("/")
 
+        fun isLocalHost(url: String) = url.contains("127.0.0.1") || url.contains("localhost")
+
+        fun isOnion(url: String) = url.endsWith(".onion") || url.endsWith(".onion/")
+
         fun normalize(url: String): String {
             val newUrl =
                 if (!url.startsWith("wss://") && !url.startsWith("ws://")) {
-                    // TODO: How to identify relays on the local network?
-                    val isLocalHost = url.contains("127.0.0.1") || url.contains("localhost")
-                    if (url.endsWith(".onion") || url.endsWith(".onion/") || isLocalHost) {
+                    if (isOnion(url) || isLocalHost(url)) {
                         "ws://${url.trim()}"
                     } else {
                         "wss://${url.trim()}"
@@ -49,6 +51,25 @@ class RelayUrlFormatter {
                 URIReference.parse(newUrl).normalize().toString()
             } catch (e: Exception) {
                 newUrl
+            }
+        }
+
+        fun normalizeOrNull(url: String): String? {
+            val newUrl =
+                if (!url.startsWith("wss://") && !url.startsWith("ws://")) {
+                    if (isOnion(url) || isLocalHost(url)) {
+                        "ws://${url.trim()}"
+                    } else {
+                        "wss://${url.trim()}"
+                    }
+                } else {
+                    url.trim()
+                }
+
+            return try {
+                URIReference.parse(newUrl).normalize().toString()
+            } catch (e: Exception) {
+                null
             }
         }
 

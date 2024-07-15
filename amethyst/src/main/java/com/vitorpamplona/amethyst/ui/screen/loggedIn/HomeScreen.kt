@@ -133,7 +133,9 @@ private fun AssembleHomePage(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    Column(Modifier.fillMaxHeight()) { HomePages(pagerState, tabs, accountViewModel, nav) }
+    Column(Modifier.fillMaxHeight()) {
+        HomePages(pagerState, tabs, accountViewModel, nav)
+    }
 }
 
 @Composable

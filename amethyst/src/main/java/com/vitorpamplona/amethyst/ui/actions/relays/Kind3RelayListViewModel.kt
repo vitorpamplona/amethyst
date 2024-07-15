@@ -30,6 +30,7 @@ import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.ammolite.relays.RelayStats
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
+import com.vitorpamplona.quartz.utils.MinimumRelayListProcessor
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +43,9 @@ class Kind3RelayListViewModel : ViewModel() {
 
     private val _relays = MutableStateFlow<List<Kind3BasicRelaySetupInfo>>(emptyList())
     val relays = _relays.asStateFlow()
+
+    private val _proposedRelays = MutableStateFlow<List<Kind3RelayProposalSetupInfo>>(emptyList())
+    val proposedRelays = _proposedRelays.asStateFlow()
 
     var hasModified = false
 
@@ -127,6 +131,44 @@ class Kind3RelayListViewModel : ViewModel() {
                     .reversed()
             }
         }
+
+        refreshProposals()
+    }
+
+    private fun refreshProposals() {
+        _proposedRelays.update {
+            val proposed =
+                MinimumRelayListProcessor
+                    .reliableRelaySetFor(
+                        account.liveKind3Follows.value.users.mapNotNull {
+                            account.getNIP65RelayList(it)
+                        },
+                        relayUrlsToIgnore =
+                            _relays.value.mapNotNullTo(HashSet()) {
+                                if (it.read && FeedType.FOLLOWS in it.feedTypes) {
+                                    it.url
+                                } else {
+                                    null
+                                }
+                            },
+                        hasOnionConnection = false,
+                    ).sortedByDescending { it.users.size }
+
+            proposed.mapNotNull {
+                if (it.requiredToNotMissEvents) {
+                    Kind3RelayProposalSetupInfo(
+                        url = RelayUrlFormatter.normalize(it.url),
+                        read = true,
+                        write = false,
+                        feedTypes = setOf(FeedType.FOLLOWS),
+                        relayStat = RelayStats.get(it.url),
+                        users = it.users,
+                    )
+                } else {
+                    null
+                }
+            }
+        }
     }
 
     fun addAll(defaultRelays: Array<RelaySetupInfo>) {
@@ -153,16 +195,34 @@ class Kind3RelayListViewModel : ViewModel() {
 
         _relays.update { it.plus(relay) }
 
+        refreshProposals()
+
+        hasModified = true
+    }
+
+    fun addRelay(relay: Kind3RelayProposalSetupInfo) {
+        if (relays.value.any { it.url == relay.url }) return
+
+        _relays.update { it.plus(Kind3BasicRelaySetupInfo(relay.url, relay.read, relay.write, relay.feedTypes, relay.relayStat, relay.paidRelay)) }
+
+        refreshProposals()
+
         hasModified = true
     }
 
     fun deleteRelay(relay: Kind3BasicRelaySetupInfo) {
         _relays.update { it.minus(relay) }
+
+        refreshProposals()
+
         hasModified = true
     }
 
     fun deleteAll() {
         _relays.update { relays -> emptyList() }
+
+        refreshProposals()
+
         hasModified = true
     }
 

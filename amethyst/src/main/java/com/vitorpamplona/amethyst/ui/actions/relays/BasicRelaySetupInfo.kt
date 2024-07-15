@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.ammolite.relays.RelayStat
+import com.vitorpamplona.quartz.encoders.HexKey
 
 @Immutable
 data class BasicRelaySetupInfo(
@@ -42,6 +43,19 @@ data class Kind3BasicRelaySetupInfo(
     val feedTypes: Set<FeedType>,
     val relayStat: RelayStat,
     val paidRelay: Boolean = false,
+) {
+    val briefInfo: RelayBriefInfoCache.RelayBriefInfo = RelayBriefInfoCache.RelayBriefInfo(url)
+}
+
+@Immutable
+data class Kind3RelayProposalSetupInfo(
+    val url: String,
+    val read: Boolean,
+    val write: Boolean,
+    val feedTypes: Set<FeedType>,
+    val relayStat: RelayStat,
+    val paidRelay: Boolean = false,
+    val users: Set<HexKey>,
 ) {
     val briefInfo: RelayBriefInfoCache.RelayBriefInfo = RelayBriefInfoCache.RelayBriefInfo(url)
 }
