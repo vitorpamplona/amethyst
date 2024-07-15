@@ -9,6 +9,7 @@
     <string name="post_was_hidden">इस प्रकाशित पत्र को छिपाया गया क्योंकि इसमें आपके आच्छाद्य उपयोगकर्ता अथवा शब्द उल्लेखित हैं</string>
     <string name="post_was_flagged_as_inappropriate_by">प्रकाशित पत्र को मौन किया गया अथवा सूचित किया गया इनके द्वारा</string>
     <string name="post_not_found">घटना उपलब्ध की जा रही है अथवा आपके पुनःप्रसारक सूची में से प्राप्त नहीं</string>
+    <string name="post_not_found_short">देखें</string>
     <string name="channel_image">प्रणाली चित्र</string>
     <string name="referenced_event_not_found">उद्धृत घटना अप्राप्त</string>
     <string name="could_not_decrypt_the_message">सन्देश का अरहस्यीकरण असफल</string>
@@ -132,6 +133,7 @@
     <string name="conversations">सम्वाद</string>
     <string name="notes">टीकाएँ</string>
     <string name="replies">प्रतिवचन</string>
+    <string name="gallery">चित्रालय</string>
     <string name="follows">"का अनुचरण"</string>
     <string name="reports">"सूचनाएँ"</string>
     <string name="more_options">अधिक विकल्प</string>
@@ -255,6 +257,8 @@
     <string name="quick_action_delete">मिटाएँ</string>
     <string name="quick_action_unfollow">अनुचरण ना करें</string>
     <string name="quick_action_follow">अनुचरण करें</string>
+    <string name="quick_action_request_deletion_gallery_title">चित्रालय से मिटाएँ</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">इस अभिलेख को चित्रालय से हटाएँ। तत्पश्चात कभी भी आप इसे पुनः जोड सकते हैं</string>
     <string name="quick_action_request_deletion_alert_title">हटाने की याचना</string>
     <string name="quick_action_request_deletion_alert_body">अमेथिस्ट अनुरोध करेगा कि आपका टीका मिटा दिया जाए उन पुनःप्रसारकों से जिनके साथ आप अब जुडे हुए हैं। कोई आश्वासन नहीं कि आपका टीका सर्वदा के लिए मिटा दिया जाएगा उन पुनःप्रसारकों से, अथवा अन्य पुनःप्रसारकों में से जहाँ यह रखा गया हो।</string>
     <string name="quick_action_block_dialog_btn">बाधित करें</string>
@@ -517,6 +521,7 @@
     <string name="share_or_save">बाँटें अथवा अभिलेखन करें</string>
     <string name="copy_url_to_clipboard">टाँकाफलक में जालपता की अनुकृति करें</string>
     <string name="copy_the_note_id_to_the_clipboard">टाँकाफलक में टीका विभेदक की अनुकृति करें</string>
+    <string name="add_media_to_gallery">अभिलेख को चित्रालय में जोडें</string>
     <string name="created_at">तब बनाया गया</string>
     <string name="rules">नियमावली</string>
     <string name="login_with_external_signer">आम्बेर के साथ प्रवेशांकन करें</string>

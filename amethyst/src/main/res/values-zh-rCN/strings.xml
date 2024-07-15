@@ -9,6 +9,7 @@
     <string name="post_was_hidden">此帖被隐藏，因为它提到了你隐藏的用户或单词</string>
     <string name="post_was_flagged_as_inappropriate_by">帖文被标记为不当</string>
     <string name="post_not_found">事件正在加载或无法在你的中继列表中找到</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">频道图片</string>
     <string name="referenced_event_not_found">未找到相关事件</string>
     <string name="could_not_decrypt_the_message">无法解密消息</string>
@@ -36,6 +37,7 @@
     <string name="report_impersonation">举报冒充</string>
     <string name="report_explicit_content">举报明确内容</string>
     <string name="report_illegal_behaviour">举报非法行为</string>
+    <string name="report_malware">举报恶意软件</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">你正在使用公钥，公钥是只读的。使用私钥登录以便回复</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">你正在使用公钥，公钥是只读的。使用私钥登录以便提升帖子</string>
     <string name="login_with_a_private_key_to_like_posts">使用私钥登录以便点赞帖子</string>
@@ -131,6 +133,7 @@
     <string name="conversations">会话</string>
     <string name="notes">动态</string>
     <string name="replies">回复</string>
+    <string name="gallery">相册</string>
     <string name="follows">"关注"</string>
     <string name="reports">"举报"</string>
     <string name="more_options">更多选项</string>
@@ -254,6 +257,8 @@
     <string name="quick_action_delete">删除</string>
     <string name="quick_action_unfollow">取关</string>
     <string name="quick_action_follow">关注</string>
+    <string name="quick_action_request_deletion_gallery_title">从相册中删除</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">从图库中删除此媒体，但任然可供浏览</string>
     <string name="quick_action_request_deletion_alert_title">请求删贴</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst 将请求你的记录从当前连接的中继器中删除。不能保证你发布的笔记将被永久从那些中继器或其他存储笔记的中继器中删除。</string>
     <string name="quick_action_block_dialog_btn">阻止</string>
@@ -267,6 +272,7 @@
     <string name="report_dialog_impersonation">恶意冒充</string>
     <string name="report_dialog_nudity">暴露裸露或恶心内容</string>
     <string name="report_dialog_illegal">违规行为</string>
+    <string name="report_dialog_malware">恶意软件</string>
     <string name="report_dialog_blocking_a_user">屏蔽一位用户将会在你的应用中隐藏他的内容。你的笔记仍然是公开可见的，包括对被你屏蔽的用户。屏蔽的用户将会被列在安全过滤器屏幕上。</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[阻止并隐藏用户]]></string>
     <string name="report_dialog_report_btn">违规报告</string>
@@ -515,6 +521,7 @@
     <string name="share_or_save">分享或保存</string>
     <string name="copy_url_to_clipboard">复制链接到剪贴板</string>
     <string name="copy_the_note_id_to_the_clipboard">复制笔记 ID 到剪贴板</string>
+    <string name="add_media_to_gallery">添加媒体到图库</string>
     <string name="created_at">创建于</string>
     <string name="rules">规则</string>
     <string name="login_with_external_signer">使用 Amber 登录</string>

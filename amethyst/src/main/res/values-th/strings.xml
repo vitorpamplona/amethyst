@@ -9,6 +9,7 @@
     <string name="post_was_hidden">โน๊ตนี้ถูกซ่อนเนื่องจากมีเนื้อหา หรือผู้ใช้ ที่ท่านไม่อยากเห็น</string>
     <string name="post_was_flagged_as_inappropriate_by">โพสต์ถูกรายงานว่าไม่เหมาะสมโดย</string>
     <string name="post_not_found">ไม่พบโพสต์นี้</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">รูปของ channel</string>
     <string name="referenced_event_not_found">ไม่พบ event ที่อ้างอิง</string>
     <string name="could_not_decrypt_the_message">ไม่สามารถเข้ารหัสข้อความได้</string>
@@ -36,6 +37,7 @@
     <string name="report_impersonation">รายงาน: การเลียนแบบ</string>
     <string name="report_explicit_content">รายงาน: เนื้อหารุนแรง</string>
     <string name="report_illegal_behaviour">รายงาน: พฤติกรรมที่ผิดกฎหมาย</string>
+    <string name="report_malware">รายงานมัลแวร์</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">เข้าสู่ระบบด้วย private key เพื่อตอบกลับ</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">เข้าสู่ระบบด้วย private key เพื่อบูสโพสต์</string>
     <string name="login_with_a_private_key_to_like_posts">เข้าสู่ระบบด้วย private key เพื่อถูกใจโพสต์</string>
@@ -131,6 +133,7 @@
     <string name="conversations">การสนทนา</string>
     <string name="notes">โน้ต</string>
     <string name="replies">ตอบกลับ</string>
+    <string name="gallery">คลังภาพ</string>
     <string name="follows">"ติดตาม"</string>
     <string name="reports">"รายงาน"</string>
     <string name="more_options">ตัวเลือกเพิ่มเติม</string>
@@ -253,6 +256,8 @@
     <string name="quick_action_delete">ลบ</string>
     <string name="quick_action_unfollow">เลิกติดตาม</string>
     <string name="quick_action_follow">ติดตาม</string>
+    <string name="quick_action_request_deletion_gallery_title">ลบออกจากคลังภาพ</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">เอาออกจากคลังภาพ คุณสามารถเพิ่มใหม่ได้ภายหลัง</string>
     <string name="quick_action_request_deletion_alert_title">ส่งคำขอให้ลบ</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst จะขอให้ลบโน้ตของคุณออกจากรีเลย์ที่คุณเชื่อมต่ออยู่ ไม่มีการรับประกันว่าโน้ตของคุณจะถูกลบออกอย่างถาวรจากรีเลย์เหล่านั้น หรือ จากรีเลย์อื่น ๆ ที่อาจเก็บไว้</string>
     <string name="quick_action_block_dialog_btn">บล๊อก</string>
@@ -266,6 +271,7 @@
     <string name="report_dialog_impersonation">การแอบอ้างบุคคลอื่นที่เป็นอันตราย</string>
     <string name="report_dialog_nudity">เนื้อหาภาพเปลือย</string>
     <string name="report_dialog_illegal">พฤติกรรมที่ผิดกฎหมาย</string>
+    <string name="report_dialog_malware">มัลแวร์</string>
     <string name="report_dialog_blocking_a_user">การบล็อกผู้ใช้จะซ่อนเนื้อหาของพวกเขาในแอปของคุณ โน้ตของคุณยังคงดูได้แบบสาธารณะรวมถึงคนที่คุณบล็อกด้วย ผู้ใช้ที่ถูกบล็อกจะแสดงรายการบนหน้าจอตัวกรองความปลอดภัย</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[บล๊อก & ซ่อนผู้ใช้]]></string>
     <string name="report_dialog_report_btn">รายงานการล่วงละเมิด</string>
@@ -514,6 +520,7 @@
     <string name="share_or_save">แชร์ หรือเก็บไว้</string>
     <string name="copy_url_to_clipboard">คัดลอก URL ลงคลิปบอร์ด</string>
     <string name="copy_the_note_id_to_the_clipboard">คัดลอก โน้ต ID ลงคลิปบอร์ดd</string>
+    <string name="add_media_to_gallery">เพิ่มไปยังคลังภาพ</string>
     <string name="created_at">สร้างโดย</string>
     <string name="rules">กฏ</string>
     <string name="login_with_external_signer">เข้าสู่ระบบด้วย Amber</string>
