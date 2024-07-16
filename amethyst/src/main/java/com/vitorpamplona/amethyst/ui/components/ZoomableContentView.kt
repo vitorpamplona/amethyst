@@ -104,6 +104,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun ZoomableContentView(
@@ -180,15 +181,11 @@ fun TwoSecondController(
     content: BaseMediaContent,
     inner: @Composable (controllerVisible: MutableState<Boolean>) -> Unit,
 ) {
-    val controllerVisible = remember { mutableStateOf(true) }
+    val controllerVisible = remember(content) { mutableStateOf(true) }
 
     LaunchedEffect(content) {
-        launch(Dispatchers.Default) {
-            delay(2000)
-            withContext(Dispatchers.Main) {
-                controllerVisible.value = false
-            }
-        }
+        delay(2.seconds)
+        controllerVisible.value = false
     }
 
     inner(controllerVisible)
