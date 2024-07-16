@@ -178,10 +178,10 @@ object ChoreographerHelper {
                         return
                     }
                     val diff = (frameTimeNanos - lastFrameTimeNanos) / 1000000
-                    if (diff > 16.6f) {
+                    if (diff > 20) {
                         // Follow the frame number
                         val droppedCount = (diff / 16.6).toInt()
-                        Log.w("block-canary", "Dropped Frames $droppedCount")
+                        Log.w("block-canary", "Dropped $droppedCount frames. Skipped $diff ms")
                     }
                     lastFrameTimeNanos = frameTimeNanos
                     Choreographer.getInstance().postFrameCallback(this)
