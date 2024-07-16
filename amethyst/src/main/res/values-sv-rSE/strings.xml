@@ -722,6 +722,8 @@
     <string name="private_outbox_section_explainer">Infoga mellan 1–3 reläer för att lagra händelser som ingen annan kan se, som dina Utkast och/eller appinställningar. Helst är dessa reläer antingen lokala eller kräver autentisering innan du laddar ner varje användares innehåll.</string>
     <string name="kind_3_section">Allmänna reläer</string>
     <string name="kind_3_section_description">Amethyst använder dessa reläer för att ladda ner inlägg åt dig.</string>
+    <string name="kind_3_recommended_section">Rekommenderade reläer</string>
+    <string name="kind_3_recommended_section_description">Lägg till följande reläer till din Allmänna relälista för att ta emot inlägg från de listade användarna.</string>
     <string name="search_section">Sökreläer</string>
     <string name="search_section_explainer">Lista över reläer som används för sökning och taggning av användare. Taggning och sökning kommer inte att fungera om inga alternativ är tillgängliga.</string>
     <string name="local_section">Lokala reläer</string>
