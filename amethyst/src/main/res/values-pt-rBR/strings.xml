@@ -723,6 +723,8 @@
     <string name="private_outbox_section_explainer">Insira entre 1-3 retransmissores para armazenar eventos que ninguém mais possa ver, como seus rascunhos e/ou configurações de aplicativo. Idealmente, esses relés são locais ou requerem autenticação antes de baixar o conteúdo de cada usuário.</string>
     <string name="kind_3_section">Relés Gerais</string>
     <string name="kind_3_section_description">Amethyst usa esses relés para baixar postagens para você.</string>
+    <string name="kind_3_recommended_section">Relés Recomendados</string>
+    <string name="kind_3_recommended_section_description">Adicione os seguintes retransmissores à sua lista de Relés Gerais, a fim de receber mensagens dos usuários listados.</string>
     <string name="search_section">Relés de Pesquisa</string>
     <string name="search_section_explainer">Lista de relés para usar em pesquisas e marcação de usuários. A marcação e a pesquisa não funcionarão se não houver opções disponíveis.</string>
     <string name="local_section">Relés locais</string>

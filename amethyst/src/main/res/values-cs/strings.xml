@@ -723,6 +723,8 @@
     <string name="private_outbox_section_explainer">Vložte mezi 1–3 relé pro ukládání událostí nikoho jiného, jako jsou koncepty a/nebo nastavení aplikace. V ideálním případě jsou tato relé buď lokální, nebo vyžadují autentizaci před stažením obsahu každého uživatele.</string>
     <string name="kind_3_section">Obecná relé</string>
     <string name="kind_3_section_description">Amethyst používá tato relé ke stahování příspěvků pro vás.</string>
+    <string name="kind_3_recommended_section">Doporučené relé</string>
+    <string name="kind_3_recommended_section_description">Pro příjem příspěvků od uvedených uživatelů přidejte následující relé do seznamu obecných relat.</string>
     <string name="search_section">Vyhledávací relé</string>
     <string name="search_section_explainer">Seznam relé, která se používají k vyhledávání a označování uživatelů. Označování a vyhledávání nebude fungovat, pokud nejsou k dispozici žádné možnosti.</string>
     <string name="local_section">Lokální relé</string>
