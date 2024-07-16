@@ -2370,7 +2370,7 @@ object LocalCache {
     }
 
     // Observers line up here.
-    val live: LocalCacheLiveData = LocalCacheLiveData()
+    val live: LocalCacheFlow = LocalCacheFlow()
 
     private fun refreshObservers(newNote: Note) {
         updateObservables(newNote.event as Event)
@@ -2659,7 +2659,7 @@ object LocalCache {
 }
 
 @Stable
-class LocalCacheLiveData {
+class LocalCacheFlow {
     private val _newEventBundles = MutableSharedFlow<Set<Note>>(0, 10, BufferOverflow.DROP_OLDEST)
     val newEventBundles = _newEventBundles.asSharedFlow() // read-only public view
 
