@@ -38,7 +38,6 @@ abstract class MediaUrlContent(
     dim: String? = null,
     blurhash: String? = null,
     val uri: String? = null,
-    val id: String? = null,
     val mimeType: String? = null,
 ) : BaseMediaContent(description, dim, blurhash)
 
@@ -50,7 +49,6 @@ class MediaUrlImage(
     blurhash: String? = null,
     dim: String? = null,
     uri: String? = null,
-    id: String? = null,
     val contentWarning: String? = null,
     mimeType: String? = null,
 ) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType)
@@ -62,7 +60,6 @@ class MediaUrlVideo(
     hash: String? = null,
     dim: String? = null,
     uri: String? = null,
-    id: String? = null,
     val artworkUri: String? = null,
     val authorName: String? = null,
     blurhash: String? = null,
