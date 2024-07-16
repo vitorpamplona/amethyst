@@ -728,6 +728,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="private_outbox_section_explainer">Fügen Sie zwischen 1–3 Relais ein, um Ereignisse zu speichern, die niemand anders sehen kann, wie Ihre Entwürfe und/oder App-Einstellungen. Idealerweise sind diese Relais entweder lokal oder erfordern eine Authentifizierung, bevor Sie die Inhalte eines jeden Benutzers herunterladen.</string>
     <string name="kind_3_section">Allgemeine Relais</string>
     <string name="kind_3_section_description">Amethyst verwendet diese Relais, um Beiträge für Sie herunterzuladen.</string>
+    <string name="kind_3_recommended_section">Empfohlene Relais</string>
+    <string name="kind_3_recommended_section_description">Fügen Sie die folgenden Relais zu Ihrer Liste hinzu, um Beiträge von den aufgelisteten Benutzern zu erhalten.</string>
     <string name="search_section">Suchrelais</string>
     <string name="search_section_explainer">Liste der Relais, die für die Suche und das Taggen von Benutzern verwendet werden. Das Taggen und die Suche funktionieren nicht, wenn keine Optionen verfügbar sind.</string>
     <string name="local_section">Lokale Relais</string>
