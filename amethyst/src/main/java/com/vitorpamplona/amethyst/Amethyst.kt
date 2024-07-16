@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst
 
 import android.app.Application
 import android.content.Context
+import android.os.Looper
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.os.StrictMode.VmPolicy
@@ -76,7 +77,7 @@ class Amethyst : Application() {
 
         OtsEvent.otsInstance = OpenTimestamps(OkHttpBlockstreamExplorer(), OkHttpCalendarBuilder())
 
-        if (BuildConfig.DEBUG) {
+        if (BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark") {
             StrictMode.setThreadPolicy(
                 ThreadPolicy
                     .Builder()
@@ -91,6 +92,8 @@ class Amethyst : Application() {
                     .penaltyLog()
                     .build(),
             )
+            Looper.getMainLooper().setMessageLogging(LogMonitor())
+            ChoreographerHelper.start()
         }
 
         GlobalScope.launch(Dispatchers.IO) {
