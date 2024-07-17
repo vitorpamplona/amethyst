@@ -258,7 +258,7 @@
     <string name="quick_action_unfollow">取关</string>
     <string name="quick_action_follow">关注</string>
     <string name="quick_action_request_deletion_gallery_title">从相册中删除</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">从图库中删除此媒体，但任然可供浏览</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">从相册中删除此媒体，但仍然可供浏览</string>
     <string name="quick_action_request_deletion_alert_title">请求删贴</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst 将请求你的记录从当前连接的中继器中删除。不能保证你发布的笔记将被永久从那些中继器或其他存储笔记的中继器中删除。</string>
     <string name="quick_action_block_dialog_btn">阻止</string>
@@ -725,6 +725,7 @@
     <string name="private_outbox_section_explainer">设置 1 ~ 3 个中继用于保存其他人无法看到的事件，例如您的草稿和软件设置。理想情况下，这些应该是本地中继，或者是在获取用户内容时需要经过身份验证的中继。</string>
     <string name="kind_3_section">通用中继</string>
     <string name="kind_3_section_description">Amethyst 会通过这些中继为您获取帖子。</string>
+    <string name="kind_3_recommended_section">推荐的中继器</string>
     <string name="search_section">搜索中继</string>
     <string name="search_section_explainer">用于关键词和标签检索的中继列表。如果没有可用选项，也就无法使用关键词和标签检索。需要确保它们支持 NIP-50。</string>
     <string name="local_section">本地中继</string>

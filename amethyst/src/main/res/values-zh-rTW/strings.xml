@@ -9,6 +9,7 @@
     <string name="post_was_hidden">此帖被隱藏，因爲它提到了你隱藏的用戶或單詞</string>
     <string name="post_was_flagged_as_inappropriate_by">貼文被標記為不當</string>
     <string name="post_not_found">事件正在加載或無法在你的中繼器列表中找到</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">頻道圖片</string>
     <string name="referenced_event_not_found">未找到相關事件</string>
     <string name="could_not_decrypt_the_message">無法解密消息</string>
@@ -36,6 +37,7 @@
     <string name="report_impersonation">舉報冒充</string>
     <string name="report_explicit_content">舉報露骨內容</string>
     <string name="report_illegal_behaviour">舉報非法行為</string>
+    <string name="report_malware">舉報惡意軟體</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">你正在使用公鑰，公鑰是只讀的。使用私鑰登錄以便回覆</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">你正在使用公鑰，公鑰是只讀的。使用私鑰登錄以便提升貼文</string>
     <string name="login_with_a_private_key_to_like_posts">使用私鑰登錄以便點贊貼文</string>
@@ -111,6 +113,7 @@
     <string name="website_url">網站鏈接</string>
     <string name="ln_address">LN 地址</string>
     <string name="ln_url_outdated">LN 鏈接（過期）</string>
+    <string name="save_to_gallery">保存到相冊</string>
     <string name="image_saved_to_the_gallery">圖片已保存到相冊</string>
     <string name="failed_to_save_the_image">保存圖片失敗</string>
     <string name="upload_image">上傳圖片</string>
@@ -128,6 +131,7 @@
     <string name="conversations">會話</string>
     <string name="notes">動態</string>
     <string name="replies">回覆</string>
+    <string name="gallery">相冊</string>
     <string name="follows">"關注"</string>
     <string name="reports">"舉報"</string>
     <string name="more_options">更多選項</string>
@@ -251,6 +255,8 @@
     <string name="quick_action_delete">刪除</string>
     <string name="quick_action_unfollow">取關</string>
     <string name="quick_action_follow">關注</string>
+    <string name="quick_action_request_deletion_gallery_title">從相冊中刪除</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">從相冊中刪除此媒體，但仍然可供瀏覽</string>
     <string name="quick_action_request_deletion_alert_title">請求刪貼</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst 將請求您的記錄從當前連接的中繼器中刪除。不能保證您發佈的筆記將被永久從那些中繼器或其他存儲筆記的中繼器中刪除。</string>
     <string name="quick_action_block_dialog_btn">屏蔽</string>
@@ -264,6 +270,7 @@
     <string name="report_dialog_impersonation">惡意冒充</string>
     <string name="report_dialog_nudity">暴露裸體或噁心內容</string>
     <string name="report_dialog_illegal">非法行為</string>
+    <string name="report_dialog_malware">惡意軟體</string>
     <string name="report_dialog_blocking_a_user">屏蔽一位用戶將會在你的應用中隱藏他的內容。你的筆記仍然是公開可見的，包括對被你屏蔽的用戶。屏蔽的用戶將會被列在安全過濾器屏幕上。</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[阻止並隱藏用户]]></string>
     <string name="report_dialog_report_btn">舉報違規</string>
@@ -301,6 +308,7 @@
     <string name="poll_zap_value_min">打閃最低金額</string>
     <string name="poll_zap_value_max">打閃最高金額</string>
     <string name="poll_consensus_threshold">共識</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">後關閉</string>
     <string name="poll_closing_time_days">天</string>
     <string name="poll_unable_to_vote">無法投票</string>
@@ -335,6 +343,14 @@
     <string name="zap_type_nonzap_explainer">Nostr 上沒有痕跡，僅在閃電上</string>
     <string name="file_server">文檔服務器</string>
     <string name="zap_forward_lnAddress">LnAddress 或 @User</string>
+    <string name="media_servers">媒體服務器</string>
+    <string name="set_preferred_media_servers">設置首選媒體上傳服務器</string>
+    <string name="no_media_server_message">尚未設置自定義媒體服務器。可以使用默認的內置服務器列表或自行添加 ↓</string>
+    <string name="built_in_media_servers_title">內置媒體服務器</string>
+    <string name="built_in_servers_description">Amethyst 的默認列表。可單獨添加或添加整個列表。</string>
+    <string name="use_default_servers">使用默認列表</string>
+    <string name="add_media_server">添加媒體服務器</string>
+    <string name="delete_media_server">刪除媒體服務器</string>
     <string name="upload_server_relays_nip95">你的中繼器 (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">文檔由你的中繼器託管。新的 NIP：檢查它們是否支持</string>
     <string name="connect_via_tor_short">Tor/Orbot 設置</string>
@@ -383,6 +399,7 @@
     <string name="warn_when_posts_have_reports_from_your_follows">當帖子有你的關注的報告時警告</string>
     <string name="new_reaction_symbol">新回應符號</string>
     <string name="no_reaction_type_setup_long_press_to_change">未選擇回應類型。長按可更改</string>
+    <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">為這個帖子添加目標聰金額。支持的客戶端可以將此顯示為獎勵捐贈的進度條</string>
     <string name="zapraiser_target_amount_in_sats">目標聰金額</string>
     <string name="sats_to_complete">Zapraiser 位於 %1$s。距離目標%2$s聰</string>
@@ -403,6 +420,7 @@
     <string name="languages">語言</string>
     <string name="tags">標籤</string>
     <string name="posting_policy">發佈政策</string>
+    <string name="relay_error_messages">該中繼的錯誤和通知</string>
     <string name="message_length">消息長度</string>
     <string name="subscriptions">訂閱</string>
     <string name="filters">篩選器</string>
@@ -442,6 +460,7 @@
     <string name="settings">設置</string>
     <string name="connectivity_type_always">始終</string>
     <string name="connectivity_type_wifi_only">僅限 WiFi</string>
+    <string name="connectivity_type_unmetered_wifi_only">未計量的 WiFi</string>
     <string name="connectivity_type_never">永不</string>
     <string name="ui_feature_set_type_complete">完整版</string>
     <string name="ui_feature_set_type_simplified">簡化版</string>
@@ -496,8 +515,10 @@
     <string name="load_image_description">何時加載圖像</string>
     <string name="copy_to_clipboard">複製至剪貼簿</string>
     <string name="copy_npub_to_clipboard">複製 npub 至剪貼簿</string>
+    <string name="share_or_save">分享或保存</string>
     <string name="copy_url_to_clipboard">將 URL 複製到剪貼簿</string>
     <string name="copy_the_note_id_to_the_clipboard">將筆記 ID 複製到剪貼簿</string>
+    <string name="add_media_to_gallery">將媒體添加到相冊</string>
     <string name="created_at">創建於</string>
     <string name="rules">規則</string>
     <string name="login_with_external_signer">使用 Amber 登錄</string>
@@ -508,6 +529,9 @@
     <string name="error_dialog_talk_to_user">向用戶發送消息</string>
     <string name="error_dialog_button_ok">確定</string>
     <string name="relay_information_document_error_assemble_url">無法連接 %1$s：%2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">無法連接 %1$s：%2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">無法解析來自 %1$s 的結果：%2$s</string>
+    <string name="relay_information_document_error_failed_with_http">中继拒绝请求 %1$s: %2$s</string>
     <string name="relay_information_document_error_reach_server">無法連接 %1$s：%2$s</string>
     <string name="relay_information_document_error_parse_result">無法解析來自 %1$s 的結果：%2$s</string>
     <string name="relay_information_document_error_http_status">%1$s 失敗了，代碼 %2$s</string>
@@ -524,6 +548,7 @@
     <string name="missing_lud16">閃電設置缺失</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">用户 %1$s 尚未設置接收聰的閃電地址</string>
     <string name="zap_split_weight">百分比</string>
+    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">與此用戶拆分打閃</string>
     <string name="forwarding_zaps_to">將打閃轉發到</string>
     <string name="lightning_wallets_not_found2">找不到閃電錢包</string>
@@ -590,9 +615,11 @@
     <string name="hi_there_is_this_still_available">你好，這個還能買到嗎？</string>
     <string name="classifieds">出售物品</string>
     <string name="classifieds_title">標題</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">狀態</string>
     <string name="classifieds_category">類別</string>
     <string name="classifieds_price">價格（聰）</string>
+    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">地點</string>
     <string name="classifieds_location_placeholder">市，州，國家</string>
     <string name="classifieds_condition_new">全新</string>
@@ -626,6 +653,8 @@
     <string name="server_did_not_provide_a_url_after_uploading">上傳後伺服器沒有提供 URL</string>
     <string name="could_not_download_from_the_server">無法從伺服器下載上傳的媒體</string>
     <string name="could_not_prepare_local_file_to_upload">無法準備要上傳的本地文件：%1$s</string>
+    <string name="failed_to_upload_with_message">上傳失敗：%1$s</string>
+    <string name="failed_to_delete_with_message">刪除失敗：%1$s</string>
     <string name="edit_draft">編輯草稿</string>
     <string name="login_with_qr_code">使用二維碼登錄</string>
     <string name="route">路徑</string>
@@ -646,6 +675,7 @@
     <string name="boost_or_quote_description">提升或引用</string>
     <string name="like_description">點贊</string>
     <string name="zap_description">打閃</string>
+    <string name="change_reaction">修改快速回應</string>
     <string name="profile_image_of_user">%1$s 的頭像圖片</string>
     <string name="relay_info">中繼器 %1$s</string>
     <string name="expand_relay_list">展開中繼列表</string>
@@ -656,6 +686,7 @@
     <string name="add_bitcoin_invoice">比特幣發票</string>
     <string name="cancel_bitcoin_invoice">取消比特幣發票</string>
     <string name="cancel_classifieds">取消出售物品</string>
+    <string name="add_zapraiser">Zapraiser</string>
     <string name="cancel_zapraiser">取消 Zapraiser</string>
     <string name="add_location">地點</string>
     <string name="remove_location">移除地點</string>
@@ -690,6 +721,7 @@
     <string name="private_outbox_section_explainer">輸入 1-3 個中繼用於存儲別人看不到的事件，例如你的草稿和/或應用設置。理想情況下，這些中繼要么是本地的，要么需要在下載每個用戶的內容之前進行驗證。</string>
     <string name="kind_3_section">一般中繼器</string>
     <string name="kind_3_section_description">Amethyst 使用這些中繼爲你下載帖子。</string>
+    <string name="kind_3_recommended_section">推薦的中繼器</string>
     <string name="search_section">搜索中繼器</string>
     <string name="search_section_explainer">搜尋內容或用戶時使用的中繼列表。如果沒有可用選項，標記和搜索將無法運作。確保他們實施 NIP-50。</string>
     <string name="local_section">本地中繼器</string>
@@ -703,7 +735,9 @@
     <string name="thank_you">謝謝！</string>
     <string name="max_limit">最大上限</string>
     <string name="restricted_writes">寫入限制</string>
+    <string name="git_repository">Git 倉庫：%1$s</string>
     <string name="git_web_address">網址</string>
+    <string name="git_clone_address">克隆：</string>
     <string name="existed_since">OTS：%1$s</string>
     <string name="ots_info_title">時間戳證明</string>
     <string name="ots_info_description">有在 %1$s 之前的某個時間簽署了此帖子的證明。此證明是在那個日期和時間在比特幣區塊鏈中記錄的時間戳。</string>
@@ -732,4 +766,5 @@
     <string name="dvm_requesting_job">正在向 DVM 申請數據作業</string>
     <string name="nwc_payment_request">付款請求已發送，正在等待來自你的錢包的確認</string>
     <string name="dvm_waiting_to_confirm_payment">正在等待 DVM 確認付款或返回結果</string>
+    <string name="add_a_nip96_server">添加 NIP-96 服務器</string>
 </resources>
