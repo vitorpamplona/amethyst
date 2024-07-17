@@ -493,7 +493,7 @@ private fun RenderScreen(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val pagerState = rememberPagerState { 9 }
+    val pagerState = rememberPagerState { 10 }
 
     Column {
         ProfileHeader(baseUser, appRecommendations, nav, accountViewModel)
