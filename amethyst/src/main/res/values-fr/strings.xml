@@ -9,6 +9,7 @@
     <string name="post_was_hidden">Ce message a été masqué car il mentionne vos utilisateurs ou mots cachés</string>
     <string name="post_was_flagged_as_inappropriate_by">Post signalé inapproprié par</string>
     <string name="post_not_found">L\'événement est en cours de chargement ou ne peut pas être trouvé dans votre liste de relais</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Image du canal</string>
     <string name="referenced_event_not_found">référence de l\'évènement non trouvée</string>
     <string name="could_not_decrypt_the_message">Impossible de déchiffrer le message</string>
@@ -132,6 +133,7 @@
     <string name="conversations">Conversations</string>
     <string name="notes">Notes</string>
     <string name="replies">Réponses</string>
+    <string name="gallery">Galerie</string>
     <string name="follows">"Suivis"</string>
     <string name="reports">"Signalements"</string>
     <string name="more_options">Plus d\'options</string>
@@ -255,6 +257,8 @@
     <string name="quick_action_delete">Supprimer</string>
     <string name="quick_action_unfollow">Ne plus suivre</string>
     <string name="quick_action_follow">Suivre</string>
+    <string name="quick_action_request_deletion_gallery_title">Supprimer de la galerie</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">Retirer ce média de votre galerie, vous pourrez le réajouter plus tard</string>
     <string name="quick_action_request_deletion_alert_title">Demande de Suppression</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst demandera que votre note soit supprimée des relais auxquels vous êtes actuellement connecté. Il n\'y a aucune garantie que votre note sera définitivement supprimée de ces relais, ou d\'autres relais où elle peut être stockée.</string>
     <string name="quick_action_block_dialog_btn">Bloquer</string>
@@ -517,6 +521,7 @@
     <string name="share_or_save">Partager ou Enregistrer</string>
     <string name="copy_url_to_clipboard">Copier l\'URL dans le presse-papiers</string>
     <string name="copy_the_note_id_to_the_clipboard">Copier l\'ID de la note dans le presse-papiers</string>
+    <string name="add_media_to_gallery">Ajouter un média à la galerie</string>
     <string name="created_at">Créé le</string>
     <string name="rules">Règles</string>
     <string name="login_with_external_signer">Se connecter avec Amber</string>
@@ -720,6 +725,8 @@
     <string name="private_outbox_section_explainer">Insérez entre 1 et 3 relais pour stocker des événements que personne d\'autre ne peut voir, comme vos Brouillons et/ou paramètres d\'application. Idéalement, ces relais sont soit locaux soit nécessitent une authentification avant de télécharger le contenu de chaque utilisateur.</string>
     <string name="kind_3_section">Relais généraux</string>
     <string name="kind_3_section_description">Amethyst utilise ces relais pour télécharger des messages pour vous.</string>
+    <string name="kind_3_recommended_section">Relais recommandés</string>
+    <string name="kind_3_recommended_section_description">Ajoutez les relais suivants à votre liste de relais généraux afin de recevoir les messages des utilisateurs listés.</string>
     <string name="search_section">Relais de recherche</string>
     <string name="search_section_explainer">Liste des relais à utiliser pour la recherche et l\'étiquetage des utilisateurs. L\'étiquetage et la recherche ne fonctionneront pas si aucune option n\'est disponible.</string>
     <string name="local_section">Relais locaux</string>
@@ -766,5 +773,34 @@
     <string name="dvm_requesting_job">Tâche demandée par DVM</string>
     <string name="nwc_payment_request">Demande de paiement envoyée, en attente de confirmation depuis votre portefeuille</string>
     <string name="dvm_waiting_to_confirm_payment">En attente que DVM confirme le paiement ou envoie les résultats</string>
+    <string name="http_status_400">Mauvaise requête - Le serveur ne peut pas ou ne veut pas traiter la requête.</string>
+    <string name="http_status_401">Non autorisé - L\'utilisateur n\'a pas d\'identifiants d\'authentification valides</string>
+    <string name="http_status_402">Paiement requis - Le serveur requiert un paiement pour compléter la requête</string>
+    <string name="http_status_403">Interdit - L\'utilisateur n\'a pas les droits d\'accès pour effectuer la requête</string>
+    <string name="http_status_404">Non Trouvé - Le serveur ne peut pas trouver l\'adresse demandée</string>
+    <string name="http_status_405">Méthode non autorisée - Le serveur supporte la méthode de requête, mais pas la ressource cible</string>
+    <string name="http_status_406">Non Acceptable - Le serveur ne trouve aucun contenu qui satisfasse la requête.</string>
+    <string name="http_status_407">Authentification du proxy requise - L\'utilisateur n\'a pas d\'identifiants d\'authentification valides</string>
+    <string name="http_status_408">Expiration de la requête - Le serveur a expiré en attente de quelqu\'un d\'autre</string>
+    <string name="http_status_409">Conflit - Le serveur ne peut pas répondre à la requête car il y a un conflit avec la ressource</string>
+    <string name="http_status_410">Parti - Le contenu demandé a été définitivement supprimé du serveur et ne sera pas rétabli</string>
+    <string name="http_status_411">Longueur requise - Le serveur rejette la requête car elle nécessite une définition</string>
+    <string name="http_status_412">La précondition a échoué - Conditions préalables de la demande dans les champs de l\'entête que le serveur ne respecte pas</string>
+    <string name="http_status_413">Données trop grandes - La requête est supérieure aux limites définies par le serveur, et le serveur refuse de la traiter</string>
+    <string name="http_status_414">URI trop longue - L\'URL demandée par le client est trop longue pour que le serveur puisse la traiter. </string>
+    <string name="http_status_415">Type de média non pris en charge - La requête utilise un format média que le serveur ne prend pas en charge</string>
+    <string name="http_status_416">Plage non satisfaisante - Le serveur ne peut pas remplir la valeur indiquée dans le champ d\'entête Range de requête. </string>
+    <string name="http_status_417">Attente échouée - Le serveur ne peut pas répondre aux exigences indiquées par le champ d\'entête Expect de la requête</string>
+    <string name="http_status_426">Mise à jour requise - Le serveur refuse de traiter la requête en utilisant le protocole courant, à moins que le client ne passe à un autre protocole.</string>
+    <string name="http_status_500">Erreur interne du serveur - Le serveur a rencontré une erreur inattendue et ne peut pas compléter la requête</string>
+    <string name="http_status_501">Non implémenté - Le serveur ne peut pas répondre à la requête ou ne reconnaît pas la méthode de requête</string>
+    <string name="http_status_502">Mauvaise passerelle - Le serveur agit comme passerelle et a reçu une réponse invalide de l\'hôte</string>
+    <string name="http_status_503">Service indisponible - Ceci se produit souvent lorsqu\'un serveur est surchargé ou stoppé pour maintenance</string>
+    <string name="http_status_504">Délai d\'attente de la passerelle - Le serveur agissait comme une passerelle ou un proxy et a expiré, en attente d\'une réponse</string>
+    <string name="http_status_505">Version HTTP non prise en charge - Le serveur ne prend pas en charge la version HTTP de la requête</string>
+    <string name="http_status_506">Variant Also Negotiates - Le serveur a une erreur de configuration interne</string>
+    <string name="http_status_507">Stockage insuffisant - Le serveur n\'a pas assez d\'espace pour traiter la demande avec succès</string>
+    <string name="http_status_508">Boucle détectée - Le serveur détecte une boucle infinie lors du traitement de la requête</string>
+    <string name="http_status_511">Authentification réseau requise - Le client doit être authentifié pour accéder au réseau</string>
     <string name="add_a_nip96_server">Ajouter un serveur NIP-96</string>
 </resources>
