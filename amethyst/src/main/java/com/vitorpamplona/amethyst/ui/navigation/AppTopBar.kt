@@ -718,7 +718,7 @@ class FollowListViewModel(
                 if (
                     event != null &&
                     event.pubKey == account.userProfile().pubkeyHex &&
-                    (event.tags.size > 1 || event.content.length > 50)
+                    (event.hasAnyTaggedUser() || event.publicAndPrivateUserCache?.isNotEmpty() == true)
                 ) {
                     CodeName(event.address().toTag(), PeopleListName(addressableNote), CodeNameType.PEOPLE_LIST)
                 } else {

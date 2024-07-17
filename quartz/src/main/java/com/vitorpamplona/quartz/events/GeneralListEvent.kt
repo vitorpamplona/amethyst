@@ -54,7 +54,7 @@ abstract class GeneralListEvent(
 
     fun title() = tags.firstOrNull { it.size > 1 && it[0] == "title" }?.get(1)
 
-    fun nameOrTitle() = name() ?: title()
+    fun nameOrTitle() = name()?.ifBlank { null } ?: title()?.ifBlank { null }
 
     fun cachedPrivateTags(): Array<Array<String>>? = privateTagsCache
 
