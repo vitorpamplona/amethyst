@@ -44,21 +44,24 @@ import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteModificationEvent
 
 object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
-    private var eventsToWatch = setOf<Note>()
-    private var addressesToWatch = setOf<Note>()
+    private var nextEventsToWatch = setOf<Note>()
+    private var nextAddressesToWatch = setOf<Note>()
+
+    private var eventsToWatchInProd = setOf<Note>()
+    private var addressesToWatchInProd = setOf<Note>()
 
     private fun createReactionsToWatchInAddressFilter(): List<TypedFilter>? {
-        val addressesToWatch =
+        val myAddressesToWatch =
             (
-                eventsToWatch.filter { it.address() != null } +
-                    addressesToWatch.filter { it.address() != null }
+                eventsToWatchInProd.filter { it.address() != null } +
+                    addressesToWatchInProd.filter { it.address() != null }
             ).toSet()
 
-        if (addressesToWatch.isEmpty()) {
+        if (myAddressesToWatch.isEmpty()) {
             return null
         }
 
-        return groupByEOSEPresence(addressesToWatch)
+        return groupByEOSEPresence(myAddressesToWatch)
             .map {
                 listOf(
                     TypedFilter(
@@ -102,13 +105,13 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
     }
 
     private fun createAddressFilter(): List<TypedFilter>? {
-        val addressesToWatch = addressesToWatch.filter { it.event == null }
+        val myAddressesToWatch = addressesToWatchInProd.filter { it.event == null }
 
-        if (addressesToWatch.isEmpty()) {
+        if (myAddressesToWatch.isEmpty()) {
             return null
         }
 
-        return addressesToWatch.mapNotNull {
+        return myAddressesToWatch.mapNotNull {
             it.address()?.let { aTag ->
                 if (aTag.kind < 25000 && aTag.dTag.isBlank()) {
                     TypedFilter(
@@ -137,11 +140,11 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
     }
 
     private fun createRepliesAndReactionsFilter(): List<TypedFilter>? {
-        if (eventsToWatch.isEmpty()) {
+        if (eventsToWatchInProd.isEmpty()) {
             return null
         }
 
-        return groupByEOSEPresence(eventsToWatch)
+        return groupByEOSEPresence(eventsToWatchInProd)
             .map {
                 listOf(
                     TypedFilter(
@@ -187,11 +190,11 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
     }
 
     private fun createQuotesFilter(): List<TypedFilter>? {
-        if (eventsToWatch.isEmpty()) {
+        if (eventsToWatchInProd.isEmpty()) {
             return null
         }
 
-        return groupByEOSEPresence(eventsToWatch)
+        return groupByEOSEPresence(eventsToWatchInProd)
             .map {
                 listOf(
                     TypedFilter(
@@ -210,10 +213,10 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
     }
 
     fun createLoadEventsIfNotLoadedFilter(): List<TypedFilter>? {
-        val directEventsToLoad = eventsToWatch.filter { it.event == null }
+        val directEventsToLoad = eventsToWatchInProd.filter { it.event == null }
 
         val threadingEventsToLoad =
-            eventsToWatch
+            eventsToWatchInProd
                 .mapNotNull { it.replyTo }
                 .flatten()
                 .filter { it !is AddressableNote && it.event == null }
@@ -243,7 +246,7 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
 
             checkNotInMainThread()
 
-            eventsToWatch.forEach {
+            eventsToWatchInProd.forEach {
                 val eose = it.lastReactionsDownloadTime[relayUrl]
                 if (eose == null) {
                     it.lastReactionsDownloadTime += Pair(relayUrl, EOSETime(time))
@@ -252,7 +255,7 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
                 }
             }
 
-            addressesToWatch.forEach {
+            addressesToWatchInProd.forEach {
                 val eose = it.lastReactionsDownloadTime[relayUrl]
                 if (eose == null) {
                     it.lastReactionsDownloadTime += Pair(relayUrl, EOSETime(time))
@@ -267,6 +270,9 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
         }
 
     override fun updateChannelFilters() {
+        addressesToWatchInProd = nextAddressesToWatch
+        eventsToWatchInProd = nextEventsToWatch
+
         val reactions = createRepliesAndReactionsFilter()
         val missing = createLoadEventsIfNotLoadedFilter()
         val addresses = createAddressFilter()
@@ -278,29 +284,29 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
     }
 
     fun add(eventId: Note) {
-        if (!eventsToWatch.contains(eventId)) {
-            eventsToWatch = eventsToWatch.plus(eventId)
+        if (!nextEventsToWatch.contains(eventId)) {
+            nextEventsToWatch = nextEventsToWatch.plus(eventId)
             invalidateFilters()
         }
     }
 
     fun remove(eventId: Note) {
-        if (eventsToWatch.contains(eventId)) {
-            eventsToWatch = eventsToWatch.minus(eventId)
+        if (nextEventsToWatch.contains(eventId)) {
+            nextEventsToWatch = nextEventsToWatch.minus(eventId)
             invalidateFilters()
         }
     }
 
     fun addAddress(addressableNote: Note) {
-        if (!addressesToWatch.contains(addressableNote)) {
-            addressesToWatch = addressesToWatch.plus(addressableNote)
+        if (!nextAddressesToWatch.contains(addressableNote)) {
+            nextAddressesToWatch = nextAddressesToWatch.plus(addressableNote)
             invalidateFilters()
         }
     }
 
     fun removeAddress(addressableNote: Note) {
-        if (addressesToWatch.contains(addressableNote)) {
-            addressesToWatch = addressesToWatch.minus(addressableNote)
+        if (nextAddressesToWatch.contains(addressableNote)) {
+            nextAddressesToWatch = nextAddressesToWatch.minus(addressableNote)
             invalidateFilters()
         }
     }
@@ -325,8 +331,8 @@ fun groupByEOSEPresence(users: Iterable<User>): Collection<List<User>> =
 fun findMinimumEOSEs(notes: List<Note>): Map<String, EOSETime> {
     val minLatestEOSEs = mutableMapOf<String, EOSETime>()
 
-    notes.forEach {
-        it.lastReactionsDownloadTime.forEach {
+    notes.forEach { note ->
+        note.lastReactionsDownloadTime.forEach {
             val minEose = minLatestEOSEs[it.key]
             if (minEose == null) {
                 minLatestEOSEs.put(it.key, EOSETime(it.value.time))
