@@ -1071,6 +1071,18 @@ fun debugState(context: Context) {
             " / " +
             LocalCache.users.size(),
     )
+    Log.d(
+        "STATE DUMP",
+        "Deletion Events: " +
+            LocalCache.deletionIndex.size(),
+    )
+    Log.d(
+        "STATE DUMP",
+        "Observable Events: " +
+            LocalCache.observablesByKindAndETag.size +
+            " / " +
+            LocalCache.observablesByKindAndAuthor.size,
+    )
 
     Log.d(
         "STATE DUMP",

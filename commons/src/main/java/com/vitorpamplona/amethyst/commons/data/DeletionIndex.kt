@@ -110,4 +110,6 @@ class DeletionIndex {
         val deletionEvent = deletedReferencesBefore.get(key)
         return deletionEvent != null && createdAt <= deletionEvent.createdAt
     }
+
+    fun size() = deletedReferencesBefore.size()
 }
