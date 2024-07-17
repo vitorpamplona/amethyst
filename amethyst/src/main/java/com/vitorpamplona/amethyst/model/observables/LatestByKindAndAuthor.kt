@@ -46,7 +46,7 @@ class LatestByKindAndAuthor<T : Event>(
 
     fun canDelete(): Boolean = _latest.subscriptionCount.value == 0
 
-    suspend fun init() {
+    fun restart() {
         val latestNote =
             if ((kind in 10000..19999) || (kind in 30000..39999)) {
                 LocalCache.addressables
@@ -70,6 +70,12 @@ class LatestByKindAndAuthor<T : Event>(
                     )?.event as? T
             }
 
-        _latest.tryEmit(latestNote)
+        if (_latest.value != latestNote) {
+            _latest.tryEmit(latestNote)
+        }
+    }
+
+    suspend fun init() {
+        restart()
     }
 }

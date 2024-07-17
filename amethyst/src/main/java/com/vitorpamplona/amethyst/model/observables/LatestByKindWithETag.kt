@@ -45,7 +45,7 @@ class LatestByKindWithETag<T : Event>(
 
     fun canDelete(): Boolean = _latest.subscriptionCount.value == 0
 
-    suspend fun init() {
+    fun restart() {
         val latestNote =
             LocalCache.notes
                 .maxOrNullOf(
@@ -57,6 +57,12 @@ class LatestByKindWithETag<T : Event>(
                     comparator = CreatedAtComparator,
                 )?.event as? T
 
-        _latest.tryEmit(latestNote)
+        if (_latest.value != latestNote) {
+            _latest.tryEmit(latestNote)
+        }
+    }
+
+    suspend fun init() {
+        restart()
     }
 }
