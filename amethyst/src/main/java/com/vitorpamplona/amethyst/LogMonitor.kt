@@ -183,7 +183,8 @@ object ChoreographerHelper {
                         return
                     }
                     val diff = (frameTimeNanos - lastFrameTimeNanos) / 1000000
-                    if (diff > 20) {
+                    // only report after 30ms because videos play at 30fps
+                    if (diff > 35) {
                         // Follow the frame number
                         val droppedCount = (diff / 16.6).toInt()
                         Log.w("block-canary", "Dropped $droppedCount frames. Skipped $diff ms")
