@@ -605,6 +605,10 @@ fun ShareImageAction(
             popupExpanded = popupExpanded,
             videoUri = content.url,
             postNostrUri = content.uri,
+            blurhash = content.blurhash,
+            dim = content.dim,
+            hash = content.hash,
+            mimeType = content.mimeType,
             onDismiss = onDismiss,
         )
     } else if (content is MediaPreloadedContent) {
@@ -613,6 +617,10 @@ fun ShareImageAction(
             popupExpanded = popupExpanded,
             videoUri = content.localFile?.toUri().toString(),
             postNostrUri = content.uri,
+            blurhash = content.blurhash,
+            dim = content.dim,
+            hash = null,
+            mimeType = content.mimeType,
             onDismiss = onDismiss,
         )
     }
@@ -625,6 +633,10 @@ fun ShareImageAction(
     popupExpanded: MutableState<Boolean>,
     videoUri: String?,
     postNostrUri: String?,
+    blurhash: String?,
+    dim: String?,
+    hash: String?,
+    mimeType: String?,
     onDismiss: () -> Unit,
 ) {
     DropdownMenu(
@@ -660,7 +672,7 @@ fun ShareImageAction(
                     if (videoUri != null) {
                         var n19 = Nip19Bech32.uriToRoute(postNostrUri)?.entity as? Nip19Bech32.NEvent
                         if (n19 != null) {
-                            accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay[0]) // TODO Whole list or first?
+                            accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay[0], blurhash, dim, hash, mimeType) // TODO Whole list or first?
                             accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
                         }
                     }
