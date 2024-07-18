@@ -27,6 +27,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.BottomAppBarDefaults.windowInsets
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -43,11 +47,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
 import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
@@ -126,11 +130,17 @@ private fun RenderBottomMenu(
     navEntryState: State<NavBackStackEntry?>,
     nav: (Route, Boolean) -> Unit,
 ) {
-    Column(modifier = BottomTopHeight) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(windowInsets)
+                .height(50.dp),
+    ) {
         HorizontalDivider(
             thickness = DividerThickness,
         )
-        NavigationBar(tonalElevation = Size0dp, containerColor = Color.Transparent) {
+        NavigationBar(tonalElevation = Size0dp) {
             bottomNavigationItems.forEach { item ->
                 HasNewItemsIcon(item, accountViewModel, navEntryState, nav)
             }

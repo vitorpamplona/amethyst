@@ -485,13 +485,7 @@ private fun MainScaffold(
             }
         },
     ) {
-        Column(
-            modifier =
-                Modifier.padding(
-                    top = it.calculateTopPadding(),
-                    bottom = it.calculateBottomPadding(),
-                ),
-        ) {
+        Column(modifier = Modifier.padding(it)) {
             AppNavigation(
                 homeFeedViewModel = homeFeedViewModel,
                 repliesFeedViewModel = repliesFeedViewModel,

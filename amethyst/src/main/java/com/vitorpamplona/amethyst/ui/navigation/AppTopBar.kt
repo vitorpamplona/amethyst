@@ -130,7 +130,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
@@ -987,7 +986,6 @@ fun FlexibleTopBarWithBackButton(
             navigationIcon = { IconButton(onClick = popBack) { ArrowBackIcon() } },
             actions = {},
         )
-        Spacer(modifier = HalfVertSpacer)
         HorizontalDivider(thickness = DividerThickness)
     }
 }

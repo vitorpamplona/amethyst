@@ -65,8 +65,8 @@ private val DarkColorPalette =
         primary = Purple200,
         secondary = Teal200,
         tertiary = Teal200,
-        background = Color(0xFF000000),
-        surface = Color(0xFF000000),
+        background = Color(red = 0, green = 0, blue = 0),
+        surface = Color(red = 0, green = 0, blue = 0),
         surfaceVariant = Color(red = 29, green = 26, blue = 34),
     )
 
@@ -451,14 +451,13 @@ fun AmethystTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            val insetsController = WindowCompat.getInsetsController(window, view)
-            if (darkTheme) {
-                window.statusBarColor = colors.background.toArgb()
-            } else {
-                window.statusBarColor = colors.primary.toArgb()
-            }
+            val insets = WindowCompat.getInsetsController(window, view)
+
+            insets.isAppearanceLightNavigationBars = !darkTheme
+            insets.isAppearanceLightStatusBars = !darkTheme
+
+            window.statusBarColor = colors.background.toArgb()
             window.navigationBarColor = colors.background.toArgb()
-            insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 }

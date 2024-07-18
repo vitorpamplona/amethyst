@@ -114,8 +114,8 @@ fun AppNavigation(
     NavHost(
         navController,
         startDestination = Route.Home.route,
-        enterTransition = { fadeIn(animationSpec = tween(200)) },
-        exitTransition = { fadeOut(animationSpec = tween(200)) },
+        enterTransition = { fadeIn(animationSpec = tween(400)) },
+        exitTransition = { fadeOut(animationSpec = tween(400)) },
     ) {
         Route.Home.let { route ->
             composable(
@@ -219,7 +219,6 @@ fun AppNavigation(
 
         composable(Route.BlockedUsers.route, content = { HiddenUsersScreen(accountViewModel, nav) })
         composable(Route.Bookmarks.route, content = { BookmarkListScreen(accountViewModel, nav) })
-
         composable(Route.Drafts.route, content = { DraftListScreen(accountViewModel, nav) })
 
         Route.ContentDiscovery.let { route ->
