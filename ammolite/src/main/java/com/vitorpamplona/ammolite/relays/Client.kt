@@ -162,7 +162,11 @@ object Client : RelayPool.Listener {
                     }
                 }
 
-                override fun onError(error: Error, subscriptionId: String, relay: Relay) {
+                override fun onError(
+                    error: Error,
+                    subscriptionId: String,
+                    relay: Relay,
+                ) {
                     unsubscribe(this)
                     latch.countDown()
                     Log.d("Relay", "Error from relay ${relay.url} count: ${latch.count} error: $error")
@@ -180,7 +184,12 @@ object Client : RelayPool.Listener {
                     }
                 }
 
-                override fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay) {
+                override fun onSendResponse(
+                    eventId: String,
+                    success: Boolean,
+                    message: String,
+                    relay: Relay,
+                ) {
                     if (eventId == signedEvent.id()) {
                         unsubscribe(this)
                         latch.countDown()
