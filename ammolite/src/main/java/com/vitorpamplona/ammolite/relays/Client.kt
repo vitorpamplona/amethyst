@@ -281,6 +281,7 @@ object Client : RelayPool.Listener {
         // }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onSendResponse(
         eventId: String,
         success: Boolean,
@@ -294,6 +295,7 @@ object Client : RelayPool.Listener {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onAuth(
         relay: Relay,
         challenge: String,
@@ -303,6 +305,7 @@ object Client : RelayPool.Listener {
         GlobalScope.launch(Dispatchers.Default) { listeners.forEach { it.onAuth(relay, challenge) } }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onNotify(
         relay: Relay,
         description: String,
@@ -314,6 +317,7 @@ object Client : RelayPool.Listener {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onSend(
         relay: Relay,
         msg: String,
@@ -324,6 +328,7 @@ object Client : RelayPool.Listener {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onBeforeSend(
         relay: Relay,
         event: EventInterface,
@@ -333,6 +338,7 @@ object Client : RelayPool.Listener {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onError(
         error: Error,
         subscriptionId: String,
