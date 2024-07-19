@@ -112,7 +112,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
 
     fun createFollowMetadataAndReleaseFilter(): TypedFilter? {
         val follows = account.liveHomeFollowLists.value?.users
-        val followSet = follows?.plus(account.userProfile().pubkeyHex)?.toList()?.ifEmpty { null }
+        val followSet = follows?.plus(account.userProfile().pubkeyHex)?.shuffled()?.ifEmpty { null }
 
         return if (followSet != null) {
             TypedFilter(
@@ -124,7 +124,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                                 MetadataEvent.KIND,
                                 AdvertisedRelayListEvent.KIND,
                             ),
-                        authors = followSet,
+                        authors = followSet.take(500),
                         since =
                             latestEOSEs.users[account.userProfile()]
                                 ?.followList
