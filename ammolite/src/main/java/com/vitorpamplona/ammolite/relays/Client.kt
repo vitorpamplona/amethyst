@@ -141,7 +141,7 @@ object Client : RelayPool.Listener {
         relayList: List<RelaySetupInfo>? = null,
         onDone: (() -> Unit)? = null,
         additionalListener: Listener? = null,
-        timeoutInSeconds: Long = 30,
+        timeoutInSeconds: Long = 15,
     ) {
         checkNotInMainThread()
 
