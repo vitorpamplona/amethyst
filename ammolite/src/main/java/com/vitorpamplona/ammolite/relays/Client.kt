@@ -169,7 +169,7 @@ object Client : RelayPool.Listener {
                     relay: Relay,
                     subscriptionId: String?,
                 ) {
-                    if (type == Relay.StateType.DISCONNECT) {
+                    if (type == Relay.StateType.DISCONNECT || type == Relay.StateType.EOSE) {
                         latch.countDown()
                         Log.d("sendAndWaitForResponse", "onRelayStateChange Disconnected from relay ${relay.url} count: ${latch.count}")
                     }
