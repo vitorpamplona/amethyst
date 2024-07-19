@@ -75,6 +75,7 @@ class Relay(
     private var afterEOSEPerSubscription = mutableMapOf<String, Boolean>()
 
     private val authResponse = mutableMapOf<HexKey, Boolean>()
+    private val authChallengesSent = mutableSetOf<String>()
     private val outboxCache = mutableMapOf<HexKey, EventInterface>()
 
     fun register(listener: Listener) {
@@ -372,6 +373,9 @@ class Relay(
 
     fun resetEOSEStatuses() {
         afterEOSEPerSubscription = LinkedHashMap(afterEOSEPerSubscription.size)
+
+        authResponse.clear()
+        authChallengesSent.clear()
     }
 
     fun sendFilter(
@@ -492,8 +496,19 @@ class Relay(
     }
 
     private fun sendAuth(signedEvent: RelayAuthEvent) {
-        authResponse.put(signedEvent.id, false)
-        writeToSocket("""["AUTH",${signedEvent.toJson()}]""")
+        val challenge = signedEvent.challenge() ?: ""
+
+        // only send replies to new challenges to avoid infinite loop:
+        // 1. Auth is sent
+        // 2. auth is rejected
+        // 3. auth is requested
+        // 4. auth is sent
+        // ...
+        if (!authChallengesSent.contains(challenge)) {
+            authResponse.put(signedEvent.id, false)
+            authChallengesSent.add(challenge)
+            writeToSocket("""["AUTH",${signedEvent.toJson()}]""")
+        }
     }
 
     private fun sendEvent(signedEvent: EventInterface) {

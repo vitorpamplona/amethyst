@@ -59,7 +59,7 @@ class FileServersEvent(
             servers
                 .map {
                     arrayOf("server", it)
-                }.plusElement(arrayOf("alt", "Relay list to use for Search"))
+                }.plusElement(arrayOf("alt", ALT))
                 .toTypedArray()
 
         fun updateRelayList(
