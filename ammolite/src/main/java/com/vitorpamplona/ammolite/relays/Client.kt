@@ -29,6 +29,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * The Nostr Client manages multiple personae the user may switch between. Events are received and
@@ -128,6 +130,68 @@ object Client : RelayPool.Listener {
 
         subscriptions = subscriptions + Pair(subscriptionId, filters)
         RelayPool.sendFilter(subscriptionId, filters)
+    }
+
+    fun sendAndWaitForResponse(
+        signedEvent: EventInterface,
+        relay: String? = null,
+        feedTypes: Set<FeedType>? = null,
+        relayList: List<RelaySetupInfo>? = null,
+        onDone: (() -> Unit)? = null,
+        timeoutInSeconds: Long = 30,
+    ) {
+        checkNotInMainThread()
+
+        val size = if (relay != null) 1 else relayList?.size ?: RelayPool.availableRelays()
+        val latch = CountDownLatch(size)
+
+        Log.d("Relay", "Waiting for $size responses")
+
+        subscribe(
+            object : Listener() {
+                override fun onEvent(
+                    event: Event,
+                    subscriptionId: String,
+                    relay: Relay,
+                    afterEOSE: Boolean,
+                ) {
+                    if (event.id() == signedEvent.id()) {
+                        unsubscribe(this)
+                        latch.countDown()
+                        Log.d("Relay", "Received response for ${event.id()} relay ${relay.url} count: ${latch.count}")
+                    }
+                }
+
+                override fun onError(error: Error, subscriptionId: String, relay: Relay) {
+                    unsubscribe(this)
+                    latch.countDown()
+                    Log.d("Relay", "Error from relay ${relay.url} count: ${latch.count} error: $error")
+                }
+
+                override fun onRelayStateChange(
+                    type: Relay.StateType,
+                    relay: Relay,
+                    subscriptionId: String?,
+                ) {
+                    if (type == Relay.StateType.DISCONNECT) {
+                        unsubscribe(this)
+                        latch.countDown()
+                        Log.d("Relay", "Disconnected from relay ${relay.url} count: ${latch.count}")
+                    }
+                }
+
+                override fun onSendResponse(eventId: String, success: Boolean, message: String, relay: Relay) {
+                    if (eventId == signedEvent.id()) {
+                        unsubscribe(this)
+                        latch.countDown()
+                        Log.d("Relay", "Received response for $eventId from relay ${relay.url} count: ${latch.count}")
+                    }
+                }
+            },
+        )
+
+        send(signedEvent, relay, feedTypes, relayList, onDone)
+        latch.await(timeoutInSeconds, TimeUnit.SECONDS)
     }
 
     fun sendFilterOnlyIfDisconnected(
