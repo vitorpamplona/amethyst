@@ -9,11 +9,13 @@
     <string name="post_was_hidden">Ez a bejegyzés el lett rejtve, mert említ rejtett felhasználóidat vagy szavaidat</string>
     <string name="post_was_flagged_as_inappropriate_by">A bejegyzést nem megfelelőként jelölte meg</string>
     <string name="post_not_found">Bejegyzés nem található</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Csatorna Kép</string>
     <string name="referenced_event_not_found">A hivatkozott esemény nem található</string>
     <string name="could_not_decrypt_the_message">Az üzenet dekódolása sikertelen</string>
     <string name="group_picture">Csoport Kép</string>
     <string name="explicit_content">Szókimondó tartalom</string>
+    <string name="spam">Spam</string>
     <string name="spam_description">Ebből a csomópontból érkező spam események száma</string>
     <string name="impersonation">Megszemélyesítés</string>
     <string name="illegal_behavior">Illegális viselkedés</string>
@@ -35,6 +37,7 @@
     <string name="report_impersonation">Megszemélyesítés bejelentés</string>
     <string name="report_explicit_content">Szókimondó tartalom bejelentés</string>
     <string name="report_illegal_behaviour">Illegális viselkedés bejelentés</string>
+    <string name="report_malware">Vírus bejelentése</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Jelentkezzen be privát kulccsal, hogy válaszolni tudjon</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Jelentkezzen be privát kulccsal a bejegyzések megosztásához</string>
     <string name="login_with_a_private_key_to_like_posts">Jelentkezzen be privát kulccsal a bejegyzések kedveléséhez</string>
@@ -52,6 +55,7 @@
     <string name="edited_number">szerkesztés #%1$s</string>
     <string name="original">eredeti</string>
     <string name="quote">Idézet</string>
+    <string name="fork">Tükrözés</string>
     <string name="propose_an_edit">Szerkesztési javaslat</string>
     <string name="new_amount_in_sats">Új összeg sats-ban</string>
     <string name="add">Hozzáad</string>
@@ -129,6 +133,7 @@
     <string name="conversations">Beszélgetések</string>
     <string name="notes">Bejegyzések</string>
     <string name="replies">Válaszok</string>
+    <string name="gallery">Galéria</string>
     <string name="follows">"Követek"</string>
     <string name="reports">"Jelentések"</string>
     <string name="more_options">Több beállítás</string>
@@ -251,6 +256,8 @@
     <string name="quick_action_delete">Törlés</string>
     <string name="quick_action_unfollow">Kikövetés</string>
     <string name="quick_action_follow">Követem</string>
+    <string name="quick_action_request_deletion_gallery_title">Törlés a Galériából</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">Távolítsa el ezt a médiát a galériából, később elolvashatod</string>
     <string name="quick_action_request_deletion_alert_title">Törlés Kérése</string>
     <string name="quick_action_request_deletion_alert_body">Az Amethyst kérni fogja, hogy töröljék a bejegyzésed azokról a csomópontokról, amelyekhez jelenleg csatlakozol. Nincs garancia arra, hogy a bejegyzésed ezekről a csomópontokról vagy más közvetítőkből (ahol tárolni lehet) véglegesen törlődik.</string>
     <string name="quick_action_block_dialog_btn">Tiltás</string>
@@ -264,6 +271,7 @@
     <string name="report_dialog_impersonation">Rosszindulatú megszemélyesítés</string>
     <string name="report_dialog_nudity">Meztelenség vagy pornográf tartalom</string>
     <string name="report_dialog_illegal">Illegális viselkedés</string>
+    <string name="report_dialog_malware">Vírus</string>
     <string name="report_dialog_blocking_a_user">Az alkalmazásban egy felhasználó letiltása minden hozzá köthető tartalmat elrejt. Jegyzeteid továbbra is nyilvánosan megtekinthetők, beleértve a letiltott személyek számára is. A letiltott felhasználók a Biztonsági szűrők felületen jelennek meg.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Felhasználó Tiltása és Elrejtése]]></string>
     <string name="report_dialog_report_btn">Visszaélés jelentése</string>
@@ -301,6 +309,7 @@
     <string name="poll_zap_value_min">Minimum Zap</string>
     <string name="poll_zap_value_max">Maximum Zap</string>
     <string name="poll_consensus_threshold">Konszenzus</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Szavazás lezárása</string>
     <string name="poll_closing_time_days">napok</string>
     <string name="poll_unable_to_vote">Nem lehet szavazni</string>
@@ -335,6 +344,14 @@
     <string name="zap_type_nonzap_explainer">Nostr-ban nyoma sincs, csak a Lightning-ben</string>
     <string name="file_server">Fájl Szerver</string>
     <string name="zap_forward_lnAddress">LnCím vagy @Felhasználó</string>
+    <string name="media_servers">Média Szerverek</string>
+    <string name="set_preferred_media_servers">Állítsd be a kívánt médiafeltöltő szervereket.</string>
+    <string name="no_media_server_message">Nincs beállítva egyéni médiaszerver. Használhatod az Amethyst listáját, vagy alább hozzáadhatsz egyet ↓</string>
+    <string name="built_in_media_servers_title">Beépített médiaszerverek</string>
+    <string name="built_in_servers_description">Az Amethist alapértelmezett listája. Hozzáadhatod őket egyenként, vagy hozzáadhatod az egész listát.</string>
+    <string name="use_default_servers">Az alapértelmezett lista használata</string>
+    <string name="add_media_server">Médiaszerver hozzáadása</string>
+    <string name="delete_media_server">Médiaszerver törlése</string>
     <string name="upload_server_relays_nip95">Saját csomópontjaid (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">A fájlokat a csomópontokra töltik fel és ott tárolják. Rögzített URL-től mentesek (harmadik féltől való függőség). Győződj meg róla, hogy legalább egy NIP-95 csomópont a csomópontlistában szerepel</string>
     <string name="connect_via_tor_short">Tor/Orbot beállítása</string>
@@ -363,6 +380,7 @@
     <string name="app_notification_dms_channel_description">Értesítést küld, amikor privát üzeneted érkezik</string>
     <string name="app_notification_zaps_channel_name">Zap-et kaptál</string>
     <string name="app_notification_zaps_channel_description">Értesítést küld, amikor valaki neked Zap-et küldött</string>
+    <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">%1$s -tól</string>
     <string name="app_notification_zaps_channel_message_for">%1$s -ért</string>
     <string name="reply_notify">Értesítés: </string>
@@ -414,6 +432,7 @@
     <string name="minimum_pow">Minimális PoW</string>
     <string name="auth">Azonosítás</string>
     <string name="payment">Fizetés</string>
+    <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Beváltás</string>
     <string name="cashu_redeem_to_zap">Küldje a Zap tárcába</string>
     <string name="cashu_redeem_to_cashu">Nyissa meg a Cashu tárcában</string>
@@ -442,6 +461,7 @@
     <string name="settings">Beállítások</string>
     <string name="connectivity_type_always">Mindig</string>
     <string name="connectivity_type_wifi_only">Csak WIFI</string>
+    <string name="connectivity_type_unmetered_wifi_only">Korlátlan WiFi</string>
     <string name="connectivity_type_never">Soha</string>
     <string name="ui_feature_set_type_complete">Teljes</string>
     <string name="ui_feature_set_type_simplified">Egyszerűsített</string>
@@ -500,6 +520,7 @@
     <string name="share_or_save">Megosztás vagy Mentés</string>
     <string name="copy_url_to_clipboard">Az URL vágólapra másolása</string>
     <string name="copy_the_note_id_to_the_clipboard">A bejegyzésazonosító vágólapra másolása</string>
+    <string name="add_media_to_gallery">Média hozzáadása a galériához</string>
     <string name="created_at">Létrehozva</string>
     <string name="rules">Szabályok</string>
     <string name="login_with_external_signer">Bejelentkezés Amber-el</string>
@@ -530,6 +551,7 @@
     <string name="missing_lud16">Hiányzó lightning beállítás</string>
     <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">A %1$s felhasználó a sat fogadáshoz nem rendelkezik LN cím beállítással</string>
     <string name="zap_split_weight">Százalék</string>
+    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Zap-ek megosztása</string>
     <string name="forwarding_zaps_to">Zap-ek továbbítása</string>
     <string name="lightning_wallets_not_found2">Lightning tárca nem található</string>
@@ -596,9 +618,11 @@
     <string name="hi_there_is_this_still_available">Szia, ez még aktuális?</string>
     <string name="classifieds">Elem eladása</string>
     <string name="classifieds_title">Cím</string>
+    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Állapot</string>
     <string name="classifieds_category">Kategória</string>
     <string name="classifieds_price">Ár (satoshiban)</string>
+    <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">Helyszín</string>
     <string name="classifieds_location_placeholder">Város, állam, ország</string>
     <string name="classifieds_condition_new">Új</string>
@@ -617,6 +641,7 @@
     <string name="classifieds_category_books">Könyvek</string>
     <string name="classifieds_category_pets">Háziállatok</string>
     <string name="classifieds_category_sports">Sport</string>
+    <string name="classifieds_category_fitness">Fitnesz</string>
     <string name="classifieds_category_art">Művészet</string>
     <string name="classifieds_category_crafts">Iparművészet</string>
     <string name="classifieds_category_home">Otthon</string>
@@ -631,6 +656,8 @@
     <string name="server_did_not_provide_a_url_after_uploading">A szerver a feltöltés után nem adott URL-t</string>
     <string name="could_not_download_from_the_server">Nem sikerült a szerverről a feltöltött médiát letölteni</string>
     <string name="could_not_prepare_local_file_to_upload">Nem sikerült előkészíteni a helyi fájlt a feltöltésre: %1$s</string>
+    <string name="failed_to_upload_with_message">Nem sikerült feltölteni: %1$s</string>
+    <string name="failed_to_delete_with_message">Nem sikerült törölni: %1$s</string>
     <string name="edit_draft">Piszkozat szerkesztése</string>
     <string name="login_with_qr_code">Bejelentkezés QR kóddal</string>
     <string name="route">Útvonal</string>
@@ -649,6 +676,9 @@
     <string name="close_all_reactions_to_this_post">Zárja be a bejegyzésre adott összes reakciót</string>
     <string name="reply_description">Válasz</string>
     <string name="boost_or_quote_description">Megosztás vagy Idézés</string>
+    <string name="like_description">Like</string>
+    <string name="zap_description">Zap</string>
+    <string name="change_reaction">Változtasd meg a gyors reakciókat</string>
     <string name="profile_image_of_user">%1$s profilképe</string>
     <string name="relay_info">%1$s csomópont</string>
     <string name="expand_relay_list">Csomópont lista kibontása</string>
@@ -694,6 +724,8 @@
     <string name="private_outbox_section_explainer">Adj hozzá 1–3 csomópontot, hogy olyan eseményeket tároljon, amelyeket senki más nem láthat, például a piszkozataidat és/vagy az alkalmazásbeállításaidat. Ideális esetben ezek a csomópontok vagy helyiek, vagy az egyes felhasználók tartalmának letöltése előtt hitelesítést igényelnek.</string>
     <string name="kind_3_section">Általános Csomópontok</string>
     <string name="kind_3_section_description">Az Amethyst ezeket a csomópontokat a bejegyzések letöltésére használja.</string>
+    <string name="kind_3_recommended_section">Ajánlott csomópontok</string>
+    <string name="kind_3_recommended_section_description">Add hozzá a következő csomópontokat az Általános Csomópontok listájához, hogy a felsorolt ​​felhasználóktól üzeneteket kapj.</string>
     <string name="search_section">Kereső Csomópontok</string>
     <string name="search_section_explainer">A tartalom vagy a felhasználók kereséséhez használt csomópontok listája. A címkézés és a keresés nem működik, ha itt nincsenek megadott lehetőségek. Győződj meg arról, hogy alkalmazzák a NIP-50-et.</string>
     <string name="local_section">Helyi Csomópontok</string>
@@ -705,10 +737,14 @@
     <string name="this_version_brought_to_you_by">Ezt a verziót hozta neked:</string>
     <string name="version_name">%1$s verzió</string>
     <string name="thank_you">Köszönöm!</string>
+    <string name="max_limit">Max Limit</string>
     <string name="restricted_writes">Korlátozott írások</string>
     <string name="forked_from">Fork-olva innen</string>
+    <string name="forked_tag">FORK</string>
     <string name="git_repository">Git-tár: %1$s</string>
+    <string name="git_web_address">Web:</string>
     <string name="git_clone_address">Klónoz:</string>
+    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Időbélyeg igazolás</string>
     <string name="ots_info_description">Bizonyíték van arra, hogy ezt a bejegyzést valamikor %1$s előtt írták alá. A bizonyítékot ezen a napon és időpontban a Bitcoin blokkláncába bélyegezték.</string>
     <string name="edit_post">Bejegyzés szerkesztése</string>
@@ -736,4 +772,34 @@
     <string name="dvm_requesting_job">Feladatot kér a DVM-től</string>
     <string name="nwc_payment_request">Fizetési kérelem elküldve, megerősítésére vár a tárcádtól</string>
     <string name="dvm_waiting_to_confirm_payment">Várakozás a DVM-re a fizetés megerősítésére vagy az eredmények elküldésére</string>
+    <string name="http_status_400">Hibás kérés – A szerver nem tudja vagy nem akarja a kérést feldolgozni.</string>
+    <string name="http_status_401">Jogosulatlan – A felhasználó nem rendelkezik érvényes hitelesítési adatokkal</string>
+    <string name="http_status_402">Fizetés szükséges – A szerver fizetséget kér a kérés teljesítéséhez</string>
+    <string name="http_status_403">Tiltott – A felhasználónak nincs hozzáférési joga a kérelem benyújtásához</string>
+    <string name="http_status_404">Nem található – A szerver a kért címet nem találja</string>
+    <string name="http_status_405">Módszer Nem Engedélyezett – A kiszolgáló támogatja a kérési módszert, de a célerőforrás nem</string>
+    <string name="http_status_406">Nem elfogadható – A szerver nem talál olyan tartalmat, amely a kérést kielégítené.</string>
+    <string name="http_status_407">Proxy hitelesítés szükséges – A felhasználó nem rendelkezik érvényes hitelesítési adatokkal</string>
+    <string name="http_status_408">Kérelem időtúllépése – A szerver időtúllépés miatt valaki másra vár</string>
+    <string name="http_status_409">Ütközés – A szerver nem tudja teljesíteni a kérést, mert az erőforrással konfliktus van</string>
+    <string name="http_status_410">Eltűnt – A kért tartalmat a szerverről véglegesen törölték, és nem lesz visszaállítva</string>
+    <string name="http_status_411">Kötelező hossz – A szerver elutasítja a kérést, mert nincs kellően definiálva</string>
+    <string name="http_status_412">Előfeltétel nem sikerült – A fejlécben lévő kérés előfeltételeit, a szerver nem teljesíti</string>
+    <string name="http_status_413">A kérés túl nagy – A kérés nagyobb, mint a szerver által meghatározott korlátok, és a szerver nem hajlandó feldolgozni</string>
+    <string name="http_status_414">Túl hosszú URI – Az ügyfél által kért URL túl hosszú ahhoz, hogy a szerver feldolgozza. </string>
+    <string name="http_status_415">Nem támogatott médiatípus – A kérés olyan médiaformátumot használ, amelyet a szerver nem támogat</string>
+    <string name="http_status_416">Tartomány nem teljesíthető – A szerver nem tudja teljesíteni a kérés Tartomány fejlécében jelzett értéket. </string>
+    <string name="http_status_417">Az elvárás nem sikerült – A szerver nem tudja teljesíteni a Várható kérés fejlécében jelzett követelményeket</string>
+    <string name="http_status_426">Frissítés szükséges – A szerver megtagadja a kérés feldolgozását az aktuális protokoll használatával, hacsak az ügyfél nem frissít egy másik protokollra.</string>
+    <string name="http_status_500">Belső szerverhiba – A szerver váratlan hibát észlelt, és nem tudja a kérést teljesíteni</string>
+    <string name="http_status_501">Nincs végrehajtva – A szerver nem tudja a kérést teljesíteni, vagy nem ismeri fel a kérés módszerét</string>
+    <string name="http_status_502">Rossz átjáró – A szerver átjáróként működik, és érvénytelen választ kapott a gazdagéptől</string>
+    <string name="http_status_503">A szolgáltatás nem elérhető – Ez gyakran akkor fordul elő, ha a kiszolgáló túlterhelt vagy karbantartás miatt leáll</string>
+    <string name="http_status_504">Átjáró Időtúllépés – A szerver átjáróként vagy proxyként működött, és a válaszra várva időtúllépés történt</string>
+    <string name="http_status_505">A HTTP-verzió nem támogatott – A szerver a kérésben szereplő HTTP-verziót nem támogatja</string>
+    <string name="http_status_506">Váltózó porbléma – A kiszolgálón belső konfigurációs hiba lépett fel</string>
+    <string name="http_status_507">Elégtelen tárhely – A szervernek nincs elég tárhelye a kérés sikeres feldolgozásához</string>
+    <string name="http_status_508">Hurok észlelve – A szerver a kérés feldolgozása közben végtelen hurkot észlel</string>
+    <string name="http_status_511">Hálózati hitelesítés szükséges – A klienst a hálózat eléréséhez hitelesíteni kell</string>
+    <string name="add_a_nip96_server">Adj hozzá egy NIP-96 szervert</string>
 </resources>
