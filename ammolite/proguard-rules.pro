@@ -19,6 +19,27 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+# preserve the line number information for debugging stack traces.
+-dontobfuscate
+-keepattributes LocalVariableTable
+-keepattributes LocalVariableTypeTable
+-keepattributes *Annotation*
+-keepattributes SourceFile
+-keepattributes LineNumberTable
+-keepattributes Signature
+-keepattributes Exceptions
+-keepattributes InnerClasses
+-keepattributes EnclosingMethod
+-keepattributes MethodParameters
+-keepparameternames
+
+-keepdirectories libs
+
+# Keep all names
+-keepnames class ** { *; }
+
+# Keep All enums
+-keep enum ** { *; }
 
 -keep class com.vitorpamplona.ammolite.service.** { *; }
 -keep class com.vitorpamplona.ammolite.relays.** { *; }
