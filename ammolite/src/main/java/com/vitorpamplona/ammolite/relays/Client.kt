@@ -142,12 +142,13 @@ object Client : RelayPool.Listener {
         onDone: (() -> Unit)? = null,
         additionalListener: Listener? = null,
         timeoutInSeconds: Long = 15,
-    ) {
+    ): Boolean {
         checkNotInMainThread()
 
         val size = if (relay != null) 1 else relayList?.size ?: RelayPool.availableRelays()
         val latch = CountDownLatch(size)
         val relayErrors = mutableMapOf<String, String>()
+        var result = false
 
         Log.d("sendAndWaitForResponse", "Waiting for $size responses")
 
@@ -182,6 +183,9 @@ object Client : RelayPool.Listener {
                     relay: Relay,
                 ) {
                     if (eventId == signedEvent.id()) {
+                        if (success) {
+                            result = true
+                        }
                         latch.countDown()
                         Log.d("sendAndWaitForResponse", "onSendResponse Received response for $eventId from relay ${relay.url} count: ${latch.count} message $message success $success")
                     }
@@ -203,6 +207,7 @@ object Client : RelayPool.Listener {
         Log.d("sendAndWaitForResponse", "countdown finished")
         unsubscribe(subscription)
         additionalListener?.let { unsubscribe(it) }
+        return result
     }
 
     fun sendFilterOnlyIfDisconnected(
