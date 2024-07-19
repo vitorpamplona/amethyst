@@ -113,7 +113,7 @@ object Client : RelayPool.Listener {
         checkNotInMainThread()
 
         subscribe(
-            object : Listener() {
+            object : Listener {
                 override fun onEvent(
                     event: Event,
                     subId: String,
@@ -152,7 +152,7 @@ object Client : RelayPool.Listener {
         Log.d("sendAndWaitForResponse", "Waiting for $size responses")
 
         val subscription =
-            object : Listener() {
+            object : Listener {
                 override fun onError(
                     error: Error,
                     subscriptionId: String,
@@ -363,7 +363,7 @@ object Client : RelayPool.Listener {
 
     fun getSubscriptionFilters(subId: String): List<TypedFilter> = subscriptions[subId] ?: emptyList()
 
-    abstract class Listener {
+    interface Listener {
         /** A new message was received */
         open fun onEvent(
             event: Event,

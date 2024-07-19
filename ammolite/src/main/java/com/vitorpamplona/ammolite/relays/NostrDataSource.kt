@@ -67,7 +67,7 @@ abstract class NostrDataSource(
     ): Int = 31 * str1.hashCode() + str2.hashCode()
 
     private val clientListener =
-        object : Client.Listener() {
+        object : Client.Listener {
             override fun onEvent(
                 event: Event,
                 subscriptionId: String,
