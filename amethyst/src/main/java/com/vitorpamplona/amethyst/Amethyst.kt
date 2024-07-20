@@ -30,6 +30,7 @@ import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil.ImageLoader
 import coil.disk.DiskCache
+import coil.memory.MemoryCache
 import com.vitorpamplona.amethyst.service.ots.OkHttpBlockstreamExplorer
 import com.vitorpamplona.amethyst.service.ots.OkHttpCalendarBuilder
 import com.vitorpamplona.amethyst.service.playback.VideoCache
@@ -66,7 +67,14 @@ class Amethyst : Application() {
             .Builder()
             .directory(applicationContext.safeCacheDir.resolve("image_cache"))
             .maxSizePercent(0.2)
-            .maximumMaxSizeBytes(500L * 1024 * 1024) // 250MB
+            .maximumMaxSizeBytes(1024 * 1024 * 1024) // 1GB
+            .build()
+    }
+
+    val coilMemCache: MemoryCache by lazy {
+        MemoryCache
+            .Builder(this)
+            .maxSizePercent(0.40) // memory heavy app due to profile pics and videos.
             .build()
     }
 
@@ -106,7 +114,7 @@ class Amethyst : Application() {
         }
     }
 
-    fun imageLoaderBuilder(): ImageLoader.Builder = ImageLoader.Builder(applicationContext).diskCache { coilCache }
+    fun imageLoaderBuilder(): ImageLoader.Builder = ImageLoader.Builder(this).diskCache { coilCache }.memoryCache { coilMemCache }
 
     fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences = EncryptedStorage.preferences(instance, npub)
 
