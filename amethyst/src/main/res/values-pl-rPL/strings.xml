@@ -20,7 +20,7 @@
     <string name="impersonation">Podszywanie się</string>
     <string name="illegal_behavior">Antyspołeczne zachowanie</string>
     <string name="other">Inne</string>
-    <string name="unknown">Nieznany</string>
+    <string name="unknown">Nieznani</string>
     <string name="relay_icon">Ikona transmitera</string>
     <string name="unknown_author">Autor nieznany</string>
     <string name="copy_text">Skopiuj tekst</string>
@@ -126,7 +126,7 @@
     <string name="copy_channel_id_note_to_the_clipboard">Kopiuj ID kanału (wpisu) do schowka</string>
     <string name="edits_the_channel_metadata">Edytuje metadane kanału</string>
     <string name="join">Dołącz</string>
-    <string name="known">Popularne</string>
+    <string name="known">Znajomi</string>
     <string name="new_requests">Nowe Prośby</string>
     <string name="blocked_users">Zablokowani użytkownicy</string>
     <string name="new_threads">Nowe Wpisy</string>
@@ -725,6 +725,8 @@
     <string name="private_outbox_section_explainer">Wstaw od 1 do 3 transmiterów przechowujących dane zdarzeń, których nikt inny nie widzi, takich jak Wersje robocze i/lub ustawienia aplikacji. Idealnie byłoby, gdyby te transmitery były lokalne lub wymagały uwierzytelnienia przed pobraniem treści każdego użytkownika.</string>
     <string name="kind_3_section">Transmitery ogólne</string>
     <string name="kind_3_section_description">Amethyst używa tych przekaźników, aby pobrać dla Ciebie posty.</string>
+    <string name="kind_3_recommended_section">Polecane Transmitery</string>
+    <string name="kind_3_recommended_section_description">Dodaj te transmitery do głównej listy, aby otrzymywać wiadomości od wymienionych użytkowników.</string>
     <string name="search_section">Transmitery wyszukujące</string>
     <string name="search_section_explainer">Lista transmiterów używanych podczas wyszukiwania treści lub użytkowników. Tagowanie i wyszukiwanie nie będą działać, jeśli nie będą dostępne żadne opcje. Upewnij się, że zaimplementowano NIP-50.</string>
     <string name="local_section">Lokalne Transmitery</string>
