@@ -34,10 +34,12 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -486,7 +488,14 @@ private fun MainScaffold(
             }
         },
     ) {
-        Column(modifier = Modifier.padding(it).imePadding()) {
+        Column(
+            modifier =
+                Modifier
+                    .padding(it)
+                    .consumeWindowInsets(it)
+                    .systemBarsPadding()
+                    .imePadding(),
+        ) {
             AppNavigation(
                 homeFeedViewModel = homeFeedViewModel,
                 repliesFeedViewModel = repliesFeedViewModel,

@@ -27,6 +27,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -135,6 +136,7 @@ private fun RenderBottomMenu(
             Modifier
                 .fillMaxWidth()
                 .windowInsetsPadding(windowInsets)
+                .consumeWindowInsets(windowInsets)
                 .height(50.dp),
     ) {
         HorizontalDivider(
