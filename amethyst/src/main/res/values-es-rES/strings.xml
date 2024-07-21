@@ -9,6 +9,7 @@
     <string name="post_was_hidden">Esta publicación se ocultó porque menciona tus usuarios o palabras ocultas</string>
     <string name="post_was_flagged_as_inappropriate_by">Post marcado como inapropiado por</string>
     <string name="post_not_found">El evento se está cargando o no se puede encontrar en la lista de relés</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Imagen del canal</string>
     <string name="referenced_event_not_found">Evento referenciado no encontrado</string>
     <string name="could_not_decrypt_the_message">No se pudo desencriptar el mensaje</string>
@@ -132,6 +133,7 @@
     <string name="conversations">Conversaciones</string>
     <string name="notes">Notas</string>
     <string name="replies">Respuestas</string>
+    <string name="gallery">Galería</string>
     <string name="follows">"Siguiendo"</string>
     <string name="reports">"Reportes"</string>
     <string name="more_options">Más opciones</string>
@@ -255,6 +257,8 @@
     <string name="quick_action_delete">Eliminar</string>
     <string name="quick_action_unfollow">Dejar de seguir</string>
     <string name="quick_action_follow">Seguir</string>
+    <string name="quick_action_request_deletion_gallery_title">Eliminar de la galería</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">Elimina este contenido multimedia de la galería, aunque puedes volver a agregarlo luego.</string>
     <string name="quick_action_request_deletion_alert_title">Solicitar eliminación</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst solicitará que se elimine su nota de los relays a los que está conectado actualmente. No hay garantía de que su nota se elimine permanentemente de esos relays, o de otros relays donde pueda almacenarse.</string>
     <string name="quick_action_block_dialog_btn">Bloquear</string>
@@ -517,6 +521,7 @@
     <string name="share_or_save">Compartir o guardar</string>
     <string name="copy_url_to_clipboard">Copiar URL al portapapeles</string>
     <string name="copy_the_note_id_to_the_clipboard">Copiar ID de la nota al portapapeles</string>
+    <string name="add_media_to_gallery">Agregar contenido multimedia a la galería</string>
     <string name="created_at">Creado</string>
     <string name="rules">Reglas</string>
     <string name="login_with_external_signer">Iniciar sesión con Amber</string>
@@ -720,6 +725,8 @@
     <string name="private_outbox_section_explainer">Inserta entre 1 y 3 relés para almacenar eventos que nadie más pueda ver, como los borradores o la configuración de la app. Lo ideal es que estos relés sean locales o requieran autenticación antes de descargar el contenido de cada usuario.</string>
     <string name="kind_3_section">Relés generales</string>
     <string name="kind_3_section_description">Amethyst usa estos relés para descargar publicaciones por ti.</string>
+    <string name="kind_3_recommended_section">Relés recomendados</string>
+    <string name="kind_3_recommended_section_description">Agrega los siguientes relés a la lista de relés generales para recibir publicaciones de los usuarios de la lista.</string>
     <string name="search_section">Relés de búsqueda</string>
     <string name="search_section_explainer">Lista de relés que se usarán al buscar contenido o usuarios. El etiquetado y la búsqueda no funcionarán si no hay opciones disponibles. Asegúrate de que implementen NIP-50.</string>
     <string name="local_section">Relés locales</string>
