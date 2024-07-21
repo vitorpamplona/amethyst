@@ -100,7 +100,7 @@ fun AppNavigation(
 ) {
     val scope = rememberCoroutineScope()
     val nav =
-        remember {
+        remember(navController) {
             { route: String ->
                 scope.launch {
                     if (getRouteWithArguments(navController) != route) {
