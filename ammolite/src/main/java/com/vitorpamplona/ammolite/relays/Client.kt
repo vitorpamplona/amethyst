@@ -28,7 +28,10 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * The Nostr Client manages multiple personae the user may switch between. Events are received and
@@ -110,7 +113,7 @@ object Client : RelayPool.Listener {
         checkNotInMainThread()
 
         subscribe(
-            object : Listener() {
+            object : Listener {
                 override fun onEvent(
                     event: Event,
                     subId: String,
@@ -128,6 +131,87 @@ object Client : RelayPool.Listener {
 
         subscriptions = subscriptions + Pair(subscriptionId, filters)
         RelayPool.sendFilter(subscriptionId, filters)
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    suspend fun sendAndWaitForResponse(
+        signedEvent: EventInterface,
+        relay: String? = null,
+        feedTypes: Set<FeedType>? = null,
+        relayList: List<RelaySetupInfo>? = null,
+        onDone: (() -> Unit)? = null,
+        additionalListener: Listener? = null,
+        timeoutInSeconds: Long = 15,
+    ): Boolean {
+        checkNotInMainThread()
+
+        val size = if (relay != null) 1 else relayList?.size ?: RelayPool.availableRelays()
+        val latch = CountDownLatch(size)
+        val relayErrors = mutableMapOf<String, String>()
+        var result = false
+
+        Log.d("sendAndWaitForResponse", "Waiting for $size responses")
+
+        val subscription =
+            object : Listener {
+                override fun onError(
+                    error: Error,
+                    subscriptionId: String,
+                    relay: Relay,
+                ) {
+                    relayErrors[relay.url]?.let {
+                        latch.countDown()
+                    }
+                    Log.d("sendAndWaitForResponse", "onError Error from relay ${relay.url} count: ${latch.count} error: $error")
+                }
+
+                override fun onRelayStateChange(
+                    type: Relay.StateType,
+                    relay: Relay,
+                    subscriptionId: String?,
+                ) {
+                    if (type == Relay.StateType.DISCONNECT || type == Relay.StateType.EOSE) {
+                        latch.countDown()
+                    }
+                    if (type == Relay.StateType.CONNECT) {
+                        Log.d("sendAndWaitForResponse", "${type.name} Sending event to relay ${relay.url} count: ${latch.count}")
+                        relay.sendOverride(signedEvent)
+                    }
+                    Log.d("sendAndWaitForResponse", "onRelayStateChange ${type.name} from relay ${relay.url} count: ${latch.count}")
+                }
+
+                override fun onSendResponse(
+                    eventId: String,
+                    success: Boolean,
+                    message: String,
+                    relay: Relay,
+                ) {
+                    if (eventId == signedEvent.id()) {
+                        if (success) {
+                            result = true
+                        }
+                        latch.countDown()
+                        Log.d("sendAndWaitForResponse", "onSendResponse Received response for $eventId from relay ${relay.url} count: ${latch.count} message $message success $success")
+                    }
+                }
+            }
+
+        subscribe(subscription)
+        additionalListener?.let { subscribe(it) }
+
+        val job =
+            GlobalScope.launch(Dispatchers.IO) {
+                send(signedEvent, relay, feedTypes, relayList, onDone)
+            }
+        job.join()
+
+        runBlocking {
+            latch.await(timeoutInSeconds, TimeUnit.SECONDS)
+        }
+        Log.d("sendAndWaitForResponse", "countdown finished")
+        unsubscribe(subscription)
+        additionalListener?.let { unsubscribe(it) }
+        return result
     }
 
     fun sendFilterOnlyIfDisconnected(
@@ -206,6 +290,7 @@ object Client : RelayPool.Listener {
         // }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onSendResponse(
         eventId: String,
         success: Boolean,
@@ -219,6 +304,7 @@ object Client : RelayPool.Listener {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onAuth(
         relay: Relay,
         challenge: String,
@@ -228,6 +314,7 @@ object Client : RelayPool.Listener {
         GlobalScope.launch(Dispatchers.Default) { listeners.forEach { it.onAuth(relay, challenge) } }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onNotify(
         relay: Relay,
         description: String,
@@ -239,6 +326,7 @@ object Client : RelayPool.Listener {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onSend(
         relay: Relay,
         msg: String,
@@ -249,6 +337,7 @@ object Client : RelayPool.Listener {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onBeforeSend(
         relay: Relay,
         event: EventInterface,
@@ -258,6 +347,7 @@ object Client : RelayPool.Listener {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onError(
         error: Error,
         subscriptionId: String,
@@ -282,7 +372,7 @@ object Client : RelayPool.Listener {
 
     fun getSubscriptionFilters(subId: String): List<TypedFilter> = subscriptions[subId] ?: emptyList()
 
-    abstract class Listener {
+    interface Listener {
         /** A new message was received */
         open fun onEvent(
             event: Event,
