@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
+import com.vitorpamplona.amethyst.ui.note.CheckAndDisplayEditStatus
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.DisplayDraft
 import com.vitorpamplona.amethyst.ui.note.DisplayOtsIfInOriginal
@@ -95,7 +96,6 @@ import com.vitorpamplona.amethyst.ui.note.RenderRepost
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.calculateBackgroundColor
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
-import com.vitorpamplona.amethyst.ui.note.elements.DisplayEditStatus
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingCommunityInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingHashtagsInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
@@ -421,11 +421,7 @@ private fun FullBleedNoteCompose(
                         DisplayFollowingHashtagsInPost(baseNote, accountViewModel, nav)
                     }
 
-                    if (editState.value is GenericLoadable.Loaded) {
-                        (editState.value as? GenericLoadable.Loaded<EditState>)?.loaded?.let {
-                            DisplayEditStatus(it)
-                        }
-                    }
+                    CheckAndDisplayEditStatus(editState)
 
                     TimeAgo(note = baseNote)
 

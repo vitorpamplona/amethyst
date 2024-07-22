@@ -991,11 +991,7 @@ fun FirstUserInfoRow(
             BoostedMark()
         }
 
-        if (editState.value is GenericLoadable.Loaded) {
-            (editState.value as? GenericLoadable.Loaded<EditState>)?.loaded?.let {
-                DisplayEditStatus(it)
-            }
-        }
+        CheckAndDisplayEditStatus(editState)
 
         if (baseNote.isDraft()) {
             DisplayDraft()
@@ -1004,6 +1000,15 @@ fun FirstUserInfoRow(
         TimeAgo(baseNote)
 
         MoreOptionsButton(baseNote, editState, accountViewModel, nav)
+    }
+}
+
+@Composable
+fun CheckAndDisplayEditStatus(editState: State<GenericLoadable<EditState>>) {
+    if (editState.value is GenericLoadable.Loaded) {
+        (editState.value as? GenericLoadable.Loaded<EditState>)?.loaded?.let {
+            DisplayEditStatus(it)
+        }
     }
 }
 
