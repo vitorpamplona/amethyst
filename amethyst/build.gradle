@@ -15,8 +15,8 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk libs.versions.android.minSdk.get().toInteger()
         targetSdk libs.versions.android.targetSdk.get().toInteger()
-        versionCode 392
-        versionName "0.89.6"
+        versionCode 393
+        versionName "0.89.7"
         buildConfigField "String", "RELEASE_NOTES_ID", "\"1130badb252bdf62aaf93cb65bfa2bb09e7600c7d6764894f2954555b3b73018\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
