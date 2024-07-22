@@ -2251,21 +2251,25 @@ class Account(
         idHex: String,
         url: String,
         relay: String?,
+        blurhash: String?,
+        dim: String?,
+        hash: String?,
+        mimeType: String?,
     ) {
         if (!isWriteable()) return
         ProfileGalleryEntryEvent.create(
             url = url,
             eventid = idHex,
             relayhint = relay,
+            blurhash = blurhash,
+            hash = hash,
+            dimensions = dim,
+            mimeType = mimeType,
             /*magnetUri = magnetUri,
-            mimeType = headerInfo.mimeType,
-            hash = headerInfo.hash,
             size = headerInfo.size.toString(),
             dimensions = headerInfo.dim,
-            blurhash = headerInfo.blurHash,
             alt = alt,
-            originalHash = originalHash,
-            sensitiveContent = sensitiveContent, */
+            originalHash = originalHash, */
             signer = signer,
         ) { event ->
             Client.send(event)

@@ -824,7 +824,7 @@ private fun RenderVideoPlayer(
             }
 
             AnimatedShareButton(controllerVisible, Modifier.align(Alignment.TopEnd).padding(end = Size165dp)) { popupExpanded, toggle ->
-                ShareImageAction(accountViewModel = accountViewModel, popupExpanded, videoUri, nostrUriCallback, toggle)
+                ShareImageAction(accountViewModel = accountViewModel, popupExpanded, videoUri, null, null, null, null, nostrUriCallback, toggle)
             }
         } else {
             controller.volume = 0f

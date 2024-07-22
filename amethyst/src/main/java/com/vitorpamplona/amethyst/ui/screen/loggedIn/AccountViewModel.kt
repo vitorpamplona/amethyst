@@ -673,8 +673,12 @@ class AccountViewModel(
         hex: String,
         url: String,
         relay: String?,
+        blurhash: String?,
+        dim: String?,
+        hash: String?,
+        mimeType: String?,
     ) {
-        viewModelScope.launch(Dispatchers.IO) { account.addToGallery(hex, url, relay) }
+        viewModelScope.launch(Dispatchers.IO) { account.addToGallery(hex, url, relay, blurhash, dim, hash, mimeType) }
     }
 
     fun removefromMediaGallery(note: Note) {
