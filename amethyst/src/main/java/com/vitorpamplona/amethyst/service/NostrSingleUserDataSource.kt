@@ -64,6 +64,7 @@ object NostrSingleUserDataSource : AmethystNostrDataSource("SingleUserFeed") {
             .map { group ->
                 val groupIds = group.map { it.pubkeyHex }
                 val minEOSEs = findMinimumEOSEsForUsers(group)
+
                 listOf(
                     TypedFilter(
                         types = EVENT_FINDER_TYPES,
@@ -92,13 +93,11 @@ object NostrSingleUserDataSource : AmethystNostrDataSource("SingleUserFeed") {
             checkNotInMainThread()
 
             usersToWatch.forEach {
-                if (it.latestMetadata != null) {
-                    val eose = it.latestEOSEs[relayUrl]
-                    if (eose == null) {
-                        it.latestEOSEs = it.latestEOSEs + Pair(relayUrl, EOSETime(time))
-                    } else {
-                        eose.time = time
-                    }
+                val eose = it.latestEOSEs[relayUrl]
+                if (eose == null) {
+                    it.latestEOSEs = it.latestEOSEs + Pair(relayUrl, EOSETime(time))
+                } else {
+                    eose.time = time
                 }
             }
         }
