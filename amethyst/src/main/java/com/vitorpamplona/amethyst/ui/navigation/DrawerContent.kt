@@ -136,7 +136,9 @@ fun DrawerContent(
         drawerTonalElevation = 0.dp,
     ) {
         Column(
-            Modifier.fillMaxHeight().verticalScroll(rememberScrollState()),
+            Modifier
+                .fillMaxHeight()
+                .verticalScroll(rememberScrollState()),
         ) {
             ProfileContent(
                 baseAccountUser = accountViewModel.account.userProfile(),
@@ -146,7 +148,7 @@ fun DrawerContent(
             )
 
             Column(drawerSpacing) {
-                EditStatusBoxes(accountViewModel.account.userProfile(), accountViewModel)
+                EditStatusBoxes(accountViewModel.account.userProfile(), accountViewModel, drawerState)
             }
 
             FollowingAndFollowerCounts(accountViewModel.account.userProfile(), onClickUser)
@@ -263,15 +265,16 @@ fun ProfileContentTemplate(
 private fun EditStatusBoxes(
     baseAccountUser: User,
     accountViewModel: AccountViewModel,
+    drawerState: DrawerState,
 ) {
     LoadStatuses(user = baseAccountUser, accountViewModel) { statuses ->
         if (statuses.isEmpty()) {
-            StatusEditBar(accountViewModel = accountViewModel)
+            StatusEditBar(accountViewModel = accountViewModel, drawerState = drawerState)
         } else {
             statuses.forEach {
                 val originalStatus by it.live().content.observeAsState()
 
-                StatusEditBar(originalStatus, it.address, accountViewModel)
+                StatusEditBar(originalStatus, it.address, accountViewModel, drawerState = drawerState)
             }
         }
     }
@@ -282,11 +285,17 @@ fun StatusEditBar(
     savedStatus: String? = null,
     tag: ATag? = null,
     accountViewModel: AccountViewModel,
+    drawerState: DrawerState,
 ) {
     val focusManager = LocalFocusManager.current
 
     val currentStatus = remember { mutableStateOf(savedStatus ?: "") }
     val hasChanged = remember { derivedStateOf { currentStatus.value != (savedStatus ?: "") } }
+    LaunchedEffect(drawerState.isClosed) {
+        if (drawerState.isClosed) {
+            focusManager.clearFocus(true)
+        }
+    }
 
     OutlinedTextField(
         value = currentStatus.value,
