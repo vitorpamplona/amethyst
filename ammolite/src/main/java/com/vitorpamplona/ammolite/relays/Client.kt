@@ -172,8 +172,8 @@ object Client : RelayPool.Listener {
                 ) {
                     if (type == Relay.StateType.DISCONNECT || type == Relay.StateType.EOSE) {
                         latch.countDown()
-                        Log.d("sendAndWaitForResponse", "onRelayStateChange Disconnected from relay ${relay.url} count: ${latch.count}")
                     }
+                    Log.d("sendAndWaitForResponse", "onRelayStateChange ${type.name} from relay ${relay.url} count: ${latch.count}")
                 }
 
                 override fun onSendResponse(
