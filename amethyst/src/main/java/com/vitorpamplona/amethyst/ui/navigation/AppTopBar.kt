@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.app.ActivityManager
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.os.Debug
 import android.util.Log
 import androidx.compose.foundation.clickable
@@ -66,6 +68,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.getSystemService
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -1034,6 +1037,14 @@ fun debugState(context: Context) {
 
     Log.d("STATE DUMP", "Total Native Heap Allocated: " + nativeHeap + " MB")
 
+    val activityManager: ActivityManager? = context.getSystemService()
+    if (activityManager != null) {
+        val isLargeHeap = (context.applicationInfo.flags and ApplicationInfo.FLAG_LARGE_HEAP) != 0
+        val memClass = if (isLargeHeap) activityManager.largeMemoryClass else activityManager.memoryClass
+
+        Log.d("STATE DUMP", "Memory Class " + memClass + " MB (largeHeap $isLargeHeap)")
+    }
+
     Log.d("STATE DUMP", "Connected Relays: " + RelayPool.connectedRelays())
 
     val imageLoader = Coil.imageLoader(context)
@@ -1090,6 +1101,13 @@ fun debugState(context: Context) {
             LocalCache.observablesByKindAndETag.size +
             " / " +
             LocalCache.observablesByKindAndAuthor.size,
+    )
+
+    Log.d(
+        "STATE DUMP",
+        "Spam: " +
+            LocalCache.antiSpam.recentMessages.size() +
+            " / " + LocalCache.antiSpam.spamMessages.size(),
     )
 
     Log.d(

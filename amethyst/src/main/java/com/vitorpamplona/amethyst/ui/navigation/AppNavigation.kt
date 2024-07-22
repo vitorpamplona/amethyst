@@ -100,7 +100,7 @@ fun AppNavigation(
 ) {
     val scope = rememberCoroutineScope()
     val nav =
-        remember {
+        remember(navController) {
             { route: String ->
                 scope.launch {
                     if (getRouteWithArguments(navController) != route) {
@@ -114,8 +114,8 @@ fun AppNavigation(
     NavHost(
         navController,
         startDestination = Route.Home.route,
-        enterTransition = { fadeIn(animationSpec = tween(400)) },
-        exitTransition = { fadeOut(animationSpec = tween(400)) },
+        enterTransition = { fadeIn(animationSpec = tween(200)) },
+        exitTransition = { fadeOut(animationSpec = tween(200)) },
     ) {
         Route.Home.let { route ->
             composable(

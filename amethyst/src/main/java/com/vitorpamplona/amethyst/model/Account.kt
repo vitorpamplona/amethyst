@@ -2761,19 +2761,22 @@ class Account(
     // Takes a User's relay list and adds the types of feeds they are active for.
     fun activeRelays(): Array<RelaySetupInfo>? {
         val usersRelayList =
-            userProfile().latestContactList?.relays()?.map {
-                val url = RelayUrlFormatter.normalize(it.key)
+            userProfile()
+                .latestContactList
+                ?.relays()
+                ?.map {
+                    val url = RelayUrlFormatter.normalize(it.key)
 
-                val localFeedTypes =
-                    localRelays.firstOrNull { localRelay -> RelayUrlFormatter.normalize(localRelay.url) == url }?.feedTypes?.minus(setOf(FeedType.SEARCH, FeedType.WALLET_CONNECT))
-                        ?: Constants.defaultRelays
-                            .filter { defaultRelay -> defaultRelay.url == url }
-                            .firstOrNull()
-                            ?.feedTypes
-                        ?: Constants.activeTypesGlobalChats
+                    val localFeedTypes =
+                        localRelays.firstOrNull { localRelay -> RelayUrlFormatter.normalize(localRelay.url) == url }?.feedTypes?.minus(setOf(FeedType.SEARCH, FeedType.WALLET_CONNECT))
+                            ?: Constants.defaultRelays
+                                .filter { defaultRelay -> defaultRelay.url == url }
+                                .firstOrNull()
+                                ?.feedTypes
+                            ?: Constants.activeTypesGlobalChats
 
-                RelaySetupInfo(url, it.value.read, it.value.write, localFeedTypes)
-            } ?: return null
+                    RelaySetupInfo(url, it.value.read, it.value.write, localFeedTypes)
+                }?.ifEmpty { null } ?: return null
 
         return usersRelayList.toTypedArray()
     }
