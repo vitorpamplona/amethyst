@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -127,8 +128,9 @@ fun DisplayHighlight(
         verticalArrangement = Arrangement.Center,
     ) {
         DisplayQuoteAuthor(
+            highlightQuote = highlight,
             authorHex = authorHex,
-            url = url,
+            baseUrl = url,
             postAddress = postAddress,
             postVersion = postVersion,
             accountViewModel = accountViewModel,
@@ -139,8 +141,9 @@ fun DisplayHighlight(
 
 @Composable
 private fun DisplayQuoteAuthor(
+    highlightQuote: String,
     authorHex: String?,
-    url: String?,
+    baseUrl: String?,
     postAddress: ATag?,
     postVersion: HexKey?,
     accountViewModel: AccountViewModel,
@@ -196,7 +199,9 @@ private fun DisplayQuoteAuthor(
         version?.let {
             DisplayEntryForNote(it, userBase, accountViewModel, nav)
         }
-    } else if (url != null) {
+    } else if (baseUrl != null) {
+        val url = "$baseUrl${if (baseUrl.contains("#")) "&" else "#"}:~:text=${Uri.encode(highlightQuote)}"
+
         DisplayEntryForAUrl(url, userBase, accountViewModel, nav)
     } else if (userBase != null) {
         userBase?.let {
