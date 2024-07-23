@@ -2358,6 +2358,16 @@ class Account(
         RelayAuthEvent.create(relayUrl, challenge, signer, onReady = onReady)
     }
 
+    fun createAuthEvent(
+        relayUrls: List<String>,
+        challenge: String,
+        onReady: (RelayAuthEvent) -> Unit,
+    ) {
+        if (!isWriteable()) return
+
+        RelayAuthEvent.create(relayUrls, challenge, signer, onReady = onReady)
+    }
+
     fun isInPrivateBookmarks(
         note: Note,
         onReady: (Boolean) -> Unit,

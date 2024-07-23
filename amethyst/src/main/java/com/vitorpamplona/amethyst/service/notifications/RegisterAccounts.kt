@@ -55,7 +55,7 @@ class RegisterAccounts(
 
     private suspend fun signAllAuths(
         notificationToken: String,
-        remainingTos: List<Pair<Account, String>>,
+        remainingTos: List<Pair<Account, List<String>>>,
         output: MutableList<RelayAuthEvent>,
         onReady: (List<RelayAuthEvent>) -> Unit,
     ) {
@@ -100,7 +100,7 @@ class RegisterAccounts(
     ) {
         val readyToSend =
             accounts
-                .map {
+                .mapNotNull {
                     Log.d(tag, "Register Account ${it.npub}")
 
                     val acc = LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)
@@ -131,13 +131,17 @@ class RegisterAccounts(
 
                         Log.d(tag, "Register Account ${acc.userProfile().toBestDisplayName()} Kind3 Reads ${readKind3Relays.joinToString(", ")}")
 
-                        (nip65Read + nip17Read + readKind3Relays).map {
-                            Pair(acc, it)
+                        val relays = (nip65Read + nip17Read + readKind3Relays)
+
+                        if (relays.isNotEmpty()) {
+                            Pair(acc, relays)
+                        } else {
+                            null
                         }
                     } else {
-                        emptyList<Pair<Account, String>>()
+                        null
                     }
-                }.flatten()
+                }
 
         val listOfAuthEvents = mutableListOf<RelayAuthEvent>()
         signAllAuths(

@@ -56,5 +56,23 @@ class RelayAuthEvent(
                 )
             signer.sign(createdAt, KIND, tags, content, onReady)
         }
+
+        fun create(
+            relays: List<String>,
+            challenge: String,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (RelayAuthEvent) -> Unit,
+        ) {
+            val content = ""
+            val tags =
+                relays
+                    .map {
+                        arrayOf("relay", it)
+                    }.plusElement(
+                        arrayOf("challenge", challenge),
+                    ).toTypedArray()
+            signer.sign(createdAt, KIND, tags, content, onReady)
+        }
     }
 }
