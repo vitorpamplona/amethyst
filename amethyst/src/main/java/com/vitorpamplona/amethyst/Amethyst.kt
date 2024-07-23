@@ -114,7 +114,12 @@ class Amethyst : Application() {
         }
     }
 
-    fun imageLoaderBuilder(): ImageLoader.Builder = ImageLoader.Builder(this).diskCache { coilCache }.memoryCache { coilMemCache }
+    fun imageLoaderBuilder(): ImageLoader.Builder =
+        ImageLoader
+            .Builder(this)
+            .diskCache { coilCache }
+            .memoryCache { coilMemCache }
+            .crossfade(true)
 
     fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences = EncryptedStorage.preferences(instance, npub)
 
