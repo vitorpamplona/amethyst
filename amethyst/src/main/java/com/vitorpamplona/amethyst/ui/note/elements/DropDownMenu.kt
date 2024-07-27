@@ -188,8 +188,9 @@ fun NoteDropDownMenu(
         DropdownMenuItem(
             text = { Text(stringRes(R.string.copy_text)) },
             onClick = {
+                val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
                 scope.launch(Dispatchers.IO) {
-                    accountViewModel.decrypt(note) { clipboardManager.setText(AnnotatedString(it)) }
+                    accountViewModel.decrypt(lastNoteVersion) { clipboardManager.setText(AnnotatedString(it)) }
                     onDismiss()
                 }
             },
