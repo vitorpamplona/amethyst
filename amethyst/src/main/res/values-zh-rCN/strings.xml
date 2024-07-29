@@ -726,6 +726,7 @@
     <string name="kind_3_section">通用中继</string>
     <string name="kind_3_section_description">Amethyst 会通过这些中继为您获取帖子。</string>
     <string name="kind_3_recommended_section">推荐的中继器</string>
+    <string name="kind_3_recommended_section_description">在通用中继列表中添加下列中继以接收列表中用户的帖子。</string>
     <string name="search_section">搜索中继</string>
     <string name="search_section_explainer">用于关键词和标签检索的中继列表。如果没有可用选项，也就无法使用关键词和标签检索。需要确保它们支持 NIP-50。</string>
     <string name="local_section">本地中继</string>
