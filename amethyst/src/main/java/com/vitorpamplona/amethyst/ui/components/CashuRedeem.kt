@@ -339,6 +339,12 @@ fun CashuPreviewNew(
                 fontSize = 20.sp,
                 modifier = Modifier.padding(top = 5.dp),
             )
+            Text(
+                text = "Mint: " + token.mint.replace("https://", ""),
+                fontSize = 7.sp,
+                color = Color.Gray,
+                modifier = Modifier.padding(start = 5.dp, bottom = 1.dp),
+            )
 
             Row(modifier = Modifier.padding(top = 5.dp)) {
                 var isRedeeming by remember { mutableStateOf(false) }
