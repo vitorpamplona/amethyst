@@ -45,6 +45,24 @@ class Nip01Test {
     }
 
     @Test
+    fun testGetPublicCompressedWith2() {
+        val key = "e6159851715b4aa6190c22b899b0c792847de0a4435ac5b678f35738351c43b0".hexToByteArray()
+        assertEquals(
+            "029fa4ce8c87ca546b196e6518db80a6780e1bd5552b61f9f17bafee5d4e34e09b",
+            nip01.compressedPubkeyCreate(key).toHexKey(),
+        )
+    }
+
+    @Test
+    fun testGetPublicCompressedWith3() {
+        val key = "65f039136f8da8d3e87b4818746b53318d5481e24b2673f162815144223a0b5a".hexToByteArray()
+        assertEquals(
+            "033dcef7585efbdb68747d919152bd481e21f5e952aaaef5a19604fbd096a93dd5",
+            nip01.compressedPubkeyCreate(key).toHexKey(),
+        )
+    }
+
+    @Test
     fun testDeterministicSign() {
         assertEquals(
             "1484d0e0bd62165e822e31f1f4cc8e1ce8e20c30a060e24fb0ecd7baf7c624f661fb7a3e4f0ddb43018e5f0b4892c929af64d8b7a86021aa081ec8231e3dfa37",

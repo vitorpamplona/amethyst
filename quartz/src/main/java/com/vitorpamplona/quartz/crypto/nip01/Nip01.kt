@@ -33,7 +33,9 @@ class Nip01(
     /** Provides a 32B "private key" aka random number */
     fun privkeyCreate() = random(32)
 
-    fun pubkeyCreate(privKey: ByteArray) = secp256k1.pubKeyCompress(secp256k1.pubkeyCreate(privKey)).copyOfRange(1, 33)
+    fun compressedPubkeyCreate(privKey: ByteArray) = secp256k1.pubKeyCompress(secp256k1.pubkeyCreate(privKey))
+
+    fun pubkeyCreate(privKey: ByteArray) = compressedPubkeyCreate(privKey).copyOfRange(1, 33)
 
     fun sign(
         data: ByteArray,

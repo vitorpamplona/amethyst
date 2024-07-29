@@ -25,6 +25,7 @@ import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.crypto.nip01.Nip01
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import fr.acinq.secp256k1.Secp256k1
@@ -48,6 +49,7 @@ class NIP44v2Test {
 
     private val random = SecureRandom()
     private val nip44v2 = Nip44v2(Secp256k1.get(), random)
+    private val nip01 = Nip01(Secp256k1.get(), random)
 
     @Test
     fun conversationKeyTest() {
@@ -65,6 +67,34 @@ class NIP44v2Test {
             val actual = nip44v2.calcPaddedLen(v[0])
             assertEquals(v[1], actual)
         }
+    }
+
+    @Test
+    fun testCompressedWith02Keys() {
+        val privateKeyA = "f410f88bcec6cbfda04d6a273c7b1dd8bba144cd45b71e87109cfa11dd7ed561".hexToByteArray()
+        val privateKeyB = "65f039136f8da8d3e87b4818746b53318d5481e24b2673f162815144223a0b5a".hexToByteArray()
+
+        val publicKeyA = nip01.pubkeyCreate(privateKeyA)
+        val publicKeyB = nip01.pubkeyCreate(privateKeyB)
+
+        assertEquals(
+            nip44v2.getConversationKey(privateKeyA, publicKeyB).toHexKey(),
+            nip44v2.getConversationKey(privateKeyB, publicKeyA).toHexKey(),
+        )
+    }
+
+    @Test
+    fun testCompressedWith03Keys() {
+        val privateKeyA = "f410f88bcec6cbfda04d6a273c7b1dd8bba144cd45b71e87109cfa11dd7ed561".hexToByteArray()
+        val privateKeyB = "e6159851715b4aa6190c22b899b0c792847de0a4435ac5b678f35738351c43b0".hexToByteArray()
+
+        val publicKeyA = nip01.pubkeyCreate(privateKeyA)
+        val publicKeyB = nip01.pubkeyCreate(privateKeyB)
+
+        assertEquals(
+            nip44v2.getConversationKey(privateKeyA, publicKeyB).toHexKey(),
+            nip44v2.getConversationKey(privateKeyB, publicKeyA).toHexKey(),
+        )
     }
 
     @Test
