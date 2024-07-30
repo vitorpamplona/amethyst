@@ -198,7 +198,7 @@ fun LoginPage(
                         }
                     }
                 },
-                contentResolver = { Amethyst.instance.contentResolver },
+                contentResolver = Amethyst.instance::contentResolverFn,
             )
             onDispose { externalSignerLauncher.clearLauncher() }
         }

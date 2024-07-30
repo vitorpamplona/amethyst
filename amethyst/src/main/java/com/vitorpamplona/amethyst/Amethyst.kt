@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst
 
 import android.app.Application
+import android.content.ContentResolver
 import android.content.Context
 import android.os.Looper
 import android.os.StrictMode
@@ -77,6 +78,8 @@ class Amethyst : Application() {
             .maxSizePercent(0.40) // memory heavy app due to profile pics and videos.
             .build()
     }
+
+    fun contentResolverFn(): ContentResolver = contentResolver
 
     override fun onCreate() {
         super.onCreate()

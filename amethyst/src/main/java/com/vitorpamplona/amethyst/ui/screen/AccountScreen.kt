@@ -176,7 +176,7 @@ fun LoggedInPage(
                                     )
                                 }
                             },
-                            contentResolver = { Amethyst.instance.contentResolver },
+                            contentResolver = Amethyst.instance::contentResolverFn,
                         )
                     }
                 }
@@ -196,7 +196,7 @@ fun LoggedInPage(
                         )
                     }
                 },
-                contentResolver = { Amethyst.instance.contentResolver },
+                contentResolver = Amethyst.instance::contentResolverFn,
             )
             onDispose {
                 accountViewModel.account.signer.launcher
