@@ -317,7 +317,7 @@ class AccountViewModel(
             }.flowOn(Dispatchers.Default)
                 .stateIn(
                     viewModelScope,
-                    SharingStarted.Eagerly,
+                    SharingStarted.WhileSubscribed(10000, 10000),
                     NoteComposeReportState(),
                 ).also {
                     noteIsHiddenFlows.put(note, it)
@@ -334,7 +334,7 @@ class AccountViewModel(
                 .map { it.note.relays.size > 3 }
                 .stateIn(
                     viewModelScope,
-                    SharingStarted.Eagerly,
+                    SharingStarted.WhileSubscribed(10000, 10000),
                     note.relays.size > 3,
                 ).also {
                     noteMustShowExpandButtonFlows.put(note, it)
