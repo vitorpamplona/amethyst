@@ -788,6 +788,7 @@
     <string name="http_status_413">Payload Zbyt duży - Żądanie jest większe niż określone limity serwera i serwer odmawia jego przetwarzania</string>
     <string name="http_status_414">URI Zbyt długi - URL klienta jest zbyt długi, aby serwer mógł go przetworzyć. </string>
     <string name="http_status_415">Nieobsługiwany format plików - żądanie używa formatu multimediów, którego serwer nie obsługuje</string>
+    <string name="http_status_417">Błąd oczekiwania-serwer nie może spełnić wymagań wskazanych w polu nagłówka żądania</string>
     <string name="http_status_426">Wymagana aktualizacja - serwer odmawia przetwarzania żądania przy użyciu bieżącego protokołu, chyba że klient uaktualni go do innego protokołu.</string>
     <string name="http_status_500">Wewnętrzny błąd serwera - serwer napotkał nieoczekiwany błąd i nie może zakończyć żądania</string>
     <string name="http_status_501">Nie zaimplementowano - serwer nie może spełnić żądania lub nie rozpoznaje metody żądania</string>
