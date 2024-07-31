@@ -54,11 +54,12 @@ import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVideoUrl
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.GalleryContentView
+import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.ui.components.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.ClickableNote
 import com.vitorpamplona.amethyst.ui.note.LongPressToQuickActionGallery
@@ -130,7 +131,12 @@ private fun GalleryFeedLoaded(
         state = listState,
     ) {
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-            val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
+            val defaultModifier =
+                remember {
+                    Modifier
+                        .fillMaxWidth()
+                        .animateItemPlacement()
+                }
 
             Row(defaultModifier) {
                 GalleryCardCompose(
@@ -169,29 +175,21 @@ fun GalleryCardCompose(
             nav = nav,
         ) { canPreview ->
 
-            // TODO Vitor, this works, but maybe you know of a better way to run this here in the background
-            // as LocalCache.checkGetOrCreateNote(it) can not run on the main thread
-            var note: Note? = null
-            val thread =
-                Thread {
-                    note = (baseNote.event as ProfileGalleryEntryEvent).event()?.let { LocalCache.checkGetOrCreateNote(it) }
-                }
-            thread.start()
-            thread.join()
-            // TODO End
-
-            val image = (baseNote.event as ProfileGalleryEntryEvent).url()
-            if (image != null) {
-                note?.let {
-                    GalleryCard(
-                        galleryNote = baseNote,
-                        baseNote = it,
-                        image = image,
-                        modifier = modifier,
-                        parentBackgroundColor = parentBackgroundColor,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+            (baseNote.event as ProfileGalleryEntryEvent).event()?.let {
+                LoadNote(baseNoteHex = it, accountViewModel = accountViewModel) { note ->
+                    note?.let {
+                        (baseNote.event as ProfileGalleryEntryEvent).url()?.let { image ->
+                            GalleryCard(
+                                galleryNote = baseNote,
+                                baseNote = it,
+                                image = image,
+                                modifier = modifier,
+                                parentBackgroundColor = parentBackgroundColor,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -309,7 +307,9 @@ fun RenderGalleryThumb(
 
 @Preview
 @Composable
-fun RenderGalleryThumbPreview(accountViewModel: AccountViewModel) {
+fun RenderGalleryThumbPreview() {
+    val accountViewModel = mockAccountViewModel()
+
     Surface(Modifier.size(200.dp)) {
         InnerRenderGalleryThumb(
             card =
