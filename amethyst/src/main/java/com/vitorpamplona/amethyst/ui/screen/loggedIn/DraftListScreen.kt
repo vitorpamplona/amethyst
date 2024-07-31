@@ -23,21 +23,32 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteContainer
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.FeedState
@@ -114,17 +125,73 @@ private fun DraftFeedLoaded(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteDialog = false
+            },
+            title = {
+                Text(text = stringResource(R.string.drafts))
+            },
+            text = {
+                Text(text = stringResource(R.string.delete_all_drafts_confirmation))
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        accountViewModel.delete(state.feed.value)
+                        showDeleteDialog = false
+                    },
+                ) {
+                    Text(text = stringResource(R.string.yes))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                    },
+                ) {
+                    Text(text = stringResource(R.string.no))
+                }
+            },
+        )
+    }
+
     LazyColumn(
         contentPadding = FeedPadding,
         state = listState,
     ) {
+        stickyHeader {
+            Row(
+                Modifier
+                    .fillMaxWidth(),
+                Arrangement.Center,
+            ) {
+                ElevatedButton(
+                    onClick = { showDeleteDialog = true },
+                ) {
+                    Text(stringResource(R.string.delete_all))
+                }
+            }
+        }
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
             SwipeToDeleteContainer(
-                modifier = Modifier.fillMaxWidth().animateContentSize(),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .animateContentSize(),
                 onStartToEnd = { accountViewModel.delete(item) },
                 onEndToStart = { accountViewModel.delete(item) },
             ) {
-                Row(Modifier.fillMaxWidth().animateItemPlacement().background(MaterialTheme.colorScheme.background)) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .animateItemPlacement()
+                        .background(MaterialTheme.colorScheme.background),
+                ) {
                     NoteCompose(
                         item,
                         routeForLastRead = routeForLastRead,

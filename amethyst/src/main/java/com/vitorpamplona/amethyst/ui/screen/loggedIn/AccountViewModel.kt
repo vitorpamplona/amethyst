@@ -729,6 +729,10 @@ class AccountViewModel(
         }
     }
 
+    fun delete(notes: List<Note>) {
+        viewModelScope.launch(Dispatchers.IO) { account.delete(notes) }
+    }
+
     fun delete(note: Note) {
         viewModelScope.launch(Dispatchers.IO) { account.delete(note) }
     }
