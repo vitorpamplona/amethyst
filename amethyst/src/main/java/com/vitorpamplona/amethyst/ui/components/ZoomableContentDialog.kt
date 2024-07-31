@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -388,6 +389,12 @@ private fun RenderImageOrVideo(
     accountViewModel: AccountViewModel,
 ) {
     val automaticallyStartPlayback = remember { mutableStateOf<Boolean>(true) }
+    val contentScale =
+        if (isFiniteHeight) {
+            ContentScale.Fit
+        } else {
+            ContentScale.FillWidth
+        }
 
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
         if (content is MediaUrlImage) {
@@ -405,21 +412,28 @@ private fun RenderImageOrVideo(
 
             UrlImageView(
                 content = content,
+                contentScale = contentScale,
                 mainImageModifier = mainModifier,
                 loadedImageModifier = Modifier.fillMaxWidth(),
-                isFiniteHeight = isFiniteHeight,
                 controllerVisible = controllerVisible,
                 accountViewModel = accountViewModel,
                 alwayShowImage = true,
             )
         } else if (content is MediaUrlVideo) {
+            val borderModifier =
+                if (roundedCorner) {
+                    MaterialTheme.colorScheme.imageModifier
+                } else {
+                    Modifier.fillMaxWidth()
+                }
+
             VideoViewInner(
                 videoUri = content.url,
                 mimeType = content.mimeType,
                 title = content.description,
                 artworkUri = content.artworkUri,
                 authorName = content.authorName,
-                roundedCorner = roundedCorner,
+                borderModifier = borderModifier,
                 isFiniteHeight = isFiniteHeight,
                 automaticallyStartPlayback = automaticallyStartPlayback,
                 onControllerVisibilityChanged = onControllerVisibilityChanged,
@@ -440,14 +454,21 @@ private fun RenderImageOrVideo(
 
             LocalImageView(
                 content = content,
+                contentScale = contentScale,
                 mainImageModifier = mainModifier,
                 loadedImageModifier = Modifier.fillMaxWidth(),
-                isFiniteHeight = isFiniteHeight,
                 controllerVisible = controllerVisible,
                 accountViewModel = accountViewModel,
                 alwayShowImage = true,
             )
         } else if (content is MediaLocalVideo) {
+            val borderModifier =
+                if (roundedCorner) {
+                    MaterialTheme.colorScheme.imageModifier
+                } else {
+                    Modifier.fillMaxWidth()
+                }
+
             content.localFile?.let {
                 VideoViewInner(
                     videoUri = it.toUri().toString(),
@@ -455,7 +476,7 @@ private fun RenderImageOrVideo(
                     title = content.description,
                     artworkUri = content.artworkUri,
                     authorName = content.authorName,
-                    roundedCorner = roundedCorner,
+                    borderModifier = borderModifier,
                     isFiniteHeight = isFiniteHeight,
                     automaticallyStartPlayback = automaticallyStartPlayback,
                     onControllerVisibilityChanged = onControllerVisibilityChanged,

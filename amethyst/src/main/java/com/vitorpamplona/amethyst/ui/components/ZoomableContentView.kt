@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.service.BlurHashRequester
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.note.BlankNote
@@ -94,6 +95,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.hashVerifierMark
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
@@ -116,6 +118,13 @@ fun ZoomableContentView(
 ) {
     var dialogOpen by remember(content) { mutableStateOf(false) }
 
+    val contentScale =
+        if (isFiniteHeight) {
+            ContentScale.Fit
+        } else {
+            ContentScale.FillWidth
+        }
+
     when (content) {
         is MediaUrlImage ->
             SensitivityWarning(content.contentWarning != null, accountViewModel) {
@@ -123,7 +132,7 @@ fun ZoomableContentView(
                     val mainImageModifier = Modifier.fillMaxWidth().clickable { dialogOpen = true }
                     val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
 
-                    UrlImageView(content, mainImageModifier, loadedImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
+                    UrlImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
                 }
             }
         is MediaUrlVideo ->
@@ -150,7 +159,7 @@ fun ZoomableContentView(
                 val mainImageModifier = Modifier.fillMaxWidth().clickable { dialogOpen = true }
                 val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
 
-                LocalImageView(content, mainImageModifier, loadedImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
+                LocalImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
             }
         is MediaLocalVideo ->
             content.localFile?.let {
@@ -190,7 +199,7 @@ fun GalleryContentView(
                     val mainImageModifier = Modifier.fillMaxWidth()
                     val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
 
-                    UrlImageView(content, mainImageModifier, loadedImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel, gallery = true)
+                    UrlImageView(content, ContentScale.Crop, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
                 }
             }
         is MediaUrlVideo ->
@@ -201,11 +210,10 @@ fun GalleryContentView(
                         mimeType = content.mimeType,
                         title = content.description,
                         artworkUri = content.artworkUri,
-                        gallery = true,
+                        borderModifier = MaterialTheme.colorScheme.videoGalleryModifier,
                         authorName = content.authorName,
                         dimensions = content.dim,
                         blurhash = content.blurhash,
-                        roundedCorner = roundedCorner,
                         isFiniteHeight = isFiniteHeight,
                         nostrUriCallback = content.uri,
                         accountViewModel = accountViewModel,
@@ -217,7 +225,7 @@ fun GalleryContentView(
                 val mainImageModifier = Modifier.fillMaxWidth()
                 val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
 
-                LocalImageView(content, mainImageModifier, loadedImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
+                LocalImageView(content, ContentScale.Crop, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
             }
         is MediaLocalVideo ->
             content.localFile?.let {
@@ -228,8 +236,7 @@ fun GalleryContentView(
                         title = content.description,
                         artworkUri = content.artworkUri,
                         authorName = content.authorName,
-                        gallery = true,
-                        roundedCorner = roundedCorner,
+                        borderModifier = MaterialTheme.colorScheme.videoGalleryModifier,
                         isFiniteHeight = isFiniteHeight,
                         nostrUriCallback = content.uri,
                         accountViewModel = accountViewModel,
@@ -257,30 +264,24 @@ fun TwoSecondController(
 @Composable
 fun LocalImageView(
     content: MediaLocalImage,
+    contentScale: ContentScale,
     mainImageModifier: Modifier,
     loadedImageModifier: Modifier,
-    isFiniteHeight: Boolean,
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
     alwayShowImage: Boolean = false,
 ) {
     if (content.localFileExists()) {
-        Box(contentAlignment = Alignment.Center) {
-            val showImage =
-                remember {
-                    mutableStateOf(
-                        if (alwayShowImage) true else accountViewModel.settings.showImages.value,
-                    )
-                }
+        val showImage =
+            remember {
+                mutableStateOf(
+                    if (alwayShowImage) true else accountViewModel.settings.showImages.value,
+                )
+            }
 
-            val contentScale =
-                remember {
-                    if (isFiniteHeight) ContentScale.Fit else ContentScale.FillWidth
-                }
-
-            val ratio = remember(content) { aspectRatio(content.dim) }
-
-            if (showImage.value) {
+        val ratio = remember(content) { aspectRatio(content.dim) }
+        CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
+            if (it) {
                 SubcomposeAsyncImage(
                     model = content.localFile,
                     contentDescription = content.description,
@@ -361,36 +362,28 @@ fun LocalImageView(
 @Composable
 fun UrlImageView(
     content: MediaUrlImage,
+    contentScale: ContentScale,
     mainImageModifier: Modifier,
     loadedImageModifier: Modifier,
-    isFiniteHeight: Boolean,
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
-    gallery: Boolean = false,
     alwayShowImage: Boolean = false,
 ) {
-    Box(contentAlignment = Alignment.Center) {
-        val showImage =
-            remember {
-                mutableStateOf(
-                    if (alwayShowImage) true else accountViewModel.settings.showImages.value,
-                )
-            }
+    val ratio = remember(content) { aspectRatio(content.dim) }
 
-        val ratio = remember(content) { aspectRatio(content.dim) }
+    val showImage =
+        remember {
+            mutableStateOf(
+                if (alwayShowImage) true else accountViewModel.settings.showImages.value,
+            )
+        }
 
-        if (showImage.value) {
+    CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
+        if (it) {
             SubcomposeAsyncImage(
                 model = content.url,
                 contentDescription = content.description,
-                contentScale =
-                    if (gallery) {
-                        ContentScale.Crop
-                    } else if (isFiniteHeight) {
-                        ContentScale.Fit
-                    } else {
-                        ContentScale.FillWidth
-                    },
+                contentScale = contentScale,
                 modifier = mainImageModifier,
             ) {
                 when (painter.state) {
@@ -493,7 +486,7 @@ fun ImageUrlWithDownloadButton(
 
     val inlineContent = mapOf("inlineContent" to InlineDownloadIcon(showImage))
 
-    val pressIndicator = remember { Modifier.clickable { runCatching { uri.openUri(url) } } }
+    val pressIndicator = remember { Modifier.fillMaxWidth().clickable { runCatching { uri.openUri(url) } } }
 
     Text(
         text = annotatedTermsString,

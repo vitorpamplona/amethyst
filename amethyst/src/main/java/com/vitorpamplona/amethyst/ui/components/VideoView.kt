@@ -30,6 +30,7 @@ import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.VideoView
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
@@ -40,9 +41,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -218,6 +219,37 @@ fun VideoView(
     accountViewModel: AccountViewModel,
     alwaysShowVideo: Boolean = false,
 ) {
+    val borderModifier =
+        if (roundedCorner) {
+            MaterialTheme.colorScheme.imageModifier
+        } else if (gallery) {
+            MaterialTheme.colorScheme.videoGalleryModifier
+        } else {
+            Modifier
+        }
+
+    VideoView(videoUri, mimeType, title, thumb, borderModifier, isFiniteHeight, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, onControllerVisibilityChanged, accountViewModel, alwaysShowVideo)
+}
+
+@Composable
+fun VideoView(
+    videoUri: String,
+    mimeType: String?,
+    title: String? = null,
+    thumb: VideoThumb? = null,
+    borderModifier: Modifier,
+    isFiniteHeight: Boolean,
+    waveform: ImmutableList<Int>? = null,
+    artworkUri: String? = null,
+    authorName: String? = null,
+    dimensions: String? = null,
+    blurhash: String? = null,
+    nostrUriCallback: String? = null,
+    onDialog: ((Boolean) -> Unit)? = null,
+    onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
+    accountViewModel: AccountViewModel,
+    alwaysShowVideo: Boolean = false,
+) {
     val defaultToStart by remember(videoUri) { mutableStateOf(DEFAULT_MUTED_SETTING.value) }
 
     val automaticallyStartPlayback =
@@ -248,8 +280,7 @@ fun VideoView(
                     defaultToStart = defaultToStart,
                     title = title,
                     thumb = thumb,
-                    roundedCorner = roundedCorner,
-                    gallery = gallery,
+                    borderModifier = borderModifier,
                     isFiniteHeight = isFiniteHeight,
                     waveform = waveform,
                     artworkUri = artworkUri,
@@ -273,19 +304,12 @@ fun VideoView(
             }
 
         Box(modifier, contentAlignment = Alignment.Center) {
-            val image =
-                if (roundedCorner) {
-                    MaterialTheme.colorScheme.imageModifier
-                } else {
-                    Modifier.fillMaxWidth()
-                }
-
             // Always displays Blurharh to avoid size flickering
             DisplayBlurHash(
                 blurhash,
                 null,
                 if (isFiniteHeight) ContentScale.FillWidth else ContentScale.FillWidth,
-                if (ratio != null) image.aspectRatio(ratio) else modifier,
+                if (ratio != null) borderModifier.aspectRatio(ratio) else borderModifier,
             )
 
             if (!automaticallyStartPlayback.value) {
@@ -302,7 +326,7 @@ fun VideoView(
                     defaultToStart = defaultToStart,
                     title = title,
                     thumb = thumb,
-                    roundedCorner = roundedCorner,
+                    borderModifier = borderModifier,
                     isFiniteHeight = isFiniteHeight,
                     waveform = waveform,
                     artworkUri = artworkUri,
@@ -326,9 +350,9 @@ fun VideoViewInner(
     defaultToStart: Boolean = false,
     title: String? = null,
     thumb: VideoThumb? = null,
-    roundedCorner: Boolean,
-    gallery: Boolean = false,
+    showControls: Boolean = false,
     isFiniteHeight: Boolean,
+    borderModifier: Modifier,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
@@ -338,7 +362,7 @@ fun VideoViewInner(
     onDialog: ((Boolean) -> Unit)? = null,
     accountViewModel: AccountViewModel,
 ) {
-    VideoPlayerActiveMutex(videoUri) { modifier, activeOnScreen ->
+    VideoPlayerActiveMutex(videoUri) { videoModifier, activeOnScreen ->
         GetMediaItem(videoUri, title, artworkUri, authorName) { mediaItem ->
             GetVideoController(
                 mediaItem = mediaItem,
@@ -351,15 +375,15 @@ fun VideoViewInner(
                     mimeType = mimeType,
                     controller = controller,
                     thumbData = thumb,
-                    roundedCorner = roundedCorner,
-                    gallery = gallery,
+                    hideControls = showControls,
                     isFiniteHeight = isFiniteHeight,
                     nostrUriCallback = nostrUriCallback,
                     waveform = waveform,
                     keepPlaying = keepPlaying,
                     automaticallyStartPlayback = automaticallyStartPlayback,
                     activeOnScreen = activeOnScreen,
-                    modifier = modifier,
+                    borderModifier = borderModifier,
+                    videoModifier = videoModifier,
                     onControllerVisibilityChanged = onControllerVisibilityChanged,
                     onDialog = onDialog,
                     accountViewModel = accountViewModel,
@@ -655,9 +679,9 @@ fun VideoPlayerActiveMutex(
         onDispose { trackingVideos.remove(myCache) }
     }
 
-    val myModifier =
+    val videoModifier =
         remember(videoUri) {
-            Modifier.fillMaxWidth().defaultMinSize(minHeight = 70.dp).onVisiblePositionChanges { distanceToCenter ->
+            Modifier.fillMaxWidth().heightIn(min = 100.dp).onVisiblePositionChanges { distanceToCenter ->
                 myCache.distanceToCenter = distanceToCenter
 
                 if (distanceToCenter != null) {
@@ -684,7 +708,7 @@ fun VideoPlayerActiveMutex(
             }
         }
 
-    inner(myModifier, active)
+    inner(videoModifier, active)
 }
 
 @Stable
@@ -699,15 +723,15 @@ private fun RenderVideoPlayer(
     mimeType: String?,
     controller: MediaController,
     thumbData: VideoThumb?,
-    roundedCorner: Boolean,
-    gallery: Boolean = false,
+    hideControls: Boolean = false,
     isFiniteHeight: Boolean,
     nostrUriCallback: String?,
     waveform: ImmutableList<Int>? = null,
     keepPlaying: MutableState<Boolean>,
     automaticallyStartPlayback: State<Boolean>,
     activeOnScreen: MutableState<Boolean>,
-    modifier: Modifier,
+    borderModifier: Modifier,
+    videoModifier: Modifier,
     onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
     onDialog: ((Boolean) -> Unit)?,
     accountViewModel: AccountViewModel,
@@ -716,27 +740,9 @@ private fun RenderVideoPlayer(
 
     val controllerVisible = remember(controller) { mutableStateOf(false) }
 
-    Box {
-        val borders = MaterialTheme.colorScheme.imageModifier
-        val bordersSquare = MaterialTheme.colorScheme.videoGalleryModifier
-        val myModifier =
-            remember(controller) {
-                if (roundedCorner) {
-                    modifier.then(
-                        borders.defaultMinSize(minHeight = 75.dp).align(Alignment.Center),
-                    )
-                } else if (gallery) {
-                    Modifier
-                    modifier.then(
-                        bordersSquare.defaultMinSize(minHeight = 75.dp).align(Alignment.Center),
-                    )
-                } else {
-                    modifier.fillMaxWidth().defaultMinSize(minHeight = 75.dp).align(Alignment.Center)
-                }
-            }
-
+    Box(modifier = borderModifier) {
         AndroidView(
-            modifier = myModifier,
+            modifier = videoModifier,
             factory = { context: Context ->
                 PlayerView(context).apply {
                     player = controller
@@ -748,7 +754,7 @@ private fun RenderVideoPlayer(
                     setBackgroundColor(Color.Transparent.toArgb())
                     setShutterBackgroundColor(Color.Transparent.toArgb())
                     controllerAutoShow = false
-                    useController = !gallery
+                    useController = !hideControls
                     thumbData?.thumb?.let { defaultArtwork = it }
                     hideController()
                     resizeMode =
@@ -757,7 +763,7 @@ private fun RenderVideoPlayer(
                         } else {
                             AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
                         }
-                    if (!gallery) {
+                    if (!hideControls) {
                         onDialog?.let { innerOnDialog ->
                             setFullscreenButtonClickListener {
                                 controller.pause()
@@ -776,7 +782,8 @@ private fun RenderVideoPlayer(
         )
 
         waveform?.let { Waveform(it, controller, remember { Modifier.align(Alignment.Center) }) }
-        if (!gallery) {
+
+        if (!hideControls) {
             val startingMuteState = remember(controller) { controller.volume < 0.001 }
 
             MuteButton(
