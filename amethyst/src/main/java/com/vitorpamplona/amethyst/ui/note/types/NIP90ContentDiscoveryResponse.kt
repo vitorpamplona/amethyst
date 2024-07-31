@@ -47,6 +47,7 @@ fun RenderNIP90ContentDiscoveryResponse(
     nav: (String) -> Unit,
 ) {
     val noteEvent = note.event as? NIP90ContentDiscoveryResponseEvent ?: return
+    val callbackUri = remember(note) { note.toNostrUri() }
 
     SensitivityWarning(
         note = note,
@@ -64,13 +65,13 @@ fun RenderNIP90ContentDiscoveryResponse(
             tags = tags,
             backgroundColor = backgroundColor,
             id = note.idHex,
-            callbackUri = note.toNostrUri(),
+            callbackUri = callbackUri,
             accountViewModel = accountViewModel,
             nav = nav,
         )
     }
 
     if (noteEvent.hasHashtags()) {
-        DisplayUncitedHashtags(noteEvent, noteEvent.content, nav)
+        DisplayUncitedHashtags(noteEvent, noteEvent.content, callbackUri, nav)
     }
 }

@@ -128,6 +128,8 @@ fun RenderTextEvent(
                 overflow = TextOverflow.Ellipsis,
             )
         } else {
+            val callbackUri = remember(note) { note.toNostrUri() }
+
             SensitivityWarning(
                 note = note,
                 accountViewModel = accountViewModel,
@@ -150,14 +152,14 @@ fun RenderTextEvent(
                         } else {
                             note.idHex
                         },
-                    callbackUri = note.toNostrUri(),
+                    callbackUri = callbackUri,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
             }
 
             if (noteEvent.hasHashtags()) {
-                DisplayUncitedHashtags(noteEvent, eventContent, nav)
+                DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, nav)
             }
         }
     }

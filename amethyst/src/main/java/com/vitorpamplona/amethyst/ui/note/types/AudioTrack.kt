@@ -216,6 +216,8 @@ fun AudioHeader(
                 }
             }
 
+            val callbackUri = remember(note) { note.toNostrUri() }
+
             content?.let {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -231,7 +233,7 @@ fun AudioHeader(
                         tags = tags,
                         backgroundColor = background,
                         id = note.idHex,
-                        callbackUri = note.toNostrUri(),
+                        callbackUri = callbackUri,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
@@ -240,7 +242,7 @@ fun AudioHeader(
 
             if (noteEvent.hasHashtags()) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    DisplayUncitedHashtags(noteEvent, nav)
+                    DisplayUncitedHashtags(noteEvent, callbackUri, nav)
                 }
             }
         }
