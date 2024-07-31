@@ -240,6 +240,16 @@ fun PrepareViewModels(
                 ),
         )
 
+    val galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel =
+        viewModel(
+            key = baseUser.pubkeyHex + "UserGalleryFeedViewModel",
+            factory =
+                NostrUserProfileGalleryFeedViewModel.Factory(
+                    baseUser,
+                    accountViewModel.account,
+                ),
+        )
+
     val followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileFollowersUserFeedViewModel",
@@ -293,16 +303,6 @@ fun PrepareViewModels(
             key = baseUser.pubkeyHex + "UserProfileBookmarksFeedViewModel",
             factory =
                 NostrUserProfileBookmarksFeedViewModel.Factory(
-                    baseUser,
-                    accountViewModel.account,
-                ),
-        )
-
-    val galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel =
-        viewModel(
-            key = baseUser.pubkeyHex + "UserGalleryFeedViewModel",
-            factory =
-                NostrUserProfileGalleryFeedViewModel.Factory(
                     baseUser,
                     accountViewModel.account,
                 ),
@@ -1574,7 +1574,6 @@ fun TabGallery(
             RenderGalleryFeed(
                 feedViewModel,
                 null,
-                0,
                 listState,
                 accountViewModel = accountViewModel,
                 nav = nav,

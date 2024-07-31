@@ -177,6 +177,69 @@ fun ZoomableContentView(
 }
 
 @Composable
+fun GalleryContentView(
+    content: BaseMediaContent,
+    roundedCorner: Boolean,
+    isFiniteHeight: Boolean,
+    accountViewModel: AccountViewModel,
+) {
+    when (content) {
+        is MediaUrlImage ->
+            SensitivityWarning(content.contentWarning != null, accountViewModel) {
+                TwoSecondController(content) { controllerVisible ->
+                    val mainImageModifier = Modifier.fillMaxWidth()
+                    val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
+
+                    UrlImageView(content, mainImageModifier, loadedImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel, gallery = true)
+                }
+            }
+        is MediaUrlVideo ->
+            SensitivityWarning(content.contentWarning != null, accountViewModel) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    VideoView(
+                        videoUri = content.url,
+                        mimeType = content.mimeType,
+                        title = content.description,
+                        artworkUri = content.artworkUri,
+                        gallery = true,
+                        authorName = content.authorName,
+                        dimensions = content.dim,
+                        blurhash = content.blurhash,
+                        roundedCorner = roundedCorner,
+                        isFiniteHeight = isFiniteHeight,
+                        nostrUriCallback = content.uri,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+            }
+        is MediaLocalImage ->
+            TwoSecondController(content) { controllerVisible ->
+                val mainImageModifier = Modifier.fillMaxWidth()
+                val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
+
+                LocalImageView(content, mainImageModifier, loadedImageModifier, isFiniteHeight, controllerVisible, accountViewModel = accountViewModel)
+            }
+        is MediaLocalVideo ->
+            content.localFile?.let {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    VideoView(
+                        videoUri = it.toUri().toString(),
+                        mimeType = content.mimeType,
+                        title = content.description,
+                        artworkUri = content.artworkUri,
+                        authorName = content.authorName,
+                        gallery = true,
+                        roundedCorner = roundedCorner,
+                        isFiniteHeight = isFiniteHeight,
+                        nostrUriCallback = content.uri,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+            }
+    }
+}
+
+@Composable
 fun TwoSecondController(
     content: BaseMediaContent,
     inner: @Composable (controllerVisible: MutableState<Boolean>) -> Unit,
@@ -303,6 +366,7 @@ fun UrlImageView(
     isFiniteHeight: Boolean,
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
+    gallery: Boolean = false,
     alwayShowImage: Boolean = false,
 ) {
     Box(contentAlignment = Alignment.Center) {
@@ -319,7 +383,14 @@ fun UrlImageView(
             SubcomposeAsyncImage(
                 model = content.url,
                 contentDescription = content.description,
-                contentScale = if (isFiniteHeight) ContentScale.Fit else ContentScale.FillWidth,
+                contentScale =
+                    if (gallery) {
+                        ContentScale.Crop
+                    } else if (isFiniteHeight) {
+                        ContentScale.Fit
+                    } else {
+                        ContentScale.FillWidth
+                    },
                 modifier = mainImageModifier,
             ) {
                 when (painter.state) {

@@ -47,16 +47,7 @@ class UserProfileGalleryFeedFilter(
             }
 
         var sorted = sort(notes)
-        var finalnotes = setOf<Note>()
-        for (item in sorted) {
-            val note = (item.event as ProfileGalleryEntryEvent).event()?.let { LocalCache.checkGetOrCreateNote(it) }
-            if (note != null) {
-                note.associatedNote = item
-                finalnotes = finalnotes + note
-            }
-        }
-
-        return finalnotes.toList()
+        return sorted.toList()
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)

@@ -139,8 +139,6 @@ open class Note(
     var relays = listOf<RelayBriefInfoCache.RelayBriefInfo>()
         private set
 
-    var associatedNote: Note? = null
-
     var lastReactionsDownloadTime: Map<String, EOSETime> = emptyMap()
 
     fun id() = Hex.decode(idHex)
