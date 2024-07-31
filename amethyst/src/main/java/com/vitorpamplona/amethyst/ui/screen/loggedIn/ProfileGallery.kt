@@ -333,24 +333,17 @@ fun InnerRenderGalleryThumb(
         contentAlignment = BottomStart,
     ) {
         card.image?.let {
-            var blurHash: String? = null
-            if ((note.associatedNote?.event as ProfileGalleryEntryEvent).blurhash() != null) {
-                blurHash = (note.associatedNote?.event as ProfileGalleryEntryEvent).blurhash()
-            }
-
-            var fullUrl = it
+            var blurHash = (note.associatedNote?.event as ProfileGalleryEntryEvent).blurhash()
             var description = (note.associatedNote?.event as ProfileGalleryEntryEvent).content
-            var hash = (note.associatedNote?.event as ProfileGalleryEntryEvent).hash()
+            // var hash = (note.associatedNote?.event as ProfileGalleryEntryEvent).hash()
             var dimensions = (note.associatedNote?.event as ProfileGalleryEntryEvent).dimensions()
             var mimeType = (note.associatedNote?.event as ProfileGalleryEntryEvent).mimeType()
-
-            // var content = Im(null, "10x10", blurhash = blurhash)
             var content: BaseMediaContent? = null
 
             if (isVideoUrl(it)) {
                 content =
                     MediaUrlVideo(
-                        url = fullUrl,
+                        url = it,
                         description = description,
                         hash = null,
                         blurhash = blurHash,
@@ -361,7 +354,7 @@ fun InnerRenderGalleryThumb(
             } else {
                 content =
                     MediaUrlImage(
-                        url = fullUrl,
+                        url = it,
                         description = description,
                         hash = null, // We don't want to show the hash banner here
                         blurhash = blurHash,
