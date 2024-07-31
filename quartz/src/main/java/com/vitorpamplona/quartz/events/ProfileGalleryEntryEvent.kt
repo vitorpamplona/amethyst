@@ -58,9 +58,9 @@ class ProfileGalleryEntryEvent(
 
     fun hasUrl() = tags.any { it.size > 1 && it[0] == URL }
 
-    fun event() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+    fun fromEvent() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
 
-    fun hasEvent() = tags.any { it.size > 1 && it[0] == "e" }
+    fun hasFromEvent() = tags.any { it.size > 1 && it[0] == "e" }
 
     fun isOneOf(mimeTypes: Set<String>) = tags.any { it.size > 1 && it[0] == MIME_TYPE && mimeTypes.contains(it[1]) }
 

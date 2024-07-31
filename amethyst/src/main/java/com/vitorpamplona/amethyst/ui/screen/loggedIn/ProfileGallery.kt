@@ -175,21 +175,41 @@ fun GalleryCardCompose(
             nav = nav,
         ) { canPreview ->
 
-            (baseNote.event as ProfileGalleryEntryEvent).event()?.let {
-                LoadNote(baseNoteHex = it, accountViewModel = accountViewModel) { note ->
-                    note?.let {
-                        (baseNote.event as ProfileGalleryEntryEvent).url()?.let { image ->
-                            GalleryCard(
+            val galleryEvent = (baseNote.event as? ProfileGalleryEntryEvent) ?: return@CheckHiddenFeedWatchBlockAndReport
+
+            galleryEvent.url()?.let { image ->
+                val sourceEvent = galleryEvent.fromEvent()
+
+                if (sourceEvent != null) {
+                    LoadNote(baseNoteHex = sourceEvent, accountViewModel = accountViewModel) { sourceNote ->
+                        if (sourceNote != null) {
+                            ClickableGalleryCard(
                                 galleryNote = baseNote,
-                                baseNote = it,
+                                baseNote = sourceNote,
                                 image = image,
                                 modifier = modifier,
                                 parentBackgroundColor = parentBackgroundColor,
                                 accountViewModel = accountViewModel,
                                 nav = nav,
                             )
+                        } else {
+                            GalleryCard(
+                                galleryNote = baseNote,
+                                image = image,
+                                modifier = modifier,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            )
                         }
                     }
+                } else {
+                    GalleryCard(
+                        galleryNote = baseNote,
+                        image = image,
+                        modifier = modifier,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
                 }
             }
         }
@@ -197,7 +217,7 @@ fun GalleryCardCompose(
 }
 
 @Composable
-fun GalleryCard(
+fun ClickableGalleryCard(
     galleryNote: Note,
     baseNote: Note,
     image: String,
@@ -208,46 +228,38 @@ fun GalleryCard(
 ) {
     // baseNote.event?.let { Text(text = it.pubKey()) }
     LongPressToQuickActionGallery(baseNote = galleryNote, accountViewModel = accountViewModel) { showPopup ->
-        CheckNewAndRenderChannelCard(
-            baseNote,
-            galleryNote,
-            image,
-            modifier,
-            parentBackgroundColor,
-            accountViewModel,
-            showPopup,
-            nav,
-        )
+        val backgroundColor =
+            calculateBackgroundColor(
+                createdAt = baseNote.createdAt(),
+                parentBackgroundColor = parentBackgroundColor,
+                accountViewModel = accountViewModel,
+            )
+
+        ClickableNote(
+            baseNote = baseNote,
+            backgroundColor = backgroundColor,
+            modifier = modifier,
+            accountViewModel = accountViewModel,
+            showPopup = showPopup,
+            nav = nav,
+        ) {
+            InnerGalleryCardBox(galleryNote, image, accountViewModel, nav)
+        }
     }
 }
 
 @Composable
-private fun CheckNewAndRenderChannelCard(
-    baseNote: Note,
+fun GalleryCard(
     galleryNote: Note,
     image: String,
     modifier: Modifier = Modifier,
-    parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    showPopup: () -> Unit,
     nav: (String) -> Unit,
 ) {
-    val backgroundColor =
-        calculateBackgroundColor(
-            createdAt = baseNote.createdAt(),
-            parentBackgroundColor = parentBackgroundColor,
-            accountViewModel = accountViewModel,
-        )
-
-    ClickableNote(
-        baseNote = baseNote,
-        backgroundColor = backgroundColor,
-        modifier = modifier,
-        accountViewModel = accountViewModel,
-        showPopup = showPopup,
-        nav = nav,
-    ) {
-        InnerGalleryCardBox(galleryNote, image, accountViewModel, nav)
+    LongPressToQuickActionGallery(baseNote = galleryNote, accountViewModel = accountViewModel) { showPopup ->
+        Column(modifier = modifier) {
+            InnerGalleryCardBox(galleryNote, image, accountViewModel, nav)
+        }
     }
 }
 
