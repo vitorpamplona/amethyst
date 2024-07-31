@@ -25,6 +25,8 @@ jna = "5.14.0"
 junit = "4.13.2"
 kotlin = "2.0.0"
 kotlinxCollectionsImmutable = "0.3.7"
+kotlinxSerialization = "1.7.1"
+kotlinxSerializationPlugin = "2.0.0"
 languageId = "17.0.5"
 lazysodiumAndroid = "5.1.0"
 lifecycleRuntimeKtx = "2.8.4"
@@ -98,6 +100,7 @@ jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackso
 jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
+kotlinx-serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "kotlinxSerialization" }
 lazysodium-android = { group = "com.goterl", name = "lazysodium-android", version.ref = "lazysodiumAndroid" }
 markdown-commonmark = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-commonmark", version.ref = "markdown" }
 markdown-ui = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui", version.ref = "markdown" }
@@ -127,3 +130,4 @@ googleServices = { id = "com.google.gms.google-services", version.ref = "gms" }
 jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 jetbrainsKotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 jetbrainsComposeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+serialization = { id = 'org.jetbrains.kotlin.plugin.serialization', version.ref = 'kotlinxSerializationPlugin' }

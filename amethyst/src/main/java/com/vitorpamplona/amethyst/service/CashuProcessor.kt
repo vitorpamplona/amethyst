@@ -23,14 +23,20 @@ package com.vitorpamplona.amethyst.service
 import android.content.Context
 import android.util.LruCache
 import androidx.compose.runtime.Immutable
-import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.Event
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.cbor.ByteString
+import kotlinx.serialization.cbor.Cbor
+import kotlinx.serialization.decodeFromByteArray
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -42,16 +48,26 @@ data class CashuToken(
     val token: String,
     val mint: String,
     val totalAmount: Long,
-    val proofs: JsonNode,
+    val proofs: List<Proof>,
+)
+
+@Serializable
+@Immutable
+class Proof(
+    val amount: Int,
+    val id: String,
+    val secret: String,
+    val C: String,
 )
 
 object CachedCashuProcessor {
-    val cashuCache = LruCache<String, GenericLoadable<CashuToken>>(20)
+    val cashuCache = LruCache<String, GenericLoadable<List<CashuToken>>>(20)
 
-    fun cached(token: String): GenericLoadable<CashuToken> = cashuCache[token] ?: GenericLoadable.Loading()
+    fun cached(token: String): GenericLoadable<List<CashuToken>> = cashuCache[token] ?: GenericLoadable.Loading()
 
-    fun parse(token: String): GenericLoadable<CashuToken> {
+    fun parse(token: String): GenericLoadable<List<CashuToken>> {
         if (cashuCache[token] !is GenericLoadable.Loaded) {
+            checkNotInMainThread()
             val newCachuData = CashuProcessor().parse(token)
 
             cashuCache.put(token, newCachuData)
@@ -62,25 +78,138 @@ object CachedCashuProcessor {
 }
 
 class CashuProcessor {
-    fun parse(cashuToken: String): GenericLoadable<CashuToken> {
+    @Serializable
+    class V3Token(
+        val unit: String?, // unit
+        val memo: String?, // memo
+        val token: List<V3T>?,
+    )
+
+    @Serializable
+    class V3T(
+        val mint: String,
+        val proofs: List<Proof>,
+    )
+
+    fun parse(cashuToken: String): GenericLoadable<List<CashuToken>> {
+        checkNotInMainThread()
+
+        if (cashuToken.startsWith("cashuA")) {
+            return parseCashuA(cashuToken)
+        }
+
+        if (cashuToken.startsWith("cashuB")) {
+            return parseCashuB(cashuToken)
+        }
+
+        return GenericLoadable.Error("Could not parse this cashu token")
+    }
+
+    fun parseCashuA(cashuToken: String): GenericLoadable<List<CashuToken>> {
         checkNotInMainThread()
 
         try {
             val base64token = cashuToken.replace("cashuA", "")
-            val cashu = jacksonObjectMapper().readTree(String(Base64.getDecoder().decode(base64token)))
-            val token = cashu.get("token").get(0)
-            val proofs = token.get("proofs")
-            val mint = token.get("mint").asText()
+            val cashu = jacksonObjectMapper().readValue<V3Token>(String(Base64.getDecoder().decode(base64token)))
 
-            var totalAmount = 0L
-            for (proof in proofs) {
-                totalAmount += proof.get("amount").asLong()
+            if (cashu.token == null) {
+                return GenericLoadable.Error("No token found")
             }
 
-            return GenericLoadable.Loaded(CashuToken(cashuToken, mint, totalAmount, proofs))
+            val converted =
+                cashu.token.map { token ->
+                    val proofs = token.proofs
+                    val mint = token.mint
+
+                    var totalAmount = 0L
+                    for (proof in proofs) {
+                        totalAmount += proof.amount
+                    }
+
+                    CashuToken(cashuToken, mint, totalAmount, proofs)
+                }
+
+            return GenericLoadable.Loaded(converted)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            return GenericLoadable.Error<CashuToken>("Could not parse this cashu token")
+            return GenericLoadable.Error<List<CashuToken>>("Could not parse this cashu token")
+        }
+    }
+
+    @Serializable
+    class V4Token(
+        val m: String, // mint
+        val u: String, // unit
+        val d: String? = null, // memo
+        val t: Array<V4T>?,
+    )
+
+    @Serializable
+    class V4T(
+        @ByteString
+        val i: ByteArray, // identifier
+        val p: Array<V4Proof>,
+    )
+
+    @Serializable
+    class V4Proof(
+        val a: Int, // amount
+        val s: String, // secret
+        @ByteString
+        val c: ByteArray, // signature
+        val d: V4DleqProof? = null, // no idea what this is
+        val w: String? = null, // witness
+    )
+
+    @Serializable
+    class V4DleqProof(
+        @ByteString
+        val e: ByteArray,
+        @ByteString
+        val s: ByteArray,
+        @ByteString
+        val r: ByteArray,
+    )
+
+    @OptIn(ExperimentalSerializationApi::class)
+    fun parseCashuB(cashuToken: String): GenericLoadable<List<CashuToken>> {
+        checkNotInMainThread()
+
+        try {
+            val base64token = cashuToken.replace("cashuB", "")
+
+            val parser = Cbor { ignoreUnknownKeys = true }
+
+            val v4Token = parser.decodeFromByteArray<V4Token>(Base64.getUrlDecoder().decode(base64token))
+
+            val v4proofs = v4Token.t ?: return GenericLoadable.Error("No token found")
+
+            val converted =
+                v4proofs.map { id ->
+                    val proofs =
+                        id.p.map {
+                            Proof(
+                                it.a,
+                                id.i.toHexKey(),
+                                it.s,
+                                it.c.toHexKey(),
+                            )
+                        }
+                    val mint = v4Token.m
+
+                    var totalAmount = 0L
+                    for (proof in proofs) {
+                        totalAmount += proof.amount
+                    }
+
+                    CashuToken(cashuToken, mint, totalAmount, proofs)
+                }
+
+            return GenericLoadable.Loaded(converted)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            if (e is CancellationException) throw e
+            return GenericLoadable.Error("Could not parse this cashu token")
         }
     }
 
@@ -209,7 +338,21 @@ class CashuProcessor {
             val factory = Event.mapper.nodeFactory
 
             val jsonObject = factory.objectNode()
-            jsonObject.put("proofs", token.proofs)
+
+            jsonObject.replace(
+                "proofs",
+                factory.arrayNode(token.proofs.size).apply {
+                    token.proofs.forEach {
+                        addObject().apply {
+                            put("amount", it.amount)
+                            put("id", it.id)
+                            put("secret", it.secret)
+                            put("C", it.C)
+                        }
+                    }
+                },
+            )
+
             jsonObject.put("pr", invoice)
 
             val mediaType = "application/json; charset=utf-8".toMediaType()

@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.components
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -31,11 +30,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -53,14 +49,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fasterxml.jackson.databind.node.TextNode
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
@@ -69,7 +63,6 @@ import com.vitorpamplona.amethyst.service.CachedCashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
-import com.vitorpamplona.amethyst.ui.note.CashuIcon
 import com.vitorpamplona.amethyst.ui.note.CopyIcon
 import com.vitorpamplona.amethyst.ui.note.OpenInNewIcon
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
@@ -77,14 +70,11 @@ import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.SmallishBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -108,8 +98,8 @@ fun CashuPreview(
 
     CrossfadeIfEnabled(targetState = cashuData, label = "CashuPreview", accountViewModel = accountViewModel) {
         when (it) {
-            is GenericLoadable.Loaded<CashuToken> -> CashuPreview(it.loaded, accountViewModel)
-            is GenericLoadable.Error<CashuToken> ->
+            is GenericLoadable.Loaded<List<CashuToken>> -> CashuPreview(it.loaded, accountViewModel)
+            is GenericLoadable.Error<List<CashuToken>> ->
                 Text(
                     text = "$cashutoken ",
                     style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
@@ -121,10 +111,12 @@ fun CashuPreview(
 
 @Composable
 fun CashuPreview(
-    token: CashuToken,
+    tokens: List<CashuToken>,
     accountViewModel: AccountViewModel,
 ) {
-    CashuPreviewNew(token, accountViewModel::meltCashu, accountViewModel::toast)
+    tokens.forEach {
+        CashuPreviewNew(it, accountViewModel::meltCashu, accountViewModel::toast)
+    }
 }
 
 @Composable
@@ -137,159 +129,11 @@ fun CashuPreviewPreview() {
 
     AmethystTheme(sharedPrefsViewModel = sharedPreferencesViewModel) {
         Column {
-            CashuPreview(
-                token = CashuToken("token", "mint", 32400, TextNode("")),
-                melt = { token, context, onDone -> },
-                toast = { title, message -> },
-            )
-
             CashuPreviewNew(
-                token = CashuToken("token", "mint", 32400, TextNode("")),
+                token = CashuToken("token", "mint", 32400, listOf()),
                 melt = { token, context, onDone -> },
                 toast = { title, message -> },
             )
-        }
-    }
-}
-
-@Composable
-fun CashuPreview(
-    token: CashuToken,
-    melt: (CashuToken, Context, (String, String) -> Unit) -> Unit,
-    toast: (String, String) -> Unit,
-) {
-    val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
-
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp)
-                .clip(shape = QuoteBorder)
-                .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder),
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 10.dp),
-            ) {
-                Icon(
-                    imageVector = CustomHashTagIcons.Cashu,
-                    null,
-                    modifier = Size20Modifier,
-                    tint = Color.Unspecified,
-                )
-
-                Text(
-                    text = stringRes(R.string.cashu),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.W500,
-                    modifier = Modifier.padding(start = 10.dp),
-                )
-            }
-
-            HorizontalDivider(thickness = DividerThickness)
-
-            Text(
-                text = "${token.totalAmount} ${stringRes(id = R.string.sats)}",
-                fontSize = 25.sp,
-                fontWeight = FontWeight.W500,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 10.dp),
-            )
-
-            Row(
-                modifier =
-                    Modifier
-                        .padding(top = 5.dp)
-                        .fillMaxWidth(),
-            ) {
-                var isRedeeming by remember { mutableStateOf(false) }
-
-                Button(
-                    onClick = {
-                        isRedeeming = true
-                        melt(token, context) { title, message ->
-                            toast(title, message)
-                            isRedeeming = false
-                        }
-                    },
-                    shape = QuoteBorder,
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        ),
-                ) {
-                    if (isRedeeming) {
-                        LoadingAnimation()
-                    } else {
-                        ZapIcon(Size20Modifier, tint = Color.White)
-                    }
-                    Spacer(DoubleHorzSpacer)
-
-                    Text(
-                        stringRes(id = R.string.cashu_redeem_to_zap),
-                        color = Color.White,
-                        fontSize = 16.sp,
-                    )
-                }
-            }
-
-            Spacer(modifier = StdHorzSpacer)
-            Button(
-                onClick = {
-                    try {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("cashu://${token.token}"))
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-
-                        startActivity(context, intent, null)
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        toast(stringRes(context, R.string.cashu), stringRes(context, R.string.cashu_no_wallet_found))
-                    }
-                },
-                shape = QuoteBorder,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                    ),
-            ) {
-                CashuIcon(Size20Modifier)
-                Spacer(DoubleHorzSpacer)
-                Text(
-                    stringRes(id = R.string.cashu_redeem_to_cashu),
-                    color = Color.White,
-                    fontSize = 16.sp,
-                )
-            }
-            Spacer(modifier = StdHorzSpacer)
-            Button(
-                onClick = {
-                    // Copying the token to clipboard
-                    clipboardManager.setText(AnnotatedString(token.token))
-                },
-                shape = QuoteBorder,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                    ),
-            ) {
-                CopyIcon(Size20Modifier, Color.White)
-                Spacer(DoubleHorzSpacer)
-                Text(stringRes(id = R.string.cashu_copy_token), color = Color.White, fontSize = 16.sp)
-            }
-            Spacer(modifier = StdHorzSpacer)
         }
     }
 }

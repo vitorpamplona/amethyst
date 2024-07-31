@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinAndroid)
     alias(libs.plugins.googleServices)
     alias(libs.plugins.jetbrainsComposeCompiler)
+    alias(libs.plugins.serialization)
 }
 
 android {
@@ -281,6 +282,9 @@ dependencies {
     implementation libs.abedElazizShe.image.compressor
     // Image compression lib
     implementation libs.zelory.video.compressor
+
+    // Cbor for cashuB format
+    implementation libs.kotlinx.serialization.cbor
 
     testImplementation libs.junit
     testImplementation libs.mockk

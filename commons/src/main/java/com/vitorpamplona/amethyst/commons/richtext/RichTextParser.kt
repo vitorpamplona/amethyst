@@ -235,7 +235,7 @@ class RichTextParser {
 
         if (word.startsWith("lnurl", true)) return WithdrawSegment(word)
 
-        if (word.startsWith("cashuA", true)) return CashuSegment(word)
+        if (word.startsWith("cashuA", true) || word.startsWith("cashuB", true)) return CashuSegment(word)
 
         if (word.startsWith("#")) return parseHash(word, tags)
 
