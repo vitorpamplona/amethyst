@@ -240,7 +240,6 @@ private fun CheckNewAndRenderChannelCard(
             parentBackgroundColor = parentBackgroundColor,
             accountViewModel = accountViewModel,
         )
-    println("NOTE:" + (baseNote.event?.id() ?: "nah"))
 
     ClickableNote(
         baseNote = baseNote,
