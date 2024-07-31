@@ -181,7 +181,6 @@ fun GalleryContentView(
     content: BaseMediaContent,
     roundedCorner: Boolean,
     isFiniteHeight: Boolean,
-    isFiniteWidth: Boolean,
     accountViewModel: AccountViewModel,
 ) {
     when (content) {

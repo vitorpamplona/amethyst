@@ -375,7 +375,6 @@ fun InnerRenderGalleryThumb(
                 content = content,
                 roundedCorner = false,
                 isFiniteHeight = false,
-                isFiniteWidth = false,
                 accountViewModel = accountViewModel,
             )
         }
