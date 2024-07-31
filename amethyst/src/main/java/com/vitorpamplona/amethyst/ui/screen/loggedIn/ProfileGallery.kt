@@ -45,18 +45,19 @@ import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
-import coil.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVideoUrl
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.components.GalleryContentView
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
-import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.ClickableNote
 import com.vitorpamplona.amethyst.ui.note.LongPressToQuickActionGallery
@@ -332,27 +333,53 @@ fun InnerRenderGalleryThumb(
         contentAlignment = BottomStart,
     ) {
         card.image?.let {
-            if (isVideoUrl(it)) {
-                VideoView(
-                    videoUri = it,
-                    mimeType = null,
-                    title = "",
-                    authorName = note.author?.toBestDisplayName(),
-                    roundedCorner = false,
-                    gallery = true,
-                    isFiniteHeight = false,
-                    alwaysShowVideo = true,
-                    accountViewModel = accountViewModel,
-                )
-            } else {
-                AsyncImage(
-                    model = it,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
+            var blurHash: String? = null
+            if ((note.associatedNote?.event as ProfileGalleryEntryEvent).blurhash() != null) {
+                blurHash = (note.associatedNote?.event as ProfileGalleryEntryEvent).blurhash()
             }
+
+            var fullUrl = it
+            var description = (note.associatedNote?.event as ProfileGalleryEntryEvent).content
+            var hash = (note.associatedNote?.event as ProfileGalleryEntryEvent).hash()
+            var dimensions = (note.associatedNote?.event as ProfileGalleryEntryEvent).dimensions()
+            var mimeType = (note.associatedNote?.event as ProfileGalleryEntryEvent).mimeType()
+
+            // var content = Im(null, "10x10", blurhash = blurhash)
+            var content: BaseMediaContent? = null
+
+            if (isVideoUrl(it)) {
+                content =
+                    MediaUrlVideo(
+                        url = fullUrl,
+                        description = description,
+                        hash = null,
+                        blurhash = blurHash,
+                        dim = dimensions,
+                        uri = null,
+                        mimeType = mimeType,
+                    )
+            } else {
+                content =
+                    MediaUrlImage(
+                        url = fullUrl,
+                        description = description,
+                        hash = null, // We don't want to show the hash banner here
+                        blurhash = blurHash,
+                        dim = dimensions,
+                        uri = null,
+                        mimeType = mimeType,
+                    )
+            }
+
+            GalleryContentView(
+                content = content,
+                roundedCorner = false,
+                isFiniteHeight = false,
+                isFiniteWidth = false,
+                accountViewModel = accountViewModel,
+            )
         }
+            // }
             ?: run { DisplayGalleryAuthorBanner(note) }
     }
 }
