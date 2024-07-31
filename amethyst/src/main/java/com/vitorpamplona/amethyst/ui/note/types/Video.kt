@@ -165,6 +165,8 @@ fun VideoDisplay(
             }
 
             summary?.let {
+                val callbackUri = remember(note) { note.toNostrUri() }
+
                 TranslatableRichTextViewer(
                     content = it,
                     canPreview = canPreview && !makeItShort,
@@ -173,7 +175,7 @@ fun VideoDisplay(
                     tags = tags,
                     backgroundColor = backgroundColor,
                     id = note.idHex,
-                    callbackUri = note.toNostrUri(),
+                    callbackUri = callbackUri,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -182,7 +184,7 @@ fun VideoDisplay(
                     Row(
                         Modifier.fillMaxWidth(),
                     ) {
-                        DisplayUncitedHashtags(event, summary, nav)
+                        DisplayUncitedHashtags(event, summary, callbackUri, nav)
                     }
                 }
             }

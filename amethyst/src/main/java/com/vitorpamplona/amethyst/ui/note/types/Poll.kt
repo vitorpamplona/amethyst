@@ -97,6 +97,7 @@ fun RenderPoll(
         )
     } else {
         val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+        val callbackUri = remember(note) { note.toNostrUri() }
 
         SensitivityWarning(
             note = note,
@@ -110,7 +111,7 @@ fun RenderPoll(
                 tags = tags,
                 backgroundColor = backgroundColor,
                 id = note.idHex,
-                callbackUri = note.toNostrUri(),
+                callbackUri = callbackUri,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -125,7 +126,7 @@ fun RenderPoll(
         }
 
         if (noteEvent.hasHashtags()) {
-            DisplayUncitedHashtags(noteEvent, eventContent, nav)
+            DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, nav)
         }
     }
 }

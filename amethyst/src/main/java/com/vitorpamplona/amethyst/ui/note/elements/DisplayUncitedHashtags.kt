@@ -42,9 +42,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun DisplayUncitedHashtags(
     event: Event,
+    callbackUri: String? = null,
     nav: (String) -> Unit,
 ) {
-    DisplayUncitedHashtags(event, event.content, nav)
+    DisplayUncitedHashtags(event, event.content, callbackUri, nav)
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -52,6 +53,7 @@ fun DisplayUncitedHashtags(
 fun DisplayUncitedHashtags(
     event: Event,
     content: String,
+    callbackUri: String? = null,
     nav: (String) -> Unit,
 ) {
     val unusedHashtags by
@@ -59,7 +61,7 @@ fun DisplayUncitedHashtags(
             val tagsInEvent = event.hashtags()
             if (tagsInEvent.isNotEmpty()) {
                 launch(Dispatchers.Default) {
-                    val state = CachedRichTextParser.parseText(content, event.tags.toImmutableListOfLists())
+                    val state = CachedRichTextParser.parseText(content, event.tags.toImmutableListOfLists(), callbackUri)
 
                     val tagsInContent =
                         state

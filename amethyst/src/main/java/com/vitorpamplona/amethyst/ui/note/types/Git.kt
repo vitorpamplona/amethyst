@@ -170,23 +170,23 @@ private fun RenderGitPatchEvent(
                 overflow = TextOverflow.Ellipsis,
             )
         } else {
+            val callbackUri = remember(note) { note.toNostrUri() }
+
             SensitivityWarning(
                 note = note,
                 accountViewModel = accountViewModel,
             ) {
-                val modifier = remember(note) { Modifier.fillMaxWidth() }
-                val tags =
-                    remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+                val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
 
                 TranslatableRichTextViewer(
                     content = eventContent,
                     canPreview = canPreview && !makeItShort,
                     quotesLeft = quotesLeft,
-                    modifier = modifier,
+                    modifier = Modifier.fillMaxWidth(),
                     tags = tags,
                     backgroundColor = backgroundColor,
                     id = note.idHex,
-                    callbackUri = note.toNostrUri(),
+                    callbackUri = callbackUri,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -196,6 +196,7 @@ private fun RenderGitPatchEvent(
                 DisplayUncitedHashtags(
                     event = noteEvent,
                     content = eventContent,
+                    callbackUri = callbackUri,
                     nav = nav,
                 )
             }
@@ -274,11 +275,12 @@ private fun RenderGitIssueEvent(
                 overflow = TextOverflow.Ellipsis,
             )
         } else {
+            val callbackUri = remember(note) { note.toNostrUri() }
+
             SensitivityWarning(
                 note = note,
                 accountViewModel = accountViewModel,
             ) {
-                val modifier = remember(note) { Modifier.fillMaxWidth() }
                 val tags =
                     remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
 
@@ -286,18 +288,18 @@ private fun RenderGitIssueEvent(
                     content = eventContent,
                     canPreview = canPreview && !makeItShort,
                     quotesLeft = quotesLeft,
-                    modifier = modifier,
+                    modifier = Modifier.fillMaxWidth(),
                     tags = tags,
                     backgroundColor = backgroundColor,
                     id = note.idHex,
-                    callbackUri = note.toNostrUri(),
+                    callbackUri = callbackUri,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
             }
 
             if (note.event?.hasHashtags() == true) {
-                DisplayUncitedHashtags(noteEvent, eventContent, nav)
+                DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, nav)
             }
         }
     }
