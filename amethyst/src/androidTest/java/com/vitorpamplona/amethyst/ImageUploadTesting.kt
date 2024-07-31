@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst
 import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
@@ -72,6 +73,7 @@ class ImageUploadTesting {
                     sensitiveContent = null,
                     serverInfo,
                     onProgress = {},
+                    context = InstrumentationRegistry.getInstrumentation().targetContext,
                 )
 
         val url = result.tags!!.first { it[0] == "url" }.get(1)
