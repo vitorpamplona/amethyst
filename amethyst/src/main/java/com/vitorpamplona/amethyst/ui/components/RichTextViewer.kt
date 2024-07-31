@@ -431,7 +431,7 @@ private fun RenderWordWithPreview(
     nav: (String) -> Unit,
 ) {
     when (word) {
-        is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
+        is ImageSegment -> ZoomableContentView(word.segmentText, state, callbackUri, accountViewModel)
         is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, callbackUri, accountViewModel)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
         is InvoiceSegment -> MayBeInvoicePreview(word.segmentText, accountViewModel)
@@ -493,11 +493,14 @@ fun ImageFromBase64(base64String: String) {
 private fun ZoomableContentView(
     word: String,
     state: RichTextViewerState,
+    callbackUri: String?,
     accountViewModel: AccountViewModel,
 ) {
     state.imagesForPager[word]?.let {
+        val contentwithuri = it
+        contentwithuri.uri = callbackUri
         Box(modifier = HalfVertPadding) {
-            ZoomableContentView(it, state.imageList, roundedCorner = true, isFiniteHeight = false, accountViewModel)
+            ZoomableContentView(contentwithuri, state.imageList, roundedCorner = true, isFiniteHeight = false, accountViewModel)
         }
     }
 }

@@ -37,7 +37,7 @@ abstract class MediaUrlContent(
     val hash: String? = null,
     dim: String? = null,
     blurhash: String? = null,
-    val uri: String? = null,
+    var uri: String? = null,
     val mimeType: String? = null,
 ) : BaseMediaContent(description, dim, blurhash)
 
