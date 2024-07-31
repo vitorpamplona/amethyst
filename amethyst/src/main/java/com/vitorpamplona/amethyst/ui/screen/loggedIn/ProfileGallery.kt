@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVideoUrl
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.GalleryContentView
@@ -80,7 +81,6 @@ import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 fun RenderGalleryFeed(
     viewModel: FeedViewModel,
     routeForLastRead: String?,
-    forceEventKind: Int?,
     listState: LazyGridState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -104,7 +104,6 @@ fun RenderGalleryFeed(
                     state,
                     routeForLastRead,
                     listState,
-                    forceEventKind,
                     accountViewModel,
                     nav,
                 )
@@ -122,7 +121,6 @@ private fun GalleryFeedLoaded(
     state: FeedState.Loaded,
     routeForLastRead: String?,
     listState: LazyGridState,
-    forceEventKind: Int?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -139,7 +137,6 @@ private fun GalleryFeedLoaded(
                     baseNote = item,
                     routeForLastRead = routeForLastRead,
                     modifier = Modifier,
-                    forceEventKind = forceEventKind,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -158,7 +155,6 @@ fun GalleryCardCompose(
     routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
-    forceEventKind: Int?,
     isHiddenFeed: Boolean = false,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -173,20 +169,29 @@ fun GalleryCardCompose(
             nav = nav,
         ) { canPreview ->
 
-            if (baseNote.associatedNote != null) {
-                if (baseNote.associatedNote!!.event != null) {
-                    val image = (baseNote.associatedNote!!.event as ProfileGalleryEntryEvent).url()
-                    if (image != null) {
-                        GalleryCard(
-                            galleryNote = baseNote.associatedNote!!,
-                            baseNote = baseNote,
-                            image = image,
-                            modifier = modifier,
-                            parentBackgroundColor = parentBackgroundColor,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
+            // TODO Vitor, this works, but maybe you know of a better way to run this here in the background
+            // as LocalCache.checkGetOrCreateNote(it) can not run on the main thread
+            var note: Note? = null
+            val thread =
+                Thread {
+                    note = (baseNote.event as ProfileGalleryEntryEvent).event()?.let { LocalCache.checkGetOrCreateNote(it) }
+                }
+            thread.start()
+            thread.join()
+            // TODO End
+
+            val image = (baseNote.event as ProfileGalleryEntryEvent).url()
+            if (image != null) {
+                note?.let {
+                    GalleryCard(
+                        galleryNote = baseNote,
+                        baseNote = it,
+                        image = image,
+                        modifier = modifier,
+                        parentBackgroundColor = parentBackgroundColor,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
                 }
             }
         }
@@ -207,6 +212,7 @@ fun GalleryCard(
     LongPressToQuickActionGallery(baseNote = galleryNote, accountViewModel = accountViewModel) { showPopup ->
         CheckNewAndRenderChannelCard(
             baseNote,
+            galleryNote,
             image,
             modifier,
             parentBackgroundColor,
@@ -220,6 +226,7 @@ fun GalleryCard(
 @Composable
 private fun CheckNewAndRenderChannelCard(
     baseNote: Note,
+    galleryNote: Note,
     image: String,
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
@@ -233,6 +240,7 @@ private fun CheckNewAndRenderChannelCard(
             parentBackgroundColor = parentBackgroundColor,
             accountViewModel = accountViewModel,
         )
+    println("NOTE:" + (baseNote.event?.id() ?: "nah"))
 
     ClickableNote(
         baseNote = baseNote,
@@ -242,7 +250,7 @@ private fun CheckNewAndRenderChannelCard(
         showPopup = showPopup,
         nav = nav,
     ) {
-        InnerGalleryCardBox(baseNote, image, accountViewModel, nav)
+        InnerGalleryCardBox(galleryNote, image, accountViewModel, nav)
     }
 }
 
@@ -268,7 +276,6 @@ data class GalleryThumb(
     val id: String?,
     val image: String?,
     val title: String?,
-    // val price: Price?,
 )
 
 @Composable
@@ -288,7 +295,6 @@ fun RenderGalleryThumb(
                     image = image,
                     title = "",
                     // noteEvent?.title(),
-                    // price = noteEvent?.price(),
                 )
             }.distinctUntilChanged()
             .observeAsState(
@@ -299,7 +305,7 @@ fun RenderGalleryThumb(
                 ),
             )
 
-    InnerRenderGalleryThumb(card as GalleryThumb, baseNote, accountViewModel)
+    InnerRenderGalleryThumb(card, baseNote, accountViewModel)
 }
 
 @Preview
@@ -312,7 +318,6 @@ fun RenderGalleryThumbPreview(accountViewModel: AccountViewModel) {
                     id = "",
                     image = null,
                     title = "Like New",
-                    // price = Price("800000", "SATS", null),
                 ),
             note = Note("hex"),
             accountViewModel = accountViewModel,
@@ -333,11 +338,11 @@ fun InnerRenderGalleryThumb(
         contentAlignment = BottomStart,
     ) {
         card.image?.let {
-            var blurHash = (note.associatedNote?.event as ProfileGalleryEntryEvent).blurhash()
-            var description = (note.associatedNote?.event as ProfileGalleryEntryEvent).content
-            // var hash = (note.associatedNote?.event as ProfileGalleryEntryEvent).hash()
-            var dimensions = (note.associatedNote?.event as ProfileGalleryEntryEvent).dimensions()
-            var mimeType = (note.associatedNote?.event as ProfileGalleryEntryEvent).mimeType()
+            var blurHash = (note.event as ProfileGalleryEntryEvent).blurhash()
+            var description = (note.event as ProfileGalleryEntryEvent).content
+            // var hash = (note.event as ProfileGalleryEntryEvent).hash()
+            var dimensions = (note.event as ProfileGalleryEntryEvent).dimensions()
+            var mimeType = (note.event as ProfileGalleryEntryEvent).mimeType()
             var content: BaseMediaContent? = null
 
             if (isVideoUrl(it)) {

@@ -1574,7 +1574,6 @@ fun TabGallery(
             RenderGalleryFeed(
                 feedViewModel,
                 null,
-                0,
                 listState,
                 accountViewModel = accountViewModel,
                 nav = nav,
