@@ -803,4 +803,6 @@
     <string name="http_status_508">Boucle détectée - Le serveur détecte une boucle infinie lors du traitement de la requête</string>
     <string name="http_status_511">Authentification réseau requise - Le client doit être authentifié pour accéder au réseau</string>
     <string name="add_a_nip96_server">Ajouter un serveur NIP-96</string>
+    <string name="delete_all">Tout supprimer</string>
+    <string name="delete_all_drafts_confirmation">Êtes-vous sûr de vouloir supprimer tous les brouillons ?</string>
 </resources>

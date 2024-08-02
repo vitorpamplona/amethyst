@@ -803,4 +803,6 @@
     <string name="http_status_508">Loop Detected - 服务器处理该请求时检测到死循环。</string>
     <string name="http_status_511">Network Authentication Required - 客户端必须通过认证才能访问该网络。</string>
     <string name="add_a_nip96_server">添加 NIP-96 服务器</string>
+    <string name="delete_all">删除所有</string>
+    <string name="delete_all_drafts_confirmation">确定要删除所有草稿吗？</string>
 </resources>
