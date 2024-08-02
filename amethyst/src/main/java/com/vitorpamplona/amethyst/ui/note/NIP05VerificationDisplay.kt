@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.nip05
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -168,7 +169,7 @@ private fun VerifyAndDisplayNIP05OrStatusLine(
                 if (nip05Verified.value != true) {
                     DisplayNIP05(nip05, nip05Verified, accountViewModel)
                 } else if (!statuses.isEmpty()) {
-                    RotateStatuses(statuses, accountViewModel, nav)
+                    ObserveRotateStatuses(statuses, accountViewModel, nav)
                 } else {
                     DisplayNIP05(nip05, nip05Verified, accountViewModel)
                 }
@@ -181,6 +182,29 @@ private fun VerifyAndDisplayNIP05OrStatusLine(
             }
         }
     }
+}
+
+@Composable
+fun ObserveRotateStatuses(
+    statuses: ImmutableList<AddressableNote>,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    ObserveAllStatusesToAvoidSwitchigAllTheTime(statuses)
+
+    RotateStatuses(
+        statuses,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
+fun ObserveAllStatusesToAvoidSwitchigAllTheTime(statuses: ImmutableList<AddressableNote>) {
+    statuses
+        .map {
+            it.live().metadata.observeAsState()
+        }
 }
 
 @Composable
@@ -221,14 +245,29 @@ fun DisplayStatus(
     nav: (String) -> Unit,
 ) {
     val noteState by addressableNote.live().metadata.observeAsState()
+    val noteEvent = noteState?.note?.event ?: return
 
-    val content = remember(noteState) { addressableNote.event?.content() ?: "" }
-    val type = remember(noteState) { (addressableNote.event as? AddressableEvent)?.dTag() ?: "" }
-    val url = remember(noteState) { addressableNote.event?.firstTaggedUrl()?.ifBlank { null } }
-    val nostrATag = remember(noteState) { addressableNote.event?.firstTaggedAddress() }
-    val nostrHexID =
-        remember(noteState) { addressableNote.event?.firstTaggedEvent()?.ifBlank { null } }
+    DisplayStatusInner(
+        noteEvent.content(),
+        (noteEvent as? AddressableEvent)?.dTag() ?: "",
+        noteEvent.firstTaggedUrl()?.ifBlank { null },
+        noteEvent.firstTaggedAddress(),
+        noteEvent.firstTaggedEvent()?.ifBlank { null },
+        accountViewModel,
+        nav,
+    )
+}
 
+@Composable
+fun DisplayStatusInner(
+    content: String,
+    type: String,
+    url: String?,
+    nostrATag: ATag?,
+    nostrHexID: String?,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
     when (type) {
         "music" ->
             Icon(
