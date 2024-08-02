@@ -138,13 +138,13 @@ abstract class NostrDataSource(
         }
 
     init {
-        Log.d(this.javaClass.simpleName, "${this.javaClass.simpleName} Subscribe")
+        Log.d("DataSource", "${this.javaClass.simpleName} Subscribe")
         Client.subscribe(clientListener)
     }
 
     fun destroy() {
         // makes sure to run
-        Log.d(this.javaClass.simpleName, "${this.javaClass.simpleName} Unsubscribe")
+        Log.d("DataSource", "${this.javaClass.simpleName} Unsubscribe")
         stop()
         Client.unsubscribe(clientListener)
         scope.cancel()
@@ -152,7 +152,7 @@ abstract class NostrDataSource(
     }
 
     open fun start() {
-        println("DataSource: ${this.javaClass.simpleName} Start")
+        Log.d("DataSource", "${this.javaClass.simpleName} Start")
         active = true
         resetFilters()
     }
@@ -160,7 +160,7 @@ abstract class NostrDataSource(
     @OptIn(DelicateCoroutinesApi::class)
     open fun stop() {
         active = false
-        println("DataSource: ${this.javaClass.simpleName} Stop")
+        Log.d("DataSource", "${this.javaClass.simpleName} Stop")
 
         GlobalScope.launch(Dispatchers.IO) {
             subscriptions.values.forEach { subscription ->
@@ -172,7 +172,7 @@ abstract class NostrDataSource(
 
     open fun stopSync() {
         active = false
-        println("DataSource: ${this.javaClass.simpleName} Stop")
+        Log.d("DataSource", "${this.javaClass.simpleName} Stop")
 
         subscriptions.values.forEach { subscription ->
             Client.close(subscription.id)
@@ -209,7 +209,7 @@ abstract class NostrDataSource(
     }
 
     private fun resetFiltersSuspend() {
-        println("DataSource: ${this.javaClass.simpleName} resetFiltersSuspend $active")
+        Log.d("DataSource", "${this.javaClass.simpleName} resetFiltersSuspend $active")
         checkNotInMainThread()
 
         // saves the channels that are currently active
