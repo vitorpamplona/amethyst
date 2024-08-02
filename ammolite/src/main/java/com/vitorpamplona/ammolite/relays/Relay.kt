@@ -548,7 +548,7 @@ class Relay(
             }
             RelayStats.addBytesSent(url, str.bytesUsedInMemory())
 
-            if (BuildConfig.DEBUG) {
+            if (BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark") {
                 Log.d("Relay", "Relay send $url $str")
             }
         }
