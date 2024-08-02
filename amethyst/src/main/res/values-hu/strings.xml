@@ -802,4 +802,6 @@
     <string name="http_status_508">Hurok észlelve – A szerver a kérés feldolgozása közben végtelen hurkot észlel</string>
     <string name="http_status_511">Hálózati hitelesítés szükséges – A klienst a hálózat eléréséhez hitelesíteni kell</string>
     <string name="add_a_nip96_server">Adj hozzá egy NIP-96 szervert</string>
+    <string name="delete_all">Törlés mind</string>
+    <string name="delete_all_drafts_confirmation">Biztosan törölni szeretnéd az összes jegyzetet?</string>
 </resources>
