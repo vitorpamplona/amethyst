@@ -48,6 +48,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
@@ -426,18 +427,6 @@ fun UpdateZapAmountDialog(
                                 Modifier.weight(1f),
                             )
 
-                            IconButton(onClick = {
-                                onClose()
-                                runCatching { uri.openUri("https://app.mutinywallet.com/settings/connections?name=Amethyst") }
-                            }) {
-                                Icon(
-                                    painter = painterResource(R.mipmap.mutiny),
-                                    null,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = Color.Unspecified,
-                                )
-                            }
-
                             IconButton(
                                 onClick = {
                                     onClose()
@@ -458,7 +447,7 @@ fun UpdateZapAmountDialog(
                                 },
                             ) {
                                 Icon(
-                                    Icons.Default.ContentPaste,
+                                    Icons.Outlined.ContentPaste,
                                     contentDescription = stringRes(id = R.string.paste_from_clipboard),
                                     modifier = Modifier.size(24.dp),
                                     tint = MaterialTheme.colorScheme.primary,
