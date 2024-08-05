@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.relays
 
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
@@ -38,6 +39,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+@Stable
 class Kind3RelayListViewModel : ViewModel() {
     private lateinit var account: Account
 
