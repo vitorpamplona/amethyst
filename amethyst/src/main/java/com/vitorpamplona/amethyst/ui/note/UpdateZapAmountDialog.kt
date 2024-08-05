@@ -685,7 +685,7 @@ fun authenticate(
                                 stringRes(
                                     context,
                                     R.string.biometric_authentication_failed_explainer_with_error,
-                                    errString,
+                                    errString.toString(),
                                 ),
                             )
                     }

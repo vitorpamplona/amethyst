@@ -49,7 +49,19 @@ fun stringRes(id: Int): String = resourceCache.get(id) ?: stringResource(id).als
 @Composable
 fun stringRes(
     id: Int,
-    vararg args: Any,
+    vararg args: String,
+): String =
+    String
+        .format(
+            LocalConfiguration.current.locales.get(0),
+            resourceCache.get(id) ?: stringResource(id).also { resourceCache.put(id, it) },
+            *args,
+        )
+
+@Composable
+fun stringRes(
+    id: Int,
+    vararg args: Int?,
 ): String =
     String
         .format(
@@ -66,7 +78,22 @@ fun stringRes(
 fun stringRes(
     ctx: Context,
     id: Int,
-    vararg args: Any?,
+    vararg args: String?,
+): String {
+    val res = ctx.resources
+
+    return String
+        .format(
+            res.configuration.locales.get(0),
+            resourceCache.get(id) ?: res.getString(id).also { resourceCache.put(id, it) },
+            *args,
+        )
+}
+
+fun stringRes(
+    ctx: Context,
+    id: Int,
+    vararg args: Int?,
 ): String {
     val res = ctx.resources
 
