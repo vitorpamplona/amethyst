@@ -801,4 +801,6 @@
     <string name="http_status_508">Detekována smyčka - Server detekuje nekonečnou smyčku při zpracování požadavku</string>
     <string name="http_status_511">Vyžadováno ověření sítě - Klient musí být autentizován, aby získal přístup k síti</string>
     <string name="add_a_nip96_server">Přidat NIP-96 server</string>
+    <string name="delete_all">Vymazat vše</string>
+    <string name="delete_all_drafts_confirmation">Opravdu chcete odstranit všechny koncepty?</string>
 </resources>

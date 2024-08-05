@@ -806,4 +806,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="http_status_508">Schleife erkannt - Der Server erkennt eine Endlosschleife, während er die Anfrage bearbeitet</string>
     <string name="http_status_511">Netzwerk-Authentifizierung erforderlich - Der Client muss authentifiziert werden, um auf das Netzwerk zuzugreifen</string>
     <string name="add_a_nip96_server">NIP-96 Server hinzufügen</string>
+    <string name="delete_all">Alles löschen</string>
+    <string name="delete_all_drafts_confirmation">Möchten Sie wirklich alle Entwürfe löschen?</string>
 </resources>
