@@ -192,7 +192,7 @@ abstract class NostrDataSource(
     }
 
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.IO)
+    private val bundler = BundledUpdate(300, Dispatchers.Default)
 
     fun invalidateFilters() {
         bundler.invalidate {
