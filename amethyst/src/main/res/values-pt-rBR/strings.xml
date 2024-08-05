@@ -801,4 +801,6 @@
     <string name="http_status_508">Loop detectado - O servidor detecta um loop infinito enquanto processa a requisição</string>
     <string name="http_status_511">Autenticação de rede necessária - O cliente deve ser autenticado para acessar a rede</string>
     <string name="add_a_nip96_server">Adicionar um servidor NIP-96</string>
+    <string name="delete_all">Apagar tudo</string>
+    <string name="delete_all_drafts_confirmation">Você tem certeza de que deseja excluir todos os rascunhos?</string>
 </resources>
