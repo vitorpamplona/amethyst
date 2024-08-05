@@ -24,6 +24,11 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 
 class EventFactory {
     companion object {
+        val additionalFactories =
+            mutableMapOf(
+                WikiNoteEvent.KIND to ::WikiNoteEvent,
+            )
+
         fun create(
             id: String,
             pubKey: String,
@@ -141,7 +146,13 @@ class EventFactory {
             VideoVerticalEvent.KIND -> VideoVerticalEvent(id, pubKey, createdAt, tags, content, sig)
             VideoViewEvent.KIND -> VideoViewEvent(id, pubKey, createdAt, tags, content, sig)
             WikiNoteEvent.KIND -> WikiNoteEvent(id, pubKey, createdAt, tags, content, sig)
-            else -> Event(id, pubKey, createdAt, kind, tags, content, sig)
+            else -> {
+                additionalFactories[kind]?.let {
+                    return it(id, pubKey, createdAt, tags, content, sig)
+                }
+
+                Event(id, pubKey, createdAt, kind, tags, content, sig)
+            }
         }
     }
 }
