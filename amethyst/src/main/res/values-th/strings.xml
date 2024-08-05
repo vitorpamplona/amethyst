@@ -800,4 +800,6 @@
     <string name="http_status_508">พบลูป - เซิร์ฟเวอร์ตรวจพบการวนลูปไม่สิ้นสุดขณะประมวลผลคำขอ</string>
     <string name="http_status_511">ต้องการการตรวจสอบเครือข่าย - ไคลเอนต์ต้องได้รับการตรวจสอบเพื่อเข้าถึงเครือข่าย</string>
     <string name="add_a_nip96_server">เพิ่ม เซิร์ฟเวอร์ NIP-96</string>
+    <string name="delete_all">ลบทั้งหมด</string>
+    <string name="delete_all_drafts_confirmation">คุณแน่ใจหรือไม่ว่าต้องการลบแบบร่างทั้งหมด</string>
 </resources>
