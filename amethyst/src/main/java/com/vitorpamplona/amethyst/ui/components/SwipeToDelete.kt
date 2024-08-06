@@ -99,7 +99,6 @@ fun DismissBackground(dismissState: SwipeToDismissBoxState) {
     val haptic = LocalHapticFeedback.current
     LaunchedEffect(key1 = dismissState.currentValue > dismissState.targetValue) {
         // doesn't run for the first time or when the list is updated.
-        println("AABBCC ${dismissState.progress}")
         if (dismissState.progress > 0 && dismissState.progress < 1) {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         }
