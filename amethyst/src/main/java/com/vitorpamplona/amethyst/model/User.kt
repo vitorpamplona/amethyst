@@ -336,32 +336,16 @@ class User(
 
     fun isFollowing(user: User): Boolean = latestContactList?.isTaggedUser(user.pubkeyHex) ?: false
 
-    fun isFollowingHashtag(tag: String): Boolean = latestContactList?.isTaggedHash(tag) ?: false
-
-    fun isFollowingHashtagCached(tag: String): Boolean {
-        return latestContactList?.verifiedFollowTagSet?.let {
+    fun isFollowingHashtag(tag: String): Boolean {
+        return latestContactList?.unverifiedFollowTagSet()?.map { it.lowercase() }?.toSet()?.let {
             return tag.lowercase() in it
         }
             ?: false
     }
 
-    fun isFollowingGeohashCached(geoTag: String): Boolean {
-        return latestContactList?.verifiedFollowGeohashSet?.let {
+    fun isFollowingGeohash(geoTag: String): Boolean {
+        return latestContactList?.unverifiedFollowAddressSet()?.toSet()?.let {
             return geoTag.lowercase() in it
-        }
-            ?: false
-    }
-
-    fun isFollowingCached(user: User): Boolean {
-        return latestContactList?.verifiedFollowKeySet?.let {
-            return user.pubkeyHex in it
-        }
-            ?: false
-    }
-
-    fun isFollowingCached(userHex: String): Boolean {
-        return latestContactList?.verifiedFollowKeySet?.let {
-            return userHex in it
         }
             ?: false
     }
@@ -369,18 +353,6 @@ class User(
     fun transientFollowCount(): Int? = latestContactList?.unverifiedFollowKeySet()?.size
 
     suspend fun transientFollowerCount(): Int = LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
-
-    fun cachedFollowingKeySet(): Set<HexKey> = latestContactList?.verifiedFollowKeySet ?: emptySet()
-
-    fun cachedFollowingTagSet(): Set<String> = latestContactList?.verifiedFollowTagSet ?: emptySet()
-
-    fun cachedFollowingGeohashSet(): Set<HexKey> = latestContactList?.verifiedFollowGeohashSet ?: emptySet()
-
-    fun cachedFollowingCommunitiesSet(): Set<HexKey> = latestContactList?.verifiedFollowCommunitySet ?: emptySet()
-
-    fun cachedFollowCount(): Int? = latestContactList?.verifiedFollowKeySet?.size
-
-    suspend fun cachedFollowerCount(): Int = LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
 
     fun hasSentMessagesTo(key: ChatroomKey?): Boolean {
         val messagesToUser = privateChatrooms[key] ?: return false

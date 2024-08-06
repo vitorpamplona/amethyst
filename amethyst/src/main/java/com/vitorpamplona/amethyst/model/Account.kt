@@ -225,6 +225,7 @@ class Account(
     @Immutable
     class LiveFollowLists(
         val users: Set<String> = emptySet(),
+        val usersPlusMe: Set<String>,
         val hashtags: Set<String> = emptySet(),
         val geotags: Set<String> = emptySet(),
         val communities: Set<String> = emptySet(),
@@ -423,17 +424,29 @@ class Account(
     val liveKind3FollowsFlow: Flow<LiveFollowLists> =
         userProfile().flow().follows.stateFlow.transformLatest {
             checkNotInMainThread()
+
+            // makes sure the output include only valid p tags
+            val verifiedFollowingUsers = it.user.latestContactList?.verifiedFollowKeySet() ?: emptySet()
+
             emit(
                 LiveFollowLists(
-                    it.user.cachedFollowingKeySet(),
-                    it.user.cachedFollowingTagSet(),
-                    it.user.cachedFollowingGeohashSet(),
-                    it.user.cachedFollowingCommunitiesSet(),
+                    verifiedFollowingUsers,
+                    verifiedFollowingUsers + keyPair.pubKeyHex,
+                    it.user.latestContactList
+                        ?.unverifiedFollowTagSet()
+                        ?.map { it.lowercase() }
+                        ?.toSet() ?: emptySet(),
+                    it.user.latestContactList
+                        ?.unverifiedFollowGeohashSet()
+                        ?.toSet() ?: emptySet(),
+                    it.user.latestContactList
+                        ?.verifiedFollowAddressSet()
+                        ?.toSet() ?: emptySet(),
                 ),
             )
         }
 
-    val liveKind3Follows = liveKind3FollowsFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists())
+    val liveKind3Follows = liveKind3FollowsFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val liveHomeList: Flow<ListNameNotePair> by lazy {
@@ -465,11 +478,11 @@ class Account(
             } else if (peopleListFollows.listName == KIND3_FOLLOWS) {
                 emit(kind3Follows)
             } else if (peopleListFollows.event == null) {
-                emit(LiveFollowLists())
+                emit(LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
             } else {
                 val result = waitToDecrypt(peopleListFollows.event)
                 if (result == null) {
-                    emit(LiveFollowLists())
+                    emit(LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
                 } else {
                     emit(result)
                 }
@@ -481,7 +494,7 @@ class Account(
     }
 
     val liveHomeFollowLists: StateFlow<LiveFollowLists?> by lazy {
-        liveHomeFollowListFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists())
+        liveHomeFollowListFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
     }
 
     fun relaysFromPeopleListFlows(
@@ -540,7 +553,7 @@ class Account(
 
     val liveNotificationFollowLists: StateFlow<LiveFollowLists?> by lazy {
         combinePeopleListFlows(liveKind3FollowsFlow, liveNotificationList)
-            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists())
+            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -552,7 +565,7 @@ class Account(
 
     val liveStoriesFollowLists: StateFlow<LiveFollowLists?> by lazy {
         combinePeopleListFlows(liveKind3FollowsFlow, liveStoriesList)
-            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists())
+            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -564,7 +577,7 @@ class Account(
 
     val liveDiscoveryFollowLists: StateFlow<LiveFollowLists?> by lazy {
         combinePeopleListFlows(liveKind3FollowsFlow, liveDiscoveryList)
-            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists())
+            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
     }
 
     private fun decryptLiveFollows(
@@ -572,10 +585,11 @@ class Account(
         onReady: (LiveFollowLists) -> Unit,
     ) {
         listEvent.privateTags(signer) { privateTagList ->
+            val users = (listEvent.bookmarkedPeople() + listEvent.filterUsers(privateTagList)).toSet()
             onReady(
                 LiveFollowLists(
-                    users =
-                        (listEvent.bookmarkedPeople() + listEvent.filterUsers(privateTagList)).toSet(),
+                    users = users,
+                    usersPlusMe = users + userProfile().pubkeyHex,
                     hashtags =
                         (listEvent.hashtags() + listEvent.filterHashtags(privateTagList)).toSet(),
                     geotags =
@@ -758,6 +772,10 @@ class Account(
             }
         }
     }
+
+    suspend fun countFollowersOf(pubkey: HexKey): Int = LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkey) ?: false }
+
+    suspend fun followerCount(): Int = countFollowersOf(keyPair.pubKeyHex)
 
     fun sendNewUserMetadata(
         name: String? = null,
@@ -2813,9 +2831,7 @@ class Account(
         flowHiddenUsers.value.hiddenUsers.contains(userHex) ||
             flowHiddenUsers.value.spammers.contains(userHex)
 
-    fun followingKeySet(): Set<HexKey> = userProfile().cachedFollowingKeySet()
-
-    fun followingTagSet(): Set<HexKey> = userProfile().cachedFollowingTagSet()
+    fun followingKeySet(): Set<HexKey> = liveKind3Follows.value.users
 
     fun isAcceptable(user: User): Boolean {
         if (userProfile().pubkeyHex == user.pubkeyHex) {
@@ -2865,8 +2881,6 @@ class Account(
     }
 
     fun getRelevantReports(note: Note): Set<Note> {
-        val followsPlusMe = userProfile().latestContactList?.verifiedFollowKeySetAndMe ?: emptySet()
-
         val innerReports =
             if (note.event is RepostEvent || note.event is GenericRepostEvent) {
                 note.replyTo?.map { getRelevantReports(it) }?.flatten() ?: emptyList()
@@ -2875,8 +2889,8 @@ class Account(
             }
 
         return (
-            note.reportsBy(followsPlusMe) +
-                (note.author?.reportsBy(followsPlusMe) ?: emptyList()) +
+            note.reportsBy(liveKind3Follows.value.usersPlusMe) +
+                (note.author?.reportsBy(liveKind3Follows.value.usersPlusMe) ?: emptyList()) +
                 innerReports
         ).toSet()
     }

@@ -29,12 +29,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.AnnotatedString
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -44,12 +44,11 @@ fun DisplayFollowingHashtagsInPost(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val userFollowState by accountViewModel.userFollows.observeAsState()
+    val userFollowState by accountViewModel.account.liveKind3Follows.collectAsStateWithLifecycle()
     var firstTag by remember(baseNote) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = userFollowState) {
-        val followingTags = userFollowState?.user?.cachedFollowingTagSet() ?: emptySet()
-        val newFirstTag = baseNote.event?.firstIsTaggedHashes(followingTags)
+        val newFirstTag = baseNote.event?.firstIsTaggedHashes(userFollowState.hashtags)
 
         if (firstTag != newFirstTag) {
             firstTag = newFirstTag

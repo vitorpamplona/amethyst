@@ -807,10 +807,10 @@ class AccountViewModel(
 
     fun isFollowing(user: User?): Boolean {
         if (user == null) return false
-        return account.userProfile().isFollowingCached(user)
+        return account.isFollowing(user)
     }
 
-    fun isFollowing(user: HexKey): Boolean = account.userProfile().isFollowingCached(user)
+    fun isFollowing(user: HexKey): Boolean = account.isFollowing(user)
 
     val hideDeleteRequestDialog: Boolean
         get() = account.hideDeleteRequestDialog

@@ -763,9 +763,11 @@ class FollowListViewModel(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveKind3FollowsFlow: Flow<List<CodeName>> =
-        account.userProfile().flow().follows.stateFlow.transformLatest {
+        account.liveKind3FollowsFlow.transformLatest {
+            checkNotInMainThread()
+
             val communities =
-                it.user.cachedFollowingCommunitiesSet().mapNotNull {
+                it.communities.mapNotNull {
                     LocalCache.checkGetOrCreateAddressableNote(it)?.let { communityNote ->
                         CodeName(
                             "Community/${communityNote.idHex}",
@@ -776,12 +778,12 @@ class FollowListViewModel(
                 }
 
             val hashtags =
-                it.user.cachedFollowingTagSet().map {
+                it.hashtags.map {
                     CodeName("Hashtag/$it", HashtagName(it), CodeNameType.ROUTE)
                 }
 
             val geotags =
-                it.user.cachedFollowingGeohashSet().map {
+                it.geotags.map {
                     CodeName("Geohash/$it", GeoHashName(it), CodeNameType.ROUTE)
                 }
 

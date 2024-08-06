@@ -83,6 +83,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.MediaServersListView
@@ -114,7 +115,6 @@ import com.vitorpamplona.ammolite.relays.RelayPoolStatus
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
@@ -151,7 +151,7 @@ fun DrawerContent(
                 EditStatusBoxes(accountViewModel.account.userProfile(), accountViewModel, drawerState)
             }
 
-            FollowingAndFollowerCounts(accountViewModel.account.userProfile(), onClickUser)
+            FollowingAndFollowerCounts(accountViewModel.account, onClickUser)
 
             HorizontalDivider(
                 thickness = DividerThickness,
@@ -380,17 +380,11 @@ fun UserStatusDeleteButton(onClick: () -> Unit) {
 
 @Composable
 private fun FollowingAndFollowerCounts(
-    baseAccountUser: User,
+    baseAccountUser: Account,
     onClick: () -> Unit,
 ) {
-    var followingCount by remember { mutableStateOf("--") }
+    val followingCount = baseAccountUser.liveKind3Follows.collectAsStateWithLifecycle()
     var followerCount by remember { mutableStateOf("--") }
-
-    WatchFollow(baseAccountUser = baseAccountUser) { newFollowing ->
-        if (followingCount != newFollowing) {
-            followingCount = newFollowing
-        }
-    }
 
     WatchFollower(baseAccountUser = baseAccountUser) { newFollower ->
         if (followerCount != newFollower) {
@@ -402,7 +396,9 @@ private fun FollowingAndFollowerCounts(
         modifier = drawerSpacing.clickable(onClick = onClick),
     ) {
         Text(
-            text = followingCount,
+            text =
+                followingCount.value.users.size
+                    .toString(),
             fontWeight = FontWeight.Bold,
         )
 
@@ -420,30 +416,18 @@ private fun FollowingAndFollowerCounts(
 }
 
 @Composable
-fun WatchFollow(
-    baseAccountUser: User,
-    onReady: (String) -> Unit,
-) {
-    val accountUserFollowsState by baseAccountUser.live().follows.observeAsState()
-
-    LaunchedEffect(key1 = accountUserFollowsState) {
-        launch(Dispatchers.IO) {
-            onReady(accountUserFollowsState?.user?.cachedFollowCount()?.toString() ?: "--")
-        }
-    }
-}
-
-@Composable
 fun WatchFollower(
-    baseAccountUser: User,
+    baseAccountUser: Account,
     onReady: (String) -> Unit,
 ) {
-    val accountUserFollowersState by baseAccountUser.live().followers.observeAsState()
+    val accountUserFollowersState by baseAccountUser
+        .userProfile()
+        .live()
+        .followers
+        .observeAsState()
 
     LaunchedEffect(key1 = accountUserFollowersState) {
-        launch(Dispatchers.IO) {
-            onReady(accountUserFollowersState?.user?.cachedFollowerCount()?.toString() ?: "--")
-        }
+        onReady(baseAccountUser.followerCount().toString() ?: "--")
     }
 }
 

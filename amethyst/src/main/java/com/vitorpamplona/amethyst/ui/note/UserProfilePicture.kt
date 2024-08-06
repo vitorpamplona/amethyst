@@ -367,11 +367,10 @@ fun WatchUserFollows(
         remember {
             accountViewModel.userFollows
                 .map {
-                    it.user.isFollowingCached(userHex) ||
-                        (userHex == accountViewModel.account.userProfile().pubkeyHex)
+                    accountViewModel.isFollowing(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
                 }.distinctUntilChanged()
         }.observeAsState(
-            accountViewModel.account.userProfile().isFollowingCached(userHex) ||
+            accountViewModel.isFollowing(userHex) ||
                 (userHex == accountViewModel.account.userProfile().pubkeyHex),
         )
 

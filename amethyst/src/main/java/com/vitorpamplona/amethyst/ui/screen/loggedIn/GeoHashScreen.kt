@@ -188,7 +188,7 @@ fun GeoHashActionOptions(
         .observeAsState()
     val isFollowingTag by
         remember(userState) {
-            derivedStateOf { userState?.user?.isFollowingGeohashCached(tag) ?: false }
+            derivedStateOf { userState?.user?.isFollowingGeohash(tag) ?: false }
         }
 
     if (isFollowingTag) {

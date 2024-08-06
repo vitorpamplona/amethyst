@@ -676,7 +676,7 @@ fun LoadModerators(
 
             val newParticipantUsers =
                 if (followingKeySet == null) {
-                    val allFollows = accountViewModel.account.userProfile().cachedFollowingKeySet()
+                    val allFollows = accountViewModel.account.liveKind3Follows.value.users
                     val followingParticipants =
                         ParticipantListBuilder().followsThatParticipateOn(baseNote, allFollows).minus(hosts)
 
@@ -732,7 +732,7 @@ private fun LoadParticipants(
 
             val newParticipantUsers =
                 if (followingKeySet == null) {
-                    val allFollows = accountViewModel.account.userProfile().cachedFollowingKeySet()
+                    val allFollows = accountViewModel.account.liveKind3Follows.value.users
                     val followingParticipants =
                         ParticipantListBuilder()
                             .followsThatParticipateOn(baseNote, allFollows)
@@ -889,7 +889,7 @@ fun RenderChannelThumb(
 
             val newParticipantUsers =
                 if (followingKeySet == null) {
-                    val allFollows = accountViewModel.account.userProfile().cachedFollowingKeySet()
+                    val allFollows = accountViewModel.account.liveKind3Follows.value.users
                     val followingParticipants =
                         ParticipantListBuilder().followsThatParticipateOn(baseNote, allFollows).toList()
 
