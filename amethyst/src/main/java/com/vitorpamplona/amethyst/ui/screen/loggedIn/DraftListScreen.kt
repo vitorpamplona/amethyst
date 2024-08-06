@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -59,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys.DRAFTS
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.maxWidthWithBackground
 
 @Composable
 fun DraftListScreen(
@@ -178,24 +178,23 @@ private fun DraftFeedLoaded(
             }
         }
         itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-            SwipeToDeleteContainer(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .animateContentSize(),
-                onStartToEnd = { accountViewModel.delete(item) },
-                onEndToStart = { accountViewModel.delete(item) },
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .animateItemPlacement(),
             ) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .animateItemPlacement()
-                        .background(MaterialTheme.colorScheme.background),
+                SwipeToDeleteContainer(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .animateContentSize(),
+                    onStartToEnd = { accountViewModel.delete(item) },
+                    onEndToStart = { accountViewModel.delete(item) },
                 ) {
                     NoteCompose(
                         item,
                         routeForLastRead = routeForLastRead,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = MaterialTheme.colorScheme.maxWidthWithBackground,
                         isBoostedNote = false,
                         isHiddenFeed = state.showHidden.value,
                         quotesLeft = 3,

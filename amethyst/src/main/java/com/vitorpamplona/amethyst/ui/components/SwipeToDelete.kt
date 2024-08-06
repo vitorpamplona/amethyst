@@ -32,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue.EndToStart
@@ -39,10 +40,13 @@ import androidx.compose.material3.SwipeToDismissBoxValue.Settled
 import androidx.compose.material3.SwipeToDismissBoxValue.StartToEnd
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -69,6 +73,7 @@ fun SwipeToDeleteContainer(
                 }
                 return@rememberSwipeToDismissBoxState true
             },
+            positionalThreshold = { it * .40f },
         )
 
     SwipeToDismissBox(
@@ -86,10 +91,19 @@ fun DismissBackground(dismissState: SwipeToDismissBoxState) {
         if (dismissState.currentValue > dismissState.targetValue) {
             Color(0xFFFF1744)
         } else {
-            Color.Transparent
+            MaterialTheme.colorScheme.surfaceVariant
         },
         label = "DismissBackground",
     )
+
+    val haptic = LocalHapticFeedback.current
+    LaunchedEffect(key1 = dismissState.currentValue > dismissState.targetValue) {
+        // doesn't run for the first time or when the list is updated.
+        println("AABBCC ${dismissState.progress}")
+        if (dismissState.progress > 0 && dismissState.progress < 1) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+    }
 
     Row(
         modifier =

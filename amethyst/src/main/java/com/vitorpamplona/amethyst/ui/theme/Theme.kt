@@ -189,6 +189,16 @@ val LightInnerPostBorderModifier =
         .clip(shape = QuoteBorder)
         .border(1.dp, LightSubtleBorder, QuoteBorder)
 
+val DarkMaxWidthWithBackground =
+    Modifier
+        .fillMaxWidth()
+        .background(DarkColorPalette.background)
+
+val LightMaxWidthWithBackground =
+    Modifier
+        .fillMaxWidth()
+        .background(LightColorPalette.background)
+
 val DarkSelectedReactionBoxModifier =
     Modifier
         .padding(horizontal = 5.dp, vertical = 5.dp)
@@ -394,6 +404,9 @@ val ColorScheme.replyModifier: Modifier
 
 val ColorScheme.innerPostModifier: Modifier
     get() = if (isLight) LightInnerPostBorderModifier else DarkInnerPostBorderModifier
+
+val ColorScheme.maxWidthWithBackground: Modifier
+    get() = if (isLight) LightMaxWidthWithBackground else DarkMaxWidthWithBackground
 
 val ColorScheme.channelNotePictureModifier: Modifier
     get() = if (isLight) LightChannelNotePictureModifier else DarkChannelNotePictureModifier
