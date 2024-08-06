@@ -27,6 +27,8 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.Nip01Serializer
 import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.events.EventFactory
+import com.vitorpamplona.quartz.utils.TimeUtils
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
@@ -244,6 +246,15 @@ class EventBenchmark {
         val serializer = Nip01Serializer()
         benchmarkRule.measureRepeated {
             serializer.escapeStringInto(specialEncoders, Nip01Serializer.BufferedDigestWriter(MessageDigest.getInstance("SHA-256")))
+        }
+    }
+
+    @Test
+    fun eventFactoryPerformanceTest() {
+        val now = TimeUtils.now()
+        val tags = arrayOf(arrayOf(""))
+        benchmarkRule.measureRepeated {
+            EventFactory.create("id", "pubkey", now, 1, tags, "content", "sig")
         }
     }
 }
