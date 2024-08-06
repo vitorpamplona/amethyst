@@ -29,6 +29,8 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 class LnZapPaymentResponseEvent(
@@ -41,6 +43,8 @@ class LnZapPaymentResponseEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     // Once one of an app user decrypts the payment, all users else can see it.
     @Transient private var response: Response? = null
+
+    override fun countMemory(): Long = super.countMemory() + pointerSizeInBytes + (response?.countMemory() ?: 0)
 
     fun requestAuthor() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
 
@@ -91,7 +95,9 @@ class LnZapPaymentResponseEvent(
 // RESPONSE OBJECTS
 abstract class Response(
     @JsonProperty("result_type") val resultType: String,
-)
+) {
+    abstract fun countMemory(): Long
+}
 
 // PayInvoice Call
 
@@ -100,7 +106,11 @@ class PayInvoiceSuccessResponse(
 ) : Response("pay_invoice") {
     class PayInvoiceResultParams(
         val preimage: String,
-    )
+    ) {
+        fun countMemory(): Long = pointerSizeInBytes + preimage.bytesUsedInMemory()
+    }
+
+    override fun countMemory(): Long = pointerSizeInBytes + (result?.countMemory() ?: 0)
 }
 
 class PayInvoiceErrorResponse(
@@ -109,7 +119,11 @@ class PayInvoiceErrorResponse(
     class PayInvoiceErrorParams(
         val code: ErrorType?,
         val message: String?,
-    )
+    ) {
+        fun countMemory(): Long = pointerSizeInBytes + pointerSizeInBytes + (message?.bytesUsedInMemory() ?: 0)
+    }
+
+    override fun countMemory(): Long = pointerSizeInBytes + (error?.countMemory() ?: 0)
 
     enum class ErrorType {
         @JsonProperty(value = "RATE_LIMITED")

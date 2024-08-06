@@ -30,14 +30,14 @@ object RelayStats {
 
     fun addBytesReceived(
         url: String,
-        bytesUsedInMemory: Int,
+        bytesUsedInMemory: Long,
     ) {
         get(url).addBytesReceived(bytesUsedInMemory)
     }
 
     fun addBytesSent(
         url: String,
-        bytesUsedInMemory: Int,
+        bytesUsedInMemory: Long,
     ) {
         get(url).addBytesSent(bytesUsedInMemory)
     }
@@ -102,11 +102,11 @@ class RelayStat(
         messages.put(debugMessage, debugMessage)
     }
 
-    fun addBytesReceived(bytesUsedInMemory: Int) {
+    fun addBytesReceived(bytesUsedInMemory: Long) {
         receivedBytes += bytesUsedInMemory
     }
 
-    fun addBytesSent(bytesUsedInMemory: Int) {
+    fun addBytesSent(bytesUsedInMemory: Long) {
         sentBytes += bytesUsedInMemory
     }
 

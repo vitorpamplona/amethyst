@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import kotlinx.collections.immutable.ImmutableSet
 
 @Immutable
@@ -38,6 +40,11 @@ class MuteListEvent(
     @Transient var publicAndPrivateUserCache: ImmutableSet<HexKey>? = null
 
     @Transient var publicAndPrivateWordCache: ImmutableSet<String>? = null
+
+    override fun countMemory(): Long =
+        super.countMemory() +
+            pointerSizeInBytes + (publicAndPrivateUserCache?.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } ?: 0) +
+            pointerSizeInBytes + (publicAndPrivateWordCache?.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } ?: 0)
 
     override fun dTag() = FIXED_D_TAG
 

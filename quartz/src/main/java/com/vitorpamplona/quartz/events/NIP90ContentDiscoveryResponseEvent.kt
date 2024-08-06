@@ -26,6 +26,8 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 class NIP90ContentDiscoveryResponseEvent(
@@ -37,6 +39,10 @@ class NIP90ContentDiscoveryResponseEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient var events: List<HexKey>? = null
+
+    override fun countMemory(): Long =
+        super.countMemory() +
+            pointerSizeInBytes + (events?.sumOf { it.bytesUsedInMemory() } ?: 0)
 
     fun innerTags(): List<HexKey> {
         if (content.isEmpty()) {

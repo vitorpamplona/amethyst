@@ -26,6 +26,8 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableSet
 import java.util.HashSet
@@ -41,6 +43,10 @@ abstract class GeneralListEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     @Transient private var privateTagsCache: Array<Array<String>>? = null
+
+    override fun countMemory(): Long =
+        super.countMemory() +
+            pointerSizeInBytes + (privateTagsCache?.sumOf { pointerSizeInBytes + it.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } } ?: 0)
 
     override fun isContentEncoded() = true
 

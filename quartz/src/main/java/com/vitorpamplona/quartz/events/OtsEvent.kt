@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.ots.VerifyResult
 import com.vitorpamplona.quartz.ots.op.OpSHA256
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import kotlinx.coroutines.CancellationException
 import java.util.Base64
 
@@ -47,6 +48,10 @@ class OtsEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient
     var verifiedTime: Long? = null
+
+    override fun countMemory(): Long =
+        super.countMemory() +
+            pointerSizeInBytes + Long.SIZE_BYTES // verifiedTime
 
     override fun isContentEncoded() = true
 

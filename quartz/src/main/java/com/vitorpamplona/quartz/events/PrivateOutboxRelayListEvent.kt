@@ -27,6 +27,8 @@ import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 class PrivateOutboxRelayListEvent(
@@ -38,6 +40,10 @@ class PrivateOutboxRelayListEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient private var privateTagsCache: Array<Array<String>>? = null
+
+    override fun countMemory(): Long =
+        super.countMemory() +
+            pointerSizeInBytes + (privateTagsCache?.sumOf { pointerSizeInBytes + it.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } } ?: 0)
 
     override fun dTag() = FIXED_D_TAG
 

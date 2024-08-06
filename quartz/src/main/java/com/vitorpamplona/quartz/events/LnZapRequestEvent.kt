@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import java.nio.charset.Charset
 import java.security.SecureRandom
 import javax.crypto.BadPaddingException
@@ -46,6 +47,8 @@ class LnZapRequestEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient private var privateZapEvent: LnZapPrivateEvent? = null
+
+    override fun countMemory(): Long = super.countMemory() + pointerSizeInBytes + (privateZapEvent?.countMemory() ?: 0)
 
     fun zappedPost() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
 

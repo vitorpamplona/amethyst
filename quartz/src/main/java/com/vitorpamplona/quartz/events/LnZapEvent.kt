@@ -24,6 +24,7 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 class LnZapEvent(
@@ -37,6 +38,10 @@ class LnZapEvent(
     LnZapEventInterface {
     // This event is also kept in LocalCache (same object)
     @Transient val zapRequest: LnZapRequestEvent?
+
+    override fun countMemory(): Long =
+        super.countMemory() +
+            pointerSizeInBytes + (zapRequest?.countMemory() ?: 0) // rough calculation
 
     override fun containedPost(): LnZapRequestEvent? =
         try {

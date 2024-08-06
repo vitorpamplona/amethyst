@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import kotlinx.collections.immutable.ImmutableSet
 
 @Immutable
@@ -36,6 +38,10 @@ class ChannelListEvent(
     sig: HexKey,
 ) : GeneralListEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient var publicAndPrivateEventCache: ImmutableSet<HexKey>? = null
+
+    override fun countMemory(): Long =
+        super.countMemory() +
+            32 + (publicAndPrivateEventCache?.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } ?: 0L) // rough calculation
 
     override fun dTag() = FIXED_D_TAG
 

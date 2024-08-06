@@ -46,40 +46,35 @@ class ContactListEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    // This function is only used by the user logged in
-    // But it is used all the time.
-
-    @delegate:Transient
-    val verifiedFollowKeySet: Set<HexKey> by lazy {
-        tags.mapNotNullTo(HashSet()) {
-            try {
-                if (it.size > 1 && it[0] == "p") {
+    /**
+     * Returns a list of p-tags that are verified as hex keys.
+     */
+    fun verifiedFollowKeySet(): Set<HexKey> =
+        tags.mapNotNullTo(mutableSetOf()) {
+            if (it.size > 1 && it[0] == "p") {
+                try {
                     decodePublicKey(it[1]).toHexKey()
-                } else {
+                } catch (e: Exception) {
+                    Log.w("ContactListEvent", "Can't parse p-tag $it in the contact list of $pubKey with id $id", e)
                     null
                 }
-            } catch (e: Exception) {
-                Log.w("ContactListEvent", "Can't parse tags as a follows: ${it[1]}", e)
+            } else {
                 null
             }
         }
-    }
 
-    @delegate:Transient
-    val verifiedFollowTagSet: Set<String> by lazy {
-        unverifiedFollowTagSet().map { it.lowercase() }.toSet()
-    }
-
-    @delegate:Transient
-    val verifiedFollowGeohashSet: Set<String> by lazy {
-        unverifiedFollowGeohashSet().map { it.lowercase() }.toSet()
-    }
-
-    @delegate:Transient
-    val verifiedFollowCommunitySet: Set<String> by lazy { unverifiedFollowAddressSet().toSet() }
-
-    @delegate:Transient
-    val verifiedFollowKeySetAndMe: Set<HexKey> by lazy { verifiedFollowKeySet + pubKey }
+    /**
+     * Returns a list of a-tags that are verified as correct.
+     */
+    fun verifiedFollowAddressSet(): Set<HexKey> =
+        tags
+            .mapNotNullTo(mutableSetOf()) {
+                if (it.size > 1 && it[0] == "a") {
+                    ATag.parse(it[1], null)?.toTag()
+                } else {
+                    null
+                }
+            }
 
     fun unverifiedFollowKeySet() = tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull { it.getOrNull(1) }
 
@@ -105,7 +100,7 @@ class ContactListEvent(
             }
         }
 
-    fun followsTags() = tags.filter { it.size > 1 && it[0] == "t" }.mapNotNull { it.getOrNull(1) }
+    fun followsTags() = hashtags()
 
     fun relays(): Map<String, ReadWrite>? =
         try {

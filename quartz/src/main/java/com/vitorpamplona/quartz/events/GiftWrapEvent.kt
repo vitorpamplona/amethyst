@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 class GiftWrapEvent(
@@ -37,6 +38,10 @@ class GiftWrapEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
+
+    override fun countMemory(): Long =
+        super.countMemory() +
+            32 + (cachedInnerEvent.values.sumOf { pointerSizeInBytes + (it?.countMemory() ?: 0) }) // rough calculation
 
     fun copyNoContent(): GiftWrapEvent {
         val copy =

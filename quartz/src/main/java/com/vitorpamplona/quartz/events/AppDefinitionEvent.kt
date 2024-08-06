@@ -27,6 +27,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import java.io.ByteArrayInputStream
 
 @Stable
@@ -57,6 +59,28 @@ class AppMetadata {
 
     @Transient
     var tags: ImmutableListOfLists<String>? = null
+
+    fun countMemory(): Long =
+        20 * pointerSizeInBytes + // 20 fields, 4 bytes for each reference
+            (name?.bytesUsedInMemory() ?: 0L) +
+            (username?.bytesUsedInMemory() ?: 0L) +
+            (displayName?.bytesUsedInMemory() ?: 0L) +
+            (picture?.bytesUsedInMemory() ?: 0L) +
+            (banner?.bytesUsedInMemory() ?: 0L) +
+            (image?.bytesUsedInMemory() ?: 0L) +
+            (website?.bytesUsedInMemory() ?: 0L) +
+            (about?.bytesUsedInMemory() ?: 0L) +
+            (subscription?.bytesUsedInMemory() ?: 0L) +
+            (cashuAccepted?.bytesUsedInMemory() ?: 0L) +
+            (encryptionSupported?.bytesUsedInMemory() ?: 0L) +
+            (personalized?.bytesUsedInMemory() ?: 0L) + // A Boolean has 8 bytes of header, plus 1 byte of payload, for a total of 9 bytes of information. The JVM then rounds it up to the next multiple of 8. so the one instance of java.lang.Boolean takes up 16 bytes of memory.
+            (amount?.bytesUsedInMemory() ?: 0L) +
+            (nip05?.bytesUsedInMemory() ?: 0L) +
+            (domain?.bytesUsedInMemory() ?: 0L) +
+            (lud06?.bytesUsedInMemory() ?: 0L) +
+            (lud16?.bytesUsedInMemory() ?: 0L) +
+            (twitter?.bytesUsedInMemory() ?: 0L) +
+            (tags?.lists?.sumOf { it.sumOf { it.bytesUsedInMemory() } } ?: 0L)
 
     fun anyName(): String? = displayName ?: name ?: username
 
@@ -108,6 +132,8 @@ class AppDefinitionEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    override fun countMemory(): Long = super.countMemory() + (cachedMetadata?.countMemory() ?: 8L)
+
     @Transient private var cachedMetadata: AppMetadata? = null
 
     fun appMetaData() =

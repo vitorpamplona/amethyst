@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 class SealedGossipEvent(
@@ -38,6 +39,10 @@ class SealedGossipEvent(
     sig: HexKey,
 ) : WrappedEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
+
+    override fun countMemory(): Long =
+        super.countMemory() +
+            pointerSizeInBytes + cachedInnerEvent.values.sumOf { pointerSizeInBytes + (it?.countMemory() ?: 0) }
 
     fun copyNoContent(): SealedGossipEvent {
         val copy =

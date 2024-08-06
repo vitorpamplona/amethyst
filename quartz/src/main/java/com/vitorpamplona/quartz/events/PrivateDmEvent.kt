@@ -27,6 +27,8 @@ import com.vitorpamplona.quartz.encoders.HexValidator
 import com.vitorpamplona.quartz.encoders.Nip54InlineMetadata
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import kotlinx.collections.immutable.persistentSetOf
 
 @Immutable
@@ -40,6 +42,10 @@ class PrivateDmEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     ChatroomKeyable {
     @Transient private var decryptedContent: Map<HexKey, String> = mapOf()
+
+    override fun countMemory(): Long =
+        super.countMemory() +
+            pointerSizeInBytes + (decryptedContent.values.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() })
 
     override fun isContentEncoded() = true
 

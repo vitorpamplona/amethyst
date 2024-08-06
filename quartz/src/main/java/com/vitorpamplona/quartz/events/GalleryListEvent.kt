@@ -60,7 +60,7 @@ class GalleryListEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (GalleryListEvent) -> Unit,
         ) {
-            var tags = arrayOf(tagName, url, eventid)
+            val tags = arrayOf(tagName, url, eventid)
             if (relay != null) {
                 tags + relay
             }

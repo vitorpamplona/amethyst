@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.encoders
 
 import android.util.Log
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 data class ATag(
@@ -30,6 +32,13 @@ data class ATag(
     val dTag: String,
     val relay: String?,
 ) {
+    fun countMemory(): Long =
+        5 * pointerSizeInBytes + // 7 fields, 4 bytes each reference (32bit)
+            8L + // kind
+            pubKeyHex.bytesUsedInMemory() +
+            dTag.bytesUsedInMemory() +
+            (relay?.bytesUsedInMemory() ?: 0)
+
     fun toTag() = assembleATag(kind, pubKeyHex, dTag)
 
     fun toNAddr(): String =

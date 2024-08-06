@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableSet
 
@@ -38,6 +39,10 @@ class CommunityListEvent(
     sig: HexKey,
 ) : GeneralListEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient var publicAndPrivateEventCache: ImmutableSet<ATag>? = null
+
+    override fun countMemory(): Long =
+        super.countMemory() +
+            32 + (publicAndPrivateEventCache?.sumOf { pointerSizeInBytes + it.countMemory() } ?: 0L) // rough calculation
 
     override fun dTag() = FIXED_D_TAG
 

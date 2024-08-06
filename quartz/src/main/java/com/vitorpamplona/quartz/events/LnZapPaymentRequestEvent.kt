@@ -29,6 +29,8 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 class LnZapPaymentRequestEvent(
@@ -41,6 +43,10 @@ class LnZapPaymentRequestEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     // Once one of an app user decrypts the payment, all users else can see it.
     @Transient private var lnInvoice: String? = null
+
+    override fun countMemory(): Long =
+        super.countMemory() +
+            pointerSizeInBytes + (lnInvoice?.bytesUsedInMemory() ?: 0) // rough calculation
 
     fun walletServicePubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
 

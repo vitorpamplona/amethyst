@@ -22,7 +22,11 @@ package com.vitorpamplona.quartz.utils
 
 import kotlin.math.min
 
-fun String.bytesUsedInMemory(): Int = (8 * ((((this.length) * 2) + 45) / 8))
+val pointerSizeInBytes = 4
+
+fun String.bytesUsedInMemory(): Long = (8 * (((this.length * 2L) + 45) / 8))
+
+fun Boolean.bytesUsedInMemory(): Long = 8
 
 fun String.containsIgnoreCase(term: String): Boolean {
     if (term.isEmpty()) return true // Empty string is contained

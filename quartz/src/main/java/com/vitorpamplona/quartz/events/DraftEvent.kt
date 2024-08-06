@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 class DraftEvent(
@@ -36,6 +37,10 @@ class DraftEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
+
+    override fun countMemory(): Long =
+        super.countMemory() +
+            32 + (cachedInnerEvent.values.sumOf { pointerSizeInBytes + (it?.countMemory() ?: 0) })
 
     override fun isContentEncoded() = true
 

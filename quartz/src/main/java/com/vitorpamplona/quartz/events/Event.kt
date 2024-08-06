@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import java.math.BigDecimal
 import java.security.MessageDigest
 
@@ -60,10 +61,11 @@ open class Event(
     override fun isContentEncoded() = false
 
     override fun countMemory(): Long =
-        12L +
+        7 * pointerSizeInBytes + // 7 fields, 4 bytes each reference (32bit)
+            12L + // createdAt + kind
             id.bytesUsedInMemory() +
             pubKey.bytesUsedInMemory() +
-            tags.sumOf { it.sumOf { it.bytesUsedInMemory() } } +
+            tags.sumOf { pointerSizeInBytes + it.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } } +
             content.bytesUsedInMemory() +
             sig.bytesUsedInMemory()
 
