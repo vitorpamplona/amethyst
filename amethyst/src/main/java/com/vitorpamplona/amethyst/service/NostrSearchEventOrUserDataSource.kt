@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.PerRelayFilter
+import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.Hex
@@ -95,7 +95,7 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                             TypedFilter(
                                 types = COMMON_FEED_TYPES,
                                 filter =
-                                    PerRelayFilter(
+                                    SincePerRelayFilter(
                                         kinds = listOf(MetadataEvent.KIND, aTag.kind),
                                         authors = listOfNotNull(aTag.pubKeyHex),
                                         // just to be sure
@@ -110,7 +110,7 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                         TypedFilter(
                             types = COMMON_FEED_TYPES,
                             filter =
-                                PerRelayFilter(
+                                SincePerRelayFilter(
                                     ids = listOfNotNull(hexToWatch),
                                 ),
                         ),
@@ -118,7 +118,7 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                         TypedFilter(
                             types = COMMON_FEED_TYPES,
                             filter =
-                                PerRelayFilter(
+                                SincePerRelayFilter(
                                     kinds = listOf(MetadataEvent.KIND),
                                     authors = listOfNotNull(hexToWatch),
                                     // just to be sure
@@ -135,7 +135,7 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                 TypedFilter(
                     types = setOf(FeedType.SEARCH),
                     filter =
-                        PerRelayFilter(
+                        SincePerRelayFilter(
                             kinds = listOf(MetadataEvent.KIND),
                             search = mySearchString,
                             limit = 1000,
@@ -144,7 +144,7 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                 TypedFilter(
                     types = setOf(FeedType.SEARCH),
                     filter =
-                        PerRelayFilter(
+                        SincePerRelayFilter(
                             kinds =
                                 listOf(
                                     TextNoteEvent.KIND,
@@ -165,7 +165,7 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                 TypedFilter(
                     types = setOf(FeedType.SEARCH),
                     filter =
-                        PerRelayFilter(
+                        SincePerRelayFilter(
                             kinds =
                                 listOf(
                                     ChannelMetadataEvent.KIND,

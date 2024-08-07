@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.PerRelayFilter
+import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
@@ -41,7 +41,7 @@ object NostrChatroomListDataSource : AmethystNostrDataSource("MailBoxFeed") {
         TypedFilter(
             types = setOf(FeedType.PRIVATE_DMS),
             filter =
-                PerRelayFilter(
+                SincePerRelayFilter(
                     kinds = listOf(PrivateDmEvent.KIND),
                     tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
                     since =
@@ -56,7 +56,7 @@ object NostrChatroomListDataSource : AmethystNostrDataSource("MailBoxFeed") {
         TypedFilter(
             types = setOf(FeedType.PRIVATE_DMS),
             filter =
-                PerRelayFilter(
+                SincePerRelayFilter(
                     kinds = listOf(PrivateDmEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     since =
@@ -71,7 +71,7 @@ object NostrChatroomListDataSource : AmethystNostrDataSource("MailBoxFeed") {
         TypedFilter(
             types = setOf(FeedType.PUBLIC_CHATS),
             filter =
-                PerRelayFilter(
+                SincePerRelayFilter(
                     kinds = listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     since =
@@ -91,7 +91,7 @@ object NostrChatroomListDataSource : AmethystNostrDataSource("MailBoxFeed") {
             // Metadata comes from any relay
             types = EVENT_FINDER_TYPES,
             filter =
-                PerRelayFilter(
+                SincePerRelayFilter(
                     kinds = listOf(ChannelCreateEvent.KIND),
                     ids = followingEvents.toList(),
                     since =
@@ -113,7 +113,7 @@ object NostrChatroomListDataSource : AmethystNostrDataSource("MailBoxFeed") {
                 // Metadata comes from any relay
                 types = EVENT_FINDER_TYPES,
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds = listOf(ChannelMetadataEvent.KIND),
                         tags = mapOf("e" to listOf(it)),
                         limit = 1,
@@ -131,7 +131,7 @@ object NostrChatroomListDataSource : AmethystNostrDataSource("MailBoxFeed") {
             TypedFilter(
                 types = setOf(FeedType.PUBLIC_CHATS),
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds = listOf(ChannelMessageEvent.KIND),
                         tags = mapOf("e" to listOf(it)),
                         since =

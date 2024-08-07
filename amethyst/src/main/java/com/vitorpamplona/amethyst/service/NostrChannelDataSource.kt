@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.PerRelayFilter
+import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 
@@ -58,7 +58,7 @@ object NostrChannelDataSource : AmethystNostrDataSource("ChatroomFeed") {
             return TypedFilter(
                 types = setOf(FeedType.FOLLOWS, FeedType.PRIVATE_DMS, FeedType.GLOBAL, FeedType.SEARCH),
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds = listOf(ChannelMessageEvent.KIND),
                         authors = listOf(myAccount.userProfile().pubkeyHex),
                         limit = 50,
@@ -71,7 +71,7 @@ object NostrChannelDataSource : AmethystNostrDataSource("ChatroomFeed") {
             return TypedFilter(
                 types = setOf(FeedType.FOLLOWS, FeedType.PRIVATE_DMS, FeedType.GLOBAL, FeedType.SEARCH),
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
                         authors = listOf(myAccount.userProfile().pubkeyHex),
                         limit = 50,
@@ -86,7 +86,7 @@ object NostrChannelDataSource : AmethystNostrDataSource("ChatroomFeed") {
             return TypedFilter(
                 types = setOf(FeedType.PUBLIC_CHATS),
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds = listOf(ChannelMessageEvent.KIND),
                         tags = mapOf("e" to listOfNotNull(channel?.idHex)),
                         limit = 200,
@@ -96,7 +96,7 @@ object NostrChannelDataSource : AmethystNostrDataSource("ChatroomFeed") {
             return TypedFilter(
                 types = setOf(FeedType.PUBLIC_CHATS),
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
                         tags = mapOf("a" to listOfNotNull(channel?.idHex)),
                         limit = 200,

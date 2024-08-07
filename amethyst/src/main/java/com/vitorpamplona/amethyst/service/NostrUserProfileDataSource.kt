@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.PerRelayFilter
+import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.events.AppRecommendationEvent
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
@@ -56,7 +56,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds = listOf(MetadataEvent.KIND),
                         authors = listOf(it.pubkeyHex),
                         limit = 1,
@@ -69,7 +69,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds =
                             listOf(
                                 TextNoteEvent.KIND,
@@ -94,7 +94,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds = listOf(LnZapEvent.KIND),
                         tags = mapOf("p" to listOf(it.pubkeyHex)),
                         limit = 200,
@@ -107,7 +107,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds = listOf(ContactListEvent.KIND),
                         authors = listOf(it.pubkeyHex),
                         limit = 1,
@@ -120,7 +120,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds = listOf(ContactListEvent.KIND),
                         tags = mapOf("p" to listOf(it.pubkeyHex)),
                     ),
@@ -132,7 +132,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds = listOf(BadgeProfilesEvent.KIND),
                         authors = listOf(it.pubkeyHex),
                         limit = 1,
@@ -145,7 +145,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds =
                             listOf(BookmarkListEvent.KIND, PeopleListEvent.KIND, AppRecommendationEvent.KIND),
                         authors = listOf(it.pubkeyHex),
@@ -159,7 +159,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds =
                             listOf(ProfileGalleryEntryEvent.KIND),
                         authors = listOf(it.pubkeyHex),
@@ -173,7 +173,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             TypedFilter(
                 types = COMMON_FEED_TYPES,
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds = listOf(BadgeAwardEvent.KIND),
                         tags = mapOf("p" to listOf(it.pubkeyHex)),
                         limit = 20,

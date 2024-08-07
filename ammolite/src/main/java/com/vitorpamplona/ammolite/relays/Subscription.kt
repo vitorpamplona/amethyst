@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.ammolite.relays
 
+import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import java.util.UUID
 
 data class Subscription(
@@ -42,28 +43,40 @@ data class Subscription(
         typedFilters?.forEachIndexed { index, typedFilter ->
             val otherFilter = otherFilters?.getOrNull(index) ?: return true
 
-            // Does not check SINCE on purpose. Avoids replacing the filter if SINCE was all that changed.
-            // fast check
-            if (typedFilter.filter.authors?.size != otherFilter.filter.authors?.size ||
-                typedFilter.filter.ids?.size != otherFilter.filter.ids?.size ||
-                typedFilter.filter.tags?.size != otherFilter.filter.tags?.size ||
-                typedFilter.filter.kinds?.size != otherFilter.filter.kinds?.size ||
-                typedFilter.filter.limit != otherFilter.filter.limit ||
-                typedFilter.filter.search?.length != otherFilter.filter.search?.length ||
-                typedFilter.filter.until != otherFilter.filter.until
-            ) {
-                return true
+            if (typedFilter.filter is SincePerRelayFilter && otherFilter.filter is SincePerRelayFilter) {
+                return isDifferent(typedFilter.filter, otherFilter.filter)
             }
 
-            // deep check
-            if (typedFilter.filter.ids != otherFilter.filter.ids ||
-                typedFilter.filter.authors != otherFilter.filter.authors ||
-                typedFilter.filter.tags != otherFilter.filter.tags ||
-                typedFilter.filter.kinds != otherFilter.filter.kinds ||
-                typedFilter.filter.search != otherFilter.filter.search
-            ) {
-                return true
-            }
+            return true
+        }
+        return false
+    }
+
+    fun isDifferent(
+        filter1: SincePerRelayFilter,
+        filter2: SincePerRelayFilter,
+    ): Boolean {
+        // Does not check SINCE on purpose. Avoids replacing the filter if SINCE was all that changed.
+        // fast check
+        if (filter1.authors?.size != filter2.authors?.size ||
+            filter1.ids?.size != filter2.ids?.size ||
+            filter1.tags?.size != filter2.tags?.size ||
+            filter1.kinds?.size != filter2.kinds?.size ||
+            filter1.limit != filter2.limit ||
+            filter1.search?.length != filter2.search?.length ||
+            filter1.until != filter2.until
+        ) {
+            return true
+        }
+
+        // deep check
+        if (filter1.ids != filter2.ids ||
+            filter1.authors != filter2.authors ||
+            filter1.tags != filter2.tags ||
+            filter1.kinds != filter2.kinds ||
+            filter1.search != filter2.search
+        ) {
+            return true
         }
         return false
     }

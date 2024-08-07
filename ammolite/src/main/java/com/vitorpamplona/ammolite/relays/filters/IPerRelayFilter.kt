@@ -18,11 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays
+package com.vitorpamplona.ammolite.relays.filters
 
-import com.vitorpamplona.ammolite.relays.filters.IPerRelayFilter
+import com.vitorpamplona.quartz.events.Event
 
-class TypedFilter(
-    val types: Set<FeedType>,
-    val filter: IPerRelayFilter,
-)
+interface IPerRelayFilter {
+    fun toJson(forRelay: String): String
+
+    fun match(
+        event: Event,
+        forRelay: String,
+    ): Boolean
+
+    fun toDebugJson(): String
+}

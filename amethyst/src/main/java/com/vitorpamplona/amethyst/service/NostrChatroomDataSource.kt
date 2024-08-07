@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.PerRelayFilter
+import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 
@@ -50,7 +50,7 @@ object NostrChatroomDataSource : AmethystNostrDataSource("ChatroomFeed") {
             TypedFilter(
                 types = setOf(FeedType.PRIVATE_DMS),
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds = listOf(PrivateDmEvent.KIND),
                         authors = myPeer.users.toList(),
                         tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
@@ -73,7 +73,7 @@ object NostrChatroomDataSource : AmethystNostrDataSource("ChatroomFeed") {
             TypedFilter(
                 types = setOf(FeedType.PRIVATE_DMS),
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds = listOf(PrivateDmEvent.KIND),
                         authors = listOf(account.userProfile().pubkeyHex),
                         tags = mapOf("p" to myPeer.users.map { it }),

@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.PerRelayFilter
+import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
@@ -72,7 +72,7 @@ object NostrVideoDataSource : AmethystNostrDataSource("VideoFeed") {
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                PerRelayFilter(
+                SincePerRelayFilter(
                     authors = follows,
                     kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
                     limit = 200,
@@ -97,7 +97,7 @@ object NostrVideoDataSource : AmethystNostrDataSource("VideoFeed") {
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                PerRelayFilter(
+                SincePerRelayFilter(
                     kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
                     tags =
                         mapOf(
@@ -128,7 +128,7 @@ object NostrVideoDataSource : AmethystNostrDataSource("VideoFeed") {
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                PerRelayFilter(
+                SincePerRelayFilter(
                     kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
                     tags =
                         mapOf(

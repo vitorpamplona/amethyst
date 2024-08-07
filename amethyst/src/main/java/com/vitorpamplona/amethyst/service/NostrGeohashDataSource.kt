@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.PerRelayFilter
+import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
@@ -43,7 +43,7 @@ object NostrGeohashDataSource : AmethystNostrDataSource("SingleGeoHashFeed") {
         return TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                PerRelayFilter(
+                SincePerRelayFilter(
                     tags =
                         mapOf(
                             "g" to

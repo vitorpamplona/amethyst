@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.PerRelayFilter
+import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
@@ -83,7 +83,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
             TypedFilter(
                 types = setOf(FeedType.GLOBAL),
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         authors = follows,
                         kinds = listOf(ClassifiedsEvent.KIND),
                         limit = 300,
@@ -98,7 +98,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                 TypedFilter(
                     types = setOf(FeedType.GLOBAL),
                     filter =
-                        PerRelayFilter(
+                        SincePerRelayFilter(
                             kinds = listOf(ClassifiedsEvent.KIND),
                             tags =
                                 mapOf(
@@ -120,7 +120,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                 TypedFilter(
                     types = setOf(FeedType.GLOBAL),
                     filter =
-                        PerRelayFilter(
+                        SincePerRelayFilter(
                             kinds = listOf(ClassifiedsEvent.KIND),
                             tags =
                                 mapOf(
@@ -146,7 +146,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
             TypedFilter(
                 types = setOf(FeedType.GLOBAL),
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds = listOf(AppDefinitionEvent.KIND),
                         limit = 300,
                         tags = mapOf("k" to kTags),
@@ -169,7 +169,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
             TypedFilter(
                 types = setOf(FeedType.GLOBAL),
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         authors = follows,
                         kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND),
                         limit = 300,
@@ -184,7 +184,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                 TypedFilter(
                     types = setOf(FeedType.GLOBAL),
                     filter =
-                        PerRelayFilter(
+                        SincePerRelayFilter(
                             tags = mapOf("p" to it),
                             kinds = listOf(LiveActivitiesEvent.KIND),
                             limit = 100,
@@ -210,7 +210,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
             TypedFilter(
                 types = setOf(FeedType.PUBLIC_CHATS),
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         authors = follows,
                         kinds = listOf(ChannelMessageEvent.KIND),
                         limit = 500,
@@ -225,7 +225,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                 TypedFilter(
                     types = setOf(FeedType.PUBLIC_CHATS),
                     filter =
-                        PerRelayFilter(
+                        SincePerRelayFilter(
                             ids = followChats,
                             kinds = listOf(ChannelCreateEvent.KIND, ChannelMessageEvent.KIND),
                             limit = 300,
@@ -251,7 +251,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                PerRelayFilter(
+                SincePerRelayFilter(
                     authors = follows,
                     kinds = listOf(CommunityDefinitionEvent.KIND, CommunityPostApprovalEvent.KIND),
                     limit = 300,
@@ -275,7 +275,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                PerRelayFilter(
+                SincePerRelayFilter(
                     kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND),
                     tags =
                         mapOf(
@@ -305,7 +305,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                PerRelayFilter(
+                SincePerRelayFilter(
                     kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND),
                     tags =
                         mapOf(
@@ -335,7 +335,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
         return TypedFilter(
             types = setOf(FeedType.PUBLIC_CHATS),
             filter =
-                PerRelayFilter(
+                SincePerRelayFilter(
                     kinds =
                         listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND, ChannelMessageEvent.KIND),
                     tags =
@@ -366,7 +366,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
         return TypedFilter(
             types = setOf(FeedType.PUBLIC_CHATS),
             filter =
-                PerRelayFilter(
+                SincePerRelayFilter(
                     kinds =
                         listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND, ChannelMessageEvent.KIND),
                     tags =
@@ -397,7 +397,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                PerRelayFilter(
+                SincePerRelayFilter(
                     kinds = listOf(CommunityDefinitionEvent.KIND, CommunityPostApprovalEvent.KIND),
                     tags =
                         mapOf(
@@ -427,7 +427,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                PerRelayFilter(
+                SincePerRelayFilter(
                     kinds = listOf(CommunityDefinitionEvent.KIND, CommunityPostApprovalEvent.KIND),
                     tags =
                         mapOf(

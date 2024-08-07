@@ -22,7 +22,10 @@ package com.vitorpamplona.ammolite.relays.filters
 
 import com.vitorpamplona.quartz.events.Event
 
-class PerRelayFilter(
+/**
+ * This is a nostr filter with per-relay authors list and since parameters
+ */
+class SincePerRelayFilter(
     val ids: List<String>? = null,
     val authors: List<String>? = null,
     val kinds: List<Int>? = null,
@@ -31,17 +34,18 @@ class PerRelayFilter(
     val until: Long? = null,
     val limit: Int? = null,
     val search: String? = null,
-) {
-    fun toJson(forRelay: String) = FilterSerializer.toJson(ids, authors, kinds, tags, since?.get(forRelay)?.time, until, limit, search)
+) : IPerRelayFilter {
+    override fun toJson(forRelay: String) = FilterSerializer.toJson(ids, authors, kinds, tags, since?.get(forRelay)?.time, until, limit, search)
 
-    fun match(
+    override fun match(
         event: Event,
-        forRelay: String? = null,
+        forRelay: String,
     ) = FilterMatcher.match(event, ids, authors, kinds, tags, since?.get(forRelay)?.time, until)
 
-    fun toDebugJson(): String {
+    override fun toDebugJson(): String {
         val factory = Event.mapper.nodeFactory
         val obj = FilterSerializer.toJsonObject(ids, authors, kinds, tags, null, until, limit, search)
+
         since?.run {
             if (isNotEmpty()) {
                 val jsonObjectSince = factory.objectNode()

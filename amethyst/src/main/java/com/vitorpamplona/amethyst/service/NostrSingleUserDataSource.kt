@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.PerRelayFilter
+import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
@@ -45,7 +45,7 @@ object NostrSingleUserDataSource : AmethystNostrDataSource("SingleUserFeed") {
             TypedFilter(
                 types = EVENT_FINDER_TYPES,
                 filter =
-                    PerRelayFilter(
+                    SincePerRelayFilter(
                         kinds = listOf(MetadataEvent.KIND, AdvertisedRelayListEvent.KIND),
                         authors = firstTimers,
                     ),
@@ -69,7 +69,7 @@ object NostrSingleUserDataSource : AmethystNostrDataSource("SingleUserFeed") {
                     TypedFilter(
                         types = EVENT_FINDER_TYPES,
                         filter =
-                            PerRelayFilter(
+                            SincePerRelayFilter(
                                 kinds = listOf(MetadataEvent.KIND, StatusEvent.KIND, AdvertisedRelayListEvent.KIND, ChatMessageRelayListEvent.KIND),
                                 authors = groupIds,
                                 since = minEOSEs,
@@ -78,7 +78,7 @@ object NostrSingleUserDataSource : AmethystNostrDataSource("SingleUserFeed") {
                     TypedFilter(
                         types = EVENT_FINDER_TYPES,
                         filter =
-                            PerRelayFilter(
+                            SincePerRelayFilter(
                                 kinds = listOf(ReportEvent.KIND),
                                 tags = mapOf("p" to groupIds),
                                 since = minEOSEs,
