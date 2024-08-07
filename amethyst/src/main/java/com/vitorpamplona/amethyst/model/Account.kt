@@ -496,6 +496,95 @@ class Account(
         liveHomeFollowListFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
     }
 
+    /**
+     * filter onion and local host from write relays
+     * for each user pubkey, a list of valid relays.
+     */
+    private fun assembleAuthorsPerWriteRelay(
+        userList: Map<HexKey, List<String>>,
+        hasOnionConnection: Boolean = false,
+    ): Map<String, List<HexKey>> {
+        val authorsPerRelayUrl = mutableMapOf<String, MutableSet<HexKey>>()
+        val relayUrlsPerAuthor = mutableMapOf<HexKey, MutableSet<String>>()
+
+        userList.forEach { userWriteRelayListPair ->
+            userWriteRelayListPair.value.forEach { relayUrl ->
+                if (!RelayUrlFormatter.isLocalHost(relayUrl) && (hasOnionConnection || !RelayUrlFormatter.isOnion(relayUrl))) {
+                    RelayUrlFormatter.normalizeOrNull(relayUrl)?.let { normRelayUrl ->
+                        val userSet = authorsPerRelayUrl[normRelayUrl]
+                        if (userSet != null) {
+                            userSet.add(userWriteRelayListPair.key)
+                        } else {
+                            authorsPerRelayUrl[normRelayUrl] = mutableSetOf(userWriteRelayListPair.key)
+                        }
+
+                        val relaySet = authorsPerRelayUrl[userWriteRelayListPair.key]
+                        if (relaySet != null) {
+                            relaySet.add(normRelayUrl)
+                        } else {
+                            relayUrlsPerAuthor[userWriteRelayListPair.key] = mutableSetOf(normRelayUrl)
+                        }
+                    }
+                }
+            }
+        }
+
+        // for each relay, authors that only use this relay go first.
+        // then keeps order by pubkey asc
+        val comparator = compareByDescending<HexKey> { relayUrlsPerAuthor[it]?.size ?: 0 }.thenBy { it }
+
+        return authorsPerRelayUrl.mapValues {
+            it.value.sortedWith(comparator)
+        }
+    }
+
+    fun authorsPerRelay(
+        pubkeyList: Set<HexKey>,
+        defaultRelayList: List<String>,
+    ): Flow<Map<String, List<String>>> =
+        combine(
+            pubkeyList.map {
+                getNIP65RelayListFlow(it)
+            },
+        ) { followsNIP65RelayLists ->
+            assembleAuthorsPerWriteRelay(
+                followsNIP65RelayLists
+                    .mapNotNull {
+                        val author = (it.note as? AddressableNote)?.address?.pubKeyHex
+                        val event = (it.note.event as? AdvertisedRelayListEvent)
+
+                        if (event != null) {
+                            event.pubKey to event.writeRelays()
+                        } else {
+                            if (author != null) {
+                                author to defaultRelayList
+                            } else {
+                                Log.e("Account", "This author should NEVER be null. Note: ${it.note.idHex}")
+                                null
+                            }
+                        }
+                    }.toMap(),
+                hasOnionConnection = proxy != null,
+            )
+        }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val liveHomeListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
+        combineTransform(liveHomeFollowListFlow, connectToRelaysFlow) { followList, existing ->
+            if (followList != null) {
+                emit(authorsPerRelay(followList.usersPlusMe, existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }))
+            } else {
+                emit(MutableStateFlow(null))
+            }
+        }.flatMapLatest {
+            it
+        }
+    }
+
+    val liveHomeListAuthorsPerRelay: StateFlow<Map<String, List<String>>?> by lazy {
+        liveHomeListAuthorsPerRelayFlow.stateIn(scope, SharingStarted.Eagerly, emptyMap())
+    }
+
     fun relaysFromPeopleListFlows(
         currentFollowList: LiveFollowLists,
         relayUrlsToIgnore: Set<String>,

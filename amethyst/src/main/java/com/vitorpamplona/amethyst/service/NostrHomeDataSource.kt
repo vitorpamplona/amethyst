@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.filters.SinceAuthorPerRelayFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
@@ -76,13 +77,13 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
     }
 
     fun createFollowAccountsFilter(): TypedFilter {
-        val follows = account.liveHomeFollowLists.value?.users
-        val followSet = follows?.plus(account.userProfile().pubkeyHex)?.toList()?.ifEmpty { null }
+        val follows =
+            account.liveHomeListAuthorsPerRelay.value
 
         return TypedFilter(
             types = setOf(if (follows == null) FeedType.GLOBAL else FeedType.FOLLOWS),
             filter =
-                SincePerRelayFilter(
+                SinceAuthorPerRelayFilter(
                     kinds =
                         listOf(
                             TextNoteEvent.KIND,
@@ -99,7 +100,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                             LiveActivitiesEvent.KIND,
                             WikiNoteEvent.KIND,
                         ),
-                    authors = followSet,
+                    authors = follows,
                     limit = 400,
                     since =
                         latestEOSEs.users[account.userProfile()]
@@ -111,20 +112,19 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
     }
 
     fun createFollowMetadataAndReleaseFilter(): TypedFilter? {
-        val follows = account.liveHomeFollowLists.value?.users
-        val followSet = follows?.plus(account.userProfile().pubkeyHex)?.shuffled()?.ifEmpty { null }
+        val follows = account.liveHomeListAuthorsPerRelay.value
 
-        return if (followSet != null) {
+        return if (follows != null) {
             TypedFilter(
                 types = setOf(FeedType.FOLLOWS),
                 filter =
-                    SincePerRelayFilter(
+                    SinceAuthorPerRelayFilter(
                         kinds =
                             listOf(
                                 MetadataEvent.KIND,
                                 AdvertisedRelayListEvent.KIND,
                             ),
-                        authors = followSet.take(500),
+                        authors = follows,
                         since =
                             latestEOSEs.users[account.userProfile()]
                                 ?.followList
