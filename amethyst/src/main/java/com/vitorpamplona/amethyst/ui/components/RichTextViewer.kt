@@ -444,10 +444,8 @@ private fun ZoomableContentView(
     state: RichTextViewerState,
     accountViewModel: AccountViewModel,
 ) {
-    println("AABBCC ZoomableContentView -- ${state.imagesForPager.keys.joinToString("..") { it }}")
     state.imagesForPager[word]?.let {
         Box(modifier = HalfVertPadding) {
-            println("AABBCC ZoomableContentView inside $word")
             ZoomableContentView(it, state.imageList, roundedCorner = true, isFiniteHeight = false, accountViewModel)
         }
     }
