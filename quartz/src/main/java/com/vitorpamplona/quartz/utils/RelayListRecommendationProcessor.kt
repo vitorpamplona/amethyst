@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 
 class RelayListRecommendationProcessor {
     companion object {
-        private fun transpose(
+        fun transpose(
             userList: Map<HexKey, MutableSet<String>>,
             ignore: Set<String> = setOf(),
         ): Map<String, MutableSet<HexKey>> {
@@ -76,7 +76,7 @@ class RelayListRecommendationProcessor {
             return validWriteRelayUrls
         }
 
-        private fun reliableRelaySetFor(
+        fun reliableRelaySetFor(
             usersAndRelays: MutableMap<HexKey, MutableSet<String>>,
             relayUrlsToIgnore: Set<String> = emptySet(),
         ): Set<RelayRecommendation> {
