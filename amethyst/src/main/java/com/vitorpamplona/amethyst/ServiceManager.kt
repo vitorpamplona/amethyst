@@ -30,6 +30,7 @@ import coil.decode.SvgDecoder
 import coil.size.Precision
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.Base64Fetcher
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -98,6 +99,7 @@ class ServiceManager {
                         add(GifDecoder.Factory())
                     }
                     add(SvgDecoder.Factory())
+                    add(Base64Fetcher.Factory)
                 } // .logger(DebugLogger())
                 .okHttpClient { HttpClientManager.getHttpClient() }
                 .precision(Precision.INEXACT)

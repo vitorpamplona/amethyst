@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import android.util.Base64
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,7 +28,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
@@ -49,8 +47,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -65,10 +61,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImagePainter
-import coil.compose.SubcomposeAsyncImage
-import coil.compose.SubcomposeAsyncImageContent
-import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.commons.compose.produceCachedState
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
@@ -83,7 +75,6 @@ import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.PhoneSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SchemelessUrlSegment
 import com.vitorpamplona.amethyst.commons.richtext.Segment
@@ -96,7 +87,6 @@ import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
-import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -112,7 +102,6 @@ import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.withContext
 
 fun isMarkdown(content: String): Boolean =
     content.startsWith("> ") ||
@@ -445,47 +434,7 @@ private fun RenderWordWithPreview(
         is HashIndexEventSegment -> TagLink(word, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
         is RegularTextSegment -> Text(word.segmentText)
-        is Base64Segment -> ImageFromBase64(word.segmentText)
-    }
-}
-
-@Composable
-fun ImageFromBase64(base64String: String) {
-    val context = LocalContext.current
-    var imageBytes by remember { mutableStateOf<ByteArray?>(null) }
-    LaunchedEffect(base64String) {
-        imageBytes =
-            withContext(Dispatchers.IO) {
-                var base64String2 = base64String.removePrefix("data:image/jpeg;base64,")
-                RichTextParser.imageExtensions.forEach {
-                    base64String2 = base64String2.removePrefix("data:image/$it;base64,")
-                }
-                runCatching { Base64.decode(base64String2, Base64.DEFAULT) }.getOrNull()
-            }
-    }
-
-    if (imageBytes == null) {
-        BlankNote()
-    } else {
-        val request =
-            ImageRequest
-                .Builder(context)
-                .data(imageBytes)
-                .build()
-
-        SubcomposeAsyncImage(
-            model = request,
-            contentDescription = null,
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            when (painter.state) {
-                is AsyncImagePainter.State.Success -> {
-                    SubcomposeAsyncImageContent()
-                }
-                else -> BlankNote()
-            }
-        }
+        is Base64Segment -> ZoomableContentView(word.segmentText, state, accountViewModel)
     }
 }
 
@@ -495,8 +444,10 @@ private fun ZoomableContentView(
     state: RichTextViewerState,
     accountViewModel: AccountViewModel,
 ) {
+    println("AABBCC ZoomableContentView -- ${state.imagesForPager.keys.joinToString("..") { it }}")
     state.imagesForPager[word]?.let {
         Box(modifier = HalfVertPadding) {
+            println("AABBCC ZoomableContentView inside $word")
             ZoomableContentView(it, state.imageList, roundedCorner = true, isFiniteHeight = false, accountViewModel)
         }
     }
