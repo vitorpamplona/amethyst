@@ -18,11 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays
+package com.vitorpamplona.ammolite.relays.filters
 
-import com.vitorpamplona.ammolite.relays.filters.PerRelayFilter
+import com.vitorpamplona.quartz.events.Event
 
-class TypedFilter(
-    val types: Set<FeedType>,
-    val filter: PerRelayFilter,
-)
+object FilterMatcher {
+    fun match(
+        event: Event,
+        ids: List<String>? = null,
+        authors: List<String>? = null,
+        kinds: List<Int>? = null,
+        tags: Map<String, List<String>>? = null,
+        since: Long? = null,
+        until: Long? = null,
+    ): Boolean {
+        if (ids?.any { event.id == it } == false) return false
+        if (kinds?.any { event.kind == it } == false) return false
+        if (authors?.any { event.pubKey == it } == false) return false
+        tags?.forEach { tag ->
+            if (!event.tags.any { it.first() == tag.key && it[1] in tag.value }) return false
+        }
+        if (event.createdAt !in (since ?: Long.MIN_VALUE)..(until ?: Long.MAX_VALUE)) {
+            return false
+        }
+        return true
+    }
+}

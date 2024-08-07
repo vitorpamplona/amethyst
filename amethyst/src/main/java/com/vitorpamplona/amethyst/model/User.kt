@@ -29,8 +29,8 @@ import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.ammolite.relays.BundledUpdate
-import com.vitorpamplona.ammolite.relays.EOSETime
 import com.vitorpamplona.ammolite.relays.Relay
+import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Lud06

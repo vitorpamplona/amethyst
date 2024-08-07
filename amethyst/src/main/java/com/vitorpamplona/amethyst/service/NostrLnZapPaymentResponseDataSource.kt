@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.filters.PerRelayFilter
 import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.signers.NostrSigner
 
@@ -39,7 +39,7 @@ class NostrLnZapPaymentResponseDataSource(
         return TypedFilter(
             types = feedTypes,
             filter =
-                Filter(
+                PerRelayFilter(
                     kinds = listOf(LnZapPaymentResponseEvent.KIND),
                     authors = listOf(fromServiceHex),
                     tags =

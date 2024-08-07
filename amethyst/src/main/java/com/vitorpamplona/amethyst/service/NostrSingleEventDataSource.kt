@@ -23,10 +23,10 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.ammolite.relays.EOSETime
 import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.ammolite.relays.filters.PerRelayFilter
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
@@ -67,7 +67,7 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
                     TypedFilter(
                         types = EVENT_FINDER_TYPES,
                         filter =
-                            Filter(
+                            PerRelayFilter(
                                 kinds =
                                     listOf(
                                         TextNoteEvent.KIND,
@@ -89,7 +89,7 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
                     TypedFilter(
                         types = EVENT_FINDER_TYPES,
                         filter =
-                            Filter(
+                            PerRelayFilter(
                                 kinds =
                                     listOf(
                                         DeletionEvent.KIND,
@@ -117,7 +117,7 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
                     TypedFilter(
                         types = EVENT_FINDER_TYPES,
                         filter =
-                            Filter(
+                            PerRelayFilter(
                                 kinds = listOf(aTag.kind),
                                 authors = listOf(aTag.pubKeyHex),
                                 limit = 5,
@@ -127,7 +127,7 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
                     TypedFilter(
                         types = EVENT_FINDER_TYPES,
                         filter =
-                            Filter(
+                            PerRelayFilter(
                                 kinds = listOf(aTag.kind),
                                 tags = mapOf("d" to listOf(aTag.dTag)),
                                 authors = listOf(aTag.pubKeyHex),
@@ -150,7 +150,7 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
                     TypedFilter(
                         types = EVENT_FINDER_TYPES,
                         filter =
-                            Filter(
+                            PerRelayFilter(
                                 kinds =
                                     listOf(
                                         TextNoteEvent.KIND,
@@ -173,7 +173,7 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
                     TypedFilter(
                         types = EVENT_FINDER_TYPES,
                         filter =
-                            Filter(
+                            PerRelayFilter(
                                 kinds =
                                     listOf(
                                         DeletionEvent.KIND,
@@ -200,7 +200,7 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
                     TypedFilter(
                         types = EVENT_FINDER_TYPES,
                         filter =
-                            Filter(
+                            PerRelayFilter(
                                 kinds = listOf(TextNoteEvent.KIND),
                                 tags = mapOf("q" to it.map { it.idHex }),
                                 since = findMinimumEOSEs(it),
@@ -232,7 +232,7 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
             TypedFilter(
                 types = EVENT_FINDER_TYPES,
                 filter =
-                    Filter(
+                    PerRelayFilter(
                         ids = interestedEvents.toList(),
                     ),
             ),

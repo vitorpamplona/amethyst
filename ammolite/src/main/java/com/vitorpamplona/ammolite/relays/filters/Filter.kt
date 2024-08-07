@@ -18,10 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays
+package com.vitorpamplona.ammolite.relays.filters
 
-class EOSETime(
-    var time: Long,
+import com.vitorpamplona.quartz.events.Event
+
+class Filter(
+    val ids: List<String>? = null,
+    val authors: List<String>? = null,
+    val kinds: List<Int>? = null,
+    val tags: Map<String, List<String>>? = null,
+    val since: Long? = null,
+    val until: Long? = null,
+    val limit: Int? = null,
+    val search: String? = null,
 ) {
-    override fun toString(): String = time.toString()
+    fun toJson() = FilterSerializer.toJson(ids, authors, kinds, tags, since, until, limit, search)
+
+    fun match(event: Event) = FilterMatcher.match(event, ids, authors, kinds, tags, since, until)
 }

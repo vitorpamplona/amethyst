@@ -18,11 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays
+package com.vitorpamplona.ammolite.relays.filters
 
-import com.vitorpamplona.ammolite.relays.filters.PerRelayFilter
-
-class TypedFilter(
-    val types: Set<FeedType>,
-    val filter: PerRelayFilter,
-)
+/*
+* Wrapper class to allow changing in EOSE without modifying the list it is included within
+*/
+class EOSETime(
+    var time: Long,
+) {
+    override fun toString(): String = time.toString()
+}

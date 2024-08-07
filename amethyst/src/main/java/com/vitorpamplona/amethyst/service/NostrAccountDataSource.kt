@@ -26,11 +26,11 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.ammolite.relays.Client
-import com.vitorpamplona.ammolite.relays.EOSETime
 import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.ammolite.relays.filters.PerRelayFilter
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
@@ -81,7 +81,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                Filter(
+                PerRelayFilter(
                     kinds = listOf(ContactListEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     limit = 1,
@@ -92,7 +92,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                Filter(
+                PerRelayFilter(
                     kinds = listOf(MetadataEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     limit = 1,
@@ -103,7 +103,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                Filter(
+                PerRelayFilter(
                     kinds =
                         listOf(
                             StatusEvent.KIND,
@@ -124,7 +124,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         return TypedFilter(
             types = EVENT_FINDER_TYPES,
             filter =
-                Filter(
+                PerRelayFilter(
                     kinds =
                         listOf(
                             MetadataEvent.KIND,
@@ -146,7 +146,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                Filter(
+                PerRelayFilter(
                     kinds = listOf(BookmarkListEvent.KIND, PeopleListEvent.KIND, MuteListEvent.KIND, BadgeProfilesEvent.KIND, EmojiPackSelectionEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     limit = 100,
@@ -157,7 +157,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                Filter(
+                PerRelayFilter(
                     kinds = listOf(DraftEvent.KIND, ReportEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     since =
@@ -172,7 +172,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                Filter(
+                PerRelayFilter(
                     authors = listOf(account.userProfile().pubkeyHex),
                     limit = 400,
                 ),
@@ -189,7 +189,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         return TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                Filter(
+                PerRelayFilter(
                     kinds =
                         listOf(
                             TextNoteEvent.KIND,
@@ -222,7 +222,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         return TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                Filter(
+                PerRelayFilter(
                     kinds =
                         listOf(
                             GitReplyEvent.KIND,
@@ -244,7 +244,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                Filter(
+                PerRelayFilter(
                     kinds = listOf(GiftWrapEvent.KIND),
                     tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
                     since =

@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.filters.PerRelayFilter
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
@@ -43,7 +43,7 @@ object NostrHashtagDataSource : AmethystNostrDataSource("SingleHashtagFeed") {
         return TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                Filter(
+                PerRelayFilter(
                     tags =
                         mapOf(
                             "t" to

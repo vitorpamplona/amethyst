@@ -1009,7 +1009,7 @@ fun AmethystClickableIcon() {
 fun debugState(context: Context) {
     Client
         .allSubscriptions()
-        .forEach { Log.d("STATE DUMP", "${it.key} ${it.value.joinToString { it.filter.toJson() }}") }
+        .forEach { Log.d("STATE DUMP", "${it.key} ${it.value.joinToString { it.filter.toDebugJson() }}") }
 
     NostrAccountDataSource.printCounter()
     NostrChannelDataSource.printCounter()

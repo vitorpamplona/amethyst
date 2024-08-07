@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.model.ThreadAssembler
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.Filter
 import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.filters.PerRelayFilter
 
 object NostrThreadDataSource : AmethystNostrDataSource("SingleThreadFeed") {
     private var eventToWatch: String? = null
@@ -45,7 +45,7 @@ object NostrThreadDataSource : AmethystNostrDataSource("SingleThreadFeed") {
         return TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
-                Filter(
+                PerRelayFilter(
                     ids = eventsToLoad.toList(),
                 ),
         )

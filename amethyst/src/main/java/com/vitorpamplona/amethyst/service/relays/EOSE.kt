@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.ammolite.relays.EOSETime
+import com.vitorpamplona.ammolite.relays.filters.EOSETime
 
 class EOSERelayList(
     var relayList: Map<String, EOSETime> = emptyMap(),
