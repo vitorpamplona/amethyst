@@ -32,9 +32,9 @@ object FilterMatcher {
         since: Long? = null,
         until: Long? = null,
     ): Boolean {
-        if (ids?.any { event.id == it } == false) return false
-        if (kinds?.any { event.kind == it } == false) return false
-        if (authors?.any { event.pubKey == it } == false) return false
+        if (ids?.contains(event.id) == false) return false
+        if (kinds?.contains(event.kind) == false) return false
+        if (authors?.contains(event.pubKey) == false) return false
         tags?.forEach { tag ->
             if (!event.tags.any { it.first() == tag.key && it[1] in tag.value }) return false
         }
