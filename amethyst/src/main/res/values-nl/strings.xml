@@ -9,6 +9,7 @@
     <string name="post_was_hidden">Dit bericht is verborgen omdat het je verborgen gebruikers of woorden noemt</string>
     <string name="post_was_flagged_as_inappropriate_by">Bericht gemarkeerd als ongepast door</string>
     <string name="post_not_found">Bericht niet gevonden</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">Kanaalafbeelding</string>
     <string name="referenced_event_not_found">Verwezen event niet gevonden</string>
     <string name="could_not_decrypt_the_message">Note versleuteld met encryptie</string>
@@ -36,6 +37,7 @@
     <string name="report_impersonation">Meld imitatie</string>
     <string name="report_explicit_content">Rapporteer expliciete inhoud</string>
     <string name="report_illegal_behaviour">Rapporteer illegaal gedrag</string>
+    <string name="report_malware">Rapporteer malware</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Je gebruikt een publieke sleutel en publieke sleutels zijn alleen-lezen. Login met een geheime sleutel om te reageren</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Je gebruikt een publieke sleutel en publieke sleutels zijn alleen-lezen. Login met een geheime sleutel om berichten te boosten</string>
     <string name="login_with_a_private_key_to_like_posts">Je gebruikt een publieke sleutel en publieke sleutels zijn alleen-lezen. Login met een geheime sleutel om berichten te liken</string>
@@ -131,6 +133,7 @@
     <string name="conversations">Gesprekken</string>
     <string name="notes">Notes</string>
     <string name="replies">Reacties</string>
+    <string name="gallery">Galerij</string>
     <string name="follows">"Volgend"</string>
     <string name="reports">"Rapporten"</string>
     <string name="more_options">Meer opties</string>
@@ -254,6 +257,8 @@
     <string name="quick_action_delete">Verwijderen</string>
     <string name="quick_action_unfollow">Ontvolgen</string>
     <string name="quick_action_follow">Volgen</string>
+    <string name="quick_action_request_deletion_gallery_title">Verwijderen uit galerij</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">Verwijder deze media uit je galerij, je kunt het later lezen</string>
     <string name="quick_action_request_deletion_alert_title">Verzoek om te verwijderen</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst zal vragen om uw note te verwijderen van de relays waarmee u momenteel verbonden bent. Er is geen garantie dat uw note permanent wordt verwijderd van deze relays, of van andere relays waar het kan worden opgeslagen.</string>
     <string name="quick_action_block_dialog_btn">Blokkeren</string>
@@ -267,6 +272,7 @@
     <string name="report_dialog_impersonation">Kwaadwillige imitatie</string>
     <string name="report_dialog_nudity">Naaktheid of gevoelige inhoud</string>
     <string name="report_dialog_illegal">Illegaal gedrag</string>
+    <string name="report_dialog_malware">Malware</string>
     <string name="report_dialog_blocking_a_user">Als u een gebruiker blokkeert, wordt zijn inhoud in uw app verborgen. Uw notes zijn nog steeds publiekelijk zichtbaar, ook voor mensen die u blokkeert. Geblokkeerde gebruikers worden vermeld in het scherm Beveiligingsfilters.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Blokkeer & verberg gebruiker]]></string>
     <string name="report_dialog_report_btn">Misbruik melden</string>
@@ -339,6 +345,14 @@
     <string name="zap_type_nonzap_explainer">Geen spoor binnen Nostr, alleen in Lightning</string>
     <string name="file_server">File server</string>
     <string name="zap_forward_lnAddress">LnAddress of @User</string>
+    <string name="media_servers">Mediaservers</string>
+    <string name="set_preferred_media_servers">Stel uw gewenste media upload servers in.</string>
+    <string name="no_media_server_message">Je hebt geen aangepaste mediaservers ingesteld. Je kunt de lijst van Amethyst gebruiken of er hieronder een toevoegen ↓</string>
+    <string name="built_in_media_servers_title">Ingebouwde mediaservers</string>
+    <string name="built_in_servers_description">Amethyst\'s standaardlijst. U kunt ze individueel toevoegen of de lijst toevoegen.</string>
+    <string name="use_default_servers">Gebruik standaard lijst</string>
+    <string name="add_media_server">Mediaserver toevoegen</string>
+    <string name="delete_media_server">Mediaserver verwijderen</string>
     <string name="upload_server_relays_nip95">Uw relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Bestanden worden geüpload naar en gehost door relays. Ze zijn vrij van een vaste url (afhankelijkheid van derden). Zorg ervoor dat u een NIP-95 relay in uw lijst met relays hebt.</string>
     <string name="connect_via_tor_short">Orbot/Tor setup</string>
@@ -507,6 +521,7 @@
     <string name="share_or_save">Delen of opslaan</string>
     <string name="copy_url_to_clipboard">Kopieer URL naar klembord</string>
     <string name="copy_the_note_id_to_the_clipboard">Note naar klembord kopiëren</string>
+    <string name="add_media_to_gallery">Media toevoegen aan galerij</string>
     <string name="created_at">Gemaakt op</string>
     <string name="rules">Regels</string>
     <string name="login_with_external_signer">Login met Amber</string>
@@ -710,6 +725,8 @@
     <string name="private_outbox_section_explainer">Plaats tussen de 1 tot 3 relays om gebeurtenissen op te slaan die niemand anders kan zien, zoals uw Concepten en/of app instellingen. Idealiter zijn deze relays lokaal of vereist authenticatie voordat de inhoud van elke gebruiker wordt gedownload.</string>
     <string name="kind_3_section">Algemene relays</string>
     <string name="kind_3_section_description">Amethyst gebruikt deze relays om berichten voor jou te downloaden.</string>
+    <string name="kind_3_recommended_section">Aanbevolen relays</string>
+    <string name="kind_3_recommended_section_description">Voeg de volgende relays toe aan je algemene relay-lijst om berichten van de vermelde gebruikers te ontvangen.</string>
     <string name="search_section">Relays zoeken</string>
     <string name="search_section_explainer">Lijst van relays om te gebruiken bij het zoeken naar inhoud of gebruikers. Taggen en zoeken werkt niet als er geen opties beschikbaar zijn. Zorg ervoor dat ze NIP-50 implementeren.</string>
     <string name="local_section">Lokale relays</string>
@@ -785,4 +802,7 @@
     <string name="http_status_507">Onvoldoende opslagruimte - De server heeft niet genoeg opslagruimte om het verzoek succesvol te verwerken</string>
     <string name="http_status_508">Loop gedetecteerd - De server detecteert een oneindige loop tijdens het verwerken van het verzoek</string>
     <string name="http_status_511">Netwerk authenticatie vereist - De client moet geauthenticeerd zijn om toegang te krijgen tot het netwerk</string>
+    <string name="add_a_nip96_server">Voeg een NIP-96 Server toe</string>
+    <string name="delete_all">Alles verwijderen</string>
+    <string name="delete_all_drafts_confirmation">Weet u zeker dat u alle concepten wilt verwijderen?</string>
 </resources>
