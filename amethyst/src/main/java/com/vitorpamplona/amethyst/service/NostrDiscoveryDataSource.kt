@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.filters.SinceAuthorPerRelayFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
@@ -66,10 +67,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     }
 
     fun createMarketplaceFilter(): List<TypedFilter> {
-        val follows =
-            account.liveDiscoveryFollowLists.value
-                ?.users
-                ?.toList()
+        val follows = account.liveDiscoveryListAuthorsPerRelay.value
         val hashToLoad =
             account.liveDiscoveryFollowLists.value
                 ?.hashtags
@@ -81,9 +79,9 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
 
         return listOfNotNull(
             TypedFilter(
-                types = setOf(FeedType.GLOBAL),
+                types = if (follows == null) setOf(FeedType.GLOBAL) else setOf(FeedType.FOLLOWS),
                 filter =
-                    SincePerRelayFilter(
+                    SinceAuthorPerRelayFilter(
                         authors = follows,
                         kinds = listOf(ClassifiedsEvent.KIND),
                         limit = 300,
@@ -165,12 +163,14 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                 ?.users
                 ?.toList()
 
+        val followsRelays = account.liveDiscoveryListAuthorsPerRelay.value
+
         return listOfNotNull(
             TypedFilter(
                 types = setOf(FeedType.GLOBAL),
                 filter =
-                    SincePerRelayFilter(
-                        authors = follows,
+                    SinceAuthorPerRelayFilter(
+                        authors = followsRelays,
                         kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND),
                         limit = 300,
                         since =
@@ -200,17 +200,14 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     }
 
     fun createPublicChatFilter(): List<TypedFilter> {
-        val follows =
-            account.liveDiscoveryFollowLists.value
-                ?.users
-                ?.toList()
+        val follows = account.liveDiscoveryListAuthorsPerRelay.value
         val followChats = account.selectedChatsFollowList().toList()
 
         return listOfNotNull(
             TypedFilter(
                 types = setOf(FeedType.PUBLIC_CHATS),
                 filter =
-                    SincePerRelayFilter(
+                    SinceAuthorPerRelayFilter(
                         authors = follows,
                         kinds = listOf(ChannelMessageEvent.KIND),
                         limit = 500,
@@ -243,15 +240,12 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     }
 
     fun createCommunitiesFilter(): TypedFilter {
-        val follows =
-            account.liveDiscoveryFollowLists.value
-                ?.users
-                ?.toList()
+        val follows = account.liveDiscoveryListAuthorsPerRelay.value
 
         return TypedFilter(
             types = setOf(FeedType.GLOBAL),
             filter =
-                SincePerRelayFilter(
+                SinceAuthorPerRelayFilter(
                     authors = follows,
                     kinds = listOf(CommunityDefinitionEvent.KIND, CommunityPostApprovalEvent.KIND),
                     limit = 300,

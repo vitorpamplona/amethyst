@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.filters.SinceAuthorPerRelayFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
@@ -64,15 +65,12 @@ object NostrVideoDataSource : AmethystNostrDataSource("VideoFeed") {
     }
 
     fun createContextualFilter(): TypedFilter {
-        val follows =
-            account.liveStoriesFollowLists.value
-                ?.users
-                ?.toList()
+        val follows = account.liveStoriesListAuthorsPerRelay.value
 
         return TypedFilter(
-            types = setOf(FeedType.GLOBAL),
+            types = if (follows == null) setOf(FeedType.GLOBAL) else setOf(FeedType.FOLLOWS),
             filter =
-                SincePerRelayFilter(
+                SinceAuthorPerRelayFilter(
                     authors = follows,
                     kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
                     limit = 200,

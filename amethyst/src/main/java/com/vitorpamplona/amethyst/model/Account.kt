@@ -108,7 +108,6 @@ import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.DualCase
-import com.vitorpamplona.quartz.utils.RelayListRecommendationProcessor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -504,6 +503,8 @@ class Account(
         userList: Map<HexKey, List<String>>,
         hasOnionConnection: Boolean = false,
     ): Map<String, List<HexKey>> {
+        checkNotInMainThread()
+
         val authorsPerRelayUrl = mutableMapOf<String, MutableSet<HexKey>>()
         val relayUrlsPerAuthor = mutableMapOf<HexKey, MutableSet<String>>()
 
@@ -585,53 +586,6 @@ class Account(
         liveHomeListAuthorsPerRelayFlow.stateIn(scope, SharingStarted.Eagerly, emptyMap())
     }
 
-    fun relaysFromPeopleListFlows(
-        currentFollowList: LiveFollowLists,
-        relayUrlsToIgnore: Set<String>,
-    ): Flow<List<RelayListRecommendationProcessor.RelayRecommendation>> =
-        combine(
-            currentFollowList.users.map {
-                getNIP65RelayListFlow(it)
-            },
-        ) { followsNIP65RelayLists ->
-            RelayListRecommendationProcessor
-                .reliableRelaySetFor(
-                    followsNIP65RelayLists.mapNotNull {
-                        (it.note.event as? AdvertisedRelayListEvent)
-                    },
-                    relayUrlsToIgnore,
-                    hasOnionConnection = proxy != null,
-                ).sortedByDescending { it.users.size }
-        }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val liveHomeFollowRelayFlow: Flow<List<RelayListRecommendationProcessor.RelayRecommendation>> by lazy {
-        combineTransform(liveHomeFollowListFlow, connectToRelaysFlow) { followList, existing ->
-            if (followList != null) {
-                emit(
-                    relaysFromPeopleListFlows(
-                        followList,
-                        existing.mapNotNullTo(HashSet()) {
-                            if (it.read && FeedType.FOLLOWS in it.feedTypes) {
-                                it.url
-                            } else {
-                                null
-                            }
-                        },
-                    ),
-                )
-            } else {
-                emit(MutableStateFlow(emptyList()))
-            }
-        }.flatMapLatest {
-            it
-        }
-    }
-
-    val liveHomeFollowRelays: StateFlow<List<RelayListRecommendationProcessor.RelayRecommendation>> by lazy {
-        liveHomeFollowRelayFlow.stateIn(scope, SharingStarted.Eagerly, emptyList())
-    }
-
     @OptIn(ExperimentalCoroutinesApi::class)
     private val liveNotificationList: Flow<ListNameNotePair> by lazy {
         defaultNotificationFollowList.flatMapLatest { listName ->
@@ -657,6 +611,23 @@ class Account(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
+    val liveStoriesListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
+        combineTransform(liveStoriesFollowLists, connectToRelaysFlow) { followList, existing ->
+            if (followList != null) {
+                emit(authorsPerRelay(followList.usersPlusMe, existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }))
+            } else {
+                emit(MutableStateFlow(null))
+            }
+        }.flatMapLatest {
+            it
+        }
+    }
+
+    val liveStoriesListAuthorsPerRelay: StateFlow<Map<String, List<String>>?> by lazy {
+        liveStoriesListAuthorsPerRelayFlow.stateIn(scope, SharingStarted.Eagerly, emptyMap())
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
     private val liveDiscoveryList: Flow<ListNameNotePair> by lazy {
         defaultDiscoveryFollowList.flatMapLatest { listName ->
             loadPeopleListFlowFromListName(listName)
@@ -666,6 +637,23 @@ class Account(
     val liveDiscoveryFollowLists: StateFlow<LiveFollowLists?> by lazy {
         combinePeopleListFlows(liveKind3FollowsFlow, liveDiscoveryList)
             .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val liveDiscoveryListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
+        combineTransform(liveDiscoveryFollowLists, connectToRelaysFlow) { followList, existing ->
+            if (followList != null) {
+                emit(authorsPerRelay(followList.usersPlusMe, existing.filter { it.read }.map { it.url }))
+            } else {
+                emit(MutableStateFlow(null))
+            }
+        }.flatMapLatest {
+            it
+        }
+    }
+
+    val liveDiscoveryListAuthorsPerRelay: StateFlow<Map<String, List<String>>?> by lazy {
+        liveDiscoveryListAuthorsPerRelayFlow.stateIn(scope, SharingStarted.Eagerly, emptyMap())
     }
 
     private fun decryptLiveFollows(
