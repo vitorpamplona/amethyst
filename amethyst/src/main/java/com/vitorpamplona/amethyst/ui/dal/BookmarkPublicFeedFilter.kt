@@ -32,14 +32,16 @@ class BookmarkPublicFeedFilter(
     override fun feed(): List<Note> {
         val bookmarks = account.userProfile().latestBookmarkList
 
-        val notes =
-            bookmarks?.taggedEvents()?.mapNotNull { LocalCache.checkGetOrCreateNote(it) } ?: emptyList()
-        val addresses =
-            bookmarks?.taggedAddresses()?.map { LocalCache.getOrCreateAddressableNote(it) } ?: emptyList()
-
-        return notes
-            .plus(addresses)
-            .toSet()
-            .sortedWith(DefaultFeedOrder)
+        return bookmarks
+            ?.tags
+            ?.mapNotNull {
+                if (it.size > 1 && it[0] == "e") {
+                    LocalCache.checkGetOrCreateNote(it[1])
+                } else if (it.size > 1 && it[0] == "a") {
+                    LocalCache.checkGetOrCreateAddressableNote(it[1])
+                } else {
+                    null
+                }
+            }?.reversed() ?: emptyList()
     }
 }

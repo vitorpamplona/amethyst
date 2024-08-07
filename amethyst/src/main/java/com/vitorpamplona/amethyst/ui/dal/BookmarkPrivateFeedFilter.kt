@@ -36,15 +36,15 @@ class BookmarkPrivateFeedFilter(
 
         val privateTags = bookmarks?.cachedPrivateTags() ?: return emptyList()
 
-        val notes =
-            bookmarks.filterEvents(privateTags).mapNotNull { LocalCache.checkGetOrCreateNote(it) }
-
-        val addresses =
-            bookmarks.filterAddresses(privateTags).map { LocalCache.getOrCreateAddressableNote(it) }
-
-        return notes
-            .plus(addresses)
-            .toSet()
-            .sortedWith(DefaultFeedOrder)
+        return privateTags
+            .mapNotNull {
+                if (it.size > 1 && it[0] == "e") {
+                    LocalCache.checkGetOrCreateNote(it[1])
+                } else if (it.size > 1 && it[0] == "a") {
+                    LocalCache.checkGetOrCreateAddressableNote(it[1])
+                } else {
+                    null
+                }
+            }.reversed()
     }
 }
