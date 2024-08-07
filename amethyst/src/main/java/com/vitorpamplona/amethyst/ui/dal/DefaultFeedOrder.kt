@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.events.Event
 
 val DefaultFeedOrder: Comparator<Note> =
-    compareBy<Note>(
+    compareByDescending<Note>
         {
             val noteEvent = it.event
             if (noteEvent == null) {
@@ -36,8 +36,4 @@ val DefaultFeedOrder: Comparator<Note> =
                     null
                 }
             }
-        },
-        {
-            it.idHex
-        },
-    ).reversed()
+        }.thenBy { it.idHex }
