@@ -24,7 +24,7 @@ import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
 import org.junit.Test
 
-class MinimumRelayListProcessorTest {
+class RelayListRecommendationProcessorTest {
     val userList =
         mutableMapOf(
             "User1" to mutableSetOf("wss://relay1.com", "wss://relay2.com", "wss://relay3.com"),
@@ -44,13 +44,13 @@ class MinimumRelayListProcessorTest {
                 "wss://relay5.com" to listOf("User2"),
                 "wss://relay6.com" to listOf("User2", "User3"),
             ).toString(),
-            MinimumRelayListProcessor.transpose(userList).toString(),
+            RelayListRecommendationProcessor.transpose(userList).toString(),
         )
     }
 
     @Test
     fun testProcessor() {
-        val recommendations = MinimumRelayListProcessor.reliableRelaySetFor(userList).toList()
+        val recommendations = RelayListRecommendationProcessor.reliableRelaySetFor(userList).toList()
 
         val rec1 = recommendations[0]
 

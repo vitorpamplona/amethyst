@@ -108,7 +108,7 @@ import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.DualCase
-import com.vitorpamplona.quartz.utils.MinimumRelayListProcessor
+import com.vitorpamplona.quartz.utils.RelayListRecommendationProcessor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -121,7 +121,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
@@ -500,13 +499,13 @@ class Account(
     fun relaysFromPeopleListFlows(
         currentFollowList: LiveFollowLists,
         relayUrlsToIgnore: Set<String>,
-    ): Flow<List<MinimumRelayListProcessor.RelayRecommendation>> =
+    ): Flow<List<RelayListRecommendationProcessor.RelayRecommendation>> =
         combine(
             currentFollowList.users.map {
                 getNIP65RelayListFlow(it)
             },
         ) { followsNIP65RelayLists ->
-            MinimumRelayListProcessor
+            RelayListRecommendationProcessor
                 .reliableRelaySetFor(
                     followsNIP65RelayLists.mapNotNull {
                         (it.note.event as? AdvertisedRelayListEvent)
@@ -517,7 +516,7 @@ class Account(
         }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveHomeFollowRelayFlow: Flow<List<MinimumRelayListProcessor.RelayRecommendation>> by lazy {
+    val liveHomeFollowRelayFlow: Flow<List<RelayListRecommendationProcessor.RelayRecommendation>> by lazy {
         combineTransform(liveHomeFollowListFlow, connectToRelaysFlow) { followList, existing ->
             if (followList != null) {
                 emit(
@@ -540,7 +539,7 @@ class Account(
         }
     }
 
-    val liveHomeFollowRelays: StateFlow<List<MinimumRelayListProcessor.RelayRecommendation>> by lazy {
+    val liveHomeFollowRelays: StateFlow<List<RelayListRecommendationProcessor.RelayRecommendation>> by lazy {
         liveHomeFollowRelayFlow.stateIn(scope, SharingStarted.Eagerly, emptyList())
     }
 

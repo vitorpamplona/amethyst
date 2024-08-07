@@ -24,9 +24,9 @@ import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 
-class MinimumRelayListProcessor {
+class RelayListRecommendationProcessor {
     companion object {
-        fun transpose(
+        private fun transpose(
             userList: Map<HexKey, MutableSet<String>>,
             ignore: Set<String> = setOf(),
         ): Map<String, MutableSet<HexKey>> {
@@ -52,7 +52,7 @@ class MinimumRelayListProcessor {
          * filter onion and local host from write relays
          * for each user pubkey, a list of valid relays.
          */
-        fun filterValidRelays(
+        private fun filterValidRelays(
             userList: List<AdvertisedRelayListEvent>,
             hasOnionConnection: Boolean = false,
         ): MutableMap<HexKey, MutableSet<String>> {
@@ -76,17 +76,7 @@ class MinimumRelayListProcessor {
             return validWriteRelayUrls
         }
 
-        fun reliableRelaySetFor(
-            userList: List<AdvertisedRelayListEvent>,
-            relayUrlsToIgnore: Set<String> = emptySet(),
-            hasOnionConnection: Boolean = false,
-        ): Set<RelayRecommendation> =
-            reliableRelaySetFor(
-                filterValidRelays(userList, hasOnionConnection),
-                relayUrlsToIgnore,
-            )
-
-        fun reliableRelaySetFor(
+        private fun reliableRelaySetFor(
             usersAndRelays: MutableMap<HexKey, MutableSet<String>>,
             relayUrlsToIgnore: Set<String> = emptySet(),
         ): Set<RelayRecommendation> {
@@ -154,6 +144,16 @@ class MinimumRelayListProcessor {
 
             return returningSet
         }
+
+        fun reliableRelaySetFor(
+            userList: List<AdvertisedRelayListEvent>,
+            relayUrlsToIgnore: Set<String> = emptySet(),
+            hasOnionConnection: Boolean = false,
+        ): Set<RelayRecommendation> =
+            reliableRelaySetFor(
+                filterValidRelays(userList, hasOnionConnection),
+                relayUrlsToIgnore,
+            )
     }
 
     class RelayRecommendation(

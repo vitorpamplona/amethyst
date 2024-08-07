@@ -31,7 +31,7 @@ import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.ammolite.relays.RelayStats
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
-import com.vitorpamplona.quartz.utils.MinimumRelayListProcessor
+import com.vitorpamplona.quartz.utils.RelayListRecommendationProcessor
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -140,7 +140,7 @@ class Kind3RelayListViewModel : ViewModel() {
     private fun refreshProposals() {
         _proposedRelays.update {
             val proposed =
-                MinimumRelayListProcessor
+                RelayListRecommendationProcessor
                     .reliableRelaySetFor(
                         account.liveKind3Follows.value.users.mapNotNull {
                             account.getNIP65RelayList(it)
