@@ -39,9 +39,20 @@ class LnZapEvent(
     // This event is also kept in LocalCache (same object)
     @Transient val zapRequest: LnZapRequestEvent?
 
+    // Keeps this as a field because it's a heavier function used everywhere.
+    val amount by lazy {
+        try {
+            lnInvoice()?.let { LnInvoiceUtil.getAmountInSats(it) }
+        } catch (e: Exception) {
+            Log.e("LnZapEvent", "Failed to Parse LnInvoice ${lnInvoice()}", e)
+            null
+        }
+    }
+
     override fun countMemory(): Long =
         super.countMemory() +
-            pointerSizeInBytes + (zapRequest?.countMemory() ?: 0) // rough calculation
+            pointerSizeInBytes + (zapRequest?.countMemory() ?: 0) + // rough calculation
+            pointerSizeInBytes + 36 // bigdecimal size
 
     override fun containedPost(): LnZapRequestEvent? =
         try {
@@ -74,16 +85,6 @@ class LnZapEvent(
     override fun zappedRequestAuthor(): String? = zapRequest?.pubKey()
 
     override fun amount() = amount
-
-    // Keeps this as a field because it's a heavier function used everywhere.
-    val amount by lazy {
-        try {
-            lnInvoice()?.let { LnInvoiceUtil.getAmountInSats(it) }
-        } catch (e: Exception) {
-            Log.e("LnZapEvent", "Failed to Parse LnInvoice ${lnInvoice()}", e)
-            null
-        }
-    }
 
     override fun content(): String = content
 
