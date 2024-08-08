@@ -398,6 +398,8 @@ class ContactListEvent(
 @Stable
 class UserMetadata {
     var name: String? = null
+
+    @Deprecated("Use name instead", replaceWith = ReplaceWith("name"))
     var username: String? = null
 
     @JsonProperty("display_name")
