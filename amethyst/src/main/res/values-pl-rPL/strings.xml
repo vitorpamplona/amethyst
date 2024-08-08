@@ -785,9 +785,11 @@
     <string name="http_status_409">Konflikt - serwer nie może spełnić żądania, ponieważ istnieje konflikt z zasobem</string>
     <string name="http_status_410">Przepadło - Żądana zawartość została trwale usunięta z serwera i nie zostanie przywrócona</string>
     <string name="http_status_411">Wymagana długość - serwer odrzuca żądanie, ponieważ wymaga zdefiniowanej</string>
+    <string name="http_status_412">Warunek wstępny nie powiódł się - warunki wstępne żądania w polu nagłówka, którego serwer nie spełnia</string>
     <string name="http_status_413">Payload Zbyt duży - Żądanie jest większe niż określone limity serwera i serwer odmawia jego przetwarzania</string>
     <string name="http_status_414">URI Zbyt długi - URL klienta jest zbyt długi, aby serwer mógł go przetworzyć. </string>
     <string name="http_status_415">Nieobsługiwany format plików - żądanie używa formatu multimediów, którego serwer nie obsługuje</string>
+    <string name="http_status_416">Zakres niezadowalający — serwer nie może spełnić wartości wskazanej w polu nagłówka zakresu żądania. </string>
     <string name="http_status_417">Błąd oczekiwania-serwer nie może spełnić wymagań wskazanych w polu nagłówka żądania</string>
     <string name="http_status_426">Wymagana aktualizacja - serwer odmawia przetwarzania żądania przy użyciu bieżącego protokołu, chyba że klient uaktualni go do innego protokołu.</string>
     <string name="http_status_500">Wewnętrzny błąd serwera - serwer napotkał nieoczekiwany błąd i nie może zakończyć żądania</string>
@@ -801,4 +803,6 @@
     <string name="http_status_508">Wykryta pętla - serwer wykrywa nieskończoną pętlę podczas przetwarzania żądania</string>
     <string name="http_status_511">Wymagane uwierzytelnienie sieciowe - Klient musi być uwierzytelniony aby uzyskać dostęp do sieci</string>
     <string name="add_a_nip96_server">Dodaj serwer NIP-96</string>
+    <string name="delete_all">Usuń wszystko</string>
+    <string name="delete_all_drafts_confirmation">Czy na pewno chcesz usunąć wszystkie wersje robocze?</string>
 </resources>
