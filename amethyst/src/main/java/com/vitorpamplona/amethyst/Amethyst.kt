@@ -75,7 +75,6 @@ class Amethyst : Application() {
     val coilMemCache: MemoryCache by lazy {
         MemoryCache
             .Builder(this)
-            .maxSizePercent(0.40) // memory heavy app due to profile pics and videos.
             .build()
     }
 
