@@ -286,20 +286,22 @@ fun RelayInformationDialog(
 
                 items(messages) { msg ->
                     Row {
-                        TranslatableRichTextViewer(
-                            content =
-                                remember {
-                                    "${timeAgo(msg.time, context)}, ${msg.type.name}: ${msg.message}"
-                                },
-                            canPreview = false,
-                            quotesLeft = 0,
-                            modifier = Modifier.fillMaxWidth(),
-                            tags = EmptyTagList,
-                            backgroundColor = color,
-                            id = msg.hashCode().toString(),
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
+                        SelectionContainer {
+                            TranslatableRichTextViewer(
+                                content =
+                                    remember {
+                                        "${timeAgo(msg.time, context)}, ${msg.type.name}: ${msg.message}"
+                                    },
+                                canPreview = false,
+                                quotesLeft = 0,
+                                modifier = Modifier.fillMaxWidth(),
+                                tags = EmptyTagList,
+                                backgroundColor = color,
+                                id = msg.hashCode().toString(),
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            )
+                        }
                     }
 
                     Spacer(modifier = StdVertSpacer)
