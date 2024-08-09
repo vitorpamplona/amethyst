@@ -35,15 +35,19 @@ object NostrCommunityDataSource : AmethystNostrDataSource("SingleCommunityFeed")
 
         val community = myCommunityToWatch.event as? CommunityDefinitionEvent ?: return null
 
+        val authors =
+            community
+                .moderators()
+                .map { it.key }
+                .plus(listOfNotNull(myCommunityToWatch.author?.pubkeyHex))
+
+        if (authors.isEmpty()) return null
+
         return TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
                 SincePerRelayFilter(
-                    authors =
-                        community
-                            .moderators()
-                            .map { it.key }
-                            .plus(listOfNotNull(myCommunityToWatch.author?.pubkeyHex)),
+                    authors = authors,
                     tags =
                         mapOf(
                             "a" to listOf(myCommunityToWatch.address.toTag()),

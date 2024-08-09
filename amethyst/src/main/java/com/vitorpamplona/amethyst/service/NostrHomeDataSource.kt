@@ -114,7 +114,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
     fun createFollowMetadataAndReleaseFilter(): TypedFilter? {
         val follows = account.liveHomeListAuthorsPerRelay.value
 
-        return if (follows != null) {
+        return if (!follows.isNullOrEmpty()) {
             TypedFilter(
                 types = setOf(FeedType.FOLLOWS),
                 filter =

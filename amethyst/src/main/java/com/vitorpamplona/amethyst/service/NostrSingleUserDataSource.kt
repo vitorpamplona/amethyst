@@ -65,26 +65,30 @@ object NostrSingleUserDataSource : AmethystNostrDataSource("SingleUserFeed") {
                 val groupIds = group.map { it.pubkeyHex }
                 val minEOSEs = findMinimumEOSEsForUsers(group)
 
-                listOf(
-                    TypedFilter(
-                        types = EVENT_FINDER_TYPES,
-                        filter =
-                            SincePerRelayFilter(
-                                kinds = listOf(MetadataEvent.KIND, StatusEvent.KIND, AdvertisedRelayListEvent.KIND, ChatMessageRelayListEvent.KIND),
-                                authors = groupIds,
-                                since = minEOSEs,
-                            ),
-                    ),
-                    TypedFilter(
-                        types = EVENT_FINDER_TYPES,
-                        filter =
-                            SincePerRelayFilter(
-                                kinds = listOf(ReportEvent.KIND),
-                                tags = mapOf("p" to groupIds),
-                                since = minEOSEs,
-                            ),
-                    ),
-                )
+                if (groupIds.isNotEmpty()) {
+                    listOf(
+                        TypedFilter(
+                            types = EVENT_FINDER_TYPES,
+                            filter =
+                                SincePerRelayFilter(
+                                    kinds = listOf(MetadataEvent.KIND, StatusEvent.KIND, AdvertisedRelayListEvent.KIND, ChatMessageRelayListEvent.KIND),
+                                    authors = groupIds,
+                                    since = minEOSEs,
+                                ),
+                        ),
+                        TypedFilter(
+                            types = EVENT_FINDER_TYPES,
+                            filter =
+                                SincePerRelayFilter(
+                                    kinds = listOf(ReportEvent.KIND),
+                                    tags = mapOf("p" to groupIds),
+                                    since = minEOSEs,
+                                ),
+                        ),
+                    )
+                } else {
+                    listOf()
+                }
             }.flatten()
     }
 
