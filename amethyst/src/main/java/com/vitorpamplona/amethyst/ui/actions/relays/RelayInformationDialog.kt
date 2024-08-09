@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -141,9 +142,8 @@ fun RelayInformationDialog(
                         Spacer(modifier = DoubleHorzSpacer)
 
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Row { Title(relayInfo.name?.trim() ?: "") }
-
-                            Row { SubtitleContent(relayInfo.description?.trim() ?: "") }
+                            Title(relayInfo.name?.trim() ?: "")
+                            SubtitleContent(relayInfo.description?.trim() ?: "")
                         }
                     }
                 }

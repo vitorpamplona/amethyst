@@ -25,21 +25,20 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
-import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
+import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
+import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChatMaxWidth
 import com.vitorpamplona.amethyst.ui.theme.largeRelayIconModifier
 
 @Composable
@@ -51,25 +50,23 @@ fun BasicRelaySetupInfoClickableRow(
     onClick: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    Column(Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(vertical = 5.dp),
+            modifier = HalfVertPadding,
         ) {
-            Column(Modifier.clickable(onClick = onClick)) {
-                val iconUrlFromRelayInfoDoc =
-                    remember(item) {
-                        Nip11CachedRetriever.getFromCache(item.url)?.icon
-                    }
+            val iconUrlFromRelayInfoDoc =
+                remember(item) {
+                    Nip11CachedRetriever.getFromCache(item.url)?.icon
+                }
 
-                RenderRelayIcon(
-                    item.briefInfo.displayUrl,
-                    iconUrlFromRelayInfoDoc ?: item.briefInfo.favIcon,
-                    loadProfilePicture,
-                    loadRobohash,
-                    MaterialTheme.colorScheme.largeRelayIconModifier,
-                )
-            }
+            RenderRelayIcon(
+                item.briefInfo.displayUrl,
+                iconUrlFromRelayInfoDoc ?: item.briefInfo.favIcon,
+                loadProfilePicture,
+                loadRobohash,
+                MaterialTheme.colorScheme.largeRelayIconModifier,
+            )
 
             Spacer(modifier = HalfHorzPadding)
 
@@ -78,12 +75,12 @@ fun BasicRelaySetupInfoClickableRow(
                     item,
                     onClick,
                     onDelete,
-                    ReactionRowHeightChat.fillMaxWidth(),
+                    ReactionRowHeightChatMaxWidth,
                 )
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = ReactionRowHeightChat.fillMaxWidth(),
+                    modifier = ReactionRowHeightChatMaxWidth,
                 ) {
                     RelayStatusRow(
                         item = item,

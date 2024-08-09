@@ -49,7 +49,7 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
-import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
+import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChatMaxWidth
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.largeRelayIconModifier
@@ -65,49 +65,44 @@ fun Kind3RelaySetupInfoProposalRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 5.dp),
         ) {
-            Column(Modifier.clickable(onClick = onClick)) {
-                val iconUrlFromRelayInfoDoc =
-                    remember(item) {
-                        Nip11CachedRetriever.getFromCache(item.url)?.icon
-                    }
+            val iconUrlFromRelayInfoDoc =
+                remember(item) {
+                    Nip11CachedRetriever.getFromCache(item.url)?.icon
+                }
 
-                RenderRelayIcon(
-                    item.briefInfo.displayUrl,
-                    iconUrlFromRelayInfoDoc ?: item.briefInfo.favIcon,
-                    loadProfilePicture,
-                    loadRobohash,
-                    MaterialTheme.colorScheme.largeRelayIconModifier,
-                )
-            }
+            RenderRelayIcon(
+                item.briefInfo.displayUrl,
+                iconUrlFromRelayInfoDoc ?: item.briefInfo.favIcon,
+                loadProfilePicture,
+                loadRobohash,
+                MaterialTheme.colorScheme.largeRelayIconModifier,
+            )
 
             Spacer(modifier = HalfHorzPadding)
 
             Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = ReactionRowHeightChat.fillMaxWidth()) {
-                    Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = item.briefInfo.displayUrl,
-                            modifier = Modifier.clickable(onClick = onClick),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                Row(ReactionRowHeightChatMaxWidth, verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = item.briefInfo.displayUrl,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
 
-                        if (item.paidRelay) {
-                            Icon(
-                                imageVector = Icons.Default.Paid,
-                                null,
-                                modifier =
-                                    Modifier
-                                        .padding(start = 5.dp, top = 1.dp)
-                                        .size(14.dp),
-                                tint = MaterialTheme.colorScheme.allGoodColor,
-                            )
-                        }
+                    if (item.paidRelay) {
+                        Icon(
+                            imageVector = Icons.Default.Paid,
+                            null,
+                            modifier =
+                                Modifier
+                                    .padding(start = 5.dp, top = 1.dp)
+                                    .size(14.dp),
+                            tint = MaterialTheme.colorScheme.allGoodColor,
+                        )
                     }
                 }
 
