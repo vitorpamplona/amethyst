@@ -1149,13 +1149,14 @@ class Account(
     fun delete(notes: List<Note>) {
         if (!isWriteable()) return
 
-        val myEvents = notes.filter { it.author == userProfile() }
-        val myNoteVersions = myEvents.mapNotNull { it.event as? Event }
-
+        val myNoteVersions = notes.filter { it.author == userProfile() }.mapNotNull { it.event as? Event }
         if (myNoteVersions.isNotEmpty()) {
-            DeletionEvent.create(myNoteVersions, signer) {
-                Client.send(it)
-                LocalCache.justConsume(it, null)
+            // chunks in 200 elements to avoid going over the 65KB limit for events.
+            myNoteVersions.chunked(200).forEach { chunkedList ->
+                DeletionEvent.create(chunkedList, signer) { deletionEvent ->
+                    Client.send(deletionEvent)
+                    LocalCache.justConsume(deletionEvent, null)
+                }
             }
         }
     }
