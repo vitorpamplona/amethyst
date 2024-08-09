@@ -36,8 +36,8 @@ import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import coil.imageLoader
 import coil.request.ImageRequest
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.model.Account
@@ -170,8 +170,6 @@ class AccountViewModel(
     val searchRelays: StateFlow<SearchRelayListEvent?> = observeByAuthor(SearchRelayListEvent.KIND, account.signer.pubKey)
 
     val toasts = MutableSharedFlow<ToastMsg?>(0, 3, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-
-    var serviceManager: ServiceManager? = null
 
     val showSensitiveContentChanges =
         account.live.map { it.account.showSensitiveContent }.distinctUntilChanged()
@@ -1191,7 +1189,7 @@ class AccountViewModel(
             account.proxyPort = portNumber.value.toInt()
             account.proxy = HttpClientManager.initProxy(checked, "127.0.0.1", account.proxyPort)
             account.saveable.invalidateData()
-            serviceManager?.forceRestart()
+            Amethyst.instance.serviceManager.forceRestart()
         }
     }
 

@@ -1028,16 +1028,18 @@ fun debugState(context: Context) {
     NostrUserProfileDataSource.printCounter()
     NostrVideoDataSource.printCounter()
 
-    val totalMemoryKb = Runtime.getRuntime().totalMemory() / (1024 * 1024)
-    val freeMemoryKb = Runtime.getRuntime().freeMemory() / (1024 * 1024)
+    val totalMemoryMb = Runtime.getRuntime().totalMemory() / (1024 * 1024)
+    val freeMemoryMb = Runtime.getRuntime().freeMemory() / (1024 * 1024)
+    val maxMemoryMb = Runtime.getRuntime().maxMemory() / (1024 * 1024)
 
-    val jvmHeapAllocatedKb = totalMemoryKb - freeMemoryKb
+    val jvmHeapAllocatedMb = totalMemoryMb - freeMemoryMb
 
-    Log.d("STATE DUMP", "Total Heap Allocated: " + jvmHeapAllocatedKb + " MB")
+    Log.d("STATE DUMP", "Total Heap Allocated: " + jvmHeapAllocatedMb + "/" + maxMemoryMb + " MB")
 
     val nativeHeap = Debug.getNativeHeapAllocatedSize() / (1024 * 1024)
+    val maxNative = Debug.getNativeHeapSize() / (1024 * 1024)
 
-    Log.d("STATE DUMP", "Total Native Heap Allocated: " + nativeHeap + " MB")
+    Log.d("STATE DUMP", "Total Native Heap Allocated: " + nativeHeap + "/" + maxNative + " MB")
 
     val activityManager: ActivityManager? = context.getSystemService()
     if (activityManager != null) {

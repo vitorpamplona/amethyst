@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.service.playback.VideoCache
 import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.ots.OpenTimestamps
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.SupervisorJob
@@ -49,6 +50,9 @@ import kotlin.time.measureTimedValue
 
 class Amethyst : Application() {
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // Service Manager is only active when the activity is active.
+    val serviceManager = ServiceManager()
 
     override fun onTerminate() {
         super.onTerminate()
@@ -124,6 +128,18 @@ class Amethyst : Application() {
             .crossfade(true)
 
     fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences = EncryptedStorage.preferences(instance, npub)
+
+    /**
+     * Release memory when the UI becomes hidden or when system resources become low.
+     *
+     * @param level the memory-related event that was raised.
+     */
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        println("Trim Memory $level")
+        GlobalScope.launch(Dispatchers.Default) { serviceManager.trimMemory() }
+    }
 
     companion object {
         lateinit var instance: Amethyst
