@@ -296,7 +296,6 @@ val MarkDownStyleOnDark =
                     SpanStyle(
                         fontFamily = FontFamily.Monospace,
                         fontSize = Font14SP,
-                        letterSpacing = 5.sp,
                         background = DarkColorPalette.onSurface.copy(alpha = 0.22f),
                     ),
             ),
@@ -335,7 +334,6 @@ val MarkDownStyleOnLight =
                     SpanStyle(
                         fontFamily = FontFamily.Monospace,
                         fontSize = Font14SP,
-                        letterSpacing = 5.sp,
                         background = LightColorPalette.onSurface.copy(alpha = 0.12f),
                     ),
             ),
