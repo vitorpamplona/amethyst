@@ -2187,7 +2187,7 @@ object LocalCache {
 
                 if (toBeRemoved.size > 1) {
                     println(
-                        "PRUNE: ${toBeRemoved.size} private messages with ${user.toBestDisplayName()} removed. ${it.roomMessages.size} kept",
+                        "PRUNE: ${toBeRemoved.size} private messages from ${user.toBestDisplayName()} to ${it.authors.joinToString(", ") { it.toBestDisplayName() }} removed. ${it.roomMessages.size} kept",
                     )
                 }
             }
