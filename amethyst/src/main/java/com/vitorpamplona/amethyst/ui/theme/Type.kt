@@ -75,21 +75,29 @@ internal val DefaultHeadingStyle: HeadingStyle = { level, textStyle ->
             )
         2 ->
             Typography.displaySmall.copy(
+                fontSize = 26.sp,
+                lineHeight = 34.sp,
+            )
+        3 ->
+            Typography.displaySmall.copy(
                 fontSize = 24.sp,
                 lineHeight = 32.sp,
             )
-        3 ->
+        4 ->
             Typography.headlineLarge.copy(
                 fontSize = 22.sp,
                 lineHeight = 26.sp,
             )
-        4 ->
+        5 ->
             Typography.headlineMedium.copy(
                 fontSize = 20.sp,
                 lineHeight = 24.sp,
             )
-        5 -> Typography.headlineSmall
-        6 -> Typography.titleLarge
+        6 ->
+            Typography.headlineSmall.copy(
+                fontSize = 18.sp,
+                lineHeight = 22.sp,
+            )
         else -> textStyle
     }
 }
