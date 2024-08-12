@@ -951,4 +951,5 @@
     <string name="add_a_nip96_server">Add a NIP-96 Server</string>
     <string name="delete_all">Delete all</string>
     <string name="delete_all_drafts_confirmation">Are you sure you want to delete all drafts?</string>
+    <string name="and_more">" ... and more"</string>
 </resources>
