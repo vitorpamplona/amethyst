@@ -40,8 +40,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.note.AddRelayButton
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
@@ -65,7 +67,11 @@ fun Kind3RelaySetupInfoProposalRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 5.dp),
@@ -107,12 +113,17 @@ fun Kind3RelaySetupInfoProposalRow(
                 }
 
                 FlowRow(verticalArrangement = Arrangement.Center) {
-                    item.users.forEach {
+                    item.users.take(3).forEach {
                         UserPicture(
                             userHex = it,
                             size = Size25dp,
                             accountViewModel = accountViewModel,
                             nav = nav,
+                        )
+                    }
+                    if (item.users.size > 3) {
+                        Text(
+                            text = stringResource(R.string.and_more),
                         )
                     }
                 }
