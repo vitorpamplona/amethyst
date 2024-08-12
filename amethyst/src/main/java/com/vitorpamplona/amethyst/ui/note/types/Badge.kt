@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -40,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,6 +53,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.get
@@ -64,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
@@ -72,13 +76,14 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun BadgeDisplay(baseNote: Note) {
+    val observingNote by baseNote.live().metadata.observeAsState()
+    val badgeData = observingNote?.note?.event as? BadgeDefinitionEvent ?: return
+
+    val image = badgeData.image()
+    val name = badgeData.name()
+    val description = badgeData.description()
+
     val background = MaterialTheme.colorScheme.background
-    val badgeData = baseNote.event as? BadgeDefinitionEvent ?: return
-
-    val image = remember { badgeData.thumb()?.ifBlank { null } ?: badgeData.image() }
-    val name = remember { badgeData.name() }
-    val description = remember { badgeData.description() }
-
     var backgroundFromImage by remember { mutableStateOf(Pair(background, background)) }
     var imageResult by remember { mutableStateOf<SuccessResult?>(null) }
 
@@ -103,26 +108,32 @@ fun BadgeDisplay(baseNote: Note) {
         }
     }
 
-    Row(
-        modifier =
-            Modifier
-                .padding(10.dp)
-                .clip(shape = CutCornerShape(20, 20, 20, 20))
-                .border(
-                    5.dp,
-                    MaterialTheme.colorScheme.mediumImportanceLink,
-                    CutCornerShape(20),
-                ).background(backgroundFromImage.first),
+    RenderBadge(
+        image,
+        name,
+        backgroundFromImage.first,
+        backgroundFromImage.second,
+        description,
     ) {
+        if (imageResult == null) {
+            imageResult = it.result
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun RenderBadgePreview() {
+    val background = MaterialTheme.colorScheme.background
+
+    ThemeComparisonRow {
         RenderBadge(
-            image,
-            name,
-            backgroundFromImage.second,
-            description,
+            image = "http://test.com",
+            name = "Name",
+            backgroundForRow = background,
+            backgroundFromImage = Color.LightGray,
+            description = "This badge is awarded to the dedicated individuals who actively contributed by writing events to the relay during the crucial testing phase leading up to the first beta release of Grain.",
         ) {
-            if (imageResult == null) {
-                imageResult = it.result
-            }
         }
     }
 }
@@ -131,51 +142,65 @@ fun BadgeDisplay(baseNote: Note) {
 private fun RenderBadge(
     image: String?,
     name: String?,
+    backgroundForRow: Color,
     backgroundFromImage: Color,
     description: String?,
     onSuccess: (AsyncImagePainter.State.Success) -> Unit,
 ) {
-    Column {
-        image.let {
-            AsyncImage(
-                model = it,
-                contentDescription =
-                    stringRes(
-                        R.string.badge_award_image_for,
-                        name ?: "",
-                    ),
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier.fillMaxWidth(),
-                onSuccess = onSuccess,
-            )
-        }
+    Row(
+        modifier =
+            Modifier
+                .padding(10.dp)
+                .clip(shape = CutCornerShape(20, 20, 20, 20))
+                .aspectRatio(0.8f)
+                .border(
+                    5.dp,
+                    MaterialTheme.colorScheme.mediumImportanceLink,
+                    CutCornerShape(20),
+                ).background(backgroundForRow),
+    ) {
+        Column {
+            image?.let {
+                AsyncImage(
+                    model = it,
+                    contentDescription =
+                        stringRes(
+                            R.string.badge_award_image_for,
+                            name ?: "",
+                        ),
+                    modifier = Modifier.weight(1f),
+                    contentScale = ContentScale.FillWidth,
+                    onSuccess = onSuccess,
+                )
+            }
 
-        name?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(start = 10.dp, end = 10.dp),
-                color = backgroundFromImage,
-            )
-        }
+            name?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 10.dp, end = 10.dp),
+                    color = backgroundFromImage,
+                )
+            }
 
-        description?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
-                color = Color.Gray,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
+            description?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 20.dp, end = 20.dp, bottom = 10.dp),
+                    color = Color.Gray,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
