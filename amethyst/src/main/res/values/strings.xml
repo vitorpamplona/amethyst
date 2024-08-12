@@ -250,11 +250,11 @@
     <string name="github" translatable="false">Github Gist w/ Proof</string>
     <string name="telegram" translatable="false">Telegram</string>
     <string name="mastodon" translatable="false">Mastodon Post ID w/ Proof</string>
-    <string name="twitter" translatable="false">Twitter Status w/ Proof</string>
+    <string name="twitter" translatable="false">X Status w/ Proof</string>
     <string name="github_proof_url_template" translatable="false">https://gist.github.com/&lt;user&gt;/&lt;gist&gt;</string>
     <string name="telegram_proof_url_template" translatable="false">https://t.me/&lt;proof post&gt;</string>
     <string name="mastodon_proof_url_template" translatable="false">https://&lt;server&gt;/&lt;user&gt;/&lt;proof post&gt;</string>
-    <string name="twitter_proof_url_template" translatable="false">https://twitter.com/&lt;user&gt;/status/&lt;proof post&gt;</string>
+    <string name="twitter_proof_url_template" translatable="false">https://x.com/&lt;user&gt;/status/&lt;proof post&gt;</string>
     <string name="private_conversation_notification">"&lt;Unable to decrypt private message&gt;\n\nYou were cited in a private/encrypted conversation between %1$s and %2$s."</string>
     <string name="account_switch_add_account_dialog_title">Add New Account</string>
     <string name="drawer_accounts">Accounts</string>

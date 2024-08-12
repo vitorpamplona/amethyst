@@ -87,7 +87,7 @@ class TwitterIdentity(
     identity: String,
     proof: String,
 ) : IdentityClaim(identity, proof) {
-    override fun toProofUrl() = "https://twitter.com/$identity/status/$proof"
+    override fun toProofUrl() = "https://x.com/$identity/status/$proof"
 
     override fun platform() = platform
 
@@ -97,7 +97,7 @@ class TwitterIdentity(
         fun parseProofUrl(proofUrl: String): TwitterIdentity? {
             return try {
                 if (proofUrl.isBlank()) return null
-                val path = proofUrl.removePrefix("https://twitter.com/").split("?")[0].split("/")
+                val path = proofUrl.removePrefix("https://x.com/").split("?")[0].split("/")
 
                 TwitterIdentity(path[0], path[2])
             } catch (e: Exception) {
