@@ -51,7 +51,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowUserButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.UnfollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.WatchIsHiddenUser
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText

@@ -160,6 +160,7 @@ import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.SaveableGridFeedState
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder

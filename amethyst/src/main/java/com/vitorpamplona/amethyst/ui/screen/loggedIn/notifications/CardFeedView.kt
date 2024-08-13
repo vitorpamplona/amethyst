@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -59,21 +59,21 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun RefreshableCardView(
-    viewModel: CardFeedViewModel,
+    feedContent: CardFeedContentState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     routeForLastRead: String,
     scrollStateKey: String? = null,
     enablePullRefresh: Boolean = true,
 ) {
-    RefresheableBox(viewModel, enablePullRefresh) {
-        SaveableCardFeedState(viewModel, accountViewModel, nav, routeForLastRead, scrollStateKey)
+    RefresheableBox(feedContent, enablePullRefresh) {
+        SaveableCardFeedState(feedContent, accountViewModel, nav, routeForLastRead, scrollStateKey)
     }
 }
 
 @Composable
 private fun SaveableCardFeedState(
-    viewModel: CardFeedViewModel,
+    feedContent: CardFeedContentState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     routeForLastRead: String,
@@ -86,35 +86,35 @@ private fun SaveableCardFeedState(
             rememberLazyListState()
         }
 
-    WatchScrollToTop(viewModel, listState)
+    WatchScrollToTop(feedContent, listState)
 
-    RenderCardFeed(viewModel, accountViewModel, listState, nav, routeForLastRead)
+    RenderCardFeed(feedContent, accountViewModel, listState, nav, routeForLastRead)
 }
 
 @Composable
 private fun WatchScrollToTop(
-    viewModel: CardFeedViewModel,
+    feedContent: CardFeedContentState,
     listState: LazyListState,
 ) {
-    val scrollToTop by viewModel.scrollToTop.collectAsStateWithLifecycle()
+    val scrollToTop by feedContent.scrollToTop.collectAsStateWithLifecycle()
 
     LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
+        if (scrollToTop > 0 && feedContent.scrolltoTopPending) {
             listState.scrollToItem(index = 0)
-            viewModel.sentToTop()
+            feedContent.sentToTop()
         }
     }
 }
 
 @Composable
 fun RenderCardFeed(
-    viewModel: CardFeedViewModel,
+    feedContent: CardFeedContentState,
     accountViewModel: AccountViewModel,
     listState: LazyListState,
     nav: (String) -> Unit,
     routeForLastRead: String,
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by feedContent.feedContent.collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(
         modifier = Modifier.fillMaxSize(),
@@ -124,10 +124,10 @@ fun RenderCardFeed(
     ) { state ->
         when (state) {
             is CardFeedState.Empty -> {
-                FeedEmpty { viewModel.invalidateData() }
+                FeedEmpty(feedContent::invalidateData)
             }
             is CardFeedState.FeedError -> {
-                FeedError(state.errorMessage) { viewModel.invalidateData() }
+                FeedError(state.errorMessage, feedContent::invalidateData)
             }
             is CardFeedState.Loaded -> {
                 FeedLoaded(

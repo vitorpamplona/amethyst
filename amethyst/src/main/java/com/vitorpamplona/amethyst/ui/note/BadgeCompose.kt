@@ -46,8 +46,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
-import com.vitorpamplona.amethyst.ui.screen.BadgeCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.BadgeCard
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 

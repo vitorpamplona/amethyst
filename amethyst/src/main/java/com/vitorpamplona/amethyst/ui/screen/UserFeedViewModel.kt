@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.ui.dal.SpammerAccountsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList

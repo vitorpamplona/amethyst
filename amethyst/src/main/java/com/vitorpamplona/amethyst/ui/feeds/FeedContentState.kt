@@ -20,13 +20,15 @@
  */
 package com.vitorpamplona.amethyst.ui.feeds
 
+import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.events.DeletionEvent
@@ -178,5 +180,25 @@ class FeedContentState(
 
     fun invalidateInsertData(newItems: Set<Note>) {
         bundlerInsert.invalidateList(newItems) { refreshFromOldState(it.flatten().toSet()) }
+    }
+
+    fun updateFeedWith(newNotes: Set<Note>) {
+        checkNotInMainThread()
+
+        if (
+            localFilter is AdditiveFeedFilter &&
+            (_feedContent.value is FeedState.Loaded || _feedContent.value is FeedState.Empty)
+        ) {
+            invalidateInsertData(newNotes)
+        } else {
+            // Refresh Everything
+            invalidateData()
+        }
+    }
+
+    fun destroy() {
+        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        bundlerInsert.cancel()
+        bundler.cancel()
     }
 }

@@ -18,9 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.feeds
+package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListNewFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverChatFeedFilter
@@ -30,8 +31,10 @@ import com.vitorpamplona.amethyst.ui.dal.DiscoverMarketplaceFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverNIP89FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedContentState
 
 class AccountFeedContentStates(
     val accountViewModel: AccountViewModel,
@@ -49,4 +52,42 @@ class AccountFeedContentStates(
     val discoverLive = FeedContentState(DiscoverLiveFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
     val discoverCommunities = FeedContentState(DiscoverCommunityFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
     val discoverPublicChats = FeedContentState(DiscoverChatFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
+
+    val notifications = CardFeedContentState(NotificationFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
+
+    fun updateFeedsWith(newNotes: Set<Note>) {
+        homeNewThreads.updateFeedWith(newNotes)
+        homeReplies.updateFeedWith(newNotes)
+
+        dmKnown.updateFeedWith(newNotes)
+        dmNew.updateFeedWith(newNotes)
+
+        videoFeed.updateFeedWith(newNotes)
+
+        discoverMarketplace.updateFeedWith(newNotes)
+        discoverDVMs.updateFeedWith(newNotes)
+        discoverLive.updateFeedWith(newNotes)
+        discoverCommunities.updateFeedWith(newNotes)
+        discoverPublicChats.updateFeedWith(newNotes)
+
+        notifications.updateFeedWith(newNotes)
+    }
+
+    fun destroy() {
+        homeNewThreads.destroy()
+        homeReplies.destroy()
+
+        dmKnown.destroy()
+        dmNew.destroy()
+
+        videoFeed.destroy()
+
+        discoverMarketplace.destroy()
+        discoverDVMs.destroy()
+        discoverLive.destroy()
+        discoverCommunities.destroy()
+        discoverPublicChats.destroy()
+
+        notifications.destroy()
+    }
 }

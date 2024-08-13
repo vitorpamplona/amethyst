@@ -68,9 +68,9 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.authorRouteFor
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
-import com.vitorpamplona.amethyst.ui.screen.CombinedZap
-import com.vitorpamplona.amethyst.ui.screen.MultiSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.MultiSetCard
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifier

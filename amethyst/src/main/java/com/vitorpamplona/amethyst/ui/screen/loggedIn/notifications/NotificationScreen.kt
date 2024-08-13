@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
 import android.Manifest
 import android.os.Build
@@ -78,9 +78,8 @@ import com.vitorpamplona.amethyst.ui.note.UserReactionsRow
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showCount
-import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefreshableCardView
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
@@ -92,7 +91,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun NotificationScreen(
-    notifFeedViewModel: NotificationViewModel,
+    notifFeedContentState: CardFeedContentState,
     userReactionsStatsModel: UserReactionsViewModel,
     sharedPreferencesViewModel: SharedPreferencesViewModel,
     accountViewModel: AccountViewModel,
@@ -100,7 +99,7 @@ fun NotificationScreen(
 ) {
     SelectNotificationProvider(sharedPreferencesViewModel)
 
-    WatchAccountForNotifications(notifFeedViewModel, accountViewModel)
+    WatchAccountForNotifications(notifFeedContentState, accountViewModel)
 
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifeCycleOwner) {
@@ -124,7 +123,7 @@ fun NotificationScreen(
             thickness = DividerThickness,
         )
         RefreshableCardView(
-            viewModel = notifFeedViewModel,
+            feedContent = notifFeedContentState,
             accountViewModel = accountViewModel,
             nav = nav,
             routeForLastRead = Route.Notification.base,
@@ -135,7 +134,7 @@ fun NotificationScreen(
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun CheckifItNeedsToRequestNotificationPermission(sharedPreferencesViewModel: SharedPreferencesViewModel): PermissionState {
+fun checkifItNeedsToRequestNotificationPermission(sharedPreferencesViewModel: SharedPreferencesViewModel): PermissionState {
     val notificationPermissionState =
         rememberPermissionState(
             Manifest.permission.POST_NOTIFICATIONS,
@@ -159,7 +158,7 @@ fun CheckifItNeedsToRequestNotificationPermission(sharedPreferencesViewModel: Sh
 
 @Composable
 fun WatchAccountForNotifications(
-    notifFeedViewModel: NotificationViewModel,
+    notifFeedContentState: CardFeedContentState,
     accountViewModel: AccountViewModel,
 ) {
     val listState by
@@ -168,7 +167,7 @@ fun WatchAccountForNotifications(
     LaunchedEffect(accountViewModel, listState) {
         NostrAccountDataSource.account = accountViewModel.account
         NostrAccountDataSource.invalidateFilters()
-        notifFeedViewModel.checkKeysInvalidateDataAndSendToTop()
+        notifFeedContentState.checkKeysInvalidateDataAndSendToTop()
     }
 }
 

@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.events.ChatroomKey

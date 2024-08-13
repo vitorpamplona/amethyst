@@ -71,7 +71,6 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.layouts.LeftPictureLayout
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
-import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.EndedFlag
@@ -80,7 +79,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.OfflineFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.observeAppDefinition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfUrlIsOnline
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.showAmountAxis
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder

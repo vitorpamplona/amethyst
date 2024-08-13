@@ -60,11 +60,11 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
-import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.JoinCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LeaveCommunityButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.NormalTimeAgo
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier

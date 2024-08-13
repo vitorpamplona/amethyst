@@ -60,14 +60,14 @@ import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
-import com.vitorpamplona.amethyst.ui.feeds.AccountFeedContentStates
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.bottomNavigationItems
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
-import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.SettingsState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.service.HttpClientManager
@@ -1228,6 +1228,7 @@ class AccountViewModel(
                         "Rendering Metrics",
                         "Notification Dots Calculation refresh ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()}",
                     )
+                    feedStates.updateFeedsWith(newNotes)
                     invalidateInsertData(newNotes)
                     upgradeAttestations()
                 }
@@ -1237,6 +1238,7 @@ class AccountViewModel(
     override fun onCleared() {
         Log.d("Init", "AccountViewModel onCleared")
         collectorJob?.cancel()
+        feedStates.destroy()
         super.onCleared()
     }
 

@@ -98,7 +98,6 @@ import com.vitorpamplona.amethyst.ui.navigation.getRouteWithArguments
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
-import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
@@ -174,12 +173,6 @@ fun MainScreen(
             factory = FollowListViewModel.Factory(accountViewModel.account),
         )
 
-    val notifFeedViewModel: NotificationViewModel =
-        viewModel(
-            key = "NotificationViewModel",
-            factory = NotificationViewModel.Factory(accountViewModel.account),
-        )
-
     val userReactionsStatsModel: UserReactionsViewModel =
         viewModel(
             key = "UserReactionsViewModel",
@@ -187,7 +180,7 @@ fun MainScreen(
         )
 
     val navBottomRow =
-        remember(navController) {
+        remember(navController, accountViewModel) {
             { route: Route, selected: Boolean ->
                 scope.launch {
                     if (!selected) {
@@ -214,7 +207,7 @@ fun MainScreen(
                                 accountViewModel.feedStates.discoverDVMs.sendToTop()
                             }
                             Route.Notification.base -> {
-                                notifFeedViewModel.invalidateDataAndSendToTop(true)
+                                accountViewModel.feedStates.notifications.invalidateDataAndSendToTop(true)
                             }
                         }
 
@@ -244,7 +237,6 @@ fun MainScreen(
                 accountStateViewModel = accountStateViewModel,
                 userReactionsStatsModel = userReactionsStatsModel,
                 followListsViewModel = followListsViewModel,
-                notifFeedViewModel = notifFeedViewModel,
                 sharedPreferencesViewModel = sharedPreferencesViewModel,
                 accountViewModel = accountViewModel,
                 nav = nav,
@@ -283,7 +275,6 @@ private fun MainScaffold(
     accountStateViewModel: AccountStateViewModel,
     userReactionsStatsModel: UserReactionsViewModel,
     followListsViewModel: FollowListViewModel,
-    notifFeedViewModel: NotificationViewModel,
     sharedPreferencesViewModel: SharedPreferencesViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -407,7 +398,6 @@ private fun MainScaffold(
                     .imePadding(),
         ) {
             AppNavigation(
-                notifFeedViewModel = notifFeedViewModel,
                 userReactionsStatsModel = userReactionsStatsModel,
                 navController = navController,
                 accountViewModel = accountViewModel,

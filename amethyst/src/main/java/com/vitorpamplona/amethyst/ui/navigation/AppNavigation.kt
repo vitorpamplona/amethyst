@@ -42,7 +42,6 @@ import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
-import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.BookmarkListScreen
@@ -51,7 +50,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.GeoHashScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HiddenUsersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRedirectScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SettingsScreen
@@ -64,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.NIP90ContentDiscoveryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.coroutines.delay
@@ -72,7 +71,6 @@ import java.net.URLDecoder
 
 @Composable
 fun AppNavigation(
-    notifFeedViewModel: NotificationViewModel,
     userReactionsStatsModel: UserReactionsViewModel,
     navController: NavHostController,
     accountViewModel: AccountViewModel,
@@ -187,7 +185,7 @@ fun AppNavigation(
                 route.arguments,
                 content = {
                     NotificationScreen(
-                        notifFeedViewModel = notifFeedViewModel,
+                        notifFeedContentState = accountViewModel.feedStates.notifications,
                         userReactionsStatsModel = userReactionsStatsModel,
                         sharedPreferencesViewModel = sharedPreferencesViewModel,
                         accountViewModel = accountViewModel,
