@@ -41,7 +41,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.BookmarkListScreen
@@ -71,7 +70,6 @@ import java.net.URLDecoder
 
 @Composable
 fun AppNavigation(
-    userReactionsStatsModel: UserReactionsViewModel,
     navController: NavHostController,
     accountViewModel: AccountViewModel,
     sharedPreferencesViewModel: SharedPreferencesViewModel,
@@ -186,7 +184,7 @@ fun AppNavigation(
                 content = {
                     NotificationScreen(
                         notifFeedContentState = accountViewModel.feedStates.notifications,
-                        userReactionsStatsModel = userReactionsStatsModel,
+                        notifSummaryState = accountViewModel.feedStates.notificationSummary,
                         sharedPreferencesViewModel = sharedPreferencesViewModel,
                         accountViewModel = accountViewModel,
                         nav = nav,

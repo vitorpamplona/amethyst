@@ -1221,18 +1221,23 @@ class AccountViewModel(
 
     init {
         Log.d("Init", "AccountViewModel")
-        collectorJob =
-            viewModelScope.launch(Dispatchers.IO) {
-                LocalCache.live.newEventBundles.collect { newNotes ->
-                    Log.d(
-                        "Rendering Metrics",
-                        "Notification Dots Calculation refresh ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()}",
-                    )
-                    feedStates.updateFeedsWith(newNotes)
-                    invalidateInsertData(newNotes)
-                    upgradeAttestations()
+        viewModelScope.launch(Dispatchers.Default) {
+            feedStates.init()
+            // awaits for init to finish before starting to capture new events.
+
+            collectorJob =
+                viewModelScope.launch(Dispatchers.IO) {
+                    LocalCache.live.newEventBundles.collect { newNotes ->
+                        Log.d(
+                            "Rendering Metrics",
+                            "Notification Dots Calculation refresh ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()}",
+                        )
+                        feedStates.updateFeedsWith(newNotes)
+                        invalidateInsertData(newNotes)
+                        upgradeAttestations()
+                    }
                 }
-            }
+        }
     }
 
     override fun onCleared() {

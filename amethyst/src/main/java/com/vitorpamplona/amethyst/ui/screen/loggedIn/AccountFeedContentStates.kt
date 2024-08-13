@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedContentState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
 
 class AccountFeedContentStates(
     val accountViewModel: AccountViewModel,
@@ -54,6 +55,11 @@ class AccountFeedContentStates(
     val discoverPublicChats = FeedContentState(DiscoverChatFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
 
     val notifications = CardFeedContentState(NotificationFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
+    val notificationSummary = NotificationSummaryState(accountViewModel.account)
+
+    suspend fun init() {
+        notificationSummary.initializeSuspend()
+    }
 
     fun updateFeedsWith(newNotes: Set<Note>) {
         homeNewThreads.updateFeedWith(newNotes)
@@ -71,6 +77,7 @@ class AccountFeedContentStates(
         discoverPublicChats.updateFeedWith(newNotes)
 
         notifications.updateFeedWith(newNotes)
+        notificationSummary.invalidateInsertData(newNotes)
     }
 
     fun destroy() {
@@ -89,5 +96,6 @@ class AccountFeedContentStates(
         discoverPublicChats.destroy()
 
         notifications.destroy()
+        notificationSummary.destroy()
     }
 }

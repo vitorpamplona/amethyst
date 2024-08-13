@@ -95,7 +95,6 @@ import com.vitorpamplona.amethyst.ui.navigation.FollowListViewModel
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.Route.Companion.InvertedLayouts
 import com.vitorpamplona.amethyst.ui.navigation.getRouteWithArguments
-import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
@@ -173,12 +172,6 @@ fun MainScreen(
             factory = FollowListViewModel.Factory(accountViewModel.account),
         )
 
-    val userReactionsStatsModel: UserReactionsViewModel =
-        viewModel(
-            key = "UserReactionsViewModel",
-            factory = UserReactionsViewModel.Factory(accountViewModel.account),
-        )
-
     val navBottomRow =
         remember(navController, accountViewModel) {
             { route: Route, selected: Boolean ->
@@ -235,7 +228,6 @@ fun MainScreen(
                 navPopBack = navPopBack,
                 openDrawer = { scope.launch { drawerState.open() } },
                 accountStateViewModel = accountStateViewModel,
-                userReactionsStatsModel = userReactionsStatsModel,
                 followListsViewModel = followListsViewModel,
                 sharedPreferencesViewModel = sharedPreferencesViewModel,
                 accountViewModel = accountViewModel,
@@ -273,7 +265,6 @@ private fun MainScaffold(
     navPopBack: () -> Unit,
     openDrawer: () -> Unit,
     accountStateViewModel: AccountStateViewModel,
-    userReactionsStatsModel: UserReactionsViewModel,
     followListsViewModel: FollowListViewModel,
     sharedPreferencesViewModel: SharedPreferencesViewModel,
     accountViewModel: AccountViewModel,
@@ -398,7 +389,6 @@ private fun MainScaffold(
                     .imePadding(),
         ) {
             AppNavigation(
-                userReactionsStatsModel = userReactionsStatsModel,
                 navController = navController,
                 accountViewModel = accountViewModel,
                 sharedPreferencesViewModel = sharedPreferencesViewModel,
