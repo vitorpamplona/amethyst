@@ -51,8 +51,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -69,20 +67,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.getSystemService
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.map
-import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavBackStackEntry
 import coil.Coil
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.FeatureSetType
-import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
-import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
@@ -100,7 +92,6 @@ import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.AmethystIcon
@@ -117,6 +108,15 @@ import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.types.LongCommunityHeader
 import com.vitorpamplona.amethyst.ui.note.types.ShortCommunityHeader
+import com.vitorpamplona.amethyst.ui.screen.CodeName
+import com.vitorpamplona.amethyst.ui.screen.CodeNameType
+import com.vitorpamplona.amethyst.ui.screen.CommunityName
+import com.vitorpamplona.amethyst.ui.screen.FollowListState
+import com.vitorpamplona.amethyst.ui.screen.GeoHashName
+import com.vitorpamplona.amethyst.ui.screen.HashtagName
+import com.vitorpamplona.amethyst.ui.screen.Name
+import com.vitorpamplona.amethyst.ui.screen.PeopleListName
+import com.vitorpamplona.amethyst.ui.screen.ResourceName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DislayGeoTagHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.GeoHashActionOptions
@@ -142,27 +142,11 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.RelayPool
 import com.vitorpamplona.quartz.events.ChatroomKey
-import com.vitorpamplona.quartz.events.ContactListEvent
-import com.vitorpamplona.quartz.events.DeletionEvent
-import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.combineTransform
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.transformLatest
 
 @Composable
 fun AppTopBar(
-    followLists: FollowListViewModel,
     navEntryState: State<NavBackStackEntry?>,
     openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
@@ -184,14 +168,14 @@ fun AppTopBar(
             derivedStateOf { navEntryState.value?.arguments?.getString("id") }
         }
 
-    RenderTopRouteBar(currentRoute, id, followLists, openDrawer, accountViewModel, nav, navPopBack)
+    RenderTopRouteBar(currentRoute, id, accountViewModel.feedStates.feedListOptions, openDrawer, accountViewModel, nav, navPopBack)
 }
 
 @Composable
 private fun RenderTopRouteBar(
     currentRoute: String?,
     id: String?,
-    followLists: FollowListViewModel,
+    followLists: FollowListState,
     openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -458,7 +442,7 @@ private fun ChannelTopBar(
 
 @Composable
 fun StoriesTopBar(
-    followLists: FollowListViewModel,
+    followLists: FollowListState,
     openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -477,7 +461,7 @@ fun StoriesTopBar(
 
 @Composable
 fun HomeTopBar(
-    followLists: FollowListViewModel,
+    followLists: FollowListState,
     openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -500,7 +484,7 @@ fun HomeTopBar(
 
 @Composable
 fun NotificationTopBar(
-    followLists: FollowListViewModel,
+    followLists: FollowListState,
     openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -519,7 +503,7 @@ fun NotificationTopBar(
 
 @Composable
 fun DiscoveryTopBar(
-    followLists: FollowListViewModel,
+    followLists: FollowListState,
     openDrawer: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -609,7 +593,7 @@ private fun LoggedInUserPictureDrawer(
 
 @Composable
 fun FollowListWithRoutes(
-    followListsModel: FollowListViewModel,
+    followListsModel: FollowListState,
     listName: String,
     onChange: (CodeName) -> Unit,
 ) {
@@ -624,7 +608,7 @@ fun FollowListWithRoutes(
 
 @Composable
 fun FollowListWithoutRoutes(
-    followListsModel: FollowListViewModel,
+    followListsModel: FollowListState,
     listName: String,
     onChange: (CodeName) -> Unit,
 ) {
@@ -635,191 +619,6 @@ fun FollowListWithoutRoutes(
         options = allLists,
         onSelect = { onChange(allLists.getOrNull(it) ?: followListsModel.kind3Follow) },
     )
-}
-
-enum class CodeNameType {
-    HARDCODED,
-    PEOPLE_LIST,
-    ROUTE,
-}
-
-abstract class Name {
-    abstract fun name(): String
-
-    open fun name(context: Context) = name()
-}
-
-class GeoHashName(
-    val geoHashTag: String,
-) : Name() {
-    override fun name() = "/g/$geoHashTag"
-}
-
-class HashtagName(
-    val hashTag: String,
-) : Name() {
-    override fun name() = "#$hashTag"
-}
-
-class ResourceName(
-    val resourceId: Int,
-) : Name() {
-    override fun name() = " $resourceId " // Space to make sure it goes first
-
-    override fun name(context: Context) = stringRes(context, resourceId)
-}
-
-class PeopleListName(
-    val note: AddressableNote,
-) : Name() {
-    override fun name() = (note.event as? PeopleListEvent)?.nameOrTitle() ?: note.dTag() ?: ""
-}
-
-class CommunityName(
-    val note: AddressableNote,
-) : Name() {
-    override fun name() = "/n/${(note.dTag() ?: "")}"
-}
-
-@Immutable data class CodeName(
-    val code: String,
-    val name: Name,
-    val type: CodeNameType,
-)
-
-@Stable
-class FollowListViewModel(
-    val account: Account,
-) : ViewModel() {
-    val kind3Follow =
-        CodeName(KIND3_FOLLOWS, ResourceName(R.string.follow_list_kind3follows), CodeNameType.HARDCODED)
-    val globalFollow =
-        CodeName(GLOBAL_FOLLOWS, ResourceName(R.string.follow_list_global), CodeNameType.HARDCODED)
-    val muteListFollow =
-        CodeName(
-            MuteListEvent.blockListFor(account.userProfile().pubkeyHex),
-            ResourceName(R.string.follow_list_mute_list),
-            CodeNameType.HARDCODED,
-        )
-    val defaultLists = persistentListOf(kind3Follow, globalFollow, muteListFollow)
-
-    val livePeopleListsFlow: Flow<List<CodeName>> by lazy {
-        flow {
-            checkNotInMainThread()
-
-            emit(getPeopleLists())
-            emitAll(livePeopleListsFlowObservable)
-        }
-    }
-
-    fun getPeopleLists(): List<CodeName> =
-        LocalCache.addressables
-            .mapNotNull { _, addressableNote ->
-                val event = (addressableNote.event as? PeopleListEvent)
-                // Has to have an list
-                if (
-                    event != null &&
-                    event.pubKey == account.userProfile().pubkeyHex &&
-                    (event.hasAnyTaggedUser() || event.publicAndPrivateUserCache?.isNotEmpty() == true)
-                ) {
-                    CodeName(event.address().toTag(), PeopleListName(addressableNote), CodeNameType.PEOPLE_LIST)
-                } else {
-                    null
-                }
-            }.sortedBy { it.name.name() }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val livePeopleListsFlowObservable: Flow<List<CodeName>> =
-        LocalCache.live.newEventBundles.transformLatest { newNotes ->
-            val hasNewList =
-                newNotes.any {
-                    val noteEvent = it.event
-
-                    noteEvent?.pubKey() == account.userProfile().pubkeyHex &&
-                        (
-                            (
-                                noteEvent is PeopleListEvent ||
-                                    noteEvent is MuteListEvent ||
-                                    noteEvent is ContactListEvent
-                            ) ||
-                                (
-                                    noteEvent is DeletionEvent &&
-                                        (
-                                            noteEvent.deleteEvents().any {
-                                                LocalCache.getNoteIfExists(it)?.event is PeopleListEvent
-                                            } ||
-                                                noteEvent.deleteAddresses().any {
-                                                    it.kind == PeopleListEvent.KIND
-                                                }
-                                        )
-                                )
-                        )
-                }
-
-            if (hasNewList) {
-                emit(getPeopleLists())
-            }
-        }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val liveKind3FollowsFlow: Flow<List<CodeName>> =
-        account.liveKind3FollowsFlow.transformLatest {
-            checkNotInMainThread()
-
-            val communities =
-                it.communities.mapNotNull {
-                    LocalCache.checkGetOrCreateAddressableNote(it)?.let { communityNote ->
-                        CodeName(
-                            "Community/${communityNote.idHex}",
-                            CommunityName(communityNote),
-                            CodeNameType.ROUTE,
-                        )
-                    }
-                }
-
-            val hashtags =
-                it.hashtags.map {
-                    CodeName("Hashtag/$it", HashtagName(it), CodeNameType.ROUTE)
-                }
-
-            val geotags =
-                it.geotags.map {
-                    CodeName("Geohash/$it", GeoHashName(it), CodeNameType.ROUTE)
-                }
-
-            emit(
-                (communities + hashtags + geotags).sortedBy { it.name.name() },
-            )
-        }
-
-    private val _kind3GlobalPeopleRoutes =
-        combineTransform(livePeopleListsFlow, liveKind3FollowsFlow) { myLivePeopleListsFlow, myLiveKind3FollowsFlow ->
-            checkNotInMainThread()
-            emit(
-                listOf(listOf(kind3Follow, globalFollow), myLivePeopleListsFlow, myLiveKind3FollowsFlow, listOf(muteListFollow))
-                    .flatten()
-                    .toImmutableList(),
-            )
-        }
-    val kind3GlobalPeopleRoutes = _kind3GlobalPeopleRoutes.flowOn(Dispatchers.IO).stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
-
-    private val _kind3GlobalPeople =
-        combineTransform(livePeopleListsFlow, liveKind3FollowsFlow) { myLivePeopleListsFlow, myLiveKind3FollowsFlow ->
-            checkNotInMainThread()
-            emit(
-                listOf(listOf(kind3Follow, globalFollow), myLivePeopleListsFlow, listOf(muteListFollow))
-                    .flatten()
-                    .toImmutableList(),
-            )
-        }
-
-    val kind3GlobalPeople = _kind3GlobalPeople.flowOn(Dispatchers.IO).stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
-
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <FollowListViewModel : ViewModel> create(modelClass: Class<FollowListViewModel>): FollowListViewModel = FollowListViewModel(account) as FollowListViewModel
-    }
 }
 
 @Composable

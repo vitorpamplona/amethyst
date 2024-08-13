@@ -3149,6 +3149,17 @@ class Account(
         }
     }
 
+    fun getAllPeopleLists(): List<AddressableNote> = getAllPeopleLists(keyPair.pubKeyHex)
+
+    fun getAllPeopleLists(pubkey: HexKey): List<AddressableNote> =
+        LocalCache.addressables
+            .filter { _, addressableNote ->
+                val event = (addressableNote.event as? PeopleListEvent)
+                event != null &&
+                    event.pubKey == pubkey &&
+                    (event.hasAnyTaggedUser() || event.publicAndPrivateUserCache?.isNotEmpty() == true)
+            }
+
     fun setHideDeleteRequestDialog() {
         hideDeleteRequestDialog = true
         saveable.invalidateData()

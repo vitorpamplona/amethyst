@@ -73,7 +73,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -91,7 +90,6 @@ import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.navigation.AppTopBar
 import com.vitorpamplona.amethyst.ui.navigation.DrawerContent
-import com.vitorpamplona.amethyst.ui.navigation.FollowListViewModel
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.Route.Companion.InvertedLayouts
 import com.vitorpamplona.amethyst.ui.navigation.getRouteWithArguments
@@ -166,12 +164,6 @@ fun MainScreen(
     DisplayErrorMessages(accountViewModel)
     DisplayNotifyMessages(accountViewModel, nav)
 
-    val followListsViewModel: FollowListViewModel =
-        viewModel(
-            key = "FollowListViewModel",
-            factory = FollowListViewModel.Factory(accountViewModel.account),
-        )
-
     val navBottomRow =
         remember(navController, accountViewModel) {
             { route: Route, selected: Boolean ->
@@ -228,7 +220,6 @@ fun MainScreen(
                 navPopBack = navPopBack,
                 openDrawer = { scope.launch { drawerState.open() } },
                 accountStateViewModel = accountStateViewModel,
-                followListsViewModel = followListsViewModel,
                 sharedPreferencesViewModel = sharedPreferencesViewModel,
                 accountViewModel = accountViewModel,
                 nav = nav,
@@ -265,7 +256,6 @@ private fun MainScaffold(
     navPopBack: () -> Unit,
     openDrawer: () -> Unit,
     accountStateViewModel: AccountStateViewModel,
-    followListsViewModel: FollowListViewModel,
     sharedPreferencesViewModel: SharedPreferencesViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -350,7 +340,6 @@ private fun MainScaffold(
             ) { isVisible ->
                 if (isVisible) {
                     AppTopBar(
-                        followListsViewModel,
                         navState,
                         openDrawer,
                         accountViewModel,
