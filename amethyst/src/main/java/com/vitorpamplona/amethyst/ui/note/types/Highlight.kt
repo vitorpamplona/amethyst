@@ -75,6 +75,7 @@ fun RenderHighlight(
 
     DisplayHighlight(
         highlight = noteEvent.quote(),
+        context = noteEvent.context(),
         authorHex = noteEvent.author(),
         url = noteEvent.inUrl(),
         postAddress = noteEvent.inPost(),
@@ -92,6 +93,7 @@ fun RenderHighlight(
 @Composable
 fun DisplayHighlight(
     highlight: String,
+    context: String?,
     authorHex: String?,
     url: String?,
     postAddress: ATag?,

@@ -40,6 +40,8 @@ class HighlightEvent(
 
     fun quote() = content
 
+    fun context() = firstTagFor("context")
+
     fun inPost() = firstTaggedAddress()
 
     fun inPostVersion() = firstTaggedEvent()
