@@ -1237,8 +1237,8 @@ class AccountViewModel(
 
     override fun onCleared() {
         Log.d("Init", "AccountViewModel onCleared")
-        collectorJob?.cancel()
         feedStates.destroy()
+        collectorJob?.cancel()
         super.onCleared()
     }
 
