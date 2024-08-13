@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.components
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.res.Configuration
 import android.util.Log
 import android.view.Window
 import androidx.compose.animation.AnimatedVisibility
@@ -46,12 +47,14 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
@@ -118,6 +121,19 @@ fun ZoomableContentView(
 ) {
     var dialogOpen by remember(content) { mutableStateOf(false) }
 
+    val orientation = LocalConfiguration.current.orientation
+
+    val orientationState by rememberUpdatedState(newValue = orientation)
+    val (sOrientation, isLandscapeMode) =
+        when (orientationState) {
+            Configuration.ORIENTATION_LANDSCAPE -> Pair("Landscape", true)
+            Configuration.ORIENTATION_PORTRAIT -> Pair("Portrait", false)
+
+            else -> Pair("Unknown", false)
+        }
+
+    Log.d("AmethystConf", "Device orientation is: $sOrientation")
+
     val contentScale =
         if (isFiniteHeight) {
             ContentScale.Fit
@@ -179,6 +195,7 @@ fun ZoomableContentView(
                 }
             }
     }
+    if (isLandscapeMode) dialogOpen = true
 
     if (dialogOpen) {
         ZoomableImageDialog(content, images, onDismiss = { dialogOpen = false }, accountViewModel)
