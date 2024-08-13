@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
@@ -67,10 +67,8 @@ import com.google.accompanist.adaptive.TwoPane
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
 import com.vitorpamplona.amethyst.ui.buttons.ChannelFabColumn
-import com.vitorpamplona.amethyst.ui.screen.ChatroomListFeedView
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
+import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
@@ -81,8 +79,8 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun ChatroomListScreen(
-    knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
-    newFeedViewModel: NostrChatroomListNewFeedViewModel,
+    knownFeedContentState: FeedContentState,
+    newFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -102,16 +100,16 @@ fun ChatroomListScreen(
 
     if (twoPane && windowSizeClass != null) {
         ChatroomListTwoPane(
-            knownFeedViewModel = knownFeedViewModel,
-            newFeedViewModel = newFeedViewModel,
+            knownFeedContentState = knownFeedContentState,
+            newFeedContentState = newFeedContentState,
             widthSizeClass = windowSizeClass!!.widthSizeClass,
             accountViewModel = accountViewModel,
             nav = nav,
         )
     } else {
         ChatroomListScreenOnlyList(
-            knownFeedViewModel = knownFeedViewModel,
-            newFeedViewModel = newFeedViewModel,
+            knownFeedContentState = knownFeedContentState,
+            newFeedContentState = newFeedContentState,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -125,8 +123,8 @@ data class RouteId(
 
 @Composable
 fun ChatroomListTwoPane(
-    knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
-    newFeedViewModel: NostrChatroomListNewFeedViewModel,
+    knownFeedContentState: FeedContentState,
+    newFeedContentState: FeedContentState,
     widthSizeClass: WindowWidthSizeClass,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -164,8 +162,8 @@ fun ChatroomListTwoPane(
         first = {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
                 ChatroomListScreenOnlyList(
-                    knownFeedViewModel,
-                    newFeedViewModel,
+                    knownFeedContentState,
+                    newFeedContentState,
                     accountViewModel,
                     navInterceptor,
                 )
@@ -209,8 +207,8 @@ fun ChatroomListTwoPane(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatroomListScreenOnlyList(
-    knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
-    newFeedViewModel: NostrChatroomListNewFeedViewModel,
+    knownFeedContentState: FeedContentState,
+    newFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -221,7 +219,7 @@ fun ChatroomListScreenOnlyList(
     val markKnownAsRead = remember { mutableStateOf(false) }
     val markNewAsRead = remember { mutableStateOf(false) }
 
-    WatchAccountForListScreen(knownFeedViewModel, newFeedViewModel, accountViewModel)
+    WatchAccountForListScreen(knownFeedContentState, newFeedContentState, accountViewModel)
 
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifeCycleOwner) {
@@ -238,11 +236,11 @@ fun ChatroomListScreenOnlyList(
     }
 
     val tabs by
-        remember(knownFeedViewModel, markKnownAsRead) {
+        remember(knownFeedContentState, markKnownAsRead) {
             derivedStateOf {
                 listOf(
-                    ChatroomListTabItem(R.string.known, knownFeedViewModel, markKnownAsRead),
-                    ChatroomListTabItem(R.string.new_requests, newFeedViewModel, markNewAsRead),
+                    ChatroomListTabItem(R.string.known, knownFeedContentState, markKnownAsRead),
+                    ChatroomListTabItem(R.string.new_requests, newFeedContentState, markNewAsRead),
                 )
             }
         }
@@ -290,7 +288,7 @@ fun ChatroomListScreenOnlyList(
             modifier = Modifier.fillMaxSize(),
         ) { page ->
             ChatroomListFeedView(
-                viewModel = tabs[page].viewModel,
+                feedContentState = tabs[page].feedContentState,
                 accountViewModel = accountViewModel,
                 nav = nav,
                 markAsRead = tabs[page].markAsRead,
@@ -301,16 +299,16 @@ fun ChatroomListScreenOnlyList(
 
 @Composable
 fun WatchAccountForListScreen(
-    knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
-    newFeedViewModel: NostrChatroomListNewFeedViewModel,
+    knownFeedContentState: FeedContentState,
+    newFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
 ) {
     LaunchedEffect(accountViewModel) {
         launch(Dispatchers.IO) {
             NostrChatroomListDataSource.account = accountViewModel.account
             NostrChatroomListDataSource.start()
-            knownFeedViewModel.invalidateData(true)
-            newFeedViewModel.invalidateData(true)
+            knownFeedContentState.invalidateData(true)
+            newFeedContentState.invalidateData(true)
         }
     }
 }
@@ -318,7 +316,7 @@ fun WatchAccountForListScreen(
 @Immutable
 class ChatroomListTabItem(
     val resource: Int,
-    val viewModel: FeedViewModel,
+    val feedContentState: FeedContentState,
     val markAsRead: MutableState<Boolean>,
 )
 

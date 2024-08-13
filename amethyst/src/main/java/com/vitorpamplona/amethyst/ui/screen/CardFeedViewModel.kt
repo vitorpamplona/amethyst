@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
+import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
@@ -74,7 +75,7 @@ class NotificationViewModel(
 open class CardFeedViewModel(
     val localFilter: FeedFilter<Note>,
 ) : ViewModel(),
-    InvalidatableViewModel {
+    InvalidatableContent {
     private val _feedContent = MutableStateFlow<CardFeedState>(CardFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 

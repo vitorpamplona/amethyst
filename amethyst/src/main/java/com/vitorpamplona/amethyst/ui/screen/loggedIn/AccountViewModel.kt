@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.ui.feeds.AccountFeedContentStates
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.bottomNavigationItems
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
@@ -170,6 +171,8 @@ class AccountViewModel(
     val searchRelays: StateFlow<SearchRelayListEvent?> = observeByAuthor(SearchRelayListEvent.KIND, account.signer.pubKey)
 
     val toasts = MutableSharedFlow<ToastMsg?>(0, 3, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    val feedStates = AccountFeedContentStates(this)
 
     val showSensitiveContentChanges =
         account.live.map { it.account.showSensitiveContent }.distinctUntilChanged()

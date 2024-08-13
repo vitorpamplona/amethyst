@@ -42,39 +42,29 @@ import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverChatFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverCommunityFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverLiveFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverMarketplaceFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverNIP89FeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.BookmarkListScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChannelScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomListScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ChatroomScreenByAuthor
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.CommunityScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DraftListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.GeoHashScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.HiddenUsersScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRedirectScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.NIP90ContentDiscoveryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ThreadScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.VideoScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChatroomListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChatroomScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChatroomScreenByAuthor
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.CommunityScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.NIP90ContentDiscoveryScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -82,16 +72,6 @@ import java.net.URLDecoder
 
 @Composable
 fun AppNavigation(
-    homeFeedViewModel: NostrHomeFeedViewModel,
-    repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
-    knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
-    newFeedViewModel: NostrChatroomListNewFeedViewModel,
-    videoFeedViewModel: NostrVideoFeedViewModel,
-    discoverMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel,
-    discoverNip89FeedViewModel: NostrDiscoverNIP89FeedViewModel,
-    discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
-    discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
-    discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
     notifFeedViewModel: NotificationViewModel,
     userReactionsStatsModel: UserReactionsViewModel,
     navController: NavHostController,
@@ -125,8 +105,8 @@ fun AppNavigation(
                     val nip47 = it.arguments?.getString("nip47")
 
                     HomeScreen(
-                        homeFeedViewModel = homeFeedViewModel,
-                        repliesFeedViewModel = repliesFeedViewModel,
+                        newThreadsFeedState = accountViewModel.feedStates.homeNewThreads,
+                        repliesFeedState = accountViewModel.feedStates.homeNewThreads,
                         accountViewModel = accountViewModel,
                         nav = nav,
                         nip47 = nip47,
@@ -148,8 +128,8 @@ fun AppNavigation(
             Route.Message.route,
             content = {
                 ChatroomListScreen(
-                    knownFeedViewModel,
-                    newFeedViewModel,
+                    accountViewModel.feedStates.dmKnown,
+                    accountViewModel.feedStates.dmNew,
                     accountViewModel,
                     nav,
                 )
@@ -162,7 +142,7 @@ fun AppNavigation(
                 route.arguments,
                 content = {
                     VideoScreen(
-                        videoFeedView = videoFeedViewModel,
+                        videoFeedContentState = accountViewModel.feedStates.videoFeed,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
@@ -176,11 +156,11 @@ fun AppNavigation(
                 route.arguments,
                 content = {
                     DiscoverScreen(
-                        discoveryContentNIP89FeedViewModel = discoverNip89FeedViewModel,
-                        discoveryMarketplaceFeedViewModel = discoverMarketplaceFeedViewModel,
-                        discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
-                        discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
-                        discoveryChatFeedViewModel = discoveryChatFeedViewModel,
+                        discoveryContentNIP89FeedContentState = accountViewModel.feedStates.discoverDVMs,
+                        discoveryMarketplaceFeedContentState = accountViewModel.feedStates.discoverMarketplace,
+                        discoveryLiveFeedContentState = accountViewModel.feedStates.discoverLive,
+                        discoveryCommunityFeedContentState = accountViewModel.feedStates.discoverCommunities,
+                        discoveryChatFeedContentState = accountViewModel.feedStates.discoverPublicChats,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )

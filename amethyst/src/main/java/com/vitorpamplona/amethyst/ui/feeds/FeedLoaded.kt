@@ -18,71 +18,50 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen
+package com.vitorpamplona.amethyst.ui.feeds
 
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
-import com.vitorpamplona.amethyst.ui.feeds.FeedError
-import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
-import com.vitorpamplona.amethyst.ui.note.ZapNoteCompose
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun LnZapFeedView(
-    viewModel: LnZapFeedViewModel,
+fun FeedLoaded(
+    state: FeedState.Loaded,
+    listState: LazyListState,
+    routeForLastRead: String?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
-
-    CrossfadeIfEnabled(targetState = feedState, animationSpec = tween(durationMillis = 100), accountViewModel = accountViewModel) { state ->
-        when (state) {
-            is LnZapFeedState.Empty -> {
-                FeedEmpty { viewModel.invalidateData() }
-            }
-            is LnZapFeedState.FeedError -> {
-                FeedError(state.errorMessage) { viewModel.invalidateData() }
-            }
-            is LnZapFeedState.Loaded -> {
-                LnZapFeedLoaded(state, accountViewModel, nav)
-            }
-            is LnZapFeedState.Loading -> {
-                LoadingFeed()
-            }
-        }
-    }
-}
-
-@Composable
-private fun LnZapFeedLoaded(
-    state: LnZapFeedState.Loaded,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    val listState = rememberLazyListState()
-
     LazyColumn(
         contentPadding = FeedPadding,
         state = listState,
     ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.zapEvent.idHex }) { _, item ->
-            ZapNoteCompose(item, accountViewModel = accountViewModel, nav = nav)
+        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
+            Row(Modifier.fillMaxWidth().animateItemPlacement()) {
+                NoteCompose(
+                    item,
+                    routeForLastRead = routeForLastRead,
+                    modifier = Modifier.fillMaxWidth(),
+                    isBoostedNote = false,
+                    isHiddenFeed = state.showHidden.value,
+                    quotesLeft = 3,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
 
             HorizontalDivider(
-                modifier = Modifier.padding(top = 10.dp),
                 thickness = DividerThickness,
             )
         }

@@ -38,6 +38,8 @@ import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
+import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
+import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -52,7 +54,7 @@ import kotlinx.coroutines.launch
 @Stable
 class RelayFeedViewModel :
     ViewModel(),
-    InvalidatableViewModel {
+    InvalidatableContent {
     val order =
         compareByDescending<RelayInfo> { it.lastEvent }
             .thenByDescending { it.counter }

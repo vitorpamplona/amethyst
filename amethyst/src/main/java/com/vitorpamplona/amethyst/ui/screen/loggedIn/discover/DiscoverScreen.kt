@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -58,24 +58,21 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
+import com.vitorpamplona.amethyst.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.ui.feeds.PagerStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.SaveableGridFeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChannelCardCompose
-import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
-import com.vitorpamplona.amethyst.ui.screen.FeedError
-import com.vitorpamplona.amethyst.ui.screen.FeedState
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.LoadingFeed
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverChatFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverCommunityFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverLiveFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverMarketplaceFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverNIP89FeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.PagerStateKeys
-import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
-import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
-import com.vitorpamplona.amethyst.ui.screen.SaveableGridFeedState
-import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
-import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.TabItem
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -92,11 +89,11 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DiscoverScreen(
-    discoveryContentNIP89FeedViewModel: NostrDiscoverNIP89FeedViewModel,
-    discoveryMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel,
-    discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
-    discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
-    discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
+    discoveryContentNIP89FeedContentState: FeedContentState,
+    discoveryMarketplaceFeedContentState: FeedContentState,
+    discoveryLiveFeedContentState: FeedContentState,
+    discoveryCommunityFeedContentState: FeedContentState,
+    discoveryChatFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -104,44 +101,46 @@ fun DiscoverScreen(
 
     val tabs by
         remember(
-            discoveryContentNIP89FeedViewModel,
-            discoveryLiveFeedViewModel,
-            discoveryCommunityFeedViewModel,
-            discoveryChatFeedViewModel,
+            discoveryContentNIP89FeedContentState,
+            discoveryLiveFeedContentState,
+            discoveryCommunityFeedContentState,
+            discoveryChatFeedContentState,
+            discoveryMarketplaceFeedContentState,
         ) {
             mutableStateOf(
                 listOf(
                     TabItem(
                         R.string.discover_content,
-                        discoveryContentNIP89FeedViewModel,
+                        discoveryContentNIP89FeedContentState,
                         Route.Discover.base + "DiscoverContent",
                         ScrollStateKeys.DISCOVER_CONTENT,
                         AppDefinitionEvent.KIND,
                     ),
                     TabItem(
                         R.string.discover_live,
-                        discoveryLiveFeedViewModel,
+                        discoveryLiveFeedContentState,
                         Route.Discover.base + "Live",
                         ScrollStateKeys.DISCOVER_LIVE,
                         LiveActivitiesEvent.KIND,
                     ),
                     TabItem(
                         R.string.discover_community,
-                        discoveryCommunityFeedViewModel,
+                        discoveryCommunityFeedContentState,
                         Route.Discover.base + "Community",
                         ScrollStateKeys.DISCOVER_COMMUNITY,
                         CommunityDefinitionEvent.KIND,
                     ),
                     TabItem(
                         R.string.discover_marketplace,
-                        discoveryMarketplaceFeedViewModel,
+                        discoveryMarketplaceFeedContentState,
                         Route.Discover.base + "Marketplace",
                         ScrollStateKeys.DISCOVER_MARKETPLACE,
                         ClassifiedsEvent.KIND,
+                        useGridLayout = true,
                     ),
                     TabItem(
                         R.string.discover_chat,
-                        discoveryChatFeedViewModel,
+                        discoveryChatFeedContentState,
                         Route.Discover.base + "Chats",
                         ScrollStateKeys.DISCOVER_CHATS,
                         ChannelCreateEvent.KIND,
@@ -153,11 +152,11 @@ fun DiscoverScreen(
     val pagerState = rememberForeverPagerState(key = PagerStateKeys.DISCOVER_SCREEN) { tabs.size }
 
     WatchAccountForDiscoveryScreen(
-        discoverNIP89FeedViewModel = discoveryContentNIP89FeedViewModel,
-        discoverMarketplaceFeedViewModel = discoveryMarketplaceFeedViewModel,
-        discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
-        discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
-        discoveryChatFeedViewModel = discoveryChatFeedViewModel,
+        discoveryContentNIP89FeedContentState = discoveryContentNIP89FeedContentState,
+        discoveryMarketplaceFeedContentState = discoveryMarketplaceFeedContentState,
+        discoveryLiveFeedContentState = discoveryLiveFeedContentState,
+        discoveryCommunityFeedContentState = discoveryCommunityFeedContentState,
+        discoveryChatFeedContentState = discoveryChatFeedContentState,
         accountViewModel = accountViewModel,
     )
 
@@ -214,11 +213,11 @@ private fun DiscoverPages(
     }
 
     HorizontalPager(state = pagerState) { page ->
-        RefresheableBox(tabs[page].viewModel, true) {
-            if (tabs[page].viewModel is NostrDiscoverMarketplaceFeedViewModel) {
-                SaveableGridFeedState(tabs[page].viewModel, scrollStateKey = tabs[page].scrollStateKey) { listState ->
+        RefresheableBox(tabs[page].feedState, true) {
+            if (tabs[page].useGridLayout) {
+                SaveableGridFeedContentState(tabs[page].feedState, scrollStateKey = tabs[page].scrollStateKey) { listState ->
                     RenderDiscoverFeed(
-                        viewModel = tabs[page].viewModel,
+                        feedContentState = tabs[page].feedState,
                         routeForLastRead = tabs[page].routeForLastRead,
                         forceEventKind = tabs[page].forceEventKind,
                         listState = listState,
@@ -227,9 +226,9 @@ private fun DiscoverPages(
                     )
                 }
             } else {
-                SaveableFeedState(tabs[page].viewModel, scrollStateKey = tabs[page].scrollStateKey) { listState ->
+                SaveableFeedContentState(tabs[page].feedState, scrollStateKey = tabs[page].scrollStateKey) { listState ->
                     RenderDiscoverFeed(
-                        viewModel = tabs[page].viewModel,
+                        feedContentState = tabs[page].feedState,
                         routeForLastRead = tabs[page].routeForLastRead,
                         forceEventKind = tabs[page].forceEventKind,
                         listState = listState,
@@ -244,14 +243,14 @@ private fun DiscoverPages(
 
 @Composable
 private fun RenderDiscoverFeed(
-    viewModel: FeedViewModel,
+    feedContentState: FeedContentState,
     routeForLastRead: String?,
     forceEventKind: Int?,
     listState: LazyGridState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(
         targetState = feedState,
@@ -261,10 +260,10 @@ private fun RenderDiscoverFeed(
     ) { state ->
         when (state) {
             is FeedState.Empty -> {
-                FeedEmpty { viewModel.invalidateData() }
+                FeedEmpty(feedContentState::invalidateData)
             }
             is FeedState.FeedError -> {
-                FeedError(state.errorMessage) { viewModel.invalidateData() }
+                FeedError(state.errorMessage, feedContentState::invalidateData)
             }
             is FeedState.Loaded -> {
                 DiscoverFeedColumnsLoaded(
@@ -285,14 +284,14 @@ private fun RenderDiscoverFeed(
 
 @Composable
 private fun RenderDiscoverFeed(
-    viewModel: FeedViewModel,
+    feedContentState: FeedContentState,
     routeForLastRead: String?,
     forceEventKind: Int?,
     listState: LazyListState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(
         targetState = feedState,
@@ -302,10 +301,10 @@ private fun RenderDiscoverFeed(
     ) { state ->
         when (state) {
             is FeedState.Empty -> {
-                FeedEmpty { viewModel.invalidateData() }
+                FeedEmpty(feedContentState::invalidateData)
             }
             is FeedState.FeedError -> {
-                FeedError(state.errorMessage) { viewModel.invalidateData() }
+                FeedError(state.errorMessage, feedContentState::invalidateData)
             }
             is FeedState.Loaded -> {
                 DiscoverFeedLoaded(
@@ -326,22 +325,22 @@ private fun RenderDiscoverFeed(
 
 @Composable
 fun WatchAccountForDiscoveryScreen(
-    discoverNIP89FeedViewModel: NostrDiscoverNIP89FeedViewModel,
-    discoverMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel,
-    discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
-    discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
-    discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
+    discoveryContentNIP89FeedContentState: FeedContentState,
+    discoveryMarketplaceFeedContentState: FeedContentState,
+    discoveryLiveFeedContentState: FeedContentState,
+    discoveryCommunityFeedContentState: FeedContentState,
+    discoveryChatFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
 ) {
     val listState by accountViewModel.account.liveDiscoveryFollowLists.collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, listState) {
         NostrDiscoveryDataSource.resetFilters()
-        discoverNIP89FeedViewModel.checkKeysInvalidateDataAndSendToTop()
-        discoverMarketplaceFeedViewModel.checkKeysInvalidateDataAndSendToTop()
-        discoveryLiveFeedViewModel.checkKeysInvalidateDataAndSendToTop()
-        discoveryCommunityFeedViewModel.checkKeysInvalidateDataAndSendToTop()
-        discoveryChatFeedViewModel.checkKeysInvalidateDataAndSendToTop()
+        discoveryContentNIP89FeedContentState.checkKeysInvalidateDataAndSendToTop()
+        discoveryMarketplaceFeedContentState.checkKeysInvalidateDataAndSendToTop()
+        discoveryLiveFeedContentState.checkKeysInvalidateDataAndSendToTop()
+        discoveryCommunityFeedContentState.checkKeysInvalidateDataAndSendToTop()
+        discoveryChatFeedContentState.checkKeysInvalidateDataAndSendToTop()
     }
 }
 

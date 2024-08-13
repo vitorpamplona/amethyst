@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen
+package com.vitorpamplona.amethyst.ui.feeds
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.LazyListState
@@ -30,34 +30,27 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
-import com.vitorpamplona.amethyst.ui.feeds.FeedError
-import com.vitorpamplona.amethyst.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
-import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyGridState
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun RefresheableFeedView(
-    viewModel: FeedViewModel,
+fun RefresheableFeedContentStateView(
+    feedContentState: FeedContentState,
     routeForLastRead: String?,
     enablePullRefresh: Boolean = true,
     scrollStateKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    RefresheableBox(viewModel, enablePullRefresh) {
-        SaveableFeedState(viewModel, scrollStateKey) { listState ->
-            RenderFeedState(viewModel, accountViewModel, listState, nav, routeForLastRead)
+    RefresheableBox(feedContentState, enablePullRefresh) {
+        SaveableFeedContentState(feedContentState, scrollStateKey) { listState ->
+            RenderFeedContentState(feedContentState, accountViewModel, listState, nav, routeForLastRead)
         }
     }
 }
 
 @Composable
-fun SaveableFeedState(
-    viewModel: FeedViewModel,
+fun SaveableFeedContentState(
+    feedContentState: FeedContentState,
     scrollStateKey: String? = null,
     content: @Composable (LazyListState) -> Unit,
 ) {
@@ -68,14 +61,14 @@ fun SaveableFeedState(
             rememberLazyListState()
         }
 
-    WatchScrollToTop(viewModel, listState)
+    WatchScrollToTopFeedContentState(feedContentState, listState)
 
     content(listState)
 }
 
 @Composable
-fun SaveableGridFeedState(
-    viewModel: FeedViewModel,
+fun SaveableGridFeedContentState(
+    feedContentState: FeedContentState,
     scrollStateKey: String? = null,
     content: @Composable (LazyGridState) -> Unit,
 ) {
@@ -86,27 +79,24 @@ fun SaveableGridFeedState(
             rememberLazyGridState()
         }
 
-    WatchScrollToTop(viewModel, gridState)
+    WatchScrollToTopFeedContentState(feedContentState, gridState)
 
     content(gridState)
 }
 
 @Composable
-fun RenderFeedState(
-    viewModel: FeedViewModel,
+fun RenderFeedContentState(
+    feedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     listState: LazyListState,
     nav: (String) -> Unit,
     routeForLastRead: String?,
-    onLoaded: @Composable (FeedState.Loaded) -> Unit = {
-        com.vitorpamplona.amethyst.ui.feeds
-            .FeedLoaded(it, listState, routeForLastRead, accountViewModel, nav)
-    },
-    onEmpty: @Composable () -> Unit = { FeedEmpty { viewModel.invalidateData() } },
-    onError: @Composable (String) -> Unit = { FeedError(it) { viewModel.invalidateData() } },
+    onLoaded: @Composable (FeedState.Loaded) -> Unit = { FeedLoaded(it, listState, routeForLastRead, accountViewModel, nav) },
+    onEmpty: @Composable () -> Unit = { FeedEmpty(feedContentState::invalidateData) },
+    onError: @Composable (String) -> Unit = { FeedError(it, feedContentState::invalidateData) },
     onLoading: @Composable () -> Unit = { LoadingFeed() },
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(
         targetState = feedState,
@@ -123,31 +113,31 @@ fun RenderFeedState(
 }
 
 @Composable
-private fun WatchScrollToTop(
-    viewModel: FeedViewModel,
+private fun WatchScrollToTopFeedContentState(
+    feedContentState: FeedContentState,
     listState: LazyListState,
 ) {
-    val scrollToTop by viewModel.scrollToTop.collectAsStateWithLifecycle()
+    val scrollToTop by feedContentState.scrollToTop.collectAsStateWithLifecycle()
 
     LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
+        if (scrollToTop > 0 && feedContentState.scrolltoTopPending) {
             listState.scrollToItem(index = 0)
-            viewModel.sentToTop()
+            feedContentState.sentToTop()
         }
     }
 }
 
 @Composable
-private fun WatchScrollToTop(
-    viewModel: FeedViewModel,
+private fun WatchScrollToTopFeedContentState(
+    feedContentState: FeedContentState,
     listState: LazyGridState,
 ) {
-    val scrollToTop by viewModel.scrollToTop.collectAsStateWithLifecycle()
+    val scrollToTop by feedContentState.scrollToTop.collectAsStateWithLifecycle()
 
     LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
+        if (scrollToTop > 0 && feedContentState.scrolltoTopPending) {
             listState.scrollToItem(index = 0)
-            viewModel.sentToTop()
+            feedContentState.sentToTop()
         }
     }
 }
