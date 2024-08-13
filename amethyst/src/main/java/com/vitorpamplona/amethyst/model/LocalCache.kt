@@ -2178,6 +2178,8 @@ object LocalCache {
                 val childrenToBeRemoved = mutableListOf<Note>()
 
                 toBeRemoved.forEach {
+                    // TODO: NEED TO TEST IF WRAPS COME BACK WHEN NEEDED BEFORE ACTIVATING
+                    // childrenToBeRemoved.addAll(removeIfWrap(it))
                     removeFromCache(it)
 
                     childrenToBeRemoved.addAll(it.removeAllChildNotes())
@@ -2192,6 +2194,24 @@ object LocalCache {
                 }
             }
         }
+    }
+
+    fun removeIfWrap(note: Note): List<Note> {
+        val noteEvent = note.event
+
+        val children =
+            if (noteEvent is WrappedEvent) {
+                noteEvent.host?.id?.let {
+                    getNoteIfExists(it)?.let {
+                        removeFromCache(it)
+                        it.removeAllChildNotes()
+                    }
+                }
+            } else {
+                null
+            }
+
+        return children ?: emptyList()
     }
 
     fun prunePastVersionsOfReplaceables() {
