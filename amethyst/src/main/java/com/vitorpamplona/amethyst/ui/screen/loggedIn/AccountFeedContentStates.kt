@@ -104,6 +104,6 @@ class AccountFeedContentStates(
         notifications.destroy()
         notificationSummary.destroy()
 
-        // feedListOptions.destroy()
+        feedListOptions.destroy()
     }
 }

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.R
@@ -185,6 +186,10 @@ class FollowListState(
         checkNotInMainThread()
 
         livePeopleListsFlow.emit(getPeopleLists())
+    }
+
+    fun destroy() {
+        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
     }
 }
 
