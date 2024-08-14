@@ -164,7 +164,7 @@ class Kind3RelayListViewModel : ViewModel() {
                         write = false,
                         feedTypes = setOf(FeedType.FOLLOWS),
                         relayStat = RelayStats.get(it.url),
-                        users = it.users,
+                        users = it.users.sorted(),
                     )
                 } else {
                     null

@@ -55,7 +55,7 @@ data class Kind3RelayProposalSetupInfo(
     val feedTypes: Set<FeedType>,
     val relayStat: RelayStat,
     val paidRelay: Boolean = false,
-    val users: Set<HexKey>,
+    val users: List<HexKey>,
 ) {
     val briefInfo: RelayBriefInfoCache.RelayBriefInfo = RelayBriefInfoCache.RelayBriefInfo(url)
 }
