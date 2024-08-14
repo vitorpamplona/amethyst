@@ -119,7 +119,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
@@ -540,17 +542,14 @@ class Account(
     }
 
     fun authorsPerRelay(
-        pubkeyList: Set<HexKey>,
+        followsNIP65RelayLists: Array<NoteState>,
         defaultRelayList: List<String>,
-    ): Flow<Map<String, List<String>>> =
-        combine(
-            pubkeyList.map {
-                getNIP65RelayListFlow(it)
-            },
-        ) { followsNIP65RelayLists ->
+    ): Map<String, List<HexKey>> {
+        val test =
             assembleAuthorsPerWriteRelay(
                 followsNIP65RelayLists
-                    .mapNotNull {
+                    .mapNotNull
+                    {
                         val author = (it.note as? AddressableNote)?.address?.pubKeyHex
                         val event = (it.note.event as? AdvertisedRelayListEvent)
 
@@ -567,23 +566,39 @@ class Account(
                     }.toMap(),
                 hasOnionConnection = proxy != null,
             )
-        }
+
+        return test
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveHomeListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
-        combineTransform(liveHomeFollowListFlow, connectToRelaysFlow) { followList, existing ->
-            if (followList != null) {
-                emit(authorsPerRelay(followList.usersPlusMe, existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }))
-            } else {
-                emit(MutableStateFlow(null))
+    val liveHomeFollowListAdvertizedRelayListFlow: Flow<Array<NoteState>?> =
+        liveHomeFollowLists
+            .transformLatest { followList ->
+                if (followList != null) {
+                    emitAll(combine(followList.usersPlusMe.map { getNIP65RelayListFlow(it) }) { it })
+                } else {
+                    emit(null)
+                }
             }
-        }.flatMapLatest {
-            it
+
+    val liveHomeListAuthorsPerRelayFlow: Flow<Map<String, List<HexKey>>?> by lazy {
+        combineTransform(liveHomeFollowListAdvertizedRelayListFlow, connectToRelays) { adverisedRelayList, existing ->
+            if (adverisedRelayList != null) {
+                emit(authorsPerRelay(adverisedRelayList, existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }))
+            } else {
+                emit(null)
+            }
         }
     }
 
-    val liveHomeListAuthorsPerRelay: StateFlow<Map<String, List<String>>?> by lazy {
-        liveHomeListAuthorsPerRelayFlow.stateIn(scope, SharingStarted.Eagerly, emptyMap())
+    val liveHomeListAuthorsPerRelay: StateFlow<Map<String, List<HexKey>>?> by lazy {
+        val currentRelays = connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }
+        val default =
+            currentRelays.associate { relayUrl ->
+                relayUrl to (liveHomeFollowLists.value?.usersPlusMe?.toList() ?: emptyList())
+            }
+
+        liveHomeListAuthorsPerRelayFlow.stateIn(scope, SharingStarted.Eagerly, default)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -611,15 +626,23 @@ class Account(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveStoriesListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
-        combineTransform(liveStoriesFollowLists, connectToRelaysFlow) { followList, existing ->
-            if (followList != null) {
-                emit(authorsPerRelay(followList.usersPlusMe, existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }))
-            } else {
-                emit(MutableStateFlow(null))
+    val liveStoriesFollowListAdvertizedRelayListFlow: Flow<Array<NoteState>?> =
+        liveStoriesFollowLists
+            .transformLatest { followList ->
+                if (followList != null) {
+                    emitAll(combine(followList.usersPlusMe.map { getNIP65RelayListFlow(it) }) { it })
+                } else {
+                    emit(null)
+                }
             }
-        }.flatMapLatest {
-            it
+
+    val liveStoriesListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
+        combineTransform(liveStoriesFollowListAdvertizedRelayListFlow, connectToRelays) { adverisedRelayList, existing ->
+            if (adverisedRelayList != null) {
+                emit(authorsPerRelay(adverisedRelayList, existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }))
+            } else {
+                emit(null)
+            }
         }
     }
 
@@ -640,15 +663,23 @@ class Account(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveDiscoveryListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
-        combineTransform(liveDiscoveryFollowLists, connectToRelaysFlow) { followList, existing ->
-            if (followList != null) {
-                emit(authorsPerRelay(followList.usersPlusMe, existing.filter { it.read }.map { it.url }))
-            } else {
-                emit(MutableStateFlow(null))
+    val liveDiscoveryFollowListAdvertizedRelayListFlow: Flow<Array<NoteState>?> =
+        liveDiscoveryFollowLists
+            .transformLatest { followList ->
+                if (followList != null) {
+                    emitAll(combine(followList.usersPlusMe.map { getNIP65RelayListFlow(it) }) { it })
+                } else {
+                    emit(null)
+                }
             }
-        }.flatMapLatest {
-            it
+
+    val liveDiscoveryListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
+        combineTransform(liveDiscoveryFollowListAdvertizedRelayListFlow, connectToRelays) { adverisedRelayList, existing ->
+            if (adverisedRelayList != null) {
+                emit(authorsPerRelay(adverisedRelayList, existing.filter { it.read }.map { it.url }))
+            } else {
+                emit(null)
+            }
         }
     }
 
