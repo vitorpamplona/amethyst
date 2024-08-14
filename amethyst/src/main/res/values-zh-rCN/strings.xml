@@ -805,4 +805,5 @@
     <string name="add_a_nip96_server">添加 NIP-96 服务器</string>
     <string name="delete_all">删除所有</string>
     <string name="delete_all_drafts_confirmation">确定要删除所有草稿吗？</string>
+    <string name="and_more">" ... 和更多"</string>
 </resources>
