@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomListNewFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DiscoverChatFeedFilter
@@ -66,6 +67,8 @@ class AccountFeedContentStates(
     }
 
     fun updateFeedsWith(newNotes: Set<Note>) {
+        checkNotInMainThread()
+
         homeNewThreads.updateFeedWith(newNotes)
         homeReplies.updateFeedWith(newNotes)
 

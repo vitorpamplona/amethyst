@@ -183,8 +183,6 @@ class FeedContentState(
     }
 
     fun updateFeedWith(newNotes: Set<Note>) {
-        checkNotInMainThread()
-
         if (
             localFilter is AdditiveFeedFilter &&
             (_feedContent.value is FeedState.Loaded || _feedContent.value is FeedState.Empty)
