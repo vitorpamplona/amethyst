@@ -55,6 +55,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
     val latestEOSEs = EOSEAccount()
 
     var job: Job? = null
+    var job2: Job? = null
 
     override fun start() {
         job?.cancel()
@@ -68,12 +69,25 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                     }
                 }
             }
+
+        job2?.cancel()
+        job2 =
+            scope.launch(Dispatchers.IO) {
+                // creates cache on main
+                withContext(Dispatchers.Main) { account.userProfile().live() }
+                account.liveHomeListAuthorsPerRelay.collect {
+                    if (this@NostrHomeDataSource::account.isInitialized) {
+                        invalidateFilters()
+                    }
+                }
+            }
         super.start()
     }
 
     override fun stop() {
         super.stop()
         job?.cancel()
+        job2?.cancel()
     }
 
     fun createFollowAccountsFilter(): TypedFilter {

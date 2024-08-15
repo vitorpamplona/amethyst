@@ -449,11 +449,10 @@ class Account(
     val liveKind3Follows = liveKind3FollowsFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val liveHomeList: Flow<ListNameNotePair> by lazy {
+    private val liveHomeList: Flow<ListNameNotePair> =
         defaultHomeFollowList.flatMapLatest { listName ->
             loadPeopleListFlowFromListName(listName)
         }
-    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun loadPeopleListFlowFromListName(listName: String): Flow<ListNameNotePair> =
@@ -490,7 +489,7 @@ class Account(
         }
 
     val liveHomeFollowListFlow: Flow<LiveFollowLists?> by lazy {
-        combinePeopleListFlows(liveKind3FollowsFlow, liveHomeList)
+        combinePeopleListFlows(liveKind3Follows, liveHomeList)
     }
 
     val liveHomeFollowLists: StateFlow<LiveFollowLists?> by lazy {
@@ -544,31 +543,27 @@ class Account(
     fun authorsPerRelay(
         followsNIP65RelayLists: Array<NoteState>,
         defaultRelayList: List<String>,
-    ): Map<String, List<HexKey>> {
-        val test =
-            assembleAuthorsPerWriteRelay(
-                followsNIP65RelayLists
-                    .mapNotNull
-                    {
-                        val author = (it.note as? AddressableNote)?.address?.pubKeyHex
-                        val event = (it.note.event as? AdvertisedRelayListEvent)
+    ): Map<String, List<HexKey>> =
+        assembleAuthorsPerWriteRelay(
+            followsNIP65RelayLists
+                .mapNotNull
+                {
+                    val author = (it.note as? AddressableNote)?.address?.pubKeyHex
+                    val event = (it.note.event as? AdvertisedRelayListEvent)
 
-                        if (event != null) {
-                            event.pubKey to event.writeRelays()
+                    if (event != null) {
+                        event.pubKey to event.writeRelays()
+                    } else {
+                        if (author != null) {
+                            author to defaultRelayList
                         } else {
-                            if (author != null) {
-                                author to defaultRelayList
-                            } else {
-                                Log.e("Account", "This author should NEVER be null. Note: ${it.note.idHex}")
-                                null
-                            }
+                            Log.e("Account", "This author should NEVER be null. Note: ${it.note.idHex}")
+                            null
                         }
-                    }.toMap(),
-                hasOnionConnection = proxy != null,
-            )
-
-        return test
-    }
+                    }
+                }.toMap(),
+            hasOnionConnection = proxy != null,
+        )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveHomeFollowListAdvertizedRelayListFlow: Flow<Array<NoteState>?> =
