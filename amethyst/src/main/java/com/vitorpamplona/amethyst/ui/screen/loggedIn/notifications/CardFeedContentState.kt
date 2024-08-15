@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrderCard
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
@@ -111,7 +112,7 @@ class CardFeedContentState(
                 val updatedCards =
                     (oldNotesState.feed.value + newCards)
                         .distinctBy { it.id() }
-                        .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
+                        .sortedWith(DefaultFeedOrderCard)
                         .reversed()
                         .take(localFilter.limit())
                         .toImmutableList()
@@ -126,7 +127,7 @@ class CardFeedContentState(
 
             val cards =
                 convertToCard(notes)
-                    .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
+                    .sortedWith(DefaultFeedOrderCard)
                     .reversed()
                     .take(localFilter.limit())
                     .toImmutableList()

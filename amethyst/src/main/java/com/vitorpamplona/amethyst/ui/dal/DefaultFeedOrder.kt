@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.Card
 import com.vitorpamplona.quartz.events.Event
 
 val DefaultFeedOrder: Comparator<Note> =
@@ -37,3 +38,6 @@ val DefaultFeedOrder: Comparator<Note> =
                 }
             }
         }.thenBy { it.idHex }
+
+val DefaultFeedOrderCard: Comparator<Card> =
+    compareByDescending<Card> { it.createdAt() }.thenBy { it.id() }
