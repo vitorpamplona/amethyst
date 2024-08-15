@@ -187,7 +187,7 @@ private fun ChannelRoomCompose(
         } else if (noteEvent is ChannelMetadataEvent) {
             "${stringRes(R.string.channel_information_changed_to)} "
         } else {
-            noteEvent?.content()
+            noteEvent?.content()?.take(200)
         }
 
     val hasNewMessages = remember { mutableStateOf<Boolean>(false) }
