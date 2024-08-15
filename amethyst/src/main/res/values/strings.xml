@@ -779,6 +779,12 @@
     <string name="could_not_prepare_local_file_to_upload">Could not prepare local file to upload: %1$s</string>
     <string name="failed_to_upload_with_message">Failed to upload: %1$s</string>
     <string name="failed_to_delete_with_message">Failed to delete: %1$s</string>
+    <string name="media_too_big_for_nip95">Media is too big for NIP-95</string>
+    <string name="unable_to_load_thumbnail">Unable to load thumbnail</string>
+
+    <string name="could_not_prepare_header">Could not prepare header information: %1$s</string>
+    <string name="compression_cancelled">Compression Cancelled</string>
+    <string name="compression_returned_null">Compression failed to return a file</string>
 
     <string name="edit_draft">Edit draft</string>
 

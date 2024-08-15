@@ -35,6 +35,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fonfon.kgeohash.toGeoHash
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
@@ -48,6 +49,7 @@ import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.Split
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -72,10 +74,8 @@ import com.vitorpamplona.quartz.events.findURLs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -109,8 +109,6 @@ open class NewPostViewModel : ViewModel() {
     var message by mutableStateOf(TextFieldValue(""))
     var urlPreview by mutableStateOf<String?>(null)
     var isUploadingImage by mutableStateOf(false)
-    val imageUploadingError =
-        MutableSharedFlow<String?>(0, 3, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     var userSuggestions by mutableStateOf<List<User>>(emptyList())
     var userSuggestionAnchor: TextRange? = null
@@ -768,6 +766,7 @@ open class NewPostViewModel : ViewModel() {
         sensitiveContent: Boolean,
         isPrivate: Boolean = false,
         server: ServerOption,
+        onError: (title: String, message: String) -> Unit,
         context: Context,
     ) {
         isUploadingImage = true
@@ -785,7 +784,16 @@ open class NewPostViewModel : ViewModel() {
                     onReady = { fileUri, contentType, size ->
                         if (server.isNip95) {
                             contentResolver.openInputStream(fileUri)?.use {
-                                createNIP95Record(it.readBytes(), contentType, alt, sensitiveContent)
+                                createNIP95Record(
+                                    it.readBytes(),
+                                    contentType,
+                                    alt,
+                                    sensitiveContent,
+                                    onError = {
+                                        onError(stringRes(context, R.string.failed_to_upload_media_no_details), it)
+                                    },
+                                    context,
+                                )
                             }
                         } else {
                             viewModelScope.launch(Dispatchers.IO) {
@@ -809,6 +817,10 @@ open class NewPostViewModel : ViewModel() {
                                         localContentType = contentType,
                                         alt = alt,
                                         sensitiveContent = sensitiveContent,
+                                        onError = {
+                                            onError(stringRes(context, R.string.failed_to_upload_media_no_details), it)
+                                        },
+                                        context = context,
                                     )
                                 } catch (e: Exception) {
                                     if (e is CancellationException) throw e
@@ -818,16 +830,14 @@ open class NewPostViewModel : ViewModel() {
                                         e,
                                     )
                                     isUploadingImage = false
-                                    viewModelScope.launch {
-                                        imageUploadingError.emit("Failed to upload: ${e.message}")
-                                    }
+                                    onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
                                 }
                             }
                         }
                     },
                     onError = {
                         isUploadingImage = false
-                        viewModelScope.launch { imageUploadingError.emit(it) }
+                        onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, it))
                     },
                 )
         }
@@ -1064,6 +1074,8 @@ open class NewPostViewModel : ViewModel() {
         localContentType: String?,
         alt: String?,
         sensitiveContent: Boolean,
+        onError: (message: String) -> Unit,
+        context: Context,
     ) {
         // Images don't seem to be ready immediately after upload
         val imageUrl = uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "url" }?.get(1)
@@ -1092,7 +1104,7 @@ open class NewPostViewModel : ViewModel() {
             Log.e("ImageDownload", "Couldn't download image from server")
             cancel()
             isUploadingImage = false
-            viewModelScope.launch { imageUploadingError.emit("Failed to upload the image / video") }
+            onError(stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))
             return
         }
 
@@ -1112,7 +1124,7 @@ open class NewPostViewModel : ViewModel() {
             },
             onError = {
                 isUploadingImage = false
-                viewModelScope.launch { imageUploadingError.emit("Failed to upload the image / video") }
+                onError(stringRes(context, R.string.could_not_prepare_header, it))
             },
         )
     }
@@ -1126,10 +1138,12 @@ open class NewPostViewModel : ViewModel() {
         mimeType: String?,
         alt: String?,
         sensitiveContent: Boolean,
+        onError: (message: String) -> Unit,
+        context: Context,
     ) {
         if (bytes.size > 80000) {
             viewModelScope.launch {
-                imageUploadingError.emit("Media is too big for NIP-95")
+                onError(stringRes(context, id = R.string.media_too_big_for_nip95))
                 isUploadingImage = false
             }
             return
@@ -1157,7 +1171,7 @@ open class NewPostViewModel : ViewModel() {
                 },
                 onError = {
                     isUploadingImage = false
-                    viewModelScope.launch { imageUploadingError.emit("Failed to upload the image / video") }
+                    onError(stringRes(context, R.string.could_not_prepare_header, it))
                 },
             )
         }

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,29 +45,20 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun NewUserMetadataView(
     onClose: () -> Unit,
-    account: Account,
+    accountViewModel: AccountViewModel,
 ) {
     val postViewModel: NewUserMetadataViewModel = viewModel()
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        postViewModel.load(account)
-
-        launch(Dispatchers.IO) {
-            postViewModel.imageUploadingError.collect { error ->
-                withContext(Dispatchers.Main) { Toast.makeText(context, error, Toast.LENGTH_SHORT).show() }
-            }
-        }
+        postViewModel.load(accountViewModel.account)
     }
 
     Dialog(
@@ -164,7 +154,7 @@ fun NewUserMetadataView(
                                 tint = MaterialTheme.colorScheme.placeholderText,
                                 modifier = Modifier.padding(start = 5.dp),
                             ) {
-                                postViewModel.uploadForPicture(it, context)
+                                postViewModel.uploadForPicture(it, context, onError = accountViewModel::toast)
                             }
                         },
                         singleLine = true,
@@ -189,7 +179,7 @@ fun NewUserMetadataView(
                                 tint = MaterialTheme.colorScheme.placeholderText,
                                 modifier = Modifier.padding(start = 5.dp),
                             ) {
-                                postViewModel.uploadForBanner(it, context)
+                                postViewModel.uploadForBanner(it, context, onError = accountViewModel::toast)
                             }
                         },
                         singleLine = true,

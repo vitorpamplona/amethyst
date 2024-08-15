@@ -114,7 +114,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -866,7 +865,7 @@ private fun ProfileActions(
         remember(accountViewModel) { derivedStateOf { accountViewModel.userProfile() == baseUser } }
 
     if (isMe) {
-        EditButton(accountViewModel.account)
+        EditButton(accountViewModel)
     }
 
     WatchIsHiddenUser(baseUser, accountViewModel) { isHidden ->
@@ -1865,11 +1864,11 @@ private fun MessageButton(
 }
 
 @Composable
-private fun EditButton(account: Account) {
+private fun EditButton(accountViewModel: AccountViewModel) {
     var wantsToEdit by remember { mutableStateOf(false) }
 
     if (wantsToEdit) {
-        NewUserMetadataView({ wantsToEdit = false }, account)
+        NewUserMetadataView({ wantsToEdit = false }, accountViewModel)
     }
 
     InnerEditButton { wantsToEdit = true }

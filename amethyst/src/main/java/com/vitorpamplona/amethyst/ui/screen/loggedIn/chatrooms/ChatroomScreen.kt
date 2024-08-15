@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms
 
-import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -129,7 +128,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun ChatroomScreen(
@@ -274,14 +272,6 @@ fun ChatroomScreen(
     NostrChatroomDataSource.loadMessagesBetween(accountViewModel.account, room)
 
     val lifeCycleOwner = LocalLifecycleOwner.current
-
-    LaunchedEffect(room, accountViewModel) {
-        launch(Dispatchers.IO) {
-            newPostModel.imageUploadingError.collect { error ->
-                withContext(Dispatchers.Main) { Toast.makeText(context, error, Toast.LENGTH_SHORT).show() }
-            }
-        }
-    }
 
     DisposableEffect(room, accountViewModel) {
         NostrChatroomDataSource.loadMessagesBetween(accountViewModel.account, room)
@@ -458,6 +448,7 @@ fun PrivateMessageEditFieldRow(
                             sensitiveContent = false,
                             isPrivate = isPrivate,
                             server = ServerOption(accountViewModel.account.defaultFileServer, false),
+                            onError = accountViewModel::toast,
                             context = context,
                         )
                     }

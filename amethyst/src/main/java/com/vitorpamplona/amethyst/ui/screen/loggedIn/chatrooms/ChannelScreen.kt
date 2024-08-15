@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms
 
-import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -175,7 +174,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -241,14 +239,6 @@ fun ChannelScreen(
     NostrChannelDataSource.loadMessagesBetween(accountViewModel.account, channel)
 
     val lifeCycleOwner = LocalLifecycleOwner.current
-
-    LaunchedEffect(Unit) {
-        launch(Dispatchers.IO) {
-            newPostModel.imageUploadingError.collect { error ->
-                withContext(Dispatchers.Main) { Toast.makeText(context, error, Toast.LENGTH_SHORT).show() }
-            }
-        }
-    }
 
     DisposableEffect(accountViewModel) {
         NostrChannelDataSource.loadMessagesBetween(accountViewModel.account, channel)
@@ -478,6 +468,7 @@ fun EditFieldRow(
                         alt = null,
                         sensitiveContent = false,
                         server = ServerOption(accountViewModel.account.defaultFileServer, false),
+                        onError = accountViewModel::toast,
                         context = context,
                     )
                 }

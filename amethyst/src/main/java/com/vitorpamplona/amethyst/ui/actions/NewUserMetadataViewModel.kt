@@ -27,15 +27,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.events.GitHubIdentity
 import com.vitorpamplona.quartz.events.MastodonIdentity
 import com.vitorpamplona.quartz.events.TwitterIdentity
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -60,8 +60,6 @@ class NewUserMetadataViewModel : ViewModel() {
 
     var isUploadingImageForPicture by mutableStateOf(false)
     var isUploadingImageForBanner by mutableStateOf(false)
-    val imageUploadingError =
-        MutableSharedFlow<String?>(0, 3, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     fun load(account: Account) {
         this.account = account
@@ -130,6 +128,7 @@ class NewUserMetadataViewModel : ViewModel() {
     fun uploadForPicture(
         uri: Uri,
         context: Context,
+        onError: (String, String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             upload(
@@ -137,6 +136,7 @@ class NewUserMetadataViewModel : ViewModel() {
                 context,
                 onUploading = { isUploadingImageForPicture = it },
                 onUploaded = { picture.value = it },
+                onError = onError,
             )
         }
     }
@@ -144,6 +144,7 @@ class NewUserMetadataViewModel : ViewModel() {
     fun uploadForBanner(
         uri: Uri,
         context: Context,
+        onError: (String, String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             upload(
@@ -151,6 +152,7 @@ class NewUserMetadataViewModel : ViewModel() {
                 context,
                 onUploading = { isUploadingImageForBanner = it },
                 onUploaded = { banner.value = it },
+                onError = onError,
             )
         }
     }
@@ -160,6 +162,7 @@ class NewUserMetadataViewModel : ViewModel() {
         context: Context,
         onUploading: (Boolean) -> Unit,
         onUploaded: (String) -> Unit,
+        onError: (String, String) -> Unit,
     ) {
         onUploading(true)
 
@@ -194,22 +197,19 @@ class NewUserMetadataViewModel : ViewModel() {
                                 onUploaded(url)
                             } else {
                                 onUploading(false)
-                                viewModelScope.launch {
-                                    imageUploadingError.emit("Failed to upload the image / video")
-                                }
+                                onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))
                             }
                         } catch (e: Exception) {
                             if (e is CancellationException) throw e
                             onUploading(false)
-                            viewModelScope.launch {
-                                imageUploadingError.emit("Failed to upload the image / video")
-                            }
+                            onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
                         }
                     }
                 },
                 onError = {
                     onUploading(false)
-                    viewModelScope.launch { imageUploadingError.emit(it) }
+
+                    onError(stringRes(context, R.string.error_when_compressing_media), stringRes(context, it))
                 },
             )
     }
