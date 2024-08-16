@@ -504,10 +504,7 @@ fun InnerNoteWithReactions(
 
     if (isNotRepost) {
         if (makeItShort) {
-            if (!isBoostedNote) {
-            } else {
-                Spacer(modifier = DoubleVertSpacer)
-            }
+            Spacer(modifier = DoubleVertSpacer)
         } else {
             ReactionsRow(
                 baseNote = baseNote,
