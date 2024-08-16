@@ -205,11 +205,11 @@ private fun RenderCardItem(
         is NoteCard ->
             NoteCardCompose(
                 item,
-                isBoostedNote = false,
-                accountViewModel = accountViewModel,
-                showHidden = showHidden,
-                nav = nav,
                 routeForLastRead = routeForLastRead,
+                isBoostedNote = false,
+                showHidden = showHidden,
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         is ZapUserSetCard ->
             ZapUserSetCompose(
@@ -248,8 +248,8 @@ private fun RenderCardItem(
 @Composable
 fun NoteCardCompose(
     baseNote: NoteCard,
+    modifier: Modifier = Modifier,
     routeForLastRead: String? = null,
-    modifier: Modifier = remember { Modifier },
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
     unPackReply: Boolean = true,
@@ -259,12 +259,10 @@ fun NoteCardCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val note = remember(baseNote) { baseNote.note }
-
     NoteCompose(
-        baseNote = note,
-        routeForLastRead = routeForLastRead,
+        baseNote = baseNote.note,
         modifier = modifier,
+        routeForLastRead = routeForLastRead,
         isBoostedNote = isBoostedNote,
         isQuotedNote = isQuotedNote,
         unPackReply = unPackReply,

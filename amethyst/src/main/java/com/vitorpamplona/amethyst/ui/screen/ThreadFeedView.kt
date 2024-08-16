@@ -285,10 +285,10 @@ fun RenderThreadFeed(
                                 MaterialTheme.colorScheme.placeholderText
                             },
                         ),
-                    parentBackgroundColor = background,
                     isBoostedNote = false,
                     unPackReply = false,
                     quotesLeft = 3,
+                    parentBackgroundColor = background,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

@@ -351,11 +351,11 @@ fun NewPostView(
                                     Row(Modifier.heightIn(max = 200.dp)) {
                                         NoteCompose(
                                             baseNote = it,
-                                            makeItShort = true,
-                                            unPackReply = false,
-                                            isQuotedNote = true,
-                                            quotesLeft = 1,
                                             modifier = MaterialTheme.colorScheme.replyModifier,
+                                            isQuotedNote = true,
+                                            unPackReply = false,
+                                            makeItShort = true,
+                                            quotesLeft = 1,
                                             accountViewModel = accountViewModel,
                                             nav = nav,
                                         )

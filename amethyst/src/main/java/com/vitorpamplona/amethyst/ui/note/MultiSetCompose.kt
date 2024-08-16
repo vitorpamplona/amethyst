@@ -141,8 +141,8 @@ fun MultiSetCompose(
 
             NoteCompose(
                 baseNote = baseNote,
-                routeForLastRead = null,
                 modifier = HalfTopPadding,
+                routeForLastRead = null,
                 isBoostedNote = true,
                 isHiddenFeed = showHidden,
                 quotesLeft = 1,

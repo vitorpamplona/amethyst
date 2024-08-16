@@ -519,11 +519,11 @@ fun DisplayFullNote(
 ) {
     NoteCompose(
         baseNote = note,
-        accountViewModel = accountViewModel,
         modifier = MaterialTheme.colorScheme.innerPostModifier,
-        parentBackgroundColor = backgroundColor,
-        quotesLeft = quotesLeft - 1,
         isQuotedNote = true,
+        quotesLeft = quotesLeft - 1,
+        parentBackgroundColor = backgroundColor,
+        accountViewModel = accountViewModel,
         nav = nav,
     )
 
@@ -671,11 +671,11 @@ private fun DisplayNoteFromTag(
     if (canPreview && quotesLeft > 0) {
         NoteCompose(
             baseNote = baseNote,
-            accountViewModel = accountViewModel,
             modifier = MaterialTheme.colorScheme.innerPostModifier,
-            parentBackgroundColor = backgroundColor,
             isQuotedNote = true,
             quotesLeft = quotesLeft - 1,
+            parentBackgroundColor = backgroundColor,
+            accountViewModel = accountViewModel,
             nav = nav,
         )
     } else {

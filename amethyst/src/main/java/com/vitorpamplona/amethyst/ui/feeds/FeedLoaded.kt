@@ -51,8 +51,8 @@ fun FeedLoaded(
             Row(Modifier.fillMaxWidth().animateItemPlacement()) {
                 NoteCompose(
                     item,
-                    routeForLastRead = routeForLastRead,
                     modifier = Modifier.fillMaxWidth(),
+                    routeForLastRead = routeForLastRead,
                     isBoostedNote = false,
                     isHiddenFeed = state.showHidden.value,
                     quotesLeft = 3,

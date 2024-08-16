@@ -193,8 +193,8 @@ private fun DraftFeedLoaded(
                 ) {
                     NoteCompose(
                         item,
-                        routeForLastRead = routeForLastRead,
                         modifier = MaterialTheme.colorScheme.maxWidthWithBackground,
+                        routeForLastRead = routeForLastRead,
                         isBoostedNote = false,
                         isHiddenFeed = state.showHidden.value,
                         quotesLeft = 3,
