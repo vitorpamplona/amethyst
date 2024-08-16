@@ -26,7 +26,6 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -61,7 +60,7 @@ fun SaveableFeedContentState(
             rememberLazyListState()
         }
 
-    WatchScrollToTopFeedContentState(feedContentState, listState)
+    WatchScrollToTop(feedContentState, listState)
 
     content(listState)
 }
@@ -79,7 +78,7 @@ fun SaveableGridFeedContentState(
             rememberLazyGridState()
         }
 
-    WatchScrollToTopFeedContentState(feedContentState, gridState)
+    WatchScrollToTop(feedContentState, gridState)
 
     content(gridState)
 }
@@ -108,36 +107,6 @@ fun RenderFeedContentState(
             is FeedState.FeedError -> onError(state.errorMessage)
             is FeedState.Loaded -> onLoaded(state)
             is FeedState.Loading -> onLoading()
-        }
-    }
-}
-
-@Composable
-private fun WatchScrollToTopFeedContentState(
-    feedContentState: FeedContentState,
-    listState: LazyListState,
-) {
-    val scrollToTop by feedContentState.scrollToTop.collectAsStateWithLifecycle()
-
-    LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && feedContentState.scrolltoTopPending) {
-            listState.scrollToItem(index = 0)
-            feedContentState.sentToTop()
-        }
-    }
-}
-
-@Composable
-private fun WatchScrollToTopFeedContentState(
-    feedContentState: FeedContentState,
-    listState: LazyGridState,
-) {
-    val scrollToTop by feedContentState.scrollToTop.collectAsStateWithLifecycle()
-
-    LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && feedContentState.scrolltoTopPending) {
-            listState.scrollToItem(index = 0)
-            feedContentState.sentToTop()
         }
     }
 }

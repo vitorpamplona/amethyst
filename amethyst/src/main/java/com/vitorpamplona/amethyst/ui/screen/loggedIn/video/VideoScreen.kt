@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.BoostReaction
@@ -146,22 +147,6 @@ fun WatchAccountForVideoScreen(
     LaunchedEffect(accountViewModel, listState, hiddenUsers) {
         NostrVideoDataSource.resetFilters()
         videoFeedContentState.checkKeysInvalidateDataAndSendToTop()
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-public fun WatchScrollToTop(
-    videoFeedContentState: FeedContentState,
-    pagerState: PagerState,
-) {
-    val scrollToTop by videoFeedContentState.scrollToTop.collectAsStateWithLifecycle()
-
-    LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && videoFeedContentState.scrolltoTopPending) {
-            pagerState.scrollToPage(page = 0)
-            videoFeedContentState.sentToTop()
-        }
     }
 }
 

@@ -86,7 +86,7 @@ fun RenderGalleryFeed(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by viewModel.feedState.feedContent.collectAsStateWithLifecycle()
     CrossfadeIfEnabled(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),

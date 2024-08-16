@@ -91,7 +91,7 @@ fun RenderChatroomFeedView(
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: String? = null,
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by viewModel.feedState.feedContent.collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(targetState = feedState, animationSpec = tween(durationMillis = 100), accountViewModel = accountViewModel) { state ->
         when (state) {

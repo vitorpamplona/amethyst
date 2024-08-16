@@ -31,7 +31,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -46,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
@@ -89,21 +89,6 @@ private fun SaveableCardFeedState(
     WatchScrollToTop(feedContent, listState)
 
     RenderCardFeed(feedContent, accountViewModel, listState, nav, routeForLastRead)
-}
-
-@Composable
-private fun WatchScrollToTop(
-    feedContent: CardFeedContentState,
-    listState: LazyListState,
-) {
-    val scrollToTop by feedContent.scrollToTop.collectAsStateWithLifecycle()
-
-    LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && feedContent.scrolltoTopPending) {
-            listState.scrollToItem(index = 0)
-            feedContent.sentToTop()
-        }
-    }
 }
 
 @Composable

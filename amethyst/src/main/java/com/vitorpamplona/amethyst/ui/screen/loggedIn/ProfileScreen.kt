@@ -1224,7 +1224,7 @@ private fun DisplayAppRecommendations(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val feedState by appRecommendations.feedContent.collectAsStateWithLifecycle()
+    val feedState by appRecommendations.feedState.feedContent.collectAsStateWithLifecycle()
 
     LaunchedEffect(key1 = Unit) { appRecommendations.invalidateData() }
 
