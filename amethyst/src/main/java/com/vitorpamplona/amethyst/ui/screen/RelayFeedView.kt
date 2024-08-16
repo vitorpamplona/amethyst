@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.ammolite.relays.BundledUpdate
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -74,9 +75,10 @@ class RelayFeedViewModel :
         val beingUsedSet = currentUser?.relaysBeingUsed?.keys ?: emptySet()
 
         val newRelaysFromRecord =
-            currentUser?.latestContactList?.relays()?.entries?.mapNotNull {
-                if (it.key !in beingUsedSet) {
-                    RelayInfo(it.key, 0, 0)
+            currentUser?.latestContactList?.relays()?.entries?.mapNotNullTo(HashSet()) {
+                val url = RelayUrlFormatter.normalize(it.key)
+                if (url !in beingUsedSet) {
+                    RelayInfo(url, 0, 0)
                 } else {
                     null
                 }
