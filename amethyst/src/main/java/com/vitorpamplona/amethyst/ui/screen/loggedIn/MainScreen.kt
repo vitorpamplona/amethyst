@@ -429,6 +429,15 @@ private fun DisplayErrorMessages(accountViewModel: AccountViewModel) {
                 ) {
                     accountViewModel.clearToasts()
                 }
+
+            is ThrowableToastMsg ->
+                InformationDialog(
+                    stringRes(obj.titleResId),
+                    obj.msg,
+                    obj.throwable,
+                ) {
+                    accountViewModel.clearToasts()
+                }
         }
     }
 }
