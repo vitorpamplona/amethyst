@@ -113,7 +113,6 @@ class CardFeedContentState(
                     (oldNotesState.feed.value + newCards)
                         .distinctBy { it.id() }
                         .sortedWith(DefaultFeedOrderCard)
-                        .reversed()
                         .take(localFilter.limit())
                         .toImmutableList()
 
@@ -128,7 +127,6 @@ class CardFeedContentState(
             val cards =
                 convertToCard(notes)
                     .sortedWith(DefaultFeedOrderCard)
-                    .reversed()
                     .take(localFilter.limit())
                     .toImmutableList()
 
