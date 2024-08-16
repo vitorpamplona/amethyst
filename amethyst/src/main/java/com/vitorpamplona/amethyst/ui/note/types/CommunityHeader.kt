@@ -42,8 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.FeatureSetType
@@ -353,12 +352,7 @@ fun WatchAddressableNoteFollows(
     accountViewModel: AccountViewModel,
     onFollowChanges: @Composable (Boolean) -> Unit,
 ) {
-    val showFollowingMark by
-        remember {
-            accountViewModel.userFollows
-                .map { it.user.latestContactList?.isTaggedAddressableNote(note.idHex) ?: false }
-                .distinctUntilChanged()
-        }.observeAsState(false)
+    val state by accountViewModel.account.liveKind3Follows.collectAsStateWithLifecycle()
 
-    onFollowChanges(showFollowingMark)
+    onFollowChanges(state.communities.contains(note.idHex))
 }

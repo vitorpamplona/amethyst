@@ -35,8 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
@@ -363,16 +362,11 @@ fun WatchUserFollows(
     accountViewModel: AccountViewModel,
     onFollowChanges: @Composable (Boolean) -> Unit,
 ) {
-    val showFollowingMark by
-        remember {
-            accountViewModel.userFollows
-                .map {
-                    accountViewModel.isFollowing(userHex) || (userHex == accountViewModel.account.userProfile().pubkeyHex)
-                }.distinctUntilChanged()
-        }.observeAsState(
-            accountViewModel.isFollowing(userHex) ||
-                (userHex == accountViewModel.account.userProfile().pubkeyHex),
-        )
+    if (accountViewModel.isLoggedUser(userHex)) {
+        onFollowChanges(true)
+    } else {
+        val state by accountViewModel.account.liveKind3Follows.collectAsStateWithLifecycle()
 
-    onFollowChanges(showFollowingMark)
+        onFollowChanges(state.users.contains(userHex))
+    }
 }

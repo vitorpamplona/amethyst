@@ -48,7 +48,6 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.service.CashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
@@ -75,13 +74,13 @@ import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
-import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
@@ -153,20 +152,26 @@ class AccountViewModel(
     val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
     val accountMarkAsReadUpdates = mutableIntStateOf(0)
 
-    val userFollows: LiveData<UserState> =
-        account
-            .userProfile()
-            .live()
-            .follows
-            .map { it }
-    val userRelays: LiveData<UserState> =
-        account
-            .userProfile()
-            .live()
-            .relays
-            .map { it }
+    // TODO: contact lists are not notes yet
+    // val kind3Relays: StateFlow<ContactListEvent?> = observeByAuthor(ContactListEvent.KIND, account.signer.pubKey)
 
-    val kind3Relays: StateFlow<ContactListEvent?> = observeByAuthor(ContactListEvent.KIND, account.signer.pubKey)
+    val normalizedKind3RelaySetFlow =
+        account
+            .userProfile()
+            .flow()
+            .relays.stateFlow
+            .map { contactListState ->
+                checkNotInMainThread()
+                contactListState.user.latestContactList?.relays()?.map {
+                    RelayUrlFormatter.normalize(it.key)
+                } ?: emptySet()
+            }.flowOn(Dispatchers.Default)
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(10000, 10000),
+                emptySet(),
+            )
+
     val dmRelays: StateFlow<ChatMessageRelayListEvent?> = observeByAuthor(ChatMessageRelayListEvent.KIND, account.signer.pubKey)
     val searchRelays: StateFlow<SearchRelayListEvent?> = observeByAuthor(SearchRelayListEvent.KIND, account.signer.pubKey)
 
@@ -333,6 +338,7 @@ class AccountViewModel(
                 .relays
                 .stateFlow
                 .map { it.note.relays.size > 3 }
+                .flowOn(Dispatchers.Default)
                 .stateIn(
                     viewModelScope,
                     SharingStarted.WhileSubscribed(10000, 10000),
