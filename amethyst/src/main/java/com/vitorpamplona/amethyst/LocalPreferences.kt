@@ -349,9 +349,15 @@ object LocalPreferences {
                     putInt(PrefKeys.PROXY_PORT, account.proxyPort)
                     putBoolean(PrefKeys.WARN_ABOUT_REPORTS, account.warnAboutPostsWithReports)
                     putBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, account.filterSpamFromStrangers)
+
+                    val regularMap =
+                        account.lastReadPerRoute.value.mapValues {
+                            it.value.value
+                        }
+
                     putString(
                         PrefKeys.LAST_READ_PER_ROUTE,
-                        Event.mapper.writeValueAsString(account.lastReadPerRoute),
+                        Event.mapper.writeValueAsString(regularMap),
                     )
                     putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, account.hasDonatedInVersion)
 
@@ -611,9 +617,10 @@ object LocalPreferences {
                 val lastReadPerRoute =
                     try {
                         getString(PrefKeys.LAST_READ_PER_ROUTE, null)?.let {
-                            Event.mapper.readValue<Map<String, Long>?>(it)
-                        }
-                            ?: mapOf()
+                            Event.mapper.readValue<Map<String, Long>?>(it)?.mapValues {
+                                MutableStateFlow(it.value)
+                            }
+                        } ?: mapOf()
                     } catch (e: Throwable) {
                         if (e is CancellationException) throw e
                         Log.w(
@@ -669,7 +676,7 @@ object LocalPreferences {
                         showSensitiveContent = MutableStateFlow(showSensitiveContent),
                         warnAboutPostsWithReports = warnAboutReports,
                         filterSpamFromStrangers = filterSpam,
-                        lastReadPerRoute = lastReadPerRoute,
+                        lastReadPerRoute = MutableStateFlow(lastReadPerRoute),
                         hasDonatedInVersion = hasDonatedInVersion,
                         pendingAttestations = MutableStateFlow(pendingAttestations ?: emptyMap()),
                     )

@@ -33,7 +33,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -54,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.patrykandpatrick.vico.core.extension.forEachIndexedExtended
@@ -171,15 +171,14 @@ private fun ChannelRoomCompose(
         .observeAsState()
     val authorName = remember(note, authorState) { authorState?.user?.toBestDisplayName() }
 
-    val chanHex = remember { channel.idHex }
-
     val channelState by channel.live.observeAsState()
-    val channelPicture by remember(note, channelState) { derivedStateOf { channel.profilePicture() } }
-    val channelName by remember(note, channelState) { derivedStateOf { channel.toBestDisplayName() } }
+
+    val channelPicture = channelState?.channel?.profilePicture() ?: channel.profilePicture()
+    val channelName = channelState?.channel?.toBestDisplayName() ?: channel.toBestDisplayName()
 
     val noteEvent = note.event
 
-    val route = remember(note) { "Channel/$chanHex" }
+    val route = "Channel/${channel.idHex}"
 
     val description =
         if (noteEvent is ChannelCreateEvent) {
@@ -190,21 +189,15 @@ private fun ChannelRoomCompose(
             noteEvent?.content()?.take(200)
         }
 
-    val hasNewMessages = remember { mutableStateOf<Boolean>(false) }
-
-    WatchNotificationChanges(note, route, accountViewModel) { newHasNewMessages ->
-        if (hasNewMessages.value != newHasNewMessages) {
-            hasNewMessages.value = newHasNewMessages
-        }
-    }
+    val lastReadTime by accountViewModel.account.loadLastReadFlow(route).collectAsStateWithLifecycle()
 
     ChannelName(
-        channelIdHex = chanHex,
+        channelIdHex = channel.idHex,
         channelPicture = channelPicture,
         channelTitle = { modifier -> ChannelTitleWithLabelInfo(channelName, modifier) },
-        channelLastTime = remember(note) { note.createdAt() },
-        channelLastContent = remember(note, authorState) { "$authorName: $description" },
-        hasNewMessages = hasNewMessages,
+        channelLastTime = note.createdAt(),
+        channelLastContent = "$authorName: $description",
+        hasNewMessages = (noteEvent?.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
         loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         onClick = { nav(route) },
@@ -257,17 +250,9 @@ private fun UserRoomCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val hasNewMessages = remember { mutableStateOf<Boolean>(false) }
+    val route = "Room/${room.hashCode()}"
 
-    val route = remember(room) { "Room/${room.hashCode()}" }
-
-    val createAt by remember(note) { derivedStateOf { note.createdAt() } }
-
-    WatchNotificationChanges(note, route, accountViewModel) { newHasNewMessages ->
-        if (hasNewMessages.value != newHasNewMessages) {
-            hasNewMessages.value = newHasNewMessages
-        }
-    }
+    val lastReadTime by accountViewModel.account.loadLastReadFlow(route).collectAsStateWithLifecycle()
 
     LoadDecryptedContentOrNull(note, accountViewModel) { content ->
         ChannelName(
@@ -279,9 +264,9 @@ private fun UserRoomCompose(
                 )
             },
             channelTitle = { RoomNameDisplay(room, it, accountViewModel) },
-            channelLastTime = createAt,
+            channelLastTime = note.createdAt(),
             channelLastContent = content,
-            hasNewMessages = hasNewMessages,
+            hasNewMessages = (note.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
             onClick = { nav(route) },
         )
     }
@@ -413,20 +398,6 @@ fun ShortUsernameDisplay(
 }
 
 @Composable
-private fun WatchNotificationChanges(
-    note: Note,
-    route: String,
-    accountViewModel: AccountViewModel,
-    onNewStatus: (Boolean) -> Unit,
-) {
-    LaunchedEffect(key1 = note, accountViewModel.accountMarkAsReadUpdates.intValue) {
-        note.event?.createdAt()?.let {
-            onNewStatus(it > accountViewModel.account.loadLastRead(route))
-        }
-    }
-}
-
-@Composable
 fun LoadUser(
     baseUserHex: String,
     accountViewModel: AccountViewModel,
@@ -455,7 +426,7 @@ fun ChannelName(
     channelTitle: @Composable (Modifier) -> Unit,
     channelLastTime: Long?,
     channelLastContent: String?,
-    hasNewMessages: MutableState<Boolean>,
+    hasNewMessages: Boolean,
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
     onClick: () -> Unit,
@@ -485,7 +456,7 @@ fun ChannelName(
     channelTitle: @Composable (Modifier) -> Unit,
     channelLastTime: Long?,
     channelLastContent: String?,
-    hasNewMessages: MutableState<Boolean>,
+    hasNewMessages: Boolean,
     onClick: () -> Unit,
 ) {
     ChatHeaderLayout(
@@ -514,7 +485,7 @@ fun ChannelName(
                 )
             }
 
-            if (hasNewMessages.value) {
+            if (hasNewMessages) {
                 NewItemsBubble()
             }
         },

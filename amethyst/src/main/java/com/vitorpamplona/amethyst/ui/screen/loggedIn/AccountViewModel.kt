@@ -27,7 +27,6 @@ import android.util.LruCache
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -150,7 +149,6 @@ class AccountViewModel(
     Dao {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
     val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
-    val accountMarkAsReadUpdates = mutableIntStateOf(0)
 
     // TODO: contact lists are not notes yet
     // val kind3Relays: StateFlow<ContactListEvent?> = observeByAuthor(ContactListEvent.KIND, account.signer.pubKey)
@@ -1121,7 +1119,6 @@ class AccountViewModel(
 
     suspend fun refreshMarkAsReadObservers() {
         updateNotificationDots()
-        accountMarkAsReadUpdates.value++
     }
 
     fun loadAndMarkAsRead(

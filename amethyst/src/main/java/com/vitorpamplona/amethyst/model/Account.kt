@@ -202,7 +202,7 @@ class Account(
     var showSensitiveContent: MutableStateFlow<Boolean?> = MutableStateFlow(null),
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: Boolean = true,
-    var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>(),
+    var lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     var hasDonatedInVersion: Set<String> = setOf<String>(),
     var pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
     val scope: CoroutineScope = Amethyst.instance.applicationIOScope,
@@ -3213,9 +3213,15 @@ class Account(
         route: String,
         timestampInSecs: Long,
     ): Boolean {
-        val lastTime = lastReadPerRoute[route]
-        return if (lastTime == null || timestampInSecs > lastTime) {
-            lastReadPerRoute = lastReadPerRoute + Pair(route, timestampInSecs)
+        val lastTime = lastReadPerRoute.value[route]
+        return if (lastTime == null) {
+            lastReadPerRoute.update {
+                it + Pair(route, MutableStateFlow(timestampInSecs))
+            }
+            saveable.invalidateData()
+            true
+        } else if (timestampInSecs > lastTime.value) {
+            lastTime.tryEmit(timestampInSecs)
             saveable.invalidateData()
             true
         } else {
@@ -3223,7 +3229,16 @@ class Account(
         }
     }
 
-    fun loadLastRead(route: String): Long = lastReadPerRoute[route] ?: 0
+    fun loadLastRead(route: String): Long = lastReadPerRoute.value[route]?.value ?: 0
+
+    fun loadLastReadFlow(route: String): StateFlow<Long> =
+        lastReadPerRoute.value[route] ?: run {
+            val newFlow = MutableStateFlow<Long>(0)
+            lastReadPerRoute.update {
+                it + Pair(route, newFlow)
+            }
+            newFlow
+        }
 
     fun hasDonatedInThisVersion(): Boolean = hasDonatedInVersion.contains(BuildConfig.VERSION_NAME)
 

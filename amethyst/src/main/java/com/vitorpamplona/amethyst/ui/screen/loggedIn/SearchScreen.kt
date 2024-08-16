@@ -380,8 +380,6 @@ private fun DisplaySearchResults(
     val channels by searchBarViewModel.searchResultsChannels.collectAsStateWithLifecycle()
     val notes by searchBarViewModel.searchResultsNotes.collectAsStateWithLifecycle()
 
-    val hasNewMessages = remember { mutableStateOf(false) }
-
     LazyColumn(
         modifier = Modifier.fillMaxHeight(),
         contentPadding = FeedPadding,
@@ -425,7 +423,7 @@ private fun DisplaySearchResults(
                 },
                 channelLastTime = null,
                 channelLastContent = item.summary(),
-                hasNewMessages = hasNewMessages,
+                hasNewMessages = false,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
                 loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                 onClick = { nav("Channel/${item.idHex}") },
