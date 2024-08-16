@@ -184,7 +184,7 @@ class Account(
     var translateTo: String = Locale.getDefault().language,
     var zapAmountChoices: List<Long> = DefaultZapAmounts,
     var reactionChoices: List<String> = DefaultReactions,
-    var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
+    var defaultZapType: MutableStateFlow<LnZapEvent.ZapType> = MutableStateFlow(LnZapEvent.ZapType.PUBLIC),
     var defaultFileServer: Nip96MediaServers.ServerName = Nip96MediaServers.DEFAULT[0],
     var defaultHomeFollowList: MutableStateFlow<String> = MutableStateFlow(KIND3_FOLLOWS),
     var defaultStoriesFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
@@ -2665,7 +2665,7 @@ class Account(
     }
 
     fun changeDefaultZapType(zapType: LnZapEvent.ZapType) {
-        defaultZapType = zapType
+        defaultZapType.tryEmit(zapType)
         live.invalidateData()
         saveable.invalidateData()
     }

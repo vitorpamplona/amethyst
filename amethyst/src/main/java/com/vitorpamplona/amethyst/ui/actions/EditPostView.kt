@@ -355,7 +355,7 @@ fun EditPostView(
                                             InvoiceRequest(
                                                 lud16,
                                                 user.pubkeyHex,
-                                                accountViewModel.account,
+                                                accountViewModel,
                                                 stringRes(id = R.string.lightning_invoice),
                                                 stringRes(id = R.string.lightning_create_and_add_invoice),
                                                 onSuccess = {

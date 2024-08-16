@@ -134,7 +134,7 @@ class UpdateZapAmountViewModel(
             account.zapPaymentRequest?.relayUri?.let { TextFieldValue(it) } ?: TextFieldValue("")
         this.walletConnectSecret =
             account.zapPaymentRequest?.secret?.let { TextFieldValue(it) } ?: TextFieldValue("")
-        this.selectedZapType = account.defaultZapType
+        this.selectedZapType = account.defaultZapType.value
     }
 
     fun toListOfAmounts(commaSeparatedAmounts: String): List<Long> = commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
@@ -196,7 +196,7 @@ class UpdateZapAmountViewModel(
 
     fun hasChanged(): Boolean =
         (
-            selectedZapType != account?.defaultZapType ||
+            selectedZapType != account?.defaultZapType?.value ||
                 amountSet != account?.zapAmountChoices ||
                 walletConnectPubkey.text != (account?.zapPaymentRequest?.pubKeyHex ?: "") ||
                 walletConnectRelay.text != (account?.zapPaymentRequest?.relayUri ?: "") ||

@@ -515,7 +515,7 @@ fun NewPostView(
                                                 InvoiceRequest(
                                                     lud16,
                                                     accountViewModel.account.userProfile().pubkeyHex,
-                                                    accountViewModel.account,
+                                                    accountViewModel,
                                                     stringRes(id = R.string.lightning_invoice),
                                                     stringRes(id = R.string.lightning_create_and_add_invoice),
                                                     onSuccess = {

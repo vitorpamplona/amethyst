@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -616,23 +617,23 @@ class AccountViewModel(
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
-        zapType: LnZapEvent.ZapType,
+        zapType: LnZapEvent.ZapType? = null,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             ZapPaymentHandler(account)
                 .zap(
-                    note,
-                    amount,
-                    pollOption,
-                    message,
-                    context,
-                    showErrorIfNoLnAddress,
-                    onError,
+                    note = note,
+                    amountMilliSats = amount,
+                    pollOption = pollOption,
+                    message = message,
+                    context = context,
+                    showErrorIfNoLnAddress = showErrorIfNoLnAddress,
+                    onError = onError,
                     onProgress = {
                         onProgress(it)
                     },
-                    onPayViaIntent,
-                    zapType,
+                    onPayViaIntent = onPayViaIntent,
+                    zapType = zapType ?: account.defaultZapType.value,
                 )
         }
     }
@@ -857,7 +858,7 @@ class AccountViewModel(
         }
     }
 
-    fun defaultZapType(): LnZapEvent.ZapType = account.defaultZapType
+    fun defaultZapType(): LnZapEvent.ZapType = account.defaultZapType.value
 
     fun unwrap(
         event: GiftWrapEvent,
@@ -1469,6 +1470,48 @@ class AccountViewModel(
         LocalCache.getAddressableNoteIfExists(
             AdvertisedRelayListEvent.createAddressTag(user.pubkeyHex),
         )
+
+    fun sendSats(
+        lnaddress: String,
+        milliSats: Long,
+        message: String,
+        toUserPubKeyHex: HexKey,
+        onSuccess: (String) -> Unit,
+        onError: (String, String) -> Unit,
+        onProgress: (percent: Float) -> Unit,
+        context: Context,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (account.defaultZapType.value == LnZapEvent.ZapType.NONZAP) {
+                LightningAddressResolver()
+                    .lnAddressInvoice(
+                        lnaddress,
+                        milliSats * 1000,
+                        message,
+                        null,
+                        onSuccess = onSuccess,
+                        onError = onError,
+                        onProgress = onProgress,
+                        context = context,
+                    )
+            } else {
+                account.createZapRequestFor(toUserPubKeyHex, message, account.defaultZapType.value) { zapRequest ->
+                    LocalCache.justConsume(zapRequest, null)
+                    LightningAddressResolver()
+                        .lnAddressInvoice(
+                            lnaddress,
+                            milliSats * 1000,
+                            message,
+                            zapRequest.toJson(),
+                            onSuccess = onSuccess,
+                            onError = onError,
+                            onProgress = onProgress,
+                            context = context,
+                        )
+                }
+            }
+        }
+    }
 
     val draftNoteCache = CachedDraftNotes(this)
 

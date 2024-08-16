@@ -85,7 +85,6 @@ import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
-import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -398,7 +397,6 @@ fun ZapVote(
                             },
                             onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
                             onPayViaIntent = {},
-                            zapType = accountViewModel.account.defaultZapType,
                         )
                     } else {
                         wantsToZap = true
@@ -522,10 +520,6 @@ fun FilteredZapAmountChoicePopup(
     val context = LocalContext.current
 
     val accountState by accountViewModel.accountLiveData.observeAsState()
-    val defaultZapType by
-        remember(accountState) {
-            derivedStateOf { accountState?.account?.defaultZapType ?: LnZapEvent.ZapType.PRIVATE }
-        }
 
     val zapMessage = ""
 
@@ -554,7 +548,6 @@ fun FilteredZapAmountChoicePopup(
                             onError,
                             onProgress,
                             onPayViaIntent,
-                            defaultZapType,
                         )
                         onDismiss()
                     },
@@ -581,7 +574,6 @@ fun FilteredZapAmountChoicePopup(
                                         onError,
                                         onProgress,
                                         onPayViaIntent,
-                                        defaultZapType,
                                     )
                                     onDismiss()
                                 },

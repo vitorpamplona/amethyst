@@ -296,7 +296,7 @@ object LocalPreferences {
                         PrefKeys.REACTION_CHOICES,
                         Event.mapper.writeValueAsString(account.reactionChoices),
                     )
-                    putString(PrefKeys.DEFAULT_ZAPTYPE, account.defaultZapType.name)
+                    putString(PrefKeys.DEFAULT_ZAPTYPE, account.defaultZapType.value.name)
                     putString(
                         PrefKeys.DEFAULT_FILE_SERVER,
                         Event.mapper.writeValueAsString(account.defaultFileServer),
@@ -658,7 +658,7 @@ object LocalPreferences {
                         translateTo = translateTo,
                         zapAmountChoices = zapAmountChoices,
                         reactionChoices = reactionChoices,
-                        defaultZapType = defaultZapType,
+                        defaultZapType = MutableStateFlow(defaultZapType),
                         defaultFileServer = defaultFileServer,
                         defaultHomeFollowList = MutableStateFlow(defaultHomeFollowList),
                         defaultStoriesFollowList = MutableStateFlow(defaultStoriesFollowList),

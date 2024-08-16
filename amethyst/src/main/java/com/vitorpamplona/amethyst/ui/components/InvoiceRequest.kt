@@ -37,7 +37,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,24 +51,19 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import com.vitorpamplona.quartz.events.LnZapEvent
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun InvoiceRequestCard(
     lud16: String,
     toUserPubKeyHex: String,
-    account: Account,
+    accountViewModel: AccountViewModel,
     titleText: String? = null,
     buttonText: String? = null,
     onSuccess: (String) -> Unit,
@@ -90,7 +84,7 @@ fun InvoiceRequestCard(
             InvoiceRequest(
                 lud16,
                 toUserPubKeyHex,
-                account,
+                accountViewModel,
                 titleText,
                 buttonText,
                 onSuccess,
@@ -105,7 +99,7 @@ fun InvoiceRequestCard(
 fun InvoiceRequest(
     lud16: String,
     toUserPubKeyHex: String,
-    account: Account,
+    accountViewModel: AccountViewModel,
     titleText: String? = null,
     buttonText: String? = null,
     onSuccess: (String) -> Unit,
@@ -113,7 +107,6 @@ fun InvoiceRequest(
     onError: (String, String) -> Unit,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -186,36 +179,16 @@ fun InvoiceRequest(
     Button(
         modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
         onClick = {
-            scope.launch(Dispatchers.IO) {
-                if (account.defaultZapType == LnZapEvent.ZapType.NONZAP) {
-                    LightningAddressResolver()
-                        .lnAddressInvoice(
-                            lud16,
-                            amount * 1000,
-                            message,
-                            null,
-                            onSuccess = onSuccess,
-                            onError = onError,
-                            onProgress = {},
-                            context = context,
-                        )
-                } else {
-                    account.createZapRequestFor(toUserPubKeyHex, message, account.defaultZapType) { zapRequest ->
-                        LocalCache.justConsume(zapRequest, null)
-                        LightningAddressResolver()
-                            .lnAddressInvoice(
-                                lud16,
-                                amount * 1000,
-                                message,
-                                zapRequest.toJson(),
-                                onSuccess = onSuccess,
-                                onError = onError,
-                                onProgress = {},
-                                context = context,
-                            )
-                    }
-                }
-            }
+            accountViewModel.sendSats(
+                lnaddress = lud16,
+                milliSats = amount * 1000,
+                message = message,
+                toUserPubKeyHex = toUserPubKeyHex,
+                onSuccess = onSuccess,
+                onError = onError,
+                onProgress = {},
+                context = context,
+            )
         },
         shape = QuoteBorder,
         colors =

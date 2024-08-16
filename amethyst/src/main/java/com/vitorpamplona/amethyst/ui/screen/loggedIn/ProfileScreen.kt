@@ -1190,7 +1190,7 @@ fun DisplayLNAddress(
                 InvoiceRequestCard(
                     lud16,
                     userHex,
-                    accountViewModel.account,
+                    accountViewModel,
                     onSuccess = {
                         zapExpanded = false
                         // pay directly
