@@ -148,7 +148,6 @@ class AccountViewModel(
 ) : ViewModel(),
     Dao {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
-    val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
 
     // TODO: contact lists are not notes yet
     // val kind3Relays: StateFlow<ContactListEvent?> = observeByAuthor(ContactListEvent.KIND, account.signer.pubKey)

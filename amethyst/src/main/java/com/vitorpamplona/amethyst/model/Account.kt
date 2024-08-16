@@ -219,7 +219,6 @@ class Account(
 
     // Observers line up here.
     val live: AccountLiveData = AccountLiveData(this)
-    val liveLanguages: AccountLiveData = AccountLiveData(this)
     val saveable: AccountLiveData = AccountLiveData(this)
 
     @Immutable
@@ -2831,21 +2830,16 @@ class Account(
 
     fun updateLocalRelayServers(servers: Set<String>) {
         localRelayServers = servers
-        liveLanguages.invalidateData()
         saveable.invalidateData()
     }
 
     fun addDontTranslateFrom(languageCode: String) {
         dontTranslateFrom = dontTranslateFrom.plus(languageCode)
-        liveLanguages.invalidateData()
-
         saveable.invalidateData()
     }
 
     fun updateTranslateTo(languageCode: String) {
         translateTo = languageCode
-        liveLanguages.invalidateData()
-
         saveable.invalidateData()
     }
 
