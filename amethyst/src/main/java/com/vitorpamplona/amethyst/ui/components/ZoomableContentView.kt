@@ -47,7 +47,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,6 +84,7 @@ import com.vitorpamplona.amethyst.service.BlurHashRequester
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
+import com.vitorpamplona.amethyst.ui.navigation.getActivity
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.HashCheckFailedIcon
@@ -102,6 +102,7 @@ import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.utils.DeviceUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
@@ -122,14 +123,14 @@ fun ZoomableContentView(
     var dialogOpen by remember(content) { mutableStateOf(false) }
 
     val orientation = LocalConfiguration.current.orientation
+    val context = LocalView.current.context.getActivity()
 
-    val orientationState by rememberUpdatedState(newValue = orientation)
     val (sOrientation, isLandscapeMode) =
-        when (orientationState) {
-            Configuration.ORIENTATION_LANDSCAPE -> Pair("Landscape", true)
-            Configuration.ORIENTATION_PORTRAIT -> Pair("Portrait", false)
+        when (orientation) {
+            Configuration.ORIENTATION_LANDSCAPE -> "Landscape" to true
+            Configuration.ORIENTATION_PORTRAIT -> "Portrait" to false
 
-            else -> Pair("Unknown", false)
+            else -> "Unknown" to false
         }
 
     Log.d("AmethystConf", "Device orientation is: $sOrientation")
@@ -165,7 +166,10 @@ fun ZoomableContentView(
                         roundedCorner = roundedCorner,
                         isFiniteHeight = isFiniteHeight,
                         nostrUriCallback = content.uri,
-                        onDialog = { dialogOpen = true },
+                        onDialog = {
+                            dialogOpen = true
+                            DeviceUtils.changeDeviceOrientation(isLandscapeMode, context)
+                        },
                         accountViewModel = accountViewModel,
                     )
                 }
@@ -195,10 +199,17 @@ fun ZoomableContentView(
                 }
             }
     }
-    if (isLandscapeMode) dialogOpen = true
 
     if (dialogOpen) {
-        ZoomableImageDialog(content, images, onDismiss = { dialogOpen = false }, accountViewModel)
+        ZoomableImageDialog(
+            content,
+            images,
+            onDismiss = {
+                dialogOpen = false
+                if (isLandscapeMode) DeviceUtils.changeDeviceOrientation(isLandscapeMode, context)
+            },
+            accountViewModel,
+        )
     }
 }
 
