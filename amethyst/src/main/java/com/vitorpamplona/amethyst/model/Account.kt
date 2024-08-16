@@ -431,7 +431,7 @@ class Account(
             emit(
                 LiveFollowLists(
                     verifiedFollowingUsers,
-                    verifiedFollowingUsers + keyPair.pubKeyHex,
+                    verifiedFollowingUsers + signer.pubKey,
                     it.user.latestContactList
                         ?.unverifiedFollowTagSet()
                         ?.map { it.lowercase() }
@@ -446,7 +446,7 @@ class Account(
             )
         }
 
-    val liveKind3Follows = liveKind3FollowsFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
+    val liveKind3Follows = liveKind3FollowsFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val liveHomeList: Flow<ListNameNotePair> =
@@ -477,11 +477,11 @@ class Account(
             } else if (peopleListFollows.listName == KIND3_FOLLOWS) {
                 emit(kind3Follows)
             } else if (peopleListFollows.event == null) {
-                emit(LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
+                emit(LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
             } else {
                 val result = waitToDecrypt(peopleListFollows.event)
                 if (result == null) {
-                    emit(LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
+                    emit(LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
                 } else {
                     emit(result)
                 }
@@ -493,7 +493,7 @@ class Account(
     }
 
     val liveHomeFollowLists: StateFlow<LiveFollowLists?> by lazy {
-        liveHomeFollowListFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
+        liveHomeFollowListFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
     }
 
     /**
@@ -605,7 +605,7 @@ class Account(
 
     val liveNotificationFollowLists: StateFlow<LiveFollowLists?> by lazy {
         combinePeopleListFlows(liveKind3FollowsFlow, liveNotificationList)
-            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
+            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -617,7 +617,7 @@ class Account(
 
     val liveStoriesFollowLists: StateFlow<LiveFollowLists?> by lazy {
         combinePeopleListFlows(liveKind3FollowsFlow, liveStoriesList)
-            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
+            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -654,7 +654,7 @@ class Account(
 
     val liveDiscoveryFollowLists: StateFlow<LiveFollowLists?> by lazy {
         combinePeopleListFlows(liveKind3FollowsFlow, liveDiscoveryList)
-            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
+            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -877,7 +877,7 @@ class Account(
 
     suspend fun countFollowersOf(pubkey: HexKey): Int = LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkey) ?: false }
 
-    suspend fun followerCount(): Int = countFollowersOf(keyPair.pubKeyHex)
+    suspend fun followerCount(): Int = countFollowersOf(signer.pubKey)
 
     fun sendNewUserMetadata(
         name: String? = null,
@@ -3175,7 +3175,7 @@ class Account(
         }
     }
 
-    fun getAllPeopleLists(): List<AddressableNote> = getAllPeopleLists(keyPair.pubKeyHex)
+    fun getAllPeopleLists(): List<AddressableNote> = getAllPeopleLists(signer.pubKey)
 
     fun getAllPeopleLists(pubkey: HexKey): List<AddressableNote> =
         LocalCache.addressables

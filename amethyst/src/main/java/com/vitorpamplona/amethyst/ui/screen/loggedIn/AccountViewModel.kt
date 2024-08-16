@@ -804,7 +804,9 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) { account.hideWord(word) }
     }
 
-    fun isLoggedUser(user: User?): Boolean = account.userProfile().pubkeyHex == user?.pubkeyHex
+    fun isLoggedUser(pubkeyHex: HexKey?): Boolean = account.signer.pubKey == pubkeyHex
+
+    fun isLoggedUser(user: User?): Boolean = isLoggedUser(user?.pubkeyHex)
 
     fun isFollowing(user: User?): Boolean {
         if (user == null) return false
