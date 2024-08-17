@@ -45,12 +45,10 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -129,8 +127,7 @@ fun ZoomableContentView(
 
     val activity = LocalView.current.context.getActivity()
 
-    val orientation by snapshotFlow { DeviceUtils.getDeviceOrientation() }
-        .collectAsState(initial = LocalConfiguration.current.orientation)
+    val orientation = LocalConfiguration.current.orientation
     val currentWindowSize = currentWindowAdaptiveInfo().windowSizeClass
 
     val detectedWindowSize =

@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.components.util
 import android.app.Activity
 import android.content.Context
 import android.content.pm.ActivityInfo
-import android.content.res.Resources
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.window.core.layout.WindowHeightSizeClass
@@ -31,18 +30,11 @@ import androidx.window.core.layout.WindowSizeClass
 import androidx.window.core.layout.WindowWidthSizeClass
 
 object DeviceUtils {
-    fun getDeviceOrientation(): Int {
-        val config = Resources.getSystem().configuration
-        return config.orientation
-    }
-
     /**
-     * Alternative for determining if the device is
-     * in landscape mode.
-     * The [getDeviceOrientation] method could be used as well
-     * to achieve the same purpose.
-     * Credits: Newpipe devs
+     * Tries to determine if the device is
+     * in landscape mode, by using the [android.util.DisplayMetrics] API.
      *
+     * Credits: NewPipe devs
      */
     fun isLandscapeMetric(context: Context): Boolean = context.resources.displayMetrics.heightPixels < context.resources.displayMetrics.widthPixels
 
@@ -58,6 +50,16 @@ object DeviceUtils {
             }
         currentActivity.requestedOrientation = newOrientation
     }
+
+    /**
+     * This method looks at the window in which the app resides,
+     * and determines if it is large, while making sure not to be affected
+     * by configuration changes(such as screen rotation),
+     * as the device display metrics can be affected as well.
+     *
+     * It could be used as an approximation of the type of device(as is the case here),
+     * though one ought to be careful about multi-window situations.
+     */
 
     @Composable
     fun windowIsLarge(
