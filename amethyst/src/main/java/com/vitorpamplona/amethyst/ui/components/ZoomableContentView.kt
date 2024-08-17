@@ -230,7 +230,7 @@ fun ZoomableContentView(
             images,
             onDismiss = {
                 dialogOpen = false
-                if (isLandscapeMode) DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
+                if (!isFoldableOrLarge) DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
             },
             accountViewModel,
         )
