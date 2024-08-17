@@ -252,6 +252,7 @@ dependencies {
 
     // Language picker and Theme chooser
     implementation libs.androidx.appcompat
+    implementation libs.androidx.window.core.android
 
     // Local model for language identification
     playImplementation libs.google.mlkit.language.id

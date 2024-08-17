@@ -18,16 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.amethyst.ui.components.util
 
 import android.app.Activity
 import android.content.Context
 import android.content.pm.ActivityInfo
+import android.content.res.Resources
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.window.core.layout.WindowHeightSizeClass
+import androidx.window.core.layout.WindowSizeClass
+import androidx.window.core.layout.WindowWidthSizeClass
 
 object DeviceUtils {
-    fun getDeviceOrientation(context: Context): Int {
-        val deviceConfiguration = context.resources.configuration
-        return deviceConfiguration.orientation
+    fun getDeviceOrientation(): Int {
+        val config = Resources.getSystem().configuration
+        return config.orientation
     }
 
     /**
@@ -38,11 +44,11 @@ object DeviceUtils {
      * Credits: Newpipe devs
      *
      */
-    fun isLandscape(context: Context): Boolean = context.resources.displayMetrics.heightPixels < context.resources.displayMetrics.widthPixels
+    fun isLandscapeMetric(context: Context): Boolean = context.resources.displayMetrics.heightPixels < context.resources.displayMetrics.widthPixels
 
     fun changeDeviceOrientation(
         isInLandscape: Boolean,
-        context: Activity,
+        currentActivity: Activity,
     ) {
         val newOrientation =
             if (isInLandscape) {
@@ -50,6 +56,29 @@ object DeviceUtils {
             } else {
                 ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             }
-        context.requestedOrientation = newOrientation
+        currentActivity.requestedOrientation = newOrientation
     }
+
+    @Composable
+    fun windowIsLarge(
+        isInLandscapeMode: Boolean,
+        windowSize: WindowSizeClass,
+    ): Boolean =
+        remember(windowSize) {
+            if (isInLandscapeMode) {
+                when (windowSize.windowHeightSizeClass) {
+                    WindowHeightSizeClass.COMPACT -> false
+                    WindowHeightSizeClass.MEDIUM -> true
+                    WindowHeightSizeClass.EXPANDED -> true
+                    else -> true
+                }
+            } else {
+                when (windowSize.windowWidthSizeClass) {
+                    WindowWidthSizeClass.EXPANDED -> true
+                    WindowWidthSizeClass.MEDIUM -> true
+                    WindowWidthSizeClass.COMPACT -> false
+                    else -> true
+                }
+            }
+        }
 }
