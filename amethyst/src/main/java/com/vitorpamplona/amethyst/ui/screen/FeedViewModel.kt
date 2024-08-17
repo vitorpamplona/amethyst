@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import android.util.Log
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -32,26 +31,15 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPrivateFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPublicFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChannelFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChatroomFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.ChatroomListNewFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.CommunityFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DiscoverChatFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DiscoverCommunityFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DiscoverLiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DiscoverMarketplaceFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DiscoverNIP89FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DraftEventsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.GeoHashFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NIP90ContentDiscoveryResponseFilter
 import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileAppRecommendationsFeedFilter
@@ -60,18 +48,11 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileGalleryFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
-import com.vitorpamplona.ammolite.relays.BundledInsert
-import com.vitorpamplona.ammolite.relays.BundledUpdate
+import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.quartz.events.ChatroomKey
-import com.vitorpamplona.quartz.events.DeletionEvent
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class NostrChannelFeedViewModel(
@@ -95,71 +76,6 @@ class NostrChatroomFeedViewModel(
         val account: Account,
     ) : ViewModelProvider.Factory {
         override fun <NostrChatRoomFeedViewModel : ViewModel> create(modelClass: Class<NostrChatRoomFeedViewModel>): NostrChatRoomFeedViewModel = NostrChatroomFeedViewModel(user, account) as NostrChatRoomFeedViewModel
-    }
-}
-
-@Stable
-class NostrVideoFeedViewModel(
-    val account: Account,
-) : FeedViewModel(VideoFeedFilter(account)) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrVideoFeedViewModel : ViewModel> create(modelClass: Class<NostrVideoFeedViewModel>): NostrVideoFeedViewModel = NostrVideoFeedViewModel(account) as NostrVideoFeedViewModel
-    }
-}
-
-class NostrDiscoverMarketplaceFeedViewModel(
-    val account: Account,
-) : FeedViewModel(
-        DiscoverMarketplaceFeedFilter(account),
-    ) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrDiscoverMarketplaceFeedViewModel : ViewModel> create(modelClass: Class<NostrDiscoverMarketplaceFeedViewModel>): NostrDiscoverMarketplaceFeedViewModel = NostrDiscoverMarketplaceFeedViewModel(account) as NostrDiscoverMarketplaceFeedViewModel
-    }
-}
-
-class NostrDiscoverNIP89FeedViewModel(
-    val account: Account,
-) : FeedViewModel(
-        DiscoverNIP89FeedFilter(account),
-    ) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrDiscoverNIP89FeedViewModel : ViewModel> create(modelClass: Class<NostrDiscoverNIP89FeedViewModel>): NostrDiscoverNIP89FeedViewModel = NostrDiscoverNIP89FeedViewModel(account) as NostrDiscoverNIP89FeedViewModel
-    }
-}
-
-class NostrDiscoverLiveFeedViewModel(
-    val account: Account,
-) : FeedViewModel(DiscoverLiveFeedFilter(account)) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrDiscoverLiveFeedViewModel : ViewModel> create(modelClass: Class<NostrDiscoverLiveFeedViewModel>): NostrDiscoverLiveFeedViewModel = NostrDiscoverLiveFeedViewModel(account) as NostrDiscoverLiveFeedViewModel
-    }
-}
-
-class NostrDiscoverCommunityFeedViewModel(
-    val account: Account,
-) : FeedViewModel(DiscoverCommunityFeedFilter(account)) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrDiscoverCommunityFeedViewModel : ViewModel> create(modelClass: Class<NostrDiscoverCommunityFeedViewModel>): NostrDiscoverCommunityFeedViewModel = NostrDiscoverCommunityFeedViewModel(account) as NostrDiscoverCommunityFeedViewModel
-    }
-}
-
-class NostrDiscoverChatFeedViewModel(
-    val account: Account,
-) : FeedViewModel(DiscoverChatFeedFilter(account)) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrDiscoverChatFeedViewModel : ViewModel> create(modelClass: Class<NostrDiscoverChatFeedViewModel>): NostrDiscoverChatFeedViewModel = NostrDiscoverChatFeedViewModel(account) as NostrDiscoverChatFeedViewModel
     }
 }
 
@@ -277,48 +193,6 @@ class NostrUserProfileBookmarksFeedViewModel(
     }
 }
 
-class NostrChatroomListKnownFeedViewModel(
-    val account: Account,
-) : FeedViewModel(ChatroomListKnownFeedFilter(account)) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrChatroomListKnownFeedViewModel : ViewModel> create(modelClass: Class<NostrChatroomListKnownFeedViewModel>): NostrChatroomListKnownFeedViewModel = NostrChatroomListKnownFeedViewModel(account) as NostrChatroomListKnownFeedViewModel
-    }
-}
-
-class NostrChatroomListNewFeedViewModel(
-    val account: Account,
-) : FeedViewModel(ChatroomListNewFeedFilter(account)) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrChatroomListNewFeedViewModel : ViewModel> create(modelClass: Class<NostrChatroomListNewFeedViewModel>): NostrChatroomListNewFeedViewModel = NostrChatroomListNewFeedViewModel(account) as NostrChatroomListNewFeedViewModel
-    }
-}
-
-@Stable
-class NostrHomeFeedViewModel(
-    val account: Account,
-) : FeedViewModel(HomeNewThreadFeedFilter(account)) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrHomeFeedViewModel : ViewModel> create(modelClass: Class<NostrHomeFeedViewModel>): NostrHomeFeedViewModel = NostrHomeFeedViewModel(account) as NostrHomeFeedViewModel
-    }
-}
-
-@Stable
-class NostrHomeRepliesFeedViewModel(
-    val account: Account,
-) : FeedViewModel(HomeConversationsFeedFilter(account)) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrHomeRepliesFeedViewModel : ViewModel> create(modelClass: Class<NostrHomeRepliesFeedViewModel>): NostrHomeRepliesFeedViewModel = NostrHomeRepliesFeedViewModel(account) as NostrHomeRepliesFeedViewModel
-    }
-}
-
 @Stable
 class NostrBookmarkPublicFeedViewModel(
     val account: Account,
@@ -381,144 +255,16 @@ class NostrUserAppRecommendationsFeedViewModel(
 
 @Stable
 abstract class FeedViewModel(
-    val localFilter: FeedFilter<Note>,
+    localFilter: FeedFilter<Note>,
 ) : ViewModel(),
-    InvalidatableViewModel {
-    private val _feedContent = MutableStateFlow<FeedState>(FeedState.Loading)
-    val feedContent = _feedContent.asStateFlow()
+    InvalidatableContent {
+    val feedState = FeedContentState(localFilter, viewModelScope)
 
-    // Simple counter that changes when it needs to invalidate everything
-    private val _scrollToTop = MutableStateFlow<Int>(0)
-    val scrollToTop = _scrollToTop.asStateFlow()
-    var scrolltoTopPending = false
+    fun sendToTop() = feedState.sendToTop()
 
-    private var lastFeedKey: String? = null
+    suspend fun sentToTop() = feedState.sentToTop()
 
-    fun sendToTop() {
-        if (scrolltoTopPending) return
-
-        scrolltoTopPending = true
-        viewModelScope.launch(Dispatchers.IO) { _scrollToTop.emit(_scrollToTop.value + 1) }
-    }
-
-    suspend fun sentToTop() {
-        scrolltoTopPending = false
-    }
-
-    private fun refresh() {
-        viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
-    }
-
-    fun refreshSuspended() {
-        checkNotInMainThread()
-
-        lastFeedKey = localFilter.feedKey()
-        val notes = localFilter.loadTop().distinctBy { it.idHex }.toImmutableList()
-
-        val oldNotesState = _feedContent.value
-        if (oldNotesState is FeedState.Loaded) {
-            if (!equalImmutableLists(notes, oldNotesState.feed.value)) {
-                updateFeed(notes)
-            }
-        } else {
-            updateFeed(notes)
-        }
-    }
-
-    private fun updateFeed(notes: ImmutableList<Note>) {
-        viewModelScope.launch(Dispatchers.Main) {
-            val currentState = _feedContent.value
-            if (notes.isEmpty()) {
-                _feedContent.update { FeedState.Empty }
-            } else if (currentState is FeedState.Loaded) {
-                // updates the current list
-                if (currentState.showHidden.value != localFilter.showHiddenKey()) {
-                    currentState.showHidden.value = localFilter.showHiddenKey()
-                }
-                currentState.feed.value = notes
-            } else {
-                _feedContent.update {
-                    FeedState.Loaded(mutableStateOf(notes), mutableStateOf(localFilter.showHiddenKey()))
-                }
-            }
-        }
-    }
-
-    fun refreshFromOldState(newItems: Set<Note>) {
-        val oldNotesState = _feedContent.value
-        if (localFilter is AdditiveFeedFilter && lastFeedKey == localFilter.feedKey()) {
-            if (oldNotesState is FeedState.Loaded) {
-                val deletionEvents: List<DeletionEvent> =
-                    newItems.mapNotNull {
-                        val noteEvent = it.event
-                        if (noteEvent is DeletionEvent) noteEvent else null
-                    }
-
-                val oldList =
-                    if (deletionEvents.isEmpty()) {
-                        oldNotesState.feed.value
-                    } else {
-                        val deletedEventIds = deletionEvents.flatMapTo(HashSet()) { it.deleteEvents() }
-                        val deletedEventAddresses = deletionEvents.flatMapTo(HashSet()) { it.deleteAddresses() }
-                        oldNotesState.feed.value
-                            .filter { !it.wasOrShouldBeDeletedBy(deletedEventIds, deletedEventAddresses) }
-                            .toImmutableList()
-                    }
-
-                val newList =
-                    localFilter
-                        .updateListWith(oldList, newItems)
-                        .distinctBy { it.idHex }
-                        .toImmutableList()
-                if (!equalImmutableLists(newList, oldNotesState.feed.value)) {
-                    updateFeed(newList)
-                }
-            } else if (oldNotesState is FeedState.Empty) {
-                val newList =
-                    localFilter
-                        .updateListWith(emptyList(), newItems)
-                        .distinctBy { it.idHex }
-                        .toImmutableList()
-                if (newList.isNotEmpty()) {
-                    updateFeed(newList)
-                }
-            } else {
-                // Refresh Everything
-                refreshSuspended()
-            }
-        } else {
-            // Refresh Everything
-            refreshSuspended()
-        }
-    }
-
-    private val bundler = BundledUpdate(250, Dispatchers.IO)
-    private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.IO)
-
-    override fun invalidateData(ignoreIfDoing: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
-            bundler.invalidate(ignoreIfDoing) {
-                // adds the time to perform the refresh into this delay
-                // holding off new updates in case of heavy refresh routines.
-                refreshSuspended()
-            }
-        }
-    }
-
-    fun checkKeysInvalidateDataAndSendToTop() {
-        if (lastFeedKey != localFilter.feedKey()) {
-            bundler.invalidate(false) {
-                // adds the time to perform the refresh into this delay
-                // holding off new updates in case of heavy refresh routines.
-                refreshSuspended()
-                sendToTop()
-            }
-        }
-    }
-
-    fun invalidateInsertData(newItems: Set<Note>) {
-        bundlerInsert.invalidateList(newItems) { refreshFromOldState(it.flatten().toSet()) }
-    }
+    override fun invalidateData(ignoreIfDoing: Boolean) = feedState.invalidateData(ignoreIfDoing)
 
     private var collectorJob: Job? = null
 
@@ -527,25 +273,13 @@ abstract class FeedViewModel(
         collectorJob =
             viewModelScope.launch(Dispatchers.IO) {
                 LocalCache.live.newEventBundles.collect { newNotes ->
-                    checkNotInMainThread()
-
-                    if (
-                        localFilter is AdditiveFeedFilter &&
-                        (_feedContent.value is FeedState.Loaded || _feedContent.value is FeedState.Empty)
-                    ) {
-                        invalidateInsertData(newNotes)
-                    } else {
-                        // Refresh Everything
-                        invalidateData()
-                    }
+                    feedState.updateFeedWith(newNotes)
                 }
             }
     }
 
     override fun onCleared() {
         Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
-        bundlerInsert.cancel()
-        bundler.cancel()
         collectorJob?.cancel()
         super.onCleared()
     }

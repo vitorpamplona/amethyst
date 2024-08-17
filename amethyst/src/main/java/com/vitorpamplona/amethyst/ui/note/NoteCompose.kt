@@ -114,7 +114,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.RenderChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.RenderChannelHeader
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
@@ -189,8 +189,8 @@ import com.vitorpamplona.quartz.events.WikiNoteEvent
 @Composable
 fun NoteCompose(
     baseNote: Note,
-    routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
+    routeForLastRead: String? = null,
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
     unPackReply: Boolean = true,
@@ -216,8 +216,8 @@ fun NoteCompose(
         ) { canPreview ->
             AcceptableNote(
                 baseNote = baseNote,
-                routeForLastRead = routeForLastRead,
                 modifier = modifier,
+                routeForLastRead = routeForLastRead,
                 isBoostedNote = isBoostedNote,
                 isQuotedNote = isQuotedNote,
                 unPackReply = unPackReply,
@@ -235,8 +235,8 @@ fun NoteCompose(
 @Composable
 fun AcceptableNote(
     baseNote: Note,
-    routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
+    routeForLastRead: String? = null,
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
     unPackReply: Boolean = true,
@@ -272,8 +272,8 @@ fun AcceptableNote(
                 LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
                     CheckNewAndRenderNote(
                         baseNote = baseNote,
-                        routeForLastRead = routeForLastRead,
                         modifier = modifier,
+                        routeForLastRead = routeForLastRead,
                         isBoostedNote = isBoostedNote,
                         isQuotedNote = isQuotedNote,
                         unPackReply = unPackReply,
@@ -315,8 +315,8 @@ fun AcceptableNote(
                 LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
                     CheckNewAndRenderNote(
                         baseNote = baseNote,
-                        routeForLastRead = routeForLastRead,
                         modifier = modifier,
+                        routeForLastRead = routeForLastRead,
                         isBoostedNote = isBoostedNote,
                         isQuotedNote = isQuotedNote,
                         unPackReply = unPackReply,
@@ -343,7 +343,7 @@ fun calculateBackgroundColor(
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
     return remember(createdAt) {
-        mutableStateOf<Color>(
+        mutableStateOf(
             if (routeForLastRead != null) {
                 val isNew = accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt)
 
@@ -366,8 +366,8 @@ fun calculateBackgroundColor(
 @Composable
 private fun CheckNewAndRenderNote(
     baseNote: Note,
-    routeForLastRead: String? = null,
     modifier: Modifier = Modifier,
+    routeForLastRead: String? = null,
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
     unPackReply: Boolean = true,
@@ -504,10 +504,7 @@ fun InnerNoteWithReactions(
 
     if (isNotRepost) {
         if (makeItShort) {
-            if (isBoostedNote) {
-            } else {
-                Spacer(modifier = DoubleVertSpacer)
-            }
+            Spacer(modifier = DoubleVertSpacer)
         } else {
             ReactionsRow(
                 baseNote = baseNote,
@@ -594,8 +591,7 @@ private fun RenderNoteRow(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val noteEvent = baseNote.event
-    when (noteEvent) {
+    when (val noteEvent = baseNote.event) {
         is AppDefinitionEvent -> RenderAppDefinition(baseNote, accountViewModel, nav)
         is AudioTrackEvent -> RenderAudioTrack(baseNote, false, accountViewModel, nav)
         is AudioHeaderEvent -> RenderAudioHeader(baseNote, false, accountViewModel, nav)
@@ -862,11 +858,11 @@ fun ReplyNoteComposition(
 ) {
     NoteCompose(
         baseNote = replyingDirectlyTo,
-        isQuotedNote = true,
-        quotesLeft = 0,
         modifier = MaterialTheme.colorScheme.replyModifier,
+        isQuotedNote = true,
         unPackReply = false,
         makeItShort = true,
+        quotesLeft = 0,
         parentBackgroundColor = backgroundColor,
         accountViewModel = accountViewModel,
         nav = nav,
@@ -921,12 +917,12 @@ fun DisplayOtsIfInOriginal(
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
 ) {
-    val editState = (editState.value as? GenericLoadable.Loaded<EditState>)?.loaded?.modificationToShow?.value
+    val editNote = (editState.value as? GenericLoadable.Loaded<EditState>)?.loaded?.modificationToShow?.value
 
-    if (editState == null) {
+    if (editNote == null) {
         DisplayOts(note = note, accountViewModel = accountViewModel)
     } else {
-        DisplayOts(note = editState, accountViewModel = accountViewModel)
+        DisplayOts(note = editNote, accountViewModel = accountViewModel)
     }
 }
 
@@ -1018,7 +1014,7 @@ fun observeEdits(
     accountViewModel: AccountViewModel,
 ): State<GenericLoadable<EditState>> {
     if (baseNote.event !is TextNoteEvent) {
-        return remember { mutableStateOf(GenericLoadable.Empty<EditState>()) }
+        return remember { mutableStateOf(GenericLoadable.Empty()) }
     }
 
     val editState =
@@ -1027,14 +1023,14 @@ fun observeEdits(
             mutableStateOf(
                 if (cached != null) {
                     if (cached.isEmpty()) {
-                        GenericLoadable.Empty<EditState>()
+                        GenericLoadable.Empty()
                     } else {
                         val state = EditState()
                         state.updateModifications(cached)
-                        GenericLoadable.Loaded<EditState>(state)
+                        GenericLoadable.Loaded(state)
                     }
                 } else {
-                    GenericLoadable.Loading<EditState>()
+                    GenericLoadable.Loading()
                 },
             )
         }
@@ -1046,7 +1042,7 @@ fun observeEdits(
             accountViewModel.findModificationEventsForNote(it) { newModifications ->
                 if (newModifications.isEmpty()) {
                     if (editState.value !is GenericLoadable.Empty) {
-                        editState.value = GenericLoadable.Empty<EditState>()
+                        editState.value = GenericLoadable.Empty()
                     }
                 } else {
                     if (editState.value is GenericLoadable.Loaded) {

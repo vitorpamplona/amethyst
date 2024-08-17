@@ -114,7 +114,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -132,6 +131,9 @@ import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
+import com.vitorpamplona.amethyst.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
@@ -141,7 +143,6 @@ import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.externalLinkForUser
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.qrcode.ShowQRDialog
-import com.vitorpamplona.amethyst.ui.screen.FeedState
 import com.vitorpamplona.amethyst.ui.screen.LnZapFeedView
 import com.vitorpamplona.amethyst.ui.screen.NostrUserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileBookmarksFeedViewModel
@@ -152,14 +153,13 @@ import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileGalleryFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileNewThreadsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileReportFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileZapsFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedView
 import com.vitorpamplona.amethyst.ui.screen.RelayFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.SaveableGridFeedState
-import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -865,7 +865,7 @@ private fun ProfileActions(
         remember(accountViewModel) { derivedStateOf { accountViewModel.userProfile() == baseUser } }
 
     if (isMe) {
-        EditButton(accountViewModel.account)
+        EditButton(accountViewModel)
     }
 
     WatchIsHiddenUser(baseUser, accountViewModel) { isHidden ->
@@ -1190,7 +1190,7 @@ fun DisplayLNAddress(
                 InvoiceRequestCard(
                     lud16,
                     userHex,
-                    accountViewModel.account,
+                    accountViewModel,
                     onSuccess = {
                         zapExpanded = false
                         // pay directly
@@ -1224,7 +1224,7 @@ private fun DisplayAppRecommendations(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val feedState by appRecommendations.feedContent.collectAsStateWithLifecycle()
+    val feedState by appRecommendations.feedState.feedContent.collectAsStateWithLifecycle()
 
     LaunchedEffect(key1 = Unit) { appRecommendations.invalidateData() }
 
@@ -1864,11 +1864,11 @@ private fun MessageButton(
 }
 
 @Composable
-private fun EditButton(account: Account) {
+private fun EditButton(accountViewModel: AccountViewModel) {
     var wantsToEdit by remember { mutableStateOf(false) }
 
     if (wantsToEdit) {
-        NewUserMetadataView({ wantsToEdit = false }, account)
+        NewUserMetadataView({ wantsToEdit = false }, accountViewModel)
     }
 
     InnerEditButton { wantsToEdit = true }

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.video
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -64,6 +63,15 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
+import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
+import com.vitorpamplona.amethyst.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.BoostReaction
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
@@ -77,15 +85,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.JustVideoDisplay
-import com.vitorpamplona.amethyst.ui.screen.FeedEmpty
-import com.vitorpamplona.amethyst.ui.screen.FeedError
-import com.vitorpamplona.amethyst.ui.screen.FeedState
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.LoadingFeed
-import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
-import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
-import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AuthorInfoVideoFeed
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -105,13 +105,13 @@ import kotlinx.collections.immutable.ImmutableList
 
 @Composable
 fun VideoScreen(
-    videoFeedView: NostrVideoFeedViewModel,
+    videoFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
     val lifeCycleOwner = LocalLifecycleOwner.current
 
-    WatchAccountForVideoScreen(videoFeedView = videoFeedView, accountViewModel = accountViewModel)
+    WatchAccountForVideoScreen(videoFeedContentState = videoFeedContentState, accountViewModel = accountViewModel)
 
     DisposableEffect(lifeCycleOwner) {
         val observer =
@@ -128,7 +128,7 @@ fun VideoScreen(
 
     Column(Modifier.fillMaxHeight()) {
         RenderPage(
-            videoFeedView = videoFeedView,
+            videoFeedContentState = videoFeedContentState,
             pagerStateKey = ScrollStateKeys.VIDEO_SCREEN,
             accountViewModel = accountViewModel,
             nav = nav,
@@ -138,7 +138,7 @@ fun VideoScreen(
 
 @Composable
 fun WatchAccountForVideoScreen(
-    videoFeedView: NostrVideoFeedViewModel,
+    videoFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
 ) {
     val listState by accountViewModel.account.liveStoriesFollowLists.collectAsStateWithLifecycle()
@@ -146,34 +146,18 @@ fun WatchAccountForVideoScreen(
 
     LaunchedEffect(accountViewModel, listState, hiddenUsers) {
         NostrVideoDataSource.resetFilters()
-        videoFeedView.checkKeysInvalidateDataAndSendToTop()
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-public fun WatchScrollToTop(
-    viewModel: FeedViewModel,
-    pagerState: PagerState,
-) {
-    val scrollToTop by viewModel.scrollToTop.collectAsStateWithLifecycle()
-
-    LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
-            pagerState.scrollToPage(page = 0)
-            viewModel.sentToTop()
-        }
+        videoFeedContentState.checkKeysInvalidateDataAndSendToTop()
     }
 }
 
 @Composable
 fun RenderPage(
-    videoFeedView: NostrVideoFeedViewModel,
+    videoFeedContentState: FeedContentState,
     pagerStateKey: String?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val feedState by videoFeedView.feedContent.collectAsStateWithLifecycle()
+    val feedState by videoFeedContentState.feedContent.collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(
         targetState = feedState,
@@ -183,13 +167,13 @@ fun RenderPage(
     ) { state ->
         when (state) {
             is FeedState.Empty -> {
-                FeedEmpty {}
+                FeedEmpty(videoFeedContentState::invalidateData)
             }
             is FeedState.FeedError -> {
-                FeedError(state.errorMessage) {}
+                FeedError(state.errorMessage, videoFeedContentState::invalidateData)
             }
             is FeedState.Loaded -> {
-                LoadedState(state, pagerStateKey, videoFeedView, accountViewModel, nav)
+                LoadedState(state, pagerStateKey, videoFeedContentState, accountViewModel, nav)
             }
             is FeedState.Loading -> {
                 LoadingFeed()
@@ -203,7 +187,7 @@ fun RenderPage(
 private fun LoadedState(
     state: FeedState.Loaded,
     pagerStateKey: String?,
-    videoFeedView: NostrVideoFeedViewModel,
+    videoFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
@@ -214,9 +198,9 @@ private fun LoadedState(
             rememberPagerState { state.feed.value.size }
         }
 
-    WatchScrollToTop(videoFeedView, pagerState)
+    WatchScrollToTop(videoFeedContentState, pagerState)
 
-    RefresheableBox(viewModel = videoFeedView) {
+    RefresheableBox(invalidateableContent = videoFeedContentState) {
         SlidingCarousel(
             state.feed,
             pagerState,

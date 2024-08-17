@@ -1180,7 +1180,6 @@ fun zapClick(
             context,
             onError = onError,
             onProgress = { onZappingProgress(it) },
-            zapType = accountViewModel.account.defaultZapType,
             onPayViaIntent = onPayViaIntent,
         )
     } else if (accountViewModel.account.zapAmountChoices.size > 1) {
@@ -1501,7 +1500,6 @@ fun ZapAmountChoicePopup(
                             onError,
                             onProgress,
                             onPayViaIntent,
-                            accountViewModel.account.defaultZapType,
                         )
                         onDismiss()
                     },
@@ -1528,7 +1526,6 @@ fun ZapAmountChoicePopup(
                                         onError,
                                         onProgress,
                                         onPayViaIntent,
-                                        accountViewModel.account.defaultZapType,
                                     )
                                     onDismiss()
                                 },

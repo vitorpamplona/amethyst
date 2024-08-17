@@ -49,13 +49,13 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteContainer
+import com.vitorpamplona.amethyst.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys.DRAFTS
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.screen.FeedState
 import com.vitorpamplona.amethyst.ui.screen.NostrDraftEventsFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
-import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys.DRAFTS
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.maxWidthWithBackground
@@ -193,8 +193,8 @@ private fun DraftFeedLoaded(
                 ) {
                     NoteCompose(
                         item,
-                        routeForLastRead = routeForLastRead,
                         modifier = MaterialTheme.colorScheme.maxWidthWithBackground,
+                        routeForLastRead = routeForLastRead,
                         isBoostedNote = false,
                         isHiddenFeed = state.showHidden.value,
                         quotesLeft = 3,

@@ -38,11 +38,14 @@ import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
+import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
+import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.ammolite.relays.BundledUpdate
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,7 +55,7 @@ import kotlinx.coroutines.launch
 @Stable
 class RelayFeedViewModel :
     ViewModel(),
-    InvalidatableViewModel {
+    InvalidatableContent {
     val order =
         compareByDescending<RelayInfo> { it.lastEvent }
             .thenByDescending { it.counter }
@@ -72,9 +75,10 @@ class RelayFeedViewModel :
         val beingUsedSet = currentUser?.relaysBeingUsed?.keys ?: emptySet()
 
         val newRelaysFromRecord =
-            currentUser?.latestContactList?.relays()?.entries?.mapNotNull {
-                if (it.key !in beingUsedSet) {
-                    RelayInfo(it.key, 0, 0)
+            currentUser?.latestContactList?.relays()?.entries?.mapNotNullTo(HashSet()) {
+                val url = RelayUrlFormatter.normalize(it.key)
+                if (url !in beingUsedSet) {
+                    RelayInfo(url, 0, 0)
                 } else {
                     null
                 }

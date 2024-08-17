@@ -501,7 +501,6 @@ fun customZapClick(
                 showErrorIfNoLnAddress = false,
                 onError = onError,
                 onProgress = { onZappingProgress(it) },
-                zapType = accountViewModel.account.defaultZapType,
                 onPayViaIntent = onPayViaIntent,
             )
         } else {

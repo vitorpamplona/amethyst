@@ -30,6 +30,7 @@ import com.abedelazizshe.lightcompressorlibrary.VideoCompressor
 import com.abedelazizshe.lightcompressorlibrary.VideoQuality
 import com.abedelazizshe.lightcompressorlibrary.config.AppSpecificStorageConfiguration
 import com.abedelazizshe.lightcompressorlibrary.config.Configuration
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import id.zelory.compressor.Compressor
 import id.zelory.compressor.constraint.default
@@ -44,7 +45,7 @@ class MediaCompressor {
         contentType: String?,
         applicationContext: Context,
         onReady: (Uri, String?, Long?) -> Unit,
-        onError: (String) -> Unit,
+        onError: (Int) -> Unit,
     ) {
         checkNotInMainThread()
 
@@ -87,7 +88,7 @@ class MediaCompressor {
                             if (path != null) {
                                 onReady(Uri.fromFile(File(path)), contentType, size)
                             } else {
-                                onError("Compression Returned null")
+                                onError(R.string.compression_returned_null)
                             }
                         }
 
@@ -100,7 +101,7 @@ class MediaCompressor {
                         }
 
                         override fun onCancelled(index: Int) {
-                            onError("Compression Cancelled")
+                            onError(R.string.compression_cancelled)
                         }
                     },
             )

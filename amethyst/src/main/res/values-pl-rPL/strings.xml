@@ -805,4 +805,5 @@
     <string name="add_a_nip96_server">Dodaj serwer NIP-96</string>
     <string name="delete_all">Usuń wszystko</string>
     <string name="delete_all_drafts_confirmation">Czy na pewno chcesz usunąć wszystkie wersje robocze?</string>
+    <string name="and_more">" ... i %1$s więcej"</string>
 </resources>

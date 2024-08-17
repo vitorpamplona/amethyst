@@ -111,7 +111,7 @@
     <string name="my_username">मेरा उपयोगकर्ता नाम</string>
     <string name="about_me">मेरा परिचय</string>
     <string name="avatar_url">अवतारचित्र जालपता</string>
-    <string name="banner_url">चौडाचित्र जालपता</string>
+    <string name="banner_url">ध्वजचित्र जालपता</string>
     <string name="website_url">जालस्थान पता</string>
     <string name="ln_address">लै॰जाल पता</string>
     <string name="ln_url_outdated">लै॰जाल पता (पुराना)</string>
@@ -701,12 +701,12 @@
     <string name="show_npub_as_a_qr_code">क्यूआर॰ क्रमचित्र के रूप में एनपुब॰ को दिखाएँ</string>
     <string name="invalid_nip19_uri">अमान्य पता</string>
     <string name="invalid_nip19_uri_description">अमेथिस्ट को एक वैश्विक वस्तु विभेदक प्राप्त हुआ खोलने के लिए परन्तु वह विभेदक अमान्य था : %1$s</string>
-    <string name="dm_relays_title">सी॰सं॰ आगतपेटिका पुनःप्रसारक</string>
+    <string name="dm_relays_title">सीधा संदेश आगतपेटिका पुनःप्रसारक</string>
     <string name="dm_relays_through">पुनःप्रसारक : %1$s</string>
     <string name="dm_relays_regular">साधारण पुनःप्रसारक प्रयुक्त</string>
     <string name="dm_relays_not_found">आपके निजी आगतपेटिका पुनःप्रसारकों की स्थापना करें</string>
     <string name="dm_relays_not_found_description">यह स्थापना विकल्प सब को सूचित करता है आपको सन्देश भेजने के लिए कौनसे पुनःप्रसारकों का प्रयोग करना चाहिए। इनके बिना आप कुछ सन्देश प्राप्त नहीं कर पाएँगे।</string>
-    <string name="dm_relays_not_found_examples">ये अच्छे विकल्प हैं :\n - inbox.nostr.wine (सशुल्क)\n - you.nostr1.com (निजी पुनःप्रसारक - सशुल्क)</string>
+    <string name="dm_relays_not_found_examples">ये अच्छे विकल्प हैं :\n - inbox.nostr.wine (सशुल्क)\n - auth.nostr1.com (शुल्करहित)\n - you.nostr1.com (निजी पुनःप्रसारक - सशुल्क)</string>
     <string name="dm_relays_not_found_editing">निजी आगतपेटिका के रूप में १ - ३ पुनःप्रसारकों को जोडें। सी॰सं॰ आगतपेटिका पुनःप्रसारकों को सब से सन्देश स्वीकारना चाहिए पर उनका अवरोहण करने की अनुमति केवल आपको देना चाहिए।</string>
     <string name="dm_relays_not_found_create_now">अभी स्थापना करें</string>
     <string name="search_relays_title">खोज पुनःप्रसारक</string>
@@ -719,7 +719,7 @@
     <string name="public_home_section_explainer">यह पुनःप्रसारक प्रकार आपके सभी विषयवस्तु रखता है। अमेथिस्ट आपके पत्रों को प्रकाशित करने के लिए यहाँ भेजेगा तथा अन्य लोग आपके विषयवस्तु ढूँढने के लिए इनका प्रयोग करेंगे। १ - ३ पुनःप्रसारकों को जोडें। ये व्यक्तिगत अथवा सशुल्क अथवा सार्वजनिक पुनःप्रसारक हो सकते हैं।</string>
     <string name="public_notif_section">सार्वजनिक आगतपेटिका पुनःप्रसारक</string>
     <string name="public_notif_section_explainer">यह पुनःप्रसारक प्रकार आपके प्रकाशित पत्रों को भेजे गये सभी प्रतिवचन, टिप्पणियाँ, इष्टसूचक तथा ज्सापों को प्राप्त करता है। १ - ३ पुनःप्रसारकों को जोडें तथा सुनिश्चित करें कि वे किसी से भी पत्र स्वीकारते हैं।</string>
-    <string name="private_inbox_section">सी॰सं॰ आगतपेटिका पुनःप्रसारक</string>
+    <string name="private_inbox_section">सीधा संदेश आगतपेटिका पुनःप्रसारक</string>
     <string name="private_inbox_section_explainer">आपके निजी आगतपेटिका के रूप में १ - ३ पुनःप्रसारकों को जोडें। अन्य लोग इनका उपयोग करेंगे आपको सी॰सं॰ भेजने के लिए। सी॰सं॰ आगतपेटिका पुनःप्रसारकों को किसी से भी सन्देश स्वीकारना चाहिए पर उनका अवरोहण अनुमति केवल आपको देना चाहिए। ये अच्छे विकल्प हैं :\n - inbox.nostr.wine (सशुल्क)\n - auth.nostr1.com (शुल्करहित)\n - you.nostr1.com (व्यक्तिगत पुनःप्रसारक - सशुल्क)</string>
     <string name="private_outbox_section">निजी पुनःप्रसारक</string>
     <string name="private_outbox_section_explainer">१ - ३ पुनःप्रसारकों को जोडें उन घटनाओं को रखने के लिए जो कोई अन्य नहीं देख सकता जैसे कि पाण्डुलिपियाँ अथवा क्रमक के स्थापना विकल्प। आदर्शतः ये पुनःप्रसारक स्थानीय होने चाहिए अथवा प्रत्येक उपयोगकर्ता के विषयवस्तु अवरोहण के पूर्व परिचय प्रमाणीकरण अनिवार्य होना चाहिए।</string>
@@ -803,4 +803,7 @@
     <string name="http_status_508">क्रमचक्र दृष्ट - सेवासंगणक को अनन्त क्रमचक्र का पता चला अनुरोध पर काम करते हुए</string>
     <string name="http_status_511">जाल प्रमाणीकरण आवश्यक - जाल उपलब्ध होने के लिए ग्राहक का प्रमाणीकरण अनिवार्य</string>
     <string name="add_a_nip96_server">निप॰-९६ सेवासंगणक जोडें</string>
+    <string name="delete_all">सब मिटाएँ</string>
+    <string name="delete_all_drafts_confirmation">क्या आप निश्चित रूप से सभी पाण्डुलिपियाँ मिटाना चाहते हैं।</string>
+    <string name="and_more">" ... तथा %1$s अधिक"</string>
 </resources>

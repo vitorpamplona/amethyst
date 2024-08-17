@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
@@ -54,17 +54,16 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.PagerStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountDialog
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.PagerStateKeys
-import com.vitorpamplona.amethyst.ui.screen.RefresheableBox
-import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
-import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
-import com.vitorpamplona.amethyst.ui.screen.ScrollStateKeys
-import com.vitorpamplona.amethyst.ui.screen.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
@@ -76,19 +75,19 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
-    homeFeedViewModel: NostrHomeFeedViewModel,
-    repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
+    newThreadsFeedState: FeedContentState,
+    repliesFeedState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     nip47: String? = null,
 ) {
     ResolveNIP47(nip47, accountViewModel)
 
-    WatchAccountForHomeScreen(homeFeedViewModel, repliesFeedViewModel, accountViewModel)
+    WatchAccountForHomeScreen(newThreadsFeedState, repliesFeedState, accountViewModel)
 
     WatchLifeCycleChanges(accountViewModel)
 
-    AssembleHomeTabs(homeFeedViewModel, repliesFeedViewModel) { pagerState, tabItems ->
+    AssembleHomeTabs(newThreadsFeedState, repliesFeedState) { pagerState, tabItems ->
         AssembleHomePage(pagerState, tabItems, accountViewModel, nav)
     }
 }
@@ -96,25 +95,25 @@ fun HomeScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AssembleHomeTabs(
-    homeFeedViewModel: NostrHomeFeedViewModel,
-    repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
+    newThreadsFeedState: FeedContentState,
+    repliesFeedState: FeedContentState,
     inner: @Composable (PagerState, ImmutableList<TabItem>) -> Unit,
 ) {
     val pagerState = rememberForeverPagerState(key = PagerStateKeys.HOME_SCREEN) { 2 }
 
     val tabs by
-        remember(homeFeedViewModel, repliesFeedViewModel) {
+        remember(newThreadsFeedState, repliesFeedState) {
             mutableStateOf(
                 listOf(
                     TabItem(
                         R.string.new_threads,
-                        homeFeedViewModel,
+                        newThreadsFeedState,
                         Route.Home.base + "Follows",
                         ScrollStateKeys.HOME_FOLLOWS,
                     ),
                     TabItem(
                         R.string.conversations,
-                        repliesFeedViewModel,
+                        repliesFeedState,
                         Route.Home.base + "FollowsReplies",
                         ScrollStateKeys.HOME_REPLIES,
                     ),
@@ -194,7 +193,7 @@ private fun HomePages(
 
     HorizontalPager(state = pagerState, userScrollEnabled = false) { page ->
         HomeFeeds(
-            viewModel = tabs[page].viewModel,
+            feedState = tabs[page].feedState,
             routeForLastRead = tabs[page].routeForLastRead,
             scrollStateKey = tabs[page].scrollStateKey,
             accountViewModel = accountViewModel,
@@ -205,22 +204,22 @@ private fun HomePages(
 
 @Composable
 fun HomeFeeds(
-    viewModel: FeedViewModel,
+    feedState: FeedContentState,
     routeForLastRead: String?,
     enablePullRefresh: Boolean = true,
     scrollStateKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    RefresheableBox(viewModel, enablePullRefresh) {
-        SaveableFeedState(viewModel, scrollStateKey) { listState ->
-            RenderFeedState(
-                viewModel = viewModel,
+    RefresheableBox(feedState, enablePullRefresh) {
+        SaveableFeedContentState(feedState, scrollStateKey) { listState ->
+            RenderFeedContentState(
+                feedContentState = feedState,
                 accountViewModel = accountViewModel,
                 listState = listState,
                 nav = nav,
                 routeForLastRead = routeForLastRead,
-                onEmpty = { HomeFeedEmpty { viewModel.invalidateData() } },
+                onEmpty = { HomeFeedEmpty(feedState::invalidateData) },
             )
         }
     }
@@ -303,8 +302,8 @@ fun CrossfadeCheckIfUrlIsOnline(
 
 @Composable
 fun WatchAccountForHomeScreen(
-    homeFeedViewModel: NostrHomeFeedViewModel,
-    repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
+    newThreadsFeedState: FeedContentState,
+    repliesFeedState: FeedContentState,
     accountViewModel: AccountViewModel,
 ) {
     val homeFollowList by accountViewModel.account.liveHomeFollowLists.collectAsStateWithLifecycle()
@@ -312,16 +311,17 @@ fun WatchAccountForHomeScreen(
     LaunchedEffect(accountViewModel, homeFollowList) {
         NostrHomeDataSource.account = accountViewModel.account
         NostrHomeDataSource.invalidateFilters()
-        homeFeedViewModel.checkKeysInvalidateDataAndSendToTop()
-        repliesFeedViewModel.checkKeysInvalidateDataAndSendToTop()
+        newThreadsFeedState.checkKeysInvalidateDataAndSendToTop()
+        repliesFeedState.checkKeysInvalidateDataAndSendToTop()
     }
 }
 
 @Immutable
 class TabItem(
     val resource: Int,
-    val viewModel: FeedViewModel,
+    val feedState: FeedContentState,
     val routeForLastRead: String,
     val scrollStateKey: String,
     val forceEventKind: Int? = null,
+    val useGridLayout: Boolean = false,
 )

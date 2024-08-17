@@ -164,6 +164,7 @@ val DividerThickness = 0.25.dp
 val ReactionRowHeight = Modifier.padding(vertical = 7.dp).height(24.dp)
 val ReactionRowHeightWithPadding = Modifier.padding(vertical = 7.dp).height(24.dp).padding(horizontal = 10.dp)
 val ReactionRowHeightChat = Modifier.height(25.dp)
+val ReactionRowHeightChatMaxWidth = Modifier.height(25.dp).fillMaxWidth()
 val UserNameRowHeight = Modifier.fillMaxWidth()
 val UserNameMaxRowHeight = Modifier.fillMaxWidth()
 

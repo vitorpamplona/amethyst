@@ -166,7 +166,7 @@ fun HashtagActionOptions(
         .follows
         .observeAsState()
     val isFollowingTag by
-        remember(userState) {
+        remember(userState, tag) {
             derivedStateOf { userState?.user?.isFollowingHashtag(tag) ?: false }
         }
 

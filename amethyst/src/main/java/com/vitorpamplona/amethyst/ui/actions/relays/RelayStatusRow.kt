@@ -21,8 +21,7 @@
 package com.vitorpamplona.amethyst.ui.actions.relays
 
 import android.widget.Toast
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteSweep
@@ -35,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,7 +47,6 @@ import com.vitorpamplona.amethyst.ui.theme.warningColor
 import kotlinx.coroutines.launch
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 fun RelayStatusRow(
     item: BasicRelaySetupInfo,
     modifier: Modifier,
@@ -62,15 +61,16 @@ fun RelayStatusRow(
         modifier =
             Modifier
                 .size(15.dp)
-                .combinedClickable(
-                    onClick = {},
-                    onLongClick = {
-                        accountViewModel.toast(
-                            R.string.read_from_relay,
-                            R.string.read_from_relay_description,
-                        )
-                    },
-                ),
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = {
+                            accountViewModel.toast(
+                                R.string.read_from_relay,
+                                R.string.read_from_relay_description,
+                            )
+                        },
+                    )
+                },
         tint = MaterialTheme.colorScheme.allGoodColor,
     )
 
@@ -88,15 +88,16 @@ fun RelayStatusRow(
         modifier =
             Modifier
                 .size(15.dp)
-                .combinedClickable(
-                    onClick = { },
-                    onLongClick = {
-                        accountViewModel.toast(
-                            R.string.write_to_relay,
-                            R.string.write_to_relay_description,
-                        )
-                    },
-                ),
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = {
+                            accountViewModel.toast(
+                                R.string.write_to_relay,
+                                R.string.write_to_relay_description,
+                            )
+                        },
+                    )
+                },
         tint = MaterialTheme.colorScheme.allGoodColor,
     )
 
@@ -114,15 +115,16 @@ fun RelayStatusRow(
         modifier =
             Modifier
                 .size(15.dp)
-                .combinedClickable(
-                    onClick = {},
-                    onLongClick = {
-                        accountViewModel.toast(
-                            R.string.errors,
-                            R.string.errors_description,
-                        )
-                    },
-                ),
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = {
+                            accountViewModel.toast(
+                                R.string.errors,
+                                R.string.errors_description,
+                            )
+                        },
+                    )
+                },
         tint =
             if (item.relayStat.errorCounter > 0) {
                 MaterialTheme.colorScheme.warningColor
@@ -145,23 +147,24 @@ fun RelayStatusRow(
         modifier =
             Modifier
                 .size(15.dp)
-                .combinedClickable(
-                    onClick = {},
-                    onLongClick = {
-                        accountViewModel.toast(
-                            R.string.spam,
-                            R.string.spam_description,
-                        )
-                        scope.launch {
-                            Toast
-                                .makeText(
-                                    context,
-                                    stringRes(context, R.string.spam),
-                                    Toast.LENGTH_SHORT,
-                                ).show()
-                        }
-                    },
-                ),
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = {
+                            accountViewModel.toast(
+                                R.string.spam,
+                                R.string.spam_description,
+                            )
+                            scope.launch {
+                                Toast
+                                    .makeText(
+                                        context,
+                                        stringRes(context, R.string.spam),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                            }
+                        },
+                    )
+                },
         tint =
             if (item.relayStat.spamCounter > 0) {
                 MaterialTheme.colorScheme.warningColor

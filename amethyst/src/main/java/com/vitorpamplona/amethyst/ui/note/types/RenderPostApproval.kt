@@ -83,9 +83,9 @@ fun RenderPostApproval(
             NoteCompose(
                 it,
                 modifier = MaterialTheme.colorScheme.replyModifier,
+                isQuotedNote = true,
                 unPackReply = false,
                 makeItShort = true,
-                isQuotedNote = true,
                 quotesLeft = quotesLeft - 1,
                 parentBackgroundColor = backgroundColor,
                 accountViewModel = accountViewModel,

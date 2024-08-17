@@ -90,8 +90,8 @@ fun RenderReport(
     note.replyTo?.lastOrNull()?.let {
         NoteCompose(
             baseNote = it,
-            isQuotedNote = true,
             modifier = MaterialTheme.colorScheme.replyModifier,
+            isQuotedNote = true,
             unPackReply = false,
             makeItShort = true,
             quotesLeft = quotesLeft - 1,

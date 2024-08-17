@@ -64,24 +64,22 @@ open class NewMediaModel : ViewModel() {
     var uploadingDescription = mutableStateOf<String?>(null)
 
     var onceUploaded: () -> Unit = {}
-    var onError: (String) -> Unit = {}
 
     open fun load(
         account: Account,
         uri: Uri,
         contentType: String?,
-        onError: (String) -> Unit,
     ) {
         this.account = account
         this.galleryUri = uri
         this.mediaType = contentType
         this.selectedServer = ServerOption(defaultServer(), false)
-        this.onError = onError
     }
 
     fun upload(
         context: Context,
         relayList: List<RelaySetupInfo>? = null,
+        onError: (String) -> Unit = {},
     ) {
         isUploadingImage = true
 
@@ -110,6 +108,7 @@ open class NewMediaModel : ViewModel() {
                                     alt,
                                     sensitiveContent,
                                     relayList = relayList,
+                                    onError = onError,
                                     context,
                                 )
                             }
@@ -148,6 +147,7 @@ open class NewMediaModel : ViewModel() {
                                         alt = alt,
                                         sensitiveContent = sensitiveContent,
                                         relayList = relayList,
+                                        onError = onError,
                                         context,
                                     )
                                 } catch (e: Exception) {
@@ -189,6 +189,7 @@ open class NewMediaModel : ViewModel() {
         alt: String,
         sensitiveContent: Boolean,
         relayList: List<RelaySetupInfo>? = null,
+        onError: (String) -> Unit = {},
         context: Context,
     ) {
         uploadingPercentage.value = 0.40f
@@ -282,11 +283,12 @@ open class NewMediaModel : ViewModel() {
         alt: String,
         sensitiveContent: Boolean,
         relayList: List<RelaySetupInfo>? = null,
+        onError: (String) -> Unit = {},
         context: Context,
     ) {
         if (bytes.size > 80000) {
             viewModelScope.launch {
-                onError("Media is too big for NIP-95")
+                onError(stringRes(context, id = R.string.media_too_big_for_nip95))
                 isUploadingImage = false
                 uploadingPercentage.value = 0.00f
                 uploadingDescription.value = null

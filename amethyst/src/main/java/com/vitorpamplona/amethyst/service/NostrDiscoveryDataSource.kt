@@ -67,15 +67,17 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     }
 
     fun createMarketplaceFilter(): List<TypedFilter> {
-        val follows = account.liveDiscoveryListAuthorsPerRelay.value
+        val follows = account.liveDiscoveryListAuthorsPerRelay.value?.ifEmpty { null }
         val hashToLoad =
             account.liveDiscoveryFollowLists.value
                 ?.hashtags
                 ?.toList()
+                ?.ifEmpty { null }
         val geohashToLoad =
             account.liveDiscoveryFollowLists.value
                 ?.geotags
                 ?.toList()
+                ?.ifEmpty { null }
 
         return listOfNotNull(
             TypedFilter(
@@ -162,6 +164,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
             account.liveDiscoveryFollowLists.value
                 ?.users
                 ?.toList()
+                ?.ifEmpty { null }
 
         val followsRelays = account.liveDiscoveryListAuthorsPerRelay.value
 
@@ -200,7 +203,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     }
 
     fun createPublicChatFilter(): List<TypedFilter> {
-        val follows = account.liveDiscoveryListAuthorsPerRelay.value
+        val follows = account.liveDiscoveryListAuthorsPerRelay.value?.ifEmpty { null }
         val followChats = account.selectedChatsFollowList().toList()
 
         return listOfNotNull(

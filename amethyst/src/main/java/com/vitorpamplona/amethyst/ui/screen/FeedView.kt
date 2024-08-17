@@ -21,45 +21,23 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.pullrefresh.PullRefreshIndicator
-import androidx.compose.material3.pullrefresh.pullRefresh
-import androidx.compose.material3.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
+import com.vitorpamplona.amethyst.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyGridState
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
 fun RefresheableFeedView(
@@ -78,53 +56,6 @@ fun RefresheableFeedView(
 }
 
 @Composable
-fun RefresheableBox(
-    viewModel: InvalidatableViewModel,
-    enablePullRefresh: Boolean = true,
-    content: @Composable () -> Unit,
-) {
-    RefresheableBox(
-        enablePullRefresh = enablePullRefresh,
-        onRefresh = { viewModel.invalidateData() },
-        content = content,
-    )
-}
-
-@Composable
-fun RefresheableBox(
-    enablePullRefresh: Boolean = true,
-    onRefresh: () -> Unit,
-    content: @Composable () -> Unit,
-) {
-    var refreshing by remember { mutableStateOf(false) }
-    val refresh = {
-        refreshing = true
-        onRefresh()
-        refreshing = false
-    }
-    val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
-
-    val modifier =
-        if (enablePullRefresh) {
-            Modifier.fillMaxSize().pullRefresh(pullRefreshState)
-        } else {
-            Modifier.fillMaxSize()
-        }
-
-    Box(modifier) {
-        content()
-
-        if (enablePullRefresh) {
-            PullRefreshIndicator(
-                refreshing = refreshing,
-                state = pullRefreshState,
-                modifier = Modifier.align(Alignment.TopCenter),
-            )
-        }
-    }
-}
-
-@Composable
 fun SaveableFeedState(
     viewModel: FeedViewModel,
     scrollStateKey: String? = null,
@@ -137,7 +68,7 @@ fun SaveableFeedState(
             rememberLazyListState()
         }
 
-    WatchScrollToTop(viewModel, listState)
+    WatchScrollToTop(viewModel.feedState, listState)
 
     content(listState)
 }
@@ -155,7 +86,7 @@ fun SaveableGridFeedState(
             rememberLazyGridState()
         }
 
-    WatchScrollToTop(viewModel, gridState)
+    WatchScrollToTop(viewModel.feedState, gridState)
 
     content(gridState)
 }
@@ -167,12 +98,15 @@ fun RenderFeedState(
     listState: LazyListState,
     nav: (String) -> Unit,
     routeForLastRead: String?,
-    onLoaded: @Composable (FeedState.Loaded) -> Unit = { FeedLoaded(it, listState, routeForLastRead, accountViewModel, nav) },
+    onLoaded: @Composable (FeedState.Loaded) -> Unit = {
+        com.vitorpamplona.amethyst.ui.feeds
+            .FeedLoaded(it, listState, routeForLastRead, accountViewModel, nav)
+    },
     onEmpty: @Composable () -> Unit = { FeedEmpty { viewModel.invalidateData() } },
     onError: @Composable (String) -> Unit = { FeedError(it) { viewModel.invalidateData() } },
     onLoading: @Composable () -> Unit = { LoadingFeed() },
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by viewModel.feedState.feedContent.collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(
         targetState = feedState,
@@ -185,114 +119,5 @@ fun RenderFeedState(
             is FeedState.Loaded -> onLoaded(state)
             is FeedState.Loading -> onLoading()
         }
-    }
-}
-
-@Composable
-private fun WatchScrollToTop(
-    viewModel: FeedViewModel,
-    listState: LazyListState,
-) {
-    val scrollToTop by viewModel.scrollToTop.collectAsStateWithLifecycle()
-
-    LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
-            listState.scrollToItem(index = 0)
-            viewModel.sentToTop()
-        }
-    }
-}
-
-@Composable
-private fun WatchScrollToTop(
-    viewModel: FeedViewModel,
-    listState: LazyGridState,
-) {
-    val scrollToTop by viewModel.scrollToTop.collectAsStateWithLifecycle()
-
-    LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
-            listState.scrollToItem(index = 0)
-            viewModel.sentToTop()
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun FeedLoaded(
-    state: FeedState.Loaded,
-    listState: LazyListState,
-    routeForLastRead: String?,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    LazyColumn(
-        contentPadding = FeedPadding,
-        state = listState,
-    ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-            Row(Modifier.fillMaxWidth().animateItemPlacement()) {
-                NoteCompose(
-                    item,
-                    routeForLastRead = routeForLastRead,
-                    modifier = Modifier.fillMaxWidth(),
-                    isBoostedNote = false,
-                    isHiddenFeed = state.showHidden.value,
-                    quotesLeft = 3,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-
-            HorizontalDivider(
-                thickness = DividerThickness,
-            )
-        }
-    }
-}
-
-@Composable
-fun LoadingFeed() {
-    Column(
-        Modifier.fillMaxHeight().fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(stringRes(R.string.loading_feed))
-    }
-}
-
-@Composable
-fun FeedError(
-    errorMessage: String,
-    onRefresh: () -> Unit,
-) {
-    Column(
-        Modifier.fillMaxHeight().fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text("${stringRes(R.string.error_loading_replies)} $errorMessage")
-        Spacer(modifier = StdVertSpacer)
-        Button(
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            onClick = onRefresh,
-        ) {
-            Text(text = stringRes(R.string.try_again))
-        }
-    }
-}
-
-@Composable
-fun FeedEmpty(onRefresh: () -> Unit) {
-    Column(
-        Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(stringRes(R.string.feed_is_empty))
-        Spacer(modifier = StdVertSpacer)
-        OutlinedButton(onClick = onRefresh) { Text(text = stringRes(R.string.refresh)) }
     }
 }

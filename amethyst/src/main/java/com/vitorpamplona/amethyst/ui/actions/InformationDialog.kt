@@ -33,11 +33,41 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import java.io.PrintWriter
+import java.io.StringWriter
+
+@Composable
+fun InformationDialog(
+    title: String,
+    textContent: String?,
+    throwable: Throwable,
+    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    onDismiss: () -> Unit,
+) {
+    val stack = stringRes(id = R.string.stack)
+    val str =
+        remember(throwable) {
+            val writer = StringWriter()
+            textContent?.let {
+                writer.append(it)
+                writer.append("\n\n")
+            }
+            writer.append(stack)
+            writer.append("\n")
+
+            throwable.printStackTrace(PrintWriter(writer))
+
+            writer.toString()
+        }
+
+    InformationDialog(title = title, textContent = str, buttonColors, onDismiss)
+}
 
 @Composable
 fun InformationDialog(
@@ -49,7 +79,11 @@ fun InformationDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
-        text = { SelectionContainer { Text(textContent) } },
+        text = {
+            SelectionContainer {
+                Text(textContent)
+            }
+        },
         confirmButton = {
             Button(
                 onClick = onDismiss,

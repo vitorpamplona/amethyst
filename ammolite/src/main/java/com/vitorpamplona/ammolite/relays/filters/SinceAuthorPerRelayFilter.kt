@@ -20,14 +20,15 @@
  */
 package com.vitorpamplona.ammolite.relays.filters
 
+import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.Event
 
 /**
  * This is a nostr filter with per-relay authors list and since parameters
  */
 class SinceAuthorPerRelayFilter(
-    val ids: List<String>? = null,
-    val authors: Map<String, List<String>>? = null,
+    val ids: List<HexKey>? = null,
+    val authors: Map<String, List<HexKey>>? = null,
     val kinds: List<Int>? = null,
     val tags: Map<String, List<String>>? = null,
     val since: Map<String, EOSETime>? = null,

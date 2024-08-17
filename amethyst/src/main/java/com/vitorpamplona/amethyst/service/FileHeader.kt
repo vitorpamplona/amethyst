@@ -49,7 +49,7 @@ class FileHeader(
             mimeType: String?,
             dimPrecomputed: String?,
             onReady: (FileHeader) -> Unit,
-            onError: (String?) -> Unit,
+            onError: (String) -> Unit,
         ) {
             try {
                 val imageData: ByteArray? = ImageDownloader().waitAndGetImage(fileUrl)
@@ -57,12 +57,12 @@ class FileHeader(
                 if (imageData != null) {
                     prepare(imageData, mimeType, dimPrecomputed, onReady, onError)
                 } else {
-                    onError(null)
+                    onError("Unable to download image from $fileUrl")
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e("ImageDownload", "Couldn't download image from server: ${e.message}")
-                onError(e.message)
+                onError(e.message ?: e.javaClass.simpleName)
             }
         }
 
@@ -71,7 +71,7 @@ class FileHeader(
             mimeType: String?,
             dimPrecomputed: String?,
             onReady: (FileHeader) -> Unit,
-            onError: (String?) -> Unit,
+            onError: (String) -> Unit,
         ) {
             try {
                 val hash = CryptoUtils.sha256(data).toHexKey()
@@ -178,7 +178,7 @@ class FileHeader(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e("ImageDownload", "Couldn't convert image in to File Header: ${e.message}")
-                onError(e.message)
+                onError(e.message ?: e.javaClass.simpleName)
             }
         }
     }

@@ -18,23 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen
+package com.vitorpamplona.amethyst.ui.feeds
 
-import androidx.compose.runtime.MutableState
-import com.vitorpamplona.amethyst.model.Note
-import kotlinx.collections.immutable.ImmutableList
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 
-sealed class FeedState {
-    object Loading : FeedState()
-
-    class Loaded(
-        val feed: MutableState<ImmutableList<Note>>,
-        val showHidden: MutableState<Boolean>,
-    ) : FeedState()
-
-    object Empty : FeedState()
-
-    class FeedError(
-        val errorMessage: String,
-    ) : FeedState()
+@Composable
+fun LoadingFeed() {
+    Column(
+        Modifier.fillMaxHeight().fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(stringRes(R.string.loading_feed))
+    }
 }

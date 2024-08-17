@@ -31,6 +31,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HiddenWordsFeedFilter
+import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -57,7 +59,7 @@ class NostrHiddenWordsFeedViewModel(
 open class StringFeedViewModel(
     val dataSource: FeedFilter<String>,
 ) : ViewModel(),
-    InvalidatableViewModel {
+    InvalidatableContent {
     private val _feedContent = MutableStateFlow<StringFeedState>(StringFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 

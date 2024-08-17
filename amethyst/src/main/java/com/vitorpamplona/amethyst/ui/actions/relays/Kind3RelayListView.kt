@@ -78,7 +78,7 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
-import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
+import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChatMaxWidth
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -307,34 +307,32 @@ fun ClickableRelayItem(
     onDelete: (Kind3BasicRelaySetupInfo) -> Unit,
     onClick: () -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 5.dp),
         ) {
-            Column(Modifier.clickable(onClick = onClick)) {
-                val iconUrlFromRelayInfoDoc =
-                    remember(item) {
-                        Nip11CachedRetriever.getFromCache(item.url)?.icon
-                    }
+            val iconUrlFromRelayInfoDoc =
+                remember(item) {
+                    Nip11CachedRetriever.getFromCache(item.url)?.icon
+                }
 
-                RenderRelayIcon(
-                    item.briefInfo.displayUrl,
-                    iconUrlFromRelayInfoDoc ?: item.briefInfo.favIcon,
-                    loadProfilePicture,
-                    loadRobohash,
-                    MaterialTheme.colorScheme.largeRelayIconModifier,
-                )
-            }
+            RenderRelayIcon(
+                item.briefInfo.displayUrl,
+                iconUrlFromRelayInfoDoc ?: item.briefInfo.favIcon,
+                loadProfilePicture,
+                loadRobohash,
+                MaterialTheme.colorScheme.largeRelayIconModifier,
+            )
 
             Spacer(modifier = HalfHorzPadding)
 
             Column(Modifier.weight(1f)) {
-                FirstLine(item, onClick, onDelete, ReactionRowHeightChat.fillMaxWidth())
+                FirstLine(item, onClick, onDelete, ReactionRowHeightChatMaxWidth)
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = ReactionRowHeightChat.fillMaxWidth(),
+                    modifier = ReactionRowHeightChatMaxWidth,
                 ) {
                     ActiveToggles(
                         item = item,
@@ -347,7 +345,7 @@ fun ClickableRelayItem(
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = ReactionRowHeightChat.fillMaxWidth(),
+                    modifier = ReactionRowHeightChatMaxWidth,
                 ) {
                     StatusRow(
                         item = item,

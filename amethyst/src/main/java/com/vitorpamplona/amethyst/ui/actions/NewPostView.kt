@@ -145,10 +145,10 @@ import com.vitorpamplona.amethyst.ui.note.RegularPostIcon
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapSplitIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.MyTextField
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.MyTextField
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -180,7 +180,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.lang.Math.round
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
@@ -220,10 +219,6 @@ fun NewPostView(
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
             postViewModel.load(accountViewModel, baseReplyTo, quote, fork, version, draft)
-
-            postViewModel.imageUploadingError.collect { error ->
-                withContext(Dispatchers.Main) { Toast.makeText(context, error, Toast.LENGTH_SHORT).show() }
-            }
         }
     }
 
@@ -356,11 +351,11 @@ fun NewPostView(
                                     Row(Modifier.heightIn(max = 200.dp)) {
                                         NoteCompose(
                                             baseNote = it,
-                                            makeItShort = true,
-                                            unPackReply = false,
-                                            isQuotedNote = true,
-                                            quotesLeft = 1,
                                             modifier = MaterialTheme.colorScheme.replyModifier,
+                                            isQuotedNote = true,
+                                            unPackReply = false,
+                                            makeItShort = true,
+                                            quotesLeft = 1,
                                             accountViewModel = accountViewModel,
                                             nav = nav,
                                         )
@@ -498,13 +493,13 @@ fun NewPostView(
                                             url,
                                             accountViewModel.account.defaultFileServer,
                                             onAdd = { alt, server, sensitiveContent ->
-                                                postViewModel.upload(url, alt, sensitiveContent, false, server, context)
+                                                postViewModel.upload(url, alt, sensitiveContent, false, server, accountViewModel::toast, context)
                                                 if (!server.isNip95) {
                                                     accountViewModel.account.changeDefaultFileServer(server.server)
                                                 }
                                             },
                                             onCancel = { postViewModel.contentToAddUrl = null },
-                                            onError = { scope.launch { postViewModel.imageUploadingError.emit(it) } },
+                                            onError = { scope.launch { Toast.makeText(context, context.resources.getText(it), Toast.LENGTH_SHORT).show() } },
                                             accountViewModel = accountViewModel,
                                         )
                                     }
@@ -520,7 +515,7 @@ fun NewPostView(
                                                 InvoiceRequest(
                                                     lud16,
                                                     accountViewModel.account.userProfile().pubkeyHex,
-                                                    accountViewModel.account,
+                                                    accountViewModel,
                                                     stringRes(id = R.string.lightning_invoice),
                                                     stringRes(id = R.string.lightning_create_and_add_invoice),
                                                     onSuccess = {
@@ -1616,7 +1611,7 @@ fun ImageVideoDescription(
     defaultServer: Nip96MediaServers.ServerName,
     onAdd: (String, ServerOption, Boolean) -> Unit,
     onCancel: () -> Unit,
-    onError: (String) -> Unit,
+    onError: (Int) -> Unit,
     accountViewModel: AccountViewModel,
 ) {
     val resolver = LocalContext.current.contentResolver
@@ -1753,7 +1748,7 @@ fun ImageVideoDescription(
                                 bitmap = resolver.loadThumbnail(uri, Size(1200, 1000), null)
                             } catch (e: Exception) {
                                 if (e is CancellationException) throw e
-                                onError("Unable to load thumbnail")
+                                onError(R.string.unable_to_load_thumbnail)
                                 Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
                             }
                         }

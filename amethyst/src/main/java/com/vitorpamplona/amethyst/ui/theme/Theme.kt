@@ -334,7 +334,7 @@ val MarkDownStyleOnLight =
                     SpanStyle(
                         fontFamily = FontFamily.Monospace,
                         fontSize = Font14SP,
-                        background = LightColorPalette.onSurface.copy(alpha = 0.22f),
+                        background = LightColorPalette.onSurface.copy(alpha = 0.12f),
                     ),
             ),
     )

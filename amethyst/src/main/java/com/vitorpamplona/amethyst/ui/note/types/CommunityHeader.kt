@@ -42,8 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.FeatureSetType
@@ -60,11 +59,11 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
-import com.vitorpamplona.amethyst.ui.screen.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.JoinCommunityButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.LeaveCommunityButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.NormalTimeAgo
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.JoinCommunityButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LeaveCommunityButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.NormalTimeAgo
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
@@ -353,12 +352,7 @@ fun WatchAddressableNoteFollows(
     accountViewModel: AccountViewModel,
     onFollowChanges: @Composable (Boolean) -> Unit,
 ) {
-    val showFollowingMark by
-        remember {
-            accountViewModel.userFollows
-                .map { it.user.latestContactList?.isTaggedAddressableNote(note.idHex) ?: false }
-                .distinctUntilChanged()
-        }.observeAsState(false)
+    val state by accountViewModel.account.liveKind3Follows.collectAsStateWithLifecycle()
 
-    onFollowChanges(showFollowingMark)
+    onFollowChanges(state.communities.contains(note.idHex))
 }

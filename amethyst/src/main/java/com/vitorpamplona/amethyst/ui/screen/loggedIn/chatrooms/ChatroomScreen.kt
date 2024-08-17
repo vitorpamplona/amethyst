@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms
 
-import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -106,7 +105,8 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForDMs
 import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForDMsAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.RefreshingChatroomFeedView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
@@ -128,7 +128,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun ChatroomScreen(
@@ -273,14 +272,6 @@ fun ChatroomScreen(
     NostrChatroomDataSource.loadMessagesBetween(accountViewModel.account, room)
 
     val lifeCycleOwner = LocalLifecycleOwner.current
-
-    LaunchedEffect(room, accountViewModel) {
-        launch(Dispatchers.IO) {
-            newPostModel.imageUploadingError.collect { error ->
-                withContext(Dispatchers.Main) { Toast.makeText(context, error, Toast.LENGTH_SHORT).show() }
-            }
-        }
-    }
 
     DisposableEffect(room, accountViewModel) {
         NostrChatroomDataSource.loadMessagesBetween(accountViewModel.account, room)
@@ -457,6 +448,7 @@ fun PrivateMessageEditFieldRow(
                             sensitiveContent = false,
                             isPrivate = isPrivate,
                             server = ServerOption(accountViewModel.account.defaultFileServer, false),
+                            onError = accountViewModel::toast,
                             context = context,
                         )
                     }

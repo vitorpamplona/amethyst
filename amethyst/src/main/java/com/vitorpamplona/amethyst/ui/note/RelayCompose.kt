@@ -32,7 +32,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -110,15 +110,9 @@ private fun RelayOptions(
     onAddRelay: () -> Unit,
     onRemoveRelay: () -> Unit,
 ) {
-    val userState by accountViewModel.userRelays.observeAsState()
+    val userState by accountViewModel.normalizedKind3RelaySetFlow.collectAsStateWithLifecycle()
 
-    val isNotUsingRelay =
-        remember(userState) {
-            accountViewModel.account.connectToRelays.value
-                .none { it.url == relay.url }
-        }
-
-    if (isNotUsingRelay) {
+    if (!userState.contains(relay.url)) {
         AddRelayButton(onAddRelay)
     } else {
         RemoveRelayButton(onRemoveRelay)

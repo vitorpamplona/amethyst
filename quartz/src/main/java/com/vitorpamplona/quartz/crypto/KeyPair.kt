@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.crypto
 
-import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 
 class KeyPair(
@@ -30,7 +29,6 @@ class KeyPair(
 ) {
     val privKey: ByteArray?
     val pubKey: ByteArray
-    val pubKeyHex: HexKey
 
     init {
         if (privKey == null) {
@@ -54,8 +52,6 @@ class KeyPair(
                 this.pubKey = pubKey
             }
         }
-
-        this.pubKeyHex = this.pubKey.toHexKey().intern()
     }
 
     override fun toString(): String = "KeyPair(privateKey=${privKey?.toHexKey()}, publicKey=${pubKey.toHexKey()}"

@@ -68,6 +68,7 @@ import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.flow.filter
 
 // TODO: Migrate this to a property of AccountVi
 object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
@@ -179,12 +180,26 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         )
 
     fun createNotificationFilter(): TypedFilter {
-        val since =
+        var since =
             latestEOSEs.users[account.userProfile()]
                 ?.followList
                 ?.get(account.defaultNotificationFollowList.value)
                 ?.relayList
-                ?: account.connectToRelays.value.associate { it.url to EOSETime(TimeUtils.oneWeekAgo()) }
+                ?.toMutableMap()
+
+        if (since == null) {
+            since =
+                account.connectToRelays.value
+                    .associate { it.url to EOSETime(TimeUtils.oneWeekAgo()) }
+                    .toMutableMap()
+        } else {
+            account.connectToRelays.value.forEach {
+                val eose = since.get(it.url)
+                if (eose == null) {
+                    since.put(it.url, EOSETime(TimeUtils.oneWeekAgo()))
+                }
+            }
+        }
 
         return TypedFilter(
             types = COMMON_FEED_TYPES,

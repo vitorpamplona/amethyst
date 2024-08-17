@@ -18,23 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrderCard
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
+import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
@@ -48,8 +47,8 @@ import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -60,21 +59,10 @@ import java.time.format.DateTimeFormatter
 import kotlin.time.measureTimedValue
 
 @Stable
-class NotificationViewModel(
-    val account: Account,
-) : CardFeedViewModel(NotificationFeedFilter(account)) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NotificationViewModel : ViewModel> create(modelClass: Class<NotificationViewModel>): NotificationViewModel = NotificationViewModel(account) as NotificationViewModel
-    }
-}
-
-@Stable
-open class CardFeedViewModel(
+class CardFeedContentState(
     val localFilter: FeedFilter<Note>,
-) : ViewModel(),
-    InvalidatableViewModel {
+    val viewModelScope: CoroutineScope,
+) : InvalidatableContent {
     private val _feedContent = MutableStateFlow<CardFeedState>(CardFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
@@ -123,8 +111,7 @@ open class CardFeedViewModel(
                 val updatedCards =
                     (oldNotesState.feed.value + newCards)
                         .distinctBy { it.id() }
-                        .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
-                        .reversed()
+                        .sortedWith(DefaultFeedOrderCard)
                         .take(localFilter.limit())
                         .toImmutableList()
 
@@ -138,8 +125,7 @@ open class CardFeedViewModel(
 
             val cards =
                 convertToCard(notes)
-                    .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
-                    .reversed()
+                    .sortedWith(DefaultFeedOrderCard)
                     .take(localFilter.limit())
                     .toImmutableList()
 
@@ -425,23 +411,15 @@ open class CardFeedViewModel(
         }
     }
 
-    var collectorJob: Job? = null
+    fun updateFeedWith(newNotes: Set<Note>) {
+        checkNotInMainThread()
 
-    init {
-        Log.d("Init", "${this.javaClass.simpleName}")
-        collectorJob =
-            viewModelScope.launch(Dispatchers.IO) {
-                LocalCache.live.newEventBundles.collect { newNotes ->
-                    checkNotInMainThread()
-
-                    if (localFilter is AdditiveFeedFilter && _feedContent.value is CardFeedState.Loaded) {
-                        invalidateInsertData(newNotes)
-                    } else {
-                        // Refresh Everything
-                        invalidateData()
-                    }
-                }
-            }
+        if (localFilter is AdditiveFeedFilter && _feedContent.value is CardFeedState.Loaded) {
+            invalidateInsertData(newNotes)
+        } else {
+            // Refresh Everything
+            invalidateData()
+        }
     }
 
     fun clear() {
@@ -449,13 +427,11 @@ open class CardFeedViewModel(
         lastNotes = null
     }
 
-    override fun onCleared() {
+    fun destroy() {
         Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
         clear()
         bundlerInsert.cancel()
         bundler.cancel()
-        collectorJob?.cancel()
-        super.onCleared()
     }
 }
 

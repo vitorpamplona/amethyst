@@ -50,7 +50,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -387,8 +386,6 @@ private fun RenderChannel(
     loadRobohash: Boolean,
     onClick: () -> Unit,
 ) {
-    val hasNewMessages = remember { mutableStateOf(false) }
-
     ChannelName(
         channelIdHex = item.idHex,
         channelPicture = item.profilePicture(),
@@ -400,7 +397,7 @@ private fun RenderChannel(
         },
         channelLastTime = null,
         channelLastContent = item.summary(),
-        hasNewMessages,
+        hasNewMessages = false,
         onClick = onClick,
         loadProfilePicture = loadProfilePicture,
         loadRobohash = loadRobohash,

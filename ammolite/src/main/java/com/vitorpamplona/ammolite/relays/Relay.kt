@@ -139,7 +139,7 @@ class Relay(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
 
-            RelayStats.newError(url, e.message)
+            RelayStats.newError(url, e.message ?: "Error trying to connect: ${e.javaClass.simpleName}")
 
             markConnectionAsClosed()
             e.printStackTrace()
@@ -232,7 +232,7 @@ class Relay(
 
             // checks if this is an actual failure. Closing the socket generates an onFailure as well.
             if (!(socket == null && (t.message == "Socket is closed" || t.message == "Socket closed"))) {
-                RelayStats.newError(url, response?.message ?: t.message)
+                RelayStats.newError(url, response?.message ?: t.message ?: "onFailure event from server: ${t.javaClass.simpleName}")
             }
 
             // Failures disconnect the relay.
@@ -549,7 +549,7 @@ class Relay(
             RelayStats.addBytesSent(url, str.bytesUsedInMemory())
 
             if (BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark") {
-                Log.d("Relay", "Relay send $url $str")
+                Log.d("Relay", "Relay send $url (${str.length} chars) $str")
             }
         }
     }

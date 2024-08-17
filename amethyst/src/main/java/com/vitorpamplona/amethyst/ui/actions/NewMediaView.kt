@@ -94,9 +94,7 @@ fun NewMediaView(
 
     LaunchedEffect(uri) {
         val mediaType = resolver.getType(uri) ?: ""
-        postViewModel.load(account, uri, mediaType) {
-            accountViewModel.toast(stringRes(context, R.string.failed_to_upload_media_no_details), it)
-        }
+        postViewModel.load(account, uri, mediaType)
     }
 
     var showRelaysDialog by remember { mutableStateOf(false) }
@@ -161,7 +159,9 @@ fun NewMediaView(
                     PostButton(
                         onPost = {
                             onClose()
-                            postViewModel.upload(context, relayList)
+                            postViewModel.upload(context, relayList) {
+                                accountViewModel.toast(stringRes(context, R.string.failed_to_upload_media_no_details), it)
+                            }
                             postViewModel.selectedServer?.let {
                                 if (!it.isNip95) {
                                     account.changeDefaultFileServer(it.server)

@@ -119,7 +119,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
@@ -182,7 +184,7 @@ class Account(
     var translateTo: String = Locale.getDefault().language,
     var zapAmountChoices: List<Long> = DefaultZapAmounts,
     var reactionChoices: List<String> = DefaultReactions,
-    var defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
+    var defaultZapType: MutableStateFlow<LnZapEvent.ZapType> = MutableStateFlow(LnZapEvent.ZapType.PUBLIC),
     var defaultFileServer: Nip96MediaServers.ServerName = Nip96MediaServers.DEFAULT[0],
     var defaultHomeFollowList: MutableStateFlow<String> = MutableStateFlow(KIND3_FOLLOWS),
     var defaultStoriesFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
@@ -200,7 +202,7 @@ class Account(
     var showSensitiveContent: MutableStateFlow<Boolean?> = MutableStateFlow(null),
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: Boolean = true,
-    var lastReadPerRoute: Map<String, Long> = mapOf<String, Long>(),
+    var lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     var hasDonatedInVersion: Set<String> = setOf<String>(),
     var pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
     val scope: CoroutineScope = Amethyst.instance.applicationIOScope,
@@ -217,7 +219,6 @@ class Account(
 
     // Observers line up here.
     val live: AccountLiveData = AccountLiveData(this)
-    val liveLanguages: AccountLiveData = AccountLiveData(this)
     val saveable: AccountLiveData = AccountLiveData(this)
 
     @Immutable
@@ -429,7 +430,7 @@ class Account(
             emit(
                 LiveFollowLists(
                     verifiedFollowingUsers,
-                    verifiedFollowingUsers + keyPair.pubKeyHex,
+                    verifiedFollowingUsers + signer.pubKey,
                     it.user.latestContactList
                         ?.unverifiedFollowTagSet()
                         ?.map { it.lowercase() }
@@ -444,14 +445,13 @@ class Account(
             )
         }
 
-    val liveKind3Follows = liveKind3FollowsFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
+    val liveKind3Follows = liveKind3FollowsFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val liveHomeList: Flow<ListNameNotePair> by lazy {
+    private val liveHomeList: Flow<ListNameNotePair> =
         defaultHomeFollowList.flatMapLatest { listName ->
             loadPeopleListFlowFromListName(listName)
         }
-    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun loadPeopleListFlowFromListName(listName: String): Flow<ListNameNotePair> =
@@ -476,11 +476,11 @@ class Account(
             } else if (peopleListFollows.listName == KIND3_FOLLOWS) {
                 emit(kind3Follows)
             } else if (peopleListFollows.event == null) {
-                emit(LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
+                emit(LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
             } else {
                 val result = waitToDecrypt(peopleListFollows.event)
                 if (result == null) {
-                    emit(LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
+                    emit(LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
                 } else {
                     emit(result)
                 }
@@ -488,11 +488,11 @@ class Account(
         }
 
     val liveHomeFollowListFlow: Flow<LiveFollowLists?> by lazy {
-        combinePeopleListFlows(liveKind3FollowsFlow, liveHomeList)
+        combinePeopleListFlows(liveKind3Follows, liveHomeList)
     }
 
     val liveHomeFollowLists: StateFlow<LiveFollowLists?> by lazy {
-        liveHomeFollowListFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
+        liveHomeFollowListFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
     }
 
     /**
@@ -540,50 +540,59 @@ class Account(
     }
 
     fun authorsPerRelay(
-        pubkeyList: Set<HexKey>,
+        followsNIP65RelayLists: Array<NoteState>,
         defaultRelayList: List<String>,
-    ): Flow<Map<String, List<String>>> =
-        combine(
-            pubkeyList.map {
-                getNIP65RelayListFlow(it)
-            },
-        ) { followsNIP65RelayLists ->
-            assembleAuthorsPerWriteRelay(
-                followsNIP65RelayLists
-                    .mapNotNull {
-                        val author = (it.note as? AddressableNote)?.address?.pubKeyHex
-                        val event = (it.note.event as? AdvertisedRelayListEvent)
+    ): Map<String, List<HexKey>> =
+        assembleAuthorsPerWriteRelay(
+            followsNIP65RelayLists
+                .mapNotNull
+                {
+                    val author = (it.note as? AddressableNote)?.address?.pubKeyHex
+                    val event = (it.note.event as? AdvertisedRelayListEvent)
 
-                        if (event != null) {
-                            event.pubKey to event.writeRelays()
+                    if (event != null) {
+                        event.pubKey to event.writeRelays()
+                    } else {
+                        if (author != null) {
+                            author to defaultRelayList
                         } else {
-                            if (author != null) {
-                                author to defaultRelayList
-                            } else {
-                                Log.e("Account", "This author should NEVER be null. Note: ${it.note.idHex}")
-                                null
-                            }
+                            Log.e("Account", "This author should NEVER be null. Note: ${it.note.idHex}")
+                            null
                         }
-                    }.toMap(),
-                hasOnionConnection = proxy != null,
-            )
-        }
+                    }
+                }.toMap(),
+            hasOnionConnection = proxy != null,
+        )
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveHomeListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
-        combineTransform(liveHomeFollowListFlow, connectToRelaysFlow) { followList, existing ->
-            if (followList != null) {
-                emit(authorsPerRelay(followList.usersPlusMe, existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }))
-            } else {
-                emit(MutableStateFlow(null))
+    val liveHomeFollowListAdvertizedRelayListFlow: Flow<Array<NoteState>?> =
+        liveHomeFollowLists
+            .transformLatest { followList ->
+                if (followList != null) {
+                    emitAll(combine(followList.usersPlusMe.map { getNIP65RelayListFlow(it) }) { it })
+                } else {
+                    emit(null)
+                }
             }
-        }.flatMapLatest {
-            it
+
+    val liveHomeListAuthorsPerRelayFlow: Flow<Map<String, List<HexKey>>?> by lazy {
+        combineTransform(liveHomeFollowListAdvertizedRelayListFlow, connectToRelays) { adverisedRelayList, existing ->
+            if (adverisedRelayList != null) {
+                emit(authorsPerRelay(adverisedRelayList, existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }))
+            } else {
+                emit(null)
+            }
         }
     }
 
-    val liveHomeListAuthorsPerRelay: StateFlow<Map<String, List<String>>?> by lazy {
-        liveHomeListAuthorsPerRelayFlow.stateIn(scope, SharingStarted.Eagerly, emptyMap())
+    val liveHomeListAuthorsPerRelay: StateFlow<Map<String, List<HexKey>>?> by lazy {
+        val currentRelays = connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }
+        val default =
+            currentRelays.associate { relayUrl ->
+                relayUrl to (liveHomeFollowLists.value?.usersPlusMe?.toList() ?: emptyList())
+            }
+
+        liveHomeListAuthorsPerRelayFlow.stateIn(scope, SharingStarted.Eagerly, default)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -595,7 +604,7 @@ class Account(
 
     val liveNotificationFollowLists: StateFlow<LiveFollowLists?> by lazy {
         combinePeopleListFlows(liveKind3FollowsFlow, liveNotificationList)
-            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
+            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -607,19 +616,27 @@ class Account(
 
     val liveStoriesFollowLists: StateFlow<LiveFollowLists?> by lazy {
         combinePeopleListFlows(liveKind3FollowsFlow, liveStoriesList)
-            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
+            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveStoriesListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
-        combineTransform(liveStoriesFollowLists, connectToRelaysFlow) { followList, existing ->
-            if (followList != null) {
-                emit(authorsPerRelay(followList.usersPlusMe, existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }))
-            } else {
-                emit(MutableStateFlow(null))
+    val liveStoriesFollowListAdvertizedRelayListFlow: Flow<Array<NoteState>?> =
+        liveStoriesFollowLists
+            .transformLatest { followList ->
+                if (followList != null) {
+                    emitAll(combine(followList.usersPlusMe.map { getNIP65RelayListFlow(it) }) { it })
+                } else {
+                    emit(null)
+                }
             }
-        }.flatMapLatest {
-            it
+
+    val liveStoriesListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
+        combineTransform(liveStoriesFollowListAdvertizedRelayListFlow, connectToRelays) { adverisedRelayList, existing ->
+            if (adverisedRelayList != null) {
+                emit(authorsPerRelay(adverisedRelayList, existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }))
+            } else {
+                emit(null)
+            }
         }
     }
 
@@ -636,19 +653,27 @@ class Account(
 
     val liveDiscoveryFollowLists: StateFlow<LiveFollowLists?> by lazy {
         combinePeopleListFlows(liveKind3FollowsFlow, liveDiscoveryList)
-            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(keyPair.pubKeyHex)))
+            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveDiscoveryListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
-        combineTransform(liveDiscoveryFollowLists, connectToRelaysFlow) { followList, existing ->
-            if (followList != null) {
-                emit(authorsPerRelay(followList.usersPlusMe, existing.filter { it.read }.map { it.url }))
-            } else {
-                emit(MutableStateFlow(null))
+    val liveDiscoveryFollowListAdvertizedRelayListFlow: Flow<Array<NoteState>?> =
+        liveDiscoveryFollowLists
+            .transformLatest { followList ->
+                if (followList != null) {
+                    emitAll(combine(followList.usersPlusMe.map { getNIP65RelayListFlow(it) }) { it })
+                } else {
+                    emit(null)
+                }
             }
-        }.flatMapLatest {
-            it
+
+    val liveDiscoveryListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
+        combineTransform(liveDiscoveryFollowListAdvertizedRelayListFlow, connectToRelays) { adverisedRelayList, existing ->
+            if (adverisedRelayList != null) {
+                emit(authorsPerRelay(adverisedRelayList, existing.filter { it.read }.map { it.url }))
+            } else {
+                emit(null)
+            }
         }
     }
 
@@ -851,7 +876,7 @@ class Account(
 
     suspend fun countFollowersOf(pubkey: HexKey): Int = LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkey) ?: false }
 
-    suspend fun followerCount(): Int = countFollowersOf(keyPair.pubKeyHex)
+    suspend fun followerCount(): Int = countFollowersOf(signer.pubKey)
 
     fun sendNewUserMetadata(
         name: String? = null,
@@ -1149,13 +1174,14 @@ class Account(
     fun delete(notes: List<Note>) {
         if (!isWriteable()) return
 
-        val myEvents = notes.filter { it.author == userProfile() }
-        val myNoteVersions = myEvents.mapNotNull { it.event as? Event }
-
+        val myNoteVersions = notes.filter { it.author == userProfile() }.mapNotNull { it.event as? Event }
         if (myNoteVersions.isNotEmpty()) {
-            DeletionEvent.create(myNoteVersions, signer) {
-                Client.send(it)
-                LocalCache.justConsume(it, null)
+            // chunks in 200 elements to avoid going over the 65KB limit for events.
+            myNoteVersions.chunked(200).forEach { chunkedList ->
+                DeletionEvent.create(chunkedList, signer) { deletionEvent ->
+                    Client.send(deletionEvent)
+                    LocalCache.justConsume(deletionEvent, null)
+                }
             }
         }
     }
@@ -2639,7 +2665,7 @@ class Account(
     }
 
     fun changeDefaultZapType(zapType: LnZapEvent.ZapType) {
-        defaultZapType = zapType
+        defaultZapType.tryEmit(zapType)
         live.invalidateData()
         saveable.invalidateData()
     }
@@ -2804,21 +2830,16 @@ class Account(
 
     fun updateLocalRelayServers(servers: Set<String>) {
         localRelayServers = servers
-        liveLanguages.invalidateData()
         saveable.invalidateData()
     }
 
     fun addDontTranslateFrom(languageCode: String) {
         dontTranslateFrom = dontTranslateFrom.plus(languageCode)
-        liveLanguages.invalidateData()
-
         saveable.invalidateData()
     }
 
     fun updateTranslateTo(languageCode: String) {
         translateTo = languageCode
-        liveLanguages.invalidateData()
-
         saveable.invalidateData()
     }
 
@@ -3148,6 +3169,17 @@ class Account(
         }
     }
 
+    fun getAllPeopleLists(): List<AddressableNote> = getAllPeopleLists(signer.pubKey)
+
+    fun getAllPeopleLists(pubkey: HexKey): List<AddressableNote> =
+        LocalCache.addressables
+            .filter { _, addressableNote ->
+                val event = (addressableNote.event as? PeopleListEvent)
+                event != null &&
+                    event.pubKey == pubkey &&
+                    (event.hasAnyTaggedUser() || event.publicAndPrivateUserCache?.isNotEmpty() == true)
+            }
+
     fun setHideDeleteRequestDialog() {
         hideDeleteRequestDialog = true
         saveable.invalidateData()
@@ -3175,9 +3207,15 @@ class Account(
         route: String,
         timestampInSecs: Long,
     ): Boolean {
-        val lastTime = lastReadPerRoute[route]
-        return if (lastTime == null || timestampInSecs > lastTime) {
-            lastReadPerRoute = lastReadPerRoute + Pair(route, timestampInSecs)
+        val lastTime = lastReadPerRoute.value[route]
+        return if (lastTime == null) {
+            lastReadPerRoute.update {
+                it + Pair(route, MutableStateFlow(timestampInSecs))
+            }
+            saveable.invalidateData()
+            true
+        } else if (timestampInSecs > lastTime.value) {
+            lastTime.tryEmit(timestampInSecs)
             saveable.invalidateData()
             true
         } else {
@@ -3185,7 +3223,16 @@ class Account(
         }
     }
 
-    fun loadLastRead(route: String): Long = lastReadPerRoute[route] ?: 0
+    fun loadLastRead(route: String): Long = lastReadPerRoute.value[route]?.value ?: 0
+
+    fun loadLastReadFlow(route: String): StateFlow<Long> =
+        lastReadPerRoute.value[route] ?: run {
+            val newFlow = MutableStateFlow<Long>(0)
+            lastReadPerRoute.update {
+                it + Pair(route, newFlow)
+            }
+            newFlow
+        }
 
     fun hasDonatedInThisVersion(): Boolean = hasDonatedInVersion.contains(BuildConfig.VERSION_NAME)
 

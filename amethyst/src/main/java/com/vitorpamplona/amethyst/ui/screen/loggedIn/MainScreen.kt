@@ -73,7 +73,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -91,24 +90,11 @@ import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.navigation.AppTopBar
 import com.vitorpamplona.amethyst.ui.navigation.DrawerContent
-import com.vitorpamplona.amethyst.ui.navigation.FollowListViewModel
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.Route.Companion.InvertedLayouts
 import com.vitorpamplona.amethyst.ui.navigation.getRouteWithArguments
-import com.vitorpamplona.amethyst.ui.note.UserReactionsViewModel
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListKnownFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrChatroomListNewFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverChatFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverCommunityFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverLiveFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverMarketplaceFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrDiscoverNIP89FeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrHomeFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrHomeRepliesFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrVideoFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NotificationViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
@@ -178,87 +164,8 @@ fun MainScreen(
     DisplayErrorMessages(accountViewModel)
     DisplayNotifyMessages(accountViewModel, nav)
 
-    val followListsViewModel: FollowListViewModel =
-        viewModel(
-            key = "FollowListViewModel",
-            factory = FollowListViewModel.Factory(accountViewModel.account),
-        )
-
-    // Avoids creating ViewModels for performance reasons (up to 1 second delays)
-    val homeFeedViewModel: NostrHomeFeedViewModel =
-        viewModel(
-            key = "NostrHomeFeedViewModel",
-            factory = NostrHomeFeedViewModel.Factory(accountViewModel.account),
-        )
-
-    val repliesFeedViewModel: NostrHomeRepliesFeedViewModel =
-        viewModel(
-            key = "NostrHomeRepliesFeedViewModel",
-            factory = NostrHomeRepliesFeedViewModel.Factory(accountViewModel.account),
-        )
-
-    val videoFeedViewModel: NostrVideoFeedViewModel =
-        viewModel(
-            key = "NostrVideoFeedViewModel",
-            factory = NostrVideoFeedViewModel.Factory(accountViewModel.account),
-        )
-
-    val discoverMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel =
-        viewModel(
-            key = "NostrDiscoveryMarketplaceFeedViewModel",
-            factory = NostrDiscoverMarketplaceFeedViewModel.Factory(accountViewModel.account),
-        )
-
-    val discoverNIP89FeedViewModel: NostrDiscoverNIP89FeedViewModel =
-        viewModel(
-            key = "NostrDiscoveryNIP89FeedViewModel",
-            factory = NostrDiscoverNIP89FeedViewModel.Factory(accountViewModel.account),
-        )
-
-    val discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel =
-        viewModel(
-            key = "NostrDiscoveryLiveFeedViewModel",
-            factory = NostrDiscoverLiveFeedViewModel.Factory(accountViewModel.account),
-        )
-
-    val discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel =
-        viewModel(
-            key = "NostrDiscoveryCommunityFeedViewModel",
-            factory = NostrDiscoverCommunityFeedViewModel.Factory(accountViewModel.account),
-        )
-
-    val discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel =
-        viewModel(
-            key = "NostrDiscoveryChatFeedViewModel",
-            factory = NostrDiscoverChatFeedViewModel.Factory(accountViewModel.account),
-        )
-
-    val notifFeedViewModel: NotificationViewModel =
-        viewModel(
-            key = "NotificationViewModel",
-            factory = NotificationViewModel.Factory(accountViewModel.account),
-        )
-
-    val userReactionsStatsModel: UserReactionsViewModel =
-        viewModel(
-            key = "UserReactionsViewModel",
-            factory = UserReactionsViewModel.Factory(accountViewModel.account),
-        )
-
-    val knownFeedViewModel: NostrChatroomListKnownFeedViewModel =
-        viewModel(
-            key = "NostrChatroomListKnownFeedViewModel",
-            factory = NostrChatroomListKnownFeedViewModel.Factory(accountViewModel.account),
-        )
-
-    val newFeedViewModel: NostrChatroomListNewFeedViewModel =
-        viewModel(
-            key = "NostrChatroomListNewFeedViewModel",
-            factory = NostrChatroomListNewFeedViewModel.Factory(accountViewModel.account),
-        )
-
     val navBottomRow =
-        remember(navController) {
+        remember(navController, accountViewModel) {
             { route: Route, selected: Boolean ->
                 scope.launch {
                     if (!selected) {
@@ -271,20 +178,21 @@ fun MainScreen(
                         // and having to deal with all recompositions with scroll to top true
                         when (route.base) {
                             Route.Home.base -> {
-                                homeFeedViewModel.sendToTop()
-                                repliesFeedViewModel.sendToTop()
+                                accountViewModel.feedStates.homeNewThreads.sendToTop()
+                                accountViewModel.feedStates.homeReplies.sendToTop()
                             }
                             Route.Video.base -> {
-                                videoFeedViewModel.sendToTop()
+                                accountViewModel.feedStates.videoFeed.sendToTop()
                             }
                             Route.Discover.base -> {
-                                discoverMarketplaceFeedViewModel.sendToTop()
-                                discoveryLiveFeedViewModel.sendToTop()
-                                discoveryCommunityFeedViewModel.sendToTop()
-                                discoveryChatFeedViewModel.sendToTop()
+                                accountViewModel.feedStates.discoverMarketplace.sendToTop()
+                                accountViewModel.feedStates.discoverLive.sendToTop()
+                                accountViewModel.feedStates.discoverCommunities.sendToTop()
+                                accountViewModel.feedStates.discoverPublicChats.sendToTop()
+                                accountViewModel.feedStates.discoverDVMs.sendToTop()
                             }
                             Route.Notification.base -> {
-                                notifFeedViewModel.invalidateDataAndSendToTop(true)
+                                accountViewModel.feedStates.notifications.invalidateDataAndSendToTop(true)
                             }
                         }
 
@@ -312,19 +220,6 @@ fun MainScreen(
                 navPopBack = navPopBack,
                 openDrawer = { scope.launch { drawerState.open() } },
                 accountStateViewModel = accountStateViewModel,
-                userReactionsStatsModel = userReactionsStatsModel,
-                followListsViewModel = followListsViewModel,
-                homeFeedViewModel = homeFeedViewModel,
-                repliesFeedViewModel = repliesFeedViewModel,
-                knownFeedViewModel = knownFeedViewModel,
-                newFeedViewModel = newFeedViewModel,
-                videoFeedViewModel = videoFeedViewModel,
-                discoverNIP89FeedViewModel = discoverNIP89FeedViewModel,
-                discoverMarketplaceFeedViewModel = discoverMarketplaceFeedViewModel,
-                discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
-                discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
-                discoveryChatFeedViewModel = discoveryChatFeedViewModel,
-                notifFeedViewModel = notifFeedViewModel,
                 sharedPreferencesViewModel = sharedPreferencesViewModel,
                 accountViewModel = accountViewModel,
                 nav = nav,
@@ -361,19 +256,6 @@ private fun MainScaffold(
     navPopBack: () -> Unit,
     openDrawer: () -> Unit,
     accountStateViewModel: AccountStateViewModel,
-    userReactionsStatsModel: UserReactionsViewModel,
-    followListsViewModel: FollowListViewModel,
-    homeFeedViewModel: NostrHomeFeedViewModel,
-    repliesFeedViewModel: NostrHomeRepliesFeedViewModel,
-    knownFeedViewModel: NostrChatroomListKnownFeedViewModel,
-    newFeedViewModel: NostrChatroomListNewFeedViewModel,
-    videoFeedViewModel: NostrVideoFeedViewModel,
-    discoverNIP89FeedViewModel: NostrDiscoverNIP89FeedViewModel,
-    discoverMarketplaceFeedViewModel: NostrDiscoverMarketplaceFeedViewModel,
-    discoveryLiveFeedViewModel: NostrDiscoverLiveFeedViewModel,
-    discoveryCommunityFeedViewModel: NostrDiscoverCommunityFeedViewModel,
-    discoveryChatFeedViewModel: NostrDiscoverChatFeedViewModel,
-    notifFeedViewModel: NotificationViewModel,
     sharedPreferencesViewModel: SharedPreferencesViewModel,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -458,7 +340,6 @@ private fun MainScaffold(
             ) { isVisible ->
                 if (isVisible) {
                     AppTopBar(
-                        followListsViewModel,
                         navState,
                         openDrawer,
                         accountViewModel,
@@ -497,18 +378,6 @@ private fun MainScaffold(
                     .imePadding(),
         ) {
             AppNavigation(
-                homeFeedViewModel = homeFeedViewModel,
-                repliesFeedViewModel = repliesFeedViewModel,
-                knownFeedViewModel = knownFeedViewModel,
-                newFeedViewModel = newFeedViewModel,
-                videoFeedViewModel = videoFeedViewModel,
-                discoverNip89FeedViewModel = discoverNIP89FeedViewModel,
-                discoverMarketplaceFeedViewModel = discoverMarketplaceFeedViewModel,
-                discoveryLiveFeedViewModel = discoveryLiveFeedViewModel,
-                discoveryCommunityFeedViewModel = discoveryCommunityFeedViewModel,
-                discoveryChatFeedViewModel = discoveryChatFeedViewModel,
-                notifFeedViewModel = notifFeedViewModel,
-                userReactionsStatsModel = userReactionsStatsModel,
                 navController = navController,
                 accountViewModel = accountViewModel,
                 sharedPreferencesViewModel = sharedPreferencesViewModel,
@@ -557,6 +426,15 @@ private fun DisplayErrorMessages(accountViewModel: AccountViewModel) {
                 InformationDialog(
                     obj.title,
                     obj.msg,
+                ) {
+                    accountViewModel.clearToasts()
+                }
+
+            is ThrowableToastMsg ->
+                InformationDialog(
+                    stringRes(obj.titleResId),
+                    obj.msg,
+                    obj.throwable,
                 ) {
                     accountViewModel.clearToasts()
                 }

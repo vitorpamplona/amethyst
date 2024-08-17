@@ -109,10 +109,8 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,12 +133,6 @@ fun EditPostView(
 
     LaunchedEffect(Unit) {
         postViewModel.load(edit, versionLookingAt, accountViewModel)
-
-        launch(Dispatchers.IO) {
-            postViewModel.imageUploadingError.collect { error ->
-                withContext(Dispatchers.Main) { Toast.makeText(context, error, Toast.LENGTH_SHORT).show() }
-            }
-        }
     }
 
     DisposableEffect(Unit) {
@@ -266,11 +258,11 @@ fun EditPostView(
                                     Row(Modifier.heightIn(max = 200.dp)) {
                                         NoteCompose(
                                             baseNote = it,
-                                            makeItShort = true,
-                                            unPackReply = false,
-                                            isQuotedNote = true,
-                                            quotesLeft = 1,
                                             modifier = MaterialTheme.colorScheme.replyModifier,
+                                            isQuotedNote = true,
+                                            unPackReply = false,
+                                            makeItShort = true,
+                                            quotesLeft = 1,
                                             accountViewModel = accountViewModel,
                                             nav = nav,
                                         )
@@ -339,13 +331,13 @@ fun EditPostView(
                                             url,
                                             accountViewModel.account.defaultFileServer,
                                             onAdd = { alt, server, sensitiveContent ->
-                                                postViewModel.upload(url, alt, sensitiveContent, false, server, context)
+                                                postViewModel.upload(url, alt, sensitiveContent, false, server, accountViewModel::toast, context)
                                                 if (!server.isNip95) {
                                                     accountViewModel.account.changeDefaultFileServer(server.server)
                                                 }
                                             },
                                             onCancel = { postViewModel.contentToAddUrl = null },
-                                            onError = { scope.launch { postViewModel.imageUploadingError.emit(it) } },
+                                            onError = { scope.launch { Toast.makeText(context, context.resources.getText(it), Toast.LENGTH_SHORT).show() } },
                                             accountViewModel = accountViewModel,
                                         )
                                     }
@@ -363,7 +355,7 @@ fun EditPostView(
                                             InvoiceRequest(
                                                 lud16,
                                                 user.pubkeyHex,
-                                                accountViewModel.account,
+                                                accountViewModel,
                                                 stringRes(id = R.string.lightning_invoice),
                                                 stringRes(id = R.string.lightning_create_and_add_invoice),
                                                 onSuccess = {

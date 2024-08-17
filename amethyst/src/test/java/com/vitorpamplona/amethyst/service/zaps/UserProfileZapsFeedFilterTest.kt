@@ -21,16 +21,16 @@
 package com.vitorpamplona.amethyst.service.zaps
 
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.LnZapEventInterface
-import com.vitorpamplona.quartz.events.zaps.UserZaps
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert
 import org.junit.Test
 import java.math.BigDecimal
 
-class UserZapsTest {
+class UserProfileZapsFeedFilterTest {
     @Test
     fun nothing() {
         Assert.assertEquals(1, 1)
@@ -38,7 +38,7 @@ class UserZapsTest {
 
     @Test
     fun user_without_zaps() {
-        val actual = UserZaps.forProfileFeed(zaps = null)
+        val actual = UserProfileZapsFeedFilter.forProfileFeed(zaps = null)
 
         Assert.assertEquals(emptyList<Pair<Note, Note>>(), actual)
     }
@@ -53,7 +53,7 @@ class UserZapsTest {
                 zapRequest to mockZapNoteWith("user-1", amount = 200),
             )
 
-        val actual = UserZaps.forProfileFeed(zaps)
+        val actual = UserProfileZapsFeedFilter.forProfileFeed(zaps)
 
         Assert.assertEquals(1, actual.count())
         Assert.assertEquals(zapRequest, actual.first().zapRequest)

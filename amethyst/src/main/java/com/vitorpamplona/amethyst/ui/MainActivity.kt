@@ -35,8 +35,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableStateOf
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
@@ -67,8 +67,6 @@ class MainActivity : AppCompatActivity() {
     val isOnMobileDataState = mutableStateOf(false)
     private val isOnWifiDataState = mutableStateOf(false)
 
-    // Service Manager is only active when the activity is active.
-    val serviceManager = ServiceManager()
     private var shouldPauseService = true
 
     @RequiresApi(Build.VERSION_CODES.R)
@@ -80,7 +78,7 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             val sharedPreferencesViewModel = prepareSharedViewModel(act = this)
-            AppScreen(sharedPreferencesViewModel = sharedPreferencesViewModel, serviceManager = serviceManager)
+            AppScreen(sharedPreferencesViewModel = sharedPreferencesViewModel, serviceManager = Amethyst.instance.serviceManager)
         }
     }
 
@@ -105,7 +103,7 @@ class MainActivity : AppCompatActivity() {
         // Keep connection alive if it's calling the signer app
         Log.d("shouldPauseService", "shouldPauseService onResume: $shouldPauseService")
         if (shouldPauseService) {
-            GlobalScope.launch(Dispatchers.IO) { serviceManager.justStart() }
+            GlobalScope.launch(Dispatchers.IO) { Amethyst.instance.serviceManager.justStart() }
         }
 
         GlobalScope.launch(Dispatchers.IO) {
@@ -129,7 +127,7 @@ class MainActivity : AppCompatActivity() {
         GlobalScope.launch(Dispatchers.IO) {
             LanguageTranslatorService.clear()
         }
-        serviceManager.cleanObservers()
+        Amethyst.instance.serviceManager.cleanObservers()
 
         // if (BuildConfig.DEBUG) {
         GlobalScope.launch(Dispatchers.IO) { debugState(this@MainActivity) }
@@ -137,7 +135,7 @@ class MainActivity : AppCompatActivity() {
 
         Log.d("shouldPauseService", "shouldPauseService onPause: $shouldPauseService")
         if (shouldPauseService) {
-            GlobalScope.launch(Dispatchers.IO) { serviceManager.pauseForGood() }
+            GlobalScope.launch(Dispatchers.IO) { Amethyst.instance.serviceManager.pauseForGood() }
         }
 
         (getSystemService(ConnectivityManager::class.java) as ConnectivityManager)
@@ -173,18 +171,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         super.onDestroy()
-    }
-
-    /**
-     * Release memory when the UI becomes hidden or when system resources become low.
-     *
-     * @param level the memory-related event that was raised.
-     */
-    @OptIn(DelicateCoroutinesApi::class)
-    override fun onTrimMemory(level: Int) {
-        super.onTrimMemory(level)
-        println("Trim Memory $level")
-        GlobalScope.launch(Dispatchers.Default) { serviceManager.trimMemory() }
     }
 
     fun updateNetworkCapabilities(networkCapabilities: NetworkCapabilities): Boolean {
@@ -228,7 +214,7 @@ class MainActivity : AppCompatActivity() {
 
                 Log.d("ServiceManager NetworkCallback", "onAvailable: $shouldPauseService")
                 if (shouldPauseService && lastNetwork != null && lastNetwork != network) {
-                    GlobalScope.launch(Dispatchers.IO) { serviceManager.forceRestart() }
+                    GlobalScope.launch(Dispatchers.IO) { Amethyst.instance.serviceManager.forceRestart() }
                 }
 
                 lastNetwork = network
@@ -247,7 +233,7 @@ class MainActivity : AppCompatActivity() {
                         "onCapabilitiesChanged: ${network.networkHandle} hasMobileData ${isOnMobileDataState.value} hasWifi ${isOnWifiDataState.value}",
                     )
                     if (updateNetworkCapabilities(networkCapabilities) && shouldPauseService) {
-                        serviceManager.forceRestart()
+                        Amethyst.instance.serviceManager.forceRestart()
                     }
                 }
             }

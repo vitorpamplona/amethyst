@@ -133,8 +133,6 @@ fun LoggedInPage(
         )
 
     val activity = getActivity() as MainActivity
-    // Find a better way to associate these two.
-    accountViewModel.serviceManager = activity.serviceManager
 
     if (accountViewModel.account.signer is NostrSignerExternal) {
         val lifeCycleOwner = LocalLifecycleOwner.current

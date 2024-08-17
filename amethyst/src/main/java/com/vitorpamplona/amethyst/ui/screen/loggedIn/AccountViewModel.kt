@@ -27,7 +27,6 @@ import android.util.LruCache
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -36,8 +35,8 @@ import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import coil.imageLoader
 import coil.request.ImageRequest
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.model.Account
@@ -48,7 +47,6 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.service.CashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
@@ -58,6 +56,7 @@ import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -65,8 +64,9 @@ import com.vitorpamplona.amethyst.ui.navigation.bottomNavigationItems
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
-import com.vitorpamplona.amethyst.ui.screen.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.SettingsState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.service.HttpClientManager
@@ -74,13 +74,13 @@ import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
-import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
@@ -149,29 +149,33 @@ class AccountViewModel(
 ) : ViewModel(),
     Dao {
     val accountLiveData: LiveData<AccountState> = account.live.map { it }
-    val accountLanguagesLiveData: LiveData<AccountState> = account.liveLanguages.map { it }
-    val accountMarkAsReadUpdates = mutableIntStateOf(0)
 
-    val userFollows: LiveData<UserState> =
+    // TODO: contact lists are not notes yet
+    // val kind3Relays: StateFlow<ContactListEvent?> = observeByAuthor(ContactListEvent.KIND, account.signer.pubKey)
+
+    val normalizedKind3RelaySetFlow =
         account
             .userProfile()
-            .live()
-            .follows
-            .map { it }
-    val userRelays: LiveData<UserState> =
-        account
-            .userProfile()
-            .live()
-            .relays
-            .map { it }
+            .flow()
+            .relays.stateFlow
+            .map { contactListState ->
+                checkNotInMainThread()
+                contactListState.user.latestContactList?.relays()?.map {
+                    RelayUrlFormatter.normalize(it.key)
+                } ?: emptySet()
+            }.flowOn(Dispatchers.Default)
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(10000, 10000),
+                emptySet(),
+            )
 
-    val kind3Relays: StateFlow<ContactListEvent?> = observeByAuthor(ContactListEvent.KIND, account.signer.pubKey)
     val dmRelays: StateFlow<ChatMessageRelayListEvent?> = observeByAuthor(ChatMessageRelayListEvent.KIND, account.signer.pubKey)
     val searchRelays: StateFlow<SearchRelayListEvent?> = observeByAuthor(SearchRelayListEvent.KIND, account.signer.pubKey)
 
     val toasts = MutableSharedFlow<ToastMsg?>(0, 3, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
-    var serviceManager: ServiceManager? = null
+    val feedStates = AccountFeedContentStates(this)
 
     val showSensitiveContentChanges =
         account.live.map { it.account.showSensitiveContent }.distinctUntilChanged()
@@ -332,6 +336,7 @@ class AccountViewModel(
                 .relays
                 .stateFlow
                 .map { it.note.relays.size > 3 }
+                .flowOn(Dispatchers.Default)
                 .stateIn(
                     viewModelScope,
                     SharingStarted.WhileSubscribed(10000, 10000),
@@ -612,23 +617,23 @@ class AccountViewModel(
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
-        zapType: LnZapEvent.ZapType,
+        zapType: LnZapEvent.ZapType? = null,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             ZapPaymentHandler(account)
                 .zap(
-                    note,
-                    amount,
-                    pollOption,
-                    message,
-                    context,
-                    showErrorIfNoLnAddress,
-                    onError,
+                    note = note,
+                    amountMilliSats = amount,
+                    pollOption = pollOption,
+                    message = message,
+                    context = context,
+                    showErrorIfNoLnAddress = showErrorIfNoLnAddress,
+                    onError = onError,
                     onProgress = {
                         onProgress(it)
                     },
-                    onPayViaIntent,
-                    zapType,
+                    onPayViaIntent = onPayViaIntent,
+                    zapType = zapType ?: account.defaultZapType.value,
                 )
         }
     }
@@ -803,7 +808,9 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) { account.hideWord(word) }
     }
 
-    fun isLoggedUser(user: User?): Boolean = account.userProfile().pubkeyHex == user?.pubkeyHex
+    fun isLoggedUser(pubkeyHex: HexKey?): Boolean = account.signer.pubKey == pubkeyHex
+
+    fun isLoggedUser(user: User?): Boolean = isLoggedUser(user?.pubkeyHex)
 
     fun isFollowing(user: User?): Boolean {
         if (user == null) return false
@@ -851,7 +858,7 @@ class AccountViewModel(
         }
     }
 
-    fun defaultZapType(): LnZapEvent.ZapType = account.defaultZapType
+    fun defaultZapType(): LnZapEvent.ZapType = account.defaultZapType.value
 
     fun unwrap(
         event: GiftWrapEvent,
@@ -1112,7 +1119,6 @@ class AccountViewModel(
 
     suspend fun refreshMarkAsReadObservers() {
         updateNotificationDots()
-        accountMarkAsReadUpdates.value++
     }
 
     fun loadAndMarkAsRead(
@@ -1191,7 +1197,7 @@ class AccountViewModel(
             account.proxyPort = portNumber.value.toInt()
             account.proxy = HttpClientManager.initProxy(checked, "127.0.0.1", account.proxyPort)
             account.saveable.invalidateData()
-            serviceManager?.forceRestart()
+            Amethyst.instance.serviceManager.forceRestart()
         }
     }
 
@@ -1220,21 +1226,28 @@ class AccountViewModel(
 
     init {
         Log.d("Init", "AccountViewModel")
-        collectorJob =
-            viewModelScope.launch(Dispatchers.IO) {
-                LocalCache.live.newEventBundles.collect { newNotes ->
-                    Log.d(
-                        "Rendering Metrics",
-                        "Notification Dots Calculation refresh ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()}",
-                    )
-                    invalidateInsertData(newNotes)
-                    upgradeAttestations()
+        viewModelScope.launch(Dispatchers.Default) {
+            feedStates.init()
+            // awaits for init to finish before starting to capture new events.
+
+            collectorJob =
+                viewModelScope.launch(Dispatchers.IO) {
+                    LocalCache.live.newEventBundles.collect { newNotes ->
+                        Log.d(
+                            "Rendering Metrics",
+                            "Notification Dots Calculation refresh ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()}",
+                        )
+                        feedStates.updateFeedsWith(newNotes)
+                        invalidateInsertData(newNotes)
+                        upgradeAttestations()
+                    }
                 }
-            }
+        }
     }
 
     override fun onCleared() {
         Log.d("Init", "AccountViewModel onCleared")
+        feedStates.destroy()
         collectorJob?.cancel()
         super.onCleared()
     }
@@ -1457,6 +1470,48 @@ class AccountViewModel(
         LocalCache.getAddressableNoteIfExists(
             AdvertisedRelayListEvent.createAddressTag(user.pubkeyHex),
         )
+
+    fun sendSats(
+        lnaddress: String,
+        milliSats: Long,
+        message: String,
+        toUserPubKeyHex: HexKey,
+        onSuccess: (String) -> Unit,
+        onError: (String, String) -> Unit,
+        onProgress: (percent: Float) -> Unit,
+        context: Context,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (account.defaultZapType.value == LnZapEvent.ZapType.NONZAP) {
+                LightningAddressResolver()
+                    .lnAddressInvoice(
+                        lnaddress,
+                        milliSats * 1000,
+                        message,
+                        null,
+                        onSuccess = onSuccess,
+                        onError = onError,
+                        onProgress = onProgress,
+                        context = context,
+                    )
+            } else {
+                account.createZapRequestFor(toUserPubKeyHex, message, account.defaultZapType.value) { zapRequest ->
+                    LocalCache.justConsume(zapRequest, null)
+                    LightningAddressResolver()
+                        .lnAddressInvoice(
+                            lnaddress,
+                            milliSats * 1000,
+                            message,
+                            zapRequest.toJson(),
+                            onSuccess = onSuccess,
+                            onError = onError,
+                            onProgress = onProgress,
+                            context = context,
+                        )
+                }
+            }
+        }
+    }
 
     val draftNoteCache = CachedDraftNotes(this)
 

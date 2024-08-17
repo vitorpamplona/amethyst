@@ -35,6 +35,8 @@ import com.vitorpamplona.amethyst.ui.dal.HiddenAccountsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.SpammerAccountsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
+import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -97,7 +99,7 @@ class NostrSpammerAccountsFeedViewModel(
 open class UserFeedViewModel(
     val dataSource: FeedFilter<User>,
 ) : ViewModel(),
-    InvalidatableViewModel {
+    InvalidatableContent {
     private val _feedContent = MutableStateFlow<UserFeedState>(UserFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
@@ -167,8 +169,4 @@ open class UserFeedViewModel(
         collectorJob?.cancel()
         super.onCleared()
     }
-}
-
-interface InvalidatableViewModel {
-    fun invalidateData(ignoreIfDoing: Boolean = false)
 }

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Row
@@ -34,6 +34,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
+import com.vitorpamplona.amethyst.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.note.ChatroomHeaderCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -41,22 +47,22 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun ChatroomListFeedView(
-    viewModel: FeedViewModel,
+    feedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     markAsRead: MutableState<Boolean>,
 ) {
-    RefresheableBox(viewModel, true) { CrossFadeState(viewModel, accountViewModel, nav, markAsRead) }
+    RefresheableBox(feedContentState, true) { CrossFadeState(feedContentState, accountViewModel, nav, markAsRead) }
 }
 
 @Composable
 private fun CrossFadeState(
-    viewModel: FeedViewModel,
+    feedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     markAsRead: MutableState<Boolean>,
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(
         targetState = feedState,
@@ -65,10 +71,10 @@ private fun CrossFadeState(
     ) { state ->
         when (state) {
             is FeedState.Empty -> {
-                FeedEmpty { viewModel.invalidateData() }
+                FeedEmpty { feedContentState.invalidateData() }
             }
             is FeedState.FeedError -> {
-                FeedError(state.errorMessage) { viewModel.invalidateData() }
+                FeedError(state.errorMessage) { feedContentState.invalidateData() }
             }
             is FeedState.Loaded -> {
                 FeedLoaded(state, accountViewModel, nav, markAsRead)

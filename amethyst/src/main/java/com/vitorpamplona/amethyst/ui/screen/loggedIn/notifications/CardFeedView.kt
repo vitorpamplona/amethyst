@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -31,7 +31,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -42,6 +41,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
+import com.vitorpamplona.amethyst.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
 import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
@@ -54,21 +59,21 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun RefreshableCardView(
-    viewModel: CardFeedViewModel,
+    feedContent: CardFeedContentState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     routeForLastRead: String,
     scrollStateKey: String? = null,
     enablePullRefresh: Boolean = true,
 ) {
-    RefresheableBox(viewModel, enablePullRefresh) {
-        SaveableCardFeedState(viewModel, accountViewModel, nav, routeForLastRead, scrollStateKey)
+    RefresheableBox(feedContent, enablePullRefresh) {
+        SaveableCardFeedState(feedContent, accountViewModel, nav, routeForLastRead, scrollStateKey)
     }
 }
 
 @Composable
 private fun SaveableCardFeedState(
-    viewModel: CardFeedViewModel,
+    feedContent: CardFeedContentState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     routeForLastRead: String,
@@ -81,35 +86,20 @@ private fun SaveableCardFeedState(
             rememberLazyListState()
         }
 
-    WatchScrollToTop(viewModel, listState)
+    WatchScrollToTop(feedContent, listState)
 
-    RenderCardFeed(viewModel, accountViewModel, listState, nav, routeForLastRead)
-}
-
-@Composable
-private fun WatchScrollToTop(
-    viewModel: CardFeedViewModel,
-    listState: LazyListState,
-) {
-    val scrollToTop by viewModel.scrollToTop.collectAsStateWithLifecycle()
-
-    LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && viewModel.scrolltoTopPending) {
-            listState.scrollToItem(index = 0)
-            viewModel.sentToTop()
-        }
-    }
+    RenderCardFeed(feedContent, accountViewModel, listState, nav, routeForLastRead)
 }
 
 @Composable
 fun RenderCardFeed(
-    viewModel: CardFeedViewModel,
+    feedContent: CardFeedContentState,
     accountViewModel: AccountViewModel,
     listState: LazyListState,
     nav: (String) -> Unit,
     routeForLastRead: String,
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by feedContent.feedContent.collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(
         modifier = Modifier.fillMaxSize(),
@@ -119,10 +109,10 @@ fun RenderCardFeed(
     ) { state ->
         when (state) {
             is CardFeedState.Empty -> {
-                FeedEmpty { viewModel.invalidateData() }
+                FeedEmpty(feedContent::invalidateData)
             }
             is CardFeedState.FeedError -> {
-                FeedError(state.errorMessage) { viewModel.invalidateData() }
+                FeedError(state.errorMessage, feedContent::invalidateData)
             }
             is CardFeedState.Loaded -> {
                 FeedLoaded(
@@ -215,11 +205,11 @@ private fun RenderCardItem(
         is NoteCard ->
             NoteCardCompose(
                 item,
-                isBoostedNote = false,
-                accountViewModel = accountViewModel,
-                showHidden = showHidden,
-                nav = nav,
                 routeForLastRead = routeForLastRead,
+                isBoostedNote = false,
+                showHidden = showHidden,
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         is ZapUserSetCard ->
             ZapUserSetCompose(
@@ -258,8 +248,8 @@ private fun RenderCardItem(
 @Composable
 fun NoteCardCompose(
     baseNote: NoteCard,
+    modifier: Modifier = Modifier,
     routeForLastRead: String? = null,
-    modifier: Modifier = remember { Modifier },
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
     unPackReply: Boolean = true,
@@ -269,12 +259,10 @@ fun NoteCardCompose(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val note = remember(baseNote) { baseNote.note }
-
     NoteCompose(
-        baseNote = note,
-        routeForLastRead = routeForLastRead,
+        baseNote = baseNote.note,
         modifier = modifier,
+        routeForLastRead = routeForLastRead,
         isBoostedNote = isBoostedNote,
         isQuotedNote = isQuotedNote,
         unPackReply = unPackReply,
