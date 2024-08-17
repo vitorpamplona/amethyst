@@ -41,13 +41,16 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -65,6 +68,8 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.net.toUri
+import androidx.window.core.layout.WindowHeightSizeClass
+import androidx.window.core.layout.WindowWidthSizeClass
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
@@ -84,6 +89,7 @@ import com.vitorpamplona.amethyst.service.BlurHashRequester
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
+import com.vitorpamplona.amethyst.ui.components.util.DeviceUtils
 import com.vitorpamplona.amethyst.ui.navigation.getActivity
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
@@ -102,7 +108,6 @@ import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.utils.DeviceUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
@@ -122,18 +127,38 @@ fun ZoomableContentView(
 ) {
     var dialogOpen by remember(content) { mutableStateOf(false) }
 
-    val orientation = LocalConfiguration.current.orientation
-    val context = LocalView.current.context.getActivity()
+    val activity = LocalView.current.context.getActivity()
 
-    val (sOrientation, isLandscapeMode) =
-        when (orientation) {
-            Configuration.ORIENTATION_LANDSCAPE -> "Landscape" to true
-            Configuration.ORIENTATION_PORTRAIT -> "Portrait" to false
+    val orientation by snapshotFlow { DeviceUtils.getDeviceOrientation() }
+        .collectAsState(initial = LocalConfiguration.current.orientation)
+    val currentWindowSize = currentWindowAdaptiveInfo().windowSizeClass
 
-            else -> "Unknown" to false
+    val detectedWindowSize =
+        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            when (currentWindowSize.windowHeightSizeClass) {
+                WindowHeightSizeClass.COMPACT -> "Likely a Normal device in Landscape mode"
+                WindowHeightSizeClass.MEDIUM -> "Likely Small tablet, or Foldable device in Landscape"
+                WindowHeightSizeClass.EXPANDED -> "Likely a Large tablet, Foldable or Desktop device in Landscape"
+                else -> "Unknown device, likely in Landscape"
+            }
+        } else {
+            when (currentWindowSize.windowWidthSizeClass) {
+                WindowWidthSizeClass.COMPACT -> "Likely a Normal device in Portrait mode"
+                WindowWidthSizeClass.MEDIUM -> "Likely Small tablet, or Foldable device in Portrait"
+                WindowWidthSizeClass.EXPANDED -> "Likely a Large tablet, Foldable or Desktop device in Portrait"
+                else -> "Unknown device, likely in Portrait"
+            }
         }
+    val (windowSize, sOrientation, isLandscapeMode) =
+        when (orientation) {
+            Configuration.ORIENTATION_LANDSCAPE -> Triple(detectedWindowSize, "Landscape", true)
+            Configuration.ORIENTATION_PORTRAIT -> Triple(detectedWindowSize, "Portrait", false)
 
-    Log.d("AmethystConf", "Device orientation is: $sOrientation")
+            else -> Triple(detectedWindowSize, "Unknown orientation(maybe a foldable device?)", false)
+        }
+    val isFoldableOrLarge = DeviceUtils.windowIsLarge(windowSize = currentWindowSize, isInLandscapeMode = isLandscapeMode)
+
+    Log.d("AmethystConf", "Device type based on window size is $windowSize, and orientation is: $sOrientation")
 
     val contentScale =
         if (isFiniteHeight) {
@@ -168,7 +193,9 @@ fun ZoomableContentView(
                         nostrUriCallback = content.uri,
                         onDialog = {
                             dialogOpen = true
-                            DeviceUtils.changeDeviceOrientation(isLandscapeMode, context)
+                            if (!isFoldableOrLarge) {
+                                DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
+                            }
                         },
                         accountViewModel = accountViewModel,
                     )
@@ -206,7 +233,7 @@ fun ZoomableContentView(
             images,
             onDismiss = {
                 dialogOpen = false
-                if (isLandscapeMode) DeviceUtils.changeDeviceOrientation(isLandscapeMode, context)
+                if (isLandscapeMode) DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
             },
             accountViewModel,
         )
