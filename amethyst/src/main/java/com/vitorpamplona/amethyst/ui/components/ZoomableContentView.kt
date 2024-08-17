@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.components
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
-import android.content.res.Configuration
 import android.util.Log
 import android.view.Window
 import androidx.compose.animation.AnimatedVisibility
@@ -54,7 +53,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
@@ -66,8 +64,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.net.toUri
-import androidx.window.core.layout.WindowHeightSizeClass
-import androidx.window.core.layout.WindowWidthSizeClass
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
@@ -126,36 +122,10 @@ fun ZoomableContentView(
     var dialogOpen by remember(content) { mutableStateOf(false) }
 
     val activity = LocalView.current.context.getActivity()
-
-    val orientation = LocalConfiguration.current.orientation
     val currentWindowSize = currentWindowAdaptiveInfo().windowSizeClass
 
-    val detectedWindowSize =
-        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            when (currentWindowSize.windowHeightSizeClass) {
-                WindowHeightSizeClass.COMPACT -> "Likely a Normal device in Landscape mode"
-                WindowHeightSizeClass.MEDIUM -> "Likely Small tablet, or Foldable device in Landscape"
-                WindowHeightSizeClass.EXPANDED -> "Likely a Large tablet, Foldable or Desktop device in Landscape"
-                else -> "Unknown device, likely in Landscape"
-            }
-        } else {
-            when (currentWindowSize.windowWidthSizeClass) {
-                WindowWidthSizeClass.COMPACT -> "Likely a Normal device in Portrait mode"
-                WindowWidthSizeClass.MEDIUM -> "Likely Small tablet, or Foldable device in Portrait"
-                WindowWidthSizeClass.EXPANDED -> "Likely a Large tablet, Foldable or Desktop device in Portrait"
-                else -> "Unknown device, likely in Portrait"
-            }
-        }
-    val (windowSize, sOrientation, isLandscapeMode) =
-        when (orientation) {
-            Configuration.ORIENTATION_LANDSCAPE -> Triple(detectedWindowSize, "Landscape", true)
-            Configuration.ORIENTATION_PORTRAIT -> Triple(detectedWindowSize, "Portrait", false)
-
-            else -> Triple(detectedWindowSize, "Unknown orientation(maybe a foldable device?)", false)
-        }
+    val isLandscapeMode = DeviceUtils.isLandscapeMetric(LocalContext.current)
     val isFoldableOrLarge = DeviceUtils.windowIsLarge(windowSize = currentWindowSize, isInLandscapeMode = isLandscapeMode)
-
-    Log.d("AmethystConf", "Device type based on window size is $windowSize, and orientation is: $sOrientation")
 
     val contentScale =
         if (isFiniteHeight) {
