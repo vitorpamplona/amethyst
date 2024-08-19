@@ -350,7 +350,7 @@ fun VideoViewInner(
     defaultToStart: Boolean = false,
     title: String? = null,
     thumb: VideoThumb? = null,
-    showControls: Boolean = false,
+    showControls: Boolean = true,
     isFiniteHeight: Boolean,
     borderModifier: Modifier,
     waveform: ImmutableList<Int>? = null,
@@ -375,7 +375,7 @@ fun VideoViewInner(
                     mimeType = mimeType,
                     controller = controller,
                     thumbData = thumb,
-                    hideControls = showControls,
+                    showControls = showControls,
                     isFiniteHeight = isFiniteHeight,
                     nostrUriCallback = nostrUriCallback,
                     waveform = waveform,
@@ -723,7 +723,7 @@ private fun RenderVideoPlayer(
     mimeType: String?,
     controller: MediaController,
     thumbData: VideoThumb?,
-    hideControls: Boolean = false,
+    showControls: Boolean = true,
     isFiniteHeight: Boolean,
     nostrUriCallback: String?,
     waveform: ImmutableList<Int>? = null,
@@ -754,7 +754,7 @@ private fun RenderVideoPlayer(
                     setBackgroundColor(Color.Transparent.toArgb())
                     setShutterBackgroundColor(Color.Transparent.toArgb())
                     controllerAutoShow = false
-                    useController = !hideControls
+                    useController = showControls
                     thumbData?.thumb?.let { defaultArtwork = it }
                     hideController()
                     resizeMode =
@@ -763,7 +763,7 @@ private fun RenderVideoPlayer(
                         } else {
                             AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
                         }
-                    if (!hideControls) {
+                    if (showControls) {
                         onDialog?.let { innerOnDialog ->
                             setFullscreenButtonClickListener {
                                 controller.pause()
@@ -783,7 +783,7 @@ private fun RenderVideoPlayer(
 
         waveform?.let { Waveform(it, controller, remember { Modifier.align(Alignment.Center) }) }
 
-        if (!hideControls) {
+        if (showControls) {
             val startingMuteState = remember(controller) { controller.volume < 0.001 }
 
             MuteButton(
