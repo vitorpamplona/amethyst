@@ -29,7 +29,7 @@ object PushNotificationUtils {
     private val pushHandler = PushDistributorHandler
 
     suspend fun init(accounts: List<AccountInfo>) {
-        if (hasInit || pushHandler.savedDistributorExists()) {
+        if (hasInit) {
             return
         }
         try {
