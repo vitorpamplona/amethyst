@@ -659,6 +659,11 @@
     <string name="could_not_prepare_local_file_to_upload">Kon lokaal bestand niet voorbereiden voor upload: %1$s</string>
     <string name="failed_to_upload_with_message">Uploaden van media mislukt: %1$s</string>
     <string name="failed_to_delete_with_message">Verwijderen van media mislukt: %1$s</string>
+    <string name="media_too_big_for_nip95">Media is te groot voor NIP-95</string>
+    <string name="unable_to_load_thumbnail">Kan thumbnail niet laden</string>
+    <string name="could_not_prepare_header">Kon header-informatie niet voorbereiden: %1$s</string>
+    <string name="compression_cancelled">Compressie geannuleerd</string>
+    <string name="compression_returned_null">Compressie kon een bestand niet terugsturen</string>
     <string name="edit_draft">Concept bewerken</string>
     <string name="login_with_qr_code">Inloggen met QR-Code</string>
     <string name="route">Route</string>
@@ -805,4 +810,6 @@
     <string name="add_a_nip96_server">Voeg een NIP-96 Server toe</string>
     <string name="delete_all">Alles verwijderen</string>
     <string name="delete_all_drafts_confirmation">Weet u zeker dat u alle concepten wilt verwijderen?</string>
+    <string name="and_more">" … en %1$s meer"</string>
+    <string name="stack">Stack:</string>
 </resources>

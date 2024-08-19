@@ -659,6 +659,11 @@
     <string name="could_not_prepare_local_file_to_upload">No se pudo preparar el archivo local para subir: %1$s</string>
     <string name="failed_to_upload_with_message">Error al subir: %1$s</string>
     <string name="failed_to_delete_with_message">Error al eliminar: %1$s</string>
+    <string name="media_too_big_for_nip95">El contenido multimedia es demasiado grande para NIP-95</string>
+    <string name="unable_to_load_thumbnail">No se puede subir imagen en miniatura</string>
+    <string name="could_not_prepare_header">No se pudo preparar la información del encabezado: %1$s</string>
+    <string name="compression_cancelled">Compresión cancelada</string>
+    <string name="compression_returned_null">La compresión no pudo devolver un archivo</string>
     <string name="edit_draft">Editar borrador</string>
     <string name="login_with_qr_code">Iniciar sesión con código QR</string>
     <string name="route">Ruta</string>
@@ -803,4 +808,8 @@
     <string name="http_status_508">Bucle detectado: el servidor detecta un bucle infinito al procesar la solicitud.</string>
     <string name="http_status_511">Autenticación de red requerida: el cliente debe estar autenticado para acceder a la red.</string>
     <string name="add_a_nip96_server">Agregar servidor NIP-96</string>
+    <string name="delete_all">Borrar todo</string>
+    <string name="delete_all_drafts_confirmation">¿Seguro quieres eliminar todos los borradores?</string>
+    <string name="and_more">" … y %1$s más"</string>
+    <string name="stack">Stack:</string>
 </resources>
