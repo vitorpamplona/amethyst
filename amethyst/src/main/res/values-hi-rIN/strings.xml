@@ -659,6 +659,11 @@
     <string name="could_not_prepare_local_file_to_upload">स्थानीय अभिलेख अनुकूल नहीं बना सके आरोहण के लिए : %1$s</string>
     <string name="failed_to_upload_with_message">आरोहण असफल : %1$s</string>
     <string name="failed_to_delete_with_message">मिटाने में असफल : %1$s</string>
+    <string name="media_too_big_for_nip95">अभिलेख निप॰-९५ के लिए बहुत बडा है</string>
+    <string name="unable_to_load_thumbnail">अल्पचित्र दिखाने में असफल</string>
+    <string name="could_not_prepare_header">शीर्षक जानकारी आयोजित करने में असफल : %1$s</string>
+    <string name="compression_cancelled">संक्षिप्तीकरण निरस्त किया गया</string>
+    <string name="compression_returned_null">संक्षिप्तीकरण से अभिलेख प्राप्त नहीं हुआ</string>
     <string name="edit_draft">पाण्डुलिपि का सम्पादन करें</string>
     <string name="login_with_qr_code">क्यूआर॰ क्रमचित्र के साथ प्रवेशांकन करें</string>
     <string name="route">मार्ग</string>
@@ -806,4 +811,5 @@
     <string name="delete_all">सब मिटाएँ</string>
     <string name="delete_all_drafts_confirmation">क्या आप निश्चित रूप से सभी पाण्डुलिपियाँ मिटाना चाहते हैं।</string>
     <string name="and_more">" ... तथा %1$s अधिक"</string>
+    <string name="stack">चिति :</string>
 </resources>
