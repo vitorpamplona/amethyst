@@ -40,6 +40,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -82,6 +83,8 @@ import com.vitorpamplona.amethyst.service.BlurHashRequester
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
+import com.vitorpamplona.amethyst.ui.components.util.DeviceUtils
+import com.vitorpamplona.amethyst.ui.navigation.getActivity
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.HashCheckFailedIcon
@@ -118,6 +121,12 @@ fun ZoomableContentView(
 ) {
     var dialogOpen by remember(content) { mutableStateOf(false) }
 
+    val activity = LocalView.current.context.getActivity()
+    val currentWindowSize = currentWindowAdaptiveInfo().windowSizeClass
+
+    val isLandscapeMode = DeviceUtils.isLandscapeMetric(LocalContext.current)
+    val isFoldableOrLarge = DeviceUtils.windowIsLarge(windowSize = currentWindowSize, isInLandscapeMode = isLandscapeMode)
+
     val contentScale =
         if (isFiniteHeight) {
             ContentScale.Fit
@@ -149,7 +158,12 @@ fun ZoomableContentView(
                         roundedCorner = roundedCorner,
                         isFiniteHeight = isFiniteHeight,
                         nostrUriCallback = content.uri,
-                        onDialog = { dialogOpen = true },
+                        onDialog = {
+                            dialogOpen = true
+                            if (!isFoldableOrLarge) {
+                                DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
+                            }
+                        },
                         accountViewModel = accountViewModel,
                     )
                 }
@@ -181,7 +195,15 @@ fun ZoomableContentView(
     }
 
     if (dialogOpen) {
-        ZoomableImageDialog(content, images, onDismiss = { dialogOpen = false }, accountViewModel)
+        ZoomableImageDialog(
+            content,
+            images,
+            onDismiss = {
+                dialogOpen = false
+                if (!isFoldableOrLarge) DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
+            },
+            accountViewModel,
+        )
     }
 }
 
