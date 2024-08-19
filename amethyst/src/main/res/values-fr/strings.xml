@@ -659,6 +659,11 @@
     <string name="could_not_prepare_local_file_to_upload">Impossible de préparer le fichier local à téléverser: %1$s</string>
     <string name="failed_to_upload_with_message">Échec du téléversement: %1$s</string>
     <string name="failed_to_delete_with_message">Échec de la suppression : %1$s</string>
+    <string name="media_too_big_for_nip95">Le média est trop volumineux pour NIP-95</string>
+    <string name="unable_to_load_thumbnail">Impossible de charger la miniature</string>
+    <string name="could_not_prepare_header">Impossible de préparer les informations d\'en-tête : %1$s</string>
+    <string name="compression_cancelled">Compression annulée</string>
+    <string name="compression_returned_null">La compression n\'a pas réussi à renvoyer un fichier</string>
     <string name="edit_draft">Modifier le brouillon</string>
     <string name="login_with_qr_code">Se connecter avec un QR Code</string>
     <string name="route">Route</string>
@@ -806,4 +811,5 @@
     <string name="delete_all">Tout supprimer</string>
     <string name="delete_all_drafts_confirmation">Êtes-vous sûr de vouloir supprimer tous les brouillons ?</string>
     <string name="and_more">" ... et %1$s autres"</string>
+    <string name="stack">Pile :</string>
 </resources>
