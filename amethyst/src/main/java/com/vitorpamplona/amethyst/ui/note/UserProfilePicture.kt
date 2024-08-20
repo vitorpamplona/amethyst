@@ -179,16 +179,16 @@ fun NonClickableUserPictures(
     size: Dp,
     accountViewModel: AccountViewModel,
 ) {
-    val userList = remember(room) { room.users.toList() }
-
     Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
-        when (userList.size) {
+        when (room.users.size) {
             0 -> {}
             1 ->
-                LoadUser(baseUserHex = userList[0], accountViewModel) {
+                LoadUser(baseUserHex = room.users.first(), accountViewModel) {
                     it?.let { BaseUserPicture(it, size, accountViewModel, outerModifier = Modifier) }
                 }
             2 -> {
+                val userList = room.users.toList()
+
                 LoadUser(baseUserHex = userList[0], accountViewModel) {
                     it?.let {
                         BaseUserPicture(
@@ -211,6 +211,8 @@ fun NonClickableUserPictures(
                 }
             }
             3 -> {
+                val userList = room.users.toList()
+
                 LoadUser(baseUserHex = userList[0], accountViewModel) {
                     it?.let {
                         BaseUserPicture(
@@ -243,6 +245,8 @@ fun NonClickableUserPictures(
                 }
             }
             else -> {
+                val userList = room.users.toList()
+
                 LoadUser(baseUserHex = userList[0], accountViewModel) {
                     it?.let {
                         BaseUserPicture(

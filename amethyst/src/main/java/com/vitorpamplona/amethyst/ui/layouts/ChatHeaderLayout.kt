@@ -28,21 +28,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.NewItemsBubble
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ChatHeadlineBorders
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
@@ -108,31 +108,29 @@ fun ChatHeaderLayout(
     secondRow: @Composable RowScope.() -> Unit,
     onClick: () -> Unit,
 ) {
-    Column(modifier = remember { Modifier.clickable(onClick = onClick) }) {
-        Row(
-            modifier = ChatHeadlineBorders,
-            verticalAlignment = Alignment.CenterVertically,
+    Row(
+        modifier = Modifier.clickable(onClick = onClick).padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Size55Modifier) { channelPicture() }
+
+        Spacer(modifier = DoubleHorzSpacer)
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Box(Size55Modifier) { channelPicture() }
-
-            Spacer(modifier = DoubleHorzSpacer)
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    firstRow()
-                }
+                firstRow()
+            }
 
-                Spacer(modifier = Height4dpModifier)
+            Spacer(modifier = Height4dpModifier)
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    secondRow()
-                }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                secondRow()
             }
         }
     }

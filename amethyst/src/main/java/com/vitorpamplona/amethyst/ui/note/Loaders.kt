@@ -75,7 +75,11 @@ fun LoadDecryptedContentOrNull(
 ) {
     val decryptedContent by
         produceState(initialValue = accountViewModel.cachedDecrypt(note), key1 = note.event?.id()) {
-            accountViewModel.decrypt(note) { value = it }
+            accountViewModel.decrypt(note) {
+                if (value != it) {
+                    value = it
+                }
+            }
         }
 
     inner(decryptedContent)

@@ -252,24 +252,47 @@ private fun UserRoomCompose(
 ) {
     val route = "Room/${room.hashCode()}"
 
-    val lastReadTime by accountViewModel.account.loadLastReadFlow(route).collectAsStateWithLifecycle()
+    ChatHeaderLayout(
+        channelPicture = {
+            NonClickableUserPictures(
+                room = room,
+                accountViewModel = accountViewModel,
+                size = Size55dp,
+            )
+        },
+        firstRow = {
+            RoomNameDisplay(room, Modifier.weight(1f), accountViewModel)
+            TimeAgo(note.createdAt())
+        },
+        secondRow = {
+            LoadDecryptedContentOrNull(note, accountViewModel) { content ->
+                if (content != null) {
+                    Text(
+                        content,
+                        color = MaterialTheme.colorScheme.grayText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    Text(
+                        stringRes(R.string.referenced_event_not_found),
+                        color = MaterialTheme.colorScheme.grayText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
 
-    LoadDecryptedContentOrNull(note, accountViewModel) { content ->
-        ChannelName(
-            channelPicture = {
-                NonClickableUserPictures(
-                    room = room,
-                    accountViewModel = accountViewModel,
-                    size = Size55dp,
-                )
-            },
-            channelTitle = { RoomNameDisplay(room, it, accountViewModel) },
-            channelLastTime = note.createdAt(),
-            channelLastContent = content,
-            hasNewMessages = (note.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
-            onClick = { nav(route) },
-        )
-    }
+            val lastReadTime by accountViewModel.account.loadLastReadFlow(route).collectAsStateWithLifecycle()
+            if ((note.createdAt() ?: Long.MIN_VALUE) > lastReadTime) {
+                NewItemsBubble()
+            }
+        },
+        onClick = { nav(route) },
+    )
 }
 
 @Composable
