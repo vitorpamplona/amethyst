@@ -39,7 +39,7 @@ class RelaySetEvent(
     fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
 
     companion object {
-        const val KIND = 30022
+        const val KIND = 30002
         const val ALT = "Relay list"
 
         fun create(
