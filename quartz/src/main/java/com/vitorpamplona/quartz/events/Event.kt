@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip01Serializer
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
+import com.vitorpamplona.quartz.encoders.PoWRank
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -256,24 +257,8 @@ open class Event(
     }
 
     override fun getPoWRank(): Int {
-        var rank = 0
-        for (i in 0..id.length) {
-            if (id[i] == '0') {
-                rank += 4
-            } else if (id[i] in '4'..'7') {
-                rank += 1
-                break
-            } else if (id[i] in '2'..'3') {
-                rank += 2
-                break
-            } else if (id[i] == '1') {
-                rank += 3
-                break
-            } else {
-                break
-            }
-        }
-        return rank
+        val commitedPoW = tags.firstOrNull { it.size > 2 && it[0] == "nonce" }?.get(2)?.toIntOrNull()
+        return PoWRank.getCommited(id, commitedPoW)
     }
 
     override fun getGeoHash(): String? = tags.firstOrNull { it.size > 1 && it[0] == "g" }?.get(1)?.ifBlank { null }
