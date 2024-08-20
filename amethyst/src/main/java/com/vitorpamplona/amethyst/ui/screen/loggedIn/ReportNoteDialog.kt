@@ -81,6 +81,7 @@ fun ReportNoteDialog(
             Pair(ReportEvent.ReportType.NUDITY, stringRes(R.string.report_dialog_nudity)),
             Pair(ReportEvent.ReportType.ILLEGAL, stringRes(R.string.report_dialog_illegal)),
             Pair(ReportEvent.ReportType.MALWARE, stringRes(R.string.report_malware)),
+            Pair(ReportEvent.ReportType.MOD, stringRes(R.string.report_mod)),
         )
 
     val reasonOptions = remember { reportTypes.map { TitleExplainer(it.second) }.toImmutableList() }

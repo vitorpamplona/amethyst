@@ -39,6 +39,11 @@
     <string name="report_explicit_content">Report Explicit Content</string>
     <string name="report_illegal_behaviour">Report Illegal Behaviour</string>
     <string name="report_malware">Report Malware</string>
+    <string name="report_mod">Report Mod</string>
+
+    <string name="malware">Malware</string>
+    <string name="mod">Mod</string>
+
     <string name="login_with_a_private_key_to_be_able_to_reply">You are using a public key and public keys are read-only. Login with a Private key to be able to reply</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">You are using a public key and public keys are read-only. Login with a Private key to be able to boost posts</string>
     <string name="login_with_a_private_key_to_like_posts">You are using a public key and public keys are read-only. Login with a Private key to like posts</string>

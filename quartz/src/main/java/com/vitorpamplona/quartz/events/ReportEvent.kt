@@ -130,6 +130,7 @@ class ReportEvent(
         NUDITY,
         PROFANITY,
         MALWARE,
+        MOD,
         OTHER,
     }
 }

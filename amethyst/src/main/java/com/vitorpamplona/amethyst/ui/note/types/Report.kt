@@ -58,7 +58,8 @@ fun RenderReport(
                     ReportEvent.ReportType.SPAM -> stringRes(R.string.spam)
                     ReportEvent.ReportType.IMPERSONATION -> stringRes(R.string.impersonation)
                     ReportEvent.ReportType.ILLEGAL -> stringRes(R.string.illegal_behavior)
-                    ReportEvent.ReportType.MALWARE -> stringRes(R.string.report_malware)
+                    ReportEvent.ReportType.MALWARE -> stringRes(R.string.malware)
+                    ReportEvent.ReportType.MOD -> stringRes(R.string.mod)
                     ReportEvent.ReportType.OTHER -> stringRes(R.string.other)
                 }
             }.toSet()
