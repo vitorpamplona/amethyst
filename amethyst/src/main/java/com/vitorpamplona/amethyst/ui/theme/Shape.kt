@@ -107,6 +107,7 @@ val HalfStartPadding = Modifier.padding(start = 5.dp)
 val StdStartPadding = Modifier.padding(start = 10.dp)
 val StdTopPadding = Modifier.padding(top = 10.dp)
 val HalfTopPadding = Modifier.padding(top = 5.dp)
+val HalfHalfTopPadding = Modifier.padding(top = 3.dp)
 
 val HalfPadding = Modifier.padding(5.dp)
 val StdPadding = Modifier.padding(10.dp)
@@ -163,7 +164,7 @@ val DividerThickness = 0.25.dp
 
 val ReactionRowHeight = Modifier.padding(vertical = 7.dp).height(24.dp)
 val ReactionRowHeightWithPadding = Modifier.padding(vertical = 7.dp).height(24.dp).padding(horizontal = 10.dp)
-val ReactionRowHeightChat = Modifier.height(25.dp)
+val ReactionRowHeightChat = Modifier.height(20.dp)
 val ReactionRowHeightChatMaxWidth = Modifier.height(25.dp).fillMaxWidth()
 val UserNameRowHeight = Modifier.fillMaxWidth()
 val UserNameMaxRowHeight = Modifier.fillMaxWidth()
@@ -201,7 +202,7 @@ val ZeroPadding = PaddingValues(0.dp)
 val FeedPadding = PaddingValues(top = 10.dp, bottom = 10.dp)
 val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
 
-val ChatPaddingInnerQuoteModifier = Modifier.padding(top = 10.dp)
+val ChatPaddingInnerQuoteModifier = Modifier
 val ChatPaddingModifier =
     Modifier
         .fillMaxWidth(1f)
@@ -255,7 +256,7 @@ val chatAuthorImage = Modifier.size(20.dp).clip(shape = CircleShape)
 val AuthorInfoVideoFeed = Modifier.width(75.dp).padding(end = 15.dp)
 
 val messageDetailsModifier = Modifier.height(Size25dp)
-val messageBubbleLimits = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 5.dp)
+val messageBubbleLimits = Modifier.padding(start = 7.dp, end = 7.dp, top = 5.dp, bottom = 5.dp)
 
 val inlinePlaceholder =
     Placeholder(

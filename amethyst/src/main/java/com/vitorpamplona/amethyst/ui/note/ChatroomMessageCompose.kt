@@ -71,7 +71,7 @@ import com.vitorpamplona.amethyst.ui.theme.ChatPaddingInnerQuoteModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatPaddingModifier
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
-import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
+import com.vitorpamplona.amethyst.ui.theme.HalfHalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
@@ -79,7 +79,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size5Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.chatAuthorBox
 import com.vitorpamplona.amethyst.ui.theme.incognitoIconModifier
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
@@ -292,9 +291,7 @@ fun ChatBubbleLayout(
         modifier = if (innerQuote) ChatPaddingInnerQuoteModifier else ChatPaddingModifier,
         horizontalArrangement = alignment,
     ) {
-        var popupExpanded = remember { mutableStateOf(false) }
-
-        val modif2 = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier
+        val popupExpanded = remember { mutableStateOf(false) }
 
         val showDetails =
             remember {
@@ -323,7 +320,7 @@ fun ChatBubbleLayout(
 
         Row(
             horizontalArrangement = alignment,
-            modifier = modif2,
+            modifier = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier,
         ) {
             Surface(
                 color = backgroundBubbleColor.value,
@@ -335,7 +332,7 @@ fun ChatBubbleLayout(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = alignment,
-                            modifier = StdTopPadding.then(Modifier.clickable(onClick = onAuthorClick)),
+                            modifier = HalfHalfTopPadding.clickable(onClick = onAuthorClick),
                         ) {
                             drawAuthorLine()
                         }
@@ -389,11 +386,14 @@ private fun BubblePreview() {
                         Icon(
                             imageVector = Icons.Default.Person,
                             contentDescription = null,
-                            modifier = Modifier.size(Size20dp).clip(CircleShape),
+                            modifier =
+                                Modifier
+                                    .size(Size20dp)
+                                    .clip(CircleShape),
                         )
                     },
                     name = {
-                        Text("Me", fontWeight = FontWeight.Bold)
+                        Text("Someone else", fontWeight = FontWeight.Bold)
                     },
                 )
             },
@@ -419,7 +419,10 @@ private fun BubblePreview() {
                         Icon(
                             imageVector = Icons.Default.Person,
                             contentDescription = null,
-                            modifier = Modifier.size(Size20dp).clip(CircleShape),
+                            modifier =
+                                Modifier
+                                    .size(Size20dp)
+                                    .clip(CircleShape),
                         )
                     },
                     name = {
@@ -430,6 +433,39 @@ private fun BubblePreview() {
             detailRow = { Text("Relays and Actions") },
         ) { backgroundBubbleColor ->
             Text("This is a very long long loong note")
+        }
+
+        ChatBubbleLayout(
+            isLoggedInUser = true,
+            innerQuote = false,
+            isComplete = false,
+            hasDetailsToShow = false,
+            drawAuthorInfo = false,
+            parentBackgroundColor = backgroundBubbleColor,
+            onClick = { false },
+            onAuthorClick = {},
+            actionMenu = { onDismiss ->
+            },
+            drawAuthorLine = {
+                UserDisplayNameLayout(
+                    picture = {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier =
+                                Modifier
+                                    .size(Size20dp)
+                                    .clip(CircleShape),
+                        )
+                    },
+                    name = {
+                        Text("Me", fontWeight = FontWeight.Bold)
+                    },
+                )
+            },
+            detailRow = { Text("Relays and Actions") },
+        ) { backgroundBubbleColor ->
+            Text("Short note")
         }
     }
 }
@@ -654,7 +690,7 @@ private fun RenderRegularTextNote(
                     content = eventContent,
                     canPreview = canPreview,
                     quotesLeft = if (innerQuote) 0 else 1,
-                    modifier = HalfTopPadding,
+                    modifier = Modifier,
                     tags = tags,
                     backgroundColor = backgroundBubbleColor,
                     id = note.idHex,
@@ -668,7 +704,7 @@ private fun RenderRegularTextNote(
                 content = stringRes(id = R.string.could_not_decrypt_the_message),
                 canPreview = true,
                 quotesLeft = 0,
-                modifier = HalfTopPadding,
+                modifier = Modifier,
                 tags = EmptyTagList,
                 backgroundColor = backgroundBubbleColor,
                 id = note.idHex,
@@ -738,7 +774,7 @@ fun UserDisplayNameLayout(
     picture: @Composable () -> Unit,
     name: @Composable () -> Unit,
 ) {
-    Box(chatAuthorBox, contentAlignment = Alignment.TopEnd) {
+    Box(chatAuthorBox, contentAlignment = Alignment.Center) {
         picture()
     }
 
