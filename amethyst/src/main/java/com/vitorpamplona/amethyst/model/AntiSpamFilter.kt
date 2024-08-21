@@ -25,6 +25,7 @@ import android.util.LruCache
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.ui.note.njumpLink
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.RelayStats
@@ -82,7 +83,7 @@ class AntiSpamFilter {
             logOffender(hash, event)
 
             if (relay != null) {
-                RelayStats.newSpam(relay.url, "https://njump.me/${Nip19Bech32.createNEvent(event.id, event.pubKey, event.kind, relay.url)}")
+                RelayStats.newSpam(relay.url, njumpLink(Nip19Bech32.createNEvent(event.id, event.pubKey, event.kind, relay.url)))
             }
 
             liveSpam.invalidateData()

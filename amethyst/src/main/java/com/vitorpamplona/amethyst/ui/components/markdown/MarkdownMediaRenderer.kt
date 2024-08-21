@@ -162,8 +162,8 @@ class MarkdownMediaRenderer(
             }
         } else if (loadedLink?.nip19 != null) {
             when (val entity = loadedLink.nip19.entity) {
-                is Nip19Bech32.NPub -> renderObservableUser(entity.hex, richTextStringBuilder)
-                is Nip19Bech32.NProfile -> renderObservableUser(entity.hex, richTextStringBuilder)
+                is Nip19Bech32.NPub -> renderObservableUser(entity.hex, loadedLink.nip19.nip19raw, richTextStringBuilder)
+                is Nip19Bech32.NProfile -> renderObservableUser(entity.hex, loadedLink.nip19.nip19raw, richTextStringBuilder)
                 is Nip19Bech32.Note -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
                 is Nip19Bech32.NEvent -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
                 is Nip19Bech32.NEmbed -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
@@ -201,10 +201,11 @@ class MarkdownMediaRenderer(
 
     fun renderObservableUser(
         userHex: String,
+        nip19: String,
         richTextStringBuilder: RichTextString.Builder,
     ) {
         renderInline(richTextStringBuilder) {
-            DisplayUser(userHex, null, accountViewModel, nav)
+            DisplayUser(userHex, nip19, null, accountViewModel, nav)
         }
     }
 

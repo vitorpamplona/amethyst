@@ -111,7 +111,11 @@ private fun lightenColor(
 }
 
 val externalLinkForUser = { user: User ->
-    "https://njump.me/${user.toNProfile()}"
+    njumpLink(user.toNProfile())
+}
+
+val njumpLink = { nip19BechAddress: String ->
+    "https://njump.me/$nip19BechAddress"
 }
 
 val externalLinkForNote = { note: Note ->
@@ -119,17 +123,17 @@ val externalLinkForNote = { note: Note ->
         if (note.event?.getReward() != null) {
             "https://nostrbounties.com/b/${note.address().toNAddr()}"
         } else if (note.event is PeopleListEvent) {
-            "https://listr.lol/a/${note.address()?.toNAddr()}"
+            "https://listr.lol/a/${note.address().toNAddr()}"
         } else if (note.event is AudioTrackEvent) {
-            "https://zapstr.live/?track=${note.address()?.toNAddr()}"
+            "https://zapstr.live/?track=${note.address().toNAddr()}"
         } else {
-            "https://njump.me/${note.address()?.toNAddr()}"
+            njumpLink(note.address().toNAddr())
         }
     } else {
         if (note.event is FileHeaderEvent) {
             "https://filestr.vercel.app/e/${note.toNEvent()}"
         } else {
-            "https://njump.me/${note.toNEvent()}"
+            njumpLink(note.toNEvent())
         }
     }
 }

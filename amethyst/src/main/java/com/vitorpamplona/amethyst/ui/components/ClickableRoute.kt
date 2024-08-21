@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -59,7 +60,7 @@ import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
-import com.vitorpamplona.amethyst.ui.note.toShortenHex
+import com.vitorpamplona.amethyst.ui.note.njumpLink
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
@@ -80,12 +81,12 @@ fun ClickableRoute(
     nav: (String) -> Unit,
 ) {
     when (val entity = nip19.entity) {
-        is Nip19Bech32.NPub -> DisplayUser(entity.hex, nip19.additionalChars, accountViewModel, nav)
-        is Nip19Bech32.NProfile -> DisplayUser(entity.hex, nip19.additionalChars, accountViewModel, nav)
-        is Nip19Bech32.Note -> DisplayEvent(entity.hex, null, nip19.additionalChars, accountViewModel, nav)
-        is Nip19Bech32.NEvent -> DisplayEvent(entity.hex, entity.kind, nip19.additionalChars, accountViewModel, nav)
+        is Nip19Bech32.NPub -> DisplayUser(entity.hex, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
+        is Nip19Bech32.NProfile -> DisplayUser(entity.hex, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
+        is Nip19Bech32.Note -> DisplayEvent(entity.hex, null, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
+        is Nip19Bech32.NEvent -> DisplayEvent(entity.hex, entity.kind, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
         is Nip19Bech32.NEmbed -> LoadAndDisplayEvent(entity.event, nip19.additionalChars, accountViewModel, nav)
-        is Nip19Bech32.NAddress -> DisplayAddress(entity, nip19.additionalChars, accountViewModel, nav)
+        is Nip19Bech32.NAddress -> DisplayAddress(entity, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
         is Nip19Bech32.NRelay -> {
             Text(word)
         }
@@ -127,11 +128,16 @@ private fun LoadAndDisplayEvent(
         if (it != null) {
             DisplayNoteLink(it, event.id, event.kind, additionalChars, accountViewModel, nav)
         } else {
+            val externalLink = event.toNIP19()
+            val uri = LocalUriHandler.current
+
             CreateClickableText(
-                clickablePart = remember(event.id) { "@${event.toNIP19()}" },
+                clickablePart = "@$externalLink",
                 suffix = additionalChars,
-                route = remember(event.id) { "Event/${event.id}" },
-                nav = nav,
+                maxLines = 1,
+                onClick = {
+                    runCatching { uri.openUri(njumpLink(externalLink)) }
+                },
             )
         }
     }
@@ -141,6 +147,7 @@ private fun LoadAndDisplayEvent(
 fun DisplayEvent(
     hex: HexKey,
     kind: Int?,
+    nip19: String,
     additionalChars: String?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -149,11 +156,16 @@ fun DisplayEvent(
         if (it != null) {
             DisplayNoteLink(it, hex, kind, additionalChars, accountViewModel, nav)
         } else {
+            val externalLink = njumpLink(nip19)
+            val uri = LocalUriHandler.current
+
             CreateClickableText(
-                clickablePart = remember(hex) { "@${hex.toShortenHex()}" },
+                clickablePart = remember(nip19) { "@$nip19" },
                 suffix = additionalChars,
-                route = remember(hex) { "Event/$hex" },
-                nav = nav,
+                maxLines = 1,
+                onClick = {
+                    runCatching { uri.openUri(externalLink) }
+                },
             )
         }
     }
@@ -218,6 +230,7 @@ private fun DisplayNoteLink(
 @Composable
 private fun DisplayAddress(
     nip19: Nip19Bech32.NAddress,
+    originalNip19: String,
     additionalChars: String?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -245,21 +258,23 @@ private fun DisplayAddress(
     }
 
     if (noteBase == null) {
-        if (additionalChars != null) {
-            Text(
-                remember { "@${nip19.atag}$additionalChars" },
-            )
-        } else {
-            Text(
-                remember { "@${nip19.atag}" },
-            )
-        }
+        val uri = LocalUriHandler.current
+
+        CreateClickableText(
+            clickablePart = "@$originalNip19",
+            suffix = additionalChars,
+            maxLines = 1,
+            onClick = {
+                runCatching { uri.openUri(njumpLink(originalNip19)) }
+            },
+        )
     }
 }
 
 @Composable
 public fun DisplayUser(
     userHex: HexKey,
+    originalNip19: String,
     additionalChars: String?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
@@ -280,15 +295,16 @@ public fun DisplayUser(
     userBase?.let { RenderUserAsClickableText(it, additionalChars, nav) }
 
     if (userBase == null) {
-        if (additionalChars != null) {
-            Text(
-                remember { "@${userHex}$additionalChars" },
-            )
-        } else {
-            Text(
-                remember { "@$userHex" },
-            )
-        }
+        val uri = LocalUriHandler.current
+
+        CreateClickableText(
+            clickablePart = "@$originalNip19",
+            suffix = additionalChars,
+            maxLines = 1,
+            onClick = {
+                runCatching { uri.openUri(njumpLink(originalNip19)) }
+            },
+        )
     }
 }
 
@@ -321,6 +337,26 @@ fun CreateClickableText(
     route: String,
     nav: (String) -> Unit,
 ) {
+    CreateClickableText(
+        clickablePart,
+        suffix,
+        maxLines,
+        overrideColor,
+        fontWeight,
+        fontSize,
+    ) { nav(route) }
+}
+
+@Composable
+fun CreateClickableText(
+    clickablePart: String,
+    suffix: String?,
+    maxLines: Int = Int.MAX_VALUE,
+    overrideColor: Color? = null,
+    fontWeight: FontWeight? = null,
+    fontSize: TextUnit = TextUnit.Unspecified,
+    onClick: (Int) -> Unit,
+) {
     val primaryColor = MaterialTheme.colorScheme.primary
     val onBackgroundColor = MaterialTheme.colorScheme.onBackground
 
@@ -351,7 +387,8 @@ fun CreateClickableText(
     ClickableText(
         text = text,
         maxLines = maxLines,
-        onClick = { nav(route) },
+        overflow = TextOverflow.Ellipsis,
+        onClick = onClick,
     )
 }
 

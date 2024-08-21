@@ -57,6 +57,7 @@ object Nip19Bech32 {
     @Immutable
     data class ParseReturn(
         val entity: Entity,
+        val nip19raw: String,
         val additionalChars: String? = null,
     )
 
@@ -138,7 +139,8 @@ object Nip19Bech32 {
         additionalChars: String?,
     ): ParseReturn? =
         try {
-            val bytes = (type + key).bechToBytes()
+            val nip19 = (type + key)
+            val bytes = nip19.bechToBytes()
 
             when (type.lowercase()) {
                 "nsec1" -> nsec(bytes)
@@ -151,7 +153,7 @@ object Nip19Bech32 {
                 "nembed1" -> nembed(bytes)
                 else -> null
             }?.let {
-                ParseReturn(it, additionalChars)
+                ParseReturn(it, nip19, additionalChars)
             }
         } catch (e: Throwable) {
             Log.w("NIP19 Parser", "Issue trying to Decode NIP19 $key: ${e.message}", e)

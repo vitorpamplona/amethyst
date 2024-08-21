@@ -257,7 +257,7 @@ fun DisplayEntryForNote(
             style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
         )
     } else {
-        DisplayEvent(noteEvent.id, noteEvent.kind, "", accountViewModel, nav)
+        DisplayEvent(noteEvent.id, noteEvent.kind, noteEvent.toNIP19(), null, accountViewModel, nav)
     }
 }
 
