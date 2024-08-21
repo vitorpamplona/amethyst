@@ -31,7 +31,10 @@ fun <K, V> produceCachedState(
     key: K,
 ): State<V?> =
     produceState(initialValue = cache.cached(key), key1 = key) {
-        value = cache.update(key)
+        val newValue = cache.update(key)
+        if (value != newValue) {
+            value = newValue
+        }
     }
 
 @Composable
@@ -41,7 +44,10 @@ fun <K, V> produceCachedState(
     updateValue: K,
 ): State<V?> =
     produceState(initialValue = cache.cached(updateValue), key1 = key) {
-        value = cache.update(updateValue)
+        val newValue = cache.update(updateValue)
+        if (value != newValue) {
+            value = newValue
+        }
     }
 
 interface CachedState<K, V> {

@@ -1548,32 +1548,47 @@ class AccountViewModel(
         val accountViewModel: AccountViewModel,
     ) : GenericBaseCache<String, LoadedBechLink>(20) {
         override suspend fun compute(key: String): LoadedBechLink? =
-            Nip19Bech32.uriToRoute(key)?.let {
-                var returningNote: Note? = null
+            withContext(Dispatchers.Default) {
+                Nip19Bech32.uriToRoute(key)?.let {
+                    var returningNote: Note? = null
 
-                when (val parsed = it.entity) {
-                    is Nip19Bech32.NSec -> {}
-                    is Nip19Bech32.NPub -> {}
-                    is Nip19Bech32.NProfile -> {}
-                    is Nip19Bech32.Note -> withContext(Dispatchers.IO) { LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note } }
-                    is Nip19Bech32.NEvent -> withContext(Dispatchers.IO) { LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note } }
-                    is Nip19Bech32.NEmbed ->
-                        withContext(Dispatchers.Default) {
-                            val baseNote = LocalCache.getOrCreateNote(parsed.event)
-                            if (baseNote.event == null) {
-                                launch(Dispatchers.IO) {
-                                    LocalCache.verifyAndConsume(parsed.event, null)
+                    when (val parsed = it.entity) {
+                        is Nip19Bech32.NSec -> {}
+                        is Nip19Bech32.NPub -> {}
+                        is Nip19Bech32.NProfile -> {}
+                        is Nip19Bech32.Note -> {
+                            LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
+                                returningNote = note
+                            }
+                        }
+                        is Nip19Bech32.NEvent -> {
+                            LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
+                                returningNote = note
+                            }
+                        }
+                        is Nip19Bech32.NEmbed ->
+                            withContext(Dispatchers.Default) {
+                                val baseNote = LocalCache.getOrCreateNote(parsed.event)
+                                if (baseNote.event == null) {
+                                    launch(Dispatchers.Default) {
+                                        LocalCache.verifyAndConsume(parsed.event, null)
+                                    }
                                 }
+
+                                returningNote = baseNote
                             }
 
-                            returningNote = baseNote
+                        is Nip19Bech32.NRelay -> {}
+                        is Nip19Bech32.NAddress -> {
+                            LocalCache.checkGetOrCreateNote(parsed.atag)?.let { note ->
+                                returningNote = note
+                            }
                         }
-                    is Nip19Bech32.NRelay -> {}
-                    is Nip19Bech32.NAddress -> withContext(Dispatchers.IO) { LocalCache.checkGetOrCreateNote(parsed.atag)?.let { note -> returningNote = note } }
-                    else -> {}
-                }
+                        else -> {}
+                    }
 
-                LoadedBechLink(returningNote, it)
+                    LoadedBechLink(returningNote, it)
+                }
             }
     }
 }
