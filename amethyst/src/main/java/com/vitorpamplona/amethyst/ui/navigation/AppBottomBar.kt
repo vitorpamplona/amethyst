@@ -144,25 +144,35 @@ private fun RenderBottomMenu(
         )
         NavigationBar(tonalElevation = Size0dp) {
             bottomNavigationItems.forEach { item ->
-                HasNewItemsIcon(item, accountViewModel, navEntryState, nav)
+                ObserveSelection(item, navEntryState) { selected ->
+                    HasNewItemsIcon(selected, item, accountViewModel, nav)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun RowScope.HasNewItemsIcon(
+private fun ObserveSelection(
     route: Route,
-    accountViewModel: AccountViewModel,
     navEntryState: State<NavBackStackEntry?>,
-    nav: (Route, Boolean) -> Unit,
+    content: @Composable (Boolean) -> Unit,
 ) {
-    val selected =
+    content(
         navEntryState.value
             ?.destination
             ?.route
-            ?.startsWith(route.base) ?: false
+            ?.startsWith(route.base) ?: false,
+    )
+}
 
+@Composable
+private fun RowScope.HasNewItemsIcon(
+    selected: Boolean,
+    route: Route,
+    accountViewModel: AccountViewModel,
+    nav: (Route, Boolean) -> Unit,
+) {
     NavigationBarItem(
         alwaysShowLabel = false,
         icon = {
