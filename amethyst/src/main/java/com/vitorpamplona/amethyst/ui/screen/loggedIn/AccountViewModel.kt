@@ -378,7 +378,7 @@ class AccountViewModel(
         onZapAmount: (String) -> Unit,
     ) {
         if (zappedNote.zapPayments.isNotEmpty()) {
-            withContext(Dispatchers.IO) {
+            withContext(Dispatchers.Default) {
                 account.calculateZappedAmount(zappedNote) { onZapAmount(showAmount(it)) }
             }
         } else {
@@ -392,7 +392,7 @@ class AccountViewModel(
     ) {
         val zapraiserAmount = zappedNote.event?.zapraiserAmount() ?: 0
         if (zappedNote.zapPayments.isNotEmpty()) {
-            withContext(Dispatchers.IO) {
+            withContext(Dispatchers.Default) {
                 account.calculateZappedAmount(zappedNote) { newZapAmount ->
                     var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
 
@@ -1049,9 +1049,11 @@ class AccountViewModel(
         note: Note,
         onResult: (Long?) -> Unit,
     ) {
-        withContext(Dispatchers.IO) {
-            onResult(LocalCache.findEarliestOtsForNote(note))
-        }
+        onResult(
+            withContext(Dispatchers.Default) {
+                LocalCache.findEarliestOtsForNote(note)
+            },
+        )
     }
 
     fun cachedModificationEventsForNote(note: Note) = LocalCache.cachedModificationEventsForNote(note)
@@ -1060,9 +1062,11 @@ class AccountViewModel(
         note: Note,
         onResult: (List<Note>) -> Unit,
     ) {
-        withContext(Dispatchers.IO) {
-            onResult(LocalCache.findLatestModificationForNote(note))
-        }
+        onResult(
+            withContext(Dispatchers.Default) {
+                LocalCache.findLatestModificationForNote(note)
+            },
+        )
     }
 
     private suspend fun checkGetOrCreateChannel(key: HexKey): Channel? = LocalCache.checkGetOrCreateChannel(key)
@@ -1547,7 +1551,7 @@ class AccountViewModel(
                     is Nip19Bech32.Note -> withContext(Dispatchers.IO) { LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note } }
                     is Nip19Bech32.NEvent -> withContext(Dispatchers.IO) { LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note -> returningNote = note } }
                     is Nip19Bech32.NEmbed ->
-                        withContext(Dispatchers.IO) {
+                        withContext(Dispatchers.Default) {
                             val baseNote = LocalCache.getOrCreateNote(parsed.event)
                             if (baseNote.event == null) {
                                 launch(Dispatchers.IO) {
