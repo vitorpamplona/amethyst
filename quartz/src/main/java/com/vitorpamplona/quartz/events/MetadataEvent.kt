@@ -157,7 +157,7 @@ class MetadataEvent(
             mapper.readValue(content, UserMetadata::class.java)
         } catch (e: Exception) {
             // e.printStackTrace()
-            Log.w("MT", "Content Parse Error: ${e.localizedMessage} $content")
+            Log.w("MetadataEvent", "Content Parse Error: ${toNostrUri()} ${e.localizedMessage}")
             null
         }
 

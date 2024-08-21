@@ -152,7 +152,7 @@ class AppDefinitionEvent(
                 newMetadata
             } catch (e: Exception) {
                 e.printStackTrace()
-                Log.w("MT", "Content Parse Error ${e.localizedMessage} $content")
+                Log.w("AppDefinitionEvent", "Content Parse Error: ${toNostrUri()} ${e.localizedMessage}")
                 null
             }
         }
