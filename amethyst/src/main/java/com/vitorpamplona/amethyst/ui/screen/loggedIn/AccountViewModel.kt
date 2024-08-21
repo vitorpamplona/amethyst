@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.model.AccountState
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.LocalCache.notes
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
@@ -1132,7 +1133,7 @@ class AccountViewModel(
         val onIsNew = createdAt > lastTime
 
         if (onIsNew) {
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(Dispatchers.Default) {
                 if (account.markAsRead(routeForLastRead, createdAt)) {
                     refreshMarkAsReadObservers()
                 }
