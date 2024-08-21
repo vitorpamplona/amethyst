@@ -158,12 +158,10 @@ private fun RowScope.HasNewItemsIcon(
     nav: (Route, Boolean) -> Unit,
 ) {
     val selected =
-        (
-            navEntryState.value
-                ?.destination
-                ?.route
-                ?.indexOf(route.base) ?: -1
-        ) > -1
+        navEntryState.value
+            ?.destination
+            ?.route
+            ?.startsWith(route.base) ?: false
 
     NavigationBarItem(
         alwaysShowLabel = false,
