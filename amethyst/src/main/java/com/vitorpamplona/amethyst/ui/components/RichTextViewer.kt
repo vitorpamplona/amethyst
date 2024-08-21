@@ -60,7 +60,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.compose.produceCachedState
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
@@ -79,7 +78,6 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SchemelessUrlSegment
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.HashtagIcon
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -90,18 +88,13 @@ import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.inlinePlaceholder
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
-import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
-import fr.acinq.secp256k1.Hex
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 
 fun isMarkdown(content: String): Boolean =
     content.startsWith("> ") ||
@@ -221,26 +214,6 @@ fun RenderRegularPreview2() {
             is RegularTextSegment -> Text(word.segmentText)
         }
     }
-}
-
-@Composable
-fun mockAccountViewModel(): AccountViewModel {
-    val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
-    sharedPreferencesViewModel.init()
-
-    return AccountViewModel(
-        Account(
-            // blank keys
-            keyPair =
-                KeyPair(
-                    privKey = Hex.decode("0f761f8a5a481e26f06605a1d9b3e9eba7a107d351f43c43a57469b788274499"),
-                    pubKey = Hex.decode("989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"),
-                    forcePubKeyCheck = false,
-                ),
-            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-        ),
-        sharedPreferencesViewModel.sharedPrefs,
-    )
 }
 
 @Preview

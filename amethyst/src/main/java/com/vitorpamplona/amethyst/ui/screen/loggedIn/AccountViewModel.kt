@@ -24,6 +24,7 @@ import android.content.Context
 import android.graphics.drawable.Drawable
 import android.util.Log
 import android.util.LruCache
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
@@ -33,6 +34,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.imageLoader
 import coil.request.ImageRequest
 import com.vitorpamplona.amethyst.Amethyst
@@ -66,11 +68,13 @@ import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.SettingsState
+import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
@@ -96,14 +100,17 @@ import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.utils.TimeUtils
+import fr.acinq.secp256k1.Hex
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
@@ -1637,4 +1644,24 @@ public suspend fun <T, K> collectSuccessfulSigningOperations(
     }
 
     onReady(output)
+}
+
+@Composable
+fun mockAccountViewModel(): AccountViewModel {
+    val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
+    sharedPreferencesViewModel.init()
+
+    return AccountViewModel(
+        Account(
+            // blank keys
+            keyPair =
+                KeyPair(
+                    privKey = Hex.decode("0f761f8a5a481e26f06605a1d9b3e9eba7a107d351f43c43a57469b788274499"),
+                    pubKey = Hex.decode("989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"),
+                    forcePubKeyCheck = false,
+                ),
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+        ),
+        sharedPreferencesViewModel.sharedPrefs,
+    )
 }

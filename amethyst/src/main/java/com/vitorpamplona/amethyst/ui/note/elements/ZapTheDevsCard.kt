@@ -58,13 +58,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableText
@@ -78,8 +75,8 @@ import com.vitorpamplona.amethyst.ui.note.PayViaIntentDialog
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
-import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -88,14 +85,10 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
-import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.events.Event
-import fr.acinq.secp256k1.Hex
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -103,12 +96,6 @@ import kotlinx.coroutines.runBlocking
 @Preview
 @Composable
 fun ZapTheDevsCardPreview() {
-    val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
-    val myCoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
-    sharedPreferencesViewModel.init()
-    sharedPreferencesViewModel.updateTheme(ThemeType.DARK)
-
     runBlocking(Dispatchers.IO) {
         val releaseNotes =
             """
@@ -173,20 +160,7 @@ fun ZapTheDevsCardPreview() {
         LocalCache.justConsume(Event.fromJson(releaseNotes), null)
     }
 
-    val accountViewModel =
-        AccountViewModel(
-            Account(
-                // blank keys
-                keyPair =
-                    KeyPair(
-                        privKey = Hex.decode("0f761f8a5a481e26f06605a1d9b3e9eba7a107d351f43c43a57469b788274499"),
-                        pubKey = Hex.decode("989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"),
-                        forcePubKeyCheck = false,
-                    ),
-                scope = myCoroutineScope,
-            ),
-            sharedPreferencesViewModel.sharedPrefs,
-        )
+    val accountViewModel = mockAccountViewModel()
 
     LoadNote(
         baseNoteHex = "0465b20da0adf45dd612024d124e1ed384f7ecd2cd7358e77998828e7bf35fa2",

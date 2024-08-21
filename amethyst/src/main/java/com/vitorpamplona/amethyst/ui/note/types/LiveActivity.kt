@@ -51,7 +51,6 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.VideoView
-import com.vitorpamplona.amethyst.ui.components.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -60,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfUrlIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CrossfadeCheckIfUrlIsOnline
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
