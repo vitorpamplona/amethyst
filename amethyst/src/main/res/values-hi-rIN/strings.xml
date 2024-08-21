@@ -661,7 +661,7 @@
     <string name="failed_to_upload_with_message">आरोहण असफल : %1$s</string>
     <string name="failed_to_delete_with_message">मिटाने में असफल : %1$s</string>
     <string name="media_too_big_for_nip95">अभिलेख निप॰-९५ के लिए बहुत बडा है</string>
-    <string name="unable_to_load_thumbnail">अल्पचित्र दिखाने में असफल</string>
+    <string name="unable_to_load_thumbnail">अंगुलाकारचित्र दिखाने में असफल</string>
     <string name="could_not_prepare_header">शीर्षक जानकारी आयोजित करने में असफल : %1$s</string>
     <string name="compression_cancelled">संक्षिप्तीकरण निरस्त किया गया</string>
     <string name="compression_returned_null">संक्षिप्तीकरण से अभिलेख प्राप्त नहीं हुआ</string>

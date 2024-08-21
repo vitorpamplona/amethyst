@@ -38,6 +38,9 @@
     <string name="report_explicit_content">Rapportera explicit innehåll</string>
     <string name="report_illegal_behaviour">Rapportera olagligt beteende</string>
     <string name="report_malware">Anmäl skadlig programvara</string>
+    <string name="report_mod">Anmäl Mod</string>
+    <string name="malware">Skadlig kod</string>
+    <string name="mod">Mod</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Logga in med en privat nyckel för att kunna svara</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Logga in med en privat nyckel för att kunna boosta inlägg</string>
     <string name="login_with_a_private_key_to_like_posts">Logga in med en privat nyckel för att gilla inlägg</string>
@@ -656,6 +659,11 @@
     <string name="could_not_prepare_local_file_to_upload">Kunde inte förbereda lokal fil att ladda upp: %1$s</string>
     <string name="failed_to_upload_with_message">Uppladdning misslyckades: %1$s</string>
     <string name="failed_to_delete_with_message">Radering misslyckades: %1$s</string>
+    <string name="media_too_big_for_nip95">Media är för stort för NIP-95</string>
+    <string name="unable_to_load_thumbnail">Kunde inte ladda miniatyrbild</string>
+    <string name="could_not_prepare_header">Kunde inte förbereda header information: %1$s</string>
+    <string name="compression_cancelled">Komprimering avbruten</string>
+    <string name="compression_returned_null">Komprimering misslyckades att returnera en fil</string>
     <string name="edit_draft">Redigera utkast</string>
     <string name="login_with_qr_code">Logga in med QR-kod</string>
     <string name="route">Rutt</string>
@@ -802,4 +810,6 @@
     <string name="add_a_nip96_server">Lägg till en NIP-96 Server</string>
     <string name="delete_all">Radera alla</string>
     <string name="delete_all_drafts_confirmation">Är du säker på att du vill ta bort alla utkast?</string>
+    <string name="and_more">" … och %1$s mer"</string>
+    <string name="stack">Stack:</string>
 </resources>
