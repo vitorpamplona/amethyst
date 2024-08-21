@@ -1328,6 +1328,9 @@ object LocalCache {
             deleteWraps(deletedEvent)
         }
 
+        deleteNote.clearFlow()
+        deleteNote.clearLive()
+
         notes.remove(deleteNote.idHex)
     }
 
@@ -1339,7 +1342,10 @@ object LocalCache {
                 if (noteEvent is WrappedEvent) {
                     deleteWraps(noteEvent)
                 }
+                it.clearFlow()
+                it.clearLive()
             }
+
             notes.remove(it.id)
         }
     }
@@ -2114,7 +2120,7 @@ object LocalCache {
                 .filter { _, item ->
                     val noteEvent = item.event
 
-                    noteEvent is TextNoteModificationEvent && noteEvent.pubKey == originalAuthor && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time)
+                    noteEvent is TextNoteModificationEvent && note.author == item.author && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time)
                 }.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
 
         modificationCache.put(note.idHex, newNotes)
@@ -2321,6 +2327,9 @@ object LocalCache {
                 author?.clearEOSE()
             }
         }
+
+        note.clearFlow()
+        note.clearLive()
 
         notes.remove(note.idHex)
     }
