@@ -1014,7 +1014,7 @@ fun observeEdits(
     accountViewModel: AccountViewModel,
 ): State<GenericLoadable<EditState>> {
     if (baseNote.event !is TextNoteEvent) {
-        return remember { mutableStateOf(GenericLoadable.Empty()) }
+        return EmptyState
     }
 
     val editState =

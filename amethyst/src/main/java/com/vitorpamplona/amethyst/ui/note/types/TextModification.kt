@@ -223,6 +223,8 @@ fun RenderTextModificationEvent(
     }
 }
 
+val EmptyState = mutableStateOf<GenericLoadable<EditState>>(GenericLoadable.Empty())
+
 @Stable
 class EditState {
     private var modificationsList: List<Note> = persistentListOf()
