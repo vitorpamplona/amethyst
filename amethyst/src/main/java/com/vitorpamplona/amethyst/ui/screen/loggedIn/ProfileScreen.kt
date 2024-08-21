@@ -954,7 +954,7 @@ fun WatchIsHiddenUser(
 
 fun getIdentityClaimIcon(identity: IdentityClaim): Int =
     when (identity) {
-        is TwitterIdentity -> R.drawable.twitter
+        is TwitterIdentity -> R.drawable.x
         is TelegramIdentity -> R.drawable.telegram
         is MastodonIdentity -> R.drawable.mastodon
         is GitHubIdentity -> R.drawable.github

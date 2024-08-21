@@ -45,7 +45,7 @@ abstract class IdentityClaim(
         fun create(
             platformIdentity: String,
             proof: String,
-        ): IdentityClaim? {
+        ): IdentityClaim {
             val (platform, identity) = platformIdentity.split(':')
 
             return when (platform.lowercase()) {
@@ -87,7 +87,7 @@ class TwitterIdentity(
     identity: String,
     proof: String,
 ) : IdentityClaim(identity, proof) {
-    override fun toProofUrl() = "https://twitter.com/$identity/status/$proof"
+    override fun toProofUrl() = "https://x.com/$identity/status/$proof"
 
     override fun platform() = platform
 
@@ -97,7 +97,7 @@ class TwitterIdentity(
         fun parseProofUrl(proofUrl: String): TwitterIdentity? {
             return try {
                 if (proofUrl.isBlank()) return null
-                val path = proofUrl.removePrefix("https://twitter.com/").split("?")[0].split("/")
+                val path = proofUrl.removePrefix("https://x.com/").split("?")[0].split("/")
 
                 TwitterIdentity(path[0], path[2])
             } catch (e: Exception) {
@@ -166,7 +166,7 @@ class MetadataEvent(
             .filter { it.firstOrNull() == "i" }
             .mapNotNull {
                 try {
-                    IdentityClaim.create(it.get(1), it.get(2))
+                    IdentityClaim.create(it[1], it[2])
                 } catch (e: Exception) {
                     Log.e("MetadataEvent", "Can't parse identity [${it.joinToString { "," }}]", e)
                     null
@@ -264,27 +264,6 @@ class MetadataEvent(
             } else {
                 currentJson.put(key, value.trim())
             }
-        }
-
-        fun createFromScratch(
-            newName: String,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (MetadataEvent) -> Unit,
-        ) {
-            val prop = ObjectMapper().createObjectNode()
-            prop.put("name", newName.trim())
-
-            val writer = StringWriter()
-            ObjectMapper().writeValue(writer, prop)
-
-            val tags = mutableListOf<Array<String>>()
-
-            tags.add(
-                arrayOf("alt", "User profile for $newName"),
-            )
-
-            signer.sign(createdAt, KIND, tags.toTypedArray(), writer.buffer.toString(), onReady)
         }
     }
 }

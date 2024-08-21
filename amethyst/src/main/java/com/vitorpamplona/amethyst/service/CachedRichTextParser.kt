@@ -26,11 +26,9 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 
 object CachedRichTextParser {
-    val richTextCache = LruCache<Int, RichTextViewerState>(50)
+    private val richTextCache = LruCache<Int, RichTextViewerState>(50)
 
-    // fun getCached(content: String): RichTextViewerState? = richTextCache[content]
-
-    fun hashCodeCache(
+    private fun hashCodeCache(
         content: String,
         tags: ImmutableListOfLists<String>,
         callbackUri: String?,
