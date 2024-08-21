@@ -42,10 +42,9 @@ fun prepareSharedViewModel(act: MainActivity): SharedPreferencesViewModel {
 
     LaunchedEffect(key1 = sharedPreferencesViewModel) {
         sharedPreferencesViewModel.init()
-        sharedPreferencesViewModel.updateDisplaySettings(windowSizeClass, displayFeatures)
     }
 
-    LaunchedEffect(key1 = displayFeatures, key2 = windowSizeClass) {
+    LaunchedEffect(sharedPreferencesViewModel, displayFeatures, windowSizeClass) {
         sharedPreferencesViewModel.updateDisplaySettings(windowSizeClass, displayFeatures)
     }
 
