@@ -38,6 +38,9 @@
     <string name="report_explicit_content">Anstößigen Inhalt melden</string>
     <string name="report_illegal_behaviour">Illegales Verhalten melden</string>
     <string name="report_malware">Malware melden</string>
+    <string name="report_mod">Melde Mod</string>
+    <string name="malware">Malware</string>
+    <string name="mod">Mod</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um antworten zu können</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um Beiträge boosten zu können</string>
     <string name="login_with_a_private_key_to_like_posts">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um Beiträge zu liken</string>
@@ -662,6 +665,11 @@ anz der Bedingungen ist erforderlich</string>
     <string name="could_not_prepare_local_file_to_upload">Lokale Datei konnte nicht zum Hochladen vorbereitet werden: %1$s</string>
     <string name="failed_to_upload_with_message">Upload fehlgeschlagen: %1$s</string>
     <string name="failed_to_delete_with_message">Löschen fehlgeschlagen: %1$s</string>
+    <string name="media_too_big_for_nip95">Medien sind zu groß für NIP-95</string>
+    <string name="unable_to_load_thumbnail">Miniaturansicht kann nicht geladen werden</string>
+    <string name="could_not_prepare_header">Konnte Kopfzeileninformationen nicht vorbereiten: %1$s</string>
+    <string name="compression_cancelled">Komprimierung abgebrochen</string>
+    <string name="compression_returned_null">Komprimierung fehlgeschlagen eine Datei zurückzugeben</string>
     <string name="edit_draft">Entwurf bearbeiten</string>
     <string name="login_with_qr_code">Einloggen mit QR-Code</string>
     <string name="route">Route</string>
@@ -808,4 +816,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="add_a_nip96_server">NIP-96 Server hinzufügen</string>
     <string name="delete_all">Alles löschen</string>
     <string name="delete_all_drafts_confirmation">Möchten Sie wirklich alle Entwürfe löschen?</string>
+    <string name="and_more">" … und %1$s mehr"</string>
+    <string name="stack">Stapel:</string>
 </resources>

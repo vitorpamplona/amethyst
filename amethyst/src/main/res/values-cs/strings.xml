@@ -38,6 +38,9 @@
     <string name="report_explicit_content">Nahlásit explicitní obsah</string>
     <string name="report_illegal_behaviour">Nahlásit nezákonné jednání</string>
     <string name="report_malware">Nahlásit malware</string>
+    <string name="report_mod">Nahlásit mód</string>
+    <string name="malware">Malware</string>
+    <string name="mod">Mód</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Pro odpověď se přihlaste s privátním klíčem</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Pro zvýšení příspěvků se přihlaste s privátním klíčem</string>
     <string name="login_with_a_private_key_to_like_posts">Přihlásit se pomocí soukromého klíče pro označení příspěvků jako líbivé</string>
@@ -657,6 +660,11 @@
     <string name="could_not_prepare_local_file_to_upload">Nelze připravit místní soubor k nahrání: %1$s</string>
     <string name="failed_to_upload_with_message">Nahrání selhalo: %1$s</string>
     <string name="failed_to_delete_with_message">Smazání selhalo: %1$s</string>
+    <string name="media_too_big_for_nip95">Média je příliš velká pro NIP-95</string>
+    <string name="unable_to_load_thumbnail">Nelze načíst náhled</string>
+    <string name="could_not_prepare_header">Nelze připravit informace v záhlaví: %1$s</string>
+    <string name="compression_cancelled">Komprese zrušena</string>
+    <string name="compression_returned_null">Komprese se nepodařilo vrátit soubor</string>
     <string name="edit_draft">Upravit koncept</string>
     <string name="login_with_qr_code">Přihlášení pomocí QR kódu</string>
     <string name="route">Trasa</string>
@@ -803,4 +811,6 @@
     <string name="add_a_nip96_server">Přidat NIP-96 server</string>
     <string name="delete_all">Vymazat vše</string>
     <string name="delete_all_drafts_confirmation">Opravdu chcete odstranit všechny koncepty?</string>
+    <string name="and_more">" … a %1$s další"</string>
+    <string name="stack">Zásobník:</string>
 </resources>

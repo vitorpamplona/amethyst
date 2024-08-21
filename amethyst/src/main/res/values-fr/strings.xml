@@ -38,6 +38,9 @@
     <string name="report_explicit_content">Signaler un contenu choquant</string>
     <string name="report_illegal_behaviour">Signaler un comportement illégal</string>
     <string name="report_malware">Signaler un programme malveillant</string>
+    <string name="report_mod">Signaler le mod</string>
+    <string name="malware">Programme malveillant</string>
+    <string name="mod">Mod</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Connectez vous avec une clé privée pour pouvoir répondre</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Connectez vous avec une clé privée pour pouvoir booster des posts</string>
     <string name="login_with_a_private_key_to_like_posts">Connectez vous avec une clé privée pour pouvoir aimer des posts</string>
