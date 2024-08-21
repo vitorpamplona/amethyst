@@ -38,6 +38,9 @@
     <string name="report_explicit_content">举报明确内容</string>
     <string name="report_illegal_behaviour">举报非法行为</string>
     <string name="report_malware">举报恶意软件</string>
+    <string name="report_mod">？？？Report Mod？？？</string>
+    <string name="malware">恶意软件</string>
+    <string name="mod">？？？Mod？？？</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">你正在使用公钥，公钥是只读的。使用私钥登录以便回复</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">你正在使用公钥，公钥是只读的。使用私钥登录以便提升帖子</string>
     <string name="login_with_a_private_key_to_like_posts">使用私钥登录以便点赞帖子</string>
@@ -659,6 +662,11 @@
     <string name="could_not_prepare_local_file_to_upload">无法准备要上传的本地文件：%1$s</string>
     <string name="failed_to_upload_with_message">上传失败：%1$s</string>
     <string name="failed_to_delete_with_message">删除失败：%1$s</string>
+    <string name="media_too_big_for_nip95">文件过大，无法使用 NIP-95</string>
+    <string name="unable_to_load_thumbnail">无法加载缩略图</string>
+    <string name="could_not_prepare_header">无法准备头部信息：%1$s</string>
+    <string name="compression_cancelled">压缩已取消</string>
+    <string name="compression_returned_null">压缩返回的文件失败</string>
     <string name="edit_draft">编辑草稿</string>
     <string name="login_with_qr_code">使用二维码登录</string>
     <string name="route">路径</string>
@@ -806,4 +814,5 @@
     <string name="delete_all">删除所有</string>
     <string name="delete_all_drafts_confirmation">确定要删除所有草稿吗？</string>
     <string name="and_more">" ... 和 %1$s 更多"</string>
+    <string name="stack">堆叠：</string>
 </resources>

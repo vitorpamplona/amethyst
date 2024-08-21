@@ -9,6 +9,7 @@
     <string name="post_was_hidden">تم إخفاء هذا المنشور لأنه يشير إلى المستخدمين الذين قمت بإخفائهم أو الكلمات التي قمت بإخفائها</string>
     <string name="post_was_flagged_as_inappropriate_by">تم وضع علامة على المنشور على أنه غير لائق بواسطة</string>
     <string name="post_not_found">المنشور غير موجود</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">صورة القناة</string>
     <string name="referenced_event_not_found">لم يتم العثور على الحدث المشار إليه</string>
     <string name="could_not_decrypt_the_message">لا يمكن فك تشفير الرسالة</string>
@@ -395,6 +396,7 @@
     <string name="automatically_load_images_gifs">معاينة الصورة</string>
     <string name="automatically_play_videos">تشغيل الفيديو</string>
     <string name="automatically_show_url_preview">معاينة الرابط</string>
+    <string name="ui_style_description">اختر نمط المنشور</string>
     <string name="load_image">تحميل الصورة</string>
     <string name="spamming_users">المستخدمون المزعجون</string>
     <string name="muted_button">الصوت مكتوم. انقر لإلغاء كتم الصوت</string>
@@ -428,6 +430,9 @@
     <string name="automatically_play_videos_description">تشغيل الفيديوهات و الصور المتحركة تلقائياً</string>
     <string name="automatically_show_url_preview_description">إظهار معاينات الروابط</string>
     <string name="load_image_description">متى يتم تحميل الصور</string>
+    <string name="copy_to_clipboard">نسخ إلى الحافظة</string>
+    <string name="copy_npub_to_clipboard">نسخ npub إلى الحافظة</string>
+    <string name="share_or_save">مشاركة أو حفظ</string>
     <string name="copy_url_to_clipboard">نسخ عنوان الرابط إلى الحافظة</string>
     <string name="copy_the_note_id_to_the_clipboard">انسخ معرف النص (ID) إلى الحافظة</string>
     <string name="created_at">أنشئ في</string>
@@ -497,10 +502,14 @@
     <string name="route_search">البحث</string>
     <string name="route_messages">الرسائل</string>
     <string name="route_security_filters">مرشحات الأمان</string>
+    <string name="new_post">منشور جديد</string>
     <string name="new_community_note">منشور جديد للمجتمع</string>
     <string name="open_all_reactions_to_this_post">فتح جميع ردود الفعل على هذا المنشور</string>
     <string name="close_all_reactions_to_this_post">إغلاق جميع ردود الفعل على هذا المنشور</string>
     <string name="reply_description">الرد</string>
+    <string name="like_description">إعجاب</string>
+    <string name="change_reaction">تغيير ردود الفعل السريعة</string>
     <string name="accessibility_scan_qr_code">مسح رمز ال QR</string>
     <string name="dvm_looking_for_app">البحث عن تطبيق</string>
+    <string name="and_more">"... و %1$s اكثر"</string>
 </resources>

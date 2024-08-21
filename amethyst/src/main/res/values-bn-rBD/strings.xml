@@ -9,6 +9,7 @@
     <string name="post_was_hidden">এই পোস্টটি লুকানো ছিল কারণ এটি আপনার লুকানো ব্যবহারকারী বা শব্দ উল্লেখ করে</string>
     <string name="post_was_flagged_as_inappropriate_by">পোস্টটি কারো দ্বারা অভিযুক্ত হয়েছে</string>
     <string name="post_not_found">ইভেন্টটি লোড হচ্ছে অথবা আপনার রিলে তালিকায় এটি পাওয়া যাচ্ছে না</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">চ্যানেল ইমেজ</string>
     <string name="referenced_event_not_found">উল্লেখিত ইভেন্টটি পাওয়া যায় নি</string>
     <string name="could_not_decrypt_the_message">মেসেজটি ডিক্রিপ্ট করা যায় নি</string>
@@ -416,6 +417,7 @@
     <string name="automatically_load_images_gifs">ছবির পূর্বরূপ</string>
     <string name="automatically_play_videos">ভিডিও প্লেব্যাক</string>
     <string name="automatically_show_url_preview">URL-এর পূর্বরূপ</string>
+    <string name="ui_style_description">পোস্ট শৈলী চয়ন করুন</string>
     <string name="load_image">ছবিটি লোড করুন</string>
     <string name="spamming_users">স্প্যামাররা</string>
     <string name="muted_button">মৌন করে রাখা। এটি তুলে নিতে ক্লিক করুন</string>

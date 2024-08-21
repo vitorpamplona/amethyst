@@ -38,6 +38,9 @@
     <string name="report_explicit_content">Denunciar conteúdo explícito</string>
     <string name="report_illegal_behaviour">Denunciar comportamento ilegal</string>
     <string name="report_malware">Reportar Malware</string>
+    <string name="report_mod">Reportar Mod</string>
+    <string name="malware">Malware</string>
+    <string name="mod">Mod</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Faça login com uma chave privada para poder responder</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Faça login com uma chave privada para poder impulsionar postagens</string>
     <string name="login_with_a_private_key_to_like_posts">Faça login com uma chave privada para curtir postagens</string>
@@ -657,6 +660,11 @@
     <string name="could_not_prepare_local_file_to_upload">Não foi possível preparar o arquivo local para enviar: %1$s</string>
     <string name="failed_to_upload_with_message">Falha ao enviar: %1$s</string>
     <string name="failed_to_delete_with_message">Falha ao excluir: %1$s</string>
+    <string name="media_too_big_for_nip95">Mídia muito grande para NIP-95</string>
+    <string name="unable_to_load_thumbnail">Não foi possível carregar a miniatura</string>
+    <string name="could_not_prepare_header">Não foi possível preparar informações do cabeçalho: %1$s</string>
+    <string name="compression_cancelled">Compressão cancelada</string>
+    <string name="compression_returned_null">Compressão falhou ao retornar um arquivo</string>
     <string name="edit_draft">Editar rascunho</string>
     <string name="login_with_qr_code">Entrar com Código QR</string>
     <string name="route">Rota</string>
@@ -803,4 +811,6 @@
     <string name="add_a_nip96_server">Adicionar um servidor NIP-96</string>
     <string name="delete_all">Apagar tudo</string>
     <string name="delete_all_drafts_confirmation">Você tem certeza de que deseja excluir todos os rascunhos?</string>
+    <string name="and_more">" … e %1$s mais"</string>
+    <string name="stack">Pilha:</string>
 </resources>
