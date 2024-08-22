@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.TorrentCommentEvent
 
 class UserProfileConversationsFeedFilter(
     val user: User,
@@ -59,7 +60,8 @@ class UserProfileConversationsFeedFilter(
                 it.event is TextNoteEvent ||
                     it.event is PollNoteEvent ||
                     it.event is ChannelMessageEvent ||
-                    it.event is LiveActivitiesChatMessageEvent
+                    it.event is LiveActivitiesChatMessageEvent ||
+                    it.event is TorrentCommentEvent
             ) &&
             !it.isNewThread() &&
             account.isAcceptable(it)

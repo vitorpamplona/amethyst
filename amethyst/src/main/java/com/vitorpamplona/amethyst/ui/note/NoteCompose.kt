@@ -112,6 +112,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.types.RenderReport
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
+import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -182,6 +184,8 @@ import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteModificationEvent
+import com.vitorpamplona.quartz.events.TorrentCommentEvent
+import com.vitorpamplona.quartz.events.TorrentEvent
 import com.vitorpamplona.quartz.events.VideoEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
@@ -754,6 +758,27 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
+        is TorrentEvent ->
+            RenderTorrent(
+                baseNote,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+
+        is TorrentCommentEvent ->
+            RenderTorrentComment(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                unPackReply,
+                backgroundColor,
+                editState,
+                accountViewModel,
+                nav,
+            )
+
         else -> {
             RenderTextEvent(
                 baseNote,

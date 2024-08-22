@@ -142,6 +142,8 @@ class EventFactory {
             StatusEvent.KIND -> StatusEvent(id, pubKey, createdAt, tags, content, sig)
             TextNoteEvent.KIND -> TextNoteEvent(id, pubKey, createdAt, tags, content, sig)
             TextNoteModificationEvent.KIND -> TextNoteModificationEvent(id, pubKey, createdAt, tags, content, sig)
+            TorrentEvent.KIND -> TorrentEvent(id, pubKey, createdAt, tags, content, sig)
+            TorrentCommentEvent.KIND -> TorrentCommentEvent(id, pubKey, createdAt, tags, content, sig)
             VideoHorizontalEvent.KIND -> VideoHorizontalEvent(id, pubKey, createdAt, tags, content, sig)
             VideoVerticalEvent.KIND -> VideoVerticalEvent(id, pubKey, createdAt, tags, content, sig)
             VideoViewEvent.KIND -> VideoViewEvent(id, pubKey, createdAt, tags, content, sig)

@@ -119,16 +119,31 @@ class DraftEvent(
 
         fun create(
             dTag: String,
+            originalNote: TorrentCommentEvent,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (DraftEvent) -> Unit,
+        ) {
+            val tagsWithMarkers =
+                originalNote.tags().filter {
+                    it.size > 3 && (it[0] == "e" || it[0] == "a") && (it[3] == "root" || it[3] == "reply")
+                }
+
+            create(dTag, originalNote, tagsWithMarkers, signer, createdAt, onReady)
+        }
+
+        fun create(
+            dTag: String,
             originalNote: LiveActivitiesChatMessageEvent,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (DraftEvent) -> Unit,
         ) {
             val tags = mutableListOf<Array<String>>()
-            originalNote.activity()?.let { tags.add(arrayOf("a", it.toTag())) }
-            originalNote.replyingTo()?.let { tags.add(arrayOf("e", it)) }
+            originalNote.activity()?.let { tags.add(arrayOf("a", it.toTag(), "", "root")) }
+            originalNote.replyingTo()?.let { tags.add(arrayOf("e", it, "", "reply")) }
 
-            create(dTag, originalNote, emptyList(), signer, createdAt, onReady)
+            create(dTag, originalNote, tags, signer, createdAt, onReady)
         }
 
         fun create(

@@ -133,6 +133,8 @@ interface EventInterface {
 
     fun taggedUrls(): List<String>
 
+    fun firstTag(key: String): String?
+
     fun firstTagFor(vararg key: String): String?
 
     fun firstTaggedAddress(): ATag?

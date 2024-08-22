@@ -114,6 +114,8 @@ import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteModificationEvent
+import com.vitorpamplona.quartz.events.TorrentCommentEvent
+import com.vitorpamplona.quartz.events.TorrentEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
@@ -464,6 +466,61 @@ object LocalCache {
     }
 
     fun consume(
+        event: TorrentEvent,
+        relay: Relay?,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        if (antiSpam.isSpam(event, relay)) {
+            return
+        }
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(
+        event: TorrentCommentEvent,
+        relay: Relay?,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        if (antiSpam.isSpam(event, relay)) {
+            return
+        }
+
+        val replyTo = computeReplyTo(event)
+
+        note.loadEvent(event, author, replyTo)
+
+        // Counts the replies
+        replyTo.forEach {
+            it.addReply(note)
+        }
+
+        refreshObservers(note)
+    }
+
+    fun consume(
         event: NIP90ContentDiscoveryResponseEvent,
         relay: Relay? = null,
     ) {
@@ -795,6 +852,8 @@ object LocalCache {
                     .tagsWithoutCitations()
                     .filter { it != event.activity()?.toTag() }
                     .mapNotNull { checkGetOrCreateNote(it) }
+            is TorrentCommentEvent ->
+                event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
 
             is DraftEvent -> {
                 event.mapTaggedEvent { checkGetOrCreateNote(it) } + event.mapTaggedAddress { checkGetOrCreateAddressableNote(it) }
@@ -1301,6 +1360,10 @@ object LocalCache {
 
         (deletedEvent as? LiveActivitiesChatMessageEvent)?.activity()?.let {
             getChannelIfExists(it.toTag())?.removeNote(deleteNote)
+        }
+
+        (deletedEvent as? TorrentCommentEvent)?.torrent()?.let {
+            getNoteIfExists(it)?.removeReply(deleteNote)
         }
 
         if (deletedEvent is PrivateDmEvent) {
@@ -2664,6 +2727,8 @@ object LocalCache {
                 is StatusEvent -> consume(event, relay)
                 is TextNoteEvent -> consume(event, relay)
                 is TextNoteModificationEvent -> consume(event, relay)
+                is TorrentEvent -> consume(event, relay)
+                is TorrentCommentEvent -> consume(event, relay)
                 is VideoHorizontalEvent -> consume(event, relay)
                 is VideoVerticalEvent -> consume(event, relay)
                 is WikiNoteEvent -> consume(event, relay)

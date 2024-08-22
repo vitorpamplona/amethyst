@@ -102,6 +102,7 @@ import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteModificationEvent
+import com.vitorpamplona.quartz.events.TorrentCommentEvent
 import com.vitorpamplona.quartz.events.WrappedEvent
 import com.vitorpamplona.quartz.events.ZapSplitSetup
 import com.vitorpamplona.quartz.signers.NostrSigner
@@ -1755,6 +1756,78 @@ class Account(
             zapRaiserAmount = zapRaiserAmount,
             replyingTo = replyingTo,
             root = root,
+            directMentions = directMentions,
+            geohash = geohash,
+            nip94attachments = nip94attachments,
+            forkedFrom = forkedFrom,
+            signer = signer,
+            isDraft = draftTag != null,
+        ) {
+            if (draftTag != null) {
+                if (message.isBlank()) {
+                    deleteDraft(draftTag)
+                } else {
+                    DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                        val newRelayList = getPrivateOutboxRelayList()?.relays()
+                        if (newRelayList != null) {
+                            Client.sendPrivately(draftEvent, newRelayList)
+                        } else {
+                            Client.send(draftEvent, relayList = relayList)
+                        }
+                        LocalCache.justConsume(draftEvent, null)
+                    }
+                }
+            } else {
+                Client.send(it, relayList = relayList)
+                LocalCache.justConsume(it, null)
+
+                // broadcast replied notes
+                replyingTo?.let {
+                    LocalCache.getNoteIfExists(replyingTo)?.event?.let {
+                        Client.send(it, relayList = relayList)
+                    }
+                }
+                replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
+                addresses?.forEach {
+                    LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
+                        Client.send(it, relayList = relayList)
+                    }
+                }
+            }
+        }
+    }
+
+    fun sendTorrentComment(
+        message: String,
+        replyTo: List<Note>?,
+        mentions: List<User>?,
+        zapReceiver: List<ZapSplitSetup>? = null,
+        wantsToMarkAsSensitive: Boolean,
+        zapRaiserAmount: Long? = null,
+        replyingTo: String?,
+        root: String,
+        directMentions: Set<HexKey>,
+        forkedFrom: Event?,
+        relayList: List<RelaySetupInfo>? = null,
+        geohash: String? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
+        draftTag: String?,
+    ) {
+        if (!isWriteable()) return
+
+        val repliesToHex = replyTo?.filter { it.address() == null }?.map { it.idHex }
+        val mentionsHex = mentions?.map { it.pubkeyHex }
+        val addresses = replyTo?.mapNotNull { it.address() } ?: emptyList()
+
+        TorrentCommentEvent.create(
+            message = message,
+            replyTos = repliesToHex,
+            mentions = mentionsHex,
+            zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
+            zapRaiserAmount = zapRaiserAmount,
+            replyingTo = replyingTo,
+            torrent = root,
             directMentions = directMentions,
             geohash = geohash,
             nip94attachments = nip94attachments,

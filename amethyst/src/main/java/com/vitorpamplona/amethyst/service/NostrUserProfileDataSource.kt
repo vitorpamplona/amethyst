@@ -42,6 +42,8 @@ import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.TorrentCommentEvent
+import com.vitorpamplona.quartz.events.TorrentEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 
 object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
@@ -85,6 +87,23 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
                             ),
                         authors = listOf(it.pubkeyHex),
                         limit = 200,
+                    ),
+            )
+        }
+
+    fun createUserPostsFilter2() =
+        user?.let {
+            TypedFilter(
+                types = COMMON_FEED_TYPES,
+                filter =
+                    SincePerRelayFilter(
+                        kinds =
+                            listOf(
+                                TorrentEvent.KIND,
+                                TorrentCommentEvent.KIND,
+                            ),
+                        authors = listOf(it.pubkeyHex),
+                        limit = 20,
                     ),
             )
         }
@@ -188,6 +207,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
             listOfNotNull(
                 createUserInfoFilter(),
                 createUserPostsFilter(),
+                createUserPostsFilter2(),
                 createProfileGalleryFilter(),
                 createFollowFilter(),
                 createFollowersFilter(),

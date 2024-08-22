@@ -135,6 +135,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
+import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelHeader
@@ -185,6 +187,8 @@ import com.vitorpamplona.quartz.events.RelaySetEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import com.vitorpamplona.quartz.events.TextNoteModificationEvent
+import com.vitorpamplona.quartz.events.TorrentCommentEvent
+import com.vitorpamplona.quartz.events.TorrentEvent
 import com.vitorpamplona.quartz.events.VideoEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 import kotlinx.collections.immutable.toImmutableList
@@ -602,6 +606,25 @@ private fun FullBleedNoteCompose(
                         false,
                         canPreview,
                         3,
+                        backgroundColor,
+                        editState,
+                        accountViewModel,
+                        nav,
+                    )
+                } else if (noteEvent is TorrentEvent) {
+                    RenderTorrent(
+                        baseNote,
+                        backgroundColor,
+                        accountViewModel,
+                        nav,
+                    )
+                } else if (noteEvent is TorrentCommentEvent) {
+                    RenderTorrentComment(
+                        baseNote,
+                        false,
+                        canPreview,
+                        quotesLeft = 3,
+                        unPackReply = false,
                         backgroundColor,
                         editState,
                         accountViewModel,

@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteModificationEvent
+import com.vitorpamplona.quartz.events.TorrentCommentEvent
 
 object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
     private var nextEventsToWatch = setOf<Note>()
@@ -179,6 +180,7 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
                                         DeletionEvent.KIND,
                                         NIP90ContentDiscoveryResponseEvent.KIND,
                                         NIP90StatusEvent.KIND,
+                                        TorrentCommentEvent.KIND,
                                     ),
                                 tags = mapOf("e" to it.map { it.idHex }),
                                 since = findMinimumEOSEs(it),

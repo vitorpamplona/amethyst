@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.events.TorrentEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 
 class UserProfileNewThreadFeedFilter(
@@ -73,7 +74,8 @@ class UserProfileNewThreadFeedFilter(
                     it.event is PollNoteEvent ||
                     it.event is HighlightEvent ||
                     it.event is AudioTrackEvent ||
-                    it.event is AudioHeaderEvent
+                    it.event is AudioHeaderEvent ||
+                    it.event is TorrentEvent
             ) &&
             it.isNewThread() &&
             account.isAcceptable(it)
