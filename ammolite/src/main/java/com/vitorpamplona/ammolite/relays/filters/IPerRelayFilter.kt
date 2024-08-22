@@ -31,4 +31,7 @@ interface IPerRelayFilter {
     ): Boolean
 
     fun toDebugJson(): String
+
+    // This only exists because some relays confuse empty lists with null lists
+    fun isValidFor(url: String): Boolean
 }

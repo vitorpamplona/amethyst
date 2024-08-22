@@ -389,7 +389,7 @@ class Relay(
                 if (isReady) {
                     val relayFilters =
                         filters.filter { filter ->
-                            activeTypes.any { it in filter.types }
+                            activeTypes.any { it in filter.types } && filter.filter.isValidFor(url)
                         }
 
                     if (relayFilters.isNotEmpty()) {

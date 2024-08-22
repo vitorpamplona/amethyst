@@ -83,7 +83,7 @@ abstract class NostrDataSource(
                         eventCounter = eventCounter + Pair(key, Counter(subscriptionId, event.kind, 1))
                     }
 
-                    // Log.d(this@NostrDataSource.javaClass.simpleName, "Relay ${relay.url}: ${event.kind}")
+                    // Log.d(this@NostrDataSource.javaClass.simpleName, "Relay ${relay.url}: $subscriptionId ${event.kind} ")
 
                     consume(event, relay)
                     if (afterEOSE) {

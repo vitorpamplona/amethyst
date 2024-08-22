@@ -246,9 +246,10 @@ class Account(
         ) { nip65RelayList, dmRelayList, searchRelayList, privateOutBox, userProfile ->
             checkNotInMainThread()
 
-            val baseRelaySet = activeRelays() ?: convertLocalRelays()
+            val localRelays = convertLocalRelays()
+            val baseRelaySet = activeRelays() ?: localRelays
             val newDMRelaySet = (dmRelayList.note.event as? ChatMessageRelayListEvent)?.relays()?.map { RelayUrlFormatter.normalize(it) }?.toSet() ?: emptySet()
-            val searchRelaySet = (searchRelayList.note.event as? SearchRelayListEvent)?.relays()?.map { RelayUrlFormatter.normalize(it) }?.toSet() ?: Constants.defaultSearchRelaySet
+            val searchRelaySet = ((searchRelayList.note.event as? SearchRelayListEvent)?.relays() ?: Constants.defaultSearchRelaySet).map { RelayUrlFormatter.normalize(it) }.toSet()
             val nip65RelaySet =
                 (nip65RelayList.note.event as? AdvertisedRelayListEvent)?.relays()?.map {
                     AdvertisedRelayListEvent.AdvertisedRelayInfo(
@@ -343,7 +344,7 @@ class Account(
             }
 
             // --------------
-            // PRIVATE OUTBOX
+            // Local Storage
             // --------------
 
             mappedRelaySet =
@@ -2972,7 +2973,7 @@ class Account(
                     val localFeedTypes =
                         localRelays.firstOrNull { localRelay -> RelayUrlFormatter.normalize(localRelay.url) == url }?.feedTypes?.minus(setOf(FeedType.SEARCH, FeedType.WALLET_CONNECT))
                             ?: Constants.defaultRelays
-                                .filter { defaultRelay -> defaultRelay.url == url }
+                                .filter { defaultRelay -> RelayUrlFormatter.normalize(defaultRelay.url) == url }
                                 .firstOrNull()
                                 ?.feedTypes
                             ?: Constants.activeTypesGlobalChats
@@ -2983,7 +2984,16 @@ class Account(
         return usersRelayList.toTypedArray()
     }
 
-    fun convertLocalRelays(): Array<RelaySetupInfo> = localRelays.map { RelaySetupInfo(RelayUrlFormatter.normalize(it.url), it.read, it.write, it.feedTypes.minus(setOf(FeedType.SEARCH, FeedType.WALLET_CONNECT))) }.toTypedArray()
+    fun convertLocalRelays(): Array<RelaySetupInfo> =
+        localRelays
+            .map {
+                RelaySetupInfo(
+                    RelayUrlFormatter.normalize(it.url),
+                    it.read,
+                    it.write,
+                    it.feedTypes.minus(setOf(FeedType.SEARCH, FeedType.WALLET_CONNECT)),
+                )
+            }.toTypedArray()
 
     fun activeGlobalRelays(): Array<String> =
         connectToRelays.value

@@ -35,6 +35,8 @@ class SincePerRelayFilter(
     val limit: Int? = null,
     val search: String? = null,
 ) : IPerRelayFilter {
+    override fun isValidFor(url: String) = true
+
     override fun toJson(forRelay: String) = FilterSerializer.toJson(ids, authors, kinds, tags, since?.get(forRelay)?.time, until, limit, search)
 
     override fun match(

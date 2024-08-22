@@ -36,7 +36,22 @@ class SinceAuthorPerRelayFilter(
     val limit: Int? = null,
     val search: String? = null,
 ) : IPerRelayFilter {
-    override fun toJson(forRelay: String) = FilterSerializer.toJson(ids, authors?.get(forRelay), kinds, tags, since?.get(forRelay)?.time, until, limit, search)
+    // This only exists because some relays consider empty arrays as null and return everything.
+    // So, if there is an author list, but no list for the specific relay or if the list is empty
+    // don't send it.
+    override fun isValidFor(forRelay: String) = authors == null || !authors[forRelay].isNullOrEmpty()
+
+    override fun toJson(forRelay: String): String {
+        // if authors is empty, but not null
+        val authorsForThisRelay =
+            if (authors != null) {
+                authors[forRelay]?.ifEmpty { null }
+            } else {
+                null
+            }
+
+        return FilterSerializer.toJson(ids, authors?.get(forRelay), kinds, tags, since?.get(forRelay)?.time, until, limit, search)
+    }
 
     override fun match(
         event: Event,
