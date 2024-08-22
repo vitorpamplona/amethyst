@@ -75,7 +75,8 @@ class EventNotificationConsumer(
         pushWrappedEvent: GiftWrapEvent,
         account: Account,
     ) {
-        pushWrappedEvent.cachedGift(account.signer) { notificationEvent ->
+        // no need to cache
+        pushWrappedEvent.unwrap(account.signer) { notificationEvent ->
             val consumed = LocalCache.hasConsumed(notificationEvent)
             val verified = LocalCache.justVerify(notificationEvent)
             Log.d("EventNotificationConsumer", "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${account.userProfile().toBestDisplayName()} consumed= $consumed && verified= $verified")
@@ -111,15 +112,19 @@ class EventNotificationConsumer(
 
         when (event) {
             is GiftWrapEvent -> {
-                event.cachedGift(account.signer) { unwrapAndConsume(it, account, onReady) }
+                event.unwrap(account.signer) {
+                    unwrapAndConsume(it, account, onReady)
+                    LocalCache.justConsume(event, null)
+                }
             }
             is SealedGossipEvent -> {
-                event.cachedGossip(account.signer) {
+                event.unseal(account.signer) {
                     if (!LocalCache.hasConsumed(it)) {
                         // this is not verifiable
                         LocalCache.justConsume(it, null)
                         onReady(it)
                     }
+                    LocalCache.justConsume(event, null)
                 }
             }
             else -> {

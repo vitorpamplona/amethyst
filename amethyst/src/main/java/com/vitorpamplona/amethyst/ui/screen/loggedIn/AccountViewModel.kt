@@ -1364,25 +1364,50 @@ class AccountViewModel(
     ) {
         when (event) {
             is GiftWrapEvent -> {
-                event.cachedGift(account.signer) {
-                    val existingNote = LocalCache.getNoteIfExists(it.id)
+                event.innerEventId?.let {
+                    val existingNote = LocalCache.getNoteIfExists(it)
                     if (existingNote != null) {
                         unwrapIfNeeded(existingNote.event, onReady)
                     } else {
-                        LocalCache.verifyAndConsume(it, null)
-                        unwrapIfNeeded(it, onReady)
+                        event.unwrap(account.signer) {
+                            LocalCache.verifyAndConsume(it, null)
+                            unwrapIfNeeded(it, onReady)
+                        }
+                    }
+                } ?: run {
+                    event.unwrap(account.signer) {
+                        val existingNote = LocalCache.getNoteIfExists(it.id)
+                        if (existingNote != null) {
+                            unwrapIfNeeded(existingNote.event, onReady)
+                        } else {
+                            LocalCache.verifyAndConsume(it, null)
+                            unwrapIfNeeded(it, onReady)
+                        }
                     }
                 }
             }
             is SealedGossipEvent -> {
-                event.cachedGossip(account.signer) {
-                    val existingNote = LocalCache.getNoteIfExists(it.id)
+                event.innerEventId?.let {
+                    val existingNote = LocalCache.getNoteIfExists(it)
                     if (existingNote != null) {
                         unwrapIfNeeded(existingNote.event, onReady)
                     } else {
-                        // this is not verifiable
-                        LocalCache.justConsume(it, null)
-                        unwrapIfNeeded(it, onReady)
+                        event.unseal(account.signer) {
+                            // this is not verifiable
+                            LocalCache.justConsume(it, null)
+                            unwrapIfNeeded(it, onReady)
+                        }
+                    }
+                } ?: run {
+                    event.unseal(account.signer) {
+                        val existingNote = LocalCache.getNoteIfExists(it.id)
+                        if (existingNote != null) {
+                            unwrapIfNeeded(existingNote.event, onReady)
+                        } else {
+                            // this is not verifiable
+                            LocalCache.justConsume(it, null)
+                            unwrapIfNeeded(it, onReady)
+                        }
                     }
                 }
             }

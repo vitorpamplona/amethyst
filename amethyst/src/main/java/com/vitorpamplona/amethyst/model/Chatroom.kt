@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Stable
@@ -75,7 +77,7 @@ class Chatroom {
     fun senderIntersects(keySet: Set<HexKey>): Boolean = authors.any { it.pubkeyHex in keySet }
 
     fun pruneMessagesToTheLatestOnly(): Set<Note> {
-        val sorted = roomMessages.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+        val sorted = roomMessages.sortedWith(DefaultFeedOrder)
 
         val toKeep =
             if ((sorted.firstOrNull()?.createdAt() ?: 0) > TimeUtils.oneWeekAgo()) {
@@ -84,7 +86,7 @@ class Chatroom {
             } else {
                 // Old messages, keep the last one.
                 sorted.take(1).toSet()
-            } + sorted.filter { it.liveSet?.isInUse() ?: false }
+            } + sorted.filter { it.liveSet?.isInUse() ?: false } + sorted.filter { it.event !is PrivateDmEvent }
 
         val toRemove = roomMessages.minus(toKeep)
         roomMessages = toKeep

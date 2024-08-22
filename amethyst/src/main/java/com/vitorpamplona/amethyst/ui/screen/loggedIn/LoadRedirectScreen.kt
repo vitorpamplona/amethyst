@@ -43,10 +43,15 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
+import com.vitorpamplona.quartz.events.ChannelMessageEvent
+import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChatroomKeyable
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.GiftWrapEvent
+import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -104,7 +109,7 @@ fun LoadRedirectScreen(
         val event = note.event
 
         if (event != null) {
-            withContext(Dispatchers.IO) { redirect(event, note, accountViewModel, nav) }
+            withContext(Dispatchers.IO) { redirect(event, accountViewModel, nav) }
         }
     }
 
@@ -118,35 +123,60 @@ fun LoadRedirectScreen(
 }
 
 fun redirect(
-    event: EventInterface,
-    note: Note,
+    eventId: HexKey,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val channelHex = note.channelHex()
+    LocalCache.getNoteIfExists(eventId)?.event?.let {
+        redirect(it, accountViewModel, nav)
+    }
+}
+
+fun redirect(
+    event: EventInterface,
+    accountViewModel: AccountViewModel,
+    nav: (String) -> Unit,
+) {
+    val channelHex =
+        if (
+            event is ChannelMessageEvent ||
+            event is ChannelMetadataEvent ||
+            event is ChannelCreateEvent ||
+            event is LiveActivitiesChatMessageEvent ||
+            event is LiveActivitiesEvent
+        ) {
+            (event as? ChannelMessageEvent)?.channel()
+                ?: (event as? ChannelMetadataEvent)?.channel()
+                ?: (event as? ChannelCreateEvent)?.id
+                ?: (event as? LiveActivitiesChatMessageEvent)?.activity()?.toTag()
+                ?: (event as? LiveActivitiesEvent)?.address()?.toTag()
+        } else {
+            null
+        }
 
     if (event is GiftWrapEvent) {
-        accountViewModel.unwrap(event) { redirect(it, note, accountViewModel, nav) }
+        event.innerEventId?.let {
+            redirect(it, accountViewModel, nav)
+        } ?: run {
+            accountViewModel.unwrap(event) { redirect(it, accountViewModel, nav) }
+        }
     } else if (event is SealedGossipEvent) {
-        accountViewModel.unseal(event) { redirect(it, note, accountViewModel, nav) }
+        event.innerEventId?.let {
+            redirect(it, accountViewModel, nav)
+        } ?: run {
+            accountViewModel.unseal(event) { redirect(it, accountViewModel, nav) }
+        }
     } else {
-        if (event == null) {
-            // stay here, loading
-        } else if (event is ChannelCreateEvent) {
-            nav("Channel/${note.idHex}")
+        if (event is ChannelCreateEvent) {
+            nav("Channel/${event.id()}")
         } else if (event is ChatroomKeyable) {
-            note.author?.let {
-                val withKey =
-                    (event as ChatroomKeyable).chatroomKey(accountViewModel.userProfile().pubkeyHex)
-
-                accountViewModel.userProfile().createChatroom(withKey)
-
-                nav("Room/${withKey.hashCode()}")
-            }
+            val withKey = event.chatroomKey(accountViewModel.userProfile().pubkeyHex)
+            accountViewModel.userProfile().createChatroom(withKey)
+            nav("Room/${withKey.hashCode()}")
         } else if (channelHex != null) {
             nav("Channel/$channelHex")
         } else {
-            nav("Note/${note.idHex}")
+            nav("Note/${event.id()}")
         }
     }
 }

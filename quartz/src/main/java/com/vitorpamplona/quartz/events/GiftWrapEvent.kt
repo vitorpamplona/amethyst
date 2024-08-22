@@ -20,12 +20,14 @@
  */
 package com.vitorpamplona.quartz.events
 
+import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
@@ -37,11 +39,11 @@ class GiftWrapEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    @Transient private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
+    @Transient var innerEventId: HexKey? = null
 
     override fun countMemory(): Long =
         super.countMemory() +
-            32 + (cachedInnerEvent.values.sumOf { pointerSizeInBytes + (it?.countMemory() ?: 0) }) // rough calculation
+            pointerSizeInBytes + (innerEventId?.bytesUsedInMemory() ?: 0)
 
     fun copyNoContent(): GiftWrapEvent {
         val copy =
@@ -54,48 +56,38 @@ class GiftWrapEvent(
                 sig,
             )
 
-        copy.cachedInnerEvent = cachedInnerEvent
+        copy.innerEventId = innerEventId
 
         return copy
     }
 
     override fun isContentEncoded() = true
 
-    fun preCachedGift(signer: NostrSigner): Event? = cachedInnerEvent[signer.pubKey]
-
-    fun addToCache(
-        pubKey: HexKey,
-        gift: Event,
-    ) {
-        cachedInnerEvent = cachedInnerEvent + Pair(pubKey, gift)
-    }
-
+    @Deprecated(
+        message = "Heavy caching was removed from this class due to high memory use. Cache it separatedly",
+        replaceWith = ReplaceWith("unwrap"),
+    )
     fun cachedGift(
         signer: NostrSigner,
         onReady: (Event) -> Unit,
-    ) {
-        cachedInnerEvent[signer.pubKey]?.let {
-            onReady(it)
-            return
-        }
-        unwrap(signer) { gift ->
-            if (gift is WrappedEvent) {
-                gift.host = HostStub(this.id, this.pubKey, this.kind)
-            }
-            addToCache(signer.pubKey, gift)
+    ) = unwrap(signer, onReady)
 
-            onReady(gift)
-        }
-    }
-
-    private fun unwrap(
+    fun unwrap(
         signer: NostrSigner,
         onReady: (Event) -> Unit,
     ) {
         try {
-            plainContent(signer) { onReady(fromJson(it)) }
+            plainContent(signer) { giftStr ->
+                val gift = fromJson(giftStr)
+                if (gift is WrappedEvent) {
+                    gift.host = HostStub(this.id, this.pubKey, this.kind)
+                }
+                innerEventId = gift.id
+
+                onReady(gift)
+            }
         } catch (e: Exception) {
-            // Log.e("UnwrapError", "Couldn't Decrypt the content", e)
+            Log.w("GiftWrapEvent", "Couldn't Decrypt the content", e)
         }
     }
 

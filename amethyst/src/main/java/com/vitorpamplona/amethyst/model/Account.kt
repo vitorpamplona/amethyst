@@ -2290,12 +2290,14 @@ class Account(
         val mine = signedEvents.wraps.filter { (it.recipientPubKey() == signer.pubKey) }
 
         mine.forEach { giftWrap ->
-            giftWrap.cachedGift(signer) { gift ->
+            giftWrap.unwrap(signer) { gift ->
                 if (gift is SealedGossipEvent) {
-                    gift.cachedGossip(signer) { gossip -> LocalCache.justConsume(gossip, null) }
-                } else {
-                    LocalCache.justConsume(gift, null)
+                    gift.unseal(signer) { gossip ->
+                        LocalCache.justConsume(gossip, null)
+                    }
                 }
+
+                LocalCache.justConsume(gift, null)
             }
 
             LocalCache.consume(giftWrap, null)
@@ -2842,7 +2844,7 @@ class Account(
     ) {
         if (!isWriteable()) return
 
-        return event.cachedGift(signer, onReady)
+        return event.unwrap(signer, onReady)
     }
 
     fun unseal(
@@ -2851,7 +2853,7 @@ class Account(
     ) {
         if (!isWriteable()) return
 
-        return event.cachedGossip(signer, onReady)
+        return event.unseal(signer, onReady)
     }
 
     fun cachedDecryptContent(note: Note): String? = cachedDecryptContent(note.event)

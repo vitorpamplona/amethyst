@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
@@ -38,11 +39,11 @@ class SealedGossipEvent(
     content: String,
     sig: HexKey,
 ) : WrappedEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    @Transient private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
+    @Transient var innerEventId: HexKey? = null
 
     override fun countMemory(): Long =
         super.countMemory() +
-            pointerSizeInBytes + cachedInnerEvent.values.sumOf { pointerSizeInBytes + (it?.countMemory() ?: 0) }
+            pointerSizeInBytes + (innerEventId?.bytesUsedInMemory() ?: 0)
 
     fun copyNoContent(): SealedGossipEvent {
         val copy =
@@ -55,51 +56,38 @@ class SealedGossipEvent(
                 sig,
             )
 
-        copy.cachedInnerEvent = cachedInnerEvent
         copy.host = host
+        copy.innerEventId = innerEventId
 
         return copy
     }
 
     override fun isContentEncoded() = true
 
-    fun preCachedGossip(signer: NostrSigner): Event? = cachedInnerEvent[signer.pubKey]
-
-    fun addToCache(
-        pubKey: HexKey,
-        gift: Event,
-    ) {
-        cachedInnerEvent = cachedInnerEvent + Pair(pubKey, gift)
-    }
-
+    @Deprecated(
+        message = "Heavy caching was removed from this class due to high memory use. Cache it separatedly",
+        replaceWith = ReplaceWith("unseal"),
+    )
     fun cachedGossip(
         signer: NostrSigner,
         onReady: (Event) -> Unit,
-    ) {
-        cachedInnerEvent[signer.pubKey]?.let {
-            onReady(it)
-            return
-        }
+    ) = unseal(signer, onReady)
 
-        unseal(signer) { gossip ->
-            val event = gossip.mergeWith(this)
-            if (event is WrappedEvent) {
-                event.host = host ?: HostStub(this.id, this.pubKey, this.kind)
-            }
-            addToCache(signer.pubKey, event)
-
-            onReady(event)
-        }
-    }
-
-    private fun unseal(
+    fun unseal(
         signer: NostrSigner,
-        onReady: (Gossip) -> Unit,
+        onReady: (Event) -> Unit,
     ) {
         try {
             plainContent(signer) {
                 try {
-                    onReady(Gossip.fromJson(it))
+                    val gossip = Gossip.fromJson(it)
+                    val event = gossip.mergeWith(this)
+                    if (event is WrappedEvent) {
+                        event.host = host ?: HostStub(this.id, this.pubKey, this.kind)
+                    }
+                    innerEventId = event.id
+
+                    onReady(event)
                 } catch (e: Exception) {
                     Log.w("GossipEvent", "Fail to decrypt or parse Gossip", e)
                 }

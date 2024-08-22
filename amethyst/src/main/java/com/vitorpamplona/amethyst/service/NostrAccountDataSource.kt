@@ -300,97 +300,119 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         event: Event,
         relay: Relay,
     ) {
+        if (LocalCache.justVerify(event)) {
+            consumeAlreadyVerified(event, relay)
+        }
+    }
+
+    fun consumeAlreadyVerified(
+        event: Event,
+        relay: Relay,
+    ) {
         checkNotInMainThread()
 
-        if (LocalCache.justVerify(event)) {
-            when (event) {
-                is PrivateOutboxRelayListEvent -> {
+        when (event) {
+            is PrivateOutboxRelayListEvent -> {
+                val note = LocalCache.getAddressableNoteIfExists(event.addressTag())
+                val noteEvent = note?.event
+                if (noteEvent == null || event.createdAt > noteEvent.createdAt()) {
+                    event.privateTags(account.signer) {
+                        LocalCache.justConsume(event, relay)
+                    }
+                }
+            }
+
+            is DraftEvent -> {
+                // Avoid decrypting over and over again if the event already exist.
+
+                if (!event.isDeleted()) {
                     val note = LocalCache.getAddressableNoteIfExists(event.addressTag())
                     val noteEvent = note?.event
-                    if (noteEvent == null || event.createdAt > noteEvent.createdAt()) {
-                        event.privateTags(account.signer) {
-                            LocalCache.justConsume(event, relay)
-                        }
-                    }
-                }
-
-                is DraftEvent -> {
-                    // Avoid decrypting over and over again if the event already exist.
-
-                    if (!event.isDeleted()) {
-                        val note = LocalCache.getAddressableNoteIfExists(event.addressTag())
-                        val noteEvent = note?.event
-                        if (noteEvent != null) {
-                            if (event.createdAt > noteEvent.createdAt() || relay.brief !in note.relays) {
-                                LocalCache.consume(event, relay)
-                            }
-                        } else {
-                            // decrypts
-                            event.cachedDraft(account.signer) {}
-
-                            LocalCache.justConsume(event, relay)
-                        }
-                    }
-                }
-
-                is GiftWrapEvent -> {
-                    // Avoid decrypting over and over again if the event already exist.
-                    val note = LocalCache.getNoteIfExists(event.id)
-                    val noteEvent = note?.event as? GiftWrapEvent
                     if (noteEvent != null) {
-                        if (relay.brief !in note.relays) {
-                            noteEvent.cachedGift(account.signer) {
-                                LocalCache.justConsume(noteEvent, relay)
-                                this.consume(it, relay)
-                            }
+                        if (event.createdAt > noteEvent.createdAt() || relay.brief !in note.relays) {
+                            LocalCache.consume(event, relay)
                         }
                     } else {
-                        // new event
-                        event.cachedGift(account.signer) {
-                            LocalCache.justConsume(event, relay)
-                            this.consume(it, relay)
-                        }
-                    }
-                }
-
-                is SealedGossipEvent -> {
-                    // Avoid decrypting over and over again if the event already exist.
-                    val note = LocalCache.getNoteIfExists(event.id)
-                    val noteEvent = note?.event as? SealedGossipEvent
-                    if (noteEvent != null) {
-                        if (relay.brief !in note.relays) {
-                            // adds the relay to seal and inner chat
-                            noteEvent.cachedGossip(account.signer) {
-                                LocalCache.consume(noteEvent, relay)
-                                LocalCache.justConsume(it, relay)
-                            }
-                        }
-                    } else {
-                        // new event
-                        event.cachedGossip(account.signer) {
-                            LocalCache.justConsume(event, relay)
-                            LocalCache.justConsume(it, relay)
-                        }
-                    }
-                }
-
-                is LnZapEvent -> {
-                    // Avoid decrypting over and over again if the event already exist.
-                    val note = LocalCache.getNoteIfExists(event.id)
-                    if (note?.event == null) {
-                        event.zapRequest?.let {
-                            if (it.isPrivateZap()) {
-                                it.decryptPrivateZap(account.signer) {}
-                            }
-                        }
+                        // decrypts
+                        event.cachedDraft(account.signer) {}
 
                         LocalCache.justConsume(event, relay)
                     }
                 }
+            }
 
-                else -> {
+            is GiftWrapEvent -> {
+                // Avoid decrypting over and over again if the event already exist.
+                val note = LocalCache.getNoteIfExists(event.id)
+                val noteEvent = note?.event as? GiftWrapEvent
+                if (noteEvent != null) {
+                    if (relay.brief !in note.relays) {
+                        LocalCache.justConsume(noteEvent, relay)
+
+                        noteEvent.innerEventId?.let {
+                            (LocalCache.getNoteIfExists(it)?.event as? Event)?.let {
+                                this.consumeAlreadyVerified(it, relay)
+                            }
+                        } ?: run {
+                            event.unwrap(account.signer) {
+                                this.consume(it, relay)
+                                noteEvent.innerEventId = it.id
+                            }
+                        }
+                    }
+                } else {
+                    // new event
+                    event.unwrap(account.signer) {
+                        LocalCache.justConsume(event, relay)
+                        this.consume(it, relay)
+                    }
+                }
+            }
+
+            is SealedGossipEvent -> {
+                // Avoid decrypting over and over again if the event already exist.
+                val note = LocalCache.getNoteIfExists(event.id)
+                val noteEvent = note?.event as? SealedGossipEvent
+                if (noteEvent != null) {
+                    if (relay.brief !in note.relays) {
+                        LocalCache.justConsume(noteEvent, relay)
+
+                        noteEvent.innerEventId?.let {
+                            (LocalCache.getNoteIfExists(it)?.event as? Event)?.let {
+                                LocalCache.justConsume(it, relay)
+                            }
+                        } ?: run {
+                            event.unseal(account.signer) {
+                                LocalCache.justConsume(it, relay)
+                                noteEvent.innerEventId = it.id
+                            }
+                        }
+                    }
+                } else {
+                    // new event
+                    event.unseal(account.signer) {
+                        LocalCache.justConsume(event, relay)
+                        LocalCache.justConsume(it, relay)
+                    }
+                }
+            }
+
+            is LnZapEvent -> {
+                // Avoid decrypting over and over again if the event already exist.
+                val note = LocalCache.getNoteIfExists(event.id)
+                if (note?.event == null) {
+                    event.zapRequest?.let {
+                        if (it.isPrivateZap()) {
+                            it.decryptPrivateZap(account.signer) {}
+                        }
+                    }
+
                     LocalCache.justConsume(event, relay)
                 }
+            }
+
+            else -> {
+                LocalCache.justConsume(event, relay)
             }
         }
     }
@@ -409,16 +431,30 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
     }
 
     private fun markInnerAsSeenOnRelay(
-        noteEvent: EventInterface,
+        newNoteEvent: EventInterface,
         relay: Relay,
     ) {
-        LocalCache.getNoteIfExists(noteEvent.id())?.addRelay(relay)
+        markInnerAsSeenOnRelay(newNoteEvent.id(), relay)
+    }
 
-        if (noteEvent is GiftWrapEvent) {
-            noteEvent.cachedGift(account.signer) { gift -> markInnerAsSeenOnRelay(gift, relay) }
-        } else if (noteEvent is SealedGossipEvent) {
-            noteEvent.cachedGossip(account.signer) { rumor ->
-                markInnerAsSeenOnRelay(rumor, relay)
+    private fun markInnerAsSeenOnRelay(
+        eventId: HexKey,
+        relay: Relay,
+    ) {
+        val note = LocalCache.getNoteIfExists(eventId)
+
+        if (note != null) {
+            note.addRelay(relay)
+
+            val noteEvent = note.event
+            if (noteEvent is GiftWrapEvent) {
+                noteEvent.innerEventId?.let {
+                    markInnerAsSeenOnRelay(it, relay)
+                }
+            } else if (noteEvent is SealedGossipEvent) {
+                noteEvent.innerEventId?.let {
+                    markInnerAsSeenOnRelay(it, relay)
+                }
             }
         }
     }
