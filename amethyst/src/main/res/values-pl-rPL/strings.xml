@@ -38,6 +38,9 @@
     <string name="report_explicit_content">Zgłoś niedozwoloną zawartość</string>
     <string name="report_illegal_behaviour">Zgłoś antyspołeczne działania</string>
     <string name="report_malware">Zgłoś złośliwe oprogramowanie</string>
+    <string name="report_mod">Zgłoś modyfikację</string>
+    <string name="malware">Złośliwe oprogramowanie</string>
+    <string name="mod">Modyfikacja</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Używasz klucza publicznego, a klucze publiczne są tylko do odczytu. Zaloguj się za pomocą klucza prywatnego, aby móc odpowiedzieć</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Używasz klucza publicznego, a klucze publiczne są tylko do odczytu. Zaloguj się za pomocą klucza prywatnego, aby zwiększyć liczbę postów</string>
     <string name="login_with_a_private_key_to_like_posts">Używasz klucza publicznego, a klucze publiczne są tylko do odczytu. Zaloguj się za pomocą klucza prywatnego, aby polubić posty</string>
@@ -659,6 +662,11 @@
     <string name="could_not_prepare_local_file_to_upload">Nie można przygotować pliku lokalnego do przesłania: %1$s</string>
     <string name="failed_to_upload_with_message">Nie udało się przesłać: %1$s</string>
     <string name="failed_to_delete_with_message">Nie udało się usunąć: %1$s</string>
+    <string name="media_too_big_for_nip95">Media są zbyt duże dla NIP-95</string>
+    <string name="unable_to_load_thumbnail">Nie można załadować miniatury</string>
+    <string name="could_not_prepare_header">Nie można przygotować informacji nagłówkowych: %1$s</string>
+    <string name="compression_cancelled">Kompresja anulowana</string>
+    <string name="compression_returned_null">Kompresja nie powiodła się przy zwracaniu pliku</string>
     <string name="edit_draft">Edytuj wersję roboczą</string>
     <string name="login_with_qr_code">Zaloguj się przy użyciu QR kodu</string>
     <string name="route">Ścieżka</string>
@@ -806,4 +814,9 @@
     <string name="delete_all">Usuń wszystko</string>
     <string name="delete_all_drafts_confirmation">Czy na pewno chcesz usunąć wszystkie wersje robocze?</string>
     <string name="and_more">" ... i %1$s więcej"</string>
+    <string name="stack">Stos:</string>
+    <string name="torrent_file">Plik torrent</string>
+    <string name="torrent_download">Pobierz</string>
+    <string name="torrent_failure">Nie udało się otworzyć pliku</string>
+    <string name="torrent_no_apps">Brak zainstalowanych aplikacji torrent do otwarcia i pobrania pliku.</string>
 </resources>
