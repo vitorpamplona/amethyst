@@ -815,4 +815,8 @@
     <string name="delete_all_drafts_confirmation">Êtes-vous sûr de vouloir supprimer tous les brouillons ?</string>
     <string name="and_more">" ... et %1$s autres"</string>
     <string name="stack">Pile :</string>
+    <string name="torrent_file">Fichier torrent</string>
+    <string name="torrent_download">Télécharger</string>
+    <string name="torrent_failure">Échec de l\'ouverture du fichier</string>
+    <string name="torrent_no_apps">Aucune application torrent installée pour ouvrir et télécharger le fichier.</string>
 </resources>
