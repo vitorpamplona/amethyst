@@ -38,6 +38,7 @@ object HexValidator {
 
     fun isHex(hex: String?): Boolean {
         if (hex == null) return false
+        if (hex.isEmpty()) return false
         if (hex.length % 2 != 0) return false // must be even
         var isHex = true
 
