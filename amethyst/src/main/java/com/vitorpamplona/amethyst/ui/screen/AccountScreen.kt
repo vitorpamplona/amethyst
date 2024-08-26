@@ -102,6 +102,12 @@ fun AccountScreen(
                         sharedPreferencesViewModel,
                     )
                 }
+
+                DisposableEffect(key1 = accountState) {
+                    onDispose {
+                        state.currentViewModelStore.viewModelStore.clear()
+                    }
+                }
             }
             is AccountState.LoggedInViewOnly -> {
                 CompositionLocalProvider(
@@ -112,6 +118,12 @@ fun AccountScreen(
                         accountStateViewModel,
                         sharedPreferencesViewModel,
                     )
+                }
+
+                DisposableEffect(key1 = accountState) {
+                    onDispose {
+                        state.currentViewModelStore.viewModelStore.clear()
+                    }
                 }
             }
         }
