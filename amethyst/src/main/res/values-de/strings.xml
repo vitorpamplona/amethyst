@@ -818,4 +818,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="delete_all_drafts_confirmation">Möchten Sie wirklich alle Entwürfe löschen?</string>
     <string name="and_more">" … und %1$s mehr"</string>
     <string name="stack">Stapel:</string>
+    <string name="torrent_file">Torrentdatei</string>
+    <string name="torrent_download">Herunterladen</string>
+    <string name="torrent_failure">Fehler beim Öffnen der Datei</string>
+    <string name="torrent_no_apps">Keine Torrent-Apps installiert, um die Datei zu öffnen und herunterzuladen.</string>
 </resources>

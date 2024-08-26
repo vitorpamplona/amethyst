@@ -38,7 +38,9 @@
     <string name="report_explicit_content">अभद्र विषयवस्तु की सूचना दें</string>
     <string name="report_illegal_behaviour">अवैध बरताव की सूचना दें</string>
     <string name="report_malware">दुष्क्रमक की सूचना दें</string>
+    <string name="report_mod">विकृति की सूचना दें</string>
     <string name="malware">दुष्क्रमक</string>
+    <string name="mod">विकृति</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। उत्तर देने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। प्रकाशित पत्रों को उद्धृत करने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
     <string name="login_with_a_private_key_to_like_posts">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। प्रकाशित पत्रों को चाहने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
@@ -813,4 +815,8 @@
     <string name="delete_all_drafts_confirmation">क्या आप निश्चित रूप से सभी पाण्डुलिपियाँ मिटाना चाहते हैं।</string>
     <string name="and_more">" ... तथा %1$s अधिक"</string>
     <string name="stack">चिति :</string>
+    <string name="torrent_file">उग्रप्रवाह अभिलेख</string>
+    <string name="torrent_download">अवरोहण</string>
+    <string name="torrent_failure">अभिलेख खोलने में असफल</string>
+    <string name="torrent_no_apps">कोई उग्रप्रवाह क्रमक स्थापित नहीं अभिलेख खोलने तथा अवरोहण करने के लिए।</string>
 </resources>
