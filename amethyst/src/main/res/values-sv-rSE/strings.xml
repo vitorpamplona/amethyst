@@ -812,4 +812,8 @@
     <string name="delete_all_drafts_confirmation">Är du säker på att du vill ta bort alla utkast?</string>
     <string name="and_more">" … och %1$s mer"</string>
     <string name="stack">Stack:</string>
+    <string name="torrent_file">Torrent fil</string>
+    <string name="torrent_download">Ladda ner</string>
+    <string name="torrent_failure">Det gick inte att öppna filen</string>
+    <string name="torrent_no_apps">Inga torrent-appar installerade för att öppna och ladda ner filen.</string>
 </resources>

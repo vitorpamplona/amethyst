@@ -813,4 +813,8 @@
     <string name="delete_all_drafts_confirmation">Opravdu chcete odstranit všechny koncepty?</string>
     <string name="and_more">" … a %1$s další"</string>
     <string name="stack">Zásobník:</string>
+    <string name="torrent_file">Torrent soubor</string>
+    <string name="torrent_download">Stáhnout</string>
+    <string name="torrent_failure">Nepodařilo se otevřít soubor</string>
+    <string name="torrent_no_apps">Pro otevření a stažení souboru nejsou nainstalovány žádné torrent aplikace.</string>
 </resources>
