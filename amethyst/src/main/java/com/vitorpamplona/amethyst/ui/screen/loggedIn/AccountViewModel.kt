@@ -1181,7 +1181,7 @@ class AccountViewModel(
 
     private var collectorJob: Job? = null
     val notificationDots = HasNotificationDot(bottomNavigationItems)
-    private val bundlerInsert = BundledInsert<Set<Note>>(3000, Dispatchers.IO)
+    private val bundlerInsert = BundledInsert<Set<Note>>(3000, Dispatchers.Default)
 
     fun invalidateInsertData(newItems: Set<Note>) {
         bundlerInsert.invalidateList(newItems) { updateNotificationDots(it.flatten().toSet()) }
@@ -1201,7 +1201,6 @@ class AccountViewModel(
             viewModelScope.launch(Dispatchers.Default) {
                 feedStates.init()
                 // awaits for init to finish before starting to capture new events.
-
                 LocalCache.live.newEventBundles.collect { newNotes ->
                     Log.d(
                         "Rendering Metrics",
@@ -1217,6 +1216,7 @@ class AccountViewModel(
     override fun onCleared() {
         Log.d("Init", "AccountViewModel onCleared")
         feedStates.destroy()
+        bundlerInsert.cancel()
         collectorJob?.cancel()
         super.onCleared()
     }
