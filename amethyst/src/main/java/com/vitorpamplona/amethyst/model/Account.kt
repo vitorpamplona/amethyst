@@ -31,7 +31,6 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.relays.FeedType
@@ -3385,26 +3384,3 @@ class Account(
         }
     }
 }
-
-class AccountLiveData(
-    private val account: Account,
-) : LiveData<AccountState>(AccountState(account)) {
-    // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.Default)
-
-    fun invalidateData() {
-        bundler.invalidate {
-            if (hasActiveObservers()) {
-                refresh()
-            }
-        }
-    }
-
-    fun refresh() {
-        postValue(AccountState(account))
-    }
-}
-
-@Immutable class AccountState(
-    val account: Account,
-)
