@@ -78,7 +78,7 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             val sharedPreferencesViewModel = prepareSharedViewModel(act = this)
-            AppScreen(sharedPreferencesViewModel = sharedPreferencesViewModel, serviceManager = Amethyst.instance.serviceManager)
+            AppScreen(sharedPreferencesViewModel = sharedPreferencesViewModel)
         }
     }
 

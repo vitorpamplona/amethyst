@@ -26,7 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.adaptive.calculateDisplayFeatures
-import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
@@ -56,13 +55,9 @@ fun prepareSharedViewModel(act: MainActivity): SharedPreferencesViewModel {
 }
 
 @Composable
-fun AppScreen(
-    sharedPreferencesViewModel: SharedPreferencesViewModel,
-    serviceManager: ServiceManager,
-) {
+fun AppScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
     AmethystTheme(sharedPreferencesViewModel) {
         val accountStateViewModel: AccountStateViewModel = viewModel()
-        accountStateViewModel.serviceManager = serviceManager
 
         LaunchedEffect(key1 = Unit) {
             accountStateViewModel.tryLoginExistingAccountAsync()

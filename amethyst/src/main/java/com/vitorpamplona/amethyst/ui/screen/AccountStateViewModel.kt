@@ -25,8 +25,8 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.AccountInfo
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.ServiceManager
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.DefaultChannels
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
@@ -66,8 +66,6 @@ val EMAIL_PATTERN = Pattern.compile(".+@.+\\.[a-z]+")
 
 @Stable
 class AccountStateViewModel : ViewModel() {
-    var serviceManager: ServiceManager? = null
-
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.Loading)
     val accountContent = _accountContent.asStateFlow()
 
@@ -86,7 +84,7 @@ class AccountStateViewModel : ViewModel() {
     private suspend fun requestLoginUI() {
         _accountContent.update { AccountState.LoggedOff }
 
-        viewModelScope.launch(Dispatchers.IO) { serviceManager?.pauseForGoodAndClearAccount() }
+        viewModelScope.launch(Dispatchers.IO) { Amethyst.instance.serviceManager.pauseForGoodAndClearAccount() }
     }
 
     suspend fun loginAndStartUI(
