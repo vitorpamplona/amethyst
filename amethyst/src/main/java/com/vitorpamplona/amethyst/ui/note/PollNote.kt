@@ -67,6 +67,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -380,14 +381,16 @@ fun ZapVote(
                         )
                         return@combinedClickable
                     } else if (
-                        accountViewModel.account.zapAmountChoices.size == 1 &&
+                        accountViewModel.account.settings.zapAmountChoices.value.size == 1 &&
                         pollViewModel.isValidInputVoteAmount(
-                            accountViewModel.account.zapAmountChoices.first(),
+                            accountViewModel.account.settings.zapAmountChoices.value
+                                .first(),
                         )
                     ) {
                         accountViewModel.zap(
                             baseNote,
-                            accountViewModel.account.zapAmountChoices.first() * 1000,
+                            accountViewModel.account.settings.zapAmountChoices.value
+                                .first() * 1000,
                             poolOption.option,
                             "",
                             context,
@@ -519,12 +522,14 @@ fun FilteredZapAmountChoicePopup(
 ) {
     val context = LocalContext.current
 
-    val accountState by accountViewModel.accountLiveData.observeAsState()
+    // TODO: Move this to the viewModel
+    val zapPaymentChoices by accountViewModel.account.settings.zapAmountChoices
+        .collectAsStateWithLifecycle()
 
     val zapMessage = ""
 
     val sortedOptions =
-        remember(accountState) { pollViewModel.createZapOptionsThatMatchThePollingParameters() }
+        remember(zapPaymentChoices) { pollViewModel.createZapOptionsThatMatchThePollingParameters(zapPaymentChoices) }
 
     Popup(
         alignment = Alignment.BottomCenter,

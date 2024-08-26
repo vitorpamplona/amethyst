@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
+import com.vitorpamplona.quartz.signers.NostrSignerSync
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.io.ByteArrayInputStream
 import java.io.StringWriter
@@ -175,6 +176,27 @@ class MetadataEvent(
 
     companion object {
         const val KIND = 0
+
+        fun newUser(
+            name: String?,
+            signer: NostrSignerSync,
+            createdAt: Long = TimeUtils.now(),
+        ): MetadataEvent? {
+            // Tries to not delete any existing attribute that we do not work with.
+            val currentJson = ObjectMapper().createObjectNode()
+
+            name?.let { addIfNotBlank(currentJson, "name", it.trim()) }
+            val writer = StringWriter()
+            ObjectMapper().writeValue(writer, currentJson)
+
+            val tags = mutableListOf<Array<String>>()
+
+            tags.add(
+                arrayOf("alt", "User profile for ${name ?: currentJson.get("name").asText() ?: ""}"),
+            )
+
+            return signer.sign(createdAt, KIND, tags.toTypedArray(), writer.buffer.toString())
+        }
 
         fun updateFromPast(
             latest: MetadataEvent?,

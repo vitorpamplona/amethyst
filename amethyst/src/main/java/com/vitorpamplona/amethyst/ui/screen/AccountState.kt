@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AccountSettings
 
 sealed class AccountState {
     object Loading : AccountState()
@@ -28,14 +28,14 @@ sealed class AccountState {
     object LoggedOff : AccountState()
 
     class LoggedInViewOnly(
-        val account: Account,
+        val accountSettings: AccountSettings,
     ) : AccountState() {
-        val currentViewModelStore = AccountCentricViewModelStore(account)
+        val currentViewModelStore = AccountCentricViewModelStore(accountSettings)
     }
 
     class LoggedIn(
-        val account: Account,
+        val accountSettings: AccountSettings,
     ) : AccountState() {
-        val currentViewModelStore = AccountCentricViewModelStore(account)
+        val currentViewModelStore = AccountCentricViewModelStore(accountSettings)
     }
 }

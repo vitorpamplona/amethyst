@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.decodePublicKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
+import com.vitorpamplona.quartz.signers.NostrSignerSync
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable data class Contact(
@@ -117,6 +118,46 @@ class ContactListEvent(
     companion object {
         const val KIND = 3
         const val ALT = "Follow List"
+
+        fun createFromScratch(
+            followUsers: List<Contact> = emptyList(),
+            followTags: List<String> = emptyList(),
+            followGeohashes: List<String> = emptyList(),
+            followCommunities: List<ATag> = emptyList(),
+            followEvents: List<String> = emptyList(),
+            relayUse: Map<String, ReadWrite>? = emptyMap(),
+            signer: NostrSignerSync,
+            createdAt: Long = TimeUtils.now(),
+        ): ContactListEvent? {
+            val content =
+                if (relayUse != null) {
+                    mapper.writeValueAsString(relayUse)
+                } else {
+                    ""
+                }
+
+            val tags =
+                listOf(arrayOf("alt", ALT)) +
+                    followUsers.map {
+                        if (it.relayUri != null) {
+                            arrayOf("p", it.pubKeyHex, it.relayUri)
+                        } else {
+                            arrayOf("p", it.pubKeyHex)
+                        }
+                    } +
+                    followTags.map { arrayOf("t", it) } +
+                    followEvents.map { arrayOf("e", it) } +
+                    followCommunities.map {
+                        if (it.relay != null) {
+                            arrayOf("a", it.toTag(), it.relay)
+                        } else {
+                            arrayOf("a", it.toTag())
+                        }
+                    } +
+                    followGeohashes.map { arrayOf("g", it) }
+
+            return signer.sign(createdAt, KIND, tags.toTypedArray(), content)
+        }
 
         fun createFromScratch(
             followUsers: List<Contact>,

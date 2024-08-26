@@ -33,10 +33,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrC
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.unifiedpush.android.connector.MessagingReceiver
 
@@ -46,7 +43,7 @@ class PushMessageReceiver : MessagingReceiver() {
     }
 
     private val appContext = Amethyst.instance.applicationContext
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val scope = Amethyst.instance.applicationIOScope
     private val eventCache = LruCache<String, String>(100)
     private val pushHandler = PushDistributorHandler
 
@@ -111,7 +108,6 @@ class PushMessageReceiver : MessagingReceiver() {
         instance: String,
     ) {
         Log.d(TAG, "Registration failed for Instance: $instance")
-        scope.cancel()
         pushHandler.forceRemoveDistributor(context)
     }
 

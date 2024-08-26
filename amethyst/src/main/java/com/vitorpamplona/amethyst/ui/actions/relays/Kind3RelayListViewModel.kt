@@ -98,7 +98,7 @@ class Kind3RelayListViewModel : ViewModel() {
                 relayFile
                     .map {
                         val localInfoFeedTypes =
-                            account.localRelays
+                            account.settings.localRelays
                                 .filter { localRelay -> localRelay.url == it.key }
                                 .firstOrNull()
                                 ?.feedTypes
@@ -119,7 +119,7 @@ class Kind3RelayListViewModel : ViewModel() {
                     .sortedBy { it.relayStat.receivedBytes }
                     .reversed()
             } else {
-                account.localRelays
+                account.settings.localRelays
                     .map {
                         Kind3BasicRelaySetupInfo(
                             url = RelayUrlFormatter.normalize(it.url),

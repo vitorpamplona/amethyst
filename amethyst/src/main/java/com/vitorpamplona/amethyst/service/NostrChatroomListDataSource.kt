@@ -108,18 +108,18 @@ object NostrChatroomListDataSource : AmethystNostrDataSource("MailBoxFeed") {
 
         if (followingEvents.isEmpty()) return null
 
-        return listOf(
+        return followingEvents.map {
             TypedFilter(
                 // Metadata comes from any relay
                 types = EVENT_FINDER_TYPES,
                 filter =
                     SincePerRelayFilter(
                         kinds = listOf(ChannelMetadataEvent.KIND),
-                        tags = mapOf("e" to followingEvents.toList()),
-                        limit = followingEvents.size * 2,
+                        tags = mapOf("e" to listOf(it)),
+                        limit = 1,
                     ),
-            ),
-        )
+            )
+        }
     }
 
     fun createLastMessageOfEachChannelFilter(): List<TypedFilter>? {

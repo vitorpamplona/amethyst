@@ -52,7 +52,7 @@ class Amethyst : Application() {
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     // Service Manager is only active when the activity is active.
-    val serviceManager = ServiceManager()
+    val serviceManager = ServiceManager(applicationIOScope)
 
     override fun onTerminate() {
         super.onTerminate()

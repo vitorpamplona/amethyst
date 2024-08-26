@@ -22,17 +22,14 @@ package com.vitorpamplona.amethyst.model
 
 import android.util.Log
 import android.util.LruCache
-import androidx.compose.runtime.Stable
-import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.njumpLink
-import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.RelayStats
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.events.Event
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 
 data class Spammer(
     val pubkeyHex: HexKey,
@@ -86,7 +83,7 @@ class AntiSpamFilter {
                 RelayStats.newSpam(relay.url, njumpLink(Nip19Bech32.createNEvent(event.id, event.pubKey, event.kind, relay.url)))
             }
 
-            liveSpam.invalidateData()
+            flowSpam.tryEmit(AntiSpamState(this))
 
             return true
         }
@@ -109,27 +106,7 @@ class AntiSpamFilter {
         }
     }
 
-    val liveSpam: AntiSpamLiveData = AntiSpamLiveData(this)
-}
-
-@Stable
-class AntiSpamLiveData(
-    val cache: AntiSpamFilter,
-) : LiveData<AntiSpamState>(AntiSpamState(cache)) {
-    // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.IO)
-
-    fun invalidateData() {
-        checkNotInMainThread()
-
-        bundler.invalidate {
-            checkNotInMainThread()
-
-            if (hasActiveObservers()) {
-                postValue(AntiSpamState(cache))
-            }
-        }
-    }
+    val flowSpam = MutableStateFlow<AntiSpamState>(AntiSpamState(this))
 }
 
 class AntiSpamState(

@@ -27,9 +27,13 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.ServiceManager
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.DefaultChannels
+import com.vitorpamplona.amethyst.model.DefaultDMRelayList
+import com.vitorpamplona.amethyst.model.DefaultNIP65List
+import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
-import com.vitorpamplona.ammolite.relays.Client
+import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
@@ -39,16 +43,20 @@ import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.encoders.toNpub
-import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
-import com.vitorpamplona.quartz.signers.NostrSignerExternal
-import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.events.Contact
+import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.events.MetadataEvent
+import com.vitorpamplona.quartz.events.SearchRelayListEvent
+import com.vitorpamplona.quartz.signers.NostrSignerSync
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -63,15 +71,17 @@ class AccountStateViewModel : ViewModel() {
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.Loading)
     val accountContent = _accountContent.asStateFlow()
 
+    private var collectorJob: Job? = null
+
     fun tryLoginExistingAccountAsync() {
         // pulls account from storage.
-        viewModelScope.launch(Dispatchers.IO) { tryLoginExistingAccount() }
+        viewModelScope.launch { tryLoginExistingAccount() }
     }
 
     private suspend fun tryLoginExistingAccount() =
         withContext(Dispatchers.IO) {
-            LocalPreferences.loadCurrentAccountFromEncryptedStorage()?.let { startUI(it) } ?: run { requestLoginUI() }
-        }
+            LocalPreferences.loadCurrentAccountFromEncryptedStorage()
+        }?.let { startUI(it) } ?: run { requestLoginUI() }
 
     private suspend fun requestLoginUI() {
         _accountContent.update { AccountState.LoggedOff }
@@ -108,49 +118,35 @@ class AccountStateViewModel : ViewModel() {
 
         val account =
             if (loginWithExternalSigner) {
-                val keyPair = KeyPair(pubKey = pubKeyParsed)
-                val localPackageName = packageName.ifBlank { "com.greenart7c3.nostrsigner" }
-                Account(
-                    keyPair,
+                AccountSettings(
+                    keyPair = KeyPair(pubKey = pubKeyParsed),
+                    externalSignerPackageName = packageName.ifBlank { "com.greenart7c3.nostrsigner" },
                     proxy = proxy,
                     proxyPort = proxyPort,
-                    signer =
-                        NostrSignerExternal(
-                            keyPair.pubKey.toHexKey(),
-                            ExternalSignerLauncher(keyPair.pubKey.toNpub(), localPackageName),
-                        ),
                 )
             } else if (key.startsWith("nsec")) {
-                val keyPair = KeyPair(privKey = key.bechToBytes())
-                Account(
-                    keyPair,
+                AccountSettings(
+                    keyPair = KeyPair(privKey = key.bechToBytes()),
                     proxy = proxy,
                     proxyPort = proxyPort,
-                    signer = NostrSignerInternal(keyPair),
                 )
             } else if (key.contains(" ") && CryptoUtils.isValidMnemonic(key)) {
-                val keyPair = KeyPair(privKey = CryptoUtils.privateKeyFromMnemonic(key))
-                Account(
-                    keyPair,
+                AccountSettings(
+                    keyPair = KeyPair(privKey = CryptoUtils.privateKeyFromMnemonic(key)),
                     proxy = proxy,
                     proxyPort = proxyPort,
-                    signer = NostrSignerInternal(keyPair),
                 )
             } else if (pubKeyParsed != null) {
-                val keyPair = KeyPair(pubKey = pubKeyParsed)
-                Account(
-                    keyPair,
+                AccountSettings(
+                    keyPair = KeyPair(pubKey = pubKeyParsed),
                     proxy = proxy,
                     proxyPort = proxyPort,
-                    signer = NostrSignerInternal(keyPair),
                 )
             } else {
-                val keyPair = KeyPair(Hex.decode(key))
-                Account(
-                    keyPair,
+                AccountSettings(
+                    keyPair = KeyPair(Hex.decode(key)),
                     proxy = proxy,
                     proxyPort = proxyPort,
-                    signer = NostrSignerInternal(keyPair),
                 )
             }
 
@@ -159,51 +155,37 @@ class AccountStateViewModel : ViewModel() {
         startUI(account)
     }
 
-    suspend fun startUI(
-        account: Account,
-        onServicesReady: (() -> Unit)? = null,
-    ) = withContext(Dispatchers.Main) {
-        if (account.isWriteable()) {
-            _accountContent.update { AccountState.LoggedIn(account) }
-        } else {
-            _accountContent.update { AccountState.LoggedInViewOnly(account) }
-        }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            withContext(Dispatchers.Main) {
-                // Prepares livedata objects on the main user.
-                account.userProfile().live()
-            }
-            serviceManager?.restartIfDifferentAccount(account)
-
-            if (onServicesReady != null) {
-                // waits for the connection to go through
-                delay(1000)
-                onServicesReady()
-            }
-        }
-
-        account.saveable.observeForever(saveListener)
-    }
-
-    @OptIn(DelicateCoroutinesApi::class)
-    private val saveListener: (com.vitorpamplona.amethyst.model.AccountState) -> Unit = {
-        GlobalScope.launch(Dispatchers.IO) { LocalPreferences.saveToEncryptedStorage(it.account) }
-    }
-
-    private suspend fun prepareLogoutOrSwitch() =
+    @OptIn(FlowPreview::class)
+    suspend fun startUI(accountSettings: AccountSettings) =
         withContext(Dispatchers.Main) {
-            when (val state = _accountContent.value) {
-                is AccountState.LoggedIn -> {
-                    state.account.saveable.removeObserver(saveListener)
-                    withContext(Dispatchers.IO) { state.currentViewModelStore.viewModelStore.clear() }
-                }
-                is AccountState.LoggedInViewOnly -> {
-                    state.account.saveable.removeObserver(saveListener)
-                    withContext(Dispatchers.IO) { state.currentViewModelStore.viewModelStore.clear() }
-                }
-                else -> {}
+            if (accountSettings.isWriteable()) {
+                _accountContent.update { AccountState.LoggedIn(accountSettings) }
+            } else {
+                _accountContent.update { AccountState.LoggedInViewOnly(accountSettings) }
             }
+
+            collectorJob?.cancel()
+            collectorJob =
+                viewModelScope.launch(Dispatchers.IO) {
+                    accountSettings.saveable.debounce(1000).collect {
+                        LocalPreferences.saveToEncryptedStorage(it.accountSettings)
+                    }
+                }
+        }
+
+    private fun prepareLogoutOrSwitch() =
+        when (val state = _accountContent.value) {
+            is AccountState.LoggedIn -> {
+                collectorJob?.cancel()
+                state.currentViewModelStore.viewModelStore.clear()
+            }
+
+            is AccountState.LoggedInViewOnly -> {
+                collectorJob?.cancel()
+                state.currentViewModelStore.viewModelStore.clear()
+            }
+
+            else -> {}
         }
 
     fun login(
@@ -290,24 +272,34 @@ class AccountStateViewModel : ViewModel() {
         name: String? = null,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val proxy = HttpClientManager.initProxy(useProxy, "127.0.0.1", proxyPort)
             val keyPair = KeyPair()
-            val account =
-                Account(
-                    keyPair,
-                    proxy = proxy,
+            val tempSigner = NostrSignerSync(keyPair)
+
+            val accountSettings =
+                AccountSettings(
+                    keyPair = keyPair,
+                    backupUserMetadata = MetadataEvent.newUser(name, tempSigner),
+                    backupContactList =
+                        ContactListEvent.createFromScratch(
+                            followUsers = listOf(Contact(keyPair.pubKey.toHexKey(), null)),
+                            followEvents = DefaultChannels.toList(),
+                            relayUse =
+                                Constants.defaultRelays.associate {
+                                    it.url to ContactListEvent.ReadWrite(it.read, it.write)
+                                },
+                            signer = tempSigner,
+                        ),
+                    backupNIP65RelayList = AdvertisedRelayListEvent.create(DefaultNIP65List, tempSigner),
+                    backupDMRelayList = ChatMessageRelayListEvent.create(DefaultDMRelayList, tempSigner),
+                    backupSearchRelayList = SearchRelayListEvent.create(DefaultSearchRelayList, tempSigner),
+                    proxy = HttpClientManager.initProxy(useProxy, "127.0.0.1", proxyPort),
                     proxyPort = proxyPort,
-                    signer = NostrSignerInternal(keyPair),
                 )
 
-            account.follow(account.userProfile())
-
             // saves to local preferences
-            LocalPreferences.updatePrefsForLogin(account)
-            startUI(account) {
-                account.userProfile().latestContactList?.let { Client.send(it) }
-                account.sendNewUserMetadata(name = name)
-            }
+            LocalPreferences.updatePrefsForLogin(accountSettings)
+
+            startUI(accountSettings)
         }
     }
 

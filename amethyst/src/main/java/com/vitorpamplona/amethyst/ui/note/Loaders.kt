@@ -181,7 +181,8 @@ fun LoadOts(
     (earliestDate as? GenericLoadable.Loaded)?.let {
         whenConfirmed(it.loaded)
     } ?: run {
-        val pendingAttestations by accountViewModel.account.pendingAttestations.collectAsStateWithLifecycle()
+        val pendingAttestations by accountViewModel.account.settings.pendingAttestations
+            .collectAsStateWithLifecycle()
         val id = note.event?.id() ?: note.idHex
 
         if (pendingAttestations[id] != null) {

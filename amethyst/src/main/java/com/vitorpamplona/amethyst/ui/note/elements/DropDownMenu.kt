@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
@@ -396,10 +397,8 @@ fun WatchBookmarksFollowsAndAccount(
         .live()
         .bookmarks
         .observeAsState()
-    val showSensitiveContent by
-        accountViewModel.showSensitiveContentChanges.observeAsState(
-            accountViewModel.account.showSensitiveContent,
-        )
+    val showSensitiveContent by accountViewModel.account.settings.showSensitiveContent
+        .collectAsStateWithLifecycle()
 
     LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = showSensitiveContent) {
         launch(Dispatchers.IO) {
@@ -411,7 +410,7 @@ fun WatchBookmarksFollowsAndAccount(
                         isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
                         isLoggedUser = accountViewModel.isLoggedUser(note.author),
                         isSensitive = note.event?.isSensitive() ?: false,
-                        showSensitiveContent = showSensitiveContent.value,
+                        showSensitiveContent = showSensitiveContent,
                     )
 
                 launch(Dispatchers.Main) {

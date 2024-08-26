@@ -262,10 +262,11 @@ class PollNoteViewModel : ViewModel() {
         }
             ?: BigDecimal.ZERO
 
-    fun createZapOptionsThatMatchThePollingParameters(): List<Long> {
+    fun createZapOptionsThatMatchThePollingParameters(zapPaymentChoices: List<Long>): List<Long> {
         val options =
-            account?.zapAmountChoices?.filter { isValidInputVoteAmount(it) }?.toMutableList()
-                ?: mutableListOf()
+            zapPaymentChoices
+                .filter { isValidInputVoteAmount(it) }
+                .toMutableList()
         if (options.isEmpty()) {
             valueMinimum?.let { minimum ->
                 valueMaximum?.let { maximum ->

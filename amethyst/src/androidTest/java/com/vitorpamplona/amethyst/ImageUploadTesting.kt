@@ -25,6 +25,7 @@ import android.graphics.Color
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.Nip96Retriever
@@ -33,6 +34,9 @@ import com.vitorpamplona.amethyst.ui.actions.ImageDownloader
 import com.vitorpamplona.quartz.crypto.KeyPair
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.fail
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Ignore
@@ -61,7 +65,11 @@ class ImageUploadTesting {
         val bytes = baos.toByteArray()
         val inputStream = bytes.inputStream()
 
-        val account = Account(KeyPair())
+        val account =
+            Account(
+                AccountSettings(KeyPair()),
+                scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            )
 
         val result =
             Nip96Uploader(account)

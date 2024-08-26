@@ -33,11 +33,11 @@ import com.vitorpamplona.quartz.events.TextNoteEvent
 class HomeConversationsFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.defaultHomeFollowList.value
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
 
     override fun showHiddenKey(): Boolean =
-        account.defaultHomeFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
-            account.defaultHomeFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
+        account.settings.defaultHomeFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+            account.settings.defaultHomeFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
 
     override fun feed(): List<Note> {
         val filterParams = buildFilterParams(account)
@@ -54,7 +54,7 @@ class HomeConversationsFeedFilter(
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
             userHex = account.userProfile().pubkeyHex,
-            selectedListName = account.defaultHomeFollowList.value,
+            selectedListName = account.settings.defaultHomeFollowList.value,
             followLists = account.liveHomeFollowLists.value,
             hiddenUsers = account.flowHiddenUsers.value,
         )

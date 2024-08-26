@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
+import com.vitorpamplona.quartz.signers.NostrSignerSync
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -138,6 +139,17 @@ class AdvertisedRelayListEvent(
             val msg = ""
 
             signer.sign(createdAt, KIND, tags, msg, onReady)
+        }
+
+        fun create(
+            list: List<AdvertisedRelayInfo>,
+            signer: NostrSignerSync,
+            createdAt: Long = TimeUtils.now(),
+        ): AdvertisedRelayListEvent? {
+            val tags = createTagArray(list)
+            val msg = ""
+
+            return signer.sign(createdAt, KIND, tags, msg)
         }
     }
 

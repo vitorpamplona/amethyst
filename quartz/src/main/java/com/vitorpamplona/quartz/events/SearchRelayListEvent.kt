@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
+import com.vitorpamplona.quartz.signers.NostrSignerSync
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -97,5 +98,11 @@ class SearchRelayListEvent(
         ) {
             signer.sign(createdAt, KIND, createTagArray(relays), "", onReady)
         }
+
+        fun create(
+            relays: List<String>,
+            signer: NostrSignerSync,
+            createdAt: Long = TimeUtils.now(),
+        ): SearchRelayListEvent? = signer.sign(createdAt, KIND, createTagArray(relays), "")
     }
 }

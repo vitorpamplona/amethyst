@@ -329,11 +329,11 @@ fun EditPostView(
                                     ) {
                                         ImageVideoDescription(
                                             url,
-                                            accountViewModel.account.defaultFileServer,
+                                            accountViewModel.account.settings.defaultFileServer,
                                             onAdd = { alt, server, sensitiveContent ->
                                                 postViewModel.upload(url, alt, sensitiveContent, false, server, accountViewModel::toast, context)
                                                 if (!server.isNip95) {
-                                                    accountViewModel.account.changeDefaultFileServer(server.server)
+                                                    accountViewModel.account.settings.changeDefaultFileServer(server.server)
                                                 }
                                             },
                                             onCancel = { postViewModel.contentToAddUrl = null },

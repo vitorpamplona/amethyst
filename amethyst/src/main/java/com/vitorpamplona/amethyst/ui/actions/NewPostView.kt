@@ -491,11 +491,11 @@ fun NewPostView(
                                     ) {
                                         ImageVideoDescription(
                                             url,
-                                            accountViewModel.account.defaultFileServer,
+                                            accountViewModel.account.settings.defaultFileServer,
                                             onAdd = { alt, server, sensitiveContent ->
                                                 postViewModel.upload(url, alt, sensitiveContent, false, server, accountViewModel::toast, context)
                                                 if (!server.isNip95) {
-                                                    accountViewModel.account.changeDefaultFileServer(server.server)
+                                                    accountViewModel.account.settings.changeDefaultFileServer(server.server)
                                                 }
                                             },
                                             onCancel = { postViewModel.contentToAddUrl = null },
@@ -1778,7 +1778,7 @@ fun ImageVideoDescription(
                     label = stringRes(id = R.string.file_server),
                     placeholder =
                         fileServers
-                            .firstOrNull { it.server == accountViewModel.account.defaultFileServer }
+                            .firstOrNull { it.server == accountViewModel.account.settings.defaultFileServer }
                             ?.server
                             ?.name
                             ?: fileServers[0].server.name,

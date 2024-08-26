@@ -367,7 +367,7 @@ private fun RenderMainPopup(
                             Icons.Default.Block,
                             stringRes(R.string.quick_action_block),
                         ) {
-                            if (accountViewModel.hideBlockAlertDialog) {
+                            if (accountViewModel.account.settings.hideBlockAlertDialog) {
                                 note.author?.let { accountViewModel.hide(it) }
                                 onDismiss()
                             } else {
@@ -385,7 +385,7 @@ private fun RenderMainPopup(
                             Icons.Default.Delete,
                             stringRes(R.string.quick_action_delete),
                         ) {
-                            if (accountViewModel.hideDeleteRequestDialog) {
+                            if (accountViewModel.account.settings.hideDeleteRequestDialog) {
                                 accountViewModel.delete(note)
                                 onDismiss()
                             } else {
@@ -560,7 +560,7 @@ private fun RenderDeleteFromGalleryPopup(
                             Icons.Default.Delete,
                             stringRes(R.string.quick_action_delete),
                         ) {
-                            if (accountViewModel.hideDeleteRequestDialog) {
+                            if (accountViewModel.account.settings.hideDeleteRequestDialog) {
                                 accountViewModel.delete(note)
                                 onDismiss()
                             } else {
@@ -699,7 +699,7 @@ fun DeleteAlertDialog(
         },
         onClickDontShowAgain = {
             accountViewModel.delete(note)
-            accountViewModel.dontShowDeleteRequestDialog()
+            accountViewModel.account.settings.setHideDeleteRequestDialog()
             onDismiss()
         },
         onDismiss = onDismiss,
@@ -727,7 +727,7 @@ private fun BlockAlertDialog(
     },
     onClickDontShowAgain = {
         note.author?.let { accountViewModel.hide(it) }
-        accountViewModel.dontShowBlockAlertDialog()
+        accountViewModel.account.settings.setHideBlockAlertDialog()
         onDismiss()
     },
     onDismiss = onDismiss,

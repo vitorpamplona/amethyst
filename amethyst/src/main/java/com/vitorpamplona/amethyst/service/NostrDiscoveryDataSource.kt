@@ -90,7 +90,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                         since =
                             latestEOSEs.users[account.userProfile()]
                                 ?.followList
-                                ?.get(account.defaultDiscoveryFollowList.value)
+                                ?.get(account.settings.defaultDiscoveryFollowList.value)
                                 ?.relayList,
                     ),
             ),
@@ -111,7 +111,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                             since =
                                 latestEOSEs.users[account.userProfile()]
                                     ?.followList
-                                    ?.get(account.defaultDiscoveryFollowList.value)
+                                    ?.get(account.settings.defaultDiscoveryFollowList.value)
                                     ?.relayList,
                         ),
                 )
@@ -133,7 +133,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                             since =
                                 latestEOSEs.users[account.userProfile()]
                                     ?.followList
-                                    ?.get(account.defaultDiscoveryFollowList.value)
+                                    ?.get(account.settings.defaultDiscoveryFollowList.value)
                                     ?.relayList,
                         ),
                 )
@@ -153,7 +153,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                         since =
                             latestEOSEs.users[account.userProfile()]
                                 ?.followList
-                                ?.get(account.defaultDiscoveryFollowList.value)
+                                ?.get(account.settings.defaultDiscoveryFollowList.value)
                                 ?.relayList,
                     ),
             ),
@@ -179,7 +179,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                         since =
                             latestEOSEs.users[account.userProfile()]
                                 ?.followList
-                                ?.get(account.defaultDiscoveryFollowList.value)
+                                ?.get(account.settings.defaultDiscoveryFollowList.value)
                                 ?.relayList,
                     ),
             ),
@@ -194,7 +194,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                             since =
                                 latestEOSEs.users[account.userProfile()]
                                     ?.followList
-                                    ?.get(account.defaultDiscoveryFollowList.value)
+                                    ?.get(account.settings.defaultDiscoveryFollowList.value)
                                     ?.relayList,
                         ),
                 )
@@ -217,7 +217,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                         since =
                             latestEOSEs.users[account.userProfile()]
                                 ?.followList
-                                ?.get(account.defaultDiscoveryFollowList.value)
+                                ?.get(account.settings.defaultDiscoveryFollowList.value)
                                 ?.relayList,
                     ),
             ),
@@ -232,7 +232,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                             since =
                                 latestEOSEs.users[account.userProfile()]
                                     ?.followList
-                                    ?.get(account.defaultDiscoveryFollowList.value)
+                                    ?.get(account.settings.defaultDiscoveryFollowList.value)
                                     ?.relayList,
                         ),
                 )
@@ -255,7 +255,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
-                            ?.get(account.defaultDiscoveryFollowList.value)
+                            ?.get(account.settings.defaultDiscoveryFollowList.value)
                             ?.relayList,
                 ),
         )
@@ -285,7 +285,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
-                            ?.get(account.defaultDiscoveryFollowList.value)
+                            ?.get(account.settings.defaultDiscoveryFollowList.value)
                             ?.relayList,
                 ),
         )
@@ -315,7 +315,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
-                            ?.get(account.defaultDiscoveryFollowList.value)
+                            ?.get(account.settings.defaultDiscoveryFollowList.value)
                             ?.relayList,
                 ),
         )
@@ -346,7 +346,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
-                            ?.get(account.defaultDiscoveryFollowList.value)
+                            ?.get(account.settings.defaultDiscoveryFollowList.value)
                             ?.relayList,
                 ),
         )
@@ -377,7 +377,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
-                            ?.get(account.defaultDiscoveryFollowList.value)
+                            ?.get(account.settings.defaultDiscoveryFollowList.value)
                             ?.relayList,
                 ),
         )
@@ -407,7 +407,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
-                            ?.get(account.defaultDiscoveryFollowList.value)
+                            ?.get(account.settings.defaultDiscoveryFollowList.value)
                             ?.relayList,
                 ),
         )
@@ -437,7 +437,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
-                            ?.get(account.defaultDiscoveryFollowList.value)
+                            ?.get(account.settings.defaultDiscoveryFollowList.value)
                             ?.relayList,
                 ),
         )
@@ -447,7 +447,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
         requestNewChannel { time, relayUrl ->
             latestEOSEs.addOrUpdate(
                 account.userProfile(),
-                account.defaultDiscoveryFollowList.value,
+                account.settings.defaultDiscoveryFollowList.value,
                 relayUrl,
                 time,
             )

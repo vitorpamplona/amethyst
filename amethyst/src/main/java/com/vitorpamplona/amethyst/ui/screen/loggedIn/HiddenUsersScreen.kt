@@ -148,10 +148,8 @@ fun HiddenUsersScreen(
     Column(Modifier.fillMaxHeight()) {
         val pagerState = rememberPagerState { 3 }
         val coroutineScope = rememberCoroutineScope()
-        var warnAboutReports by remember {
-            mutableStateOf(accountViewModel.account.warnAboutPostsWithReports)
-        }
-        var filterSpam by remember { mutableStateOf(accountViewModel.account.filterSpamFromStrangers) }
+        var warnAboutReports by remember { mutableStateOf(accountViewModel.account.settings.warnAboutPostsWithReports) }
+        var filterSpam by remember { mutableStateOf(accountViewModel.account.settings.filterSpamFromStrangers) }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
@@ -237,7 +235,10 @@ private fun AddMuteWordTextField(accountViewModel: AccountViewModel) {
             value = currentWordToAdd.value,
             onValueChange = { currentWordToAdd.value = it },
             label = { Text(text = stringRes(R.string.hide_new_word_label)) },
-            modifier = Modifier.fillMaxWidth().padding(10.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp),
             placeholder = {
                 Text(
                     text = stringRes(R.string.hide_new_word_label),
@@ -272,10 +273,10 @@ fun WatchAccountAndBlockList(
     accountViewModel: AccountViewModel,
     invalidate: () -> Unit,
 ) {
-    val accountState by accountViewModel.accountLiveData.observeAsState()
+    val transientSpammers by accountViewModel.account.transientHiddenUsers.collectAsStateWithLifecycle()
     val blockListState by accountViewModel.account.flowHiddenUsers.collectAsStateWithLifecycle()
 
-    LaunchedEffect(accountViewModel, accountState, blockListState) {
+    LaunchedEffect(accountViewModel, transientSpammers, blockListState) {
         invalidate()
     }
 }

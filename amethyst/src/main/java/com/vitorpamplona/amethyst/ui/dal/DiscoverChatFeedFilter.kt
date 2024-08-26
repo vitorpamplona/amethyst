@@ -32,12 +32,12 @@ import com.vitorpamplona.quartz.events.PeopleListEvent
 open class DiscoverChatFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.defaultDiscoveryFollowList.value
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultDiscoveryFollowList.value
 
     override fun showHiddenKey(): Boolean =
-        account.defaultDiscoveryFollowList.value ==
+        account.settings.defaultDiscoveryFollowList.value ==
             PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
-            account.defaultDiscoveryFollowList.value ==
+            account.settings.defaultDiscoveryFollowList.value ==
             MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
 
     override fun feed(): List<Note> {
@@ -67,7 +67,7 @@ open class DiscoverChatFeedFilter(
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
             userHex = account.userProfile().pubkeyHex,
-            selectedListName = account.defaultDiscoveryFollowList.value,
+            selectedListName = account.settings.defaultDiscoveryFollowList.value,
             followLists = account.liveDiscoveryFollowLists.value,
             hiddenUsers = account.flowHiddenUsers.value,
         )

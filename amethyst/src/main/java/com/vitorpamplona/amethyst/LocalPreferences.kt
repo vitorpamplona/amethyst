@@ -26,7 +26,7 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.DefaultReactions
 import com.vitorpamplona.amethyst.model.DefaultZapAmounts
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
@@ -47,9 +47,10 @@ import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.LnZapEvent
-import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
-import com.vitorpamplona.quartz.signers.NostrSignerExternal
-import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.events.MetadataEvent
+import com.vitorpamplona.quartz.events.MuteListEvent
+import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -91,9 +92,13 @@ private object PrefKeys {
     const val DEFAULT_NOTIFICATION_FOLLOW_LIST = "defaultNotificationFollowList"
     const val DEFAULT_DISCOVERY_FOLLOW_LIST = "defaultDiscoveryFollowList"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer"
+    const val LATEST_USER_METADATA = "latestUserMetadata"
     const val LATEST_CONTACT_LIST = "latestContactList"
     const val LATEST_DM_RELAY_LIST = "latestDMRelayList"
     const val LATEST_NIP65_RELAY_LIST = "latestNIP65RelayList"
+    const val LATEST_SEARCH_RELAY_LIST = "latestSearchRelayList"
+    const val LATEST_MUTE_LIST = "latestMuteList"
+    const val LATEST_PRIVATE_HOME_RELAY_LIST = "latestPrivateHomeRelayList"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
     const val HIDE_NIP_17_WARNING_DIALOG = "hide_nip24_warning_dialog" // delete later
@@ -117,57 +122,67 @@ object LocalPreferences {
 
     private var currentAccount: String? = null
     private var savedAccounts: List<AccountInfo>? = null
-    private var cachedAccounts: MutableMap<String, Account?> = mutableMapOf()
+    private var cachedAccounts: MutableMap<String, AccountSettings?> = mutableMapOf()
 
     suspend fun currentAccount(): String? {
         if (currentAccount == null) {
-            currentAccount = encryptedPreferences().getString(PrefKeys.CURRENT_ACCOUNT, null)
+            currentAccount =
+                withContext(Dispatchers.IO) {
+                    encryptedPreferences().getString(PrefKeys.CURRENT_ACCOUNT, null)
+                }
         }
         return currentAccount
     }
 
-    private fun updateCurrentAccount(npub: String?) {
+    private suspend fun updateCurrentAccount(npub: String?) {
         if (npub == null) {
             currentAccount = null
-            encryptedPreferences().edit().clear().apply()
+            withContext(Dispatchers.IO) {
+                encryptedPreferences().edit().clear().apply()
+            }
         } else if (currentAccount != npub) {
             currentAccount = npub
-
-            encryptedPreferences().edit().apply { putString(PrefKeys.CURRENT_ACCOUNT, npub) }.apply()
+            withContext(Dispatchers.IO) {
+                encryptedPreferences().edit().apply { putString(PrefKeys.CURRENT_ACCOUNT, npub) }.apply()
+            }
         }
     }
 
-    private fun savedAccounts(): List<AccountInfo> {
+    private suspend fun savedAccounts(): List<AccountInfo> {
         if (savedAccounts == null) {
-            with(encryptedPreferences()) {
-                val newSystemOfAccounts =
-                    getString(PrefKeys.ALL_ACCOUNT_INFO, "[]")?.let {
-                        Event.mapper.readValue<List<AccountInfo>>(it)
-                    }
-
-                if (!newSystemOfAccounts.isNullOrEmpty()) {
-                    savedAccounts = newSystemOfAccounts
-                } else {
-                    val oldAccounts = getString(PrefKeys.SAVED_ACCOUNTS, null)?.split(COMMA) ?: listOf()
-
-                    val migrated =
-                        oldAccounts.map { npub ->
-                            AccountInfo(
-                                npub,
-                                encryptedPreferences(npub).getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false),
-                                (encryptedPreferences(npub).getString(PrefKeys.NOSTR_PRIVKEY, "") ?: "")
-                                    .isNotBlank(),
-                            )
+            withContext(Dispatchers.IO) {
+                with(encryptedPreferences()) {
+                    val newSystemOfAccounts =
+                        getString(PrefKeys.ALL_ACCOUNT_INFO, "[]")?.let {
+                            Event.mapper.readValue<List<AccountInfo>>(it)
                         }
 
-                    savedAccounts = migrated
+                    if (!newSystemOfAccounts.isNullOrEmpty()) {
+                        savedAccounts = newSystemOfAccounts
+                    } else {
+                        val oldAccounts = getString(PrefKeys.SAVED_ACCOUNTS, null)?.split(COMMA) ?: listOf()
 
-                    edit().apply { putString(PrefKeys.ALL_ACCOUNT_INFO, Event.mapper.writeValueAsString(savedAccounts)) }.apply()
+                        val migrated =
+                            oldAccounts.map { npub ->
+                                AccountInfo(
+                                    npub,
+                                    encryptedPreferences(npub).getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false),
+                                    (encryptedPreferences(npub).getString(PrefKeys.NOSTR_PRIVKEY, "") ?: "")
+                                        .isNotBlank(),
+                                )
+                            }
+
+                        savedAccounts = migrated
+
+                        edit().apply { putString(PrefKeys.ALL_ACCOUNT_INFO, Event.mapper.writeValueAsString(savedAccounts)) }.apply()
+                    }
                 }
             }
         }
         return savedAccounts!!
     }
+
+    fun cachedAccounts() = savedAccounts
 
     private suspend fun updateSavedAccounts(accounts: List<AccountInfo>) =
         withContext(Dispatchers.IO) {
@@ -189,35 +204,33 @@ object LocalPreferences {
         updateSavedAccounts(accounts)
     }
 
-    private suspend fun setCurrentAccount(account: Account) =
-        withContext(Dispatchers.IO) {
-            val npub = account.userProfile().pubkeyNpub()
-            val accInfo =
-                AccountInfo(
-                    npub,
-                    account.isWriteable(),
-                    account.signer is NostrSignerExternal,
-                )
-            updateCurrentAccount(npub)
-            addAccount(accInfo)
-        }
+    private suspend fun setCurrentAccount(accountSettings: AccountSettings) {
+        val npub = accountSettings.keyPair.pubKey.toNpub()
+        val accInfo =
+            AccountInfo(
+                npub,
+                accountSettings.isWriteable(),
+                accountSettings.externalSignerPackageName != null,
+            )
+        updateCurrentAccount(npub)
+        addAccount(accInfo)
+    }
 
-    suspend fun switchToAccount(accountInfo: AccountInfo) = withContext(Dispatchers.IO) { updateCurrentAccount(accountInfo.npub) }
+    suspend fun switchToAccount(accountInfo: AccountInfo) = updateCurrentAccount(accountInfo.npub)
 
     /** Removes the account from the app level shared preferences */
     private suspend fun removeAccount(accountInfo: AccountInfo) {
-        val accounts = savedAccounts().filter { it.npub != accountInfo.npub }
-        updateSavedAccounts(accounts)
+        updateSavedAccounts(savedAccounts().filter { it.npub != accountInfo.npub })
     }
 
     /** Deletes the npub-specific shared preference file */
-    private fun deleteUserPreferenceFile(npub: String) {
-        checkNotInMainThread()
-
-        val prefsDir = File(prefsDirPath)
-        prefsDir.list()?.forEach {
-            if (it.contains(npub)) {
-                File(prefsDir, it).delete()
+    private suspend fun deleteUserPreferenceFile(npub: String) {
+        withContext(Dispatchers.IO) {
+            val prefsDir = File(prefsDirPath)
+            prefsDir.list()?.forEach {
+                if (it.contains(npub)) {
+                    File(prefsDir, it).delete()
+                }
             }
         }
     }
@@ -246,8 +259,7 @@ object LocalPreferences {
     suspend fun updatePrefsForLogout(accountInfo: AccountInfo) {
         Log.d("LocalPreferences", "Saving to encrypted storage updatePrefsForLogout")
         withContext(Dispatchers.IO) {
-            val userPrefs = encryptedPreferences(accountInfo.npub)
-            userPrefs.edit().clear().commit()
+            encryptedPreferences(accountInfo.npub).edit().clear().commit()
             removeAccount(accountInfo)
             deleteUserPreferenceFile(accountInfo.npub)
 
@@ -259,99 +271,134 @@ object LocalPreferences {
         }
     }
 
-    suspend fun updatePrefsForLogin(account: Account) {
-        setCurrentAccount(account)
-        saveToEncryptedStorage(account)
+    suspend fun updatePrefsForLogin(accountSettings: AccountSettings) {
+        setCurrentAccount(accountSettings)
+        saveToEncryptedStorage(accountSettings)
     }
 
-    fun allSavedAccounts(): List<AccountInfo> = savedAccounts()
+    suspend fun allSavedAccounts(): List<AccountInfo> = savedAccounts()
 
-    suspend fun saveToEncryptedStorage(account: Account) {
+    suspend fun saveToEncryptedStorage(settings: AccountSettings) {
         Log.d("LocalPreferences", "Saving to encrypted storage")
         withContext(Dispatchers.IO) {
-            checkNotInMainThread()
-
-            val prefs = encryptedPreferences(account.userProfile().pubkeyNpub())
+            val prefs = encryptedPreferences(settings.keyPair.pubKey.toNpub())
             prefs
                 .edit()
                 .apply {
-                    putBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, account.signer is NostrSignerExternal)
-                    if (account.signer is NostrSignerExternal) {
+                    putBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, settings.externalSignerPackageName != null)
+                    if (settings.externalSignerPackageName != null) {
                         remove(PrefKeys.NOSTR_PRIVKEY)
-                        putString(PrefKeys.SIGNER_PACKAGE_NAME, account.signer.launcher.signerPackageName)
+                        putString(PrefKeys.SIGNER_PACKAGE_NAME, settings.externalSignerPackageName)
                     } else {
-                        account.keyPair.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHexKey()) }
+                        remove(PrefKeys.SIGNER_PACKAGE_NAME)
+                        settings.keyPair.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHexKey()) }
                     }
-                    account.keyPair.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHexKey()) }
-                    putString(PrefKeys.RELAYS, Event.mapper.writeValueAsString(account.localRelays))
-                    putStringSet(PrefKeys.DONT_TRANSLATE_FROM, account.dontTranslateFrom)
-                    putStringSet(PrefKeys.LOCAL_RELAY_SERVERS, account.localRelayServers)
+                    settings.keyPair.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHexKey()) }
+                    putString(PrefKeys.RELAYS, Event.mapper.writeValueAsString(settings.localRelays))
+                    putStringSet(PrefKeys.DONT_TRANSLATE_FROM, settings.dontTranslateFrom)
+                    putStringSet(PrefKeys.LOCAL_RELAY_SERVERS, settings.localRelayServers)
                     putString(
                         PrefKeys.LANGUAGE_PREFS,
-                        Event.mapper.writeValueAsString(account.languagePreferences),
+                        Event.mapper.writeValueAsString(settings.languagePreferences),
                     )
-                    putString(PrefKeys.TRANSLATE_TO, account.translateTo)
-                    putString(PrefKeys.ZAP_AMOUNTS, Event.mapper.writeValueAsString(account.zapAmountChoices))
+                    putString(PrefKeys.TRANSLATE_TO, settings.translateTo)
+                    putString(PrefKeys.ZAP_AMOUNTS, Event.mapper.writeValueAsString(settings.zapAmountChoices.value))
                     putString(
                         PrefKeys.REACTION_CHOICES,
-                        Event.mapper.writeValueAsString(account.reactionChoices),
+                        Event.mapper.writeValueAsString(settings.reactionChoices.value),
                     )
-                    putString(PrefKeys.DEFAULT_ZAPTYPE, account.defaultZapType.value.name)
+                    putString(PrefKeys.DEFAULT_ZAPTYPE, settings.defaultZapType.value.name)
                     putString(
                         PrefKeys.DEFAULT_FILE_SERVER,
-                        Event.mapper.writeValueAsString(account.defaultFileServer),
+                        Event.mapper.writeValueAsString(settings.defaultFileServer),
                     )
-                    putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, account.defaultHomeFollowList.value)
-                    putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, account.defaultStoriesFollowList.value)
+                    putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, settings.defaultHomeFollowList.value)
+                    putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, settings.defaultStoriesFollowList.value)
                     putString(
                         PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST,
-                        account.defaultNotificationFollowList.value,
+                        settings.defaultNotificationFollowList.value,
                     )
                     putString(
                         PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST,
-                        account.defaultDiscoveryFollowList.value,
+                        settings.defaultDiscoveryFollowList.value,
                     )
                     putString(
                         PrefKeys.ZAP_PAYMENT_REQUEST_SERVER,
-                        Event.mapper.writeValueAsString(account.zapPaymentRequest),
+                        Event.mapper.writeValueAsString(settings.zapPaymentRequest),
                     )
-                    if (account.backupContactList != null) {
+                    if (settings.backupContactList != null) {
                         putString(
                             PrefKeys.LATEST_CONTACT_LIST,
-                            Event.mapper.writeValueAsString(account.backupContactList),
+                            Event.mapper.writeValueAsString(settings.backupContactList),
                         )
                     } else {
                         remove(PrefKeys.LATEST_CONTACT_LIST)
                     }
 
-                    if (account.backupDMRelayList != null) {
+                    if (settings.backupUserMetadata != null) {
+                        putString(
+                            PrefKeys.LATEST_USER_METADATA,
+                            Event.mapper.writeValueAsString(settings.backupUserMetadata),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_USER_METADATA)
+                    }
+
+                    if (settings.backupDMRelayList != null) {
                         putString(
                             PrefKeys.LATEST_DM_RELAY_LIST,
-                            Event.mapper.writeValueAsString(account.backupDMRelayList),
+                            Event.mapper.writeValueAsString(settings.backupDMRelayList),
                         )
                     } else {
                         remove(PrefKeys.LATEST_DM_RELAY_LIST)
                     }
 
-                    if (account.backupNIP65RelayList != null) {
+                    if (settings.backupNIP65RelayList != null) {
                         putString(
                             PrefKeys.LATEST_NIP65_RELAY_LIST,
-                            Event.mapper.writeValueAsString(account.backupNIP65RelayList),
+                            Event.mapper.writeValueAsString(settings.backupNIP65RelayList),
                         )
                     } else {
                         remove(PrefKeys.LATEST_NIP65_RELAY_LIST)
                     }
 
-                    putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, account.hideDeleteRequestDialog)
-                    putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, account.hideNIP17WarningDialog)
-                    putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, account.hideBlockAlertDialog)
-                    putBoolean(PrefKeys.USE_PROXY, account.proxy != null)
-                    putInt(PrefKeys.PROXY_PORT, account.proxyPort)
-                    putBoolean(PrefKeys.WARN_ABOUT_REPORTS, account.warnAboutPostsWithReports)
-                    putBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, account.filterSpamFromStrangers)
+                    if (settings.backupSearchRelayList != null) {
+                        putString(
+                            PrefKeys.LATEST_SEARCH_RELAY_LIST,
+                            Event.mapper.writeValueAsString(settings.backupSearchRelayList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_SEARCH_RELAY_LIST)
+                    }
+
+                    if (settings.backupMuteList != null) {
+                        putString(
+                            PrefKeys.LATEST_MUTE_LIST,
+                            Event.mapper.writeValueAsString(settings.backupMuteList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_MUTE_LIST)
+                    }
+
+                    if (settings.backupPrivateHomeRelayList != null) {
+                        putString(
+                            PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST,
+                            Event.mapper.writeValueAsString(settings.backupPrivateHomeRelayList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST)
+                    }
+
+                    putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, settings.hideDeleteRequestDialog)
+                    putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, settings.hideNIP17WarningDialog)
+                    putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, settings.hideBlockAlertDialog)
+                    putBoolean(PrefKeys.USE_PROXY, settings.proxy != null)
+                    putInt(PrefKeys.PROXY_PORT, settings.proxyPort)
+                    putBoolean(PrefKeys.WARN_ABOUT_REPORTS, settings.warnAboutPostsWithReports)
+                    putBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, settings.filterSpamFromStrangers)
 
                     val regularMap =
-                        account.lastReadPerRoute.value.mapValues {
+                        settings.lastReadPerRoute.value.mapValues {
                             it.value.value
                         }
 
@@ -359,23 +406,23 @@ object LocalPreferences {
                         PrefKeys.LAST_READ_PER_ROUTE,
                         Event.mapper.writeValueAsString(regularMap),
                     )
-                    putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, account.hasDonatedInVersion)
+                    putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, settings.hasDonatedInVersion.value)
 
-                    if (account.showSensitiveContent.value == null) {
+                    if (settings.showSensitiveContent.value == null) {
                         remove(PrefKeys.SHOW_SENSITIVE_CONTENT)
                     } else {
-                        putBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, account.showSensitiveContent.value!!)
+                        putBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, settings.showSensitiveContent.value!!)
                     }
 
                     putString(
                         PrefKeys.PENDING_ATTESTATIONS,
-                        Event.mapper.writeValueAsString(account.pendingAttestations.value),
+                        Event.mapper.writeValueAsString(settings.pendingAttestations.value),
                     )
                 }.apply()
         }
     }
 
-    suspend fun loadCurrentAccountFromEncryptedStorage(): Account? = currentAccount()?.let { loadCurrentAccountFromEncryptedStorage(it) }
+    suspend fun loadCurrentAccountFromEncryptedStorage(): AccountSettings? = currentAccount()?.let { loadCurrentAccountFromEncryptedStorage(it) }
 
     suspend fun saveSharedSettings(
         sharedSettings: Settings,
@@ -408,39 +455,39 @@ object LocalPreferences {
 
     val mutex = Mutex()
 
-    suspend fun loadCurrentAccountFromEncryptedStorage(npub: String): Account? =
-        withContext(Dispatchers.IO) {
+    suspend fun loadCurrentAccountFromEncryptedStorage(npub: String): AccountSettings? {
+        // if already loaded, return right away
+        if (cachedAccounts.containsKey(npub)) {
+            return cachedAccounts[npub]
+        }
+
+        return withContext(Dispatchers.IO) {
             mutex.withLock {
                 if (cachedAccounts.containsKey(npub)) {
                     return@withContext cachedAccounts.get(npub)
                 }
 
-                val account = innerLoadCurrentAccountFromEncryptedStorage(npub)
-                account?.registerObservers()
+                val accountSettings = innerLoadCurrentAccountFromEncryptedStorage(npub)
 
-                cachedAccounts.put(npub, account)
+                cachedAccounts.put(npub, accountSettings)
 
-                return@withContext account
+                return@withContext accountSettings
             }
         }
+    }
 
-    suspend fun innerLoadCurrentAccountFromEncryptedStorage(npub: String?): Account? {
-        Log.d("LocalPreferences", "Load account from file")
+    private suspend fun innerLoadCurrentAccountFromEncryptedStorage(npub: String?): AccountSettings? {
+        Log.d("LocalPreferences", "Load account from file $npub")
 
         return withContext(Dispatchers.IO) {
             checkNotInMainThread()
 
             return@withContext with(encryptedPreferences(npub)) {
+                val privKey = getString(PrefKeys.NOSTR_PRIVKEY, null)
                 val pubKey = getString(PrefKeys.NOSTR_PUBKEY, null) ?: return@with null
-                val loginWithExternalSigner = getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)
-                val privKey = if (loginWithExternalSigner) null else getString(PrefKeys.NOSTR_PRIVKEY, null)
-
-                val localRelays =
-                    getString(PrefKeys.RELAYS, "[]")?.let {
-                        println("LocalRelays: $it")
-                        Event.mapper.readValue<Set<RelaySetupInfo>?>(it)
-                    }
-                        ?: setOf<RelaySetupInfo>()
+                val externalSignerPackageName =
+                    getString(PrefKeys.SIGNER_PACKAGE_NAME, null)
+                        ?: if (getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)) "com.greenart7c3.nostrsigner" else null
 
                 val dontTranslateFrom = getStringSet(PrefKeys.DONT_TRANSLATE_FROM, null) ?: setOf()
                 val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
@@ -454,149 +501,27 @@ object LocalPreferences {
                 val defaultDiscoveryFollowList =
                     getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
 
-                val zapAmountChoices =
-                    getString(PrefKeys.ZAP_AMOUNTS, "[]")
-                        ?.let { Event.mapper.readValue<List<Long>?>(it) }
-                        ?.ifEmpty { DefaultZapAmounts }
-                        ?: DefaultZapAmounts
-
-                val reactionChoices =
-                    getString(PrefKeys.REACTION_CHOICES, "[]")
-                        ?.let { Event.mapper.readValue<List<String>?>(it) }
-                        ?.ifEmpty { DefaultReactions }
-                        ?: DefaultReactions
-
                 val defaultZapType =
                     getString(PrefKeys.DEFAULT_ZAPTYPE, "")?.let { serverName ->
-                        LnZapEvent.ZapType.values().firstOrNull { it.name == serverName }
-                    }
-                        ?: LnZapEvent.ZapType.PUBLIC
+                        LnZapEvent.ZapType.entries.firstOrNull { it.name == serverName }
+                    } ?: LnZapEvent.ZapType.PUBLIC
 
-                val defaultFileServer =
-                    try {
-                        getString(PrefKeys.DEFAULT_FILE_SERVER, "")?.let { serverName ->
-                            Event.mapper.readValue<Nip96MediaServers.ServerName>(serverName)
-                        }
-                            ?: Nip96MediaServers.DEFAULT[0]
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        Log.w("LocalPreferences", "Failed to decode saved File Server", e)
-                        e.printStackTrace()
-                        Nip96MediaServers.DEFAULT[0]
-                    }
+                val localRelays = parseOrNull<Set<RelaySetupInfo>>(PrefKeys.RELAYS) ?: emptySet()
+                val reactionChoices = parseOrNull<List<String>>(PrefKeys.REACTION_CHOICES)?.ifEmpty { DefaultReactions } ?: DefaultReactions
+                val zapAmountChoices = parseOrNull<List<Long>>(PrefKeys.ZAP_AMOUNTS)?.ifEmpty { DefaultZapAmounts } ?: DefaultZapAmounts
 
-                val zapPaymentRequestServer =
-                    try {
-                        getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)?.let {
-                            Event.mapper.readValue<Nip47WalletConnect.Nip47URI?>(it)
-                        }
-                    } catch (e: Throwable) {
-                        if (e is CancellationException) throw e
-                        Log.w(
-                            "LocalPreferences",
-                            "Error Decoding Zap Payment Request Server ${getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)}",
-                            e,
-                        )
-                        e.printStackTrace()
-                        null
-                    }
+                val defaultFileServer = parseOrNull<Nip96MediaServers.ServerName>(PrefKeys.DEFAULT_FILE_SERVER) ?: Nip96MediaServers.DEFAULT[0]
+                val zapPaymentRequestServer = parseOrNull<Nip47WalletConnect.Nip47URI>(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER)
+                val pendingAttestations = parseOrNull<Map<HexKey, String>>(PrefKeys.PENDING_ATTESTATIONS) ?: mapOf()
+                val languagePreferences = parseOrNull<Map<String, String>>(PrefKeys.LANGUAGE_PREFS) ?: mapOf()
 
-                val latestContactList =
-                    try {
-                        getString(PrefKeys.LATEST_CONTACT_LIST, null)?.let {
-                            if (it != "null") {
-                                println("Decoding Contact List: $it")
-                                Event.fromJson(it) as ContactListEvent?
-                            } else {
-                                null
-                            }
-                        }
-                    } catch (e: Throwable) {
-                        if (e is CancellationException) throw e
-                        Log.w(
-                            "LocalPreferences",
-                            "Error Decoding Contact List ${getString(PrefKeys.LATEST_CONTACT_LIST, null)}",
-                            e,
-                        )
-                        null
-                    }
-
-                val latestDmRelayList =
-                    try {
-                        getString(PrefKeys.LATEST_DM_RELAY_LIST, null)?.let {
-                            if (it != "null") {
-                                println("Decoding DM Relay List: $it")
-                                Event.fromJson(it) as ChatMessageRelayListEvent?
-                            } else {
-                                null
-                            }
-                        }
-                    } catch (e: Throwable) {
-                        if (e is CancellationException) throw e
-                        Log.w(
-                            "LocalPreferences",
-                            "Error Decoding DM Relay List ${getString(PrefKeys.LATEST_DM_RELAY_LIST, null)}",
-                            e,
-                        )
-                        null
-                    }
-
-                val latestNip65RelayList =
-                    try {
-                        getString(PrefKeys.LATEST_NIP65_RELAY_LIST, null)?.let {
-                            if (it != "null") {
-                                println("Decoding NIP65 Relay List: $it")
-                                Event.fromJson(it) as AdvertisedRelayListEvent?
-                            } else {
-                                null
-                            }
-                        }
-                    } catch (e: Throwable) {
-                        if (e is CancellationException) throw e
-                        Log.w(
-                            "LocalPreferences",
-                            "Error Decoding NIP65 Relay List ${getString(PrefKeys.LATEST_NIP65_RELAY_LIST, null)}",
-                            e,
-                        )
-                        null
-                    }
-
-                val pendingAttestations =
-                    try {
-                        getString(PrefKeys.PENDING_ATTESTATIONS, null)?.let {
-                            println("Decoding Attestation List: " + it)
-                            if (it != null) {
-                                Event.mapper.readValue<Map<HexKey, String>>(it)
-                            } else {
-                                null
-                            }
-                        }
-                    } catch (e: Throwable) {
-                        if (e is CancellationException) throw e
-                        Log.w(
-                            "LocalPreferences",
-                            "Error Decoding Contact List ${getString(PrefKeys.PENDING_ATTESTATIONS, null)}",
-                            e,
-                        )
-                        null
-                    }
-
-                val languagePreferences =
-                    try {
-                        getString(PrefKeys.LANGUAGE_PREFS, null)?.let {
-                            Event.mapper.readValue<Map<String, String>?>(it)
-                        }
-                            ?: mapOf()
-                    } catch (e: Throwable) {
-                        if (e is CancellationException) throw e
-                        Log.w(
-                            "LocalPreferences",
-                            "Error Decoding Language Preferences ${getString(PrefKeys.LANGUAGE_PREFS, null)}",
-                            e,
-                        )
-                        e.printStackTrace()
-                        mapOf()
-                    }
+                val latestUserMetadata = parseEventOrNull<MetadataEvent>(PrefKeys.LATEST_USER_METADATA)
+                val latestContactList = parseEventOrNull<ContactListEvent>(PrefKeys.LATEST_CONTACT_LIST)
+                val latestDmRelayList = parseEventOrNull<ChatMessageRelayListEvent>(PrefKeys.LATEST_DM_RELAY_LIST)
+                val latestNip65RelayList = parseEventOrNull<AdvertisedRelayListEvent>(PrefKeys.LATEST_NIP65_RELAY_LIST)
+                val latestSearchRelayList = parseEventOrNull<SearchRelayListEvent>(PrefKeys.LATEST_SEARCH_RELAY_LIST)
+                val latestMuteList = parseEventOrNull<MuteListEvent>(PrefKeys.LATEST_MUTE_LIST)
+                val latestPrivateHomeRelayList = parseEventOrNull<PrivateOutboxRelayListEvent>(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST)
 
                 val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
                 val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
@@ -615,82 +540,84 @@ object LocalPreferences {
                 val warnAboutReports = getBoolean(PrefKeys.WARN_ABOUT_REPORTS, true)
 
                 val lastReadPerRoute =
-                    try {
-                        getString(PrefKeys.LAST_READ_PER_ROUTE, null)?.let {
-                            Event.mapper.readValue<Map<String, Long>?>(it)?.mapValues {
-                                MutableStateFlow(it.value)
-                            }
-                        } ?: mapOf()
-                    } catch (e: Throwable) {
-                        if (e is CancellationException) throw e
-                        Log.w(
-                            "LocalPreferences",
-                            "Error Decoding Last Read per route ${getString(PrefKeys.LAST_READ_PER_ROUTE, null)}",
-                            e,
-                        )
-                        e.printStackTrace()
-                        mapOf()
-                    }
+                    parseOrNull<Map<String, Long>>(PrefKeys.LAST_READ_PER_ROUTE)?.mapValues {
+                        MutableStateFlow(it.value)
+                    } ?: mapOf()
 
                 val keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray())
-                val signer =
-                    if (loginWithExternalSigner) {
-                        val packageName =
-                            getString(PrefKeys.SIGNER_PACKAGE_NAME, null) ?: "com.greenart7c3.nostrsigner"
-                        NostrSignerExternal(
-                            pubKey,
-                            ExternalSignerLauncher(pubKey.hexToByteArray().toNpub(), packageName),
-                        )
-                    } else {
-                        NostrSignerInternal(keyPair)
-                    }
-
                 val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
 
-                val account =
-                    Account(
-                        keyPair = keyPair,
-                        signer = signer,
-                        localRelays = localRelays,
-                        localRelayServers = localRelayServers,
-                        dontTranslateFrom = dontTranslateFrom,
-                        languagePreferences = languagePreferences,
-                        translateTo = translateTo,
-                        zapAmountChoices = zapAmountChoices,
-                        reactionChoices = reactionChoices,
-                        defaultZapType = MutableStateFlow(defaultZapType),
-                        defaultFileServer = defaultFileServer,
-                        defaultHomeFollowList = MutableStateFlow(defaultHomeFollowList),
-                        defaultStoriesFollowList = MutableStateFlow(defaultStoriesFollowList),
-                        defaultNotificationFollowList = MutableStateFlow(defaultNotificationFollowList),
-                        defaultDiscoveryFollowList = MutableStateFlow(defaultDiscoveryFollowList),
-                        zapPaymentRequest = zapPaymentRequestServer,
-                        hideDeleteRequestDialog = hideDeleteRequestDialog,
-                        hideBlockAlertDialog = hideBlockAlertDialog,
-                        hideNIP17WarningDialog = hideNIP17WarningDialog,
-                        backupContactList = latestContactList,
-                        backupNIP65RelayList = latestNip65RelayList,
-                        backupDMRelayList = latestDmRelayList,
-                        proxy = proxy,
-                        proxyPort = proxyPort,
-                        showSensitiveContent = MutableStateFlow(showSensitiveContent),
-                        warnAboutPostsWithReports = warnAboutReports,
-                        filterSpamFromStrangers = filterSpam,
-                        lastReadPerRoute = MutableStateFlow(lastReadPerRoute),
-                        hasDonatedInVersion = hasDonatedInVersion,
-                        pendingAttestations = MutableStateFlow(pendingAttestations ?: emptyMap()),
-                    )
-
-                // Loads from DB
-                account.userProfile()
-
-                withContext(Dispatchers.Main) {
-                    // Loads Live Objects
-                    account.userProfile().live()
-                }
-
-                return@with account
+                return@with AccountSettings(
+                    keyPair = keyPair,
+                    externalSignerPackageName = externalSignerPackageName,
+                    localRelays = localRelays,
+                    localRelayServers = localRelayServers,
+                    dontTranslateFrom = dontTranslateFrom,
+                    languagePreferences = languagePreferences,
+                    translateTo = translateTo,
+                    zapAmountChoices = MutableStateFlow(zapAmountChoices),
+                    reactionChoices = MutableStateFlow(reactionChoices),
+                    defaultZapType = MutableStateFlow(defaultZapType),
+                    defaultFileServer = defaultFileServer,
+                    defaultHomeFollowList = MutableStateFlow(defaultHomeFollowList),
+                    defaultStoriesFollowList = MutableStateFlow(defaultStoriesFollowList),
+                    defaultNotificationFollowList = MutableStateFlow(defaultNotificationFollowList),
+                    defaultDiscoveryFollowList = MutableStateFlow(defaultDiscoveryFollowList),
+                    zapPaymentRequest = zapPaymentRequestServer,
+                    hideDeleteRequestDialog = hideDeleteRequestDialog,
+                    hideBlockAlertDialog = hideBlockAlertDialog,
+                    hideNIP17WarningDialog = hideNIP17WarningDialog,
+                    backupUserMetadata = latestUserMetadata,
+                    backupContactList = latestContactList,
+                    backupNIP65RelayList = latestNip65RelayList,
+                    backupDMRelayList = latestDmRelayList,
+                    backupSearchRelayList = latestSearchRelayList,
+                    backupPrivateHomeRelayList = latestPrivateHomeRelayList,
+                    backupMuteList = latestMuteList,
+                    proxy = proxy,
+                    proxyPort = proxyPort,
+                    showSensitiveContent = MutableStateFlow(showSensitiveContent),
+                    warnAboutPostsWithReports = warnAboutReports,
+                    filterSpamFromStrangers = filterSpam,
+                    lastReadPerRoute = MutableStateFlow(lastReadPerRoute),
+                    hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
+                    pendingAttestations = MutableStateFlow(pendingAttestations),
+                )
             }
+        }
+    }
+
+    private inline fun <reified T> SharedPreferences.parseOrNull(key: String): T? {
+        val value = getString(key, null)
+        if (value.isNullOrEmpty() || value == "null") {
+            return null
+        }
+        return try {
+            if (T::class.java.isInstance(Event::class.java)) {
+                Event.fromJson(value) as T?
+            } else {
+                Event.mapper.readValue<T?>(value)
+            }
+        } catch (e: Throwable) {
+            if (e is CancellationException) throw e
+            Log.w("LocalPreferences", "Error Decoding $key from Preferences with value $value", e)
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private inline fun <reified T> SharedPreferences.parseEventOrNull(key: String): T? {
+        val value = getString(key, null)
+        if (value.isNullOrEmpty() || value == "null") {
+            return null
+        }
+        return try {
+            Event.fromJson(value) as T?
+        } catch (e: Throwable) {
+            if (e is CancellationException) throw e
+            Log.w("LocalPreferences", "Error Decoding $key from Preferences with value $value", e)
+            e.printStackTrace()
+            null
         }
     }
 }

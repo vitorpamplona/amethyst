@@ -32,7 +32,7 @@ open class DiscoverMarketplaceFeedFilter(
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList()
 
-    open fun followList(): String = account.defaultDiscoveryFollowList.value
+    open fun followList(): String = account.settings.defaultDiscoveryFollowList.value
 
     override fun showHiddenKey(): Boolean =
         followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
@@ -55,7 +55,7 @@ open class DiscoverMarketplaceFeedFilter(
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
             account.userProfile().pubkeyHex,
-            account.defaultDiscoveryFollowList.value,
+            account.settings.defaultDiscoveryFollowList.value,
             account.liveDiscoveryFollowLists.value,
             account.flowHiddenUsers.value,
         )

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
 import com.vitorpamplona.quartz.crypto.KeyPair
@@ -30,7 +31,9 @@ import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.events.Event
 import junit.framework.TestCase
 import junit.framework.TestCase.assertEquals
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.junit.Test
@@ -133,7 +136,7 @@ class ThreadAssemblerTest {
                     null,
                 )
 
-            val account = Account(KeyPair())
+            val account = Account(AccountSettings(KeyPair()), scope = CoroutineScope(Dispatchers.IO + SupervisorJob()))
             withContext(Dispatchers.Main) {
                 val user = account.userProfile().live()
             }

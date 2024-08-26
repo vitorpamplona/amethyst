@@ -33,7 +33,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -153,7 +152,12 @@ private fun FeedLoaded(
             key = { _, item -> item.id() },
             contentType = { _, item -> item.javaClass.simpleName },
         ) { _, item ->
-            val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
+            val defaultModifier =
+                remember {
+                    Modifier
+                        .fillMaxWidth()
+                        .animateItemPlacement()
+                }
 
             Row(defaultModifier) {
                 RenderCardItem(
@@ -176,18 +180,20 @@ private fun ShowDonationCard(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val account by accountViewModel.account.live.observeAsState()
-    if (account?.account?.hasDonatedInThisVersion() == false) {
-        LoadNote(
-            BuildConfig.RELEASE_NOTES_ID,
-            accountViewModel,
-        ) { loadedNoteId ->
-            if (loadedNoteId != null) {
-                ZapTheDevsCard(
-                    loadedNoteId,
-                    accountViewModel,
-                    nav,
-                )
+    if (!accountViewModel.account.hasDonatedInThisVersion()) {
+        val donated by accountViewModel.account.observeDonatedInThisVersion().collectAsStateWithLifecycle()
+        if (!donated) {
+            LoadNote(
+                BuildConfig.RELEASE_NOTES_ID,
+                accountViewModel,
+            ) { loadedNoteId ->
+                if (loadedNoteId != null) {
+                    ZapTheDevsCard(
+                        loadedNoteId,
+                        accountViewModel,
+                        nav,
+                    )
+                }
             }
         }
     }

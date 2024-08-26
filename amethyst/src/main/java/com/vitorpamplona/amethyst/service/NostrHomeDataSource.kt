@@ -46,7 +46,6 @@ import com.vitorpamplona.quartz.events.WikiNoteEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
     lateinit var account: Account
@@ -61,8 +60,6 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
         job?.cancel()
         job =
             scope.launch(Dispatchers.IO) {
-                // creates cache on main
-                withContext(Dispatchers.Main) { account.userProfile().live() }
                 account.liveHomeFollowLists.collect {
                     if (this@NostrHomeDataSource::account.isInitialized) {
                         invalidateFilters()
@@ -73,8 +70,6 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
         job2?.cancel()
         job2 =
             scope.launch(Dispatchers.IO) {
-                // creates cache on main
-                withContext(Dispatchers.Main) { account.userProfile().live() }
                 account.liveHomeListAuthorsPerRelay.collect {
                     if (this@NostrHomeDataSource::account.isInitialized) {
                         invalidateFilters()
@@ -119,7 +114,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
-                            ?.get(account.defaultHomeFollowList.value)
+                            ?.get(account.settings.defaultHomeFollowList.value)
                             ?.relayList,
                 ),
         )
@@ -142,7 +137,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                         since =
                             latestEOSEs.users[account.userProfile()]
                                 ?.followList
-                                ?.get(account.defaultHomeFollowList.value)
+                                ?.get(account.settings.defaultHomeFollowList.value)
                                 ?.relayList,
                     ),
             )
@@ -184,7 +179,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
-                            ?.get(account.defaultHomeFollowList.value)
+                            ?.get(account.settings.defaultHomeFollowList.value)
                             ?.relayList,
                 ),
         )
@@ -223,7 +218,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
-                            ?.get(account.defaultHomeFollowList.value)
+                            ?.get(account.settings.defaultHomeFollowList.value)
                             ?.relayList,
                 ),
         )
@@ -258,7 +253,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
-                            ?.get(account.defaultHomeFollowList.value)
+                            ?.get(account.settings.defaultHomeFollowList.value)
                             ?.relayList,
                 ),
         )
@@ -268,7 +263,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
         requestNewChannel { time, relayUrl ->
             latestEOSEs.addOrUpdate(
                 account.userProfile(),
-                account.defaultHomeFollowList.value,
+                account.settings.defaultHomeFollowList.value,
                 relayUrl,
                 time,
             )

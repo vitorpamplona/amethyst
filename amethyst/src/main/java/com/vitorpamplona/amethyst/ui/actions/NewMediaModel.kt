@@ -333,7 +333,7 @@ open class NewMediaModel : ViewModel() {
 
     fun isVideo() = mediaType?.startsWith("video")
 
-    fun defaultServer() = account?.defaultFileServer ?: Nip96MediaServers.DEFAULT[0]
+    fun defaultServer() = account?.settings?.defaultFileServer ?: Nip96MediaServers.DEFAULT[0]
 
     fun onceUploaded(onceUploaded: () -> Unit) {
         this.onceUploaded = onceUploaded

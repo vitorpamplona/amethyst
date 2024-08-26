@@ -34,11 +34,11 @@ import com.vitorpamplona.quartz.events.VideoVerticalEvent
 class VideoFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.defaultStoriesFollowList.value
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultStoriesFollowList.value
 
     override fun showHiddenKey(): Boolean =
-        account.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
-            account.defaultStoriesFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
+        account.settings.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+            account.settings.defaultStoriesFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
@@ -78,7 +78,7 @@ class VideoFeedFilter(
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
             userHex = account.userProfile().pubkeyHex,
-            selectedListName = account.defaultStoriesFollowList.value,
+            selectedListName = account.settings.defaultStoriesFollowList.value,
             followLists = account.liveStoriesFollowLists.value,
             hiddenUsers = account.flowHiddenUsers.value,
         )

@@ -41,17 +41,7 @@ class SinceAuthorPerRelayFilter(
     // don't send it.
     override fun isValidFor(forRelay: String) = authors == null || !authors[forRelay].isNullOrEmpty()
 
-    override fun toJson(forRelay: String): String {
-        // if authors is empty, but not null
-        val authorsForThisRelay =
-            if (authors != null) {
-                authors[forRelay]?.ifEmpty { null }
-            } else {
-                null
-            }
-
-        return FilterSerializer.toJson(ids, authors?.get(forRelay), kinds, tags, since?.get(forRelay)?.time, until, limit, search)
-    }
+    override fun toJson(forRelay: String): String = FilterSerializer.toJson(ids, authors?.get(forRelay), kinds, tags, since?.get(forRelay)?.time, until, limit, search)
 
     override fun match(
         event: Event,

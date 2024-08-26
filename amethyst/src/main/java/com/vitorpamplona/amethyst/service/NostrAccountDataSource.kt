@@ -164,7 +164,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
-                            ?.get(account.defaultNotificationFollowList.value)
+                            ?.get(account.settings.defaultNotificationFollowList.value)
                             ?.relayList,
                 ),
         )
@@ -183,7 +183,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         var since =
             latestEOSEs.users[account.userProfile()]
                 ?.followList
-                ?.get(account.defaultNotificationFollowList.value)
+                ?.get(account.settings.defaultNotificationFollowList.value)
                 ?.relayList
                 ?.toMutableMap()
 
@@ -229,7 +229,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         val since =
             latestEOSEs.users[account.userProfile()]
                 ?.followList
-                ?.get(account.defaultNotificationFollowList.value)
+                ?.get(account.settings.defaultNotificationFollowList.value)
                 ?.relayList
                 ?: account.connectToRelays.value.associate { it.url to EOSETime(TimeUtils.oneWeekAgo()) }
                 ?: account.convertLocalRelays().associate { it.url to EOSETime(TimeUtils.oneWeekAgo()) }
@@ -278,7 +278,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
             if (hasLoadedTheBasics[account.userProfile()] != null) {
                 latestEOSEs.addOrUpdate(
                     account.userProfile(),
-                    account.defaultNotificationFollowList.value,
+                    account.settings.defaultNotificationFollowList.value,
                     relayUrl,
                     time,
                 )

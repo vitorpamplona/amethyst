@@ -184,7 +184,7 @@ class NewUserMetadataViewModel : ViewModel() {
                                         size = size,
                                         alt = null,
                                         sensitiveContent = null,
-                                        server = account.defaultFileServer,
+                                        server = account.settings.defaultFileServer,
                                         contentResolver = contentResolver,
                                         onProgress = {},
                                         context = context,

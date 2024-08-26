@@ -447,7 +447,7 @@ fun PrivateMessageEditFieldRow(
                             alt = null,
                             sensitiveContent = false,
                             isPrivate = isPrivate,
-                            server = ServerOption(accountViewModel.account.defaultFileServer, false),
+                            server = ServerOption(accountViewModel.account.settings.defaultFileServer, false),
                             onError = accountViewModel::toast,
                             context = context,
                         )
@@ -467,7 +467,7 @@ fun PrivateMessageEditFieldRow(
                         modifier = Size30Modifier,
                         onClick = {
                             if (
-                                !accountViewModel.hideNIP17WarningDialog &&
+                                !accountViewModel.account.settings.hideNIP17WarningDialog &&
                                 !channelScreenModel.nip17 &&
                                 !channelScreenModel.requiresNIP17
                             ) {
@@ -549,13 +549,13 @@ fun NewFeatureNIP17AlertDialog(
         buttonIconResource = R.drawable.incognito,
         buttonText = stringRes(R.string.new_feature_nip17_activate),
         onClickDoOnce = {
-            scope.launch(Dispatchers.IO) { onConfirm() }
+            scope.launch { onConfirm() }
             onDismiss()
         },
         onClickDontShowAgain = {
-            scope.launch(Dispatchers.IO) {
+            scope.launch {
                 onConfirm()
-                accountViewModel.dontShowNIP17WarningDialog()
+                accountViewModel.account.settings.setHideNIP17WarningDialog()
             }
             onDismiss()
         },

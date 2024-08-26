@@ -467,7 +467,7 @@ fun EditFieldRow(
                         galleryUri = it,
                         alt = null,
                         sensitiveContent = false,
-                        server = ServerOption(accountViewModel.account.defaultFileServer, false),
+                        server = ServerOption(accountViewModel.account.settings.defaultFileServer, false),
                         onError = accountViewModel::toast,
                         context = context,
                     )

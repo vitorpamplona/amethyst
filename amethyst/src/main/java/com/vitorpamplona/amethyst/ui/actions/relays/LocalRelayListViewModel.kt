@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.ui.actions.relays
 
 class LocalRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<String>? = account.localRelayServers.toList()
+    override fun getRelayList(): List<String> = account.settings.localRelayServers.toList()
 
     override fun saveRelayList(urlList: List<String>) {
-        account.updateLocalRelayServers(urlList.toSet())
+        account.settings.updateLocalRelayServers(urlList.toSet())
     }
 }

@@ -78,7 +78,7 @@ object NostrVideoDataSource : AmethystNostrDataSource("VideoFeed") {
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
-                            ?.get(account.defaultStoriesFollowList.value)
+                            ?.get(account.settings.defaultStoriesFollowList.value)
                             ?.relayList,
                 ),
         )
@@ -109,7 +109,7 @@ object NostrVideoDataSource : AmethystNostrDataSource("VideoFeed") {
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
-                            ?.get(account.defaultStoriesFollowList.value)
+                            ?.get(account.settings.defaultStoriesFollowList.value)
                             ?.relayList,
                 ),
         )
@@ -140,7 +140,7 @@ object NostrVideoDataSource : AmethystNostrDataSource("VideoFeed") {
                     since =
                         latestEOSEs.users[account.userProfile()]
                             ?.followList
-                            ?.get(account.defaultStoriesFollowList.value)
+                            ?.get(account.settings.defaultStoriesFollowList.value)
                             ?.relayList,
                 ),
         )
@@ -150,7 +150,7 @@ object NostrVideoDataSource : AmethystNostrDataSource("VideoFeed") {
         requestNewChannel { time, relayUrl ->
             latestEOSEs.addOrUpdate(
                 account.userProfile(),
-                account.defaultStoriesFollowList.value,
+                account.settings.defaultStoriesFollowList.value,
                 relayUrl,
                 time,
             )

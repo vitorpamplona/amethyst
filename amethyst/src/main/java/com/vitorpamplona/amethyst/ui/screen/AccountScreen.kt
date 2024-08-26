@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +51,7 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -59,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
 @Composable
 fun AccountScreen(
@@ -95,7 +97,7 @@ fun AccountScreen(
                     LocalViewModelStoreOwner provides state.currentViewModelStore,
                 ) {
                     LoggedInPage(
-                        state.account,
+                        state.accountSettings,
                         accountStateViewModel,
                         sharedPreferencesViewModel,
                     )
@@ -106,7 +108,7 @@ fun AccountScreen(
                     LocalViewModelStoreOwner provides state.currentViewModelStore,
                 ) {
                     LoggedInPage(
-                        state.account,
+                        state.accountSettings,
                         accountStateViewModel,
                         sharedPreferencesViewModel,
                     )
@@ -118,7 +120,7 @@ fun AccountScreen(
 
 @Composable
 fun LoggedInPage(
-    account: Account,
+    accountSettings: AccountSettings,
     accountStateViewModel: AccountStateViewModel,
     sharedPreferencesViewModel: SharedPreferencesViewModel,
 ) {
@@ -127,10 +129,14 @@ fun LoggedInPage(
             key = "AccountViewModel",
             factory =
                 AccountViewModel.Factory(
-                    account,
+                    accountSettings,
                     sharedPreferencesViewModel.sharedPrefs,
                 ),
         )
+
+    LaunchedEffect(key1 = accountViewModel) {
+        accountViewModel.restartServices()
+    }
 
     val activity = getActivity() as MainActivity
 
@@ -208,7 +214,7 @@ fun LoggedInPage(
 }
 
 class AccountCentricViewModelStore(
-    val account: Account,
+    val accountSettings: AccountSettings,
 ) : ViewModelStoreOwner {
     override val viewModelStore = ViewModelStore()
 }

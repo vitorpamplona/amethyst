@@ -164,7 +164,7 @@ fun NewMediaView(
                             }
                             postViewModel.selectedServer?.let {
                                 if (!it.isNip95) {
-                                    account.changeDefaultFileServer(it.server)
+                                    account.settings.changeDefaultFileServer(it.server)
                                 }
                             }
                         },
@@ -290,7 +290,7 @@ fun ImageVideoPost(
             label = stringRes(id = R.string.file_server),
             placeholder =
                 fileServers
-                    .firstOrNull { it.server == accountViewModel.account.defaultFileServer }
+                    .firstOrNull { it.server == accountViewModel.account.settings.defaultFileServer }
                     ?.server
                     ?.name
                     ?: fileServers[0].server.name,

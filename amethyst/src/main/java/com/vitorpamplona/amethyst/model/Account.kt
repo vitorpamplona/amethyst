@@ -20,19 +20,15 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.content.res.Resources
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.switchMap
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.FileHeader
-import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.ammolite.relays.BundledUpdate
@@ -46,10 +42,8 @@ import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.encoders.hexToByteArray
-import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
@@ -106,7 +100,6 @@ import com.vitorpamplona.quartz.events.TorrentCommentEvent
 import com.vitorpamplona.quartz.events.WrappedEvent
 import com.vitorpamplona.quartz.events.ZapSplitSetup
 import com.vitorpamplona.quartz.signers.NostrSigner
-import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.DualCase
 import kotlinx.coroutines.CoroutineScope
@@ -122,91 +115,25 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.math.BigDecimal
-import java.net.Proxy
-import java.util.Locale
 import java.util.UUID
 import kotlin.coroutines.resume
-
-val DefaultChannels =
-    setOf(
-        // Anigma's Nostr
-        "25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb",
-        // Amethyst's Group
-        "42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5",
-    )
-
-val DefaultReactions =
-    listOf(
-        "\uD83D\uDE80",
-        "\uD83E\uDEC2",
-        "\uD83D\uDC40",
-        "\uD83D\uDE02",
-        "\uD83C\uDF89",
-        "\uD83E\uDD14",
-        "\uD83D\uDE31",
-    )
-
-val DefaultZapAmounts = listOf(100L, 500L, 1000L)
-
-fun getLanguagesSpokenByUser(): Set<String> {
-    val languageList = ConfigurationCompat.getLocales(Resources.getSystem().getConfiguration())
-    val codedList = mutableSetOf<String>()
-    for (i in 0 until languageList.size()) {
-        languageList.get(i)?.let { codedList.add(it.language) }
-    }
-    return codedList
-}
-
-val GLOBAL_FOLLOWS =
-    " Global " // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
-val KIND3_FOLLOWS =
-    " All Follows " // This has spaces to avoid mixing with a potential NIP-51 list with the same
-// name.
 
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
 class Account(
-    val keyPair: KeyPair,
-    val signer: NostrSigner = NostrSignerInternal(keyPair),
-    var localRelays: Set<RelaySetupInfo> = Constants.defaultRelays.toSet(),
-    var localRelayServers: Set<String> = setOf(),
-    var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
-    var languagePreferences: Map<String, String> = mapOf(),
-    var translateTo: String = Locale.getDefault().language,
-    var zapAmountChoices: List<Long> = DefaultZapAmounts,
-    var reactionChoices: List<String> = DefaultReactions,
-    var defaultZapType: MutableStateFlow<LnZapEvent.ZapType> = MutableStateFlow(LnZapEvent.ZapType.PUBLIC),
-    var defaultFileServer: Nip96MediaServers.ServerName = Nip96MediaServers.DEFAULT[0],
-    var defaultHomeFollowList: MutableStateFlow<String> = MutableStateFlow(KIND3_FOLLOWS),
-    var defaultStoriesFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
-    var defaultNotificationFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
-    var defaultDiscoveryFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
-    var zapPaymentRequest: Nip47WalletConnect.Nip47URI? = null,
-    var hideDeleteRequestDialog: Boolean = false,
-    var hideBlockAlertDialog: Boolean = false,
-    var hideNIP17WarningDialog: Boolean = false,
-    var backupContactList: ContactListEvent? = null,
-    var backupDMRelayList: ChatMessageRelayListEvent? = null,
-    var backupNIP65RelayList: AdvertisedRelayListEvent? = null,
-    var proxy: Proxy? = null,
-    var proxyPort: Int = 9050,
-    var showSensitiveContent: MutableStateFlow<Boolean?> = MutableStateFlow(null),
-    var warnAboutPostsWithReports: Boolean = true,
-    var filterSpamFromStrangers: Boolean = true,
-    var lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
-    var hasDonatedInVersion: Set<String> = setOf<String>(),
-    var pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
-    val scope: CoroutineScope = Amethyst.instance.applicationIOScope,
+    val settings: AccountSettings = AccountSettings(KeyPair()),
+    val signer: NostrSigner = settings.createSigner(),
+    val scope: CoroutineScope,
 ) {
     var transientHiddenUsers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf())
 
@@ -217,10 +144,6 @@ class Account(
 
     var transientPaymentRequestDismissals: Set<PaymentRequest> = emptySet()
     val transientPaymentRequests: MutableStateFlow<Set<PaymentRequest>> = MutableStateFlow(emptySet())
-
-    // Observers line up here.
-    val live: AccountLiveData = AccountLiveData(this)
-    val saveable: AccountLiveData = AccountLiveData(this)
 
     @Immutable
     class LiveFollowLists(
@@ -245,214 +168,293 @@ class Account(
             userProfile().flow().relays.stateFlow,
         ) { nip65RelayList, dmRelayList, searchRelayList, privateOutBox, userProfile ->
             checkNotInMainThread()
-
-            val localRelays = convertLocalRelays()
-            val baseRelaySet = activeRelays() ?: localRelays
-            val newDMRelaySet = (dmRelayList.note.event as? ChatMessageRelayListEvent)?.relays()?.map { RelayUrlFormatter.normalize(it) }?.toSet() ?: emptySet()
-            val searchRelaySet = ((searchRelayList.note.event as? SearchRelayListEvent)?.relays() ?: Constants.defaultSearchRelaySet).map { RelayUrlFormatter.normalize(it) }.toSet()
-            val nip65RelaySet =
-                (nip65RelayList.note.event as? AdvertisedRelayListEvent)?.relays()?.map {
-                    AdvertisedRelayListEvent.AdvertisedRelayInfo(
-                        RelayUrlFormatter.normalize(it.relayUrl),
-                        it.type,
-                    )
-                }
-            val privateOutboxRelaySet = (privateOutBox.note.event as? PrivateOutboxRelayListEvent)?.relays()?.map { RelayUrlFormatter.normalize(it) }?.toSet() ?: emptySet()
-
-            // ------
-            // DMs
-            // ------
-
-            var mappedRelaySet =
-                baseRelaySet.map {
-                    if (newDMRelaySet.contains(it.url)) {
-                        RelaySetupInfo(it.url, true, true, it.feedTypes + FeedType.PRIVATE_DMS)
-                    } else {
-                        it
-                    }
-                }
-
-            newDMRelaySet.forEach { newUrl ->
-                if (mappedRelaySet.none { it.url == newUrl }) {
-                    mappedRelaySet = mappedRelaySet +
-                        RelaySetupInfo(
-                            newUrl,
-                            true,
-                            true,
-                            setOf(
-                                FeedType.PRIVATE_DMS,
-                            ),
-                        )
-                }
-            }
-
-            // ------
-            // SEARCH
-            // ------
-
-            mappedRelaySet =
-                mappedRelaySet.map {
-                    if (searchRelaySet.contains(it.url)) {
-                        RelaySetupInfo(it.url, true, it.write || false, it.feedTypes + FeedType.SEARCH)
-                    } else {
-                        it
-                    }
-                }
-
-            searchRelaySet.forEach { newUrl ->
-                if (mappedRelaySet.none { it.url == newUrl }) {
-                    mappedRelaySet = mappedRelaySet +
-                        RelaySetupInfo(
-                            newUrl,
-                            true,
-                            false,
-                            setOf(
-                                FeedType.SEARCH,
-                            ),
-                        )
-                }
-            }
-
-            // --------------
-            // PRIVATE OUTBOX
-            // --------------
-
-            mappedRelaySet =
-                mappedRelaySet.map {
-                    if (privateOutboxRelaySet.contains(it.url)) {
-                        RelaySetupInfo(it.url, true, true, it.feedTypes + setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
-                    } else {
-                        it
-                    }
-                }
-
-            privateOutboxRelaySet.forEach { newUrl ->
-                if (mappedRelaySet.none { it.url == newUrl }) {
-                    mappedRelaySet = mappedRelaySet +
-                        RelaySetupInfo(
-                            newUrl,
-                            true,
-                            true,
-                            setOf(
-                                FeedType.FOLLOWS,
-                                FeedType.PUBLIC_CHATS,
-                                FeedType.GLOBAL,
-                                FeedType.PRIVATE_DMS,
-                            ),
-                        )
-                }
-            }
-
-            // --------------
-            // Local Storage
-            // --------------
-
-            mappedRelaySet =
-                mappedRelaySet.map {
-                    if (localRelayServers.contains(it.url)) {
-                        RelaySetupInfo(it.url, true, true, it.feedTypes + setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
-                    } else {
-                        it
-                    }
-                }
-
-            localRelayServers.forEach { newUrl ->
-                if (mappedRelaySet.none { it.url == newUrl }) {
-                    mappedRelaySet = mappedRelaySet +
-                        RelaySetupInfo(
-                            newUrl,
-                            true,
-                            true,
-                            setOf(
-                                FeedType.FOLLOWS,
-                                FeedType.PUBLIC_CHATS,
-                                FeedType.GLOBAL,
-                                FeedType.PRIVATE_DMS,
-                            ),
-                        )
-                }
-            }
-
-            // --------------
-            // NIP-65 Public Inbox/Outbox
-            // --------------
-
-            mappedRelaySet =
-                mappedRelaySet.map { relay ->
-                    val nip65setup = nip65RelaySet?.firstOrNull { relay.url == it.relayUrl }
-                    if (nip65setup != null) {
-                        val write = nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
-
-                        RelaySetupInfo(
-                            relay.url,
-                            true,
-                            relay.write || write,
-                            relay.feedTypes +
-                                setOf(
-                                    FeedType.FOLLOWS,
-                                    FeedType.GLOBAL,
-                                    FeedType.PUBLIC_CHATS,
-                                ),
-                        )
-                    } else {
-                        relay
-                    }
-                }
-
-            nip65RelaySet?.forEach { newNip65Setup ->
-                if (mappedRelaySet.none { it.url == newNip65Setup.relayUrl }) {
-                    val write = newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
-
-                    mappedRelaySet = mappedRelaySet +
-                        RelaySetupInfo(
-                            newNip65Setup.relayUrl,
-                            true,
-                            write,
-                            setOf(
-                                FeedType.FOLLOWS,
-                                FeedType.PUBLIC_CHATS,
-                            ),
-                        )
-                }
-            }
-
-            emit(mappedRelaySet.toTypedArray())
+            emit(
+                normalizeAndCombineRelayListsWithFallbacks(
+                    kind3RelayList = kind3Relays(),
+                    newDMRelayEvent = dmRelayList.note.event as? ChatMessageRelayListEvent,
+                    searchRelayEvent = searchRelayList.note.event as? SearchRelayListEvent,
+                    privateOutboxRelayEvent = privateOutBox.note.event as? PrivateOutboxRelayListEvent,
+                    nip65RelayEvent = nip65RelayList.note.event as? AdvertisedRelayListEvent,
+                ).toTypedArray(),
+            )
         }
 
-    val connectToRelays = connectToRelaysFlow.stateIn(scope, SharingStarted.Eagerly, activeRelays() ?: convertLocalRelays())
+    private fun normalizeAndCombineRelayListsWithFallbacks(
+        kind3RelayList: Array<RelaySetupInfo>? = null,
+        newDMRelayEvent: ChatMessageRelayListEvent? = null,
+        searchRelayEvent: SearchRelayListEvent? = null,
+        privateOutboxRelayEvent: PrivateOutboxRelayListEvent? = null,
+        nip65RelayEvent: AdvertisedRelayListEvent? = null,
+        localRelayList: Set<String>? = null,
+    ) = normalizeAndCombineRelayLists(
+        baseRelaySet = kind3RelayList ?: convertLocalRelays(),
+        newDMRelayEvent = newDMRelayEvent ?: settings.backupDMRelayList,
+        searchRelayEvent = searchRelayEvent ?: settings.backupSearchRelayList,
+        privateOutboxRelayEvent = privateOutboxRelayEvent ?: settings.backupPrivateHomeRelayList,
+        nip65RelayEvent = nip65RelayEvent ?: settings.backupNIP65RelayList,
+        localRelayList = localRelayList ?: settings.localRelayServers,
+    )
+
+    private fun normalizeAndCombineRelayLists(
+        baseRelaySet: Array<RelaySetupInfo>,
+        newDMRelayEvent: ChatMessageRelayListEvent?,
+        searchRelayEvent: SearchRelayListEvent?,
+        privateOutboxRelayEvent: PrivateOutboxRelayListEvent?,
+        nip65RelayEvent: AdvertisedRelayListEvent?,
+        localRelayList: Set<String>,
+    ): List<RelaySetupInfo> {
+        val newDMRelaySet = newDMRelayEvent?.relays()?.map { RelayUrlFormatter.normalize(it) }?.toSet() ?: emptySet()
+        val searchRelaySet = (searchRelayEvent?.relays() ?: Constants.defaultSearchRelaySet).map { RelayUrlFormatter.normalize(it) }.toSet()
+        val nip65RelaySet =
+            nip65RelayEvent?.relays()?.map {
+                AdvertisedRelayListEvent.AdvertisedRelayInfo(
+                    RelayUrlFormatter.normalize(it.relayUrl),
+                    it.type,
+                )
+            }
+        val privateOutboxRelaySet = privateOutboxRelayEvent?.relays()?.map { RelayUrlFormatter.normalize(it) }?.toSet() ?: emptySet()
+        val localRelaySet = localRelayList.map { RelayUrlFormatter.normalize(it) }.toSet()
+
+        return combineRelayLists(
+            baseRelaySet = baseRelaySet,
+            newDMRelaySet = newDMRelaySet,
+            searchRelaySet = searchRelaySet,
+            privateOutboxRelaySet = privateOutboxRelaySet,
+            nip65RelaySet = nip65RelaySet,
+            localRelaySet = localRelaySet,
+        )
+    }
+
+    private fun combineRelayLists(
+        baseRelaySet: Array<RelaySetupInfo>,
+        newDMRelaySet: Set<String>,
+        searchRelaySet: Set<String>,
+        privateOutboxRelaySet: Set<String>,
+        nip65RelaySet: List<AdvertisedRelayListEvent.AdvertisedRelayInfo>?,
+        localRelaySet: Set<String>,
+    ): List<RelaySetupInfo> {
+        // ------
+        // DMs
+        // ------
+        var mappedRelaySet =
+            baseRelaySet.map {
+                if (newDMRelaySet.contains(it.url)) {
+                    RelaySetupInfo(it.url, true, true, it.feedTypes + FeedType.PRIVATE_DMS)
+                } else {
+                    it
+                }
+            }
+
+        newDMRelaySet.forEach { newUrl ->
+            if (mappedRelaySet.none { it.url == newUrl }) {
+                mappedRelaySet = mappedRelaySet +
+                    RelaySetupInfo(
+                        newUrl,
+                        true,
+                        true,
+                        setOf(
+                            FeedType.PRIVATE_DMS,
+                        ),
+                    )
+            }
+        }
+
+        // ------
+        // SEARCH
+        // ------
+
+        mappedRelaySet =
+            mappedRelaySet.map {
+                if (searchRelaySet.contains(it.url)) {
+                    RelaySetupInfo(it.url, true, it.write || false, it.feedTypes + FeedType.SEARCH)
+                } else {
+                    it
+                }
+            }
+
+        searchRelaySet.forEach { newUrl ->
+            if (mappedRelaySet.none { it.url == newUrl }) {
+                mappedRelaySet = mappedRelaySet +
+                    RelaySetupInfo(
+                        newUrl,
+                        true,
+                        false,
+                        setOf(
+                            FeedType.SEARCH,
+                        ),
+                    )
+            }
+        }
+
+        // --------------
+        // PRIVATE OUTBOX
+        // --------------
+
+        mappedRelaySet =
+            mappedRelaySet.map {
+                if (privateOutboxRelaySet.contains(it.url)) {
+                    RelaySetupInfo(it.url, true, true, it.feedTypes + setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
+                } else {
+                    it
+                }
+            }
+
+        privateOutboxRelaySet.forEach { newUrl ->
+            if (mappedRelaySet.none { it.url == newUrl }) {
+                mappedRelaySet = mappedRelaySet +
+                    RelaySetupInfo(
+                        newUrl,
+                        true,
+                        true,
+                        setOf(
+                            FeedType.FOLLOWS,
+                            FeedType.PUBLIC_CHATS,
+                            FeedType.GLOBAL,
+                            FeedType.PRIVATE_DMS,
+                        ),
+                    )
+            }
+        }
+
+        // --------------
+        // Local Storage
+        // --------------
+
+        mappedRelaySet =
+            mappedRelaySet.map {
+                if (localRelaySet.contains(it.url)) {
+                    RelaySetupInfo(it.url, true, true, it.feedTypes + setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL, FeedType.PRIVATE_DMS))
+                } else {
+                    it
+                }
+            }
+
+        localRelaySet.forEach { newUrl ->
+            if (mappedRelaySet.none { it.url == newUrl }) {
+                mappedRelaySet = mappedRelaySet +
+                    RelaySetupInfo(
+                        newUrl,
+                        true,
+                        true,
+                        setOf(
+                            FeedType.FOLLOWS,
+                            FeedType.PUBLIC_CHATS,
+                            FeedType.GLOBAL,
+                            FeedType.PRIVATE_DMS,
+                        ),
+                    )
+            }
+        }
+
+        // --------------
+        // NIP-65 Public Inbox/Outbox
+        // --------------
+
+        mappedRelaySet =
+            mappedRelaySet.map { relay ->
+                val nip65setup = nip65RelaySet?.firstOrNull { relay.url == it.relayUrl }
+                if (nip65setup != null) {
+                    val write = nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
+
+                    RelaySetupInfo(
+                        relay.url,
+                        true,
+                        relay.write || write,
+                        relay.feedTypes +
+                            setOf(
+                                FeedType.FOLLOWS,
+                                FeedType.GLOBAL,
+                                FeedType.PUBLIC_CHATS,
+                            ),
+                    )
+                } else {
+                    relay
+                }
+            }
+
+        nip65RelaySet?.forEach { newNip65Setup ->
+            if (mappedRelaySet.none { it.url == newNip65Setup.relayUrl }) {
+                val write = newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
+
+                mappedRelaySet = mappedRelaySet +
+                    RelaySetupInfo(
+                        newNip65Setup.relayUrl,
+                        true,
+                        write,
+                        setOf(
+                            FeedType.FOLLOWS,
+                            FeedType.PUBLIC_CHATS,
+                        ),
+                    )
+            }
+        }
+        return mappedRelaySet
+    }
+
+    val connectToRelays =
+        connectToRelaysFlow
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                normalizeAndCombineRelayListsWithFallbacks(
+                    kind3Relays(),
+                    getDMRelayList(),
+                    getSearchRelayList(),
+                    getPrivateOutboxRelayList(),
+                    getNIP65RelayList(),
+                ).toTypedArray(),
+            )
+
+    fun buildFollowLists(latestContactList: ContactListEvent?): LiveFollowLists {
+        // makes sure the output include only valid p tags
+        val verifiedFollowingUsers = latestContactList?.verifiedFollowKeySet() ?: emptySet()
+
+        return LiveFollowLists(
+            verifiedFollowingUsers,
+            verifiedFollowingUsers + signer.pubKey,
+            latestContactList
+                ?.unverifiedFollowTagSet()
+                ?.map { it.lowercase() }
+                ?.toSet() ?: emptySet(),
+            latestContactList
+                ?.unverifiedFollowGeohashSet()
+                ?.toSet() ?: emptySet(),
+            latestContactList
+                ?.verifiedFollowAddressSet()
+                ?.toSet() ?: emptySet(),
+        )
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveKind3FollowsFlow: Flow<LiveFollowLists> =
         userProfile().flow().follows.stateFlow.transformLatest {
             checkNotInMainThread()
-
-            // makes sure the output include only valid p tags
-            val verifiedFollowingUsers = it.user.latestContactList?.verifiedFollowKeySet() ?: emptySet()
-
-            emit(
-                LiveFollowLists(
-                    verifiedFollowingUsers,
-                    verifiedFollowingUsers + signer.pubKey,
-                    it.user.latestContactList
-                        ?.unverifiedFollowTagSet()
-                        ?.map { it.lowercase() }
-                        ?.toSet() ?: emptySet(),
-                    it.user.latestContactList
-                        ?.unverifiedFollowGeohashSet()
-                        ?.toSet() ?: emptySet(),
-                    it.user.latestContactList
-                        ?.verifiedFollowAddressSet()
-                        ?.toSet() ?: emptySet(),
-                ),
-            )
+            emit(buildFollowLists(it.user.latestContactList))
         }
 
-    val liveKind3Follows = liveKind3FollowsFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
+    val liveKind3Follows =
+        liveKind3FollowsFlow
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                buildFollowLists(userProfile().latestContactList ?: settings.backupContactList),
+            )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val liveHomeList: Flow<ListNameNotePair> =
-        defaultHomeFollowList.flatMapLatest { listName ->
+        settings.defaultHomeFollowList.flatMapLatest { listName ->
             loadPeopleListFlowFromListName(listName)
+        }
+
+    fun peopleListFromListNameStarter(listName: String): ListNameNotePair =
+        if (listName != GLOBAL_FOLLOWS && listName != KIND3_FOLLOWS) {
+            val note = LocalCache.checkGetOrCreateAddressableNote(listName)
+            val noteEvent = note?.event as? GeneralListEvent
+            ListNameNotePair(listName, noteEvent)
+        } else {
+            ListNameNotePair(listName, null)
         }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -467,26 +469,32 @@ class Account(
             MutableStateFlow(ListNameNotePair(listName, null))
         }
 
+    suspend fun combinePeopleList(
+        kind3Follows: LiveFollowLists,
+        peopleListFollows: ListNameNotePair,
+    ): LiveFollowLists? =
+        if (peopleListFollows.listName == GLOBAL_FOLLOWS) {
+            null
+        } else if (peopleListFollows.listName == KIND3_FOLLOWS) {
+            kind3Follows
+        } else if (peopleListFollows.event == null) {
+            LiveFollowLists(usersPlusMe = setOf(signer.pubKey))
+        } else {
+            val result = waitToDecrypt(peopleListFollows.event)
+            if (result == null) {
+                LiveFollowLists(usersPlusMe = setOf(signer.pubKey))
+            } else {
+                result
+            }
+        }
+
     fun combinePeopleListFlows(
         kind3FollowsSource: Flow<LiveFollowLists>,
         peopleListFollowsSource: Flow<ListNameNotePair>,
     ): Flow<LiveFollowLists?> =
         combineTransform(kind3FollowsSource, peopleListFollowsSource) { kind3Follows, peopleListFollows ->
             checkNotInMainThread()
-            if (peopleListFollows.listName == GLOBAL_FOLLOWS) {
-                emit(null)
-            } else if (peopleListFollows.listName == KIND3_FOLLOWS) {
-                emit(kind3Follows)
-            } else if (peopleListFollows.event == null) {
-                emit(LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
-            } else {
-                val result = waitToDecrypt(peopleListFollows.event)
-                if (result == null) {
-                    emit(LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
-                } else {
-                    emit(result)
-                }
-            }
+            emit(combinePeopleList(kind3Follows, peopleListFollows))
         }
 
     val liveHomeFollowListFlow: Flow<LiveFollowLists?> by lazy {
@@ -494,7 +502,18 @@ class Account(
     }
 
     val liveHomeFollowLists: StateFlow<LiveFollowLists?> by lazy {
-        liveHomeFollowListFlow.stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
+        liveHomeFollowListFlow
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                runBlocking {
+                    combinePeopleList(
+                        liveKind3Follows.value,
+                        peopleListFromListNameStarter(settings.defaultHomeFollowList.value),
+                    )
+                },
+            )
     }
 
     /**
@@ -542,29 +561,47 @@ class Account(
     }
 
     fun authorsPerRelay(
-        followsNIP65RelayLists: Array<NoteState>,
+        followsNIP65RelayLists: List<Note>,
         defaultRelayList: List<String>,
-    ): Map<String, List<HexKey>> =
-        assembleAuthorsPerWriteRelay(
+    ): Map<String, List<HexKey>> {
+        checkNotInMainThread()
+
+        val defaultSet = defaultRelayList.toSet()
+
+        return assembleAuthorsPerWriteRelay(
             followsNIP65RelayLists
                 .mapNotNull
                 {
-                    val author = (it.note as? AddressableNote)?.address?.pubKeyHex
-                    val event = (it.note.event as? AdvertisedRelayListEvent)
+                    val author = (it as? AddressableNote)?.address?.pubKeyHex
+                    val event = (it.event as? AdvertisedRelayListEvent)
 
                     if (event != null) {
-                        event.pubKey to event.writeRelays()
+                        val authorWriteRelays =
+                            event.writeRelays().map {
+                                RelayUrlFormatter.normalize(it)
+                            }
+
+                        val commonRelaysToMe = authorWriteRelays.filter { it in defaultSet }
+                        if (commonRelaysToMe.isNotEmpty()) {
+                            println("Assemble NIP65 Refined: $author ${commonRelaysToMe.joinToString(", ") { it }}")
+                            event.pubKey to commonRelaysToMe
+                        } else {
+                            println("Assemble NIP65 Default: $author ${defaultSet.size}")
+                            event.pubKey to defaultRelayList
+                        }
                     } else {
                         if (author != null) {
+                            println("Assemble NIP65 Default: $author ${defaultSet.size}")
                             author to defaultRelayList
                         } else {
-                            Log.e("Account", "This author should NEVER be null. Note: ${it.note.idHex}")
+                            Log.e("Account", "This author should NEVER be null. Note: ${it.idHex}")
                             null
                         }
                     }
                 }.toMap(),
-            hasOnionConnection = proxy != null,
+            hasOnionConnection = settings.proxy != null,
         )
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveHomeFollowListAdvertizedRelayListFlow: Flow<Array<NoteState>?> =
@@ -580,7 +617,12 @@ class Account(
     val liveHomeListAuthorsPerRelayFlow: Flow<Map<String, List<HexKey>>?> by lazy {
         combineTransform(liveHomeFollowListAdvertizedRelayListFlow, connectToRelays) { adverisedRelayList, existing ->
             if (adverisedRelayList != null) {
-                emit(authorsPerRelay(adverisedRelayList, existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }))
+                emit(
+                    authorsPerRelay(
+                        adverisedRelayList.map { it.note },
+                        existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
+                    ),
+                )
             } else {
                 emit(null)
             }
@@ -588,37 +630,58 @@ class Account(
     }
 
     val liveHomeListAuthorsPerRelay: StateFlow<Map<String, List<HexKey>>?> by lazy {
-        val currentRelays = connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }
-        val default =
-            currentRelays.associate { relayUrl ->
-                relayUrl to (liveHomeFollowLists.value?.usersPlusMe?.toList() ?: emptyList())
-            }
-
-        liveHomeListAuthorsPerRelayFlow.stateIn(scope, SharingStarted.Eagerly, default)
+        liveHomeListAuthorsPerRelayFlow.flowOn(Dispatchers.Default).stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            authorsPerRelay(
+                liveHomeFollowLists.value?.usersPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
+                connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
+            ),
+        )
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val liveNotificationList: Flow<ListNameNotePair> by lazy {
-        defaultNotificationFollowList.flatMapLatest { listName ->
+        settings.defaultNotificationFollowList.flatMapLatest { listName ->
             loadPeopleListFlowFromListName(listName)
         }
     }
 
     val liveNotificationFollowLists: StateFlow<LiveFollowLists?> by lazy {
         combinePeopleListFlows(liveKind3FollowsFlow, liveNotificationList)
-            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                runBlocking {
+                    combinePeopleList(
+                        liveKind3Follows.value,
+                        peopleListFromListNameStarter(settings.defaultNotificationFollowList.value),
+                    )
+                },
+            )
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val liveStoriesList: Flow<ListNameNotePair> by lazy {
-        defaultStoriesFollowList.flatMapLatest { listName ->
+        settings.defaultStoriesFollowList.flatMapLatest { listName ->
             loadPeopleListFlowFromListName(listName)
         }
     }
 
     val liveStoriesFollowLists: StateFlow<LiveFollowLists?> by lazy {
         combinePeopleListFlows(liveKind3FollowsFlow, liveStoriesList)
-            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                runBlocking {
+                    combinePeopleList(
+                        liveKind3Follows.value,
+                        peopleListFromListNameStarter(settings.defaultStoriesFollowList.value),
+                    )
+                },
+            )
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -635,7 +698,7 @@ class Account(
     val liveStoriesListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
         combineTransform(liveStoriesFollowListAdvertizedRelayListFlow, connectToRelays) { adverisedRelayList, existing ->
             if (adverisedRelayList != null) {
-                emit(authorsPerRelay(adverisedRelayList, existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }))
+                emit(authorsPerRelay(adverisedRelayList.map { it.note }, existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }))
             } else {
                 emit(null)
             }
@@ -643,19 +706,36 @@ class Account(
     }
 
     val liveStoriesListAuthorsPerRelay: StateFlow<Map<String, List<String>>?> by lazy {
-        liveStoriesListAuthorsPerRelayFlow.stateIn(scope, SharingStarted.Eagerly, emptyMap())
+        liveStoriesListAuthorsPerRelayFlow.flowOn(Dispatchers.Default).stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            authorsPerRelay(
+                liveStoriesFollowLists.value?.usersPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
+                connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
+            ),
+        )
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val liveDiscoveryList: Flow<ListNameNotePair> by lazy {
-        defaultDiscoveryFollowList.flatMapLatest { listName ->
+        settings.defaultDiscoveryFollowList.flatMapLatest { listName ->
             loadPeopleListFlowFromListName(listName)
         }
     }
 
     val liveDiscoveryFollowLists: StateFlow<LiveFollowLists?> by lazy {
         combinePeopleListFlows(liveKind3FollowsFlow, liveDiscoveryList)
-            .stateIn(scope, SharingStarted.Eagerly, LiveFollowLists(usersPlusMe = setOf(signer.pubKey)))
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                runBlocking {
+                    combinePeopleList(
+                        liveKind3Follows.value,
+                        peopleListFromListNameStarter(settings.defaultDiscoveryFollowList.value),
+                    )
+                },
+            )
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -672,7 +752,7 @@ class Account(
     val liveDiscoveryListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
         combineTransform(liveDiscoveryFollowListAdvertizedRelayListFlow, connectToRelays) { adverisedRelayList, existing ->
             if (adverisedRelayList != null) {
-                emit(authorsPerRelay(adverisedRelayList, existing.filter { it.read }.map { it.url }))
+                emit(authorsPerRelay(adverisedRelayList.map { it.note }, existing.filter { it.read }.map { it.url }))
             } else {
                 emit(null)
             }
@@ -680,7 +760,14 @@ class Account(
     }
 
     val liveDiscoveryListAuthorsPerRelay: StateFlow<Map<String, List<String>>?> by lazy {
-        liveDiscoveryListAuthorsPerRelayFlow.stateIn(scope, SharingStarted.Eagerly, emptyMap())
+        liveDiscoveryListAuthorsPerRelayFlow.flowOn(Dispatchers.Default).stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            authorsPerRelay(
+                liveDiscoveryFollowLists.value?.usersPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
+                connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
+            ),
+        )
     }
 
     private fun decryptLiveFollows(
@@ -728,55 +815,69 @@ class Account(
         val hiddenWordsCase = hiddenWords.map { DualCase(it.lowercase(), it.uppercase()) }
     }
 
+    suspend fun decryptPeopleList(event: PeopleListEvent?): PeopleListEvent.UsersAndWords {
+        if (event == null) return PeopleListEvent.UsersAndWords()
+
+        return withTimeoutOrNull(1000) {
+            suspendCancellableCoroutine { continuation ->
+                event.publicAndPrivateUsersAndWords(signer) {
+                    continuation.resume(it)
+                }
+            }
+        } ?: PeopleListEvent.UsersAndWords()
+    }
+
+    suspend fun decryptMuteList(event: MuteListEvent?): PeopleListEvent.UsersAndWords {
+        if (event == null) return PeopleListEvent.UsersAndWords()
+
+        return withTimeoutOrNull(1000) {
+            suspendCancellableCoroutine { continuation ->
+                event.publicAndPrivateUsersAndWords(signer) {
+                    continuation.resume(it)
+                }
+            }
+        } ?: PeopleListEvent.UsersAndWords()
+    }
+
+    suspend fun assembleLiveHiddenUsers(
+        blockList: Note,
+        muteList: Note,
+        transientHiddenUsers: Set<String>,
+        showSensitiveContent: Boolean?,
+    ): LiveHiddenUsers {
+        val resultBlockList = decryptPeopleList(blockList.event as? PeopleListEvent)
+        val resultMuteList = decryptMuteList(muteList.event as? MuteListEvent)
+
+        return LiveHiddenUsers(
+            hiddenUsers = resultBlockList.users + resultMuteList.users,
+            hiddenWords = resultBlockList.words + resultMuteList.words,
+            spammers = transientHiddenUsers,
+            showSensitiveContent = showSensitiveContent,
+        )
+    }
+
     val flowHiddenUsers: StateFlow<LiveHiddenUsers> by lazy {
         combineTransform(
-            transientHiddenUsers,
-            showSensitiveContent,
             getBlockListNote().flow().metadata.stateFlow,
             getMuteListNote().flow().metadata.stateFlow,
-        ) { transientHiddenUsers, showSensitiveContent, blockList, muteList ->
+            transientHiddenUsers,
+            settings.showSensitiveContent,
+        ) { blockList, muteList, transientHiddenUsers, showSensitiveContent ->
             checkNotInMainThread()
-
-            val resultBlockList =
-                (blockList.note.event as? PeopleListEvent)?.let {
-                    withTimeoutOrNull(1000) {
-                        suspendCancellableCoroutine { continuation ->
-                            it.publicAndPrivateUsersAndWords(signer) { continuation.resume(it) }
-                        }
-                    }
-                }
-                    ?: PeopleListEvent.UsersAndWords()
-
-            val resultMuteList =
-                (muteList.note.event as? MuteListEvent)?.let {
-                    withTimeoutOrNull(1000) {
-                        suspendCancellableCoroutine { continuation ->
-                            it.publicAndPrivateUsersAndWords(signer) { continuation.resume(it) }
-                        }
-                    }
-                }
-                    ?: PeopleListEvent.UsersAndWords()
-
-            val hiddenWords = resultBlockList.words + resultMuteList.words
-
-            emit(
-                LiveHiddenUsers(
-                    hiddenUsers = (resultBlockList.users + resultMuteList.users),
-                    hiddenWords = hiddenWords,
-                    spammers = transientHiddenUsers,
-                    showSensitiveContent = showSensitiveContent,
-                ),
+            emit(assembleLiveHiddenUsers(blockList.note, muteList.note, transientHiddenUsers, showSensitiveContent))
+        }.flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                runBlocking {
+                    assembleLiveHiddenUsers(
+                        getBlockListNote(),
+                        getMuteListNote(),
+                        transientHiddenUsers.value,
+                        settings.showSensitiveContent.value,
+                    )
+                },
             )
-        }.stateIn(
-            scope,
-            SharingStarted.Eagerly,
-            LiveHiddenUsers(
-                hiddenUsers = setOf(),
-                hiddenWords = setOf(),
-                spammers = transientHiddenUsers.value,
-                showSensitiveContent = showSensitiveContent.value,
-            ),
-        )
     }
 
     val liveHiddenUsers = flowHiddenUsers.asLiveData()
@@ -806,44 +907,36 @@ class Account(
             !this.transientPaymentRequests.value.contains(paymentRequest) &&
             !this.transientPaymentRequestDismissals.contains(paymentRequest)
         ) {
-            this.transientPaymentRequests.value = transientPaymentRequests.value + paymentRequest
+            this.transientPaymentRequests.value += paymentRequest
         }
     }
 
     fun dismissPaymentRequest(request: PaymentRequest) {
         if (this.transientPaymentRequests.value.contains(request)) {
-            this.transientPaymentRequests.value = transientPaymentRequests.value - request
-            this.transientPaymentRequestDismissals = transientPaymentRequestDismissals + request
+            this.transientPaymentRequests.value -= request
+            this.transientPaymentRequestDismissals += request
         }
     }
 
-    var userProfileCache: User? = null
+    private var userProfileCache: User? = null
+
+    fun userProfile(): User = userProfileCache ?: LocalCache.getOrCreateUser(signer.pubKey).also { userProfileCache = it }
+
+    fun isWriteable(): Boolean = settings.isWriteable()
 
     fun updateOptOutOptions(
         warnReports: Boolean,
         filterSpam: Boolean,
     ) {
-        warnAboutPostsWithReports = warnReports
-        filterSpamFromStrangers = filterSpam
-        LocalCache.antiSpam.active = filterSpamFromStrangers
-        if (!filterSpamFromStrangers) {
-            transientHiddenUsers.update {
-                emptySet()
+        if (settings.updateOptOutOptions(warnReports, filterSpam)) {
+            LocalCache.antiSpam.active = settings.filterSpamFromStrangers
+            if (!settings.filterSpamFromStrangers) {
+                transientHiddenUsers.update {
+                    emptySet()
+                }
             }
         }
-        live.invalidateData()
-        saveable.invalidateData()
     }
-
-    fun userProfile(): User =
-        userProfileCache
-            ?: run {
-                val myUser: User = LocalCache.getOrCreateUser(keyPair.pubKey.toHexKey())
-                userProfileCache = myUser
-                myUser
-            }
-
-    fun isWriteable(): Boolean = keyPair.privKey != null || signer is NostrSignerExternal
 
     fun sendKind3RelayList(relays: Map<String, ContactListEvent.ReadWrite>) {
         if (!isWriteable()) return
@@ -1037,21 +1130,27 @@ class Account(
                 ?.filter { it.value.read }
                 ?.keys
                 ?.ifEmpty { null }
-            ?: localRelays.filter { it.read }.map { it.url }.toSet()
+            ?: settings.localRelays
+                .filter { it.read }
+                .map { it.url }
+                .toSet()
 
-    fun hasWalletConnectSetup(): Boolean = zapPaymentRequest != null
+    fun hasWalletConnectSetup(): Boolean = settings.zapPaymentRequest != null
 
     fun isNIP47Author(pubkeyHex: String?): Boolean = (getNIP47Signer().pubKey == pubkeyHex)
 
     fun getNIP47Signer(): NostrSigner =
-        zapPaymentRequest?.secret?.hexToByteArray()?.let { NostrSignerInternal(KeyPair(it)) }
+        settings.zapPaymentRequest
+            ?.secret
+            ?.hexToByteArray()
+            ?.let { NostrSignerInternal(KeyPair(it)) }
             ?: signer
 
     fun decryptZapPaymentResponseEvent(
         zapResponseEvent: LnZapPaymentResponseEvent,
         onReady: (Response) -> Unit,
     ) {
-        val myNip47 = zapPaymentRequest ?: return
+        val myNip47 = settings.zapPaymentRequest ?: return
 
         val signer =
             myNip47.secret?.hexToByteArray()?.let { NostrSignerInternal(KeyPair(it)) } ?: signer
@@ -1081,7 +1180,7 @@ class Account(
     ) {
         if (!isWriteable()) return
 
-        zapPaymentRequest?.let { nip47 ->
+        settings.zapPaymentRequest?.let { nip47 ->
             val signer =
                 nip47.secret?.hexToByteArray()?.let { NostrSignerInternal(KeyPair(it)) } ?: signer
 
@@ -1117,7 +1216,7 @@ class Account(
                 ?.relays()
                 ?.keys
                 ?.ifEmpty { null }
-                ?: localRelays.map { it.url }.toSet(),
+                ?: settings.localRelays.map { it.url }.toSet(),
             signer,
             message,
             zapType,
@@ -1248,9 +1347,9 @@ class Account(
     }
 
     suspend fun updateAttestations() {
-        Log.d("Pending Attestations", "Updating ${pendingAttestations.value.size} pending attestations")
+        Log.d("Pending Attestations", "Updating ${settings.pendingAttestations.value.size} pending attestations")
 
-        pendingAttestations.value.forEach { pair ->
+        settings.pendingAttestations.value.forEach { pair ->
             val newAttestation = OtsEvent.upgrade(pair.value, pair.key)
 
             if (pair.value != newAttestation) {
@@ -1258,7 +1357,7 @@ class Account(
                     LocalCache.justConsume(it, null)
                     Client.send(it)
 
-                    pendingAttestations.update {
+                    settings.pendingAttestations.update {
                         it - pair.key
                     }
                 }
@@ -1268,7 +1367,7 @@ class Account(
 
     fun hasPendingAttestations(note: Note): Boolean {
         val id = note.event?.id() ?: note.idHex
-        return pendingAttestations.value[id] != null
+        return settings.pendingAttestations.value[id] != null
     }
 
     fun timestamp(note: Note) {
@@ -1277,11 +1376,7 @@ class Account(
 
         val id = note.event?.id() ?: note.idHex
 
-        pendingAttestations.update {
-            it + Pair(id, OtsEvent.stamp(id))
-        }
-
-        saveable.invalidateData()
+        settings.addPendingAttestation(id, OtsEvent.stamp(id))
     }
 
     fun follow(user: User) {
@@ -2308,7 +2403,7 @@ class Account(
 
         signedEvents.wraps.forEach { wrap ->
             // Creates an alias
-            if (mineNote != null && wrap.recipientPubKey() != keyPair.pubKey.toHexKey()) {
+            if (mineNote != null && wrap.recipientPubKey() != signer.pubKey) {
                 LocalCache.getOrAddAliasNote(wrap.id, mineNote)
             }
 
@@ -2620,6 +2715,8 @@ class Account(
         return LocalCache.getOrCreateAddressableNote(aTag)
     }
 
+    fun getMuteListFlow(): StateFlow<NoteState> = getMuteListNote().flow().metadata.stateFlow
+
     fun getBlockList(): PeopleListEvent? = getBlockListNote().event as? PeopleListEvent
 
     fun getMuteList(): MuteListEvent? = getMuteListNote().event as? MuteListEvent
@@ -2736,62 +2833,6 @@ class Account(
         transientHiddenUsers.update {
             it - pubkeyHex
         }
-        live.invalidateData()
-        saveable.invalidateData()
-    }
-
-    fun changeDefaultZapType(zapType: LnZapEvent.ZapType) {
-        defaultZapType.tryEmit(zapType)
-        live.invalidateData()
-        saveable.invalidateData()
-    }
-
-    fun changeDefaultFileServer(server: Nip96MediaServers.ServerName) {
-        defaultFileServer = server
-        live.invalidateData()
-        saveable.invalidateData()
-    }
-
-    fun changeDefaultHomeFollowList(name: String) {
-        defaultHomeFollowList.tryEmit(name)
-        live.invalidateData()
-        saveable.invalidateData()
-    }
-
-    fun changeDefaultStoriesFollowList(name: String) {
-        defaultStoriesFollowList.tryEmit(name)
-        live.invalidateData()
-        saveable.invalidateData()
-    }
-
-    fun changeDefaultNotificationFollowList(name: String) {
-        defaultNotificationFollowList.tryEmit(name)
-        live.invalidateData()
-        saveable.invalidateData()
-    }
-
-    fun changeDefaultDiscoveryFollowList(name: String) {
-        defaultDiscoveryFollowList.tryEmit(name)
-        live.invalidateData()
-        saveable.invalidateData()
-    }
-
-    fun changeZapAmounts(newAmounts: List<Long>) {
-        zapAmountChoices = newAmounts
-        live.invalidateData()
-        saveable.invalidateData()
-    }
-
-    fun changeReactionTypes(newTypes: List<String>) {
-        reactionChoices = newTypes
-        live.invalidateData()
-        saveable.invalidateData()
-    }
-
-    fun changeZapPaymentRequest(newServer: Nip47WalletConnect.Nip47URI?) {
-        zapPaymentRequest = newServer
-        live.invalidateData()
-        saveable.invalidateData()
     }
 
     fun selectedChatsFollowList(): Set<String> {
@@ -2904,76 +2945,19 @@ class Account(
         }
     }
 
-    fun updateLocalRelayServers(servers: Set<String>) {
-        localRelayServers = servers
-        saveable.invalidateData()
-    }
-
-    fun addDontTranslateFrom(languageCode: String) {
-        dontTranslateFrom = dontTranslateFrom.plus(languageCode)
-        saveable.invalidateData()
-    }
-
-    fun updateTranslateTo(languageCode: String) {
-        translateTo = languageCode
-        saveable.invalidateData()
-    }
-
-    fun prefer(
-        source: String,
-        target: String,
-        preference: String,
-    ) {
-        languagePreferences = languagePreferences + Pair("$source,$target", preference)
-        saveable.invalidateData()
-    }
-
-    fun preferenceBetween(
-        source: String,
-        target: String,
-    ): String? = languagePreferences.get("$source,$target")
-
-    private fun updateContactListTo(newContactList: ContactListEvent?) {
-        if (newContactList == null || newContactList.tags.isEmpty()) return
-
-        // Events might be different objects, we have to compare their ids.
-        if (backupContactList?.id != newContactList.id) {
-            backupContactList = newContactList
-            saveable.invalidateData()
-        }
-    }
-
-    private fun updateDMRelayList(newDMRelayList: ChatMessageRelayListEvent?) {
-        if (newDMRelayList == null || newDMRelayList.tags.isEmpty()) return
-
-        // Events might be different objects, we have to compare their ids.
-        if (backupDMRelayList?.id != newDMRelayList.id) {
-            backupDMRelayList = newDMRelayList
-            saveable.invalidateData()
-        }
-    }
-
-    private fun updateNIP65RelayList(newNIP65RelayList: AdvertisedRelayListEvent?) {
-        if (newNIP65RelayList == null || newNIP65RelayList.tags.isEmpty()) return
-
-        // Events might be different objects, we have to compare their ids.
-        if (backupNIP65RelayList?.id != newNIP65RelayList.id) {
-            backupNIP65RelayList = newNIP65RelayList
-            saveable.invalidateData()
-        }
-    }
-
     // Takes a User's relay list and adds the types of feeds they are active for.
-    fun activeRelays(): Array<RelaySetupInfo>? {
+    fun kind3Relays(): Array<RelaySetupInfo>? {
         val usersRelayList =
-            userProfile()
-                .latestContactList
+            (userProfile().latestContactList ?: settings.backupContactList)
                 ?.relays()
                 ?.map {
                     val url = RelayUrlFormatter.normalize(it.key)
 
                     val localFeedTypes =
-                        localRelays.firstOrNull { localRelay -> RelayUrlFormatter.normalize(localRelay.url) == url }?.feedTypes?.minus(setOf(FeedType.SEARCH, FeedType.WALLET_CONNECT))
+                        settings.localRelays
+                            .firstOrNull { localRelay -> RelayUrlFormatter.normalize(localRelay.url) == url }
+                            ?.feedTypes
+                            ?.minus(setOf(FeedType.SEARCH, FeedType.WALLET_CONNECT))
                             ?: Constants.defaultRelays
                                 .filter { defaultRelay -> RelayUrlFormatter.normalize(defaultRelay.url) == url }
                                 .firstOrNull()
@@ -2987,7 +2971,7 @@ class Account(
     }
 
     fun convertLocalRelays(): Array<RelaySetupInfo> =
-        localRelays
+        settings.localRelays
             .map {
                 RelaySetupInfo(
                     RelayUrlFormatter.normalize(it.url),
@@ -3024,7 +3008,7 @@ class Account(
             return true
         }
 
-        if (!warnAboutPostsWithReports) {
+        if (!settings.warnAboutPostsWithReports) {
             return !isHidden(user) &&
                 // if user hasn't hided this author
                 user.reportsBy(userProfile()).isEmpty() // if user has not reported this post
@@ -3037,7 +3021,7 @@ class Account(
     }
 
     private fun isAcceptableDirect(note: Note): Boolean {
-        if (!warnAboutPostsWithReports) {
+        if (!settings.warnAboutPostsWithReports) {
             return !note.hasReportsBy(userProfile())
         }
         return !note.hasReportsBy(userProfile()) &&
@@ -3078,14 +3062,10 @@ class Account(
     }
 
     fun saveKind3RelayList(value: List<RelaySetupInfo>) {
-        try {
-            localRelays = value.toSet()
-            return sendKind3RelayList(
-                value.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
-            )
-        } finally {
-            saveable.invalidateData()
-        }
+        settings.updateLocalRelays(value.toSet())
+        sendKind3RelayList(
+            value.associate { it.url to ContactListEvent.ReadWrite(it.read, it.write) },
+        )
     }
 
     fun getDMRelayListNote(): AddressableNote =
@@ -3265,134 +3245,146 @@ class Account(
                     (event.hasAnyTaggedUser() || event.publicAndPrivateUserCache?.isNotEmpty() == true)
             }
 
-    fun setHideDeleteRequestDialog() {
-        hideDeleteRequestDialog = true
-        saveable.invalidateData()
-    }
-
-    fun setHideNIP17WarningDialog() {
-        hideNIP17WarningDialog = true
-        saveable.invalidateData()
-    }
-
-    fun setHideBlockAlertDialog() {
-        hideBlockAlertDialog = true
-        saveable.invalidateData()
-    }
-
-    fun updateShowSensitiveContent(show: Boolean?) {
-        showSensitiveContent.update {
-            show
-        }
-        saveable.invalidateData()
-        live.invalidateData()
-    }
+    fun updateShowSensitiveContent(show: Boolean?) = settings.updateShowSensitiveContent(show)
 
     fun markAsRead(
         route: String,
         timestampInSecs: Long,
-    ): Boolean {
-        val lastTime = lastReadPerRoute.value[route]
-        return if (lastTime == null) {
-            lastReadPerRoute.update {
-                it + Pair(route, MutableStateFlow(timestampInSecs))
-            }
-            saveable.invalidateData()
-            true
-        } else if (timestampInSecs > lastTime.value) {
-            lastTime.tryEmit(timestampInSecs)
-            saveable.invalidateData()
-            true
-        } else {
-            false
-        }
-    }
+    ) = settings.markAsRead(route, timestampInSecs)
 
-    fun loadLastRead(route: String): Long = lastReadPerRoute.value[route]?.value ?: 0
+    fun loadLastRead(route: String): Long = settings.lastReadPerRoute.value[route]?.value ?: 0
 
-    fun loadLastReadFlow(route: String): StateFlow<Long> =
-        lastReadPerRoute.value[route] ?: run {
-            val newFlow = MutableStateFlow<Long>(0)
-            lastReadPerRoute.update {
-                it + Pair(route, newFlow)
-            }
-            newFlow
+    fun loadLastReadFlow(route: String) = settings.getLastReadFlow(route)
+
+    fun hasDonatedInThisVersion() = settings.hasDonatedInVersion(BuildConfig.VERSION_NAME)
+
+    fun observeDonatedInThisVersion() =
+        settings
+            .observeDonatedInVersion(BuildConfig.VERSION_NAME)
+            .flowOn(Dispatchers.Default)
+            .stateIn(scope, SharingStarted.Eagerly, hasDonatedInThisVersion())
+
+    fun markDonatedInThisVersion() = settings.markDonatedInThisVersion(BuildConfig.VERSION_NAME)
+
+    init {
+        Log.d("AccountRegisterObservers", "Init")
+        settings.backupContactList?.let {
+            Log.d("AccountRegisterObservers", "Loading saved contacts ${it.toJson()}")
+
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.consume(it) }
         }
 
-    fun hasDonatedInThisVersion(): Boolean = hasDonatedInVersion.contains(BuildConfig.VERSION_NAME)
+        settings.backupUserMetadata?.let {
+            Log.d("AccountRegisterObservers", "Loading saved user metadata ${it.toJson()}")
 
-    fun markDonatedInThisVersion() {
-        hasDonatedInVersion = hasDonatedInVersion + BuildConfig.VERSION_NAME
-        saveable.invalidateData()
-        live.invalidateData()
-    }
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.consume(it, null) }
+        }
 
-    suspend fun registerObservers() =
-        withContext(Dispatchers.Main) {
-            // saves contact list for the next time.
-            scope.launch {
-                Log.d("AccountRegisterObservers", "Kind 3 Collector Start")
-                userProfile().flow().follows.stateFlow.collect {
-                    Log.d("AccountRegisterObservers", "Updating Kind 3 ${userProfile().toBestDisplayName()}")
-                    updateContactListTo(userProfile().latestContactList)
+        settings.backupDMRelayList?.let {
+            Log.d("AccountRegisterObservers", "Loading saved DM Relay List ${it.toJson()}")
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
+        }
+
+        settings.backupNIP65RelayList?.let {
+            Log.d("AccountRegisterObservers", "Loading saved nip65 relay list ${it.toJson()}")
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
+        }
+
+        settings.backupSearchRelayList?.let {
+            Log.d("AccountRegisterObservers", "Loading saved search relay list ${it.toJson()}")
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
+        }
+
+        settings.backupPrivateHomeRelayList?.let {
+            Log.d("AccountRegisterObservers", "Loading saved search relay list ${it.toJson()}")
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
+        }
+
+        settings.backupMuteList?.let {
+            Log.d("AccountRegisterObservers", "Loading saved mute list ${it.toJson()}")
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
+        }
+
+        // saves contact list for the next time.
+        scope.launch(Dispatchers.Default) {
+            Log.d("AccountRegisterObservers", "Kind 0 Collector Start")
+            userProfile().flow().metadata.stateFlow.collect {
+                Log.d("AccountRegisterObservers", "Updating Kind 0 ${userProfile().toBestDisplayName()}")
+                settings.updateUserMetadata(userProfile().latestMetadata)
+            }
+        }
+
+        // saves contact list for the next time.
+        scope.launch(Dispatchers.Default) {
+            Log.d("AccountRegisterObservers", "Kind 3 Collector Start")
+            userProfile().flow().follows.stateFlow.collect {
+                Log.d("AccountRegisterObservers", "Updating Kind 3 ${userProfile().toBestDisplayName()}")
+                settings.updateContactListTo(userProfile().latestContactList)
+            }
+        }
+
+        scope.launch(Dispatchers.Default) {
+            Log.d("AccountRegisterObservers", "NIP-17 Relay List Collector Start")
+            getDMRelayListFlow().collect {
+                Log.d("AccountRegisterObservers", "Updating DM Relay List for ${userProfile().toBestDisplayName()}")
+                (it.note.event as? ChatMessageRelayListEvent)?.let {
+                    settings.updateDMRelayList(it)
                 }
             }
+        }
 
-            scope.launch {
-                Log.d("AccountRegisterObservers", "NIP-17 Relay List Collector Start")
-                getDMRelayListFlow().collect {
-                    Log.d("AccountRegisterObservers", "Updating DM Relay List for ${userProfile().toBestDisplayName()}")
-                    (it.note.event as? ChatMessageRelayListEvent)?.let {
-                        updateDMRelayList(it)
-                    }
+        scope.launch(Dispatchers.Default) {
+            Log.d("AccountRegisterObservers", "NIP-65 Relay List Collector Start")
+            getNIP65RelayListFlow().collect {
+                Log.d("AccountRegisterObservers", "Updating NIP-65 List for ${userProfile().toBestDisplayName()}")
+                (it.note.event as? AdvertisedRelayListEvent)?.let {
+                    settings.updateNIP65RelayList(it)
                 }
             }
+        }
 
-            scope.launch {
-                Log.d("AccountRegisterObservers", "NIP-65 Relay List Collector Start")
-                getNIP65RelayListFlow().collect {
-                    Log.d("AccountRegisterObservers", "Updating NIP-65 List for ${userProfile().toBestDisplayName()}")
-                    (it.note.event as? AdvertisedRelayListEvent)?.let {
-                        updateNIP65RelayList(it)
-                    }
+        scope.launch(Dispatchers.Default) {
+            Log.d("AccountRegisterObservers", "Search Relay List Collector Start")
+            getSearchRelayListFlow().collect {
+                Log.d("AccountRegisterObservers", "Updating Search Relay List for ${userProfile().toBestDisplayName()}")
+                (it.note.event as? SearchRelayListEvent)?.let {
+                    settings.updateSearchRelayList(it)
                 }
             }
+        }
 
-            // imports transient blocks due to spam.
-            LocalCache.antiSpam.liveSpam.observeForever {
-                GlobalScope.launch(Dispatchers.IO) {
-                    it.cache.spamMessages.snapshot().values.forEach { spammer ->
-                        if (spammer.pubkeyHex !in transientHiddenUsers.value && spammer.duplicatedMessages.size >= 5) {
-                            if (spammer.pubkeyHex != userProfile().pubkeyHex && spammer.pubkeyHex !in followingKeySet()) {
-                                transientHiddenUsers.update {
-                                    it + spammer.pubkeyHex
-                                }
-                                live.invalidateData()
+        scope.launch(Dispatchers.Default) {
+            Log.d("AccountRegisterObservers", "Private Home Relay List Collector Start")
+            getPrivateOutboxRelayListFlow().collect {
+                Log.d("AccountRegisterObservers", "Updating Private Home Relay List for ${userProfile().toBestDisplayName()}")
+                (it.note.event as? PrivateOutboxRelayListEvent)?.let {
+                    settings.updatePrivateHomeRelayList(it)
+                }
+            }
+        }
+
+        scope.launch(Dispatchers.Default) {
+            Log.d("AccountRegisterObservers", "Mute List Collector Start")
+            getMuteListFlow().collect {
+                Log.d("AccountRegisterObservers", "Updating Mute List for ${userProfile().toBestDisplayName()}")
+                (it.note.event as? MuteListEvent)?.let {
+                    settings.updateMuteList(it)
+                }
+            }
+        }
+
+        scope.launch(Dispatchers.Default) {
+            LocalCache.antiSpam.flowSpam.collect {
+                it.cache.spamMessages.snapshot().values.forEach { spammer ->
+                    if (spammer.pubkeyHex !in transientHiddenUsers.value && spammer.duplicatedMessages.size >= 5) {
+                        if (spammer.pubkeyHex != userProfile().pubkeyHex && spammer.pubkeyHex !in followingKeySet()) {
+                            transientHiddenUsers.update {
+                                it + spammer.pubkeyHex
                             }
                         }
                     }
                 }
             }
-        }
-
-    init {
-        Log.d("Account", "Init")
-        backupContactList?.let {
-            println("Loading saved contacts ${it.toJson()}")
-
-            if (userProfile().latestContactList == null) {
-                GlobalScope.launch(Dispatchers.IO) { LocalCache.consume(it) }
-            }
-        }
-
-        backupDMRelayList?.let {
-            println("Loading DM Relay List ${it.toJson()}")
-            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
-        }
-
-        backupNIP65RelayList?.let {
-            println("Loading saved contacts ${it.toJson()}")
-            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
         }
     }
 }

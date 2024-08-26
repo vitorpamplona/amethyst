@@ -331,6 +331,7 @@ class User(
             }
         }
 
+        flowSet?.metadata?.invalidateData()
         liveSet?.innerMetadata?.invalidateData()
     }
 
@@ -434,12 +435,17 @@ class UserFlowSet(
     u: User,
 ) {
     // Observers line up here.
+    val metadata = UserBundledRefresherFlow(u)
     val follows = UserBundledRefresherFlow(u)
     val relays = UserBundledRefresherFlow(u)
 
-    fun isInUse(): Boolean = relays.stateFlow.subscriptionCount.value > 0 || follows.stateFlow.subscriptionCount.value > 0
+    fun isInUse(): Boolean =
+        metadata.stateFlow.subscriptionCount.value > 0 ||
+            relays.stateFlow.subscriptionCount.value > 0 ||
+            follows.stateFlow.subscriptionCount.value > 0
 
     fun destroy() {
+        metadata.destroy()
         relays.destroy()
         follows.destroy()
     }

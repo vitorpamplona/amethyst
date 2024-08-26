@@ -28,10 +28,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -42,7 +40,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AccountState
+import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -73,14 +71,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.BundledInsert
-import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
-import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
@@ -107,10 +103,8 @@ import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
@@ -127,7 +121,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.time.measureTimedValue
 
@@ -152,11 +145,11 @@ import kotlin.time.measureTimedValue
 
 @Stable
 class AccountViewModel(
-    val account: Account,
+    accountSettings: AccountSettings,
     val settings: SettingsState,
 ) : ViewModel(),
     Dao {
-    val accountLiveData: LiveData<AccountState> = account.live.map { it }
+    val account = Account(accountSettings, accountSettings.createSigner(), viewModelScope)
 
     // TODO: contact lists are not notes yet
     // val kind3Relays: StateFlow<ContactListEvent?> = observeByAuthor(ContactListEvent.KIND, account.signer.pubKey)
@@ -184,9 +177,6 @@ class AccountViewModel(
     val toasts = MutableSharedFlow<ToastMsg?>(0, 3, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     val feedStates = AccountFeedContentStates(this)
-
-    val showSensitiveContentChanges =
-        account.live.map { it.account.showSensitiveContent }.distinctUntilChanged()
 
     fun clearToasts() {
         viewModelScope.launch { toasts.emit(null) }
@@ -259,7 +249,9 @@ class AccountViewModel(
 
     fun reactToOrDelete(note: Note) {
         viewModelScope.launch(Dispatchers.IO) {
-            val reaction = account.reactionChoices.first()
+            val reaction =
+                account.settings.reactionChoices.value
+                    .first()
             if (hasReactedTo(note, reaction)) {
                 deleteReactionTo(note, reaction)
             } else {
@@ -641,7 +633,7 @@ class AccountViewModel(
                         onProgress(it)
                     },
                     onPayViaIntent = onPayViaIntent,
-                    zapType = zapType ?: account.defaultZapType.value,
+                    zapType = zapType ?: account.settings.defaultZapType.value,
                 )
         }
     }
@@ -768,22 +760,6 @@ class AccountViewModel(
         account.decryptZapContentAuthor(note, onReady)
     }
 
-    fun translateTo(lang: Locale) {
-        account.updateTranslateTo(lang.language)
-    }
-
-    fun dontTranslateFrom(lang: String) {
-        account.addDontTranslateFrom(lang)
-    }
-
-    fun prefer(
-        source: String,
-        target: String,
-        preference: String,
-    ) {
-        account.prefer(source, target, preference)
-    }
-
     fun follow(user: User) {
         viewModelScope.launch(Dispatchers.IO) { account.follow(user) }
     }
@@ -827,27 +803,6 @@ class AccountViewModel(
 
     fun isFollowing(user: HexKey): Boolean = account.isFollowing(user)
 
-    val hideDeleteRequestDialog: Boolean
-        get() = account.hideDeleteRequestDialog
-
-    fun dontShowDeleteRequestDialog() {
-        viewModelScope.launch(Dispatchers.IO) { account.setHideDeleteRequestDialog() }
-    }
-
-    val hideNIP17WarningDialog: Boolean
-        get() = account.hideNIP17WarningDialog
-
-    fun dontShowNIP17WarningDialog() {
-        account.setHideNIP17WarningDialog()
-    }
-
-    val hideBlockAlertDialog: Boolean
-        get() = account.hideBlockAlertDialog
-
-    fun dontShowBlockAlertDialog() {
-        account.setHideBlockAlertDialog()
-    }
-
     fun hideSensitiveContent() {
         account.updateShowSensitiveContent(false)
     }
@@ -866,7 +821,7 @@ class AccountViewModel(
         }
     }
 
-    fun defaultZapType(): LnZapEvent.ZapType = account.defaultZapType.value
+    fun defaultZapType(): LnZapEvent.ZapType = account.settings.defaultZapType.value
 
     fun unwrap(
         event: GiftWrapEvent,
@@ -1206,18 +1161,22 @@ class AccountViewModel(
         portNumber: MutableState<String>,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            account.proxyPort = portNumber.value.toInt()
-            account.proxy = HttpClientManager.initProxy(checked, "127.0.0.1", account.proxyPort)
-            account.saveable.invalidateData()
+            account.settings.updateProxy(checked, portNumber.value)
             Amethyst.instance.serviceManager.forceRestart()
         }
     }
 
+    fun restartServices() {
+        viewModelScope.launch(Dispatchers.IO) {
+            Amethyst.instance.serviceManager.restartIfDifferentAccount(account)
+        }
+    }
+
     class Factory(
-        val account: Account,
+        val accountSettings: AccountSettings,
         val settings: SettingsState,
     ) : ViewModelProvider.Factory {
-        override fun <AccountViewModel : ViewModel> create(modelClass: Class<AccountViewModel>): AccountViewModel = AccountViewModel(account, settings) as AccountViewModel
+        override fun <AccountViewModel : ViewModel> create(modelClass: Class<AccountViewModel>): AccountViewModel = AccountViewModel(accountSettings, settings) as AccountViewModel
     }
 
     private var collectorJob: Job? = null
@@ -1478,7 +1437,7 @@ class AccountViewModel(
                         val noteEvent = note.event
                         noteEvent is NIP90ContentDiscoveryResponseEvent &&
                             noteEvent.pubKey == pubkeyHex &&
-                            noteEvent.isTaggedUser(account.keyPair.pubKey.toHexKey()) &&
+                            noteEvent.isTaggedUser(account.signer.pubKey) &&
                             noteEvent.createdAt > fifteenMinsAgo
                     },
                     comparator = CreatedAtComparator,
@@ -1519,7 +1478,7 @@ class AccountViewModel(
         context: Context,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            if (account.defaultZapType.value == LnZapEvent.ZapType.NONZAP) {
+            if (account.settings.defaultZapType.value == LnZapEvent.ZapType.NONZAP) {
                 LightningAddressResolver()
                     .lnAddressInvoice(
                         lnaddress,
@@ -1532,7 +1491,7 @@ class AccountViewModel(
                         context = context,
                     )
             } else {
-                account.createZapRequestFor(toUserPubKeyHex, message, account.defaultZapType.value) { zapRequest ->
+                account.createZapRequestFor(toUserPubKeyHex, message, account.settings.defaultZapType.value) { zapRequest ->
                     LocalCache.justConsume(zapRequest, null)
                     LightningAddressResolver()
                         .lnAddressInvoice(
@@ -1692,7 +1651,7 @@ fun mockAccountViewModel(): AccountViewModel {
     sharedPreferencesViewModel.init()
 
     return AccountViewModel(
-        Account(
+        AccountSettings(
             // blank keys
             keyPair =
                 KeyPair(
@@ -1700,7 +1659,6 @@ fun mockAccountViewModel(): AccountViewModel {
                     pubKey = Hex.decode("989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"),
                     forcePubKeyCheck = false,
                 ),
-            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
         ),
         sharedPreferencesViewModel.sharedPrefs,
     )

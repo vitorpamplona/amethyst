@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -75,7 +74,7 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.firstFullChar
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
@@ -97,13 +96,13 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
 class UpdateReactionTypeViewModel(
-    val account: Account,
+    val accountSettings: AccountSettings,
 ) : ViewModel() {
     var nextChoice by mutableStateOf(TextFieldValue(""))
     var reactionSet by mutableStateOf(listOf<String>())
 
     fun load() {
-        this.reactionSet = account.reactionChoices
+        this.reactionSet = accountSettings.reactionChoices.value
     }
 
     fun toListOfChoices(commaSeparatedAmounts: String): List<Long> = commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
@@ -124,7 +123,7 @@ class UpdateReactionTypeViewModel(
     }
 
     fun sendPost() {
-        account.changeReactionTypes(reactionSet)
+        accountSettings.changeReactionTypes(reactionSet)
         nextChoice = TextFieldValue("")
     }
 
@@ -132,12 +131,12 @@ class UpdateReactionTypeViewModel(
         nextChoice = TextFieldValue("")
     }
 
-    fun hasChanged(): Boolean = reactionSet != account.reactionChoices
+    fun hasChanged(): Boolean = reactionSet != accountSettings.reactionChoices.value
 
     class Factory(
-        val account: Account,
+        val accountSettings: AccountSettings,
     ) : ViewModelProvider.Factory {
-        override fun <UpdateReactionTypeViewModel : ViewModel> create(modelClass: Class<UpdateReactionTypeViewModel>): UpdateReactionTypeViewModel = UpdateReactionTypeViewModel(account) as UpdateReactionTypeViewModel
+        override fun <UpdateReactionTypeViewModel : ViewModel> create(modelClass: Class<UpdateReactionTypeViewModel>): UpdateReactionTypeViewModel = UpdateReactionTypeViewModel(accountSettings) as UpdateReactionTypeViewModel
     }
 }
 
@@ -151,7 +150,7 @@ fun UpdateReactionTypeDialog(
     val postViewModel: UpdateReactionTypeViewModel =
         viewModel(
             key = "UpdateReactionTypeViewModel",
-            factory = UpdateReactionTypeViewModel.Factory(accountViewModel.account),
+            factory = UpdateReactionTypeViewModel.Factory(accountViewModel.account.settings),
         )
 
     LaunchedEffect(accountViewModel) { postViewModel.load() }

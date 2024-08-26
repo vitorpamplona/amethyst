@@ -24,11 +24,8 @@ import android.util.Log
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.ammolite.service.HttpClientManager
-import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -55,7 +52,7 @@ class RegisterAccounts(
 
     private suspend fun signAllAuths(
         notificationToken: String,
-        remainingTos: List<Pair<Account, List<String>>>,
+        remainingTos: List<Pair<AccountSettings, List<String>>>,
         output: MutableList<RelayAuthEvent>,
         onReady: (List<RelayAuthEvent>) -> Unit,
     ) {
@@ -71,7 +68,10 @@ class RegisterAccounts(
                         val result =
                             withTimeoutOrNull(10000) {
                                 suspendCancellableCoroutine { continuation ->
-                                    accountRelayPair.first.createAuthEvent(accountRelayPair.second, notificationToken) { result ->
+                                    val signer = accountRelayPair.first.createSigner()
+                                    // TODO: Modify the external launcher to launch as different users.
+                                    // Right now it only registers if Amber has already approved this signature
+                                    RelayAuthEvent.create(accountRelayPair.second, notificationToken, signer) { result ->
                                         continuation.resume(result)
                                     }
                                 }
@@ -104,32 +104,18 @@ class RegisterAccounts(
                     Log.d(tag, "Register Account ${it.npub}")
 
                     val acc = LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)
-
                     if (acc != null && acc.isWriteable()) {
-                        val nip65Read =
-                            (
-                                LocalCache
-                                    .getAddressableNoteIfExists(
-                                        AdvertisedRelayListEvent.createAddressTag(acc.userProfile().pubkeyHex),
-                                    )?.event as? AdvertisedRelayListEvent
-                            )?.readRelays() ?: acc.backupNIP65RelayList?.readRelays() ?: emptyList<String>()
+                        val nip65Read = acc.backupNIP65RelayList?.readRelays() ?: emptyList()
 
-                        Log.d(tag, "Register Account ${acc.userProfile().toBestDisplayName()} NIP65 Reads ${nip65Read.joinToString(", ")}")
+                        Log.d(tag, "Register Account ${it.npub} NIP65 Reads ${nip65Read.joinToString(", ")}")
 
-                        val nip17Read =
-                            (
-                                LocalCache
-                                    .getAddressableNoteIfExists(
-                                        ChatMessageRelayListEvent.createAddressTag(acc.userProfile().pubkeyHex),
-                                    )?.event as? ChatMessageRelayListEvent
-                            )?.relays() ?: acc.backupDMRelayList?.relays() ?: emptyList<String>()
+                        val nip17Read = acc.backupDMRelayList?.relays() ?: emptyList<String>()
 
-                        Log.d(tag, "Register Account ${acc.userProfile().toBestDisplayName()} NIP17 Reads ${nip17Read.joinToString(", ")}")
+                        Log.d(tag, "Register Account ${it.npub} NIP17 Reads ${nip17Read.joinToString(", ")}")
 
-                        val kind3Relays = (acc.userProfile().latestContactList?.relays() ?: acc.backupContactList?.relays())
-                        val readKind3Relays = kind3Relays?.mapNotNull { if (it.value.read) it.key else null } ?: emptyList<String>()
+                        val readKind3Relays = acc.backupContactList?.relays()?.mapNotNull { if (it.value.read) it.key else null } ?: emptyList<String>()
 
-                        Log.d(tag, "Register Account ${acc.userProfile().toBestDisplayName()} Kind3 Reads ${readKind3Relays.joinToString(", ")}")
+                        Log.d(tag, "Register Account ${it.npub} Kind3 Reads ${readKind3Relays.joinToString(", ")}")
 
                         val relays = (nip65Read + nip17Read + readKind3Relays)
 

@@ -448,13 +448,14 @@ fun StoriesTopBar(
     nav: (String) -> Unit,
 ) {
     GenericMainTopBar(openDrawer, accountViewModel, nav) {
-        val list by accountViewModel.account.defaultStoriesFollowList.collectAsStateWithLifecycle()
+        val list by accountViewModel.account.settings.defaultStoriesFollowList
+            .collectAsStateWithLifecycle()
 
         FollowListWithRoutes(
             followListsModel = followLists,
             listName = list,
         ) { listName ->
-            accountViewModel.account.changeDefaultStoriesFollowList(listName.code)
+            accountViewModel.account.settings.changeDefaultStoriesFollowList(listName.code)
         }
     }
 }
@@ -467,7 +468,8 @@ fun HomeTopBar(
     nav: (String) -> Unit,
 ) {
     GenericMainTopBar(openDrawer, accountViewModel, nav) {
-        val list by accountViewModel.account.defaultHomeFollowList.collectAsStateWithLifecycle()
+        val list by accountViewModel.account.settings.defaultHomeFollowList
+            .collectAsStateWithLifecycle()
 
         FollowListWithRoutes(
             followListsModel = followLists,
@@ -476,7 +478,7 @@ fun HomeTopBar(
             if (listName.type == CodeNameType.ROUTE) {
                 nav(listName.code)
             } else {
-                accountViewModel.account.changeDefaultHomeFollowList(listName.code)
+                accountViewModel.account.settings.changeDefaultHomeFollowList(listName.code)
             }
         }
     }
@@ -490,13 +492,14 @@ fun NotificationTopBar(
     nav: (String) -> Unit,
 ) {
     GenericMainTopBar(openDrawer, accountViewModel, nav) {
-        val list by accountViewModel.account.defaultNotificationFollowList.collectAsStateWithLifecycle()
+        val list by accountViewModel.account.settings.defaultNotificationFollowList
+            .collectAsStateWithLifecycle()
 
         FollowListWithoutRoutes(
             followListsModel = followLists,
             listName = list,
         ) { listName ->
-            accountViewModel.account.changeDefaultNotificationFollowList(listName.code)
+            accountViewModel.account.settings.changeDefaultNotificationFollowList(listName.code)
         }
     }
 }
@@ -509,13 +512,14 @@ fun DiscoveryTopBar(
     nav: (String) -> Unit,
 ) {
     GenericMainTopBar(openDrawer, accountViewModel, nav) {
-        val list by accountViewModel.account.defaultDiscoveryFollowList.collectAsStateWithLifecycle()
+        val list by accountViewModel.account.settings.defaultDiscoveryFollowList
+            .collectAsStateWithLifecycle()
 
         FollowListWithoutRoutes(
             followListsModel = followLists,
             listName = list,
         ) { listName ->
-            accountViewModel.account.changeDefaultDiscoveryFollowList(listName.code)
+            accountViewModel.account.settings.changeDefaultDiscoveryFollowList(listName.code)
         }
     }
 }

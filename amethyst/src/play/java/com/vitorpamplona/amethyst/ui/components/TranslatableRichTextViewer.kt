@@ -230,7 +230,7 @@ private fun TranslationMessage(
             DropdownMenuItem(
                 text = {
                     Row {
-                        if (source in accountViewModel.account.dontTranslateFrom) {
+                        if (source in accountViewModel.account.settings.dontTranslateFrom) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
@@ -251,17 +251,15 @@ private fun TranslationMessage(
                     }
                 },
                 onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.dontTranslateFrom(source)
-                        langSettingsPopupExpanded = false
-                    }
+                    accountViewModel.account.settings.addDontTranslateFrom(source)
+                    langSettingsPopupExpanded = false
                 },
             )
             HorizontalDivider(thickness = DividerThickness)
             DropdownMenuItem(
                 text = {
                     Row {
-                        if (accountViewModel.account.preferenceBetween(source, target) == source) {
+                        if (accountViewModel.account.settings.preferenceBetween(source, target) == source) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
@@ -283,7 +281,7 @@ private fun TranslationMessage(
                 },
                 onClick = {
                     scope.launch(Dispatchers.IO) {
-                        accountViewModel.prefer(source, target, source)
+                        accountViewModel.account.settings.prefer(source, target, source)
                         langSettingsPopupExpanded = false
                     }
                 },
@@ -291,7 +289,7 @@ private fun TranslationMessage(
             DropdownMenuItem(
                 text = {
                     Row {
-                        if (accountViewModel.account.preferenceBetween(source, target) == target) {
+                        if (accountViewModel.account.settings.preferenceBetween(source, target) == target) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
@@ -313,7 +311,7 @@ private fun TranslationMessage(
                 },
                 onClick = {
                     scope.launch(Dispatchers.IO) {
-                        accountViewModel.prefer(source, target, target)
+                        accountViewModel.account.settings.prefer(source, target, target)
                         langSettingsPopupExpanded = false
                     }
                 },
@@ -326,7 +324,7 @@ private fun TranslationMessage(
                     DropdownMenuItem(
                         text = {
                             Row {
-                                if (lang.language in accountViewModel.account.translateTo) {
+                                if (accountViewModel.account.settings.translateToContains(lang)) {
                                     Icon(
                                         imageVector = Icons.Default.Check,
                                         contentDescription = null,
@@ -348,7 +346,7 @@ private fun TranslationMessage(
                         },
                         onClick = {
                             scope.launch(Dispatchers.IO) {
-                                accountViewModel.translateTo(lang)
+                                accountViewModel.account.settings.updateTranslateTo(lang)
                                 langSettingsPopupExpanded = false
                             }
                         },
@@ -375,13 +373,13 @@ fun TranslateAndWatchLanguageChanges(
             LanguageTranslatorService
                 .autoTranslate(
                     content,
-                    accountViewModel.account.dontTranslateFrom,
-                    accountViewModel.account.translateTo,
+                    accountViewModel.account.settings.dontTranslateFrom,
+                    accountViewModel.account.settings.translateTo,
                 ).addOnCompleteListener { task ->
                     if (task.isSuccessful && !content.equals(task.result.result, true)) {
                         if (task.result.sourceLang != null && task.result.targetLang != null) {
                             val preference =
-                                accountViewModel.account.preferenceBetween(
+                                accountViewModel.account.settings.preferenceBetween(
                                     task.result.sourceLang!!,
                                     task.result.targetLang!!,
                                 )

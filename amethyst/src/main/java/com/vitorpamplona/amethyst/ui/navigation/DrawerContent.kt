@@ -446,10 +446,17 @@ fun ListContent(
     var editMediaServers by remember { mutableStateOf(false) }
 
     var backupDialogOpen by remember { mutableStateOf(false) }
-    var checked by remember { mutableStateOf(accountViewModel.account.proxy != null) }
+    var checked by remember { mutableStateOf(accountViewModel.account.settings.proxy != null) }
     var disconnectTorDialog by remember { mutableStateOf(false) }
     var conectOrbotDialogOpen by remember { mutableStateOf(false) }
-    val proxyPort = remember { mutableStateOf(accountViewModel.account.proxyPort.toString()) }
+    val proxyPort =
+        remember {
+            mutableStateOf(
+                accountViewModel.account.settings.proxyPort
+                    .toString(),
+            )
+        }
+
     val context = LocalContext.current
 
     Column(modifier) {
@@ -507,7 +514,7 @@ fun ListContent(
             route = Route.BlockedUsers.route,
         )
 
-        accountViewModel.account.keyPair.privKey?.let {
+        accountViewModel.account.settings.keyPair.privKey?.let {
             IconRow(
                 title = stringRes(R.string.backup_keys),
                 icon = R.drawable.ic_key,

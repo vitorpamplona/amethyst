@@ -36,7 +36,7 @@ open class DiscoverLiveFeedFilter(
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList()
 
-    open fun followList(): String = account.defaultDiscoveryFollowList.value
+    open fun followList(): String = account.settings.defaultDiscoveryFollowList.value
 
     override fun showHiddenKey(): Boolean =
         followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
@@ -57,7 +57,7 @@ open class DiscoverLiveFeedFilter(
         val filterParams =
             FilterByListParams.create(
                 userHex = account.userProfile().pubkeyHex,
-                selectedListName = account.defaultDiscoveryFollowList.value,
+                selectedListName = account.settings.defaultDiscoveryFollowList.value,
                 followLists = account.liveDiscoveryFollowLists.value,
                 hiddenUsers = account.flowHiddenUsers.value,
             )

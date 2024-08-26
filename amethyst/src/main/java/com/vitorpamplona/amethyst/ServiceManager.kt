@@ -28,6 +28,7 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
 import coil.size.Precision
+import coil.util.DebugLogger
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.Base64Fetcher
@@ -57,18 +58,19 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 @Stable
-class ServiceManager {
+class ServiceManager(
+    val scope: CoroutineScope,
+) {
     private var isStarted: Boolean =
         false // to not open amber in a loop trying to use auth relays and registering for notifications
     private var account: Account? = null
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var collectorJob: Job? = null
 
     private fun start(account: Account) {
@@ -86,9 +88,9 @@ class ServiceManager {
         val myAccount = account
 
         // Resets Proxy Use
-        HttpClientManager.setDefaultProxy(account?.proxy)
+        HttpClientManager.setDefaultProxy(account?.settings?.proxy)
         HttpClientManager.setDefaultUserAgent("Amethyst/${BuildConfig.VERSION_NAME}")
-        LocalCache.antiSpam.active = account?.filterSpamFromStrangers ?: true
+        LocalCache.antiSpam.active = account?.settings?.filterSpamFromStrangers ?: true
         Coil.setImageLoader {
             Amethyst.instance
                 .imageLoaderBuilder()
@@ -100,8 +102,11 @@ class ServiceManager {
                     }
                     add(SvgDecoder.Factory())
                     add(Base64Fetcher.Factory)
-                } // .logger(DebugLogger())
-                .okHttpClient { HttpClientManager.getHttpClient() }
+                }.apply {
+                    if (BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark") {
+                        this.logger(DebugLogger())
+                    }
+                }.okHttpClient { HttpClientManager.getHttpClient() }
                 .precision(Precision.INEXACT)
                 .respectCacheHeaders(false)
                 .build()
@@ -126,19 +131,22 @@ class ServiceManager {
 
             // start services
             NostrAccountDataSource.account = myAccount
-            NostrAccountDataSource.otherAccounts =
-                LocalPreferences.allSavedAccounts().mapNotNull {
-                    try {
-                        it.npub.bechToBytes().toHexKey()
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        null
-                    }
-                }
             NostrHomeDataSource.account = myAccount
             NostrChatroomListDataSource.account = myAccount
             NostrVideoDataSource.account = myAccount
             NostrDiscoveryDataSource.account = myAccount
+
+            NostrAccountDataSource.otherAccounts =
+                runBlocking {
+                    LocalPreferences.allSavedAccounts().mapNotNull {
+                        try {
+                            it.npub.bechToBytes().toHexKey()
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            null
+                        }
+                    }
+                }
 
             // Notification Elements
             NostrHomeDataSource.start()
@@ -190,7 +198,7 @@ class ServiceManager {
         LocalCache.cleanObservers()
     }
 
-    fun trimMemory() {
+    suspend fun trimMemory() {
         LocalCache.cleanObservers()
 
         val accounts =

@@ -326,7 +326,6 @@ fun ZapDonationButton(
         if (wantsToZap != null) {
             ZapAmountChoicePopup(
                 baseNote = baseNote,
-                zapAmountChoices = wantsToZap ?: accountViewModel.account.zapAmountChoices,
                 popupYOffset = iconSize,
                 accountViewModel = accountViewModel,
                 onDismiss = {
@@ -452,7 +451,9 @@ fun customZapClick(
         return
     }
 
-    if (accountViewModel.account.zapAmountChoices.isEmpty()) {
+    if (accountViewModel.account.settings.zapAmountChoices.value
+            .isEmpty()
+    ) {
         accountViewModel.toast(
             stringRes(context, R.string.error_dialog_zap_error),
             stringRes(context, R.string.no_zap_amount_setup_long_press_to_change),
@@ -462,8 +463,10 @@ fun customZapClick(
             stringRes(context, R.string.error_dialog_zap_error),
             stringRes(context, R.string.login_with_a_private_key_to_be_able_to_send_zaps),
         )
-    } else if (accountViewModel.account.zapAmountChoices.size == 1) {
-        val amount = accountViewModel.account.zapAmountChoices.first()
+    } else if (accountViewModel.account.settings.zapAmountChoices.value.size == 1) {
+        val amount =
+            accountViewModel.account.settings.zapAmountChoices.value
+                .first()
 
         if (amount > 1100) {
             accountViewModel.zap(
@@ -481,9 +484,11 @@ fun customZapClick(
             onMultipleChoices(listOf(1000L, 5_000L, 10_000L))
             // recommends amounts for a monthly release.
         }
-    } else if (accountViewModel.account.zapAmountChoices.size > 1) {
-        if (accountViewModel.account.zapAmountChoices.any { it > 1100 }) {
-            onMultipleChoices(accountViewModel.account.zapAmountChoices)
+    } else if (accountViewModel.account.settings.zapAmountChoices.value.size > 1) {
+        if (accountViewModel.account.settings.zapAmountChoices.value
+                .any { it > 1100 }
+        ) {
+            onMultipleChoices(accountViewModel.account.settings.zapAmountChoices.value)
         } else {
             onMultipleChoices(listOf(1000L, 5_000L, 10_000L))
         }

@@ -47,18 +47,18 @@ import com.vitorpamplona.quartz.events.RepostEvent
 class NotificationFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.defaultNotificationFollowList.value
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultNotificationFollowList.value
 
     override fun showHiddenKey(): Boolean =
-        account.defaultNotificationFollowList.value ==
+        account.settings.defaultNotificationFollowList.value ==
             PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
-            account.defaultNotificationFollowList.value ==
+            account.settings.defaultNotificationFollowList.value ==
             MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
             userHex = account.userProfile().pubkeyHex,
-            selectedListName = account.defaultNotificationFollowList.value,
+            selectedListName = account.settings.defaultNotificationFollowList.value,
             followLists = account.liveNotificationFollowLists.value,
             hiddenUsers = account.flowHiddenUsers.value,
         )

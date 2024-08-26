@@ -368,7 +368,7 @@ private fun copyNSec(
     account: Account,
     clipboardManager: ClipboardManager,
 ) {
-    account.keyPair.privKey?.let {
+    account.settings.keyPair.privKey?.let {
         clipboardManager.setText(AnnotatedString(it.toNsec()))
         scope.launch {
             Toast
@@ -398,7 +398,7 @@ private fun encryptCopyNSec(
                 ).show()
         }
     } else {
-        accountViewModel.account.keyPair.privKey?.let {
+        accountViewModel.account.settings.keyPair.privKey?.let {
             val key = CryptoUtils.encryptNIP49(it.toHexKey(), password.value.text)
             if (key != null) {
                 clipboardManager.setText(AnnotatedString(key))
