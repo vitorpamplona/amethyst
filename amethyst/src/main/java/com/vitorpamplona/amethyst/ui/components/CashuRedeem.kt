@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.SmallishBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -98,8 +99,8 @@ fun CashuPreview(
 
     CrossfadeIfEnabled(targetState = cashuData, label = "CashuPreview", accountViewModel = accountViewModel) {
         when (it) {
-            is GenericLoadable.Loaded<List<CashuToken>> -> CashuPreview(it.loaded, accountViewModel)
-            is GenericLoadable.Error<List<CashuToken>> ->
+            is GenericLoadable.Loaded<ImmutableList<CashuToken>> -> CashuPreview(it.loaded, accountViewModel)
+            is GenericLoadable.Error<ImmutableList<CashuToken>> ->
                 Text(
                     text = "$cashutoken ",
                     style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
@@ -111,7 +112,7 @@ fun CashuPreview(
 
 @Composable
 fun CashuPreview(
-    tokens: List<CashuToken>,
+    tokens: ImmutableList<CashuToken>,
     accountViewModel: AccountViewModel,
 ) {
     tokens.forEach {

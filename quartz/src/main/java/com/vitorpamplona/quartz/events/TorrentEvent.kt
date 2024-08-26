@@ -121,6 +121,7 @@ class TorrentEvent(
     }
 }
 
+@Immutable
 class TorrentFile(
     val fileName: String,
     val bytes: Long?,

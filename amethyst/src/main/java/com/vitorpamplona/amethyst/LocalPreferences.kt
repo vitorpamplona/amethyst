@@ -51,6 +51,7 @@ import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.events.SearchRelayListEvent
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -555,8 +556,8 @@ object LocalPreferences {
                     dontTranslateFrom = dontTranslateFrom,
                     languagePreferences = languagePreferences,
                     translateTo = translateTo,
-                    zapAmountChoices = MutableStateFlow(zapAmountChoices),
-                    reactionChoices = MutableStateFlow(reactionChoices),
+                    zapAmountChoices = MutableStateFlow(zapAmountChoices.toImmutableList()),
+                    reactionChoices = MutableStateFlow(reactionChoices.toImmutableList()),
                     defaultZapType = MutableStateFlow(defaultZapType),
                     defaultFileServer = defaultFileServer,
                     defaultHomeFollowList = MutableStateFlow(defaultHomeFollowList),

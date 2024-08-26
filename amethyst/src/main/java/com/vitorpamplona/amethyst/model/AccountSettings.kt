@@ -45,6 +45,9 @@ import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -61,7 +64,7 @@ val DefaultChannels =
     )
 
 val DefaultReactions =
-    listOf(
+    persistentListOf(
         "\uD83D\uDE80",
         "\uD83E\uDEC2",
         "\uD83D\uDC40",
@@ -92,7 +95,7 @@ val DefaultSearchRelayList =
         RelayUrlFormatter.normalize("wss://relay.noswhere.com"),
     )
 
-val DefaultZapAmounts = listOf(100L, 500L, 1000L)
+val DefaultZapAmounts = persistentListOf(100L, 500L, 1000L)
 
 fun getLanguagesSpokenByUser(): Set<String> {
     val languageList = ConfigurationCompat.getLocales(Resources.getSystem().getConfiguration())
@@ -118,8 +121,8 @@ class AccountSettings(
     var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
     var languagePreferences: Map<String, String> = mapOf(),
     var translateTo: String = Locale.getDefault().language,
-    var zapAmountChoices: MutableStateFlow<List<Long>> = MutableStateFlow(DefaultZapAmounts),
-    var reactionChoices: MutableStateFlow<List<String>> = MutableStateFlow(DefaultReactions),
+    var zapAmountChoices: MutableStateFlow<ImmutableList<Long>> = MutableStateFlow(DefaultZapAmounts),
+    var reactionChoices: MutableStateFlow<ImmutableList<String>> = MutableStateFlow(DefaultReactions),
     val defaultZapType: MutableStateFlow<LnZapEvent.ZapType> = MutableStateFlow(LnZapEvent.ZapType.PUBLIC),
     var defaultFileServer: Nip96MediaServers.ServerName = Nip96MediaServers.DEFAULT[0],
     val defaultHomeFollowList: MutableStateFlow<String> = MutableStateFlow(KIND3_FOLLOWS),
@@ -177,7 +180,7 @@ class AccountSettings(
 
     fun changeZapAmounts(newAmounts: List<Long>) {
         if (zapAmountChoices.value != newAmounts) {
-            zapAmountChoices.tryEmit(newAmounts)
+            zapAmountChoices.tryEmit(newAmounts.toImmutableList())
             saveAccountSettings()
         }
     }
@@ -191,7 +194,7 @@ class AccountSettings(
 
     fun changeReactionTypes(newTypes: List<String>) {
         if (reactionChoices.value != newTypes) {
-            reactionChoices.tryEmit(newTypes)
+            reactionChoices.tryEmit(newTypes.toImmutableList())
             saveAccountSettings()
         }
     }

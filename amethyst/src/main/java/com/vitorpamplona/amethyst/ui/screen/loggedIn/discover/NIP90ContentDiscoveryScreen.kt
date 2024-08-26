@@ -461,7 +461,7 @@ fun ZapDVMButton(
         if (wantsToZap != null) {
             ZapAmountChoicePopup(
                 baseNote = baseNote,
-                zapAmountChoices = listOf(amount / 1000),
+                zapAmountChoices = persistentListOf(amount / 1000),
                 popupYOffset = iconSize,
                 accountViewModel = accountViewModel,
                 onDismiss = {

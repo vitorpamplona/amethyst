@@ -32,6 +32,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.Event
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.cbor.ByteString
@@ -61,11 +63,11 @@ class Proof(
 )
 
 object CachedCashuProcessor {
-    val cashuCache = LruCache<String, GenericLoadable<List<CashuToken>>>(20)
+    val cashuCache = LruCache<String, GenericLoadable<ImmutableList<CashuToken>>>(20)
 
-    fun cached(token: String): GenericLoadable<List<CashuToken>> = cashuCache[token] ?: GenericLoadable.Loading()
+    fun cached(token: String): GenericLoadable<ImmutableList<CashuToken>> = cashuCache[token] ?: GenericLoadable.Loading()
 
-    fun parse(token: String): GenericLoadable<List<CashuToken>> {
+    fun parse(token: String): GenericLoadable<ImmutableList<CashuToken>> {
         if (cashuCache[token] !is GenericLoadable.Loaded) {
             checkNotInMainThread()
             val newCachuData = CashuProcessor().parse(token)
@@ -91,7 +93,7 @@ class CashuProcessor {
         val proofs: List<Proof>,
     )
 
-    fun parse(cashuToken: String): GenericLoadable<List<CashuToken>> {
+    fun parse(cashuToken: String): GenericLoadable<ImmutableList<CashuToken>> {
         checkNotInMainThread()
 
         if (cashuToken.startsWith("cashuA")) {
@@ -105,7 +107,7 @@ class CashuProcessor {
         return GenericLoadable.Error("Could not parse this cashu token")
     }
 
-    fun parseCashuA(cashuToken: String): GenericLoadable<List<CashuToken>> {
+    fun parseCashuA(cashuToken: String): GenericLoadable<ImmutableList<CashuToken>> {
         checkNotInMainThread()
 
         try {
@@ -129,10 +131,10 @@ class CashuProcessor {
                     CashuToken(cashuToken, mint, totalAmount, proofs)
                 }
 
-            return GenericLoadable.Loaded(converted)
+            return GenericLoadable.Loaded(converted.toImmutableList())
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            return GenericLoadable.Error<List<CashuToken>>("Could not parse this cashu token")
+            return GenericLoadable.Error("Could not parse this cashu token")
         }
     }
 
@@ -172,7 +174,7 @@ class CashuProcessor {
     )
 
     @OptIn(ExperimentalSerializationApi::class)
-    fun parseCashuB(cashuToken: String): GenericLoadable<List<CashuToken>> {
+    fun parseCashuB(cashuToken: String): GenericLoadable<ImmutableList<CashuToken>> {
         checkNotInMainThread()
 
         try {
@@ -205,7 +207,7 @@ class CashuProcessor {
                     CashuToken(cashuToken, mint, totalAmount, proofs)
                 }
 
-            return GenericLoadable.Loaded(converted)
+            return GenericLoadable.Loaded(converted.toImmutableList())
         } catch (e: Exception) {
             e.printStackTrace()
             if (e is CancellationException) throw e

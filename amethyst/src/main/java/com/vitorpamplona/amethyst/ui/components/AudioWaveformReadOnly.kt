@@ -40,7 +40,6 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
@@ -67,7 +66,6 @@ private const val DEFAULT_GRAPHICS_LAYER_ALPHA: Float = 0.99F
 @Composable
 fun AudioWaveformReadOnly(
     modifier: Modifier = Modifier,
-    style: DrawStyle = Fill,
     waveformBrush: Brush = SolidColor(Color.White),
     progressBrush: Brush = SolidColor(Color.Blue),
     waveformAlignment: WaveformAlignment = WaveformAlignment.Center,
@@ -131,7 +129,7 @@ fun AudioWaveformReadOnly(
                         height = amplitude,
                     ),
                 cornerRadius = CornerRadius(spikeRadiusState.toPx(), spikeRadiusState.toPx()),
-                style = style,
+                style = Fill,
             )
             drawRect(
                 brush = progressBrush,

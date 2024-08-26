@@ -1329,7 +1329,7 @@ fun ReactionChoicePopup(
         onDismissRequest = { onDismiss() },
     ) {
         ReactionChoicePopupContent(
-            reactions.toImmutableList(),
+            reactions,
             toRemove = toRemove,
             onClick = { reactionType ->
                 accountViewModel.reactToOrDelete(
@@ -1487,7 +1487,7 @@ fun ZapAmountChoicePopup(
 @Composable
 fun ZapAmountChoicePopup(
     baseNote: Note,
-    zapAmountChoices: List<Long>,
+    zapAmountChoices: ImmutableList<Long>,
     accountViewModel: AccountViewModel,
     popupYOffset: Dp,
     onDismiss: () -> Unit,

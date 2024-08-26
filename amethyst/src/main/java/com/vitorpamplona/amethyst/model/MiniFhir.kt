@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model
 
 import android.util.Log
+import androidx.compose.runtime.Stable
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.DeserializationFeature
@@ -40,11 +41,13 @@ import kotlinx.collections.immutable.toImmutableMap
     JsonSubTypes.Type(value = Bundle::class, name = "Bundle"),
     JsonSubTypes.Type(value = VisionPrescription::class, name = "VisionPrescription"),
 )
+@Stable
 open class Resource(
     var resourceType: String? = null,
     var id: String = "",
 )
 
+@Stable
 class Practitioner(
     resourceType: String? = null,
     id: String = "",
@@ -53,6 +56,7 @@ class Practitioner(
     var gender: String? = null,
 ) : Resource(resourceType, id)
 
+@Stable
 class Patient(
     resourceType: String? = null,
     id: String = "",
@@ -61,6 +65,7 @@ class Patient(
     var gender: String? = null,
 ) : Resource(resourceType, id)
 
+@Stable
 class HumanName(
     var use: String? = null,
     var family: String? = null,
@@ -69,6 +74,7 @@ class HumanName(
     fun assembleName(): String = given.joinToString(" ") + " " + family
 }
 
+@Stable
 class Bundle(
     resourceType: String? = null,
     id: String = "",
@@ -77,6 +83,7 @@ class Bundle(
     var entry: List<Resource> = arrayListOf(),
 ) : Resource(resourceType, id)
 
+@Stable
 class VisionPrescription(
     resourceType: String? = null,
     id: String = "",
@@ -89,6 +96,7 @@ class VisionPrescription(
     var lensSpecification: List<LensSpecification> = arrayListOf(),
 ) : Resource(resourceType, id)
 
+@Stable
 class LensSpecification(
     var eye: String? = null,
     var sphere: Double? = null,
@@ -105,6 +113,7 @@ class LensSpecification(
     var note: String? = null,
 )
 
+@Stable
 class Prism(
     var amount: Double? = null,
     var base: String? = null,
