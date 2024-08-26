@@ -33,7 +33,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -115,7 +114,7 @@ fun RenderCardFeed(
             }
             is CardFeedState.Loaded -> {
                 FeedLoaded(
-                    state = state,
+                    loaded = state,
                     listState = listState,
                     routeForLastRead = routeForLastRead,
                     accountViewModel = accountViewModel,
@@ -132,12 +131,14 @@ fun RenderCardFeed(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FeedLoaded(
-    state: CardFeedState.Loaded,
+    loaded: CardFeedState.Loaded,
     listState: LazyListState,
     routeForLastRead: String,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    val items by loaded.feed.collectAsStateWithLifecycle()
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = FeedPadding,
@@ -148,22 +149,15 @@ private fun FeedLoaded(
         }
 
         itemsIndexed(
-            items = state.feed.value,
+            items = items.list,
             key = { _, item -> item.id() },
             contentType = { _, item -> item.javaClass.simpleName },
         ) { _, item ->
-            val defaultModifier =
-                remember {
-                    Modifier
-                        .fillMaxWidth()
-                        .animateItemPlacement()
-                }
-
-            Row(defaultModifier) {
+            Row(Modifier.fillMaxWidth().animateItemPlacement()) {
                 RenderCardItem(
                     item,
                     routeForLastRead,
-                    showHidden = state.showHidden.value,
+                    showHidden = items.showHidden,
                     accountViewModel,
                     nav,
                 )

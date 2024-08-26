@@ -1238,16 +1238,26 @@ private fun DisplayAppRecommendations(
                 Column {
                     Text(stringRes(id = R.string.recommended_apps))
 
-                    FlowRow(
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(vertical = 5.dp),
-                    ) {
-                        state.feed.value.forEach { app -> WatchApp(app, nav) }
-                    }
+                    Recommends(state, nav)
                 }
             }
             else -> {}
         }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun Recommends(
+    loaded: FeedState.Loaded,
+    nav: (String) -> Unit,
+) {
+    val items by loaded.feed.collectAsStateWithLifecycle()
+    FlowRow(
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.padding(vertical = 5.dp),
+    ) {
+        items.list.forEach { app -> WatchApp(app, nav) }
     }
 }
 

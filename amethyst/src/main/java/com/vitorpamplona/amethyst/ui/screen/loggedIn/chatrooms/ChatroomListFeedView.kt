@@ -88,16 +88,18 @@ private fun CrossFadeState(
 
 @Composable
 private fun FeedLoaded(
-    state: FeedState.Loaded,
+    loaded: FeedState.Loaded,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
     markAsRead: MutableState<Boolean>,
 ) {
+    val items by loaded.feed.collectAsStateWithLifecycle()
+
     val listState = rememberLazyListState()
 
     LaunchedEffect(key1 = markAsRead.value) {
         if (markAsRead.value) {
-            accountViewModel.markAllAsRead(state.feed.value) { markAsRead.value = false }
+            accountViewModel.markAllAsRead(items.list) { markAsRead.value = false }
         }
     }
 
@@ -106,7 +108,7 @@ private fun FeedLoaded(
         state = listState,
     ) {
         itemsIndexed(
-            state.feed.value,
+            items.list,
             key = { index, item -> if (index == 0) index else item.idHex },
         ) { _, item ->
             Row(Modifier.fillMaxWidth()) {

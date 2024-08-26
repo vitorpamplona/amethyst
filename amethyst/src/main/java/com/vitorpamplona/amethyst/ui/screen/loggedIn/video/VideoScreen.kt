@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -42,7 +41,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -101,7 +99,6 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.VideoEvent
-import kotlinx.collections.immutable.ImmutableList
 
 @Composable
 fun VideoScreen(
@@ -183,28 +180,18 @@ fun RenderPage(
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 private fun LoadedState(
-    state: FeedState.Loaded,
+    loaded: FeedState.Loaded,
     pagerStateKey: String?,
     videoFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
-    val pagerState =
-        if (pagerStateKey != null) {
-            rememberForeverPagerState(pagerStateKey) { state.feed.value.size }
-        } else {
-            rememberPagerState { state.feed.value.size }
-        }
-
-    WatchScrollToTop(videoFeedContentState, pagerState)
-
     RefresheableBox(invalidateableContent = videoFeedContentState) {
         SlidingCarousel(
-            state.feed,
-            pagerState,
-            state.showHidden.value,
+            loaded,
+            pagerStateKey,
+            videoFeedContentState,
             accountViewModel,
             nav,
         )
@@ -214,25 +201,36 @@ private fun LoadedState(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SlidingCarousel(
-    feed: MutableState<ImmutableList<Note>>,
-    pagerState: PagerState,
-    showHidden: Boolean,
+    loaded: FeedState.Loaded,
+    pagerStateKey: String?,
+    videoFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    val items by loaded.feed.collectAsStateWithLifecycle()
+
+    val pagerState =
+        if (pagerStateKey != null) {
+            rememberForeverPagerState(pagerStateKey, items.list.size) { items.list.size }
+        } else {
+            rememberPagerState(items.list.size) { items.list.size }
+        }
+
+    WatchScrollToTop(videoFeedContentState, pagerState)
+
     VerticalPager(
         state = pagerState,
         beyondBoundsPageCount = 1,
         modifier = Modifier.fillMaxSize(),
-        key = { index -> feed.value.getOrNull(index)?.idHex ?: "$index" },
+        key = { index -> items.list.getOrNull(index)?.idHex ?: "$index" },
     ) { index ->
-        feed.value.getOrNull(index)?.let { note ->
+        items.list.getOrNull(index)?.let { note ->
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CheckHiddenFeedWatchBlockAndReport(
                     note = note,
                     modifier = Modifier.fillMaxWidth(),
                     showHiddenWarning = true,
-                    ignoreAllBlocksAndReports = showHidden,
+                    ignoreAllBlocksAndReports = items.showHidden,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 ) {

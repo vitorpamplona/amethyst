@@ -28,7 +28,9 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -37,24 +39,26 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FeedLoaded(
-    state: FeedState.Loaded,
+    loaded: FeedState.Loaded,
     listState: LazyListState,
     routeForLastRead: String?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    val items by loaded.feed.collectAsStateWithLifecycle()
+
     LazyColumn(
         contentPadding = FeedPadding,
         state = listState,
     ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
+        itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
             Row(Modifier.fillMaxWidth().animateItemPlacement()) {
                 NoteCompose(
                     item,
                     modifier = Modifier.fillMaxWidth(),
                     routeForLastRead = routeForLastRead,
                     isBoostedNote = false,
-                    isHiddenFeed = state.showHidden.value,
+                    isHiddenFeed = items.showHidden,
                     quotesLeft = 3,
                     accountViewModel = accountViewModel,
                     nav = nav,

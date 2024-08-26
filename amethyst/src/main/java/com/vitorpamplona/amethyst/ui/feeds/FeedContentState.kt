@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.feeds
 
 import android.util.Log
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -38,7 +37,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @Stable
@@ -79,7 +77,7 @@ class FeedContentState(
 
         val oldNotesState = _feedContent.value
         if (oldNotesState is FeedState.Loaded) {
-            if (!equalImmutableLists(notes, oldNotesState.feed.value)) {
+            if (!equalImmutableLists(notes, oldNotesState.feed.value.list)) {
                 updateFeed(notes)
             }
         } else {
@@ -88,21 +86,15 @@ class FeedContentState(
     }
 
     private fun updateFeed(notes: ImmutableList<Note>) {
-        viewModelScope.launch(Dispatchers.Main) {
-            val currentState = _feedContent.value
-            if (notes.isEmpty()) {
-                _feedContent.update { FeedState.Empty }
-            } else if (currentState is FeedState.Loaded) {
-                // updates the current list
-                if (currentState.showHidden.value != localFilter.showHiddenKey()) {
-                    currentState.showHidden.value = localFilter.showHiddenKey()
-                }
-                currentState.feed.value = notes
-            } else {
-                _feedContent.update {
-                    FeedState.Loaded(mutableStateOf(notes), mutableStateOf(localFilter.showHiddenKey()))
-                }
-            }
+        val currentState = _feedContent.value
+        if (notes.isEmpty()) {
+            _feedContent.tryEmit(FeedState.Empty)
+        } else if (currentState is FeedState.Loaded) {
+            currentState.feed.tryEmit(LoadedFeedState(notes, localFilter.showHiddenKey()))
+        } else {
+            _feedContent.tryEmit(
+                FeedState.Loaded(MutableStateFlow(LoadedFeedState(notes, localFilter.showHiddenKey()))),
+            )
         }
     }
 
@@ -118,11 +110,11 @@ class FeedContentState(
 
                 val oldList =
                     if (deletionEvents.isEmpty()) {
-                        oldNotesState.feed.value
+                        oldNotesState.feed.value.list
                     } else {
                         val deletedEventIds = deletionEvents.flatMapTo(HashSet()) { it.deleteEvents() }
                         val deletedEventAddresses = deletionEvents.flatMapTo(HashSet()) { it.deleteAddresses() }
-                        oldNotesState.feed.value
+                        oldNotesState.feed.value.list
                             .filter { !it.wasOrShouldBeDeletedBy(deletedEventIds, deletedEventAddresses) }
                             .toImmutableList()
                     }
@@ -132,7 +124,7 @@ class FeedContentState(
                         .updateListWith(oldList, newItems)
                         .distinctBy { it.idHex }
                         .toImmutableList()
-                if (!equalImmutableLists(newList, oldNotesState.feed.value)) {
+                if (!equalImmutableLists(newList, oldNotesState.feed.value.list)) {
                     updateFeed(newList)
                 }
             } else if (oldNotesState is FeedState.Empty) {

@@ -347,18 +347,20 @@ fun WatchAccountForDiscoveryScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DiscoverFeedLoaded(
-    state: FeedState.Loaded,
+    loaded: FeedState.Loaded,
     routeForLastRead: String?,
     listState: LazyListState,
     forceEventKind: Int?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    val items by loaded.feed.collectAsStateWithLifecycle()
+
     LazyColumn(
         contentPadding = FeedPadding,
         state = listState,
     ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
+        itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
             val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
 
             Row(defaultModifier) {
@@ -382,19 +384,21 @@ private fun DiscoverFeedLoaded(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DiscoverFeedColumnsLoaded(
-    state: FeedState.Loaded,
+    loaded: FeedState.Loaded,
     routeForLastRead: String?,
     listState: LazyGridState,
     forceEventKind: Int?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    val items by loaded.feed.collectAsStateWithLifecycle()
+
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         contentPadding = FeedPadding,
         state = listState,
     ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
+        itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
             val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
 
             Row(defaultModifier) {

@@ -20,16 +20,17 @@
  */
 package com.vitorpamplona.amethyst.ui.feeds
 
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.Note
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.flow.MutableStateFlow
 
+@Stable
 sealed class FeedState {
     object Loading : FeedState()
 
     class Loaded(
-        val feed: MutableState<ImmutableList<Note>>,
-        val showHidden: MutableState<Boolean>,
+        val feed: MutableStateFlow<LoadedFeedState<Note>>,
     ) : FeedState()
 
     object Empty : FeedState()
@@ -38,3 +39,9 @@ sealed class FeedState {
         val errorMessage: String,
     ) : FeedState()
 }
+
+@Stable
+class LoadedFeedState<T>(
+    val list: ImmutableList<T>,
+    val showHidden: Boolean,
+)

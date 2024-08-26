@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.mutableStateOf
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -34,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrderCard
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
+import com.vitorpamplona.amethyst.ui.feeds.LoadedFeedState
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
@@ -51,7 +51,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
@@ -109,13 +108,13 @@ class CardFeedContentState(
                 lastAccount = (localFilter as? NotificationFeedFilter)?.account
 
                 val updatedCards =
-                    (oldNotesState.feed.value + newCards)
+                    (oldNotesState.feed.value.list + newCards)
                         .distinctBy { it.id() }
                         .sortedWith(DefaultFeedOrderCard)
                         .take(localFilter.limit())
                         .toImmutableList()
 
-                if (!equalImmutableLists(oldNotesState.feed.value, updatedCards)) {
+                if (!equalImmutableLists(oldNotesState.feed.value.list, updatedCards)) {
                     updateFeed(updatedCards)
                 }
             }
@@ -291,21 +290,15 @@ class CardFeedContentState(
     }
 
     private fun updateFeed(notes: ImmutableList<Card>) {
-        viewModelScope.launch(Dispatchers.Main) {
-            val currentState = _feedContent.value
-
-            if (notes.isEmpty()) {
-                _feedContent.update { CardFeedState.Empty }
-            } else if (currentState is CardFeedState.Loaded) {
-                if (currentState.showHidden.value != localFilter.showHiddenKey()) {
-                    currentState.showHidden.value = localFilter.showHiddenKey()
-                }
-                currentState.feed.value = notes
-            } else {
-                _feedContent.update {
-                    CardFeedState.Loaded(mutableStateOf(notes), mutableStateOf(localFilter.showHiddenKey()))
-                }
-            }
+        val currentState = _feedContent.value
+        if (notes.isEmpty()) {
+            _feedContent.tryEmit(CardFeedState.Empty)
+        } else if (currentState is CardFeedState.Loaded) {
+            currentState.feed.tryEmit(LoadedFeedState(notes, localFilter.showHiddenKey()))
+        } else {
+            _feedContent.tryEmit(
+                CardFeedState.Loaded(MutableStateFlow(LoadedFeedState(notes, localFilter.showHiddenKey()))),
+            )
         }
     }
 
@@ -336,14 +329,14 @@ class CardFeedContentState(
                 lastAccount = (localFilter as? NotificationFeedFilter)?.account
 
                 val updatedCards =
-                    (oldNotesState.feed.value + newCards)
+                    (oldNotesState.feed.value.list + newCards)
                         .distinctBy { it.id() }
                         .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
                         .reversed()
                         .take(localFilter.limit())
                         .toImmutableList()
 
-                if (!equalImmutableLists(oldNotesState.feed.value, updatedCards)) {
+                if (!equalImmutableLists(oldNotesState.feed.value.list, updatedCards)) {
                     updateFeed(updatedCards)
                 }
             }

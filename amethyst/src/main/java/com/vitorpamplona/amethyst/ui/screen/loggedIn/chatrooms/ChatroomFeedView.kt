@@ -122,7 +122,7 @@ fun RenderChatroomFeedView(
 
 @Composable
 fun ChatroomFeedLoaded(
-    state: FeedState.Loaded,
+    loaded: FeedState.Loaded,
     accountViewModel: AccountViewModel,
     listState: LazyListState,
     nav: (String) -> Unit,
@@ -131,7 +131,9 @@ fun ChatroomFeedLoaded(
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: String? = null,
 ) {
-    LaunchedEffect(state.feed.value.firstOrNull()) {
+    val items by loaded.feed.collectAsStateWithLifecycle()
+
+    LaunchedEffect(items.list.firstOrNull()) {
         if (listState.firstVisibleItemIndex <= 1) {
             listState.animateScrollToItem(0)
         }
@@ -143,7 +145,7 @@ fun ChatroomFeedLoaded(
         reverseLayout = true,
         state = listState,
     ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
+        itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
             val noteEvent = item.event
             if (avoidDraft == null || noteEvent !is DraftEvent || noteEvent.dTag() != avoidDraft) {
                 ChatroomMessageCompose(

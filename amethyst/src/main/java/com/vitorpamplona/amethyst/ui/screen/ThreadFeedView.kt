@@ -69,6 +69,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -224,22 +225,24 @@ fun ThreadFeedView(
 @Composable
 fun RenderThreadFeed(
     noteId: String,
-    state: FeedState.Loaded,
+    loaded: FeedState.Loaded,
     listState: LazyListState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    val items by loaded.feed.collectAsStateWithLifecycle()
+
     LaunchedEffect(noteId) {
         // waits to load the thread to scroll to item.
         delay(100)
         val noteForPosition =
-            state.feed.value
+            items.list
                 .filter { it.idHex == noteId }
                 .firstOrNull()
-        var position = state.feed.value.indexOf(noteForPosition)
+        var position = items.list.indexOf(noteForPosition)
 
         if (position >= 0) {
-            if (position >= 1 && position < state.feed.value.size - 1) {
+            if (position >= 1 && position < items.list.size - 1) {
                 position-- // show the replying note
             }
 
@@ -251,7 +254,7 @@ fun RenderThreadFeed(
         contentPadding = FeedPadding,
         state = listState,
     ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { index, item ->
+        itemsIndexed(items.list, key = { _, item -> item.idHex }) { index, item ->
             if (index == 0) {
                 ProvideTextStyle(TextStyle(fontSize = 18.sp, lineHeight = 1.20.em)) {
                     NoteMaster(

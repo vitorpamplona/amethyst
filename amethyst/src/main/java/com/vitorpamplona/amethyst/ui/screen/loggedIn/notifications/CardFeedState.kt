@@ -21,15 +21,16 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
+import com.vitorpamplona.amethyst.ui.feeds.LoadedFeedState
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @Immutable
 abstract class Card {
@@ -119,8 +120,7 @@ sealed class CardFeedState {
 
     @Stable
     class Loaded(
-        val feed: MutableState<ImmutableList<Card>>,
-        val showHidden: MutableState<Boolean>,
+        val feed: MutableStateFlow<LoadedFeedState<Card>>,
     ) : CardFeedState()
 
     @Immutable object Empty : CardFeedState()

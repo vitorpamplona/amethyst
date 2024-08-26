@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteContainer
@@ -119,12 +120,14 @@ private fun RenderDraftListScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DraftFeedLoaded(
-    state: FeedState.Loaded,
+    loaded: FeedState.Loaded,
     listState: LazyListState,
     routeForLastRead: String?,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    val items by loaded.feed.collectAsStateWithLifecycle()
+
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
@@ -141,7 +144,7 @@ private fun DraftFeedLoaded(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        accountViewModel.delete(state.feed.value)
+                        accountViewModel.delete(items.list)
                         showDeleteDialog = false
                     },
                 ) {
@@ -177,7 +180,7 @@ private fun DraftFeedLoaded(
                 }
             }
         }
-        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
+        itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -196,7 +199,7 @@ private fun DraftFeedLoaded(
                         modifier = MaterialTheme.colorScheme.maxWidthWithBackground,
                         routeForLastRead = routeForLastRead,
                         isBoostedNote = false,
-                        isHiddenFeed = state.showHidden.value,
+                        isHiddenFeed = items.showHidden,
                         quotesLeft = 3,
                         accountViewModel = accountViewModel,
                         nav = nav,

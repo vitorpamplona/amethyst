@@ -40,7 +40,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -118,26 +117,21 @@ fun RenderGalleryFeed(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun GalleryFeedLoaded(
-    state: FeedState.Loaded,
+    loaded: FeedState.Loaded,
     routeForLastRead: String?,
     listState: LazyGridState,
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    val items by loaded.feed.collectAsStateWithLifecycle()
+
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         contentPadding = FeedPadding,
         state = listState,
     ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.idHex }) { _, item ->
-            val defaultModifier =
-                remember {
-                    Modifier
-                        .fillMaxWidth()
-                        .animateItemPlacement()
-                }
-
-            Row(defaultModifier) {
+        itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
+            Row(Modifier.fillMaxWidth().animateItemPlacement()) {
                 GalleryCardCompose(
                     baseNote = item,
                     routeForLastRead = routeForLastRead,
