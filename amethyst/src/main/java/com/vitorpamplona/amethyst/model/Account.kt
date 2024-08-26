@@ -583,15 +583,12 @@ class Account(
 
                         val commonRelaysToMe = authorWriteRelays.filter { it in defaultSet }
                         if (commonRelaysToMe.isNotEmpty()) {
-                            println("Assemble NIP65 Refined: $author ${commonRelaysToMe.joinToString(", ") { it }}")
                             event.pubKey to commonRelaysToMe
                         } else {
-                            println("Assemble NIP65 Default: $author ${defaultSet.size}")
                             event.pubKey to defaultRelayList
                         }
                     } else {
                         if (author != null) {
-                            println("Assemble NIP65 Default: $author ${defaultSet.size}")
                             author to defaultRelayList
                         } else {
                             Log.e("Account", "This author should NEVER be null. Note: ${it.idHex}")
