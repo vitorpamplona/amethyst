@@ -72,27 +72,34 @@ class GiftWrapEvent(
         onReady: (Event) -> Unit,
     ) = unwrap(signer, onReady)
 
+    fun unwrapThrowing(
+        signer: NostrSigner,
+        onReady: (Event) -> Unit,
+    ) {
+        plainContent(signer) { giftStr ->
+            val gift =
+                try {
+                    fromJson(giftStr)
+                } catch (e: Exception) {
+                    Log.w("GiftWrapEvent", "Couldn't Parse the content " + this.toNostrUri() + " " + giftStr)
+                    return@plainContent
+                }
+
+            if (gift is WrappedEvent) {
+                gift.host = HostStub(this.id, this.pubKey, this.kind)
+            }
+            innerEventId = gift.id
+
+            onReady(gift)
+        }
+    }
+
     fun unwrap(
         signer: NostrSigner,
         onReady: (Event) -> Unit,
     ) {
         try {
-            plainContent(signer) { giftStr ->
-                val gift =
-                    try {
-                        fromJson(giftStr)
-                    } catch (e: Exception) {
-                        Log.w("GiftWrapEvent", "Couldn't Parse the content " + this.toNostrUri() + " " + giftStr)
-                        return@plainContent
-                    }
-
-                if (gift is WrappedEvent) {
-                    gift.host = HostStub(this.id, this.pubKey, this.kind)
-                }
-                innerEventId = gift.id
-
-                onReady(gift)
-            }
+            unwrapThrowing(signer, onReady)
         } catch (e: Exception) {
             Log.w("GiftWrapEvent", "Couldn't Decrypt the content " + this.toNostrUri())
         }

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.crypto.nip44
 
-import android.util.Log
 import com.vitorpamplona.quartz.crypto.nip04.Nip04
 import com.vitorpamplona.quartz.events.Event
 import fr.acinq.secp256k1.Secp256k1
@@ -85,42 +84,41 @@ class Nip44(
         json: String,
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): String? =
-        try {
-            val info = Event.mapper.readValue(json, EncryptedInfoString::class.java)
+    ): String? {
+        val info = Event.mapper.readValue(json, EncryptedInfoString::class.java)
 
-            when (info.v) {
-                Nip04.EncryptedInfo.V -> {
-                    val encryptedInfo =
-                        Nip04.EncryptedInfo(
-                            ciphertext = Base64.getDecoder().decode(info.ciphertext),
-                            nonce = Base64.getDecoder().decode(info.nonce),
-                        )
-                    nip04.decrypt(encryptedInfo, privateKey, pubKey)
-                }
-                Nip44v1.EncryptedInfo.V -> {
-                    val encryptedInfo =
-                        Nip44v1.EncryptedInfo(
-                            ciphertext = Base64.getDecoder().decode(info.ciphertext),
-                            nonce = Base64.getDecoder().decode(info.nonce),
-                        )
-                    v1.decrypt(encryptedInfo, privateKey, pubKey)
-                }
-                Nip44v2.EncryptedInfo.V -> {
-                    val encryptedInfo =
-                        Nip44v2.EncryptedInfo(
-                            ciphertext = Base64.getDecoder().decode(info.ciphertext),
-                            nonce = Base64.getDecoder().decode(info.nonce),
-                            mac = Base64.getDecoder().decode(info.mac),
-                        )
-                    v2.decrypt(encryptedInfo, privateKey, pubKey)
-                }
-                else -> null
+        return when (info.v) {
+            Nip04.EncryptedInfo.V -> {
+                val encryptedInfo =
+                    Nip04.EncryptedInfo(
+                        ciphertext = Base64.getDecoder().decode(info.ciphertext),
+                        nonce = Base64.getDecoder().decode(info.nonce),
+                    )
+                nip04.decrypt(encryptedInfo, privateKey, pubKey)
             }
-        } catch (e: Exception) {
-            Log.e("CryptoUtils", "NIP44: Unable to find version and decrypt $json", e)
-            null
+
+            Nip44v1.EncryptedInfo.V -> {
+                val encryptedInfo =
+                    Nip44v1.EncryptedInfo(
+                        ciphertext = Base64.getDecoder().decode(info.ciphertext),
+                        nonce = Base64.getDecoder().decode(info.nonce),
+                    )
+                v1.decrypt(encryptedInfo, privateKey, pubKey)
+            }
+
+            Nip44v2.EncryptedInfo.V -> {
+                val encryptedInfo =
+                    Nip44v2.EncryptedInfo(
+                        ciphertext = Base64.getDecoder().decode(info.ciphertext),
+                        nonce = Base64.getDecoder().decode(info.nonce),
+                        mac = Base64.getDecoder().decode(info.mac),
+                    )
+                v2.decrypt(encryptedInfo, privateKey, pubKey)
+            }
+
+            else -> null
         }
+    }
 
     fun decryptNIP44FromBase64(
         payload: String,
@@ -129,18 +127,13 @@ class Nip44(
     ): String? {
         if (payload.isEmpty()) return null
 
-        return try {
-            val byteArray = Base64.getDecoder().decode(payload)
+        val byteArray = Base64.getDecoder().decode(payload)
 
-            when (byteArray[0].toInt()) {
-                Nip04.EncryptedInfo.V -> nip04.decrypt(payload, privateKey, pubKey)
-                Nip44v1.EncryptedInfo.V -> v1.decrypt(payload, privateKey, pubKey)
-                Nip44v2.EncryptedInfo.V -> v2.decrypt(payload, privateKey, pubKey)
-                else -> null
-            }
-        } catch (e: Exception) {
-            Log.e("CryptoUtils", "NIP44: Unable to find version and decrypt $payload", e)
-            null
+        return when (byteArray[0].toInt()) {
+            Nip04.EncryptedInfo.V -> nip04.decrypt(payload, privateKey, pubKey)
+            Nip44v1.EncryptedInfo.V -> v1.decrypt(payload, privateKey, pubKey)
+            Nip44v2.EncryptedInfo.V -> v2.decrypt(payload, privateKey, pubKey)
+            else -> null
         }
     }
 }
