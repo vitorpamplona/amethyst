@@ -102,7 +102,7 @@ fun AppNavigation(
 
                     HomeScreen(
                         newThreadsFeedState = accountViewModel.feedStates.homeNewThreads,
-                        repliesFeedState = accountViewModel.feedStates.homeNewThreads,
+                        repliesFeedState = accountViewModel.feedStates.homeReplies,
                         accountViewModel = accountViewModel,
                         nav = nav,
                         nip47 = nip47,
