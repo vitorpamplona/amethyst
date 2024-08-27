@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.model.DefaultDMRelayList
 import com.vitorpamplona.amethyst.model.DefaultNIP65List
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
+import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.crypto.CryptoUtils
@@ -53,7 +54,9 @@ import com.vitorpamplona.quartz.signers.NostrSignerSync
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
@@ -298,6 +301,15 @@ class AccountStateViewModel : ViewModel() {
             LocalPreferences.updatePrefsForLogin(accountSettings)
 
             startUI(accountSettings)
+
+            GlobalScope.launch(Dispatchers.IO) {
+                delay(2000) // waits for the new user to connect to the new relays.
+                accountSettings.backupUserMetadata?.let { Client.send(it) }
+                accountSettings.backupContactList?.let { Client.send(it) }
+                accountSettings.backupNIP65RelayList?.let { Client.send(it) }
+                accountSettings.backupDMRelayList?.let { Client.send(it) }
+                accountSettings.backupSearchRelayList?.let { Client.send(it) }
+            }
         }
     }
 
