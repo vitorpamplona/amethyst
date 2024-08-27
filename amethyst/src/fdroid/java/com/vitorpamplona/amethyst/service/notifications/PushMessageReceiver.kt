@@ -51,11 +51,13 @@ class PushMessageReceiver : MessagingReceiver() {
         message: ByteArray,
         instance: String,
     ) {
-        val messageStr = String(message)
-        Log.d(TAG, "New message ${message.decodeToString()} for Instance: $instance")
+        val messageStr = message.decodeToString()
+        Log.d(TAG, "New message $messageStr for Instance: $instance")
         scope.launch {
             try {
-                parseMessage(messageStr)?.let { receiveIfNew(it) }
+                parseMessage(messageStr)?.let {
+                    receiveIfNew(it)
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.d(TAG, "Message could not be parsed: ${e.message}")
