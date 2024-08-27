@@ -81,13 +81,15 @@ class ZapPaymentHandler(
                     val lud16 = note.author?.info?.lnAddress()
 
                     if (lud16.isNullOrBlank()) {
-                        onError(
-                            stringRes(context, R.string.missing_lud16),
-                            stringRes(
-                                context,
-                                R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats,
-                            ),
-                        )
+                        if (showErrorIfNoLnAddress) {
+                            onError(
+                                stringRes(context, R.string.missing_lud16),
+                                stringRes(
+                                    context,
+                                    R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats,
+                                ),
+                            )
+                        }
                         return@withContext
                     }
 
@@ -97,13 +99,15 @@ class ZapPaymentHandler(
                 val lud16 = note.author?.info?.lnAddress()
 
                 if (lud16.isNullOrBlank()) {
-                    onError(
-                        stringRes(context, R.string.missing_lud16),
-                        stringRes(
-                            context,
-                            R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats,
-                        ),
-                    )
+                    if (showErrorIfNoLnAddress) {
+                        onError(
+                            stringRes(context, R.string.missing_lud16),
+                            stringRes(
+                                context,
+                                R.string.user_does_not_have_a_lightning_address_setup_to_receive_sats,
+                            ),
+                        )
+                    }
                     return@withContext
                 }
 
