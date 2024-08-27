@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -71,7 +72,7 @@ import com.vitorpamplona.amethyst.ui.theme.ChatPaddingInnerQuoteModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatPaddingModifier
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
-import com.vitorpamplona.amethyst.ui.theme.HalfHalfTopPadding
+import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
@@ -332,7 +333,7 @@ fun ChatBubbleLayout(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = alignment,
-                            modifier = HalfHalfTopPadding.clickable(onClick = onAuthorClick),
+                            modifier = HalfHalfVertPadding.clickable(onClick = onAuthorClick),
                         ) {
                             drawAuthorLine()
                         }
@@ -389,7 +390,8 @@ private fun BubblePreview() {
                             modifier =
                                 Modifier
                                     .size(Size20dp)
-                                    .clip(CircleShape),
+                                    .clip(CircleShape)
+                                    .background(Color.LightGray),
                         )
                     },
                     name = {
