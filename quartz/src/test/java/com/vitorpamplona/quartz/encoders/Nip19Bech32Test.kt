@@ -92,6 +92,16 @@ class Nip19Bech32Test {
     }
 
     @Test()
+    fun uri_to_route_complete_nprofile_2() {
+        val actual = Nip19Bech32.uriToRoute("nostr:nprofile1qqsyvrp9u6p0mfur9dfdru3d853tx9mdjuhkphxuxgfwmryja7zsvhqpzamhxue69uhhv6t5daezumn0wd68yvfwvdhk6tcpz9mhxue69uhkummnw3ezuamfdejj7qgwwaehxw309ahx7uewd3hkctcscpyug")
+
+        Assert.assertNotNull(actual)
+        Assert.assertTrue(actual?.entity is Nip19Bech32.NProfile)
+        Assert.assertEquals("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c", (actual?.entity as? Nip19Bech32.NProfile)?.hex)
+        Assert.assertEquals("wss://vitor.nostr1.com/", (actual?.entity as? Nip19Bech32.NProfile)?.relay?.first())
+    }
+
+    @Test()
     fun uri_to_route_complete_nprofile() {
         val actual = Nip19Bech32.uriToRoute("nostr:nprofile1qy2hwumn8ghj7un9d3shjtnyv9kh2uewd9hj7qgwwaehxw309ahx7uewd3hkctcpr9mhxue69uhhyetvv9ujuumwdae8gtnnda3kjctv9uqzq9thu3vem5gvsc6f3l3uyz7c92h6lq56t9wws0zulzkrgc6nrvym5jfztf")
 

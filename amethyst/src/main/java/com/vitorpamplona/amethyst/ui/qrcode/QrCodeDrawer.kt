@@ -26,10 +26,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -46,13 +47,16 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import com.google.zxing.qrcode.encoder.ByteMatrix
 import com.google.zxing.qrcode.encoder.Encoder
 import com.google.zxing.qrcode.encoder.QRCode
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 
 const val QR_MARGIN_PX = 100f
 
 @Preview
 @Composable
 fun QrCodeDrawerPreview() {
-    QrCodeDrawer("Test QR data")
+    Box(Modifier.background(Color.Black).padding(10.dp)) {
+        QrCodeDrawer("Test QR data")
+    }
 }
 
 @Composable
@@ -62,19 +66,21 @@ fun QrCodeDrawer(
 ) {
     val qrCode = remember(contents) { createQrCode(contents = contents) }
 
-    val foregroundColor = MaterialTheme.colorScheme.onSurface
+    val foregroundColor = Color.Black
 
     Box(
         modifier =
             modifier
+                .clip(shape = QuoteBorder)
                 .defaultMinSize(48.dp, 48.dp)
                 .aspectRatio(1f)
-                .background(MaterialTheme.colorScheme.background),
+                .background(Color.White),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             // Calculate the height and width of each column/row
             val rowHeight = (size.width - QR_MARGIN_PX * 2f) / qrCode.matrix.height
             val columnWidth = (size.width - QR_MARGIN_PX * 2f) / qrCode.matrix.width
+            val radius = CornerRadius(20f)
 
             // Draw all of the finder patterns required by the QR spec. Calculate the ratio
             // of the number of rows/columns to the width and height
@@ -86,6 +92,7 @@ fun QrCodeDrawer(
                         height = rowHeight * FINDER_PATTERN_ROW_COUNT,
                     ),
                 color = foregroundColor,
+                cornerRadius = radius,
             )
 
             // Draw data bits (encoded data part)
@@ -162,6 +169,7 @@ fun DrawScope.drawAllQrCodeDataBits(
                 ),
         ),
     ).forEach { section ->
+        val newSize = Size(size.width + 0.5f, size.height + 0.5f)
         for (y in section.first.second until section.second.second) {
             for (x in section.first.first until section.second.first) {
                 if (bytes[x, y] == 1.toByte()) {
@@ -177,7 +185,7 @@ fun DrawScope.drawAllQrCodeDataBits(
                                                     x = QR_MARGIN_PX + x * size.width,
                                                     y = QR_MARGIN_PX + y * size.height,
                                                 ),
-                                            size = size,
+                                            size = newSize,
                                         ),
                                 )
                             },
@@ -191,7 +199,7 @@ fun DrawScope.drawAllQrCodeDataBits(
 const val FINDER_PATTERN_ROW_COUNT = 7
 private const val INTERIOR_EXTERIOR_SHAPE_RATIO = 3f / FINDER_PATTERN_ROW_COUNT
 private const val INTERIOR_EXTERIOR_OFFSET_RATIO = 2f / FINDER_PATTERN_ROW_COUNT
-private const val INTERIOR_EXTERIOR_SHAPE_CORNER_RADIUS = 0.12f
+private const val INTERIOR_EXTERIOR_SHAPE_CORNER_RADIUS = 0.50f
 private const val INTERIOR_BACKGROUND_EXTERIOR_SHAPE_RATIO = 5f / FINDER_PATTERN_ROW_COUNT
 private const val INTERIOR_BACKGROUND_EXTERIOR_OFFSET_RATIO = 1f / FINDER_PATTERN_ROW_COUNT
 private const val INTERIOR_BACKGROUND_EXTERIOR_SHAPE_CORNER_RADIUS = 0.5f
@@ -206,6 +214,7 @@ private const val INTERIOR_BACKGROUND_EXTERIOR_SHAPE_CORNER_RADIUS = 0.5f
 internal fun DrawScope.drawQrCodeFinders(
     sideLength: Float,
     finderPatternSize: Size,
+    cornerRadius: CornerRadius,
     color: Color,
 ) {
     setOf(
@@ -219,7 +228,7 @@ internal fun DrawScope.drawQrCodeFinders(
         drawQrCodeFinder(
             topLeft = offset,
             finderPatternSize = finderPatternSize,
-            cornerRadius = CornerRadius.Zero,
+            cornerRadius = cornerRadius,
             color = color,
         )
     }

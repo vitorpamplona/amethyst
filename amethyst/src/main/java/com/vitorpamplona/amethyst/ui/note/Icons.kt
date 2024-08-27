@@ -108,11 +108,11 @@ fun FollowingIcon(modifier: Modifier) {
 }
 
 @Composable
-fun ArrowBackIcon() {
+fun ArrowBackIcon(tint: Color = MaterialTheme.colorScheme.grayText) {
     Icon(
         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
         contentDescription = stringRes(R.string.back),
-        tint = MaterialTheme.colorScheme.grayText,
+        tint = tint,
     )
 }
 

@@ -31,8 +31,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -54,14 +54,16 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNIP05
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.nip05VerificationAsAState
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.events.UserMetadata
 
@@ -88,6 +90,15 @@ fun ShowQRDialogPreview() {
 }
 
 @Composable
+fun BackButton(onPress: () -> Unit) {
+    IconButton(
+        onClick = onPress,
+    ) {
+        ArrowBackIcon(MaterialTheme.colorScheme.onBackground)
+    }
+}
+
+@Composable
 fun ShowQRDialog(
     user: User,
     accountViewModel: AccountViewModel,
@@ -107,7 +118,7 @@ fun ShowQRDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    CloseButton(onPress = onClose)
+                    BackButton(onPress = onClose)
                 }
 
                 Column(
@@ -126,23 +137,23 @@ fun ShowQRDialog(
                                     contentDescription = stringRes(R.string.profile_image),
                                     modifier =
                                         Modifier
-                                            .width(100.dp)
-                                            .height(100.dp)
+                                            .width(120.dp)
+                                            .height(120.dp)
                                             .clip(shape = CircleShape)
-                                            .border(3.dp, MaterialTheme.colorScheme.background, CircleShape),
+                                            .border(3.dp, MaterialTheme.colorScheme.onBackground, CircleShape),
                                     loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
                                     loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                                 )
                             }
                             Row(
                                 horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
+                                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                             ) {
                                 CreateTextWithEmoji(
                                     text = user.info?.bestName() ?: "",
                                     tags = user.info?.tags,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp,
+                                    fontSize = 20.sp,
                                 )
                             }
 
@@ -160,7 +171,7 @@ fun ShowQRDialog(
                                 } else {
                                     Text(
                                         text = user.pubkeyDisplayHex(),
-                                        fontSize = 14.sp,
+                                        fontSize = Font14SP,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
@@ -170,20 +181,16 @@ fun ShowQRDialog(
 
                         Row(
                             horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = Size35dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = Size10dp),
                         ) {
                             QrCodeDrawer(user.toNostrUri())
                         }
 
                         Row(modifier = Modifier.padding(horizontal = 30.dp)) {
-                            Button(
+                            FilledTonalButton(
                                 onClick = { presenting = false },
                                 shape = RoundedCornerShape(Size35dp),
                                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                    ),
                             ) {
                                 Text(text = stringRes(R.string.scan_qr))
                             }
