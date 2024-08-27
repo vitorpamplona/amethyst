@@ -466,7 +466,6 @@ class UserLiveSet(
     val innerRelayInfo = UserBundledRefresherLiveData(u)
     val innerZaps = UserBundledRefresherLiveData(u)
     val innerBookmarks = UserBundledRefresherLiveData(u)
-    val innerGallery = UserBundledRefresherLiveData(u)
     val innerStatuses = UserBundledRefresherLiveData(u)
 
     // UI Observers line up here.
@@ -479,7 +478,6 @@ class UserLiveSet(
     val relayInfo = innerRelayInfo.map { it }
     val zaps = innerZaps.map { it }
     val bookmarks = innerBookmarks.map { it }
-    val gallery = innerGallery.map { it }
     val statuses = innerStatuses.map { it }
 
     val profilePictureChanges = innerMetadata.map { it.user.profilePicture() }.distinctUntilChanged()
@@ -498,7 +496,6 @@ class UserLiveSet(
             relayInfo.hasObservers() ||
             zaps.hasObservers() ||
             bookmarks.hasObservers() ||
-            gallery.hasObservers() ||
             statuses.hasObservers() ||
             profilePictureChanges.hasObservers() ||
             nip05Changes.hasObservers() ||
@@ -514,7 +511,6 @@ class UserLiveSet(
         innerRelayInfo.destroy()
         innerZaps.destroy()
         innerBookmarks.destroy()
-        innerGallery.destroy()
         innerStatuses.destroy()
     }
 }
