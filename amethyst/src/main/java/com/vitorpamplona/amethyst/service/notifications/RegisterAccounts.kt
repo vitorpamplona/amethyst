@@ -160,6 +160,7 @@ class RegisterAccounts(
             val client = HttpClientManager.getHttpClient()
 
             val isSucess = client.newCall(request).execute().use { it.isSuccessful }
+            Log.i(tag, "Server registration $isSucess")
         } catch (e: java.lang.Exception) {
             if (e is CancellationException) throw e
             Log.e(tag, "Unable to register with push server", e)

@@ -44,12 +44,17 @@ import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.math.BigDecimal
+import kotlin.coroutines.cancellation.CancellationException
 
 class EventNotificationConsumer(
     private val applicationContext: Context,
 ) {
+    companion object {
+        const val TAG = "EventNotificationConsumer"
+    }
+
     suspend fun consume(event: GiftWrapEvent) {
-        Log.d("EventNotificationConsumer", "New Notification Arrived")
+        Log.d(TAG, "New Notification Arrived")
         if (!LocalCache.justVerify(event)) return
         if (!notificationManager().areNotificationsEnabled()) return
 
@@ -57,14 +62,15 @@ class EventNotificationConsumer(
         // Test with all logged in accounts
         var matchAccount = false
         LocalPreferences.allSavedAccounts().forEach {
-            if (!matchAccount && it.hasPrivKey || it.loggedInWithExternalSigner) {
+            if (!matchAccount && (it.hasPrivKey || it.loggedInWithExternalSigner)) {
                 LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)?.let { acc ->
-                    Log.d("EventNotificationConsumer", "New Notification Testing if for ${it.npub}")
+                    Log.d(TAG, "New Notification Testing if for ${it.npub}")
                     try {
                         consumeIfMatchesAccount(event, acc)
                         matchAccount = true
                     } catch (e: Exception) {
-                        // Not for this account.
+                        if (e is CancellationException) throw e
+                        Log.d(TAG, "Message was not for user ${it.npub}: ${e.message}")
                     }
                 }
             }
@@ -79,26 +85,23 @@ class EventNotificationConsumer(
         // Right now it only registers if Amber has already approved this signature
         val signer = account.createSigner()
 
-        pushWrappedEvent.unwrap(signer) { notificationEvent ->
+        pushWrappedEvent.unwrapThrowing(signer) { notificationEvent ->
             val consumed = LocalCache.hasConsumed(notificationEvent)
             val verified = LocalCache.justVerify(notificationEvent)
-            Log.d("EventNotificationConsumer", "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${signer.pubKey} consumed= $consumed && verified= $verified")
+            Log.d(TAG, "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${signer.pubKey} consumed= $consumed && verified= $verified")
             if (!consumed && verified) {
-                Log.d("EventNotificationConsumer", "New Notification was verified")
+                Log.d(TAG, "New Notification was verified")
                 unwrapAndConsume(notificationEvent, signer) { innerEvent ->
-
-                    Log.d("EventNotificationConsumer", "Unwrapped consume $consumed ${innerEvent.javaClass.simpleName}")
-                    if (!consumed) {
-                        if (innerEvent is PrivateDmEvent) {
-                            Log.d("EventNotificationConsumer", "New Nip-04 DM to Notify")
-                            notify(innerEvent, signer, account)
-                        } else if (innerEvent is LnZapEvent) {
-                            Log.d("EventNotificationConsumer", "New Zap to Notify")
-                            notify(innerEvent, signer, account)
-                        } else if (innerEvent is ChatMessageEvent) {
-                            Log.d("EventNotificationConsumer", "New ChatMessage to Notify")
-                            notify(innerEvent, signer, account)
-                        }
+                    Log.d(TAG, "Unwrapped consume $consumed ${innerEvent.javaClass.simpleName}")
+                    if (innerEvent is PrivateDmEvent) {
+                        Log.d(TAG, "New Nip-04 DM to Notify")
+                        notify(innerEvent, signer, account)
+                    } else if (innerEvent is LnZapEvent) {
+                        Log.d(TAG, "New Zap to Notify")
+                        notify(innerEvent, signer, account)
+                    } else if (innerEvent is ChatMessageEvent) {
+                        Log.d(TAG, "New ChatMessage to Notify")
+                        notify(innerEvent, signer, account)
                     }
                 }
             }
@@ -147,6 +150,7 @@ class EventNotificationConsumer(
             // old event being re-broadcasted
             event.pubKey != signer.pubKey
         ) { // from the user
+            Log.d(TAG, "Notifying")
             val myUser = LocalCache.getUserIfExists(signer.pubKey) ?: return
             val chatNote = LocalCache.getNoteIfExists(event.id) ?: return
             val chatRoom = event.chatroomKey(signer.pubKey)
@@ -251,41 +255,41 @@ class EventNotificationConsumer(
         signer: NostrSigner,
         acc: AccountSettings,
     ) {
-        Log.d("EventNotificationConsumer", "Notify Start ${event.toNostrUri()}")
+        Log.d(TAG, "Notify Start ${event.toNostrUri()}")
         val noteZapEvent = LocalCache.getNoteIfExists(event.id) ?: return
 
-        Log.d("EventNotificationConsumer", "Notify Not Notified Yet")
+        Log.d(TAG, "Notify Not Notified Yet")
 
         // old event being re-broadcast
         if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
 
-        Log.d("EventNotificationConsumer", "Notify Not an old event")
+        Log.d(TAG, "Notify Not an old event")
 
         val noteZapRequest = event.zapRequest?.id?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
         val noteZapped =
             event.zappedPost().firstOrNull()?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
 
-        Log.d("EventNotificationConsumer", "Notify ZapRequest $noteZapRequest zapped $noteZapped")
+        Log.d(TAG, "Notify ZapRequest $noteZapRequest zapped $noteZapped")
 
         if ((event.amount ?: BigDecimal.ZERO) < BigDecimal.TEN) return
 
-        Log.d("EventNotificationConsumer", "Notify Amount Bigger than 10")
+        Log.d(TAG, "Notify Amount Bigger than 10")
 
         if (event.isTaggedUser(signer.pubKey)) {
             val amount = showAmount(event.amount)
 
-            Log.d("EventNotificationConsumer", "Notify Amount $amount")
+            Log.d(TAG, "Notify Amount $amount")
 
             (noteZapRequest.event as? LnZapRequestEvent)?.let { event ->
                 decryptZapContentAuthor(noteZapRequest, signer) {
-                    Log.d("EventNotificationConsumer", "Notify Decrypted if Private Zap ${event.id}")
+                    Log.d(TAG, "Notify Decrypted if Private Zap ${event.id}")
 
                     val author = LocalCache.getOrCreateUser(it.pubKey)
                     val senderInfo = Pair(author, it.content.ifBlank { null })
 
                     if (noteZapped.event?.content() != null) {
                         decryptContent(noteZapped, signer) {
-                            Log.d("EventNotificationConsumer", "Notify Decrypted if Private Note")
+                            Log.d(TAG, "Notify Decrypted if Private Note")
 
                             val zappedContent = it.split("\n").get(0)
 
@@ -311,7 +315,7 @@ class EventNotificationConsumer(
                             val userPicture = senderInfo.first.profilePicture()
                             val noteUri = "nostr:Notifications"
 
-                            Log.d("EventNotificationConsumer", "Notify ${event.id} $content $title $noteUri")
+                            Log.d(TAG, "Notify ${event.id} $content $title $noteUri")
 
                             notificationManager()
                                 .sendZapNotification(
@@ -326,7 +330,7 @@ class EventNotificationConsumer(
                         }
                     } else {
                         // doesn't have a base note to refer to.
-                        Log.d("EventNotificationConsumer", "Notify Zapped note not available")
+                        Log.d(TAG, "Notify Zapped note not available")
 
                         val user = senderInfo.first.toBestDisplayName()
                         var title = stringRes(applicationContext, R.string.app_notification_zaps_channel_message, amount)
@@ -342,7 +346,7 @@ class EventNotificationConsumer(
                         val userPicture = senderInfo.first.profilePicture()
                         val noteUri = "nostr:Notifications"
 
-                        Log.d("EventNotificationConsumer", "Notify ${event.id} $content $title $noteUri")
+                        Log.d(TAG, "Notify ${event.id} $content $title $noteUri")
 
                         notificationManager()
                             .sendZapNotification(
