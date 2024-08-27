@@ -115,7 +115,7 @@ class PushMessageReceiver : MessagingReceiver() {
         context: Context,
         instance: String,
     ) {
-        val removedEndpoint = pushHandler.endpoint
+        val removedEndpoint = pushHandler.getSavedEndpoint()
         Log.d(TAG, "Endpoint: $removedEndpoint removed for Instance: $instance")
         Log.d(TAG, "App is unregistered. ")
         pushHandler.forceRemoveDistributor(context)
