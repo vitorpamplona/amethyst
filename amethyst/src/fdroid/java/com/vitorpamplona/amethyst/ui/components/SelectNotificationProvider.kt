@@ -150,9 +150,6 @@ fun SelectNotificationProvider(sharedPreferencesViewModel: SharedPreferencesView
                         )
                     }
                 }
-            } else {
-                val currentDistributor = PushDistributorHandler.getSavedDistributor()
-                PushDistributorHandler.saveDistributor(currentDistributor)
             }
         }
     }

@@ -34,6 +34,9 @@ object PushNotificationUtils {
         }
         try {
             if (pushHandler.savedDistributorExists()) {
+                val currentDistributor = PushDistributorHandler.getSavedDistributor()
+                PushDistributorHandler.saveDistributor(currentDistributor)
+
                 RegisterAccounts(accounts).go(pushHandler.getSavedEndpoint())
             }
         } catch (e: Exception) {
