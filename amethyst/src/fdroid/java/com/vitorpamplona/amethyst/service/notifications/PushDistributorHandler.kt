@@ -42,9 +42,8 @@ object PushDistributorHandler : PushDistributorActions {
     private val unifiedPush: UnifiedPush = UnifiedPush
 
     private var endpointInternal = ""
-    val endpoint = endpointInternal
 
-    fun getSavedEndpoint() = endpoint
+    fun getSavedEndpoint() = endpointInternal
 
     fun setEndpoint(newEndpoint: String) {
         endpointInternal = newEndpoint
