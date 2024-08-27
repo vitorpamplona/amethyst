@@ -93,16 +93,6 @@ class PushMessageReceiver : MessagingReceiver() {
         }
     }
 
-    override fun onReceive(
-        context: Context,
-        intent: Intent,
-    ) {
-        val intentData = intent.dataString
-        val intentAction = intent.action.toString()
-        Log.d(TAG, "Intent Data:- $intentData Intent Action: $intentAction")
-        super.onReceive(context, intent)
-    }
-
     override fun onRegistrationFailed(
         context: Context,
         instance: String,
