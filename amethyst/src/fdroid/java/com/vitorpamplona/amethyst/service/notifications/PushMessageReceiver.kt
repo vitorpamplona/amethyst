@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.service.notifications
 
 import android.app.NotificationManager
 import android.content.Context
-import android.content.Intent
 import android.util.Log
 import android.util.LruCache
 import androidx.core.content.ContextCompat
@@ -83,13 +82,17 @@ class PushMessageReceiver : MessagingReceiver() {
         endpoint: String,
         instance: String,
     ) {
-        Log.d(TAG, "New endpoint provided:- $endpoint for Instance: $instance")
         val sanitizedEndpoint = endpoint.dropLast(5)
-        pushHandler.setEndpoint(sanitizedEndpoint)
-        scope.launch(Dispatchers.IO) {
-            RegisterAccounts(LocalPreferences.allSavedAccounts()).go(sanitizedEndpoint)
-            notificationManager().getOrCreateZapChannel(appContext)
-            notificationManager().getOrCreateDMChannel(appContext)
+        if (sanitizedEndpoint != pushHandler.getSavedEndpoint()) {
+            Log.d(TAG, "New endpoint provided:- $endpoint for Instance: $instance ${pushHandler.getSavedEndpoint()} $sanitizedEndpoint")
+            pushHandler.setEndpoint(sanitizedEndpoint)
+            scope.launch(Dispatchers.IO) {
+                RegisterAccounts(LocalPreferences.allSavedAccounts()).go(sanitizedEndpoint)
+                notificationManager().getOrCreateZapChannel(appContext)
+                notificationManager().getOrCreateDMChannel(appContext)
+            }
+        } else {
+            Log.d(TAG, "Same endpoint provided:- $endpoint for Instance: $instance $sanitizedEndpoint")
         }
     }
 
