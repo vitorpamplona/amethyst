@@ -509,6 +509,7 @@
     <string name="reply_description">الرد</string>
     <string name="like_description">إعجاب</string>
     <string name="change_reaction">تغيير ردود الفعل السريعة</string>
+    <string name="edit_post">تعديل المنشور</string>
     <string name="accessibility_scan_qr_code">مسح رمز ال QR</string>
     <string name="dvm_looking_for_app">البحث عن تطبيق</string>
     <string name="and_more">"... و %1$s اكثر"</string>
