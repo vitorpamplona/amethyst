@@ -93,11 +93,8 @@ import com.vitorpamplona.amethyst.ui.actions.ServerOption
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
-import com.vitorpamplona.amethyst.ui.note.DisplayRoomSubject
-import com.vitorpamplona.amethyst.ui.note.DisplayUserSetAsSubject
 import com.vitorpamplona.amethyst.ui.note.IncognitoIconOff
 import com.vitorpamplona.amethyst.ui.note.IncognitoIconOn
-import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.ui.note.UserCompose

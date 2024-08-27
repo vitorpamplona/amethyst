@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -63,6 +63,20 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.note.DisplayDraftChat
+import com.vitorpamplona.amethyst.ui.note.FollowingIcon
+import com.vitorpamplona.amethyst.ui.note.InnerUserPicture
+import com.vitorpamplona.amethyst.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
+import com.vitorpamplona.amethyst.ui.note.NoteQuickActionMenu
+import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
+import com.vitorpamplona.amethyst.ui.note.RelayBadgesHorizontal
+import com.vitorpamplona.amethyst.ui.note.ReplyReaction
+import com.vitorpamplona.amethyst.ui.note.WatchBlockAndReport
+import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
+import com.vitorpamplona.amethyst.ui.note.WatchUserFollows
+import com.vitorpamplona.amethyst.ui.note.ZapReaction
+import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleMaxSizeModifier

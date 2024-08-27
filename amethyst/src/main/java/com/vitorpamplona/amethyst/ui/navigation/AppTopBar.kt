@@ -100,7 +100,6 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.LoadCityName
-import com.vitorpamplona.amethyst.ui.note.LoadUser
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
@@ -124,6 +123,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagActionOptions
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LoadRoom
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LoadRoomByAuthor
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LongChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LongRoomHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.RoomNameOnlyDisplay
