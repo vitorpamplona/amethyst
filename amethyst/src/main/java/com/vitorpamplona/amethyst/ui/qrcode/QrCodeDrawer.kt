@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -62,14 +61,14 @@ fun QrCodeDrawer(
 ) {
     val qrCode = remember(contents) { createQrCode(contents = contents) }
 
-    val foregroundColor = MaterialTheme.colorScheme.onSurface
+    val foregroundColor = Color.Black
 
     Box(
         modifier =
             modifier
                 .defaultMinSize(48.dp, 48.dp)
                 .aspectRatio(1f)
-                .background(MaterialTheme.colorScheme.background),
+                .background(Color.White),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             // Calculate the height and width of each column/row
