@@ -135,6 +135,7 @@ fun RelayInformationDialog(
                                 iconUrl = relayInfo.icon ?: relayBriefInfo.favIcon,
                                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
                                 loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                                RelayStats.get(url = relayBriefInfo.url).pingInMs,
                                 iconModifier = MaterialTheme.colorScheme.largeRelayIconModifier,
                             )
                         }
