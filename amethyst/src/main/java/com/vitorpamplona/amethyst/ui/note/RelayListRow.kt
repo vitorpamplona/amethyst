@@ -20,14 +20,18 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +40,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
@@ -54,6 +62,8 @@ import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.relayIconModifier
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
+import com.vitorpamplona.ammolite.relays.RelayStats
+import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 
 @Composable
 public fun RelayBadgesHorizontal(
@@ -192,13 +202,43 @@ fun RenderRelayIcon(
     loadRobohash: Boolean,
     iconModifier: Modifier = MaterialTheme.colorScheme.relayIconModifier,
 ) {
-    RobohashFallbackAsyncImage(
-        robot = displayUrl,
-        model = iconUrl,
-        contentDescription = stringRes(id = R.string.relay_info, displayUrl),
-        colorFilter = RelayIconFilter,
-        modifier = iconModifier,
-        loadProfilePicture = loadProfilePicture,
-        loadRobohash = loadRobohash,
-    )
+    Box(
+        contentAlignment = Alignment.TopEnd,
+    ) {
+        RobohashFallbackAsyncImage(
+            robot = displayUrl,
+            model = iconUrl,
+            contentDescription = stringRes(id = R.string.relay_info, displayUrl),
+            colorFilter = RelayIconFilter,
+            modifier = iconModifier,
+            loadProfilePicture = loadProfilePicture,
+            loadRobohash = loadRobohash,
+        )
+
+        Box(
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        Color.Gray,
+                    ),
+        ) {
+            val pingInMs = RelayStats.get(RelayUrlFormatter.normalize(displayUrl)).pingInMs
+            Text(
+                modifier = Modifier.padding(4.dp),
+                style =
+                    TextStyle(
+                        color =
+                            if (pingInMs <= 150) {
+                                Color.Green
+                            } else if (pingInMs <= 300) {
+                                Color.Yellow
+                            } else {
+                                Color.Red
+                            },
+                    ),
+                text = "$pingInMs",
+            )
+        }
+    }
 }
