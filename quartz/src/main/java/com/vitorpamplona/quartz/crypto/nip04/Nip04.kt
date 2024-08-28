@@ -154,6 +154,7 @@ class Nip04(
 
             fun isNIP04(encoded: String): Boolean {
                 val l = encoded.length
+                if (l < 28) return false
                 return encoded[l - 28] == '?' && encoded[l - 27] == 'i' && encoded[l - 26] == 'v' && encoded[l - 25] == '='
             }
 
