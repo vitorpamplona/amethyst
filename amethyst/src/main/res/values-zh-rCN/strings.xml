@@ -815,4 +815,8 @@
     <string name="delete_all_drafts_confirmation">确定要删除所有草稿吗？</string>
     <string name="and_more">" ... 和 %1$s 更多"</string>
     <string name="stack">堆叠：</string>
+    <string name="torrent_file">Torrent 文件</string>
+    <string name="torrent_download">下载</string>
+    <string name="torrent_failure">打开文件失败</string>
+    <string name="torrent_no_apps">没有用于打开和下载文件的 Torrent 客户端</string>
 </resources>
