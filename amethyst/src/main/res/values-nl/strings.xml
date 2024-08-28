@@ -38,6 +38,9 @@
     <string name="report_explicit_content">Rapporteer expliciete inhoud</string>
     <string name="report_illegal_behaviour">Rapporteer illegaal gedrag</string>
     <string name="report_malware">Rapporteer malware</string>
+    <string name="report_mod">Rapporteer mod</string>
+    <string name="malware">Malware</string>
+    <string name="mod">Mod</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Je gebruikt een publieke sleutel en publieke sleutels zijn alleen-lezen. Login met een geheime sleutel om te reageren</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Je gebruikt een publieke sleutel en publieke sleutels zijn alleen-lezen. Login met een geheime sleutel om berichten te boosten</string>
     <string name="login_with_a_private_key_to_like_posts">Je gebruikt een publieke sleutel en publieke sleutels zijn alleen-lezen. Login met een geheime sleutel om berichten te liken</string>
@@ -812,4 +815,8 @@
     <string name="delete_all_drafts_confirmation">Weet u zeker dat u alle concepten wilt verwijderen?</string>
     <string name="and_more">" … en %1$s meer"</string>
     <string name="stack">Stack:</string>
+    <string name="torrent_file">Torrent-bestand</string>
+    <string name="torrent_download">Downloaden</string>
+    <string name="torrent_failure">Kon bestand niet openen</string>
+    <string name="torrent_no_apps">Geen torrent apps geïnstalleerd om het bestand te openen en te downloaden.</string>
 </resources>
