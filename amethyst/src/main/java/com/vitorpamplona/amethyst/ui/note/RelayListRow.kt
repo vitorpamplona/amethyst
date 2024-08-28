@@ -62,8 +62,6 @@ import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.relayIconModifier
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
-import com.vitorpamplona.ammolite.relays.RelayStats
-import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 
 @Composable
 public fun RelayBadgesHorizontal(
@@ -189,6 +187,7 @@ fun RenderRelay(
             displayUrl = relay.displayUrl,
             iconUrl = relayInfo?.icon ?: relay.favIcon,
             loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+            pingInMs = 0,
             loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         )
     }
@@ -200,6 +199,7 @@ fun RenderRelayIcon(
     iconUrl: String?,
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
+    pingInMs: Long,
     iconModifier: Modifier = MaterialTheme.colorScheme.relayIconModifier,
 ) {
     Box(
@@ -214,31 +214,31 @@ fun RenderRelayIcon(
             loadProfilePicture = loadProfilePicture,
             loadRobohash = loadRobohash,
         )
-
-        Box(
-            modifier =
-                Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        Color.Gray,
-                    ),
-        ) {
-            val pingInMs = RelayStats.get(RelayUrlFormatter.normalize(displayUrl)).pingInMs
-            Text(
-                modifier = Modifier.padding(4.dp),
-                style =
-                    TextStyle(
-                        color =
-                            if (pingInMs <= 150) {
-                                Color.Green
-                            } else if (pingInMs <= 300) {
-                                Color.Yellow
-                            } else {
-                                Color.Red
-                            },
-                    ),
-                text = "$pingInMs",
-            )
+        if (pingInMs > 0) {
+            Box(
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            Color.Gray,
+                        ),
+            ) {
+                Text(
+                    modifier = Modifier.padding(4.dp),
+                    style =
+                        TextStyle(
+                            color =
+                                if (pingInMs <= 150) {
+                                    Color.Green
+                                } else if (pingInMs <= 300) {
+                                    Color.Yellow
+                                } else {
+                                    Color.Red
+                                },
+                        ),
+                    text = "$pingInMs",
+                )
+            }
         }
     }
 }

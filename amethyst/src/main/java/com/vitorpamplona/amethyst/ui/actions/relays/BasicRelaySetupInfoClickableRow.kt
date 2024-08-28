@@ -65,6 +65,7 @@ fun BasicRelaySetupInfoClickableRow(
                 iconUrlFromRelayInfoDoc ?: item.briefInfo.favIcon,
                 loadProfilePicture,
                 loadRobohash,
+                item.relayStat.pingInMs,
                 MaterialTheme.colorScheme.largeRelayIconModifier,
             )
 
