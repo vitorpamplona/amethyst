@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.events
 
 import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.events.nip46.NostrConnectEvent
 
 class EventFactory {
     companion object {
@@ -120,6 +121,7 @@ class EventFactory {
             MetadataEvent.KIND -> MetadataEvent(id, pubKey, createdAt, tags, content, sig)
             MuteListEvent.KIND -> MuteListEvent(id, pubKey, createdAt, tags, content, sig)
             NNSEvent.KIND -> NNSEvent(id, pubKey, createdAt, tags, content, sig)
+            NostrConnectEvent.KIND -> NostrConnectEvent(id, pubKey, createdAt, tags, content, sig)
             NIP90StatusEvent.KIND -> NIP90StatusEvent(id, pubKey, createdAt, tags, content, sig)
             NIP90ContentDiscoveryRequestEvent.KIND -> NIP90ContentDiscoveryRequestEvent(id, pubKey, createdAt, tags, content, sig)
             NIP90ContentDiscoveryResponseEvent.KIND -> NIP90ContentDiscoveryResponseEvent(id, pubKey, createdAt, tags, content, sig)

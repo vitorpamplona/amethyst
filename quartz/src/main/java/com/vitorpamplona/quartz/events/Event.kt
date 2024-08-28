@@ -43,6 +43,9 @@ import com.vitorpamplona.quartz.encoders.Nip01Serializer
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.PoWRank
 import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.events.nip46.BunkerMessage
+import com.vitorpamplona.quartz.events.nip46.BunkerRequest
+import com.vitorpamplona.quartz.events.nip46.BunkerResponse
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
@@ -435,7 +438,12 @@ open class Event(
                         .addSerializer(Gossip::class.java, GossipSerializer())
                         .addDeserializer(Gossip::class.java, GossipDeserializer())
                         .addDeserializer(Response::class.java, ResponseDeserializer())
-                        .addDeserializer(Request::class.java, RequestDeserializer()),
+                        .addDeserializer(Request::class.java, RequestDeserializer())
+                        .addDeserializer(BunkerMessage::class.java, BunkerMessage.BunkerMessageDeserializer())
+                        .addSerializer(BunkerRequest::class.java, BunkerRequest.BunkerRequestSerializer())
+                        .addDeserializer(BunkerRequest::class.java, BunkerRequest.BunkerRequestDeserializer())
+                        .addSerializer(BunkerResponse::class.java, BunkerResponse.BunkerResponseSerializer())
+                        .addDeserializer(BunkerResponse::class.java, BunkerResponse.BunkerResponseDeserializer()),
                 )
 
         fun fromJson(jsonObject: JsonNode): Event =
@@ -452,7 +460,7 @@ open class Event(
                 sig = jsonObject.get("sig").asText(),
             )
 
-        private inline fun <reified R> JsonNode.toTypedArray(transform: (JsonNode) -> R): Array<R> = Array(size()) { transform(get(it)) }
+        inline fun <reified R> JsonNode.toTypedArray(transform: (JsonNode) -> R): Array<R> = Array(size()) { transform(get(it)) }
 
         fun fromJson(json: String): Event = mapper.readValue(json, Event::class.java)
 
