@@ -167,10 +167,13 @@ class RegisterAccounts(
         }
     }
 
-    suspend fun go(notificationToken: String) =
-        withContext(Dispatchers.IO) {
-            signEventsToProveControlOfAccounts(accounts, notificationToken) { postRegistrationEvent(it) }
+    suspend fun go(notificationToken: String) {
+        if (notificationToken.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                signEventsToProveControlOfAccounts(accounts, notificationToken) { postRegistrationEvent(it) }
 
-            PushNotificationUtils.hasInit = true
+                PushNotificationUtils.hasInit = true
+            }
         }
+    }
 }
