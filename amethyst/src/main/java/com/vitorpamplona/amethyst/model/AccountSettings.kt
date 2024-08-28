@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.model
 import android.content.res.Resources
 import androidx.compose.runtime.Stable
 import androidx.core.os.ConfigurationCompat
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
@@ -426,7 +425,7 @@ class AccountSettings(
     fun markDonatedInThisVersion(versionName: String): Boolean {
         if (!hasDonatedInVersion.value.contains(versionName)) {
             hasDonatedInVersion.update {
-                it + BuildConfig.VERSION_NAME
+                it + versionName
             }
             saveAccountSettings()
             return true
