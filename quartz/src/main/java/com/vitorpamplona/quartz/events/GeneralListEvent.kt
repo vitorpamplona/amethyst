@@ -108,7 +108,7 @@ abstract class GeneralListEvent(
         }
 
         try {
-            signer.nip04Decrypt(content, pubKey) {
+            signer.decrypt(content, pubKey) {
                 privateTagsCache = mapper.readValue<Array<Array<String>>>(it)
                 privateTagsCache?.let { onReady(it) }
             }

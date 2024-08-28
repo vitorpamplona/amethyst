@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.crypto.nip04
 
 import android.util.Log
 import com.vitorpamplona.quartz.crypto.SharedKeyCache
-import com.vitorpamplona.quartz.crypto.nip44.Nip44v1
 import com.vitorpamplona.quartz.encoders.Hex
 import fr.acinq.secp256k1.Secp256k1
 import java.security.SecureRandom
@@ -128,6 +127,10 @@ class Nip04(
         pubKey: ByteArray,
     ): ByteArray = secp256k1.pubKeyTweakMul(h02 + pubKey, privateKey).copyOfRange(1, 33)
 
+    companion object {
+        fun isNIP04(encoded: String) = EncryptedInfo.isNIP04(encoded)
+    }
+
     class EncryptedInfo(
         val ciphertext: ByteArray,
         val nonce: ByteArray,
@@ -138,7 +141,7 @@ class Nip04(
             fun decodePayload(payload: String): EncryptedInfo? {
                 return try {
                     val byteArray = Base64.getDecoder().decode(payload)
-                    check(byteArray[0].toInt() == Nip44v1.EncryptedInfo.V)
+                    check(byteArray[0].toInt() == V)
                     return EncryptedInfo(
                         nonce = byteArray.copyOfRange(1, 25),
                         ciphertext = byteArray.copyOfRange(25, byteArray.size),
@@ -147,6 +150,11 @@ class Nip04(
                     Log.w("NIP04", "Unable to Parse encrypted payload: $payload")
                     null
                 }
+            }
+
+            fun isNIP04(encoded: String): Boolean {
+                val l = encoded.length
+                return encoded[l - 28] == '?' && encoded[l - 27] == 'i' && encoded[l - 26] == 'v' && encoded[l - 25] == '='
             }
 
             fun decodeFromNIP04(payload: String): EncryptedInfo? =

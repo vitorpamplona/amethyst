@@ -20,10 +20,13 @@
  */
 package com.vitorpamplona.quartz.encoders
 
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.junit.runner.RunWith
 
+@RunWith(AndroidJUnit4::class)
 class HexEncodingTest {
     val testHex = "48a72b485d38338627ec9d427583551f9af4f016c739b8ec0d6313540a8b12cf"
 

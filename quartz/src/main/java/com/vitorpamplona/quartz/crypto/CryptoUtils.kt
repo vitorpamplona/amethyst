@@ -81,6 +81,17 @@ object CryptoUtils {
         return nip01.sha256(data)
     }
 
+    fun decrypt(
+        msg: String,
+        privateKey: ByteArray,
+        pubKey: ByteArray,
+    ): String? =
+        if (Nip04.isNIP04(msg)) {
+            decryptNIP04(msg, privateKey, pubKey)
+        } else {
+            decryptNIP44(msg, privateKey, pubKey)
+        }
+
     /** NIP 04 Utils */
     fun encryptNIP04(
         msg: String,

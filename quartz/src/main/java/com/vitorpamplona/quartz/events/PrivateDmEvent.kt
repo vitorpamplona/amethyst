@@ -92,7 +92,7 @@ class PrivateDmEvent(
             return
         }
 
-        signer.nip04Decrypt(content, talkingWith(signer.pubKey)) { retVal ->
+        signer.decrypt(content, talkingWith(signer.pubKey)) { retVal ->
             val content =
                 if (retVal.startsWith(NIP_18_ADVERTISEMENT)) {
                     retVal.substring(16)

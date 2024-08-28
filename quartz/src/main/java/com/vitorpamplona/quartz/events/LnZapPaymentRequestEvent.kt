@@ -62,7 +62,7 @@ class LnZapPaymentRequestEvent(
         }
 
         try {
-            signer.nip04Decrypt(content, talkingWith(signer.pubKey)) { jsonText ->
+            signer.decrypt(content, talkingWith(signer.pubKey)) { jsonText ->
                 val payInvoiceMethod = mapper.readValue(jsonText, Request::class.java)
 
                 lnInvoice = (payInvoiceMethod as? PayInvoiceMethod)?.params?.invoice

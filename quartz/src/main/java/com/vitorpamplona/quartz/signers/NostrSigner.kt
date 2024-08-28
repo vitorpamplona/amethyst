@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.signers
 
+import com.vitorpamplona.quartz.crypto.nip04.Nip04
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.Event
@@ -66,6 +67,18 @@ abstract class NostrSigner(
         event: LnZapRequestEvent,
         onReady: (LnZapPrivateEvent) -> Unit,
     )
+
+    fun decrypt(
+        encryptedContent: String,
+        fromPublicKey: HexKey,
+        onReady: (String) -> Unit,
+    ) {
+        if (Nip04.isNIP04(encryptedContent)) {
+            nip04Decrypt(encryptedContent, fromPublicKey, onReady)
+        } else {
+            nip44Decrypt(encryptedContent, fromPublicKey, onReady)
+        }
+    }
 
     fun <T : Event> assembleRumor(
         createdAt: Long,

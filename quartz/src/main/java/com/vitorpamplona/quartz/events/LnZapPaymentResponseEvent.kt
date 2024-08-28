@@ -57,7 +57,7 @@ class LnZapPaymentResponseEvent(
         onReady: (String) -> Unit,
     ) {
         try {
-            signer.nip04Decrypt(content, talkingWith(signer.pubKey)) { content -> onReady(content) }
+            signer.decrypt(content, talkingWith(signer.pubKey)) { content -> onReady(content) }
         } catch (e: Exception) {
             Log.w("PrivateDM", "Error decrypting the message ${e.message}")
         }
