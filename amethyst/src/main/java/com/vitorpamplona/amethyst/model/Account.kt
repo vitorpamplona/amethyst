@@ -1188,7 +1188,7 @@ class Account(
                         replyingToHex = event.id,
                         authSigner = signer,
                     )
-                wcListener.start()
+                wcListener.startSync()
 
                 LocalCache.consume(event, zappedNote) { it.response(signer) { onResponse(it) } }
 

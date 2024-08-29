@@ -1664,7 +1664,10 @@ object LocalCache {
     @Suppress("UNUSED_PARAMETER")
     fun consume(event: ChannelMuteUserEvent) {}
 
-    fun consume(event: LnZapEvent) {
+    fun consume(
+        event: LnZapEvent,
+        relay: Relay?,
+    ) {
         val note = getOrCreateNote(event.id)
         // Already processed this event.
         if (note.event != null) return
@@ -2693,7 +2696,7 @@ object LocalCache {
                     event.zapRequest?.let {
                         // must have a valid request
                         verifyAndConsume(it, relay)
-                        consume(event)
+                        consume(event, relay)
                     }
                 }
                 is LnZapRequestEvent -> consume(event)

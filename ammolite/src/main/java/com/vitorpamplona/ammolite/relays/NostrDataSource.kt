@@ -157,6 +157,12 @@ abstract class NostrDataSource(
         resetFilters()
     }
 
+    open fun startSync() {
+        Log.d("DataSource", "${this.javaClass.simpleName} Start")
+        active = true
+        resetFiltersSuspend()
+    }
+
     @OptIn(DelicateCoroutinesApi::class)
     open fun stop() {
         active = false
