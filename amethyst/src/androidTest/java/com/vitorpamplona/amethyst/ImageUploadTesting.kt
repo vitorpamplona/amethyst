@@ -188,6 +188,12 @@ class ImageUploadTesting {
             testBase(Nip96MediaServers.ServerName("nostpic.com", "https://nostpic.com"))
         }
 
+    @Test(expected = RuntimeException::class)
+    fun testSprovoostNl() =
+        runBlocking {
+            testBase(Nip96MediaServers.ServerName("sprovoost.nl", "https://img.sprovoost.nl/"))
+        }
+
     @Test()
     @Ignore("Not Working anymore")
     fun testNostrOnch() =

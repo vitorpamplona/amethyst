@@ -24,6 +24,26 @@ import junit.framework.TestCase.assertEquals
 import org.junit.Test
 
 class Nip96Test {
+    val relativeUrlTest =
+        """
+{
+  "api_url": "/n96",
+  "download_url": "/",
+  "content_types": [
+    "image/*",
+    "video/*",
+    "audio/*"
+  ],
+  "plans": {
+    "free": {
+      "name": "",
+      "is_nip98_required": true,
+      "max_byte_size": 5000000000
+    }
+  }
+}
+"""
+
     val json =
         """
         {
@@ -116,7 +136,7 @@ class Nip96Test {
 
     @Test()
     fun parseNostrBuild() {
-        val info = Nip96Retriever().parse(json)
+        val info = Nip96Retriever().parse("https://nostr.build", json)
 
         assertEquals("https://nostr.build/api/v2/nip96/upload", info.apiUrl)
         assertEquals("https://media.nostr.build", info.downloadUrl)
@@ -141,5 +161,15 @@ class Nip96Test {
 
         assertEquals(26843545600L, info.plans["creator"]?.maxByteSize)
         assertEquals(10737418240L, info.plans["professional"]?.maxByteSize)
+    }
+
+    @Test()
+    fun parseRelativeUrls() {
+        val info = Nip96Retriever().parse("https://test.com", relativeUrlTest)
+
+        assertEquals("https://test.com/n96", info.apiUrl)
+        assertEquals("https://test.com/", info.downloadUrl)
+        assertEquals(null, info.tosUrl)
+        assertEquals(null, info.delegatedToUrl)
     }
 }

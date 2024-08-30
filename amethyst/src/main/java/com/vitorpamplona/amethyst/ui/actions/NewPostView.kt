@@ -1654,7 +1654,17 @@ fun ImageVideoDescription(
             fileServers.map { TitleExplainer(it.server.name, it.server.baseUrl) }.toImmutableList()
         }
 
-    var selectedServer by remember { mutableStateOf(ServerOption(defaultServer, false)) }
+    var selectedServer by remember {
+        mutableStateOf(
+            ServerOption(
+                fileServers
+                    .firstOrNull { it.server == defaultServer }
+                    ?.server
+                    ?: fileServers[0].server,
+                false,
+            ),
+        )
+    }
     var message by remember { mutableStateOf("") }
     var sensitiveContent by remember { mutableStateOf(false) }
 
@@ -1778,7 +1788,7 @@ fun ImageVideoDescription(
                     label = stringRes(id = R.string.file_server),
                     placeholder =
                         fileServers
-                            .firstOrNull { it.server == accountViewModel.account.settings.defaultFileServer }
+                            .firstOrNull { it.server == defaultServer }
                             ?.server
                             ?.name
                             ?: fileServers[0].server.name,

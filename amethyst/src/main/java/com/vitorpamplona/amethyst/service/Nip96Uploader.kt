@@ -190,8 +190,26 @@ class Nip96Uploader(
                     }
                 }
             } else {
+                val msg = response.body.string()
+
+                val errorMessage =
+                    try {
+                        val tree = jacksonObjectMapper().readTree(msg)
+                        val status = tree.get("status")?.asText()
+                        val message = tree.get("message")?.asText()
+                        if (status == "error" && message != null) {
+                            message
+                        } else {
+                            null
+                        }
+                    } catch (e: Exception) {
+                        null
+                    }
+
                 val explanation = HttpStatusMessages.resourceIdFor(response.code)
-                if (explanation != null) {
+                if (errorMessage != null) {
+                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_with_message, errorMessage))
+                } else if (explanation != null) {
                     throw RuntimeException(stringRes(context, R.string.failed_to_upload_with_message, stringRes(context, explanation)))
                 } else {
                     throw RuntimeException(stringRes(context, R.string.failed_to_upload_with_message, response.code))

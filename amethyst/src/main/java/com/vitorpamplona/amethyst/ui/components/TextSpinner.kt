@@ -93,7 +93,7 @@ fun TextSpinner(
     val focusRequester = remember { FocusRequester() }
     val interactionSource = remember { MutableInteractionSource() }
     var optionsShowing by remember { mutableStateOf(false) }
-    var currentText by remember { mutableStateOf(placeholder) }
+    var currentText by remember(placeholder) { mutableStateOf(placeholder) }
 
     Box(
         modifier = modifier,

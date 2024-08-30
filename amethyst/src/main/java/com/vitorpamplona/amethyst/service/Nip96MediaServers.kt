@@ -27,6 +27,8 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import kotlinx.coroutines.CancellationException
 import okhttp3.Request
+import java.net.URI
+import java.net.URL
 
 object Nip96MediaServers {
     val DEFAULT =
@@ -76,10 +78,26 @@ class Nip96Retriever {
         val mediaTransformations: Map<MimeType, Array<String>> = emptyMap(),
     )
 
-    fun parse(body: String): ServerInfo {
+    fun parse(
+        baseUrl: String,
+        body: String,
+    ): ServerInfo {
         val mapper =
             jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        return mapper.readValue(body, ServerInfo::class.java)
+        val serverInfo = mapper.readValue(body, ServerInfo::class.java)
+
+        return serverInfo.copy(
+            apiUrl = makeAbsoluteIfRelativeUrl(baseUrl, serverInfo.apiUrl),
+            downloadUrl = serverInfo.downloadUrl?.let { makeAbsoluteIfRelativeUrl(baseUrl, it) },
+            delegatedToUrl = serverInfo.delegatedToUrl?.let { makeAbsoluteIfRelativeUrl(baseUrl, it) },
+            tosUrl = serverInfo.tosUrl?.let { makeAbsoluteIfRelativeUrl(baseUrl, it) },
+            plans =
+                serverInfo.plans.mapValues { u ->
+                    u.value.copy(
+                        url = u.value.url?.let { makeAbsoluteIfRelativeUrl(baseUrl, it) },
+                    )
+                },
+        )
     }
 
     suspend fun loadInfo(baseUrl: String): ServerInfo {
@@ -98,7 +116,7 @@ class Nip96Retriever {
                 val body = it.body.string()
                 try {
                     if (it.isSuccessful) {
-                        return parse(body)
+                        return parse(baseUrl, body)
                     } else {
                         throw RuntimeException(
                             "Resulting Message from $baseUrl is an error: ${response.code} ${response.message}",
@@ -117,3 +135,18 @@ class Nip96Retriever {
 typealias PlanName = String
 
 typealias MimeType = String
+
+fun makeAbsoluteIfRelativeUrl(
+    baseUrl: String,
+    potentialyRelativeUrl: String,
+): String =
+    try {
+        val apiUrl = URI(potentialyRelativeUrl)
+        if (apiUrl.isAbsolute) {
+            potentialyRelativeUrl
+        } else {
+            URL(URL(baseUrl), potentialyRelativeUrl).toString()
+        }
+    } catch (e: Exception) {
+        potentialyRelativeUrl
+    }
