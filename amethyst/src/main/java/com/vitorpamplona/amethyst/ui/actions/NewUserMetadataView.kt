@@ -225,7 +225,7 @@ fun NewUserMetadataView(
                         onValueChange = { postViewModel.lnAddress.value = it },
                         placeholder = {
                             Text(
-                                text = "me@mylightiningnode.com",
+                                text = "me@mylightningnode.com",
                                 color = MaterialTheme.colorScheme.placeholderText,
                             )
                         },
