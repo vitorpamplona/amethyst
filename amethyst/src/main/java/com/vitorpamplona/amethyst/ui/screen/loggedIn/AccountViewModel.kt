@@ -30,7 +30,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.imageLoader
@@ -44,7 +43,6 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.LocalCache.notes
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
@@ -1480,7 +1478,7 @@ class AccountViewModel(
                 LightningAddressResolver()
                     .lnAddressInvoice(
                         lnaddress,
-                        milliSats * 1000,
+                        milliSats,
                         message,
                         null,
                         onSuccess = onSuccess,
@@ -1494,7 +1492,7 @@ class AccountViewModel(
                     LightningAddressResolver()
                         .lnAddressInvoice(
                             lnaddress,
-                            milliSats * 1000,
+                            milliSats,
                             message,
                             zapRequest.toJson(),
                             onSuccess = onSuccess,
