@@ -472,43 +472,42 @@ fun LoginPage(
                         },
                     ),
             )
+        }
+        Spacer(modifier = Modifier.height(10.dp))
 
-            Spacer(modifier = Modifier.height(10.dp))
+        if (PackageUtils.isOrbotInstalled(context)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = useProxy.value,
+                    onCheckedChange = {
+                        if (it) {
+                            connectOrbotDialogOpen = true
+                        }
+                    },
+                )
 
-            if (PackageUtils.isOrbotInstalled(context)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = useProxy.value,
-                        onCheckedChange = {
-                            if (it) {
-                                connectOrbotDialogOpen = true
-                            }
-                        },
-                    )
+                Text(stringRes(R.string.connect_via_tor))
+            }
 
-                    Text(stringRes(R.string.connect_via_tor))
-                }
-
-                if (connectOrbotDialogOpen) {
-                    ConnectOrbotDialog(
-                        onClose = { connectOrbotDialogOpen = false },
-                        onPost = {
-                            connectOrbotDialogOpen = false
-                            useProxy.value = true
-                        },
-                        onError = {
-                            scope.launch {
-                                Toast
-                                    .makeText(
-                                        context,
-                                        it,
-                                        Toast.LENGTH_LONG,
-                                    ).show()
-                            }
-                        },
-                        proxyPort,
-                    )
-                }
+            if (connectOrbotDialogOpen) {
+                ConnectOrbotDialog(
+                    onClose = { connectOrbotDialogOpen = false },
+                    onPost = {
+                        connectOrbotDialogOpen = false
+                        useProxy.value = true
+                    },
+                    onError = {
+                        scope.launch {
+                            Toast
+                                .makeText(
+                                    context,
+                                    it,
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                        }
+                    },
+                    proxyPort,
+                )
             }
         }
 
