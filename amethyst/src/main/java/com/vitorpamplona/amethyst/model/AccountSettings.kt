@@ -252,7 +252,7 @@ class AccountSettings(
         portNumber: String,
     ) {
         val port = portNumber.toIntOrNull() ?: return
-        if (proxyPort != port && isProxyEnabled() != enabled) {
+        if (proxyPort != port || isProxyEnabled() != enabled) {
             proxyPort = portNumber.toInt()
             proxy = HttpClientManager.initProxy(enabled, "127.0.0.1", proxyPort)
             saveAccountSettings()
