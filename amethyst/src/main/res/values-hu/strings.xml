@@ -38,6 +38,7 @@
     <string name="report_explicit_content">Szókimondó tartalom bejelentés</string>
     <string name="report_illegal_behaviour">Illegális viselkedés bejelentés</string>
     <string name="report_malware">Vírus bejelentése</string>
+    <string name="malware">Vírus</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Jelentkezzen be privát kulccsal, hogy válaszolni tudjon</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Jelentkezzen be privát kulccsal a bejegyzések megosztásához</string>
     <string name="login_with_a_private_key_to_like_posts">Jelentkezzen be privát kulccsal a bejegyzések kedveléséhez</string>
@@ -658,6 +659,11 @@
     <string name="could_not_prepare_local_file_to_upload">Nem sikerült előkészíteni a helyi fájlt a feltöltésre: %1$s</string>
     <string name="failed_to_upload_with_message">Nem sikerült feltölteni: %1$s</string>
     <string name="failed_to_delete_with_message">Nem sikerült törölni: %1$s</string>
+    <string name="media_too_big_for_nip95">Média túl nagy a NIP-95 számára</string>
+    <string name="unable_to_load_thumbnail">Indexképet nem sikerült betölteni</string>
+    <string name="could_not_prepare_header">Nem sikerült előkészíteni a fejléc információkat: %1$s</string>
+    <string name="compression_cancelled">Tömörítés megszakítva</string>
+    <string name="compression_returned_null">A tömörítés nem tudott visszaadni egy fájlt</string>
     <string name="edit_draft">Piszkozat szerkesztése</string>
     <string name="login_with_qr_code">Bejelentkezés QR kóddal</string>
     <string name="route">Útvonal</string>
@@ -804,4 +810,10 @@
     <string name="add_a_nip96_server">Adj hozzá egy NIP-96 szervert</string>
     <string name="delete_all">Törlés mind</string>
     <string name="delete_all_drafts_confirmation">Biztosan törölni szeretnéd az összes jegyzetet?</string>
+    <string name="and_more">" … és még további %1$s"</string>
+    <string name="stack">Köteg:</string>
+    <string name="torrent_file">Torrent Fájl</string>
+    <string name="torrent_download">Letöltés</string>
+    <string name="torrent_failure">Nem sikerült megnyitni a fájlt</string>
+    <string name="torrent_no_apps">A fájl megnyitásához és letöltéséhez nincsenek torrentalkalmazások telepítve.</string>
 </resources>
