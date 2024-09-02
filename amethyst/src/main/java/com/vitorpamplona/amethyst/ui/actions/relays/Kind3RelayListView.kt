@@ -59,8 +59,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -677,6 +679,7 @@ private fun ActiveToggles(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FirstLine(
     item: Kind3BasicRelaySetupInfo,
@@ -684,11 +687,18 @@ private fun FirstLine(
     onDelete: (Kind3BasicRelaySetupInfo) -> Unit,
     modifier: Modifier,
 ) {
+    val clipboardManager = LocalClipboardManager.current
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = item.briefInfo.displayUrl,
-                modifier = Modifier.clickable(onClick = onClick),
+                modifier =
+                    Modifier.combinedClickable(
+                        onClick = onClick,
+                        onLongClick = {
+                            clipboardManager.setText(AnnotatedString(item.briefInfo.url))
+                        },
+                    ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
