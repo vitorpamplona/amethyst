@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.actions.relays
 
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -294,6 +293,7 @@ fun LoadRelayInfo(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ClickableRelayItem(
     item: Kind3BasicRelaySetupInfo,
@@ -309,7 +309,17 @@ fun ClickableRelayItem(
     onDelete: (Kind3BasicRelaySetupInfo) -> Unit,
     onClick: () -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+    val clipboardManager = LocalClipboardManager.current
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    clipboardManager.setText(AnnotatedString(item.briefInfo.url))
+                },
+            ),
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 5.dp),
