@@ -149,7 +149,7 @@ class Nip96Uploader(
                 .addFormDataPart("expiration", "")
                 .addFormDataPart("size", length.toString())
                 .also { body ->
-                    alt?.let { body.addFormDataPart("alt", it) }
+                    alt?.ifBlank { null }?.let { body.addFormDataPart("alt", it) }
                     sensitiveContent?.let { body.addFormDataPart("content-warning", it) }
                     contentType?.let { body.addFormDataPart("content_type", it) }
                 }.addFormDataPart(
