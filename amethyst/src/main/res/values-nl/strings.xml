@@ -132,8 +132,8 @@
     <string name="known">Bekend</string>
     <string name="new_requests">Nieuw verzoek</string>
     <string name="blocked_users">Geblokkeerde gebruikers</string>
-    <string name="new_threads">Nieuwe thread</string>
-    <string name="conversations">Gesprekken</string>
+    <string name="new_threads">Nieuwe onderwerpen</string>
+    <string name="conversations">Discussies</string>
     <string name="notes">Notes</string>
     <string name="replies">Reacties</string>
     <string name="gallery">Galerij</string>
@@ -261,7 +261,7 @@
     <string name="quick_action_unfollow">Ontvolgen</string>
     <string name="quick_action_follow">Volgen</string>
     <string name="quick_action_request_deletion_gallery_title">Verwijderen uit galerij</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Verwijder deze media uit je galerij, je kunt het later lezen</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">Verwijder deze media uit je galerij, je kunt het terug zien in je feed.</string>
     <string name="quick_action_request_deletion_alert_title">Verzoek om te verwijderen</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst zal vragen om uw note te verwijderen van de relays waarmee u momenteel verbonden bent. Er is geen garantie dat uw note permanent wordt verwijderd van deze relays, of van andere relays waar het kan worden opgeslagen.</string>
     <string name="quick_action_block_dialog_btn">Blokkeren</string>
