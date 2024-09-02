@@ -607,7 +607,7 @@ class AccountViewModel(
 
     fun zap(
         note: Note,
-        amount: Long,
+        amountInMillisats: Long,
         pollOption: Int?,
         message: String,
         context: Context,
@@ -621,7 +621,7 @@ class AccountViewModel(
             ZapPaymentHandler(account)
                 .zap(
                     note = note,
-                    amountMilliSats = amount,
+                    amountMilliSats = amountInMillisats,
                     pollOption = pollOption,
                     message = message,
                     context = context,
