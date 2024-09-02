@@ -740,9 +740,9 @@
     <string name="local_section">Lokalne Transmitery</string>
     <string name="local_section_explainer">Lista transmiterów działających na tym urządzeniu.</string>
     <string name="zap_the_devs_title">Wspieraj deweloperów!</string>
-    <string name="zap_the_devs_description">Twoja darowizna pomaga nam coś zmienić. Każdy sat liczy się!</string>
+    <string name="zap_the_devs_description">Twoja darowizna pomaga nam coś zmienić. Każdy sat się liczy!</string>
     <string name="donate_now">Przekaż darowiznę</string>
-    <string name="brought_to_you_by">został Ci dostarczony przez:</string>
+    <string name="brought_to_you_by">została Ci dostarczona przez:</string>
     <string name="this_version_brought_to_you_by">Ta wersja została Ci dostarczona przez:</string>
     <string name="version_name">Wersja %1$s</string>
     <string name="thank_you">Dziękuję!</string>
