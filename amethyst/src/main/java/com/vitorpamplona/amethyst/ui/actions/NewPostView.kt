@@ -24,9 +24,12 @@ import android.Manifest
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.util.Log
 import android.util.Size
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -56,6 +59,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.LocationOn
@@ -117,6 +121,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.FileProvider
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -180,7 +186,11 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import java.io.File
 import java.lang.Math.round
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
@@ -195,6 +205,7 @@ fun NewPostView(
     accountViewModel: AccountViewModel,
     nav: (String) -> Unit,
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
     val postViewModel: NewPostViewModel = viewModel()
     postViewModel.wantsDirectMessage = enableMessageInterface
 
@@ -204,6 +215,9 @@ fun NewPostView(
     val scope = rememberCoroutineScope()
     var showRelaysDialog by remember { mutableStateOf(false) }
     var relayList = remember { accountViewModel.account.activeWriteRelays().toImmutableList() }
+    var showCamera by remember {
+        mutableStateOf(true)
+    }
 
     LaunchedEffect(key1 = postViewModel.draftTag) {
         launch(Dispatchers.IO) {
@@ -561,7 +575,6 @@ fun NewPostView(
 @Composable
 private fun BottomRowActions(postViewModel: NewPostViewModel) {
     val scrollState = rememberScrollState()
-
     Row(
         modifier =
             Modifier
@@ -577,6 +590,12 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
         ) {
             postViewModel.selectImage(it)
         }
+
+        TakePictureButton(
+            onPictureTaken = {
+                postViewModel.selectImage(it)
+            },
+        )
 
         if (postViewModel.canUsePoll) {
             // These should be hashtag recommendations the user selects in the future.
@@ -619,6 +638,64 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
 
         ForwardZapTo(postViewModel) {
             postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
+        }
+    }
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun TakePictureButton(onPictureTaken: (Uri) -> Unit) {
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    val launcher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.TakePicture(),
+        ) { success ->
+            if (success) {
+                imageUri?.let {
+                    onPictureTaken(it)
+                }
+            }
+        }
+    val context = LocalContext.current
+    val cameraPermissionState =
+        rememberPermissionState(
+            Manifest.permission.CAMERA,
+        )
+
+    Box {
+        IconButton(
+            modifier = Modifier.align(Alignment.Center),
+            onClick = {
+                if (cameraPermissionState.status.isGranted) {
+                    val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+                    val storageDir: File? = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                    File
+                        .createTempFile(
+                            "JPEG_${timeStamp}_",
+                            ".jpg",
+                            storageDir,
+                        ).apply {
+                            imageUri =
+                                FileProvider.getUriForFile(
+                                    context,
+                                    "${context.packageName}.provider",
+                                    this,
+                                )
+                        }
+                    imageUri?.let {
+                        launcher.launch(it)
+                    }
+                } else {
+                    cameraPermissionState.launchPermissionRequest()
+                }
+            },
+        ) {
+            Icon(
+                imageVector = Icons.Default.CameraAlt,
+                contentDescription = stringRes(id = R.string.upload_image),
+                modifier = Modifier.height(25.dp),
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
         }
     }
 }
