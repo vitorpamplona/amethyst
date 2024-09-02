@@ -20,8 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -42,6 +43,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -109,6 +112,7 @@ fun ChatRelayExpandButton(onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RenderRelay(
     relay: RelayBriefInfoCache.RelayBriefInfo,
@@ -143,11 +147,15 @@ fun RenderRelay(
         )
     }
 
+    val clipboardManager = LocalClipboardManager.current
     val clickableModifier =
         remember(relay) {
             Modifier
                 .size(Size17dp)
-                .clickable(
+                .combinedClickable(
+                    onLongClick = {
+                        clipboardManager.setText(AnnotatedString(relay.url))
+                    },
                     onClick = {
                         accountViewModel.retrieveRelayDocument(
                             relay.url,

@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.actions.relays
 
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -59,8 +58,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -292,6 +293,7 @@ fun LoadRelayInfo(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ClickableRelayItem(
     item: Kind3BasicRelaySetupInfo,
@@ -307,7 +309,17 @@ fun ClickableRelayItem(
     onDelete: (Kind3BasicRelaySetupInfo) -> Unit,
     onClick: () -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+    val clipboardManager = LocalClipboardManager.current
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    clipboardManager.setText(AnnotatedString(item.briefInfo.url))
+                },
+            ),
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 5.dp),
@@ -677,6 +689,7 @@ private fun ActiveToggles(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FirstLine(
     item: Kind3BasicRelaySetupInfo,
@@ -684,11 +697,18 @@ private fun FirstLine(
     onDelete: (Kind3BasicRelaySetupInfo) -> Unit,
     modifier: Modifier,
 ) {
+    val clipboardManager = LocalClipboardManager.current
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = item.briefInfo.displayUrl,
-                modifier = Modifier.clickable(onClick = onClick),
+                modifier =
+                    Modifier.combinedClickable(
+                        onClick = onClick,
+                        onLongClick = {
+                            clipboardManager.setText(AnnotatedString(item.briefInfo.url))
+                        },
+                    ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
