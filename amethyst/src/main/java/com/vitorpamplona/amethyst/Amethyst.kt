@@ -59,10 +59,15 @@ class Amethyst : Application() {
         applicationIOScope.cancel()
     }
 
+    fun nip95cache() = safeCacheDir.resolve("NIP95")
+
     val videoCache: VideoCache by lazy {
         val newCache = VideoCache()
         runBlocking {
-            newCache.initFileCache(this@Amethyst)
+            newCache.initFileCache(
+                this@Amethyst,
+                safeCacheDir.resolve("exoplayer"),
+            )
         }
         newCache
     }
@@ -70,7 +75,7 @@ class Amethyst : Application() {
     val coilCache: DiskCache by lazy {
         DiskCache
             .Builder()
-            .directory(applicationContext.safeCacheDir.resolve("image_cache"))
+            .directory(safeCacheDir.resolve("image_cache"))
             .maxSizePercent(0.2)
             .maximumMaxSizeBytes(1024 * 1024 * 1024) // 1GB
             .build()
