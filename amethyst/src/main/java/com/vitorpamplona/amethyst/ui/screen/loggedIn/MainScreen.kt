@@ -39,7 +39,6 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -313,10 +312,12 @@ private fun MainScaffold(
 
             Modifier
                 .statusBarsPadding()
+                .imePadding()
                 .nestedScroll(nestedScrollConnection)
         } else {
             Modifier
                 .statusBarsPadding()
+                .imePadding()
         }
 
     Scaffold(
@@ -373,9 +374,7 @@ private fun MainScaffold(
             modifier =
                 Modifier
                     .padding(it)
-                    .consumeWindowInsets(it)
-                    .systemBarsPadding()
-                    .imePadding(),
+                    .consumeWindowInsets(it),
         ) {
             AppNavigation(
                 navController = navController,
