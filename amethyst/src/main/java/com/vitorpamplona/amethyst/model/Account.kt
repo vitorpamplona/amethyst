@@ -3291,9 +3291,13 @@ class Account(
             GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
         }
 
-        settings.backupPrivateHomeRelayList?.let {
-            Log.d("AccountRegisterObservers", "Loading saved search relay list ${it.toJson()}")
-            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
+        settings.backupPrivateHomeRelayList?.let { event ->
+            Log.d("AccountRegisterObservers", "Loading saved search relay list ${event.toJson()}")
+            GlobalScope.launch(Dispatchers.IO) {
+                event.privateTags(signer) {
+                    LocalCache.verifyAndConsume(event, null)
+                }
+            }
         }
 
         settings.backupMuteList?.let {
