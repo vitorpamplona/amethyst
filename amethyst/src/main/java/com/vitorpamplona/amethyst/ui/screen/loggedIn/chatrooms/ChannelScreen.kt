@@ -501,7 +501,7 @@ fun MyTextField(
     isError: Boolean = false,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    keyboardActions: KeyboardActions = KeyboardActions(),
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
     singleLine: Boolean = false,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
@@ -527,7 +527,6 @@ fun MyTextField(
 ) {
     // COPIED FROM TEXT FIELD
     // The only change is the contentPadding below
-
     val textColor =
         textStyle.color.takeOrElse {
             val focused by interactionSource.collectIsFocusedAsState()
