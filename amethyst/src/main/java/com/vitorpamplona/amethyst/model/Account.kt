@@ -1192,7 +1192,12 @@ class Account(
 
                 LocalCache.consume(event, zappedNote) { it.response(signer) { onResponse(it) } }
 
-                Client.send(event, nip47.relayUri, wcListener.feedTypes) { wcListener.destroy() }
+                Client.send(
+                    signedEvent = event,
+                    relay = nip47.relayUri,
+                    feedTypes = wcListener.feedTypes,
+                    onDone = { wcListener.destroy() },
+                )
 
                 onSent()
             }
