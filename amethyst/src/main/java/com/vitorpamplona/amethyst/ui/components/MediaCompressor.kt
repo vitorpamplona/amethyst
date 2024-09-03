@@ -46,10 +46,20 @@ class MediaCompressor {
         applicationContext: Context,
         onReady: (Uri, String?, Long?) -> Unit,
         onError: (Int) -> Unit,
+        mediaQaulity: CompressorQuality?,
     ) {
         checkNotInMainThread()
 
         if (contentType?.startsWith("video", true) == true) {
+            val videoQuality =
+                when (mediaQaulity) {
+                    CompressorQuality.VERY_LOW -> VideoQuality.VERY_LOW
+                    CompressorQuality.LOW -> VideoQuality.LOW
+                    CompressorQuality.MEDIUM -> VideoQuality.MEDIUM
+                    CompressorQuality.HIGH -> VideoQuality.HIGH
+                    CompressorQuality.VERY_HIGH -> VideoQuality.VERY_HIGH
+                    else -> VideoQuality.MEDIUM
+                }
             VideoCompressor.start(
                 // => This is required
                 context = applicationContext,
@@ -65,7 +75,7 @@ class MediaCompressor {
                 appSpecificStorageConfiguration = AppSpecificStorageConfiguration(),
                 configureWith =
                     Configuration(
-                        quality = VideoQuality.MEDIUM,
+                        quality = videoQuality,
                         // => required name
                         videoNames = listOf(UUID.randomUUID().toString()),
                     ),
@@ -110,10 +120,19 @@ class MediaCompressor {
             !contentType.contains("gif") &&
             !contentType.contains("svg")
         ) {
+            val imageQuality =
+                when (mediaQaulity) {
+                    CompressorQuality.VERY_LOW -> 40
+                    CompressorQuality.LOW -> 50
+                    CompressorQuality.MEDIUM -> 60
+                    CompressorQuality.HIGH -> 80
+                    CompressorQuality.VERY_HIGH -> 90
+                    else -> 60
+                }
             try {
                 val compressedImageFile =
                     Compressor.compress(applicationContext, from(uri, contentType, applicationContext)) {
-                        default(width = 640, format = Bitmap.CompressFormat.JPEG)
+                        default(width = 640, format = Bitmap.CompressFormat.JPEG, quality = imageQuality)
                     }
                 onReady(compressedImageFile.toUri(), contentType, compressedImageFile.length())
             } catch (e: Exception) {
@@ -162,4 +181,12 @@ class MediaCompressor {
         }
         return arrayOf(name, extension)
     }
+}
+
+enum class CompressorQuality {
+    VERY_LOW,
+    LOW,
+    MEDIUM,
+    HIGH,
+    VERY_HIGH,
 }

@@ -30,6 +30,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.Nip96Uploader
+import com.vitorpamplona.amethyst.ui.components.CompressorQuality
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.events.GitHubIdentity
@@ -211,6 +212,7 @@ class NewUserMetadataViewModel : ViewModel() {
 
                     onError(stringRes(context, R.string.error_when_compressing_media), stringRes(context, it))
                 },
+                mediaQaulity = CompressorQuality.MEDIUM,
             )
     }
 }

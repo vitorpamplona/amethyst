@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.ui.components.CompressorQuality
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -223,6 +224,7 @@ open class EditPostViewModel : ViewModel() {
                         isUploadingImage = false
                         onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, it))
                     },
+                    mediaQaulity = CompressorQuality.LOW,
                 )
         }
     }
