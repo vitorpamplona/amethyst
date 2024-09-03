@@ -910,7 +910,7 @@ open class NewPostViewModel : ViewModel() {
                         isUploadingImage = false
                         onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, it))
                     },
-                    mediaQaulity = CompressorQuality.LOW,
+                    mediaQuality = CompressorQuality.LOW,
                 )
         }
     }

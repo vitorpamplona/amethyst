@@ -212,7 +212,7 @@ class NewUserMetadataViewModel : ViewModel() {
 
                     onError(stringRes(context, R.string.error_when_compressing_media), stringRes(context, it))
                 },
-                mediaQaulity = CompressorQuality.MEDIUM,
+                mediaQuality = CompressorQuality.MEDIUM,
             )
     }
 }

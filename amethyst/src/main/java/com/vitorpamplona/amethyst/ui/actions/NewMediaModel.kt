@@ -167,7 +167,7 @@ open class NewMediaModel : ViewModel() {
                         uploadingDescription.value = null
                         onError(stringRes(context, R.string.error_when_compressing_media, it))
                     },
-                    mediaQaulity = CompressorQuality.LOW,
+                    mediaQuality = CompressorQuality.LOW,
                 )
         }
     }

@@ -46,13 +46,13 @@ class MediaCompressor {
         applicationContext: Context,
         onReady: (Uri, String?, Long?) -> Unit,
         onError: (Int) -> Unit,
-        mediaQaulity: CompressorQuality?,
+        mediaQuality: CompressorQuality?,
     ) {
         checkNotInMainThread()
 
         if (contentType?.startsWith("video", true) == true) {
             val videoQuality =
-                when (mediaQaulity) {
+                when (mediaQuality) {
                     CompressorQuality.VERY_LOW -> VideoQuality.VERY_LOW
                     CompressorQuality.LOW -> VideoQuality.LOW
                     CompressorQuality.MEDIUM -> VideoQuality.MEDIUM
@@ -121,7 +121,7 @@ class MediaCompressor {
             !contentType.contains("svg")
         ) {
             val imageQuality =
-                when (mediaQaulity) {
+                when (mediaQuality) {
                     CompressorQuality.VERY_LOW -> 40
                     CompressorQuality.LOW -> 50
                     CompressorQuality.MEDIUM -> 60
