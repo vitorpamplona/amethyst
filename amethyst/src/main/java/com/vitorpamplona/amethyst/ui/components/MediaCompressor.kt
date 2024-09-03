@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.components
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.core.net.toUri
 import com.abedelazizshe.lightcompressorlibrary.CompressionListener
@@ -60,6 +61,7 @@ class MediaCompressor {
                     CompressorQuality.VERY_HIGH -> VideoQuality.VERY_HIGH
                     else -> VideoQuality.MEDIUM
                 }
+            Log.d("MediaCompressor", "Using video compression $mediaQuality")
             VideoCompressor.start(
                 // => This is required
                 context = applicationContext,
@@ -130,6 +132,7 @@ class MediaCompressor {
                     else -> 60
                 }
             try {
+                Log.d("MediaCompressor", "Using image compression $mediaQuality")
                 val compressedImageFile =
                     Compressor.compress(applicationContext, from(uri, contentType, applicationContext)) {
                         default(width = 640, format = Bitmap.CompressFormat.JPEG, quality = imageQuality)
