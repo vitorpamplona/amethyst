@@ -130,6 +130,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.ui.components.BechLink
+import com.vitorpamplona.amethyst.ui.components.CompressorQuality
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
@@ -1667,6 +1668,7 @@ fun ImageVideoDescription(
     }
     var message by remember { mutableStateOf("") }
     var sensitiveContent by remember { mutableStateOf(false) }
+    var sliderPosition by remember { mutableStateOf(1f) } // 0 = Low, 1 = Medium, 2 = High
 
     Column(
         modifier =
@@ -1843,6 +1845,38 @@ fun ImageVideoDescription(
                             capitalization = KeyboardCapitalization.Sentences,
                         ),
                 )
+            }
+
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Media Quality")
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column {
+                    Slider(
+                        value = sliderPosition,
+                        onValueChange = { sliderPosition = it },
+                        valueRange = 0f..2f,
+                        steps = 1,
+                    )
+
+                    Text(
+                        text =
+                            when (sliderPosition.toInt()) {
+                                0 -> CompressorQuality.LOW.toString()
+                                1 -> CompressorQuality.MEDIUM.toString()
+                                2 -> CompressorQuality.HIGH.toString()
+                                else -> CompressorQuality.MEDIUM.toString()
+                            },
+                    )
+                }
             }
 
             Button(
