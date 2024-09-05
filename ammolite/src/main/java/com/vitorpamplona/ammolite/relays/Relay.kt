@@ -343,7 +343,7 @@ class Relay(
                     // Log.w("Relay", "Relay onNotify $url, ${msg[1].asString}")
                     it.onNotify(this@Relay, msgArray[1].asText())
                 }
-            "CLOSED" -> listeners.forEach { Log.w("Relay", "Relay onClosed $url, $newMessage") }
+            "CLOSED" -> listeners.forEach { Log.w("Relay", "Relay Closed Subscription $url, $newMessage") }
             else -> {
                 RelayStats.newError(url, "Unsupported message: $newMessage")
 

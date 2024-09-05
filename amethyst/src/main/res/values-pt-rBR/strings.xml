@@ -816,7 +816,7 @@
     <string name="add_a_nip96_server">Adicionar um servidor NIP-96</string>
     <string name="delete_all">Apagar tudo</string>
     <string name="delete_all_drafts_confirmation">Você tem certeza de que deseja excluir todos os rascunhos?</string>
-    <string name="and_more">" … e %1$s mais"</string>
+    <string name="and_more">" +%1$s"</string>
     <string name="stack">Pilha:</string>
     <string name="torrent_file">Arquivo Torrent</string>
     <string name="torrent_download">Baixar</string>

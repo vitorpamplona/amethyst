@@ -813,7 +813,7 @@
     <string name="add_a_nip96_server">निप॰-९६ सेवासंगणक जोडें</string>
     <string name="delete_all">सब मिटाएँ</string>
     <string name="delete_all_drafts_confirmation">क्या आप निश्चित रूप से सभी पाण्डुलिपियाँ मिटाना चाहते हैं।</string>
-    <string name="and_more">" ... तथा %1$s अधिक"</string>
+    <string name="and_more">" +%1$s"</string>
     <string name="stack">चिति :</string>
     <string name="torrent_file">उग्रप्रवाह अभिलेख</string>
     <string name="torrent_download">अवरोहण</string>

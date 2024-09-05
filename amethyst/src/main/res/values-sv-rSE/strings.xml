@@ -815,7 +815,7 @@
     <string name="add_a_nip96_server">Lägg till en NIP-96 Server</string>
     <string name="delete_all">Radera alla</string>
     <string name="delete_all_drafts_confirmation">Är du säker på att du vill ta bort alla utkast?</string>
-    <string name="and_more">" … och %1$s mer"</string>
+    <string name="and_more">" +%1$s"</string>
     <string name="stack">Stack:</string>
     <string name="torrent_file">Torrent fil</string>
     <string name="torrent_download">Ladda ner</string>

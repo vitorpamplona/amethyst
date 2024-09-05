@@ -803,7 +803,7 @@
     <string name="add_a_nip96_server">เพิ่ม เซิร์ฟเวอร์ NIP-96</string>
     <string name="delete_all">ลบทั้งหมด</string>
     <string name="delete_all_drafts_confirmation">คุณแน่ใจหรือไม่ว่าต้องการลบแบบร่างทั้งหมด</string>
-    <string name="and_more">" … และอีก %1$s"</string>
+    <string name="and_more">" +%1$s"</string>
     <string name="torrent_file">ไฟล์ Torrent</string>
     <string name="torrent_download">ดาวน์โหลด</string>
     <string name="torrent_failure">ไม่สามารถเปิดไฟล์ได้</string>
