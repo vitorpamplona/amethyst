@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.theme
 
 import android.app.Activity
+import android.app.UiModeManager
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -45,12 +47,14 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.halilibo.richtext.ui.RichTextStyle
@@ -451,10 +455,19 @@ fun AmethystTheme(
     sharedPrefsViewModel: SharedPreferencesViewModel,
     content: @Composable () -> Unit,
 ) {
+    val context = LocalContext.current
     val darkTheme =
         when (sharedPrefsViewModel.sharedPrefs.theme) {
-            ThemeType.DARK -> true
-            ThemeType.LIGHT -> false
+            ThemeType.DARK -> {
+                val uiManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager?
+                uiManager!!.nightMode = UiModeManager.MODE_NIGHT_YES
+                true
+            }
+            ThemeType.LIGHT -> {
+                val uiManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager?
+                uiManager!!.nightMode = UiModeManager.MODE_NIGHT_NO
+                false
+            }
             else -> isSystemInDarkTheme()
         }
     val colors = if (darkTheme) DarkColorPalette else LightColorPalette
@@ -477,6 +490,8 @@ fun AmethystTheme(
 
             window.statusBarColor = colors.transparentBackground.toArgb()
             window.navigationBarColor = colors.transparentBackground.toArgb()
+
+            view.setBackgroundColor(colors.background.toArgb())
         }
     }
 }
