@@ -26,6 +26,10 @@ import android.content.Intent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -120,13 +124,37 @@ fun AppNavigation(
 
             composable(Route.Search.route) { SearchScreen(accountViewModel, nav) }
 
-            composable(Route.BlockedUsers.route, content = { SecurityFiltersScreen(accountViewModel, nav) })
-            composable(Route.Bookmarks.route, content = { BookmarkListScreen(accountViewModel, nav) })
-            composable(Route.Drafts.route, content = { DraftListScreen(accountViewModel, nav) })
+            composable(
+                Route.BlockedUsers.route,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) { SecurityFiltersScreen(accountViewModel, nav) }
+
+            composable(
+                Route.Bookmarks.route,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) { BookmarkListScreen(accountViewModel, nav) }
+
+            composable(
+                Route.Drafts.route,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) { DraftListScreen(accountViewModel, nav) }
 
             composable(
                 Route.ContentDiscovery.route,
                 Route.ContentDiscovery.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
             ) {
                 DvmContentDiscoveryScreen(it.id(), accountViewModel, nav)
             }
@@ -134,6 +162,10 @@ fun AppNavigation(
             composable(
                 Route.Profile.route,
                 Route.Profile.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
             ) {
                 ProfileScreen(it.id(), accountViewModel, nav)
             }
@@ -141,6 +173,10 @@ fun AppNavigation(
             composable(
                 Route.Note.route,
                 Route.Note.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
             ) {
                 ThreadScreen(it.id(), accountViewModel, nav)
             }
@@ -148,6 +184,10 @@ fun AppNavigation(
             composable(
                 Route.Hashtag.route,
                 Route.Hashtag.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
             ) {
                 HashtagScreen(it.id(), accountViewModel, nav)
             }
@@ -155,6 +195,10 @@ fun AppNavigation(
             composable(
                 Route.Geohash.route,
                 Route.Geohash.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
             ) {
                 GeoHashScreen(it.id(), accountViewModel, nav)
             }
@@ -162,6 +206,10 @@ fun AppNavigation(
             composable(
                 Route.Community.route,
                 Route.Community.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
             ) {
                 CommunityScreen(it.id(), accountViewModel, nav)
             }
@@ -169,6 +217,10 @@ fun AppNavigation(
             composable(
                 Route.Room.route,
                 Route.Room.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
             ) {
                 ChatroomScreen(
                     roomId = it.id(),
@@ -181,6 +233,10 @@ fun AppNavigation(
             composable(
                 Route.RoomByAuthor.route,
                 Route.RoomByAuthor.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
             ) {
                 ChatroomScreenByAuthor(it.id(), null, accountViewModel, nav)
             }
@@ -188,6 +244,10 @@ fun AppNavigation(
             composable(
                 Route.Channel.route,
                 Route.Channel.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
             ) {
                 ChannelScreen(
                     channelId = it.id(),
@@ -210,6 +270,10 @@ fun AppNavigation(
             composable(
                 Route.Settings.route,
                 Route.Settings.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
             ) {
                 SettingsScreen(
                     sharedPreferencesViewModel,
@@ -328,3 +392,9 @@ private fun isSameRoute(
 
     return false
 }
+
+val slideInHorizontallyFromEnd = slideInHorizontally(animationSpec = tween(), initialOffsetX = { it })
+val slideOutHorizontallyToEnd = slideOutHorizontally(animationSpec = tween(), targetOffsetX = { it })
+
+val scaleIn = scaleIn(animationSpec = tween(), initialScale = 0.9f)
+val scaleOut = scaleOut(animationSpec = tween(), targetScale = 0.9f)
