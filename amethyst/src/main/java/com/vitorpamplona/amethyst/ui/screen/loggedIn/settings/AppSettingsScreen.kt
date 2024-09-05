@@ -52,7 +52,6 @@ import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.model.parseFeatureSetType
 import com.vitorpamplona.amethyst.model.parseThemeType
-import com.vitorpamplona.amethyst.ui.checkLanguage
 import com.vitorpamplona.amethyst.ui.components.PushNotificationSettingsRow
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
@@ -208,9 +207,6 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
             languageIndex,
         ) {
             sharedPreferencesViewModel.updateLanguage(languageEntries[languageList[it].title])
-            languageEntries[languageList[it].title]?.let {
-                checkLanguage(it)
-            }
         }
 
         Spacer(modifier = HalfVertSpacer)
