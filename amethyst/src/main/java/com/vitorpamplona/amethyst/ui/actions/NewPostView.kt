@@ -1880,22 +1880,24 @@ fun ImageVideoDescription(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text =
+                                when (mediaQualitySlider) {
+                                    0 -> stringRes(R.string.media_compression_quality_low)
+                                    1 -> stringRes(R.string.media_compression_quality_medium)
+                                    2 -> stringRes(R.string.media_compression_quality_high)
+                                    else -> stringRes(R.string.media_compression_quality_medium)
+                                },
+                            modifier = Modifier.align(Alignment.Center),
+                        )
+                    }
+
                     Slider(
                         value = mediaQualitySlider.toFloat(),
                         onValueChange = { mediaQualitySlider = it.toInt() },
                         valueRange = 0f..2f,
                         steps = 1,
-                    )
-
-                    Text(
-                        text =
-                            when (mediaQualitySlider) {
-                                0 -> stringRes(R.string.media_compression_quality_low)
-                                1 -> stringRes(R.string.media_compression_quality_medium)
-                                2 -> stringRes(R.string.media_compression_quality_high)
-                                else -> stringRes(R.string.media_compression_quality_medium)
-                            },
-                        textAlign = TextAlign.Center,
                     )
                 }
             }

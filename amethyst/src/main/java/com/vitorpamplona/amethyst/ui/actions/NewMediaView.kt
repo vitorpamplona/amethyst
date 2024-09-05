@@ -63,7 +63,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -219,22 +218,24 @@ fun NewMediaView(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(modifier = Modifier.fillMaxWidth()) {
+                                    Text(
+                                        text =
+                                            when (mediaQualitySlider) {
+                                                0 -> stringRes(R.string.media_compression_quality_low)
+                                                1 -> stringRes(R.string.media_compression_quality_medium)
+                                                2 -> stringRes(R.string.media_compression_quality_high)
+                                                else -> stringRes(R.string.media_compression_quality_medium)
+                                            },
+                                        modifier = Modifier.align(Alignment.Center),
+                                    )
+                                }
+
                                 Slider(
                                     value = mediaQualitySlider.toFloat(),
                                     onValueChange = { mediaQualitySlider = it.toInt() },
                                     valueRange = 0f..2f,
                                     steps = 1,
-                                )
-
-                                Text(
-                                    text =
-                                        when (mediaQualitySlider) {
-                                            0 -> stringRes(context, R.string.media_compression_quality_low)
-                                            1 -> stringRes(context, R.string.media_compression_quality_medium)
-                                            2 -> stringRes(context, R.string.media_compression_quality_high)
-                                            else -> stringRes(context, R.string.media_compression_quality_medium)
-                                        },
-                                    textAlign = TextAlign.Center,
                                 )
                             }
                         }
