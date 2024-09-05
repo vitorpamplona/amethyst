@@ -1860,12 +1860,12 @@ fun ImageVideoDescription(
                     verticalArrangement = Arrangement.spacedBy(Size5dp),
                 ) {
                     Text(
-                        text = "Media Quality",
+                        text = stringRes(R.string.media_compression_quality_label),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = "Select low quality to generate smaller files with less quality. Select high quality to generate larger files with higher quality.",
+                        text = stringRes(R.string.media_compression_quality_explainer),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray,
                         maxLines = 4,
@@ -1889,10 +1889,10 @@ fun ImageVideoDescription(
                     Text(
                         text =
                             when (mediaQualitySlider.toInt()) {
-                                0 -> "Low"
-                                1 -> "Medium"
-                                2 -> "High"
-                                else -> "Medium"
+                                0 -> stringRes(R.string.media_compression_quality_low)
+                                1 -> stringRes(R.string.media_compression_quality_medium)
+                                2 -> stringRes(R.string.media_compression_quality_high)
+                                else -> stringRes(R.string.media_compression_quality_medium)
                             },
                         textAlign = TextAlign.Center,
                     )

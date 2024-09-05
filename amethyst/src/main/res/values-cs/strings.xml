@@ -817,4 +817,10 @@
     <string name="torrent_download">Stáhnout</string>
     <string name="torrent_failure">Nepodařilo se otevřít soubor</string>
     <string name="torrent_no_apps">Pro otevření a stažení souboru nejsou nainstalovány žádné torrent aplikace.</string>
+    <string name="media_compression_quality_label">Kvalita médií</string>
+    <string name="media_compression_quality_explainer">Vyberte Nízkou kvalitu pro kompresi médií na menší soubor s nižší kvalitou, nebo vyberte Vysokou kvalitu pro kompresi na větší soubor s vyšší kvalitou.</string>
+    <string name="media_compression_quality_low">Nízká</string>
+    <string name="media_compression_quality_medium">Střední</string>
+    <string name="media_compression_quality_high">Vysoká</string>
+
 </resources>
