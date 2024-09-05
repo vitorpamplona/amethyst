@@ -307,6 +307,7 @@
     <string name="zap_type_nonzap_explainer">নস্টারে কোনো সন্ধান নেই, কেবল বিজলিতে আছে</string>
     <string name="file_server">ফাইল সার্ভার</string>
     <string name="zap_forward_lnAddress">বিজলি-ঠিকানা বা @ব্যবহারকারী</string>
+    <string name="use_default_servers">ডিফল্ট তালিকা ব্যবহার করুন</string>
     <string name="upload_server_relays_nip95">আপনার রিলেগুলি (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">ফাইলগুলো আপনার রিলে দ্বারা গৃহীত হয়। নতুন NIP: তারা এটি সমর্থন করে কিনা দেখে নিন</string>
     <string name="connect_via_tor_short">Tor/Orbot সেটআপ করুন</string>
@@ -318,6 +319,7 @@
     <string name="follow_list_selection">অনুসরণ তালিকা</string>
     <string name="follow_list_kind3follows">অনুসৃত সকলেরা</string>
     <string name="follow_list_global">বৈশ্বিক</string>
+    <string name="follow_list_mute_list">নিঃশব্দ তালিকা</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Tor এর মাধ্যমে Orbot এর সাথে সংযুক্ত হোন
         \n\n১. [Orbot] নামান (https://play.google.com/store/apps/details?id=org.torproject.android)
         \n২. Orbot চালু করুন
@@ -417,6 +419,7 @@
     <string name="automatically_load_images_gifs">ছবির পূর্বরূপ</string>
     <string name="automatically_play_videos">ভিডিও প্লেব্যাক</string>
     <string name="automatically_show_url_preview">URL-এর পূর্বরূপ</string>
+    <string name="automatically_hide_nav_bars">ইমারসিভ স্ক্রোলিং</string>
     <string name="ui_style_description">পোস্ট শৈলী চয়ন করুন</string>
     <string name="load_image">ছবিটি লোড করুন</string>
     <string name="spamming_users">স্প্যামাররা</string>
@@ -487,6 +490,7 @@
     <string name="wallet_number">ওয়ালেট %1$s</string>
     <string name="error_opening_external_signer">স্বাক্ষরের অ্যাপ খোলা যাচ্ছে না</string>
     <string name="sign_request_rejected">স্বাক্ষরের অনুরোধ প্রত্যাখ্যান করা হয়েছে</string>
+    <string name="no_reactions_setup">কোন প্রতিক্রিয়া সেটআপ</string>
     <string name="push_server_none">কোনটি নয়</string>
     <string name="send_the_seller_a_message">বিক্রেতাকে একটি বার্তা পাঠান</string>
     <string name="hi_seller_is_this_still_available">হাই %1$s, এটা কি এখনও পাওয়া যায়?</string>
