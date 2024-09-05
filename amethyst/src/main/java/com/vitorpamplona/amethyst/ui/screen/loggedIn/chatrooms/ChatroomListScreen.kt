@@ -24,9 +24,12 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -73,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
@@ -183,39 +187,60 @@ fun ChatroomListTwoPane(
             }
         }
 
-    TwoPane(
-        first = {
-            ChatroomListScreenOnlyList(
-                knownFeedContentState,
-                newFeedContentState,
-                accountViewModel,
-                twoPaneNav,
-            )
-        },
-        second = {
-            twoPaneNav.innerNav.value?.let {
-                if (it.route == "Room") {
-                    Chatroom(
-                        roomId = it.id,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
-
-                if (it.route == "Channel") {
-                    Channel(
-                        channelId = it.id,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
+    DisappearingScaffold(
+        isInvertedLayout = false,
+        topBar = {
+            Column {
+                MainTopBar(accountViewModel, nav)
             }
         },
-        strategy = strategy,
-        displayFeatures = accountViewModel.settings.displayFeatures.value,
-        foldAwareConfiguration = FoldAwareConfiguration.VerticalFoldsOnly,
-        modifier = Modifier.fillMaxSize(),
-    )
+        bottomBar = {
+            AppBottomBar(Route.Message, accountViewModel) { route, _ ->
+                nav.newStack(route.base)
+            }
+        },
+        accountViewModel = accountViewModel,
+    ) {
+        TwoPane(
+            first = {
+                Box(Modifier.fillMaxSize().systemBarsPadding(), contentAlignment = Alignment.BottomEnd) {
+                    ChatroomListScreenOnlyList(
+                        knownFeedContentState,
+                        newFeedContentState,
+                        accountViewModel,
+                        twoPaneNav,
+                    )
+
+                    Box(Modifier.padding(Size20dp), contentAlignment = Alignment.Center) {
+                        ChannelFabColumn(accountViewModel, nav)
+                    }
+                }
+            },
+            second = {
+                twoPaneNav.innerNav.value?.let {
+                    if (it.route == "Room") {
+                        Chatroom(
+                            roomId = it.id,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
+
+                    if (it.route == "Channel") {
+                        Channel(
+                            channelId = it.id,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
+                }
+            },
+            strategy = strategy,
+            displayFeatures = accountViewModel.settings.displayFeatures.value,
+            foldAwareConfiguration = FoldAwareConfiguration.VerticalFoldsOnly,
+            modifier = Modifier.padding(it).consumeWindowInsets(it).fillMaxSize(),
+        )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -244,20 +269,22 @@ fun ChatroomListScreenOnlyList(
             }
         }
 
-    ChatroomListOnlyTabs(
-        pagerState,
-        tabs,
-        { markKnownAsRead.value = true },
-        { markNewAsRead.value = true },
-    )
+    Column {
+        ChatroomListOnlyTabs(
+            pagerState,
+            tabs,
+            { markKnownAsRead.value = true },
+            { markNewAsRead.value = true },
+        )
 
-    ChatroomListTabs(
-        pagerState,
-        tabs,
-        PaddingValues(0.dp),
-        accountViewModel,
-        nav,
-    )
+        ChatroomListTabs(
+            pagerState,
+            tabs,
+            PaddingValues(0.dp),
+            accountViewModel,
+            nav,
+        )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

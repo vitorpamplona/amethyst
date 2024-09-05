@@ -26,10 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.adaptive.calculateDisplayFeatures
-import com.vitorpamplona.amethyst.ui.screen.AccountScreen
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
-import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -52,17 +49,4 @@ fun prepareSharedViewModel(act: MainActivity): SharedPreferencesViewModel {
     }
 
     return sharedPreferencesViewModel
-}
-
-@Composable
-fun AppScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
-    AmethystTheme(sharedPreferencesViewModel) {
-        val accountStateViewModel: AccountStateViewModel = viewModel()
-
-        LaunchedEffect(key1 = Unit) {
-            accountStateViewModel.tryLoginExistingAccountAsync()
-        }
-
-        AccountScreen(accountStateViewModel, sharedPreferencesViewModel)
-    }
 }

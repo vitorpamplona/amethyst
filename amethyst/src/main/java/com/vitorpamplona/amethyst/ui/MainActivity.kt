@@ -34,7 +34,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.debugState
@@ -44,6 +46,9 @@ import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.ui.components.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.ui.components.keepPlayingMutex
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.screen.AccountScreen
+import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
@@ -78,7 +83,16 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             val sharedPreferencesViewModel = prepareSharedViewModel(act = this)
-            AppScreen(sharedPreferencesViewModel = sharedPreferencesViewModel)
+
+            AmethystTheme(sharedPreferencesViewModel) {
+                val accountStateViewModel: AccountStateViewModel = viewModel()
+
+                LaunchedEffect(key1 = Unit) {
+                    accountStateViewModel.tryLoginExistingAccountAsync()
+                }
+
+                AccountScreen(accountStateViewModel, sharedPreferencesViewModel)
+            }
         }
     }
 
