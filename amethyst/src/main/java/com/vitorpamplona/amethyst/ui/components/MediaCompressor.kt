@@ -47,7 +47,7 @@ class MediaCompressor {
         applicationContext: Context,
         onReady: (Uri, String?, Long?) -> Unit,
         onError: (Int) -> Unit,
-        mediaQuality: CompressorQuality?,
+        mediaQuality: CompressorQuality,
     ) {
         checkNotInMainThread()
 
@@ -59,7 +59,6 @@ class MediaCompressor {
                     CompressorQuality.MEDIUM -> VideoQuality.MEDIUM
                     CompressorQuality.HIGH -> VideoQuality.HIGH
                     CompressorQuality.VERY_HIGH -> VideoQuality.VERY_HIGH
-                    else -> VideoQuality.MEDIUM
                 }
             Log.d("MediaCompressor", "Using video compression $mediaQuality")
             VideoCompressor.start(
@@ -129,7 +128,6 @@ class MediaCompressor {
                     CompressorQuality.MEDIUM -> 60
                     CompressorQuality.HIGH -> 80
                     CompressorQuality.VERY_HIGH -> 90
-                    else -> 60
                 }
             try {
                 Log.d("MediaCompressor", "Using image compression $mediaQuality")
