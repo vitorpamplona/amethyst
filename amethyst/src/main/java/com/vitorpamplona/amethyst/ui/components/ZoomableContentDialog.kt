@@ -255,34 +255,36 @@ private fun DialogContent(
                     ShareImageAction(accountViewModel = accountViewModel, popupExpanded = popupExpanded, myContent, onDismiss = { popupExpanded.value = false })
                 }
 
-                val localContext = LocalContext.current
+                if (myContent !is MediaUrlContent || !myContent.url.endsWith(".m3u8")) {
+                    val localContext = LocalContext.current
 
-                val writeStoragePermissionState =
-                    rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
-                        if (isGranted) {
-                            saveImage(myContent, localContext, accountViewModel)
+                    val writeStoragePermissionState =
+                        rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
+                            if (isGranted) {
+                                saveImage(myContent, localContext, accountViewModel)
+                            }
                         }
+
+                    OutlinedButton(
+                        onClick = {
+                            if (
+                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
+                                writeStoragePermissionState.status.isGranted
+                            ) {
+                                saveImage(myContent, localContext, accountViewModel)
+                            } else {
+                                writeStoragePermissionState.launchPermissionRequest()
+                            }
+                        },
+                        contentPadding = PaddingValues(horizontal = Size5dp),
+                        colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            modifier = Size20Modifier,
+                            contentDescription = stringRes(R.string.save_to_gallery),
+                        )
                     }
-
-                OutlinedButton(
-                    onClick = {
-                        if (
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
-                            writeStoragePermissionState.status.isGranted
-                        ) {
-                            saveImage(myContent, localContext, accountViewModel)
-                        } else {
-                            writeStoragePermissionState.launchPermissionRequest()
-                        }
-                    },
-                    contentPadding = PaddingValues(horizontal = Size5dp),
-                    colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        modifier = Size20Modifier,
-                        contentDescription = stringRes(R.string.save_to_gallery),
-                    )
                 }
             }
         }

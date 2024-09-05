@@ -602,6 +602,8 @@
     <string name="automatically_show_url_preview_description">Show URL previews</string>
     <string name="load_image_description">When to load images</string>
 
+    <string name="copy_stack_to_clipboard">Copy Stack</string>
+
     <string name="copy_to_clipboard">Copy to clipboard</string>
     <string name="copy_npub_to_clipboard">Copy npub to clipboard</string>
     <string name="share_or_save">Share or Save</string>
