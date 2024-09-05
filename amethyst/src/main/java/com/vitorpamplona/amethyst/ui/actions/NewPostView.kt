@@ -130,7 +130,6 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.ui.components.BechLink
-import com.vitorpamplona.amethyst.ui.components.CompressorQuality
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
@@ -1849,18 +1848,37 @@ fun ImageVideoDescription(
             }
 
             Row(
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                        .padding(vertical = 8.dp),
             ) {
-                Text("Media Quality")
+                Column(
+                    modifier = Modifier.weight(1.0f),
+                    verticalArrangement = Arrangement.spacedBy(Size5dp),
+                ) {
+                    Text(
+                        text = "Media Quality",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = "Select low quality to generate smaller files with less quality. Select high quality to generate larger files with higher quality.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Column {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Slider(
                         value = mediaQualitySlider,
                         onValueChange = { mediaQualitySlider = it },
@@ -1871,11 +1889,12 @@ fun ImageVideoDescription(
                     Text(
                         text =
                             when (mediaQualitySlider.toInt()) {
-                                0 -> CompressorQuality.LOW.toString()
-                                1 -> CompressorQuality.MEDIUM.toString()
-                                2 -> CompressorQuality.HIGH.toString()
-                                else -> CompressorQuality.MEDIUM.toString()
+                                0 -> "Low"
+                                1 -> "Medium"
+                                2 -> "High"
+                                else -> "Medium"
                             },
+                        textAlign = TextAlign.Center,
                     )
                 }
             }
