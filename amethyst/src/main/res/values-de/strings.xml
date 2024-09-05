@@ -522,6 +522,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="automatically_play_videos_description">Videos und GIFs automatisch abspielen</string>
     <string name="automatically_show_url_preview_description">URL-Vorschauen anzeigen</string>
     <string name="load_image_description">Wann Bilder geladen werden sollen</string>
+    <string name="copy_stack_to_clipboard">Stapel kopieren</string>
     <string name="copy_to_clipboard">In Zwischenablage kopieren</string>
     <string name="copy_npub_to_clipboard">Npub in Zwischenablage kopieren</string>
     <string name="share_or_save">Teilen oder Speichern</string>
@@ -826,4 +827,5 @@ anz der Bedingungen ist erforderlich</string>
     <string name="torrent_download">Herunterladen</string>
     <string name="torrent_failure">Fehler beim Öffnen der Datei</string>
     <string name="torrent_no_apps">Keine Torrent-Apps installiert, um die Datei zu öffnen und herunterzuladen.</string>
+    <string name="select_list_to_filter">Liste zum Filtern des Feeds auswählen</string>
 </resources>

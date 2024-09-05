@@ -516,6 +516,7 @@
     <string name="automatically_play_videos_description">Spela upp videor och GIFs automatiskt</string>
     <string name="automatically_show_url_preview_description">Visa förhandsgranskning av URL</string>
     <string name="load_image_description">När bilder ska laddas</string>
+    <string name="copy_stack_to_clipboard">Kopiera stacken</string>
     <string name="copy_to_clipboard">Kopiera till Urklipp</string>
     <string name="copy_npub_to_clipboard">Kopiera npub till urklipp</string>
     <string name="share_or_save">Dela eller Spara</string>
@@ -820,4 +821,5 @@
     <string name="torrent_download">Ladda ner</string>
     <string name="torrent_failure">Det gick inte att öppna filen</string>
     <string name="torrent_no_apps">Inga torrent-appar installerade för att öppna och ladda ner filen.</string>
+    <string name="select_list_to_filter">Välj en lista för att filtrera flödet</string>
 </resources>

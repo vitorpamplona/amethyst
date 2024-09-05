@@ -517,6 +517,7 @@
     <string name="automatically_play_videos_description">Automaticky přehrávat videa a GIFy</string>
     <string name="automatically_show_url_preview_description">Zobrazit náhledy URL</string>
     <string name="load_image_description">Kdy načíst obrázek</string>
+    <string name="copy_stack_to_clipboard">Kopírovat zásobník</string>
     <string name="copy_to_clipboard">Kopírovat do schránky</string>
     <string name="copy_npub_to_clipboard">Kopírovat npub do schránky</string>
     <string name="share_or_save">Sdílet nebo Uložit</string>
@@ -821,4 +822,5 @@
     <string name="torrent_download">Stáhnout</string>
     <string name="torrent_failure">Nepodařilo se otevřít soubor</string>
     <string name="torrent_no_apps">Pro otevření a stažení souboru nejsou nainstalovány žádné torrent aplikace.</string>
+    <string name="select_list_to_filter">Vyberte seznam pro filtrování kanálu</string>
 </resources>
