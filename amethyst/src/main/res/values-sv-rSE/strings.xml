@@ -816,4 +816,10 @@
     <string name="torrent_download">Ladda ner</string>
     <string name="torrent_failure">Det gick inte att öppna filen</string>
     <string name="torrent_no_apps">Inga torrent-appar installerade för att öppna och ladda ner filen.</string>
+
+    <string name="media_compression_quality_label">Mediakvalitet</string>
+    <string name="media_compression_quality_explainer">Välj Låg kvalitet för att komprimera ditt media till en mindre fil med lägre kvalitet, eller välj Hög kvalitet för att komprimera till en större fil med högre kvalitet.</string>
+    <string name="media_compression_quality_low">Låg</string>
+    <string name="media_compression_quality_medium">Medel</string>
+    <string name="media_compression_quality_high">Hög</string>
 </resources>

@@ -822,4 +822,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="torrent_download">Herunterladen</string>
     <string name="torrent_failure">Fehler beim Öffnen der Datei</string>
     <string name="torrent_no_apps">Keine Torrent-Apps installiert, um die Datei zu öffnen und herunterzuladen.</string>
+    <string name="media_compression_quality_label">Medienqualität</string>
+    <string name="media_compression_quality_explainer">Wählen Sie Niedrige Qualität, um Ihre Medien in eine kleinere Datei mit geringerer Qualität zu komprimieren, oder wählen Sie Hohe Qualität, um sie in eine größere Datei mit höherer Qualität zu komprimieren.</string>
+    <string name="media_compression_quality_low">Niedrig</string>
+    <string name="media_compression_quality_medium">Mittel</string>
+    <string name="media_compression_quality_high">Hoch</string>
 </resources>
