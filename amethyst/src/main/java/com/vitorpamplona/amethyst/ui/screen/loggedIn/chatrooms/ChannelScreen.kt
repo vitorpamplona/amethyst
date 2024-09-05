@@ -116,7 +116,9 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.ServerOption
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.components.CompressorQuality
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -466,6 +468,8 @@ fun EditFieldRow(
                         galleryUri = it,
                         alt = null,
                         sensitiveContent = false,
+                        // Use MEDIUM quality
+                        mediaQuality = MediaCompressor().compressorQualityToFloat(CompressorQuality.MEDIUM),
                         server = ServerOption(accountViewModel.account.settings.defaultFileServer, false),
                         onError = accountViewModel::toast,
                         context = context,

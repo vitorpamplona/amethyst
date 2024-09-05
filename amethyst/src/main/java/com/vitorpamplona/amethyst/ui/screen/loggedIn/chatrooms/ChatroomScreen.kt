@@ -92,6 +92,8 @@ import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.ServerOption
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.components.CompressorQuality
+import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.IncognitoIconOff
 import com.vitorpamplona.amethyst.ui.note.IncognitoIconOn
@@ -443,6 +445,8 @@ fun PrivateMessageEditFieldRow(
                             galleryUri = it,
                             alt = null,
                             sensitiveContent = false,
+                            // use MEDIUM quality
+                            mediaQuality = MediaCompressor().compressorQualityToFloat(CompressorQuality.MEDIUM),
                             isPrivate = isPrivate,
                             server = ServerOption(accountViewModel.account.settings.defaultFileServer, false),
                             onError = accountViewModel::toast,

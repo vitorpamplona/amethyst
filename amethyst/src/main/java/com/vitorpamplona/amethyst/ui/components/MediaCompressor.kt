@@ -184,6 +184,22 @@ class MediaCompressor {
         }
         return arrayOf(name, extension)
     }
+
+    fun floatToCompressorQuality(mediaQualityFloat: Float): CompressorQuality =
+        when (mediaQualityFloat) {
+            0f -> CompressorQuality.LOW
+            1f -> CompressorQuality.MEDIUM
+            2f -> CompressorQuality.HIGH
+            else -> CompressorQuality.MEDIUM
+        }
+
+    fun compressorQualityToFloat(compressorQuality: CompressorQuality): Float =
+        when (compressorQuality) {
+            CompressorQuality.LOW -> 0f
+            CompressorQuality.MEDIUM -> 1f
+            CompressorQuality.HIGH -> 2f
+            else -> 1f
+        }
 }
 
 enum class CompressorQuality {

@@ -493,8 +493,8 @@ fun NewPostView(
                                         ImageVideoDescription(
                                             url,
                                             accountViewModel.account.settings.defaultFileServer,
-                                            onAdd = { alt, server, sensitiveContent ->
-                                                postViewModel.upload(url, alt, sensitiveContent, false, server, accountViewModel::toast, context)
+                                            onAdd = { alt, server, sensitiveContent, mediaQuality ->
+                                                postViewModel.upload(url, alt, sensitiveContent, mediaQuality, false, server, accountViewModel::toast, context)
                                                 if (!server.isNip95) {
                                                     accountViewModel.account.settings.changeDefaultFileServer(server.server)
                                                 }
@@ -1610,7 +1610,7 @@ fun CreateButton(
 fun ImageVideoDescription(
     uri: Uri,
     defaultServer: Nip96MediaServers.ServerName,
-    onAdd: (String, ServerOption, Boolean) -> Unit,
+    onAdd: (String, ServerOption, Boolean, Float) -> Unit,
     onCancel: () -> Unit,
     onError: (Int) -> Unit,
     accountViewModel: AccountViewModel,
@@ -1668,7 +1668,7 @@ fun ImageVideoDescription(
     }
     var message by remember { mutableStateOf("") }
     var sensitiveContent by remember { mutableStateOf(false) }
-    var sliderPosition by remember { mutableStateOf(1f) } // 0 = Low, 1 = Medium, 2 = High
+    var mediaQualitySlider by remember { mutableStateOf(1f) } // 0 = Low, 1 = Medium, 2 = High
 
     Column(
         modifier =
@@ -1861,15 +1861,15 @@ fun ImageVideoDescription(
             ) {
                 Column {
                     Slider(
-                        value = sliderPosition,
-                        onValueChange = { sliderPosition = it },
+                        value = mediaQualitySlider,
+                        onValueChange = { mediaQualitySlider = it },
                         valueRange = 0f..2f,
                         steps = 1,
                     )
 
                     Text(
                         text =
-                            when (sliderPosition.toInt()) {
+                            when (mediaQualitySlider.toInt()) {
                                 0 -> CompressorQuality.LOW.toString()
                                 1 -> CompressorQuality.MEDIUM.toString()
                                 2 -> CompressorQuality.HIGH.toString()
@@ -1884,7 +1884,7 @@ fun ImageVideoDescription(
                     Modifier
                         .fillMaxWidth()
                         .padding(vertical = 10.dp),
-                onClick = { onAdd(message, selectedServer, sensitiveContent) },
+                onClick = { onAdd(message, selectedServer, sensitiveContent, mediaQualitySlider) },
                 shape = QuoteBorder,
                 colors =
                     ButtonDefaults.buttonColors(

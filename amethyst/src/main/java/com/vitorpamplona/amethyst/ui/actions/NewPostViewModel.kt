@@ -46,7 +46,6 @@ import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.LocationUtil
 import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
-import com.vitorpamplona.amethyst.ui.components.CompressorQuality
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.Split
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -835,6 +834,7 @@ open class NewPostViewModel : ViewModel() {
         galleryUri: Uri,
         alt: String?,
         sensitiveContent: Boolean,
+        mediaQuality: Float,
         isPrivate: Boolean = false,
         server: ServerOption,
         onError: (title: String, message: String) -> Unit,
@@ -910,7 +910,7 @@ open class NewPostViewModel : ViewModel() {
                         isUploadingImage = false
                         onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, it))
                     },
-                    mediaQuality = CompressorQuality.LOW,
+                    mediaQuality = MediaCompressor().floatToCompressorQuality(mediaQuality),
                 )
         }
     }
