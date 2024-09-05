@@ -810,7 +810,6 @@
     <string name="add_a_nip96_server">Adj hozzá egy NIP-96 szervert</string>
     <string name="delete_all">Törlés mind</string>
     <string name="delete_all_drafts_confirmation">Biztosan törölni szeretnéd az összes jegyzetet?</string>
-    <string name="and_more">" +%1$s"</string>
     <string name="stack">Köteg:</string>
     <string name="torrent_file">Torrent Fájl</string>
     <string name="torrent_download">Letöltés</string>

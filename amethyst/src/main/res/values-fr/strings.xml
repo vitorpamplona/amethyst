@@ -813,7 +813,6 @@
     <string name="add_a_nip96_server">Ajouter un serveur NIP-96</string>
     <string name="delete_all">Tout supprimer</string>
     <string name="delete_all_drafts_confirmation">Êtes-vous sûr de vouloir supprimer tous les brouillons ?</string>
-    <string name="and_more">" +%1$s"</string>
     <string name="stack">Pile :</string>
     <string name="torrent_file">Fichier torrent</string>
     <string name="torrent_download">Télécharger</string>

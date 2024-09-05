@@ -813,7 +813,6 @@
     <string name="add_a_nip96_server">Voeg een NIP-96 Server toe</string>
     <string name="delete_all">Alles verwijderen</string>
     <string name="delete_all_drafts_confirmation">Weet u zeker dat u alle concepten wilt verwijderen?</string>
-    <string name="and_more">" … en %1$s meer"</string>
     <string name="stack">Stack:</string>
     <string name="torrent_file">Torrent-bestand</string>
     <string name="torrent_download">Downloaden</string>

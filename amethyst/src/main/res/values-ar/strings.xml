@@ -512,5 +512,4 @@
     <string name="edit_post">تعديل المنشور</string>
     <string name="accessibility_scan_qr_code">مسح رمز ال QR</string>
     <string name="dvm_looking_for_app">البحث عن تطبيق</string>
-    <string name="and_more">" +%1$s"</string>
 </resources>
