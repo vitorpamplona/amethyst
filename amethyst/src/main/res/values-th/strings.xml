@@ -656,6 +656,7 @@
     <string name="could_not_prepare_local_file_to_upload">ไม่สามารถเตรียมข้อมูลสำหรับอัพโหลด : %1$s</string>
     <string name="failed_to_upload_with_message">การอัปโหลดล้มเหลว: %1$s</string>
     <string name="failed_to_delete_with_message">การลบล้มเหลว: %1$s</string>
+    <string name="media_too_big_for_nip95">สื่อชิ้นนี้ใหญ่เกินไปสำหรับ NIP-95</string>
     <string name="edit_draft">แก้ไขฉบับร่าง</string>
     <string name="login_with_qr_code">เข้าสู่ระบบด้วย qr code</string>
     <string name="route">เส้นทาง</string>
@@ -803,6 +804,7 @@
     <string name="delete_all">ลบทั้งหมด</string>
     <string name="delete_all_drafts_confirmation">คุณแน่ใจหรือไม่ว่าต้องการลบแบบร่างทั้งหมด</string>
     <string name="and_more">" … และอีก %1$s"</string>
+    <string name="torrent_file">ไฟล์ Torrent</string>
     <string name="torrent_download">ดาวน์โหลด</string>
     <string name="torrent_failure">ไม่สามารถเปิดไฟล์ได้</string>
 </resources>
