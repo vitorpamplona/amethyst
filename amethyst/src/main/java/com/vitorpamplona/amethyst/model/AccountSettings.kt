@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
@@ -162,7 +161,7 @@ class AccountSettings(
         } else {
             when (val packageName = externalSignerPackageName) {
                 null -> NostrSignerInternal(keyPair)
-                else -> NostrSignerExternal(keyPair.pubKey.toHexKey(), ExternalSignerLauncher(keyPair.pubKey.toNpub(), packageName))
+                else -> NostrSignerExternal(keyPair.pubKey.toHexKey(), ExternalSignerLauncher(keyPair.pubKey.toHexKey(), packageName))
             }
         }
 

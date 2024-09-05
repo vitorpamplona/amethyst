@@ -92,7 +92,7 @@ class Result(
 }
 
 class ExternalSignerLauncher(
-    private val npub: String,
+    private val currentUserPubKeyHex: String,
     val signerPackageName: String,
 ) {
     private val contentCache = LruCache<String, (String) -> Unit>(50)
@@ -222,7 +222,7 @@ class ExternalSignerLauncher(
         intent.putExtra("pubKey", pubKey)
         intent.putExtra("id", id)
         if (type !== SignerType.GET_PUBLIC_KEY) {
-            intent.putExtra("current_user", npub)
+            intent.putExtra("current_user", currentUserPubKeyHex)
         } else {
             intent.putExtra("permissions", defaultPermissions())
         }
@@ -278,7 +278,7 @@ class ExternalSignerLauncher(
     ): kotlin.Result<String?> {
         val localData =
             if (signerType !== SignerType.GET_PUBLIC_KEY) {
-                arrayOf(*data, npub)
+                arrayOf(*data, currentUserPubKeyHex)
             } else {
                 data
             }
