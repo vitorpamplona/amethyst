@@ -810,6 +810,5 @@
     <string name="add_a_nip96_server">Agregar servidor NIP-96</string>
     <string name="delete_all">Borrar todo</string>
     <string name="delete_all_drafts_confirmation">¿Seguro quieres eliminar todos los borradores?</string>
-    <string name="and_more">" … y %1$s más"</string>
     <string name="stack">Stack:</string>
 </resources>

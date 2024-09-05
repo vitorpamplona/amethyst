@@ -816,7 +816,6 @@
     <string name="add_a_nip96_server">Přidat NIP-96 server</string>
     <string name="delete_all">Vymazat vše</string>
     <string name="delete_all_drafts_confirmation">Opravdu chcete odstranit všechny koncepty?</string>
-    <string name="and_more">" … a %1$s další"</string>
     <string name="stack">Zásobník:</string>
     <string name="torrent_file">Torrent soubor</string>
     <string name="torrent_download">Stáhnout</string>
