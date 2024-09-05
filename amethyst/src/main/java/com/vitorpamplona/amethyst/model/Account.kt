@@ -632,7 +632,7 @@ class Account(
             authorsPerRelay(
                 liveHomeFollowLists.value?.usersPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
                 connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
-            ),
+            ).ifEmpty { null },
         )
     }
 
@@ -708,7 +708,7 @@ class Account(
             authorsPerRelay(
                 liveStoriesFollowLists.value?.usersPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
                 connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
-            ),
+            ).ifEmpty { null },
         )
     }
 
@@ -761,8 +761,8 @@ class Account(
             SharingStarted.Eagerly,
             authorsPerRelay(
                 liveDiscoveryFollowLists.value?.usersPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
-                connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
-            ),
+                connectToRelays.value.filter { it.read }.map { it.url },
+            ).ifEmpty { null },
         )
     }
 
