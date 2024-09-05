@@ -587,7 +587,7 @@ fun PrivateMessageEditFieldRow(
                             alt = null,
                             sensitiveContent = false,
                             // use MEDIUM quality
-                            mediaQuality = MediaCompressor().compressorQualityToFloat(CompressorQuality.MEDIUM),
+                            mediaQuality = MediaCompressor().compressorQualityToInt(CompressorQuality.MEDIUM),
                             isPrivate = isPrivate,
                             server = ServerOption(accountViewModel.account.settings.defaultFileServer, false),
                             onError = accountViewModel::toast,

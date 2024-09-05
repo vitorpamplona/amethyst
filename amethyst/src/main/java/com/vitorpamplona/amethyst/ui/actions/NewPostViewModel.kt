@@ -834,7 +834,7 @@ open class NewPostViewModel : ViewModel() {
         galleryUri: Uri,
         alt: String?,
         sensitiveContent: Boolean,
-        mediaQuality: Float,
+        mediaQuality: Int,
         isPrivate: Boolean = false,
         server: ServerOption,
         onError: (title: String, message: String) -> Unit,
@@ -910,7 +910,7 @@ open class NewPostViewModel : ViewModel() {
                         isUploadingImage = false
                         onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, it))
                     },
-                    mediaQuality = MediaCompressor().floatToCompressorQuality(mediaQuality),
+                    mediaQuality = MediaCompressor().intToCompressorQuality(mediaQuality),
                 )
         }
     }

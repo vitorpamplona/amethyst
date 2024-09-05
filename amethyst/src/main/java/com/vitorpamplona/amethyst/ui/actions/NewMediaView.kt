@@ -51,7 +51,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -106,7 +106,7 @@ fun NewMediaView(
 
     var showRelaysDialog by remember { mutableStateOf(false) }
     var relayList = remember { accountViewModel.account.activeWriteRelays().toImmutableList() }
-    var mediaQualitySlider by remember { mutableFloatStateOf(1f) } // 0 = Low, 1 = Medium, 2 = High
+    var mediaQualitySlider by remember { mutableIntStateOf(1) } // 0 = Low, 1 = Medium, 2 = High
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -220,15 +220,15 @@ fun NewMediaView(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Slider(
-                                    value = mediaQualitySlider,
-                                    onValueChange = { mediaQualitySlider = it },
+                                    value = mediaQualitySlider.toFloat(),
+                                    onValueChange = { mediaQualitySlider = it.toInt() },
                                     valueRange = 0f..2f,
                                     steps = 1,
                                 )
 
                                 Text(
                                     text =
-                                        when (mediaQualitySlider.toInt()) {
+                                        when (mediaQualitySlider) {
                                             0 -> stringRes(context, R.string.media_compression_quality_low)
                                             1 -> stringRes(context, R.string.media_compression_quality_medium)
                                             2 -> stringRes(context, R.string.media_compression_quality_high)

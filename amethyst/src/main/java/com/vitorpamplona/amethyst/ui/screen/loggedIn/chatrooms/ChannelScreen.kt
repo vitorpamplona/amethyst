@@ -517,7 +517,7 @@ fun EditFieldRow(
                         alt = null,
                         sensitiveContent = false,
                         // Use MEDIUM quality
-                        mediaQuality = MediaCompressor().compressorQualityToFloat(CompressorQuality.MEDIUM),
+                        mediaQuality = MediaCompressor().compressorQualityToInt(CompressorQuality.MEDIUM),
                         server = ServerOption(accountViewModel.account.settings.defaultFileServer, false),
                         onError = accountViewModel::toast,
                         context = context,

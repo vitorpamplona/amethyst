@@ -88,6 +88,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -1610,7 +1611,7 @@ fun CreateButton(
 fun ImageVideoDescription(
     uri: Uri,
     defaultServer: Nip96MediaServers.ServerName,
-    onAdd: (String, ServerOption, Boolean, Float) -> Unit,
+    onAdd: (String, ServerOption, Boolean, Int) -> Unit,
     onCancel: () -> Unit,
     onError: (Int) -> Unit,
     accountViewModel: AccountViewModel,
@@ -1668,7 +1669,7 @@ fun ImageVideoDescription(
     }
     var message by remember { mutableStateOf("") }
     var sensitiveContent by remember { mutableStateOf(false) }
-    var mediaQualitySlider by remember { mutableStateOf(1f) } // 0 = Low, 1 = Medium, 2 = High
+    var mediaQualitySlider by remember { mutableIntStateOf(1) } // 0 = Low, 1 = Medium, 2 = High
 
     Column(
         modifier =
@@ -1880,15 +1881,15 @@ fun ImageVideoDescription(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Slider(
-                        value = mediaQualitySlider,
-                        onValueChange = { mediaQualitySlider = it },
+                        value = mediaQualitySlider.toFloat(),
+                        onValueChange = { mediaQualitySlider = it.toInt() },
                         valueRange = 0f..2f,
                         steps = 1,
                     )
 
                     Text(
                         text =
-                            when (mediaQualitySlider.toInt()) {
+                            when (mediaQualitySlider) {
                                 0 -> stringRes(R.string.media_compression_quality_low)
                                 1 -> stringRes(R.string.media_compression_quality_medium)
                                 2 -> stringRes(R.string.media_compression_quality_high)

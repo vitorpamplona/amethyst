@@ -183,20 +183,20 @@ class MediaCompressor {
         return arrayOf(name, extension)
     }
 
-    fun floatToCompressorQuality(mediaQualityFloat: Float): CompressorQuality =
+    fun intToCompressorQuality(mediaQualityFloat: Int): CompressorQuality =
         when (mediaQualityFloat) {
-            0f -> CompressorQuality.LOW
-            1f -> CompressorQuality.MEDIUM
-            2f -> CompressorQuality.HIGH
+            0 -> CompressorQuality.LOW
+            1 -> CompressorQuality.MEDIUM
+            2 -> CompressorQuality.HIGH
             else -> CompressorQuality.MEDIUM
         }
 
-    fun compressorQualityToFloat(compressorQuality: CompressorQuality): Float =
+    fun compressorQualityToInt(compressorQuality: CompressorQuality): Int =
         when (compressorQuality) {
-            CompressorQuality.LOW -> 0f
-            CompressorQuality.MEDIUM -> 1f
-            CompressorQuality.HIGH -> 2f
-            else -> 1f
+            CompressorQuality.LOW -> 0
+            CompressorQuality.MEDIUM -> 1
+            CompressorQuality.HIGH -> 2
+            else -> 1
         }
 }
 
