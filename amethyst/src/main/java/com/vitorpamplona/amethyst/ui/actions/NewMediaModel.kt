@@ -34,7 +34,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.Nip96Uploader
-import com.vitorpamplona.amethyst.ui.components.CompressorQuality
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
@@ -80,6 +79,7 @@ open class NewMediaModel : ViewModel() {
     fun upload(
         context: Context,
         relayList: List<RelaySetupInfo>? = null,
+        mediaQuality: Float,
         onError: (String) -> Unit = {},
     ) {
         isUploadingImage = true
@@ -167,7 +167,7 @@ open class NewMediaModel : ViewModel() {
                         uploadingDescription.value = null
                         onError(stringRes(context, R.string.error_when_compressing_media, it))
                     },
-                    mediaQuality = CompressorQuality.LOW,
+                    mediaQuality = MediaCompressor().floatToCompressorQuality(mediaQuality),
                 )
         }
     }

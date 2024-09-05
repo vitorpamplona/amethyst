@@ -44,22 +44,27 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -72,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.FileServersEvent
 import kotlinx.collections.immutable.toImmutableList
@@ -100,6 +106,7 @@ fun NewMediaView(
 
     var showRelaysDialog by remember { mutableStateOf(false) }
     var relayList = remember { accountViewModel.account.activeWriteRelays().toImmutableList() }
+    var mediaQualitySlider by remember { mutableFloatStateOf(1f) } // 0 = Low, 1 = Medium, 2 = High
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -160,7 +167,7 @@ fun NewMediaView(
                     PostButton(
                         onPost = {
                             onClose()
-                            postViewModel.upload(context, relayList) {
+                            postViewModel.upload(context, relayList, mediaQualitySlider) {
                                 accountViewModel.toast(stringRes(context, R.string.failed_to_upload_media_no_details), it)
                             }
                             postViewModel.selectedServer?.let {
@@ -180,6 +187,57 @@ fun NewMediaView(
                         modifier = Modifier.fillMaxWidth().verticalScroll(scrollState),
                     ) {
                         ImageVideoPost(postViewModel, accountViewModel)
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                                    .padding(vertical = 8.dp),
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1.0f),
+                                verticalArrangement = Arrangement.spacedBy(Size5dp),
+                            ) {
+                                Text(
+                                    text = "Media Quality",
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Text(
+                                    text = "Select low quality to generate smaller files with less quality. Select high quality to generate larger files with higher quality.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray,
+                                    maxLines = 4,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Slider(
+                                    value = mediaQualitySlider,
+                                    onValueChange = { mediaQualitySlider = it },
+                                    valueRange = 0f..2f,
+                                    steps = 1,
+                                )
+
+                                Text(
+                                    text =
+                                        when (mediaQualitySlider.toInt()) {
+                                            0 -> "Low"
+                                            1 -> "Medium"
+                                            2 -> "High"
+                                            else -> "Medium"
+                                        },
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
                     }
                 }
             }
