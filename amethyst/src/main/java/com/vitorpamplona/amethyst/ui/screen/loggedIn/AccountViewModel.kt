@@ -58,13 +58,14 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.bottomNavigationItems
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.SettingsState
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -83,12 +84,14 @@ import com.vitorpamplona.quartz.events.ChatroomKeyable
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
+import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.Participant
 import com.vitorpamplona.quartz.events.ReportEvent
+import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.Response
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.SearchRelayListEvent
@@ -102,6 +105,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
@@ -110,7 +114,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -120,7 +126,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
-import kotlin.time.measureTimedValue
 
 @Immutable open class ToastMsg
 
@@ -175,6 +180,82 @@ class AccountViewModel(
     val toasts = MutableSharedFlow<ToastMsg?>(0, 3, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     val feedStates = AccountFeedContentStates(this)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val notificationHasNewItems =
+        combineTransform(
+            account.loadLastReadFlow("Notification"),
+            feedStates.notifications.feedContent
+                .flatMapLatest {
+                    if (it is CardFeedState.Loaded) {
+                        it.feed
+                    } else {
+                        MutableStateFlow(null)
+                    }
+                }.map { it?.list?.firstOrNull()?.createdAt() },
+        ) { lastRead, newestItemCreatedAt ->
+            emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
+        }
+
+    val notificationHasNewItemsFlow = notificationHasNewItems.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val messagesHasNewItems =
+        feedStates.dmKnown.feedContent
+            .flatMapLatest {
+                if (it is FeedState.Loaded) {
+                    it.feed
+                } else {
+                    MutableStateFlow(null)
+                }
+            }.flatMapLatest {
+                val flows =
+                    it?.list?.mapNotNull { chat ->
+                        (chat.event as? ChatroomKeyable)?.let { event ->
+                            val room = event.chatroomKey(account.signer.pubKey)
+                            account.settings.getLastReadFlow("Room/${room.hashCode()}").map {
+                                (chat.event?.createdAt() ?: 0) > it
+                            }
+                        }
+                    }
+
+                if (flows != null) {
+                    combine(flows) {
+                        it.any { it }
+                    }
+                } else {
+                    MutableStateFlow(false)
+                }
+            }
+
+    val messagesHasNewItemsFlow = messagesHasNewItems.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val homeHasNewItems =
+        combineTransform(
+            account.loadLastReadFlow("HomeFollows"),
+            feedStates.homeNewThreads.feedContent
+                .flatMapLatest {
+                    if (it is FeedState.Loaded) {
+                        it.feed
+                    } else {
+                        MutableStateFlow(null)
+                    }
+                }.map {
+                    it?.list?.firstOrNull { it.event != null && it.event !is GenericRepostEvent && it.event !is RepostEvent }?.createdAt()
+                },
+        ) { lastRead, newestItemCreatedAt ->
+            emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
+        }
+
+    val homeHasNewItemsFlow = homeHasNewItems.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    val hasNewItems =
+        mapOf(
+            Route.Home to homeHasNewItemsFlow,
+            Route.Message to messagesHasNewItemsFlow,
+            Route.Notification to notificationHasNewItemsFlow,
+        )
 
     fun clearToasts() {
         viewModelScope.launch { toasts.emit(null) }
@@ -1082,10 +1163,6 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) { onDone(OnlineChecker.isOnline(media)) }
     }
 
-    suspend fun refreshMarkAsReadObservers() {
-        updateNotificationDots()
-    }
-
     fun loadAndMarkAsRead(
         routeForLastRead: String,
         createdAt: Long?,
@@ -1098,9 +1175,7 @@ class AccountViewModel(
 
         if (onIsNew) {
             viewModelScope.launch(Dispatchers.Default) {
-                if (account.markAsRead(routeForLastRead, createdAt)) {
-                    refreshMarkAsReadObservers()
-                }
+                account.markAsRead(routeForLastRead, createdAt)
             }
         }
 
@@ -1112,8 +1187,6 @@ class AccountViewModel(
         onDone: () -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            var atLeastOne = false
-
             for (note in notes) {
                 note.event?.let { noteEvent ->
                     val channelHex = note.channelHex()
@@ -1128,15 +1201,9 @@ class AccountViewModel(
                         }
 
                     route?.let {
-                        if (account.markAsRead(route, noteEvent.createdAt())) {
-                            atLeastOne = true
-                        }
+                        account.markAsRead(route, noteEvent.createdAt())
                     }
                 }
-            }
-
-            if (atLeastOne) {
-                refreshMarkAsReadObservers()
             }
 
             onDone()
@@ -1178,20 +1245,7 @@ class AccountViewModel(
     }
 
     private var collectorJob: Job? = null
-    val notificationDots = HasNotificationDot(bottomNavigationItems)
     private val bundlerInsert = BundledInsert<Set<Note>>(3000, Dispatchers.Default)
-
-    fun invalidateInsertData(newItems: Set<Note>) {
-        bundlerInsert.invalidateList(newItems) { updateNotificationDots(it.flatten().toSet()) }
-    }
-
-    fun updateNotificationDots(newNotes: Set<Note> = emptySet()) {
-        val (value, elapsed) = measureTimedValue { notificationDots.update(newNotes, account) }
-        Log.d(
-            "Rendering Metrics",
-            "Notification Dots Calculation in $elapsed for ${newNotes.size} new notes",
-        )
-    }
 
     init {
         Log.d("Init", "AccountViewModel")
@@ -1202,10 +1256,9 @@ class AccountViewModel(
                 LocalCache.live.newEventBundles.collect { newNotes ->
                     Log.d(
                         "Rendering Metrics",
-                        "Notification Dots Calculation refresh ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()}",
+                        "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()}",
                     )
                     feedStates.updateFeedsWith(newNotes)
-                    invalidateInsertData(newNotes)
                     upgradeAttestations()
                 }
             }
@@ -1570,33 +1623,6 @@ class AccountViewModel(
                     LoadedBechLink(returningNote, it)
                 }
             }
-    }
-}
-
-class HasNotificationDot(
-    bottomNavigationItems: ImmutableList<Route>,
-) {
-    val hasNewItems = bottomNavigationItems.associateWith { MutableStateFlow(false) }
-
-    fun update(
-        newNotes: Set<Note>,
-        account: Account,
-    ) {
-        checkNotInMainThread()
-
-        hasNewItems.forEach {
-            val (value, elapsed) =
-                measureTimedValue {
-                    val newResult = it.key.hasNewItems(account, newNotes)
-                    if (newResult != it.value.value) {
-                        it.value.value = newResult
-                    }
-                }
-            Log.d(
-                "Rendering Metrics",
-                "Notification Dots Calculation for ${it.key.route} in $elapsed for ${newNotes.size} new notes",
-            )
-        }
     }
 }
 

@@ -194,7 +194,7 @@ fun AddNotifIconIfNeeded(
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
 ) {
-    val flow = accountViewModel.notificationDots.hasNewItems[route] ?: return
+    val flow = accountViewModel.hasNewItems[route] ?: return
     val hasNewItems by flow.collectAsStateWithLifecycle()
     if (hasNewItems) {
         NotificationDotIcon(modifier)
