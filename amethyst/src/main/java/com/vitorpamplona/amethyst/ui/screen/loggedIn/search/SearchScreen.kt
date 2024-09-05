@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.search
 
-import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,12 +29,14 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,10 +46,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -63,16 +61,11 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -96,13 +89,9 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.ammolite.relays.BundledUpdate
-import com.vitorpamplona.quartz.events.findHashtags
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -162,7 +151,7 @@ fun SearchScreen(
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            SearchBar(searchBarViewModel, listState)
+            SearchBar(searchBarViewModel, listState, nav)
         },
         bottomBar = {
             AppBottomBar(Route.Search, accountViewModel) { route, _ ->
@@ -187,91 +176,12 @@ fun WatchAccountForSearchScreen(accountViewModel: AccountViewModel) {
     }
 }
 
-@Stable
-class SearchBarViewModel(
-    val account: Account,
-) : ViewModel() {
-    var searchValue by mutableStateOf("")
-
-    private var _searchResultsUsers = MutableStateFlow<List<User>>(emptyList())
-    private var _searchResultsNotes = MutableStateFlow<List<Note>>(emptyList())
-    private var _searchResultsChannels = MutableStateFlow<List<Channel>>(emptyList())
-    private var _hashtagResults = MutableStateFlow<List<String>>(emptyList())
-
-    val searchResultsUsers = _searchResultsUsers.asStateFlow()
-    val searchResultsNotes = _searchResultsNotes.asStateFlow()
-    val searchResultsChannels = _searchResultsChannels.asStateFlow()
-    val hashtagResults = _hashtagResults.asStateFlow()
-
-    val isSearching by derivedStateOf { searchValue.isNotBlank() }
-
-    fun updateSearchValue(newValue: String) {
-        searchValue = newValue
-    }
-
-    private suspend fun runSearch() {
-        if (searchValue.isBlank()) {
-            _hashtagResults.value = emptyList()
-            _searchResultsUsers.value = emptyList()
-            _searchResultsChannels.value = emptyList()
-            _searchResultsNotes.value = emptyList()
-            return
-        }
-
-        _hashtagResults.emit(findHashtags(searchValue))
-        _searchResultsUsers.emit(
-            LocalCache
-                .findUsersStartingWith(searchValue)
-                .sortedWith(compareBy({ account.isFollowing(it) }, { it.toBestDisplayName() }))
-                .reversed(),
-        )
-        _searchResultsNotes.emit(
-            LocalCache
-                .findNotesStartingWith(searchValue)
-                .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-                .reversed(),
-        )
-        _searchResultsChannels.emit(LocalCache.findChannelsStartingWith(searchValue))
-    }
-
-    fun clear() {
-        searchValue = ""
-        _searchResultsUsers.value = emptyList()
-        _searchResultsChannels.value = emptyList()
-        _searchResultsNotes.value = emptyList()
-        _searchResultsChannels.value = emptyList()
-    }
-
-    private val bundler = BundledUpdate(250, Dispatchers.IO)
-
-    fun invalidateData() {
-        bundler.invalidate {
-            // adds the time to perform the refresh into this delay
-            // holding off new updates in case of heavy refresh routines.
-            runSearch()
-        }
-    }
-
-    override fun onCleared() {
-        bundler.cancel()
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
-        super.onCleared()
-    }
-
-    fun isSearchingFun() = searchValue.isNotBlank()
-
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <SearchBarViewModel : ViewModel> create(modelClass: Class<SearchBarViewModel>): SearchBarViewModel = SearchBarViewModel(account) as SearchBarViewModel
-    }
-}
-
-@OptIn(FlowPreview::class)
+@OptIn(FlowPreview::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun SearchBar(
     searchBarViewModel: SearchBarViewModel,
     listState: LazyListState,
+    nav: INav,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -313,8 +223,7 @@ private fun SearchBar(
 
     DisposableEffect(Unit) { onDispose { NostrSearchEventOrUserDataSource.clear() } }
 
-    // LAST ROW
-    SearchTextField(searchBarViewModel) {
+    SearchTextField(searchBarViewModel, modifier = Modifier.statusBarsPadding()) {
         scope.launch(Dispatchers.IO) { searchTextChanges.trySend(it) }
     }
 }
@@ -322,6 +231,7 @@ private fun SearchBar(
 @Composable
 private fun SearchTextField(
     searchBarViewModel: SearchBarViewModel,
+    modifier: Modifier,
     onTextChanges: (String) -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -334,7 +244,7 @@ private fun SearchTextField(
     }
 
     Row(
-        modifier = Modifier.padding(10.dp).fillMaxWidth(),
+        modifier = modifier.padding(10.dp).fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
