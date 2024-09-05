@@ -29,6 +29,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -38,8 +40,10 @@ fun Nip65RelayList(
     postViewModel: Nip65RelayListViewModel,
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
+    val newNav = rememberExtendedNav(nav, onClose)
+
     val homeFeedState by postViewModel.homeRelays.collectAsStateWithLifecycle()
     val notifFeedState by postViewModel.notificationRelays.collectAsStateWithLifecycle()
 
@@ -47,8 +51,8 @@ fun Nip65RelayList(
         LazyColumn(
             contentPadding = FeedPadding,
         ) {
-            renderNip65HomeItems(homeFeedState, postViewModel, accountViewModel, onClose, nav)
-            renderNip65NotifItems(notifFeedState, postViewModel, accountViewModel, onClose, nav)
+            renderNip65HomeItems(homeFeedState, postViewModel, accountViewModel, newNav)
+            renderNip65NotifItems(notifFeedState, postViewModel, accountViewModel, newNav)
         }
     }
 }
@@ -57,18 +61,15 @@ fun LazyListScope.renderNip65HomeItems(
     feedState: List<BasicRelaySetupInfo>,
     postViewModel: Nip65RelayListViewModel,
     accountViewModel: AccountViewModel,
-    onClose: () -> Unit,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     itemsIndexed(feedState, key = { _, item -> "Nip65Home" + item.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteHomeRelay(item) },
             accountViewModel = accountViewModel,
-        ) {
-            onClose()
-            nav(it)
-        }
+            nav,
+        )
     }
 
     item {
@@ -81,18 +82,15 @@ fun LazyListScope.renderNip65NotifItems(
     feedState: List<BasicRelaySetupInfo>,
     postViewModel: Nip65RelayListViewModel,
     accountViewModel: AccountViewModel,
-    onClose: () -> Unit,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     itemsIndexed(feedState, key = { _, item -> "Nip65Notif" + item.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteNotifRelay(item) },
             accountViewModel = accountViewModel,
-        ) {
-            onClose()
-            nav(it)
-        }
+            nav,
+        )
     }
 
     item {

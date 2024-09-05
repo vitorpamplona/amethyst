@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.NoteBody
 import com.vitorpamplona.amethyst.ui.note.observeEdits
@@ -70,7 +71,7 @@ fun RenderTextModificationEvent(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = note.event as? TextNoteModificationEvent ?: return
     val noteAuthor = note.author ?: return
@@ -176,7 +177,7 @@ fun RenderTextModificationEvent(
                                         routeFor(
                                             baseNote,
                                             accountViewModel.userProfile(),
-                                        )?.let { nav(it) }
+                                        )?.let { nav.nav(it) }
                                     },
                         ) {
                             NoteBody(

@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -42,7 +43,7 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 fun RefreshingFeedUserFeedView(
     viewModel: UserFeedViewModel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     enablePullRefresh: Boolean = true,
 ) {
     RefresheableBox(viewModel, enablePullRefresh) { UserFeedView(viewModel, accountViewModel, nav) }
@@ -52,7 +53,7 @@ fun RefreshingFeedUserFeedView(
 fun UserFeedView(
     viewModel: UserFeedViewModel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
@@ -78,7 +79,7 @@ fun UserFeedView(
 private fun FeedLoaded(
     state: UserFeedState.Loaded,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val listState = rememberLazyListState()
 

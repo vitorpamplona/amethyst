@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.actions.relays.SettingsCategoryWithButton
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertPadding
@@ -70,7 +71,7 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 fun MediaServersListView(
     onClose: () -> Unit,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val mediaServersViewModel: MediaServersViewModel = viewModel()
     val mediaServersState by mediaServersViewModel.fileServers.collectAsStateWithLifecycle()

@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.LoadThumbAndThenVideoView
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.VideoView
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
@@ -62,7 +63,7 @@ fun RenderAudioTrack(
     note: Note,
     isFiniteHeight: Boolean,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = note.event as? AudioTrackEvent ?: return
 
@@ -75,7 +76,7 @@ fun AudioTrackHeader(
     note: Note,
     isFiniteHeight: Boolean,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val media = remember { noteEvent.media() }
     val cover = remember { noteEvent.cover() }
@@ -118,7 +119,7 @@ fun AudioTrackHeader(
                         Modifier
                             .padding(top = 5.dp, start = 10.dp, end = 10.dp)
                             .clickable {
-                                nav("User/${it.second.pubkeyHex}")
+                                nav.nav("User/${it.second.pubkeyHex}")
                             },
                 ) {
                     ClickableUserPicture(it.second, 25.dp, accountViewModel)
@@ -173,7 +174,7 @@ fun RenderAudioHeader(
     note: Note,
     isFiniteHeight: Boolean,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = note.event as? AudioHeaderEvent ?: return
 
@@ -186,7 +187,7 @@ fun AudioHeader(
     note: Note,
     isFiniteHeight: Boolean,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val media = remember { noteEvent.stream() ?: noteEvent.download() }
     val waveform = remember { noteEvent.wavefrom()?.toImmutableList()?.ifEmpty { null } }

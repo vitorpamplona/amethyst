@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.AddRelayButton
 import com.vitorpamplona.amethyst.ui.note.RemoveRelayButton
 import com.vitorpamplona.amethyst.ui.note.getGradient
@@ -66,7 +67,7 @@ fun DisplayRelaySet(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = baseNote.event as? RelaySetEvent ?: return
 
@@ -92,7 +93,7 @@ fun DisplayNIP65RelayList(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = baseNote.event as? AdvertisedRelayListEvent ?: return
 
@@ -134,7 +135,7 @@ fun DisplayDMRelayList(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = baseNote.event as? ChatMessageRelayListEvent ?: return
 
@@ -160,7 +161,7 @@ fun DisplaySearchRelayList(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = baseNote.event as? SearchRelayListEvent ?: return
 
@@ -188,7 +189,7 @@ fun DisplayRelaySet(
     relayDescription: String?,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -270,7 +271,7 @@ fun DisplayRelaySet(
 private fun RelayOptionsAction(
     relay: String,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val userStateRelayInfo by accountViewModel.account
         .userProfile()

@@ -50,7 +50,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavBackStackEntry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -118,17 +117,17 @@ fun IfKeyboardClosed(inner: @Composable () -> Unit) {
 
 @Composable
 fun AppBottomBar(
+    selectedRoute: Route?,
     accountViewModel: AccountViewModel,
-    navEntryState: State<NavBackStackEntry?>,
     nav: (Route, Boolean) -> Unit,
 ) {
-    IfKeyboardClosed { RenderBottomMenu(accountViewModel, navEntryState, nav) }
+    IfKeyboardClosed { RenderBottomMenu(selectedRoute, accountViewModel, nav) }
 }
 
 @Composable
 private fun RenderBottomMenu(
+    selectedRoute: Route?,
     accountViewModel: AccountViewModel,
-    navEntryState: State<NavBackStackEntry?>,
     nav: (Route, Boolean) -> Unit,
 ) {
     Column(
@@ -144,26 +143,10 @@ private fun RenderBottomMenu(
         )
         NavigationBar(tonalElevation = Size0dp) {
             bottomNavigationItems.forEach { item ->
-                ObserveSelection(item, navEntryState) { selected ->
-                    HasNewItemsIcon(selected, item, accountViewModel, nav)
-                }
+                HasNewItemsIcon(item == selectedRoute, item, accountViewModel, nav)
             }
         }
     }
-}
-
-@Composable
-private fun ObserveSelection(
-    route: Route,
-    navEntryState: State<NavBackStackEntry?>,
-    content: @Composable (Boolean) -> Unit,
-) {
-    content(
-        navEntryState.value
-            ?.destination
-            ?.route
-            ?.startsWith(route.base) ?: false,
-    )
 }
 
 @Composable

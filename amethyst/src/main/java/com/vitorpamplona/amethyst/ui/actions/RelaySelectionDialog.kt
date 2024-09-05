@@ -48,6 +48,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.actions.relays.RelayInformationDialog
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -74,7 +75,7 @@ fun RelaySelectionDialog(
     onClose: () -> Unit,
     onPost: (list: ImmutableList<RelaySetupInfo>) -> Unit,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val context = LocalContext.current
 

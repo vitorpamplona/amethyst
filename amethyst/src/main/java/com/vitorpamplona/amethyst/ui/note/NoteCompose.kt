@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.GenericRepostLayout
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.BoostedMark
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayEditStatus
@@ -204,7 +205,7 @@ fun NoteCompose(
     quotesLeft: Int,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     WatchNoteEvent(
         baseNote = baseNote,
@@ -250,7 +251,7 @@ fun AcceptableNote(
     quotesLeft: Int,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     if (isQuotedNote || isBoostedNote) {
         when (baseNote.event) {
@@ -382,7 +383,7 @@ private fun CheckNewAndRenderNote(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     showPopup: () -> Unit,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val backgroundColor =
         calculateBackgroundColor(
@@ -423,7 +424,7 @@ fun ClickableNote(
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     showPopup: () -> Unit,
-    nav: (String) -> Unit,
+    nav: INav,
     content: @Composable () -> Unit,
 ) {
     val updatedModifier =
@@ -437,7 +438,7 @@ fun ClickableNote(
                             } else {
                                 baseNote
                             }
-                        routeFor(redirectToNote, accountViewModel.userProfile())?.let { nav(it) }
+                        routeFor(redirectToNote, accountViewModel.userProfile())?.let { nav.nav(it) }
                     },
                     onLongClick = showPopup,
                 ).background(backgroundColor.value)
@@ -457,7 +458,7 @@ fun InnerNoteWithReactions(
     canPreview: Boolean,
     quotesLeft: Int,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val notBoostedNorQuote = !isBoostedNote && !isQuotedNote
     val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
@@ -539,7 +540,7 @@ fun NoteBody(
     backgroundColor: MutableState<Color>,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     FirstUserInfoRow(
         baseNote = baseNote,
@@ -594,7 +595,7 @@ private fun RenderNoteRow(
     unPackReply: Boolean,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     when (val noteEvent = baseNote.event) {
         is AppDefinitionEvent -> RenderAppDefinition(baseNote, accountViewModel, nav)
@@ -819,7 +820,7 @@ fun RenderDraft(
     unPackReply: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     ObserveDraftEvent(note, accountViewModel) {
         val edits = remember { mutableStateOf(GenericLoadable.Empty<EditState>()) }
@@ -850,7 +851,7 @@ fun RenderRepost(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     note.replyTo?.lastOrNull { it.event !is CommunityDefinitionEvent }?.let {
         NoteCompose(
@@ -880,7 +881,7 @@ fun ReplyNoteComposition(
     replyingDirectlyTo: Note,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     NoteCompose(
         baseNote = replyingDirectlyTo,
@@ -900,7 +901,7 @@ fun SecondUserInfoRow(
     note: Note,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = note.event ?: return
     val noteAuthor = note.author ?: return
@@ -981,7 +982,7 @@ fun FirstUserInfoRow(
     showAuthorPicture: Boolean,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Row(verticalAlignment = CenterVertically, modifier = UserNameRowHeight) {
         val isRepost = baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
@@ -1090,7 +1091,7 @@ fun observeEdits(
 private fun BadgeBox(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     if (accountViewModel.settings.featureSet == FeatureSetType.COMPLETE) {
         if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
@@ -1104,7 +1105,7 @@ private fun BadgeBox(
 @Composable
 private fun RenderAuthorImages(
     baseNote: Note,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
 ) {
     if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
@@ -1161,7 +1162,7 @@ private fun RepostNoteAuthorPicture(
     baseNote: Note,
     baseRepost: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     GenericRepostLayout(
         baseAuthorPicture = {

@@ -23,19 +23,18 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -66,12 +65,14 @@ import com.google.accompanist.adaptive.HorizontalTwoPaneStrategy
 import com.google.accompanist.adaptive.TwoPane
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
-import com.vitorpamplona.amethyst.ui.buttons.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.MainTopBar
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
@@ -79,10 +80,8 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun ChatroomListScreen(
-    knownFeedContentState: FeedContentState,
-    newFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val windowSizeClass by accountViewModel.settings.windowSizeClass
 
@@ -100,26 +99,65 @@ fun ChatroomListScreen(
 
     if (twoPane && windowSizeClass != null) {
         ChatroomListTwoPane(
-            knownFeedContentState = knownFeedContentState,
-            newFeedContentState = newFeedContentState,
+            knownFeedContentState = accountViewModel.feedStates.dmKnown,
+            newFeedContentState = accountViewModel.feedStates.dmNew,
             widthSizeClass = windowSizeClass!!.widthSizeClass,
             accountViewModel = accountViewModel,
             nav = nav,
         )
     } else {
-        ChatroomListScreenOnlyList(
-            knownFeedContentState = knownFeedContentState,
-            newFeedContentState = newFeedContentState,
+        ScaffoldChatroomListScreenOnlyList(
+            knownFeedContentState = accountViewModel.feedStates.dmKnown,
+            newFeedContentState = accountViewModel.feedStates.dmNew,
             accountViewModel = accountViewModel,
             nav = nav,
         )
     }
 }
 
-data class RouteId(
-    val route: String,
-    val id: String,
-)
+class TwoPaneNav(
+    val nav: INav,
+) : INav {
+    override val drawerState: DrawerState = nav.drawerState
+
+    val innerNav = mutableStateOf<RouteId?>(null)
+
+    override fun nav(route: String) {
+        if (route.startsWith("Room/") || route.startsWith("Channel/")) {
+            innerNav.value = RouteId(route.substringBefore("/"), route.substringAfter("/"))
+        } else {
+            nav.nav(route)
+        }
+    }
+
+    override fun newStack(route: String) {
+        nav.newStack(route)
+    }
+
+    override fun popBack() {
+        nav.popBack()
+    }
+
+    override fun popUpTo(
+        route: String,
+        upTo: String,
+    ) {
+        nav.popUpTo(route, upTo)
+    }
+
+    override fun closeDrawer() {
+        nav.closeDrawer()
+    }
+
+    override fun openDrawer() {
+        nav.openDrawer()
+    }
+
+    data class RouteId(
+        val route: String,
+        val id: String,
+    )
+}
 
 @Composable
 fun ChatroomListTwoPane(
@@ -127,23 +165,10 @@ fun ChatroomListTwoPane(
     newFeedContentState: FeedContentState,
     widthSizeClass: WindowWidthSizeClass,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     /** The index of the currently selected word, or `null` if none is selected */
-    var selectedRoute: RouteId? by remember { mutableStateOf(null) }
-
-    val navInterceptor =
-        remember {
-            { fullRoute: String ->
-                if (fullRoute.startsWith("Room/") || fullRoute.startsWith("Channel/")) {
-                    val route = fullRoute.substringBefore("/")
-                    val id = fullRoute.substringAfter("/")
-                    selectedRoute = RouteId(route, id)
-                } else {
-                    nav(fullRoute)
-                }
-            }
-        }
+    val twoPaneNav = remember { TwoPaneNav(nav) }
 
     val strategy =
         remember {
@@ -160,28 +185,17 @@ fun ChatroomListTwoPane(
 
     TwoPane(
         first = {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
-                ChatroomListScreenOnlyList(
-                    knownFeedContentState,
-                    newFeedContentState,
-                    accountViewModel,
-                    navInterceptor,
-                )
-                Box(Modifier.padding(Size20dp), contentAlignment = Alignment.Center) {
-                    ChannelFabColumn(accountViewModel, nav)
-                }
-                HorizontalDivider(
-                    modifier =
-                        Modifier
-                            .fillMaxHeight() // fill the max height
-                            .width(DividerThickness),
-                )
-            }
+            ChatroomListScreenOnlyList(
+                knownFeedContentState,
+                newFeedContentState,
+                accountViewModel,
+                twoPaneNav,
+            )
         },
         second = {
-            selectedRoute?.let {
+            twoPaneNav.innerNav.value?.let {
                 if (it.route == "Room") {
-                    ChatroomScreen(
+                    Chatroom(
                         roomId = it.id,
                         accountViewModel = accountViewModel,
                         nav = nav,
@@ -189,7 +203,7 @@ fun ChatroomListTwoPane(
                 }
 
                 if (it.route == "Channel") {
-                    ChannelScreen(
+                    Channel(
                         channelId = it.id,
                         accountViewModel = accountViewModel,
                         nav = nav,
@@ -210,17 +224,107 @@ fun ChatroomListScreenOnlyList(
     knownFeedContentState: FeedContentState,
     newFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val pagerState = rememberPagerState { 2 }
-    val coroutineScope = rememberCoroutineScope()
 
-    var moreActionsExpanded by remember { mutableStateOf(false) }
     val markKnownAsRead = remember { mutableStateOf(false) }
     val markNewAsRead = remember { mutableStateOf(false) }
 
     WatchAccountForListScreen(knownFeedContentState, newFeedContentState, accountViewModel)
+    WatchLifecycleAndRefreshDataSource(accountViewModel)
 
+    val tabs by
+        remember(knownFeedContentState, markKnownAsRead) {
+            derivedStateOf {
+                listOf(
+                    ChatroomListTabItem(R.string.known, knownFeedContentState, markKnownAsRead),
+                    ChatroomListTabItem(R.string.new_requests, newFeedContentState, markNewAsRead),
+                )
+            }
+        }
+
+    ChatroomListOnlyTabs(
+        pagerState,
+        tabs,
+        { markKnownAsRead.value = true },
+        { markNewAsRead.value = true },
+    )
+
+    ChatroomListTabs(
+        pagerState,
+        tabs,
+        PaddingValues(0.dp),
+        accountViewModel,
+        nav,
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ScaffoldChatroomListScreenOnlyList(
+    knownFeedContentState: FeedContentState,
+    newFeedContentState: FeedContentState,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val pagerState = rememberPagerState { 2 }
+
+    val markKnownAsRead = remember { mutableStateOf(false) }
+    val markNewAsRead = remember { mutableStateOf(false) }
+
+    WatchAccountForListScreen(knownFeedContentState, newFeedContentState, accountViewModel)
+    WatchLifecycleAndRefreshDataSource(accountViewModel)
+
+    val tabs by
+        remember(knownFeedContentState, markKnownAsRead) {
+            derivedStateOf {
+                listOf(
+                    ChatroomListTabItem(R.string.known, knownFeedContentState, markKnownAsRead),
+                    ChatroomListTabItem(R.string.new_requests, newFeedContentState, markNewAsRead),
+                )
+            }
+        }
+
+    DisappearingScaffold(
+        isInvertedLayout = false,
+        topBar = {
+            Column {
+                MainTopBar(accountViewModel, nav)
+                ChatroomListOnlyTabs(
+                    pagerState,
+                    tabs,
+                    { markKnownAsRead.value = true },
+                    { markNewAsRead.value = true },
+                )
+            }
+        },
+        bottomBar = {
+            AppBottomBar(Route.Message, accountViewModel) { route, _ ->
+                if (route == Route.Message) {
+                    tabs[pagerState.currentPage].feedContentState.sendToTop()
+                } else {
+                    nav.newStack(route.base)
+                }
+            }
+        },
+        floatingButton = {
+            ChannelFabColumn(accountViewModel, nav)
+        },
+        accountViewModel = accountViewModel,
+    ) {
+        ChatroomListTabs(
+            pagerState,
+            tabs,
+            it,
+            accountViewModel,
+            nav,
+        )
+    }
+}
+
+@Composable
+private fun WatchLifecycleAndRefreshDataSource(accountViewModel: AccountViewModel) {
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifeCycleOwner) {
         val observer =
@@ -234,64 +338,76 @@ fun ChatroomListScreenOnlyList(
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
     }
+}
 
-    val tabs by
-        remember(knownFeedContentState, markKnownAsRead) {
-            derivedStateOf {
-                listOf(
-                    ChatroomListTabItem(R.string.known, knownFeedContentState, markKnownAsRead),
-                    ChatroomListTabItem(R.string.new_requests, newFeedContentState, markNewAsRead),
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun ChatroomListTabs(
+    pagerState: PagerState,
+    tabs: List<ChatroomListTabItem>,
+    paddingValues: PaddingValues,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    HorizontalPager(
+        contentPadding = paddingValues,
+        state = pagerState,
+        userScrollEnabled = false,
+    ) { page ->
+        ChatroomListFeedView(
+            feedContentState = tabs[page].feedContentState,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            markAsRead = tabs[page].markAsRead,
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ChatroomListOnlyTabs(
+    pagerState: PagerState,
+    tabs: List<ChatroomListTabItem>,
+    onMarkKnownAsRead: () -> Unit,
+    onMarkNewAsRead: () -> Unit,
+) {
+    var moreActionsExpanded by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+
+    Box(Modifier.fillMaxWidth()) {
+        TabRow(
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+            selectedTabIndex = pagerState.currentPage,
+            modifier = TabRowHeight,
+        ) {
+            tabs.forEachIndexed { index, tab ->
+                Tab(
+                    selected = pagerState.currentPage == index,
+                    text = { Text(text = stringRes(tab.resource)) },
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
                 )
             }
         }
 
-    Column(
-        modifier = Modifier.fillMaxHeight(),
-    ) {
-        Box(Modifier.fillMaxWidth()) {
-            TabRow(
-                containerColor = Color.Transparent,
-                contentColor = MaterialTheme.colorScheme.onBackground,
-                selectedTabIndex = pagerState.currentPage,
-                modifier = TabRowHeight,
-            ) {
-                tabs.forEachIndexed { index, tab ->
-                    Tab(
-                        selected = pagerState.currentPage == index,
-                        text = { Text(text = stringRes(tab.resource)) },
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                    )
-                }
-            }
+        IconButton(
+            modifier =
+                Modifier
+                    .size(40.dp)
+                    .align(Alignment.CenterEnd),
+            onClick = { moreActionsExpanded = true },
+        ) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = stringRes(id = R.string.more_options),
+                tint = MaterialTheme.colorScheme.placeholderText,
+            )
 
-            IconButton(
-                modifier = Modifier.size(40.dp).align(Alignment.CenterEnd),
-                onClick = { moreActionsExpanded = true },
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = stringRes(id = R.string.more_options),
-                    tint = MaterialTheme.colorScheme.placeholderText,
-                )
-
-                ChatroomTabMenu(
-                    moreActionsExpanded,
-                    { moreActionsExpanded = false },
-                    { markKnownAsRead.value = true },
-                    { markNewAsRead.value = true },
-                )
-            }
-        }
-
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-        ) { page ->
-            ChatroomListFeedView(
-                feedContentState = tabs[page].feedContentState,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                markAsRead = tabs[page].markAsRead,
+            ChatroomTabMenu(
+                moreActionsExpanded,
+                { moreActionsExpanded = false },
+                onMarkKnownAsRead,
+                onMarkNewAsRead,
             )
         }
     }

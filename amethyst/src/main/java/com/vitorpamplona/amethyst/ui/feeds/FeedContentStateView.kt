@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -38,7 +39,7 @@ fun RefresheableFeedContentStateView(
     enablePullRefresh: Boolean = true,
     scrollStateKey: String? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     RefresheableBox(feedContentState, enablePullRefresh) {
         SaveableFeedContentState(feedContentState, scrollStateKey) { listState ->
@@ -88,7 +89,7 @@ fun RenderFeedContentState(
     feedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     listState: LazyListState,
-    nav: (String) -> Unit,
+    nav: INav,
     routeForLastRead: String?,
     onLoaded: @Composable (FeedState.Loaded) -> Unit = { FeedLoaded(it, listState, routeForLastRead, accountViewModel, nav) },
     onEmpty: @Composable () -> Unit = { FeedEmpty(feedContentState::invalidateData) },

@@ -26,6 +26,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -74,7 +75,7 @@ private fun ObserverAndRenderNIP95(
             // Creates a new object when the event arrives to force an update of the image.
             val note = noteState?.note
             val uri = header.toNostrUri()
-            val localDir = note?.idHex?.let { File(File(appContext.cacheDir, "NIP95"), it) }
+            val localDir = note?.idHex?.let { File(Amethyst.instance.nip95cache(), it) }
             val blurHash = eventHeader.blurhash()
             val dimensions = eventHeader.dimensions()
             val description = eventHeader.alt() ?: eventHeader.content

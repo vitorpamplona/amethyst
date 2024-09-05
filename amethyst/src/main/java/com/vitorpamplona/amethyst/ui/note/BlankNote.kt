@@ -39,6 +39,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -96,7 +98,7 @@ fun BlankNote(
 @Preview
 fun HiddenNotePreview() {
     val accountViewModel = mockAccountViewModel()
-    val nav: (String) -> Unit = {}
+    val nav = EmptyNav
 
     ThemeComparisonColumn(
         toPreview = {
@@ -117,7 +119,7 @@ fun HiddenNote(
     isHiddenAuthor: Boolean,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
-    nav: (String) -> Unit,
+    nav: INav,
     onClick: () -> Unit,
 ) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {

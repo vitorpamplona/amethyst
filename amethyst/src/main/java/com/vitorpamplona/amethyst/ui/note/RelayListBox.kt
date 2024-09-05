@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonBoxModifer
@@ -64,7 +65,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 fun RelayBadges(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val expanded = remember { mutableStateOf(false) }
 
@@ -87,7 +88,7 @@ fun RenderAllRelayList(
     modifier: Modifier = Modifier,
     verticalArrangement: Arrangement.Vertical = Arrangement.Top,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteRelays by baseNote
         .flow()
@@ -105,7 +106,7 @@ fun RenderClosedRelayList(
     modifier: Modifier = Modifier,
     verticalAlignment: Alignment.Vertical = Alignment.Top,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Row(modifier, verticalAlignment = verticalAlignment) {
         WatchAndRenderRelay(baseNote, 0, accountViewModel, nav)
@@ -119,7 +120,7 @@ fun WatchAndRenderRelay(
     baseNote: Note,
     relayIndex: Int,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteRelays by baseNote
         .flow()

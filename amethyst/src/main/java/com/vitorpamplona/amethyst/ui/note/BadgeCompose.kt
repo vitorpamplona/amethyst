@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
@@ -58,7 +59,7 @@ fun BadgeCompose(
     isInnerNote: Boolean = false,
     routeForLastRead: String,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteState by likeSetCard.note
         .live()
@@ -87,7 +88,7 @@ fun BadgeCompose(
                             routeFor(
                                 note,
                                 accountViewModel.userProfile(),
-                            )?.let { nav(it) }
+                            )?.let { nav.nav(it) }
                         },
                     ),
         ) {

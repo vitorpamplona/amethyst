@@ -85,6 +85,8 @@ import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -115,7 +117,7 @@ fun RichTextViewer(
     backgroundColor: MutableState<Color>,
     callbackUri: String? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Column(modifier = modifier) {
         if (remember(content) { isMarkdown(content) }) {
@@ -129,7 +131,7 @@ fun RichTextViewer(
 @Preview
 @Composable
 fun RenderStrangeNamePreview() {
-    val nav: (String) -> Unit = {}
+    val nav = EmptyNav
 
     Column(modifier = Modifier.padding(10.dp)) {
         RenderRegular(
@@ -152,7 +154,7 @@ fun RenderStrangeNamePreview() {
 @Preview
 @Composable
 fun RenderRegularPreview() {
-    val nav: (String) -> Unit = {}
+    val nav = EmptyNav
 
     Column(modifier = Modifier.padding(10.dp)) {
         RenderRegular(
@@ -192,7 +194,7 @@ fun RenderRegularPreview() {
 @Preview
 @Composable
 fun RenderRegularPreview2() {
-    val nav: (String) -> Unit = {}
+    val nav = EmptyNav
     RenderRegular(
         "#Amethyst v0.84.1: ncryptsec support (NIP-49)",
         EmptyTagList,
@@ -229,7 +231,7 @@ fun RenderRegularPreview3() {
                 arrayOf("proxy", "https://misskey.io/notes/9q0x6gtdysir03qh", "activitypub"),
             ),
         )
-    val nav: (String) -> Unit = {}
+    val nav = EmptyNav
     val accountViewModel = mockAccountViewModel()
 
     RenderRegular(
@@ -266,7 +268,7 @@ private fun RenderRegular(
     backgroundColor: MutableState<Color>,
     callbackUri: String? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     RenderRegular(content, tags, callbackUri) { word, state ->
         if (canPreview) {
@@ -359,7 +361,7 @@ private fun RenderWordWithoutPreview(
     state: RichTextViewerState,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     when (word) {
         // Don't preview Images
@@ -390,7 +392,7 @@ private fun RenderWordWithPreview(
     quotesLeft: Int,
     callbackUri: String? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     when (word) {
         is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
@@ -448,7 +450,7 @@ fun BechLink(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val loadedLink by produceCachedState(cache = accountViewModel.bechLinkCache, key = word)
 
@@ -488,7 +490,7 @@ fun DisplayFullNote(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     NoteCompose(
         baseNote = note,
@@ -510,7 +512,7 @@ fun DisplayFullNote(
 @Composable
 fun HashTag(
     segment: HashTagSegment,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val background = MaterialTheme.colorScheme.onBackground
@@ -542,12 +544,12 @@ fun HashTag(
         modifier =
             remember {
                 Modifier.clickable {
-                    nav("Hashtag/${segment.hashtag}")
+                    nav.nav("Hashtag/${segment.hashtag}")
                 }
             },
         inlineContent =
             if (hashtagIcon != null) {
-                mapOf("inlineContent" to InlineIcon(hashtagIcon))
+                mapOf("inlineContent" to inlineIcon(hashtagIcon))
             } else {
                 emptyMap()
             },
@@ -555,7 +557,7 @@ fun HashTag(
 }
 
 @Composable
-private fun InlineIcon(hashtagIcon: HashtagIcon) =
+private fun inlineIcon(hashtagIcon: HashtagIcon) =
     InlineTextContent(inlinePlaceholder) {
         Icon(
             imageVector = hashtagIcon.icon,
@@ -569,7 +571,7 @@ private fun InlineIcon(hashtagIcon: HashtagIcon) =
 fun TagLink(
     word: HashIndexUserSegment,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     LoadUser(baseUserHex = word.hex, accountViewModel) {
         if (it == null) {
@@ -610,7 +612,7 @@ fun TagLink(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     LoadNote(baseNoteHex = word.hex, accountViewModel) {
         if (it == null) {
@@ -639,7 +641,7 @@ private fun DisplayNoteFromTag(
     quotesLeft: Int,
     accountViewModel: AccountViewModel,
     backgroundColor: MutableState<Color>,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     if (canPreview && quotesLeft > 0) {
         NoteCompose(
@@ -662,7 +664,7 @@ private fun DisplayNoteFromTag(
 private fun DisplayUserFromTag(
     baseUser: User,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val meta by baseUser.live().userMetadataInfo.observeAsState(baseUser.info)
 

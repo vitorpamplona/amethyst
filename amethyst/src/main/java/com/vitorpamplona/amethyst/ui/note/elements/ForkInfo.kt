@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -51,7 +52,7 @@ fun ShowForkInformation(
     noteEvent: BaseTextNoteEvent,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val forkedAddress = remember(noteEvent) { noteEvent.forkFromAddress() }
     val forkedEvent = remember(noteEvent) { noteEvent.forkFromVersion() }
@@ -78,7 +79,7 @@ fun ForkInformationRowLightColor(
     originalVersion: Note,
     modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteState by originalVersion.live().metadata.observeAsState()
     val note = noteState?.note ?: return
@@ -93,7 +94,7 @@ fun ForkInformationRowLightColor(
                         append(stringRes(id = R.string.forked_from))
                         append(" ")
                     },
-                onClick = { nav(route) },
+                onClick = { nav.nav(route) },
                 style =
                     LocalTextStyle.current.copy(
                         color = MaterialTheme.colorScheme.nip05,
@@ -128,7 +129,7 @@ fun ForkInformationRow(
     originalVersion: Note,
     modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteState by originalVersion.live().metadata.observeAsState()
     val note = noteState?.note ?: return

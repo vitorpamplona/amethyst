@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.note.types.EditState
@@ -63,7 +64,7 @@ fun MoreOptionsButton(
     baseNote: Note,
     editState: State<GenericLoadable<EditState>>? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val popupExpanded = remember { mutableStateOf(false) }
 
@@ -101,7 +102,7 @@ fun NoteDropDownMenu(
     onDismiss: () -> Unit,
     editState: State<GenericLoadable<EditState>>? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var reportDialogShowing by remember { mutableStateOf(false) }
 

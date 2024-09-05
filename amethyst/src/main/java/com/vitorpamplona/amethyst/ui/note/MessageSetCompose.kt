@@ -37,6 +37,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -50,7 +51,7 @@ fun MessageSetCompose(
     routeForLastRead: String,
     showHidden: Boolean = false,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val baseNote = remember { messageSetCard.note }
 
@@ -80,7 +81,7 @@ fun MessageSetCompose(
                             routeFor(
                                 baseNote,
                                 accountViewModel.userProfile(),
-                            )?.let { nav(it) }
+                            )?.let { nav.nav(it) }
                         }
                     },
                     onLongClick = enablePopup,

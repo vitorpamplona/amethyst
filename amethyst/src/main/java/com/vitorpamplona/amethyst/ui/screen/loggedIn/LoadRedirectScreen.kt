@@ -32,15 +32,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Nav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -61,22 +61,11 @@ import kotlinx.coroutines.withContext
 fun LoadRedirectScreen(
     eventId: String?,
     accountViewModel: AccountViewModel,
-    navController: NavController,
+    nav: Nav,
 ) {
     if (eventId == null) return
 
     var noteBase by remember { mutableStateOf<Note?>(null) }
-    val scope = rememberCoroutineScope()
-
-    val nav =
-        remember(navController) {
-            { route: String ->
-                scope.launch {
-                    navController.navigate(route) { popUpTo(Route.Event.route) { inclusive = true } }
-                }
-                Unit
-            }
-        }
 
     LaunchedEffect(eventId) {
         launch(Dispatchers.IO) {
@@ -100,7 +89,7 @@ fun LoadRedirectScreen(
 fun LoadRedirectScreen(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteState by baseNote.live().metadata.observeAsState()
 
@@ -125,7 +114,7 @@ fun LoadRedirectScreen(
 fun redirect(
     eventId: HexKey,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     LocalCache.getNoteIfExists(eventId)?.event?.let {
         redirect(it, accountViewModel, nav)
@@ -135,7 +124,7 @@ fun redirect(
 fun redirect(
     event: EventInterface,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val channelHex =
         if (
@@ -168,15 +157,15 @@ fun redirect(
         }
     } else {
         if (event is ChannelCreateEvent) {
-            nav("Channel/${event.id()}")
+            nav.popUpTo("Channel/${event.id()}", Route.Event.route)
         } else if (event is ChatroomKeyable) {
             val withKey = event.chatroomKey(accountViewModel.userProfile().pubkeyHex)
             accountViewModel.userProfile().createChatroom(withKey)
-            nav("Room/${withKey.hashCode()}")
+            nav.popUpTo("Room/${withKey.hashCode()}", Route.Event.route)
         } else if (channelHex != null) {
-            nav("Channel/$channelHex")
+            nav.popUpTo("Channel/$channelHex", Route.Event.route)
         } else {
-            nav("Note/${event.id()}")
+            nav.popUpTo("Note/${event.id()}", Route.Event.route)
         }
     }
 }

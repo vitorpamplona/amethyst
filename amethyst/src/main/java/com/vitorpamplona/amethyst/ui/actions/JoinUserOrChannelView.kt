@@ -75,12 +75,13 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchBarViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelName
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchBarViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -102,7 +103,7 @@ import kotlinx.coroutines.withContext
 fun JoinUserOrChannelView(
     onClose: () -> Unit,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val searchBarViewModel: SearchBarViewModel =
         viewModel(
@@ -126,7 +127,7 @@ fun JoinUserOrChannelView(
     searchBarViewModel: SearchBarViewModel,
     onClose: () -> Unit,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Dialog(
         onDismissRequest = {
@@ -183,7 +184,7 @@ fun JoinUserOrChannelView(
 private fun RenderSearch(
     searchBarViewModel: SearchBarViewModel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val listState = rememberLazyListState()
 
@@ -324,7 +325,7 @@ private fun RenderSearchResults(
     searchBarViewModel: SearchBarViewModel,
     listState: LazyListState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     if (searchBarViewModel.isSearching) {
         val users by searchBarViewModel.searchResultsUsers.collectAsStateWithLifecycle()
@@ -347,7 +348,7 @@ private fun RenderSearchResults(
                     key = { _, item -> "u" + item.pubkeyHex },
                 ) { _, item ->
                     UserComposeForChat(item, accountViewModel) {
-                        accountViewModel.createChatRoomFor(item) { nav("Room/$it") }
+                        accountViewModel.createChatRoomFor(item) { nav.nav("Room/$it") }
 
                         searchBarViewModel.clear()
                     }
@@ -366,7 +367,7 @@ private fun RenderSearchResults(
                         loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
                         loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                     ) {
-                        nav("Channel/${item.idHex}")
+                        nav.nav("Channel/${item.idHex}")
                         searchBarViewModel.clear()
                     }
 

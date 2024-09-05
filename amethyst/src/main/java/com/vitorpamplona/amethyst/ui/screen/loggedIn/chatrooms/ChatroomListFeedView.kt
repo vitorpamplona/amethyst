@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -48,7 +49,7 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 fun ChatroomListFeedView(
     feedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     markAsRead: MutableState<Boolean>,
 ) {
     RefresheableBox(feedContentState, true) { CrossFadeState(feedContentState, accountViewModel, nav, markAsRead) }
@@ -58,7 +59,7 @@ fun ChatroomListFeedView(
 private fun CrossFadeState(
     feedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     markAsRead: MutableState<Boolean>,
 ) {
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
@@ -89,7 +90,7 @@ private fun CrossFadeState(
 private fun FeedLoaded(
     loaded: FeedState.Loaded,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     markAsRead: MutableState<Boolean>,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()

@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
 import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
@@ -59,7 +60,7 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 fun RefreshableCardView(
     feedContent: CardFeedContentState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     routeForLastRead: String,
     scrollStateKey: String? = null,
     enablePullRefresh: Boolean = true,
@@ -73,7 +74,7 @@ fun RefreshableCardView(
 private fun SaveableCardFeedState(
     feedContent: CardFeedContentState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     routeForLastRead: String,
     scrollStateKey: String? = null,
 ) {
@@ -94,7 +95,7 @@ fun RenderCardFeed(
     feedContent: CardFeedContentState,
     accountViewModel: AccountViewModel,
     listState: LazyListState,
-    nav: (String) -> Unit,
+    nav: INav,
     routeForLastRead: String,
 ) {
     val feedState by feedContent.feedContent.collectAsStateWithLifecycle()
@@ -135,7 +136,7 @@ private fun FeedLoaded(
     listState: LazyListState,
     routeForLastRead: String,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
@@ -172,7 +173,7 @@ private fun FeedLoaded(
 @Composable
 private fun ShowDonationCard(
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     if (!accountViewModel.account.hasDonatedInThisVersion()) {
         val donated by accountViewModel.account.observeDonatedInThisVersion().collectAsStateWithLifecycle()
@@ -199,7 +200,7 @@ private fun RenderCardItem(
     routeForLastRead: String,
     showHidden: Boolean,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     when (item) {
         is NoteCard ->
@@ -257,7 +258,7 @@ fun NoteCardCompose(
     showHidden: Boolean = false,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     NoteCompose(
         baseNote = baseNote.note,

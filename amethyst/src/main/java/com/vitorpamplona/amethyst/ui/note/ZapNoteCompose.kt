@@ -45,13 +45,14 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.ZapReqResponse
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.FollowButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ShowUserButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.UnfollowButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.WatchIsHiddenUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ShowUserButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.WatchIsHiddenUser
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ZapReqResponse
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -63,7 +64,7 @@ import kotlinx.coroutines.launch
 fun ZapNoteCompose(
     baseReqResponse: ZapReqResponse,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val baseNoteRequest by baseReqResponse.zapRequest
         .live()
@@ -86,7 +87,7 @@ fun ZapNoteCompose(
         Column(
             modifier =
                 Modifier.clickable(
-                    onClick = { nav(route) },
+                    onClick = { nav.nav(route) },
                 ),
             verticalArrangement = Arrangement.Center,
         ) {
@@ -99,7 +100,7 @@ fun ZapNoteCompose(
 private fun RenderZapNote(
     baseAuthor: User,
     zapNote: Note,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
 ) {
     Row(

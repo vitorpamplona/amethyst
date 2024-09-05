@@ -54,6 +54,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.relays.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -75,7 +77,7 @@ import kotlin.coroutines.cancellation.CancellationException
 @Composable
 fun TorrentPreview() {
     val accountViewModel = mockAccountViewModel()
-    val nav: (String) -> Unit = {}
+    val nav = EmptyNav
 
     val torrent =
         runBlocking {
@@ -148,7 +150,7 @@ fun RenderTorrent(
     note: Note,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = note.event as? TorrentEvent ?: return
 
@@ -181,7 +183,7 @@ fun DisplayFileList(
     link: () -> String,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var expanded by remember { mutableStateOf(false) }
 

@@ -105,6 +105,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -156,7 +157,7 @@ fun ReactionsRow(
     addPadding: Boolean,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val wantsToSeeReactions = remember(baseNote) { mutableStateOf(false) }
 
@@ -178,7 +179,7 @@ private fun InnerReactionRow(
     wantsToSeeReactions: MutableState<Boolean>,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     GenericInnerReactionRow(
         showReactionDetail = showReactionDetail,
@@ -446,7 +447,7 @@ private fun RenderShowIndividualReactionsButton(
 @Composable
 private fun ReactionDetailGallery(
     baseNote: Note,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
 ) {
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
@@ -479,7 +480,7 @@ private fun ReactionDetailGallery(
 @Composable
 private fun WatchBoostsAndRenderGallery(
     baseNote: Note,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
 ) {
     val boostsEvents by baseNote.live().boosts.observeAsState()
@@ -498,7 +499,7 @@ private fun WatchBoostsAndRenderGallery(
 @Composable
 private fun WatchReactionsAndRenderGallery(
     baseNote: Note,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
 ) {
     val reactionsState by baseNote.live().reactions.observeAsState()
@@ -521,7 +522,7 @@ private fun WatchReactionsAndRenderGallery(
 private fun WatchZapAndRenderGallery(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
 ) {
     val zapsState by baseNote.live().zaps.observeAsState()
@@ -553,7 +554,7 @@ private fun BoostWithDialog(
     editState: State<GenericLoadable<EditState>>,
     grayTint: Color,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var wantsToQuote by remember { mutableStateOf<Note?>(null) }
     var wantsToFork by remember { mutableStateOf<Note?>(null) }
@@ -605,7 +606,7 @@ private fun ReplyReactionWithDialog(
     baseNote: Note,
     grayTint: Color,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var wantsToReplyTo by remember { mutableStateOf<Note?>(null) }
 
@@ -830,7 +831,7 @@ fun LikeReaction(
     baseNote: Note,
     grayTint: Color,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     iconSize: Dp = Size18dp,
     heartSizeModifier: Modifier = Size18Modifier,
     iconFontSize: TextUnit = Font14SP,
@@ -983,7 +984,7 @@ fun ZapReaction(
     iconSize: Dp = Size20dp,
     iconSizeModifier: Modifier = Size20Modifier,
     animationSize: Dp = 14.dp,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
@@ -1061,7 +1062,7 @@ fun ZapReaction(
                     baseNote.author?.let {
                         scope.launch(Dispatchers.IO) {
                             val route = routeToMessage(it, msg, accountViewModel)
-                            nav(route)
+                            nav.nav(route)
                         }
                     }
                 },

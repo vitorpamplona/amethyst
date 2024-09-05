@@ -43,13 +43,16 @@ class VideoCache {
 
     lateinit var cacheDataSourceFactory: CacheDataSource.Factory
 
-    suspend fun initFileCache(context: Context) {
+    suspend fun initFileCache(
+        context: Context,
+        cachePath: File,
+    ) {
         exoDatabaseProvider = StandaloneDatabaseProvider(context)
 
         withContext(Dispatchers.IO) {
             simpleCache =
                 SimpleCache(
-                    File(context.cacheDir, "exoplayer"),
+                    cachePath,
                     leastRecentlyUsedCacheEvictor,
                     exoDatabaseProvider,
                 )

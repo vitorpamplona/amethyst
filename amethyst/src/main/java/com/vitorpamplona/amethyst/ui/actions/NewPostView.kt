@@ -136,6 +136,7 @@ import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZapRaiserRequest
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.CancelIcon
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
@@ -194,7 +195,7 @@ fun NewPostView(
     draft: Note? = null,
     enableMessageInterface: Boolean = false,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val postViewModel: NewPostViewModel = viewModel()
     postViewModel.wantsDirectMessage = enableMessageInterface
