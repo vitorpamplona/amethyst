@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
@@ -116,7 +117,7 @@ fun ObserveDisplayNip05Status(
     baseNote: Note,
     columnModifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     WatchAuthor(baseNote = baseNote) {
         ObserveDisplayNip05Status(it, columnModifier, accountViewModel, nav)
@@ -128,7 +129,7 @@ fun ObserveDisplayNip05Status(
     baseUser: User,
     columnModifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val nip05 by baseUser.live().nip05Changes.observeAsState(baseUser.nip05())
 
@@ -158,7 +159,7 @@ private fun VerifyAndDisplayNIP05OrStatusLine(
     baseUser: User,
     columnModifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Column(modifier = columnModifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -188,7 +189,7 @@ private fun VerifyAndDisplayNIP05OrStatusLine(
 fun ObserveRotateStatuses(
     statuses: ImmutableList<AddressableNote>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     ObserveAllStatusesToAvoidSwitchigAllTheTime(statuses)
 
@@ -211,7 +212,7 @@ fun ObserveAllStatusesToAvoidSwitchigAllTheTime(statuses: ImmutableList<Addressa
 fun RotateStatuses(
     statuses: ImmutableList<AddressableNote>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var indexToDisplay by remember(statuses) { mutableIntStateOf(0) }
 
@@ -242,7 +243,7 @@ fun DisplayUsersNpub(npub: String) {
 fun DisplayStatus(
     addressableNote: AddressableNote,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteState by addressableNote.live().metadata.observeAsState()
     val noteEvent = noteState?.note?.event ?: return
@@ -266,7 +267,7 @@ fun DisplayStatusInner(
     nostrATag: ATag?,
     nostrHexID: String?,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     when (type) {
         "music" ->
@@ -311,7 +312,7 @@ fun DisplayStatusInner(
                         routeFor(
                             note,
                             accountViewModel.userProfile(),
-                        )?.let { nav(it) }
+                        )?.let { nav.nav(it) }
                     },
                 ) {
                     Icon(
@@ -333,7 +334,7 @@ fun DisplayStatusInner(
                         routeFor(
                             it,
                             accountViewModel.userProfile(),
-                        )?.let { nav(it) }
+                        )?.let { nav.nav(it) }
                     },
                 ) {
                     Icon(

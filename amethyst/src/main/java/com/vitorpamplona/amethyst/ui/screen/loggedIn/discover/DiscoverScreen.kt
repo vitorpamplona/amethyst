@@ -24,9 +24,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -69,9 +67,12 @@ import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableGridFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChannelCardCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.TabItem
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -86,6 +87,22 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
+@Composable
+fun DiscoverScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    DiscoverScreen(
+        discoveryContentNIP89FeedContentState = accountViewModel.feedStates.discoverDVMs,
+        discoveryMarketplaceFeedContentState = accountViewModel.feedStates.discoverMarketplace,
+        discoveryLiveFeedContentState = accountViewModel.feedStates.discoverLive,
+        discoveryCommunityFeedContentState = accountViewModel.feedStates.discoverCommunities,
+        discoveryChatFeedContentState = accountViewModel.feedStates.discoverPublicChats,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DiscoverScreen(
@@ -95,7 +112,7 @@ fun DiscoverScreen(
     discoveryCommunityFeedContentState: FeedContentState,
     discoveryChatFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val lifeCycleOwner = LocalLifecycleOwner.current
 
@@ -177,13 +194,7 @@ fun DiscoverScreen(
         onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp),
-        ) {
-            DiscoverPages(pagerState, tabs, accountViewModel, nav)
-        }
-    }
+    DiscoverPages(pagerState, tabs, accountViewModel, nav)
 }
 
 @Composable
@@ -192,49 +203,67 @@ private fun DiscoverPages(
     pagerState: PagerState,
     tabs: ImmutableList<TabItem>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
-    ScrollableTabRow(
-        containerColor = Color.Transparent,
-        contentColor = MaterialTheme.colorScheme.onBackground,
-        selectedTabIndex = pagerState.currentPage,
-        modifier = TabRowHeight,
-        edgePadding = 8.dp,
-    ) {
-        val coroutineScope = rememberCoroutineScope()
+    DisappearingScaffold(
+        isInvertedLayout = false,
+        topBar = {
+            Column {
+                DiscoveryTopBar(accountViewModel, nav)
+                ScrollableTabRow(
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onBackground,
+                    selectedTabIndex = pagerState.currentPage,
+                    modifier = TabRowHeight,
+                    edgePadding = 8.dp,
+                ) {
+                    val coroutineScope = rememberCoroutineScope()
 
-        tabs.forEachIndexed { index, tab ->
-            Tab(
-                selected = pagerState.currentPage == index,
-                text = { Text(text = stringRes(tab.resource)) },
-                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-            )
-        }
-    }
-
-    HorizontalPager(state = pagerState) { page ->
-        RefresheableBox(tabs[page].feedState, true) {
-            if (tabs[page].useGridLayout) {
-                SaveableGridFeedContentState(tabs[page].feedState, scrollStateKey = tabs[page].scrollStateKey) { listState ->
-                    RenderDiscoverFeed(
-                        feedContentState = tabs[page].feedState,
-                        routeForLastRead = tabs[page].routeForLastRead,
-                        forceEventKind = tabs[page].forceEventKind,
-                        listState = listState,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+                    tabs.forEachIndexed { index, tab ->
+                        Tab(
+                            selected = pagerState.currentPage == index,
+                            text = { Text(text = stringRes(tab.resource)) },
+                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                        )
+                    }
                 }
-            } else {
-                SaveableFeedContentState(tabs[page].feedState, scrollStateKey = tabs[page].scrollStateKey) { listState ->
-                    RenderDiscoverFeed(
-                        feedContentState = tabs[page].feedState,
-                        routeForLastRead = tabs[page].routeForLastRead,
-                        forceEventKind = tabs[page].forceEventKind,
-                        listState = listState,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+            }
+        },
+        bottomBar = {
+            AppBottomBar(Route.Discover, accountViewModel) { route, _ ->
+                if (route == Route.Discover) {
+                    tabs[pagerState.currentPage].feedState.sendToTop()
+                } else {
+                    nav.newStack(route.base)
+                }
+            }
+        },
+        accountViewModel = accountViewModel,
+    ) {
+        HorizontalPager(state = pagerState, contentPadding = it) { page ->
+            RefresheableBox(tabs[page].feedState, true) {
+                if (tabs[page].useGridLayout) {
+                    SaveableGridFeedContentState(tabs[page].feedState, scrollStateKey = tabs[page].scrollStateKey) { listState ->
+                        RenderDiscoverFeed(
+                            feedContentState = tabs[page].feedState,
+                            routeForLastRead = tabs[page].routeForLastRead,
+                            forceEventKind = tabs[page].forceEventKind,
+                            listState = listState,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
+                } else {
+                    SaveableFeedContentState(tabs[page].feedState, scrollStateKey = tabs[page].scrollStateKey) { listState ->
+                        RenderDiscoverFeed(
+                            feedContentState = tabs[page].feedState,
+                            routeForLastRead = tabs[page].routeForLastRead,
+                            forceEventKind = tabs[page].forceEventKind,
+                            listState = listState,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
                 }
             }
         }
@@ -248,7 +277,7 @@ private fun RenderDiscoverFeed(
     forceEventKind: Int?,
     listState: LazyGridState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
@@ -289,7 +318,7 @@ private fun RenderDiscoverFeed(
     forceEventKind: Int?,
     listState: LazyListState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
@@ -352,7 +381,7 @@ private fun DiscoverFeedLoaded(
     listState: LazyListState,
     forceEventKind: Int?,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
@@ -389,7 +418,7 @@ private fun DiscoverFeedColumnsLoaded(
     listState: LazyGridState,
     forceEventKind: Int?,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 

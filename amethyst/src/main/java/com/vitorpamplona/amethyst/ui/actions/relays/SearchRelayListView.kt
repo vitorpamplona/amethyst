@@ -29,6 +29,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -38,15 +40,17 @@ fun SearchRelayList(
     postViewModel: SearchRelayListViewModel,
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val feedState by postViewModel.relays.collectAsStateWithLifecycle()
+
+    val newNav = rememberExtendedNav(nav, onClose)
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
         ) {
-            renderSearchItems(feedState, postViewModel, accountViewModel, onClose, nav)
+            renderSearchItems(feedState, postViewModel, accountViewModel, newNav)
         }
     }
 }
@@ -55,18 +59,15 @@ fun LazyListScope.renderSearchItems(
     feedState: List<BasicRelaySetupInfo>,
     postViewModel: SearchRelayListViewModel,
     accountViewModel: AccountViewModel,
-    onClose: () -> Unit,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     itemsIndexed(feedState, key = { _, item -> "Search" + item.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteRelay(item) },
             accountViewModel = accountViewModel,
-        ) {
-            onClose()
-            nav(it)
-        }
+            nav,
+        )
     }
 
     item {

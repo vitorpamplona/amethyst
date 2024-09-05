@@ -51,6 +51,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
+import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -61,13 +63,23 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.relays.RelayStat
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AllRelayListView(
     onClose: () -> Unit,
     relayToAdd: String = "",
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
+) {
+    MappedAllRelayListView(onClose, relayToAdd, accountViewModel, rememberExtendedNav(nav, onClose))
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MappedAllRelayListView(
+    onClose: () -> Unit,
+    relayToAdd: String = "",
+    accountViewModel: AccountViewModel,
+    newNav: INav,
 ) {
     val kind3ViewModel: Kind3RelayListViewModel = viewModel()
     val kind3FeedState by kind3ViewModel.relays.collectAsStateWithLifecycle()
@@ -179,7 +191,7 @@ fun AllRelayListView(
                             Modifier.padding(bottom = 8.dp),
                         )
                     }
-                    renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, onClose, nav)
+                    renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, newNav)
 
                     item {
                         SettingsCategory(
@@ -187,7 +199,7 @@ fun AllRelayListView(
                             stringRes(R.string.public_notif_section_explainer),
                         )
                     }
-                    renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, onClose, nav)
+                    renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, newNav)
 
                     item {
                         SettingsCategory(
@@ -195,7 +207,7 @@ fun AllRelayListView(
                             stringRes(R.string.private_inbox_section_explainer),
                         )
                     }
-                    renderDMItems(dmFeedState, dmViewModel, accountViewModel, onClose, nav)
+                    renderDMItems(dmFeedState, dmViewModel, accountViewModel, newNav)
 
                     item {
                         SettingsCategory(
@@ -203,7 +215,7 @@ fun AllRelayListView(
                             stringRes(R.string.private_outbox_section_explainer),
                         )
                     }
-                    renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, onClose, nav)
+                    renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, newNav)
 
                     item {
                         SettingsCategoryWithButton(
@@ -214,7 +226,7 @@ fun AllRelayListView(
                             },
                         )
                     }
-                    renderSearchItems(searchFeedState, searchViewModel, accountViewModel, onClose, nav)
+                    renderSearchItems(searchFeedState, searchViewModel, accountViewModel, newNav)
 
                     item {
                         SettingsCategory(
@@ -222,7 +234,7 @@ fun AllRelayListView(
                             stringRes(R.string.local_section_explainer),
                         )
                     }
-                    renderLocalItems(localFeedState, localViewModel, accountViewModel, onClose, nav)
+                    renderLocalItems(localFeedState, localViewModel, accountViewModel, newNav)
 
                     item {
                         SettingsCategoryWithButton(
@@ -233,7 +245,7 @@ fun AllRelayListView(
                             },
                         )
                     }
-                    renderKind3Items(kind3FeedState, kind3ViewModel, accountViewModel, onClose, nav, relayToAdd)
+                    renderKind3Items(kind3FeedState, kind3ViewModel, accountViewModel, newNav, relayToAdd)
 
                     if (kind3Proposals.isNotEmpty()) {
                         item {
@@ -242,7 +254,7 @@ fun AllRelayListView(
                                 stringRes(R.string.kind_3_recommended_section_description),
                             )
                         }
-                        renderKind3ProposalItems(kind3Proposals, kind3ViewModel, accountViewModel, onClose, nav)
+                        renderKind3ProposalItems(kind3Proposals, kind3ViewModel, accountViewModel, newNav)
                     }
                 }
             }

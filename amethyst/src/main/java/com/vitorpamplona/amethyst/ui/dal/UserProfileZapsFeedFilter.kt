@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.ZapReqResponse
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ZapReqResponse
 import com.vitorpamplona.quartz.events.LnZapEventInterface
 
 class UserProfileZapsFeedFilter(

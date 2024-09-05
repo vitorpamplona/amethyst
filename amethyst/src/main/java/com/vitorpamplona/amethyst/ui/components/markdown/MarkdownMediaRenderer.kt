@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.ui.components.DisplayFullNote
 import com.vitorpamplona.amethyst.ui.components.DisplayUser
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadedBechLink
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
@@ -59,7 +60,7 @@ class MarkdownMediaRenderer(
     val backgroundColor: MutableState<Color>,
     val callbackUri: String? = null,
     val accountViewModel: AccountViewModel,
-    val nav: (String) -> Unit,
+    val nav: INav,
 ) : MediaRenderer {
     val parser = RichTextParser()
 

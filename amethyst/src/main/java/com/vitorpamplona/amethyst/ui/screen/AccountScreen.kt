@@ -54,13 +54,12 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
+import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.MainScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
 
 @Composable
 fun AccountScreen(
@@ -150,9 +149,20 @@ fun LoggedInPage(
         accountViewModel.restartServices()
     }
 
-    val activity = getActivity() as MainActivity
+    ListenToExternalSignerIfNeeded(accountViewModel)
 
+    AppNavigation(
+        accountViewModel = accountViewModel,
+        accountStateViewModel = accountStateViewModel,
+        sharedPreferencesViewModel = sharedPreferencesViewModel,
+    )
+}
+
+@Composable
+private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
     if (accountViewModel.account.signer is NostrSignerExternal) {
+        val activity = getActivity() as MainActivity
+
         val lifeCycleOwner = LocalLifecycleOwner.current
         val launcher =
             rememberLauncherForActivityResult(
@@ -221,8 +231,6 @@ fun LoggedInPage(
             }
         }
     }
-
-    MainScreen(accountViewModel, accountStateViewModel, sharedPreferencesViewModel)
 }
 
 class AccountCentricViewModelStore(

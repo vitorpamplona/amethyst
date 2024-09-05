@@ -55,6 +55,8 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableEmail
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.timeAgo
@@ -79,8 +81,10 @@ fun RelayInformationDialog(
     relayBriefInfo: RelayBriefInfoCache.RelayBriefInfo,
     relayInfo: Nip11RelayInformation,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
+    val newNav = rememberExtendedNav(nav, onClose)
+
     val messages =
         remember(relayBriefInfo) {
             RelayStats
@@ -152,10 +156,7 @@ fun RelayInformationDialog(
                     Section(stringRes(R.string.owner))
 
                     relayInfo.pubkey?.let {
-                        DisplayOwnerInformation(it, accountViewModel) {
-                            onClose()
-                            nav(it)
-                        }
+                        DisplayOwnerInformation(it, accountViewModel, newNav)
                     }
                 }
                 item {
@@ -300,7 +301,7 @@ fun RelayInformationDialog(
                                 backgroundColor = color,
                                 id = msg.hashCode().toString(),
                                 accountViewModel = accountViewModel,
-                                nav = nav,
+                                nav = newNav,
                             )
                         }
                     }
@@ -353,7 +354,7 @@ private fun DisplaySoftwareInformation(relayInfo: Nip11RelayInformation) {
 private fun DisplayOwnerInformation(
     userHex: String,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     LoadUser(baseUserHex = userHex, accountViewModel) {
         CrossfadeIfEnabled(it, accountViewModel = accountViewModel) {

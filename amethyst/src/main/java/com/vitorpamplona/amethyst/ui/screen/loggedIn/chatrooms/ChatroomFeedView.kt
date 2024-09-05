@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -55,7 +56,7 @@ import com.vitorpamplona.quartz.events.DraftEvent
 fun RefreshingChatroomFeedView(
     viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     routeForLastRead: String,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
@@ -84,7 +85,7 @@ fun RenderChatroomFeedView(
     viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
     listState: LazyListState,
-    nav: (String) -> Unit,
+    nav: INav,
     routeForLastRead: String,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
@@ -124,7 +125,7 @@ fun ChatroomFeedLoaded(
     loaded: FeedState.Loaded,
     accountViewModel: AccountViewModel,
     listState: LazyListState,
-    nav: (String) -> Unit,
+    nav: INav,
     routeForLastRead: String,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,

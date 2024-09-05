@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 import android.Manifest
 import android.os.Build
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -41,10 +41,27 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+
+@Composable
+fun NotificationScreen(
+    sharedPreferencesViewModel: SharedPreferencesViewModel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    NotificationScreen(
+        notifFeedContentState = accountViewModel.feedStates.notifications,
+        notifSummaryState = accountViewModel.feedStates.notificationSummary,
+        sharedPreferencesViewModel = sharedPreferencesViewModel,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+}
 
 @Composable
 fun NotificationScreen(
@@ -52,7 +69,7 @@ fun NotificationScreen(
     notifSummaryState: NotificationSummaryState,
     sharedPreferencesViewModel: SharedPreferencesViewModel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     SelectNotificationProvider(sharedPreferencesViewModel)
 
@@ -72,20 +89,38 @@ fun NotificationScreen(
         onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Column(Modifier.fillMaxHeight()) {
-        SummaryBar(
-            state = notifSummaryState,
-        )
-        HorizontalDivider(
-            thickness = DividerThickness,
-        )
-        RefreshableCardView(
-            feedContent = notifFeedContentState,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            routeForLastRead = Route.Notification.base,
-            scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN,
-        )
+    DisappearingScaffold(
+        isInvertedLayout = false,
+        topBar = {
+            Column {
+                NotificationTopBar(accountViewModel, nav)
+                SummaryBar(
+                    state = notifSummaryState,
+                )
+            }
+        },
+        bottomBar = {
+            AppBottomBar(Route.Notification, accountViewModel) { route, _ ->
+                if (route == Route.Notification) {
+                    notifFeedContentState.invalidateDataAndSendToTop(true)
+                } else {
+                    nav.newStack(route.base)
+                }
+            }
+        },
+        accountViewModel = accountViewModel,
+    ) {
+        Column(
+            modifier = Modifier.padding(it).consumeWindowInsets(it),
+        ) {
+            RefreshableCardView(
+                feedContent = notifFeedContentState,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                routeForLastRead = Route.Notification.base,
+                scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN,
+            )
+        }
     }
 }
 

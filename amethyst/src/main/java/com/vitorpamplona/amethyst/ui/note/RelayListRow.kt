@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.actions.relays.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
@@ -70,7 +71,7 @@ import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 public fun RelayBadgesHorizontal(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val expanded = remember { mutableStateOf(false) }
 
@@ -117,7 +118,7 @@ fun ChatRelayExpandButton(onClick: () -> Unit) {
 fun RenderRelay(
     relay: RelayBriefInfoCache.RelayBriefInfo,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val relayInfo by
         produceState(

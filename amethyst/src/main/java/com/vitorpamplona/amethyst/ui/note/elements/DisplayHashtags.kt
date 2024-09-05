@@ -36,13 +36,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.AnnotatedString
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun DisplayFollowingHashtagsInPost(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val userFollowState by accountViewModel.account.liveKind3Follows.collectAsStateWithLifecycle()
     var firstTag by remember(baseNote) { mutableStateOf<String?>(null) }
@@ -65,14 +66,14 @@ fun DisplayFollowingHashtagsInPost(
 @Composable
 private fun DisplayTagList(
     firstTag: String,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val displayTag = remember(firstTag) { AnnotatedString(" #$firstTag") }
     val route = remember(firstTag) { "Hashtag/$firstTag" }
 
     ClickableText(
         text = displayTag,
-        onClick = { nav(route) },
+        onClick = { nav.nav(route) },
         style =
             LocalTextStyle.current.copy(
                 color =

@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -52,7 +53,7 @@ import com.vitorpamplona.quartz.events.WikiNoteEvent
 fun RenderWikiContent(
     note: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = note.event as? WikiNoteEvent ?: return
 
@@ -64,7 +65,7 @@ private fun WikiNoteHeader(
     noteEvent: WikiNoteEvent,
     note: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val title = remember(noteEvent) { noteEvent.title() }
     val summary =

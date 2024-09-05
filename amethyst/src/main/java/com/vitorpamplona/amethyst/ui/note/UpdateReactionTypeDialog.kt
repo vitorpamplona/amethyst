@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.service.firstFullChar
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -145,7 +146,7 @@ class UpdateReactionTypeViewModel(
 fun UpdateReactionTypeDialog(
     onClose: () -> Unit,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val postViewModel: UpdateReactionTypeViewModel =
         viewModel(
@@ -326,7 +327,7 @@ private fun RenderReactionOption(
 @Composable
 private fun EmojiSelector(
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     onClick: ((EmojiUrl) -> Unit)? = null,
 ) {
     LoadAddressableNote(
@@ -361,7 +362,7 @@ private fun EmojiSelector(
 fun EmojiCollectionGallery(
     emojiCollections: ImmutableList<ATag>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     onClick: ((EmojiUrl) -> Unit)? = null,
 ) {
     val color = MaterialTheme.colorScheme.background
@@ -385,14 +386,14 @@ private fun WatchAndRenderNote(
     emojiPack: AddressableNote,
     bgColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     onClick: ((EmojiUrl) -> Unit)?,
 ) {
     val scope = rememberCoroutineScope()
 
     Column(
         Modifier.fillMaxWidth().clickable {
-            scope.launch { routeFor(emojiPack, accountViewModel.userProfile())?.let { nav(it) } }
+            scope.launch { routeFor(emojiPack, accountViewModel.userProfile())?.let { nav.nav(it) } }
         },
     ) {
         RenderEmojiPack(

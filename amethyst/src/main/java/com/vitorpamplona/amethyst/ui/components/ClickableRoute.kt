@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.njumpLink
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -78,7 +79,7 @@ fun ClickableRoute(
     word: String,
     nip19: Nip19Bech32.ParseReturn,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     when (val entity = nip19.entity) {
         is Nip19Bech32.NPub -> DisplayUser(entity.hex, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
@@ -122,7 +123,7 @@ private fun LoadAndDisplayEvent(
     event: Event,
     additionalChars: String?,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     LoadOrCreateNote(event, accountViewModel) {
         if (it != null) {
@@ -150,7 +151,7 @@ fun DisplayEvent(
     nip19: String,
     additionalChars: String?,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     LoadNote(hex, accountViewModel) {
         if (it != null) {
@@ -178,7 +179,7 @@ private fun DisplayNoteLink(
     kind: Int?,
     addedCharts: String?,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteState by it.live().metadata.observeAsState()
 
@@ -233,7 +234,7 @@ private fun DisplayAddress(
     originalNip19: String,
     additionalChars: String?,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var noteBase by remember(nip19) { mutableStateOf(accountViewModel.getNoteIfExists(nip19.atag)) }
 
@@ -277,7 +278,7 @@ public fun DisplayUser(
     originalNip19: String,
     additionalChars: String?,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var userBase by
         remember(userHex) {
@@ -312,7 +313,7 @@ public fun DisplayUser(
 public fun RenderUserAsClickableText(
     baseUser: User,
     additionalChars: String?,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val userState by baseUser.live().userMetadataInfo.observeAsState()
 
@@ -335,7 +336,7 @@ fun CreateClickableText(
     fontWeight: FontWeight? = null,
     fontSize: TextUnit = TextUnit.Unspecified,
     route: String,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     CreateClickableText(
         clickablePart,
@@ -344,7 +345,7 @@ fun CreateClickableText(
         overrideColor,
         fontWeight,
         fontSize,
-    ) { nav(route) }
+    ) { nav.nav(route) }
 }
 
 @Composable
@@ -627,7 +628,7 @@ fun CreateClickableTextWithEmoji(
     fontWeight: FontWeight = FontWeight.Normal,
     fontSize: TextUnit = TextUnit.Unspecified,
     route: String,
-    nav: (String) -> Unit,
+    nav: INav,
     tags: ImmutableListOfLists<String>?,
 ) {
     CustomEmojiChecker(
@@ -658,7 +659,7 @@ fun CreateClickableTextWithEmoji(
                 suffix,
                 nonClickablePartStyle,
             ) {
-                nav(route)
+                nav.nav(route)
             }
         },
     )

@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.ChatHeaderLayout
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
@@ -90,7 +91,7 @@ import com.vitorpamplona.quartz.events.DraftEvent
 fun ChatroomHeaderCompose(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     if (baseNote.event != null) {
         ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
@@ -108,7 +109,7 @@ fun ChatroomHeaderCompose(
 fun ChatroomComposeChannelOrUser(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     if (baseNote.event is DraftEvent) {
         ObserveDraftEvent(baseNote, accountViewModel) {
@@ -135,7 +136,7 @@ fun ChatroomComposeChannelOrUser(
 private fun ChatroomPrivateMessages(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val userRoom by
         remember(baseNote) {
@@ -158,7 +159,7 @@ private fun ChatroomChannel(
     channelHex: HexKey,
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     LoadChannel(baseChannelHex = channelHex, accountViewModel) { channel ->
         ChannelRoomCompose(baseNote, channel, accountViewModel, nav)
@@ -170,7 +171,7 @@ private fun ChannelRoomCompose(
     note: Note,
     channel: Channel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val authorState by note.author!!
         .live()
@@ -207,7 +208,7 @@ private fun ChannelRoomCompose(
         hasNewMessages = (noteEvent?.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
         loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
-        onClick = { nav(route) },
+        onClick = { nav.nav(route) },
     )
 }
 
@@ -255,7 +256,7 @@ private fun UserRoomCompose(
     note: Note,
     room: ChatroomKey,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val route = "Room/${room.hashCode()}"
 
@@ -298,7 +299,7 @@ private fun UserRoomCompose(
                 NewItemsBubble()
             }
         },
-        onClick = { nav(route) },
+        onClick = { nav.nav(route) },
     )
 }
 

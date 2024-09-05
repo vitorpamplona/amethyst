@@ -71,6 +71,8 @@ import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.actions.RelayInfoDialog
+import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -102,12 +104,14 @@ fun Kind3RelayListView(
     postViewModel: Kind3RelayListViewModel,
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
-    nav: (String) -> Unit,
+    nav: INav,
     relayToAdd: String,
 ) {
+    val newNav = rememberExtendedNav(nav, onClose)
+
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(contentPadding = FeedPadding) {
-            renderKind3Items(feedState, postViewModel, accountViewModel, onClose, nav, relayToAdd)
+            renderKind3Items(feedState, postViewModel, accountViewModel, newNav, relayToAdd)
         }
     }
 }
@@ -116,8 +120,7 @@ fun LazyListScope.renderKind3Items(
     feedState: List<Kind3BasicRelaySetupInfo>,
     postViewModel: Kind3RelayListViewModel,
     accountViewModel: AccountViewModel,
-    onClose: () -> Unit,
-    nav: (String) -> Unit,
+    nav: INav,
     relayToAdd: String,
 ) {
     itemsIndexed(feedState, key = { _, item -> "kind3" + item.url }) { index, item ->
@@ -132,10 +135,8 @@ fun LazyListScope.renderKind3Items(
             onToggleSearch = { postViewModel.toggleSearch(it) },
             onDelete = { postViewModel.deleteRelay(it) },
             accountViewModel = accountViewModel,
-        ) {
-            onClose()
-            nav(it)
-        }
+            nav = nav,
+        )
     }
 
     item {
@@ -148,8 +149,7 @@ fun LazyListScope.renderKind3ProposalItems(
     feedState: List<Kind3RelayProposalSetupInfo>,
     postViewModel: Kind3RelayListViewModel,
     accountViewModel: AccountViewModel,
-    onClose: () -> Unit,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     itemsIndexed(feedState, key = { _, item -> "kind3proposal" + item.url }) { index, item ->
         Kind3RelaySetupInfoProposalDialog(
@@ -158,10 +158,7 @@ fun LazyListScope.renderKind3ProposalItems(
                 postViewModel.addRelay(item)
             },
             accountViewModel = accountViewModel,
-            nav = {
-                onClose()
-                nav(it)
-            },
+            nav = nav,
         )
         HorizontalDivider(
             thickness = DividerThickness,
@@ -214,7 +211,7 @@ fun LoadRelayInfo(
     onToggleSearch: (Kind3BasicRelaySetupInfo) -> Unit,
     onDelete: (Kind3BasicRelaySetupInfo) -> Unit,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var relayInfo: RelayInfoDialog? by remember { mutableStateOf(null) }
     val context = LocalContext.current

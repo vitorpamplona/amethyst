@@ -50,6 +50,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.relays.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
@@ -67,7 +69,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun TorrentCommentPreview() {
     val accountViewModel = mockAccountViewModel()
-    val nav: (String) -> Unit = {}
+    val nav = EmptyNav
 
     val comment =
         runBlocking {
@@ -160,7 +162,7 @@ fun RenderTorrentComment(
     backgroundColor: MutableState<Color>,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Column {
         val noteEvent = note.event
@@ -205,7 +207,7 @@ fun TorrentHeader(
     torrentHex: String,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     LoadNote(baseNoteHex = torrentHex, accountViewModel = accountViewModel) {
         if (it != null) {
@@ -219,7 +221,7 @@ fun ShortTorrentHeader(
     baseNote: Note,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val channelState by baseNote.live().metadata.observeAsState()
     val note = channelState?.note ?: return
@@ -229,7 +231,7 @@ fun ShortTorrentHeader(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             modifier.clickable {
-                routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) }
+                routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) }
             },
     ) {
         Icons.Outlined.FileOpen

@@ -29,11 +29,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -44,7 +48,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DrawerState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -92,10 +95,10 @@ import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
-import com.vitorpamplona.amethyst.ui.qrcode.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -115,23 +118,20 @@ import com.vitorpamplona.ammolite.relays.RelayPoolStatus
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
-import kotlinx.coroutines.launch
 
 @Composable
 fun DrawerContent(
-    nav: (String) -> Unit,
-    drawerState: DrawerState,
+    nav: INav,
     openSheet: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    val coroutineScope = rememberCoroutineScope()
     val onClickUser = {
-        nav("User/${accountViewModel.userProfile().pubkeyHex}")
-        coroutineScope.launch { drawerState.close() }
-        Unit
+        nav.nav(routeFor(accountViewModel.userProfile()))
+        nav.closeDrawer()
     }
 
     ModalDrawerSheet(
+        windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Bottom + WindowInsetsSides.Start),
         drawerContainerColor = MaterialTheme.colorScheme.background,
         drawerTonalElevation = 0.dp,
     ) {
@@ -148,7 +148,7 @@ fun DrawerContent(
             )
 
             Column(drawerSpacing) {
-                EditStatusBoxes(accountViewModel.account.userProfile(), accountViewModel, drawerState)
+                EditStatusBoxes(accountViewModel.account.userProfile(), accountViewModel, nav)
             }
 
             FollowingAndFollowerCounts(accountViewModel.account, onClickUser)
@@ -160,7 +160,6 @@ fun DrawerContent(
 
             ListContent(
                 modifier = Modifier.fillMaxWidth(),
-                drawerState,
                 openSheet,
                 accountViewModel,
                 nav,
@@ -170,7 +169,6 @@ fun DrawerContent(
 
             BottomContent(
                 accountViewModel.account.userProfile(),
-                drawerState,
                 accountViewModel,
                 nav,
             )
@@ -265,16 +263,16 @@ fun ProfileContentTemplate(
 private fun EditStatusBoxes(
     baseAccountUser: User,
     accountViewModel: AccountViewModel,
-    drawerState: DrawerState,
+    nav: INav,
 ) {
     LoadStatuses(user = baseAccountUser, accountViewModel) { statuses ->
         if (statuses.isEmpty()) {
-            StatusEditBar(accountViewModel = accountViewModel, drawerState = drawerState)
+            StatusEditBar(accountViewModel = accountViewModel, nav = nav)
         } else {
             statuses.forEach {
                 val originalStatus by it.live().content.observeAsState()
 
-                StatusEditBar(originalStatus, it.address, accountViewModel, drawerState = drawerState)
+                StatusEditBar(originalStatus, it.address, accountViewModel, nav)
             }
         }
     }
@@ -285,14 +283,14 @@ fun StatusEditBar(
     savedStatus: String? = null,
     tag: ATag? = null,
     accountViewModel: AccountViewModel,
-    drawerState: DrawerState,
+    nav: INav,
 ) {
     val focusManager = LocalFocusManager.current
 
     val currentStatus = remember { mutableStateOf(savedStatus ?: "") }
     val hasChanged = remember { derivedStateOf { currentStatus.value != (savedStatus ?: "") } }
-    LaunchedEffect(drawerState.isClosed) {
-        if (drawerState.isClosed) {
+    LaunchedEffect(nav.drawerState.isClosed) {
+        if (nav.drawerState.isClosed) {
             focusManager.clearFocus(true)
         }
     }
@@ -434,14 +432,12 @@ fun WatchFollower(
 @Composable
 fun ListContent(
     modifier: Modifier,
-    drawerState: DrawerState,
     openSheet: () -> Unit,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val route = remember(accountViewModel) { "User/${accountViewModel.userProfile().pubkeyHex}" }
 
-    val coroutineScope = rememberCoroutineScope()
     var wantsToEditRelays by remember { mutableStateOf(false) }
     var editMediaServers by remember { mutableStateOf(false) }
 
@@ -465,7 +461,6 @@ fun ListContent(
             icon = Route.Profile.icon,
             tint = MaterialTheme.colorScheme.primary,
             nav = nav,
-            drawerState = drawerState,
             route = route,
         )
 
@@ -474,7 +469,6 @@ fun ListContent(
             icon = Route.Bookmarks.icon,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            drawerState = drawerState,
             route = Route.Bookmarks.route,
         )
 
@@ -483,24 +477,23 @@ fun ListContent(
             icon = Route.Drafts.icon,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            drawerState = drawerState,
             route = Route.Drafts.route,
         )
 
         IconRowRelays(
             accountViewModel = accountViewModel,
             onClick = {
-                coroutineScope.launch { drawerState.close() }
+                nav.closeDrawer()
                 wantsToEditRelays = true
             },
         )
 
         IconRow(
-            title = "Media Servers",
+            title = stringRes(R.string.media_servers),
             icon = androidx.media3.ui.R.drawable.exo_icon_repeat_all,
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = {
-                coroutineScope.launch { drawerState.close() }
+                nav.closeDrawer()
                 editMediaServers = true
             },
         )
@@ -510,7 +503,6 @@ fun ListContent(
             icon = Route.BlockedUsers.icon,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            drawerState = drawerState,
             route = Route.BlockedUsers.route,
         )
 
@@ -520,7 +512,7 @@ fun ListContent(
                 icon = R.drawable.ic_key,
                 tint = MaterialTheme.colorScheme.onBackground,
                 onClick = {
-                    coroutineScope.launch { drawerState.close() }
+                    nav.closeDrawer()
                     backupDialogOpen = true
                 },
             )
@@ -536,14 +528,14 @@ fun ListContent(
             icon = R.drawable.ic_tor,
             tint = MaterialTheme.colorScheme.onBackground,
             onLongClick = {
-                coroutineScope.launch { drawerState.close() }
+                nav.closeDrawer()
                 conectOrbotDialogOpen = true
             },
             onClick = {
                 if (checked) {
                     disconnectTorDialog = true
                 } else {
-                    coroutineScope.launch { drawerState.close() }
+                    nav.closeDrawer()
                     conectOrbotDialogOpen = true
                 }
             },
@@ -554,7 +546,6 @@ fun ListContent(
             icon = Route.Settings.icon,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            drawerState = drawerState,
             route = Route.Settings.route,
         )
 
@@ -660,18 +651,16 @@ fun NavigationRow(
     title: String,
     icon: Int,
     tint: Color,
-    nav: (String) -> Unit,
-    drawerState: DrawerState,
+    nav: INav,
     route: String,
 ) {
-    val coroutineScope = rememberCoroutineScope()
     IconRow(
         title,
         icon,
         tint,
         onClick = {
-            nav(route)
-            coroutineScope.launch { drawerState.close() }
+            nav.closeDrawer()
+            nav.nav(route)
         },
     )
 }
@@ -754,9 +743,8 @@ fun IconRowRelays(
 @Composable
 fun BottomContent(
     user: User,
-    drawerState: DrawerState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -788,8 +776,8 @@ fun BottomContent(
                         }
                     },
                 onClick = {
-                    nav("Note/${BuildConfig.RELEASE_NOTES_ID}")
-                    coroutineScope.launch { drawerState.close() }
+                    nav.nav("Note/${BuildConfig.RELEASE_NOTES_ID}")
+                    nav.closeDrawer()
                 },
                 modifier = Modifier.padding(start = 16.dp),
             )
@@ -797,7 +785,7 @@ fun BottomContent(
             IconButton(
                 onClick = {
                     dialogOpen = true
-                    coroutineScope.launch { drawerState.close() }
+                    nav.closeDrawer()
                 },
             ) {
                 Icon(
@@ -816,8 +804,8 @@ fun BottomContent(
             accountViewModel,
             onScan = {
                 dialogOpen = false
-                coroutineScope.launch { drawerState.close() }
-                nav(it)
+                nav.closeDrawer()
+                nav.nav(it)
             },
             onClose = { dialogOpen = false },
         )

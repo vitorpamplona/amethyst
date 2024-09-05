@@ -26,18 +26,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.LoadCityName
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 
 @Composable
 fun DisplayLocation(
     geohashStr: String,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     LoadCityName(geohashStr) { cityName ->
         ClickableText(
             text = AnnotatedString(cityName),
-            onClick = { nav("Geohash/$geohashStr") },
+            onClick = { nav.nav("Geohash/$geohashStr") },
             style =
                 LocalTextStyle.current.copy(
                     color =

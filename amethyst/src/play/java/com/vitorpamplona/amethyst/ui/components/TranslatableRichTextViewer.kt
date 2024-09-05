@@ -78,7 +78,7 @@ fun TranslatableRichTextViewer(
     id: String,
     callbackUri: String? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var translatedTextState by
         remember(id) { mutableStateOf(TranslationConfig(content, null, null, false)) }
@@ -122,7 +122,7 @@ private fun RenderText(
     id: String,
     callbackUri: String? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var showOriginal by
         remember(translatedTextState) { mutableStateOf(translatedTextState.showOriginal) }

@@ -63,6 +63,7 @@ import coil.request.SuccessResult
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -211,7 +212,7 @@ fun RenderBadgeAward(
     note: Note,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     if (note.replyTo.isNullOrEmpty()) return
 
@@ -228,7 +229,7 @@ fun RenderBadgeAward(
                 modifier =
                     Modifier
                         .size(size = Size35dp)
-                        .clickable { nav("User/${user.pubkeyHex}") },
+                        .clickable { nav.nav("User/${user.pubkeyHex}") },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 ClickableUserPicture(

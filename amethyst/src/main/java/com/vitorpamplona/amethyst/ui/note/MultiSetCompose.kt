@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.authorRouteFor
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
@@ -101,7 +102,7 @@ fun MultiSetCompose(
     routeForLastRead: String,
     showHidden: Boolean = false,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val baseNote = remember { multiSetCard.note }
 
@@ -123,7 +124,7 @@ fun MultiSetCompose(
                 .background(backgroundColor.value)
                 .combinedClickable(
                     onClick = {
-                        scope.launch { routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) } }
+                        scope.launch { routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) } }
                     },
                     onLongClick = { popupExpanded.value = true },
                 ).padding(
@@ -163,7 +164,7 @@ private fun Galeries(
     multiSetCard: MultiSetCard,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     if (multiSetCard.zapEvents.isNotEmpty()) {
         DecryptAndRenderZapGallery(multiSetCard, backgroundColor, accountViewModel, nav)
@@ -184,7 +185,7 @@ private fun Galeries(
 fun RenderLikeGallery(
     reactionType: String,
     likeEvents: ImmutableList<Note>,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
 ) {
     if (likeEvents.isNotEmpty()) {
@@ -226,7 +227,7 @@ fun DecryptAndRenderZapGallery(
     multiSetCard: MultiSetCard,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val zapEvents by
         produceState(initialValue = accountViewModel.cachedDecryptAmountMessageInGroup(multiSetCard.zapEvents)) {
@@ -241,7 +242,7 @@ fun RenderZapGallery(
     zapEvents: ImmutableList<ZapAmountCommentNotification>,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Row(Modifier.fillMaxWidth()) {
         Box(
@@ -259,7 +260,7 @@ fun RenderZapGallery(
 @Composable
 fun RenderBoostGallery(
     boostEvents: ImmutableList<Note>,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
 ) {
     Row(
@@ -280,7 +281,7 @@ fun RenderBoostGallery(
 @Composable
 fun RenderBoostGallery(
     noteToGetBoostEvents: NoteState,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
 ) {
     Row(
@@ -321,7 +322,7 @@ fun MapZaps(
 fun AuthorGalleryZaps(
     authorNotes: ImmutableList<ZapAmountCommentNotification>,
     backgroundColor: MutableState<Color>,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
 ) {
     Column(modifier = StdStartPadding) {
@@ -367,9 +368,9 @@ private fun ParseAuthorCommentAndAmount(
 
 fun click(
     content: ZapAmountCommentNotification,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
-    content.user?.let { nav(routeFor(it)) }
+    content.user?.let { nav.nav(routeFor(it)) }
 }
 
 @Composable
@@ -377,7 +378,7 @@ private fun RenderState(
     content: ZapAmountCommentNotification,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Row(
         modifier = Modifier.clickable { click(content, nav) },
@@ -404,7 +405,7 @@ val commentTextSize = 12.sp
 private fun DisplayAuthorCommentAndAmount(
     authorComment: ZapAmountCommentNotification,
     backgroundColor: MutableState<Color>,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
 ) {
     Box(modifier = Size35Modifier, contentAlignment = Alignment.BottomCenter) {
@@ -446,7 +447,7 @@ fun CrossfadeToDisplayAmount(amount: String) {
 fun CrossfadeToDisplayComment(
     comment: String,
     backgroundColor: MutableState<Color>,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
 ) {
     TranslatableRichTextViewer(
@@ -466,7 +467,7 @@ fun CrossfadeToDisplayComment(
 @Composable
 fun AuthorGallery(
     authorNotes: ImmutableList<Note>,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
 ) {
     Column(modifier = StdStartPadding) {
@@ -478,7 +479,7 @@ fun AuthorGallery(
 @Composable
 fun AuthorGallery(
     noteToGetBoostEvents: NoteState,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
 ) {
     Column(modifier = StdStartPadding) {
@@ -491,10 +492,10 @@ fun AuthorGallery(
 @Composable
 private fun BoxedAuthor(
     note: Note,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    Box(modifier = Size35Modifier.clickable(onClick = { nav(authorRouteFor(note)) })) {
+    Box(modifier = Size35Modifier.clickable(onClick = { nav.nav(authorRouteFor(note)) })) {
         WatchAuthorWithBlank(note, Size35Modifier, accountViewModel) { author ->
             WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
                 author,

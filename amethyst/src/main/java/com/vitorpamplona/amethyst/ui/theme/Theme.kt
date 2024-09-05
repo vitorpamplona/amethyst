@@ -81,6 +81,9 @@ private val LightColorPalette =
 private val DarkNewItemBackground = DarkColorPalette.primary.copy(0.12f)
 private val LightNewItemBackground = LightColorPalette.primary.copy(0.12f)
 
+private val DarkTransparentBackground = DarkColorPalette.background.copy(0.32f)
+private val LightTransparentBackground = LightColorPalette.background.copy(0.32f)
+
 private val DarkSelectedNote = DarkNewItemBackground.compositeOver(DarkColorPalette.background)
 private val LightSelectedNote = LightNewItemBackground.compositeOver(LightColorPalette.background)
 
@@ -345,6 +348,9 @@ val ColorScheme.isLight: Boolean
 val ColorScheme.newItemBackgroundColor: Color
     get() = if (isLight) LightNewItemBackground else DarkNewItemBackground
 
+val ColorScheme.transparentBackground: Color
+    get() = if (isLight) LightTransparentBackground else DarkTransparentBackground
+
 val ColorScheme.selectedNote: Color
     get() = if (isLight) LightSelectedNote else DarkSelectedNote
 
@@ -469,8 +475,8 @@ fun AmethystTheme(
             insets.isAppearanceLightNavigationBars = !darkTheme
             insets.isAppearanceLightStatusBars = !darkTheme
 
-            window.statusBarColor = colors.background.toArgb()
-            window.navigationBarColor = colors.background.toArgb()
+            window.statusBarColor = colors.transparentBackground.toArgb()
+            window.navigationBarColor = colors.transparentBackground.toArgb()
         }
     }
 }
