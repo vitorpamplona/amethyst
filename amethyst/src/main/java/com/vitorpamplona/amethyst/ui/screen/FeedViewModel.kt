@@ -260,6 +260,8 @@ abstract class FeedViewModel(
     InvalidatableContent {
     val feedState = FeedContentState(localFilter, viewModelScope)
 
+    override val isRefreshing = feedState.isRefreshing
+
     fun sendToTop() = feedState.sendToTop()
 
     suspend fun sentToTop() = feedState.sentToTop()

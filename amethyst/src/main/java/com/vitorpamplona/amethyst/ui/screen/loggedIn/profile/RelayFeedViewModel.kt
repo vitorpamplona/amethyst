@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile
 
 import android.util.Log
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.RelayInfo
@@ -50,28 +52,36 @@ class RelayFeedViewModel :
 
     var currentUser: User? = null
 
+    override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
+
     fun refresh() {
         viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
     }
 
     fun refreshSuspended() {
-        val beingUsed = currentUser?.relaysBeingUsed?.values ?: emptyList()
-        val beingUsedSet = currentUser?.relaysBeingUsed?.keys ?: emptySet()
+        try {
+            isRefreshing.value = true
 
-        val newRelaysFromRecord =
-            currentUser?.latestContactList?.relays()?.entries?.mapNotNullTo(HashSet()) {
-                val url = RelayUrlFormatter.normalize(it.key)
-                if (url !in beingUsedSet) {
-                    RelayInfo(url, 0, 0)
-                } else {
-                    null
+            val beingUsed = currentUser?.relaysBeingUsed?.values ?: emptyList()
+            val beingUsedSet = currentUser?.relaysBeingUsed?.keys ?: emptySet()
+
+            val newRelaysFromRecord =
+                currentUser?.latestContactList?.relays()?.entries?.mapNotNullTo(HashSet()) {
+                    val url = RelayUrlFormatter.normalize(it.key)
+                    if (url !in beingUsedSet) {
+                        RelayInfo(url, 0, 0)
+                    } else {
+                        null
+                    }
                 }
-            }
-                ?: emptyList()
+                    ?: emptyList()
 
-        val newList = (beingUsed + newRelaysFromRecord).sortedWith(order)
+            val newList = (beingUsed + newRelaysFromRecord).sortedWith(order)
 
-        _feedContent.update { newList }
+            _feedContent.update { newList }
+        } finally {
+            isRefreshing.value = false
+        }
     }
 
     val listener: (UserState) -> Unit = { invalidateData() }

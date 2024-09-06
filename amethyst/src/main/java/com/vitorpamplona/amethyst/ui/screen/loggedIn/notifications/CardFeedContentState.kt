@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
 import android.util.Log
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableStateOf
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -72,6 +74,8 @@ class CardFeedContentState(
 
     private var lastFeedKey: String? = null
 
+    override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
+
     fun sendToTop() {
         if (scrolltoTopPending) return
 
@@ -94,41 +98,47 @@ class CardFeedContentState(
     private fun refreshSuspended() {
         checkNotInMainThread()
 
-        val notes = localFilter.feed()
-        lastFeedKey = localFilter.feedKey()
+        try {
+            isRefreshing.value = true
 
-        val thisAccount = (localFilter as? NotificationFeedFilter)?.account
-        val lastNotesCopy = if (thisAccount == lastAccount) lastNotes else null
+            val notes = localFilter.feed()
+            lastFeedKey = localFilter.feedKey()
 
-        val oldNotesState = _feedContent.value
-        if (lastNotesCopy != null && oldNotesState is CardFeedState.Loaded) {
-            val newCards = convertToCard(notes.minus(lastNotesCopy))
-            if (newCards.isNotEmpty()) {
+            val thisAccount = (localFilter as? NotificationFeedFilter)?.account
+            val lastNotesCopy = if (thisAccount == lastAccount) lastNotes else null
+
+            val oldNotesState = _feedContent.value
+            if (lastNotesCopy != null && oldNotesState is CardFeedState.Loaded) {
+                val newCards = convertToCard(notes.minus(lastNotesCopy))
+                if (newCards.isNotEmpty()) {
+                    lastNotes = notes.toSet()
+                    lastAccount = (localFilter as? NotificationFeedFilter)?.account
+
+                    val updatedCards =
+                        (oldNotesState.feed.value.list + newCards)
+                            .distinctBy { it.id() }
+                            .sortedWith(DefaultFeedOrderCard)
+                            .take(localFilter.limit())
+                            .toImmutableList()
+
+                    if (!equalImmutableLists(oldNotesState.feed.value.list, updatedCards)) {
+                        updateFeed(updatedCards)
+                    }
+                }
+            } else {
                 lastNotes = notes.toSet()
                 lastAccount = (localFilter as? NotificationFeedFilter)?.account
 
-                val updatedCards =
-                    (oldNotesState.feed.value.list + newCards)
-                        .distinctBy { it.id() }
+                val cards =
+                    convertToCard(notes)
                         .sortedWith(DefaultFeedOrderCard)
                         .take(localFilter.limit())
                         .toImmutableList()
 
-                if (!equalImmutableLists(oldNotesState.feed.value.list, updatedCards)) {
-                    updateFeed(updatedCards)
-                }
+                updateFeed(cards)
             }
-        } else {
-            lastNotes = notes.toSet()
-            lastAccount = (localFilter as? NotificationFeedFilter)?.account
-
-            val cards =
-                convertToCard(notes)
-                    .sortedWith(DefaultFeedOrderCard)
-                    .take(localFilter.limit())
-                    .toImmutableList()
-
-            updateFeed(cards)
+        } finally {
+            isRefreshing.value = false
         }
     }
 
