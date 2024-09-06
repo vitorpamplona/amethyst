@@ -519,6 +519,7 @@
     <string name="automatically_play_videos_description">Lire automatiquement les vidéos et les GIFs</string>
     <string name="automatically_show_url_preview_description">Afficher la prévisualisation d\'URL</string>
     <string name="load_image_description">Quand charger les images</string>
+    <string name="copy_stack_to_clipboard">Copier dans le presse-papiers</string>
     <string name="copy_to_clipboard">Copier dans le presse-papiers</string>
     <string name="copy_npub_to_clipboard">Copier npub dans le presse-papiers</string>
     <string name="share_or_save">Partager ou Enregistrer</string>
@@ -667,6 +668,11 @@
     <string name="could_not_prepare_header">Impossible de préparer les informations d\'en-tête : %1$s</string>
     <string name="compression_cancelled">Compression annulée</string>
     <string name="compression_returned_null">La compression n\'a pas réussi à renvoyer un fichier</string>
+    <string name="media_compression_quality_label">Qualité des médias</string>
+    <string name="media_compression_quality_explainer">Sélectionnez une qualité basse pour compresser vos médias en un fichier plus petit, avec moins de qualité ou sélectionnez qualité haute pour compresser en un fichier plus grand, avec une meilleure qualité.</string>
+    <string name="media_compression_quality_low">Basse</string>
+    <string name="media_compression_quality_medium">Moyenne</string>
+    <string name="media_compression_quality_high">Haute</string>
     <string name="edit_draft">Modifier le brouillon</string>
     <string name="login_with_qr_code">Se connecter avec un QR Code</string>
     <string name="route">Route</string>
