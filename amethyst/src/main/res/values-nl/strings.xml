@@ -519,6 +519,7 @@
     <string name="automatically_play_videos_description">Video\'s en GIF\'s automatisch afspelen</string>
     <string name="automatically_show_url_preview_description">Toon URL-voorbeelden</string>
     <string name="load_image_description">Wanneer afbeeldingen te laden</string>
+    <string name="copy_stack_to_clipboard">Kopieer stapel</string>
     <string name="copy_to_clipboard">Kopiëren naar klembord</string>
     <string name="copy_npub_to_clipboard">Kopieer npub naar klembord</string>
     <string name="share_or_save">Delen of opslaan</string>
@@ -667,6 +668,11 @@
     <string name="could_not_prepare_header">Kon header-informatie niet voorbereiden: %1$s</string>
     <string name="compression_cancelled">Compressie geannuleerd</string>
     <string name="compression_returned_null">Compressie kon een bestand niet terugsturen</string>
+    <string name="media_compression_quality_label">Mediakwaliteit</string>
+    <string name="media_compression_quality_explainer">Selecteer lage kwaliteit om uw media te comprimeren naar een kleiner bestand met minder kwaliteit of selecteer hoge kwaliteit om te comprimeren naar een groter bestand met een hogere kwaliteit.</string>
+    <string name="media_compression_quality_low">Laag</string>
+    <string name="media_compression_quality_medium">Normaal</string>
+    <string name="media_compression_quality_high">Hoog</string>
     <string name="edit_draft">Concept bewerken</string>
     <string name="login_with_qr_code">Inloggen met QR-Code</string>
     <string name="route">Route</string>
@@ -818,4 +824,5 @@
     <string name="torrent_download">Downloaden</string>
     <string name="torrent_failure">Kon bestand niet openen</string>
     <string name="torrent_no_apps">Geen torrent apps geïnstalleerd om het bestand te openen en te downloaden.</string>
+    <string name="select_list_to_filter">Selecteer een lijst om de feed te filteren</string>
 </resources>
