@@ -1519,6 +1519,7 @@ fun DrawBanner(
             model = banner,
             contentDescription = stringRes(id = R.string.profile_image),
             contentScale = ContentScale.FillWidth,
+            placeholder = painterResource(R.drawable.profile_banner),
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -1544,7 +1545,7 @@ fun DrawBanner(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(125.dp),
+                    .height(150.dp),
         )
     }
 }
