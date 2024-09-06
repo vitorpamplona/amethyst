@@ -51,7 +51,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -289,23 +288,9 @@ fun ChatBubbleLayout(
             }
         }
 
-    val alignment: Arrangement.Horizontal =
-        if (isLoggedInUser) {
-            Arrangement.End
-        } else {
-            Arrangement.Start
-        }
-
-    val shape: Shape =
-        if (isLoggedInUser) {
-            ChatBubbleShapeMe
-        } else {
-            ChatBubbleShapeThem
-        }
-
     Row(
         modifier = if (innerQuote) ChatPaddingInnerQuoteModifier else ChatPaddingModifier,
-        horizontalArrangement = alignment,
+        horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
     ) {
         val popupExpanded = remember { mutableStateOf(false) }
 
@@ -335,19 +320,19 @@ fun ChatBubbleLayout(
             }
 
         Row(
-            horizontalArrangement = alignment,
+            horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
             modifier = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier,
         ) {
             Surface(
                 color = backgroundBubbleColor.value,
-                shape = shape,
+                shape = if (isLoggedInUser) ChatBubbleShapeMe else ChatBubbleShapeThem,
                 modifier = clickableModifier,
             ) {
                 Column(modifier = messageBubbleLimits, verticalArrangement = RowColSpacing5dp) {
                     if (drawAuthorInfo) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = alignment,
+                            horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
                             modifier = HalfHalfVertPadding.clickable(onClick = onAuthorClick),
                         ) {
                             drawAuthorLine()
