@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.events.Event
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -289,7 +290,7 @@ fun ZapDonationButton(
     animationSize: Dp = 14.dp,
     nav: INav,
 ) {
-    var wantsToZap by remember { mutableStateOf<List<Long>?>(null) }
+    var wantsToZap by remember { mutableStateOf<ImmutableList<Long>?>(null) }
     var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
     var wantsToPay by
         remember(baseNote) {
@@ -313,7 +314,7 @@ fun ZapDonationButton(
                 onZappingProgress = { progress: Float ->
                     scope.launch { zappingProgress = progress }
                 },
-                onMultipleChoices = { options -> wantsToZap = options },
+                onMultipleChoices = { options -> wantsToZap = options.toImmutableList() },
                 onError = { _, message ->
                     scope.launch {
                         zappingProgress = 0f
@@ -325,9 +326,10 @@ fun ZapDonationButton(
         },
         modifier = Modifier.fillMaxWidth(),
     ) {
-        if (wantsToZap != null) {
+        wantsToZap?.let {
             ZapAmountChoicePopup(
                 baseNote = baseNote,
+                zapAmountChoices = it,
                 popupYOffset = iconSize,
                 accountViewModel = accountViewModel,
                 onDismiss = {
