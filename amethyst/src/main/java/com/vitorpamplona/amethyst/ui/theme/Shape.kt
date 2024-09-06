@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.ripple
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -284,3 +285,5 @@ val reactionBox =
         .padding(horizontal = 6.dp, vertical = 6.dp)
         .size(Size40dp)
         .padding(5.dp)
+
+val ripple24dp = ripple(bounded = false, radius = Size24dp)

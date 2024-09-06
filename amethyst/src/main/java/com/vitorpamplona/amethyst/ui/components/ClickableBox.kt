@@ -25,13 +25,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
-import com.vitorpamplona.amethyst.ui.theme.Size24dp
+import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 
 @Composable
 fun ClickableBox(
@@ -43,7 +42,7 @@ fun ClickableBox(
         modifier.clickable(
             role = Role.Button,
             interactionSource = remember { MutableInteractionSource() },
-            indication = rememberRipple(bounded = false, radius = Size24dp),
+            indication = ripple24dp,
             onClick = onClick,
         ),
         contentAlignment = Alignment.Center,
@@ -64,7 +63,7 @@ fun ClickableBox(
         modifier.combinedClickable(
             role = Role.Button,
             interactionSource = remember { MutableInteractionSource() },
-            indication = rememberRipple(bounded = false, radius = Size24dp),
+            indication = ripple24dp,
             onClick = onClick,
             onLongClick = onLongClick,
         ),

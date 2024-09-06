@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.note
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -65,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size17dp
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.relayIconModifier
+import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 
 @Composable
@@ -154,6 +156,8 @@ fun RenderRelay(
             Modifier
                 .size(Size17dp)
                 .combinedClickable(
+                    indication = ripple24dp,
+                    interactionSource = MutableInteractionSource(),
                     onLongClick = {
                         clipboardManager.setText(AnnotatedString(relay.url))
                     },

@@ -141,7 +141,10 @@ private fun RenderBottomMenu(
         HorizontalDivider(
             thickness = DividerThickness,
         )
-        NavigationBar(tonalElevation = Size0dp) {
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.background,
+            tonalElevation = Size0dp,
+        ) {
             bottomNavigationItems.forEach { item ->
                 HasNewItemsIcon(item == selectedRoute, item, accountViewModel, nav)
             }

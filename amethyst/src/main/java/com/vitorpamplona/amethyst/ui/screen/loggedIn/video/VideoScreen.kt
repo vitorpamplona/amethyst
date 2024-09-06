@@ -258,7 +258,7 @@ fun SlidingCarousel(
 
     VerticalPager(
         state = pagerState,
-        beyondBoundsPageCount = 1,
+        beyondViewportPageCount = 1,
         modifier = Modifier.fillMaxSize(),
         key = { index -> items.list.getOrNull(index)?.idHex ?: "$index" },
     ) { index ->
