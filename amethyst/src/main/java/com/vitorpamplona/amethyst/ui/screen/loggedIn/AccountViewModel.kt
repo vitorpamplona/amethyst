@@ -393,9 +393,10 @@ class AccountViewModel(
             ?: combineTransform(
                 account.flowHiddenUsers,
                 account.liveKind3Follows,
+                note.flow().author(),
                 note.flow().metadata.stateFlow,
                 note.flow().reports.stateFlow,
-            ) { hiddenUsers, followingUsers, metadata, reports ->
+            ) { hiddenUsers, followingUsers, autor, metadata, reports ->
                 emit(isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.users))
             }.flowOn(Dispatchers.Default)
                 .stateIn(
