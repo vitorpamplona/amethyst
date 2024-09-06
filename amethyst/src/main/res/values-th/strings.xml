@@ -38,6 +38,7 @@
     <string name="report_explicit_content">รายงาน: เนื้อหารุนแรง</string>
     <string name="report_illegal_behaviour">รายงาน: พฤติกรรมที่ผิดกฎหมาย</string>
     <string name="report_malware">รายงานมัลแวร์</string>
+    <string name="malware">มัลแวร์</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">เข้าสู่ระบบด้วย private key เพื่อตอบกลับ</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">เข้าสู่ระบบด้วย private key เพื่อบูสโพสต์</string>
     <string name="login_with_a_private_key_to_like_posts">เข้าสู่ระบบด้วย private key เพื่อถูกใจโพสต์</string>
@@ -657,6 +658,9 @@
     <string name="failed_to_upload_with_message">การอัปโหลดล้มเหลว: %1$s</string>
     <string name="failed_to_delete_with_message">การลบล้มเหลว: %1$s</string>
     <string name="media_too_big_for_nip95">สื่อชิ้นนี้ใหญ่เกินไปสำหรับ NIP-95</string>
+    <string name="media_compression_quality_low">ต่ำ</string>
+    <string name="media_compression_quality_medium">กลาง</string>
+    <string name="media_compression_quality_high">สูง</string>
     <string name="edit_draft">แก้ไขฉบับร่าง</string>
     <string name="login_with_qr_code">เข้าสู่ระบบด้วย qr code</string>
     <string name="route">เส้นทาง</string>
