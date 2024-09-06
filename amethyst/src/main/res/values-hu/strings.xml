@@ -609,7 +609,7 @@
     <string name="push_server_none_explainer">Push értesítések letiltása</string>
     <string name="push_server_uses_app_explainer">A(z) %1$s alkalmazást használja</string>
     <string name="push_server_install_app">Push értesítések beállítása</string>
-    <string name="push_server_install_app_description">        A push értesítések fogadásához olyan alkalmazást telepíts, amely támogatja a [Unified Push](https://unifiedpush.org/), például az [Nfty](https://ntfy.sh/) alkalmazást.
+    <string name="push_server_install_app_description">        A push értesítések fogadásához olyan alkalmazást telepíts, amely támogatja a [Unified Push](https://unifiedpush.org/), például az [Ntfy](https://ntfy.sh/) alkalmazást.
         A telepítés után a Beállításokban válaszd ki a használni kívánt alkalmazást.
     </string>
     <string name="payment_required_title">Üzenet %1$s-tól</string>

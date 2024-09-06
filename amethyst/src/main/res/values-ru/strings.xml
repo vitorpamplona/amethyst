@@ -396,7 +396,7 @@
     <string name="automatically_show_profile_picture_description">Показывать картинки профилей</string>
     <string name="push_server_title">Push уведомления</string>
     <string name="push_server_install_app">Настройки push-уведомлений</string>
-    <string name="push_server_install_app_description">        Для получения push-уведомлений, установите приложение, которое поддерживает [Unified Push](https://unifiedpush.org/), например [Nfty](https://ntfy.sh/).
+    <string name="push_server_install_app_description">        Для получения push-уведомлений, установите приложение, которое поддерживает [Unified Push](https://unifiedpush.org/), например [Ntfy](https://ntfy.sh/).
         После установки выберите приложение, которое хотите использовать, в настройках.
     </string>
     <string name="thread_title">Ветка</string>

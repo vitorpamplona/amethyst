@@ -610,7 +610,7 @@
     <string name="push_server_none_explainer">Inaktivera Push-meddelande</string>
     <string name="push_server_uses_app_explainer">Använder appen %1$s</string>
     <string name="push_server_install_app">Inställning av Push-aviseringar</string>
-    <string name="push_server_install_app_description">        För att ta emot push-aviseringar, installera vilken app som helst som stöder [Unified Push](https://unifiedpush.org), till exempel [Nfty](https://ntfy.sh/).
+    <string name="push_server_install_app_description">        För att ta emot push-aviseringar, installera vilken app som helst som stöder [Unified Push](https://unifiedpush.org), till exempel [Ntfy](https://ntfy.sh/).
         Efter installationen väljer du den app du vill använda i inställningarna.
     </string>
     <string name="payment_required_title">Meddelande från %1$s</string>

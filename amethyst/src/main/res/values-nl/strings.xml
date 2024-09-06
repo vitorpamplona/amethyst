@@ -613,7 +613,7 @@
     <string name="push_server_none_explainer">Push-notificaties uitschakelen</string>
     <string name="push_server_uses_app_explainer">Gebruikt app %1$s</string>
     <string name="push_server_install_app">Instellen Push-notificaties</string>
-    <string name="push_server_install_app_description">        Om push-notificaties te ontvangen, installeer een app die [Unified Push] ondersteunt](https://unifiedpush.org/), zoals [Nfty](https://ntfy.sh/).
+    <string name="push_server_install_app_description">        Om push-notificaties te ontvangen, installeer een app die [Unified Push] ondersteunt](https://unifiedpush.org/), zoals [Ntfy](https://ntfy.sh/).
         Na installatie selecteer de app die je wilt gebruiken in de instellingen.
     </string>
     <string name="payment_required_title">Bericht van %1$s</string>

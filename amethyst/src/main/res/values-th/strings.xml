@@ -609,7 +609,7 @@
     <string name="push_server_none_explainer">ปิดการแจ้งเตือน</string>
     <string name="push_server_uses_app_explainer">ใช้แอพ %1$s</string>
     <string name="push_server_install_app">ตั้งค่าการแจ้งเตือน</string>
-    <string name="push_server_install_app_description">เพื่อที่จะรับการแจ้งเตือน ให้ติดตั้งแอพที่รองรับระบบ [Unified Push](https://unifiedpush.org/) เช่น [Nfty](https://ntfy.sh/)เสร็จแล้วจึงเปิดใช้้ในการตั้งค่า</string>
+    <string name="push_server_install_app_description">เพื่อที่จะรับการแจ้งเตือน ให้ติดตั้งแอพที่รองรับระบบ [Unified Push](https://unifiedpush.org/) เช่น [Ntfy](https://ntfy.sh/)เสร็จแล้วจึงเปิดใช้้ในการตั้งค่า</string>
     <string name="payment_required_title">ข้อความจาก %1$s</string>
     <string name="thread_title">หัวเรื่อง</string>
     <string name="send_the_seller_a_message">ส่งข้อความหาผู้ขาย</string>

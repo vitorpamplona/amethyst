@@ -525,7 +525,7 @@
     <string name="push_server_none_explainer">Poistaa Push-ilmoitukset käytöstä</string>
     <string name="push_server_uses_app_explainer">Käyttää sovellusta %1$s</string>
     <string name="push_server_install_app">Push-ilmoituksen asennus</string>
-    <string name="push_server_install_app_description">        Saadaksesi push-ilmoituksia, asenna mikä tahansa sovellus, joka tukee Unified Push:ia, kuten Nfty.
+    <string name="push_server_install_app_description">        Saadaksesi push-ilmoituksia, asenna mikä tahansa sovellus, joka tukee Unified Push:ia, kuten Ntfy.
 			Asennuksen jälkeen valitse Asetuksista sovellus, jota haluat käyttää.</string>
     <string name="payment_required_title">Viesti käyttäjältä %1$s</string>
     <string name="thread_title">Keskusteluketju</string>

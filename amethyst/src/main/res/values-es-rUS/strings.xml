@@ -609,7 +609,7 @@
     <string name="push_server_none_explainer">Desactiva las notificaciones push</string>
     <string name="push_server_uses_app_explainer">Usa la app %1$s</string>
     <string name="push_server_install_app">Configuración de notificaciones push</string>
-    <string name="push_server_install_app_description">        Para recibir notificaciones push, instala cualquier aplicación compatible con [Unified Push](https://unifiedpush.org/), como [Nfty](https://ntfy.sh/).
+    <string name="push_server_install_app_description">        Para recibir notificaciones push, instala cualquier aplicación compatible con [Unified Push](https://unifiedpush.org/), como [Ntfy](https://ntfy.sh/).
         Tras la instalación, selecciona la aplicación que deseas usar en la configuración.
     </string>
     <string name="payment_required_title">Mensaje de %1$s</string>

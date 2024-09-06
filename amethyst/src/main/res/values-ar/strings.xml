@@ -468,7 +468,7 @@
     <string name="push_server_uses_app_explainer">يتم استخدام هذا التطبيق: %1$s</string>
     <string name="push_server_install_app">إعدادات الإشعارات</string>
     <string name="push_server_install_app_description">لاستخدام الإشعارات حمل أي تطبيق يدعم ال [Unified Push](https://unifiedpush.org/)
-مثل [Nfty](https://ntfy.sh/).
+مثل [Ntfy](https://ntfy.sh/).
 بعد تثبيتك التطبيق قم باختياره من الإعدادات</string>
     <string name="classifieds_title">العنوان</string>
     <string name="classifieds_title_placeholder">iPhone 13</string>

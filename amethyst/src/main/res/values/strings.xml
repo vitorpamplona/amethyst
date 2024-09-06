@@ -727,7 +727,7 @@
 
     <string name="push_server_install_app">Push Notification Setup</string>
     <string name="push_server_install_app_description">
-        To receive push notifications, install any app that supports [Unified Push](https://unifiedpush.org/), such as [Nfty](https://ntfy.sh/).
+        To receive push notifications, install any app that supports [Unified Push](https://unifiedpush.org/), such as [Ntfy](https://ntfy.sh/).
         After installing, select the app you want to use in the Settings.
     </string>
 
