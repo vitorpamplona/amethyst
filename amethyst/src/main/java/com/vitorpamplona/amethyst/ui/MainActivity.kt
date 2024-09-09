@@ -21,14 +21,18 @@
 package com.vitorpamplona.amethyst.ui
 
 import android.annotation.SuppressLint
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -63,6 +67,8 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.torproject.jni.TorService
+import org.torproject.jni.TorService.LocalBinder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.Timer
@@ -133,6 +139,34 @@ class MainActivity : AppCompatActivity() {
 
         // resets state until next External Signer Call
         Timer().schedule(350) { shouldPauseService = true }
+
+        bindService(
+            Intent(this, TorService::class.java),
+            object : ServiceConnection {
+                override fun onServiceConnected(
+                    name: ComponentName,
+                    service: IBinder,
+                ) {
+                    // moved torService to a local variable, since we only need it once
+
+                    val torService = (service as LocalBinder).service
+
+                    while (torService.torControlConnection == null) {
+                        try {
+                            Thread.sleep(500)
+                        } catch (e: InterruptedException) {
+                            e.printStackTrace()
+                        }
+                    }
+
+                    Toast.makeText(this@MainActivity, "Got Tor control connection", Toast.LENGTH_LONG).show()
+                }
+
+                override fun onServiceDisconnected(name: ComponentName) {
+                }
+            },
+            BIND_AUTO_CREATE,
+        )
     }
 
     override fun onPause() {
@@ -154,6 +188,8 @@ class MainActivity : AppCompatActivity() {
 
         (getSystemService(ConnectivityManager::class.java) as ConnectivityManager)
             .unregisterNetworkCallback(networkCallback)
+
+        stopService(Intent(baseContext, TorService::class.java))
 
         super.onPause()
     }

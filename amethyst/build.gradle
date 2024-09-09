@@ -288,6 +288,9 @@ dependencies {
     // Cbor for cashuB format
     implementation libs.kotlinx.serialization.cbor
 
+    implementation libs.tor.android
+    implementation libs.jtorctl
+
     testImplementation libs.junit
     testImplementation libs.mockk
 

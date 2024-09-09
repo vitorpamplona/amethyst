@@ -22,6 +22,7 @@ fragmentKtx = "1.8.3"
 gms = "4.4.2"
 jacksonModuleKotlin = "2.17.2"
 jna = "5.14.0"
+jtorctl = "0.4.5.7"
 junit = "4.13.2"
 kotlin = "2.0.0"
 kotlinxCollectionsImmutable = "0.3.7"
@@ -41,6 +42,7 @@ rfc3986 = "0.1.0"
 secp256k1KmpJniAndroid = "0.15.0"
 securityCryptoKtx = "1.1.0-alpha06"
 spotless = "6.25.0"
+torAndroid = "0.4.8.12"
 translate = "17.0.3"
 unifiedpush = "2.3.1"
 urlDetector = "0.1.23"
@@ -99,6 +101,7 @@ google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", v
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jacksonModuleKotlin" }
 jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
+jtorctl = { module = "info.guardianproject:jtorctl", version.ref = "jtorctl" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
 kotlinx-serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "kotlinxSerialization" }
@@ -110,6 +113,7 @@ mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 rfc3986-normalizer = { group = "org.czeal", name = "rfc3986", version.ref = "rfc3986" }
 secp256k1-kmp-jni-android = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-android", version.ref = "secp256k1KmpJniAndroid" }
+tor-android = { module = "info.guardianproject:tor-android", version.ref = "torAndroid" }
 trbl-blurhash = { group = "io.trbl", name = "blurhash", version.ref = "blurhash" }
 unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", version.ref = "unifiedpush" }
 url-detector = { group = "io.github.url-detector", name = "url-detector", version.ref = "urlDetector" }

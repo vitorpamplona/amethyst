@@ -24,6 +24,7 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven { url "https://jitpack.io" }
+        maven { url "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
     }
 }
 
