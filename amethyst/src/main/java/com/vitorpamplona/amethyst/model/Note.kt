@@ -67,7 +67,9 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import java.math.BigDecimal
@@ -764,8 +766,32 @@ open class Note(
             }
         }
 
-        if (thisEvent is BaseTextNoteEvent) {
-            if (accountChoices.hiddenWordsCase.isNotEmpty() && thisEvent.content.containsAny(accountChoices.hiddenWordsCase)) {
+        if (accountChoices.hiddenWordsCase.isNotEmpty()) {
+            if (thisEvent is BaseTextNoteEvent && thisEvent.content.containsAny(accountChoices.hiddenWordsCase)) {
+                return true
+            }
+
+            if (author?.toBestDisplayName()?.containsAny(accountChoices.hiddenWordsCase) == true) {
+                return true
+            }
+
+            if (author?.profilePicture()?.containsAny(accountChoices.hiddenWordsCase) == true) {
+                return true
+            }
+
+            if (author?.info?.banner?.containsAny(accountChoices.hiddenWordsCase) == true) {
+                return true
+            }
+
+            if (author?.info?.about?.containsAny(accountChoices.hiddenWordsCase) == true) {
+                return true
+            }
+
+            if (author?.info?.lud06?.containsAny(accountChoices.hiddenWordsCase) == true) {
+                return true
+            }
+
+            if (author?.info?.lud16?.containsAny(accountChoices.hiddenWordsCase) == true) {
                 return true
             }
         }
@@ -847,6 +873,15 @@ class NoteFlowSet(
     val metadata = NoteBundledRefresherFlow(u)
     val reports = NoteBundledRefresherFlow(u)
     val relays = NoteBundledRefresherFlow(u)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun author() =
+        metadata.stateFlow.flatMapLatest {
+            it.note.author
+                ?.flow()
+                ?.metadata
+                ?.stateFlow ?: MutableStateFlow(null)
+        }
 
     fun isInUse(): Boolean =
         metadata.stateFlow.subscriptionCount.value > 0 ||

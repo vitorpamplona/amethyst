@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Done
@@ -32,9 +35,14 @@ import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
@@ -50,15 +58,11 @@ fun InformationDialog(
     buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
     onDismiss: () -> Unit,
 ) {
-    val stack = stringRes(id = R.string.stack)
-    val str =
+    val str = textContent ?: throwable.localizedMessage ?: throwable.message ?: throwable.javaClass.simpleName
+
+    val stack =
         remember(throwable) {
             val writer = StringWriter()
-            textContent?.let {
-                writer.append(it)
-                writer.append("\n\n")
-            }
-            writer.append(stack)
             writer.append("\n")
 
             throwable.printStackTrace(PrintWriter(writer))
@@ -66,13 +70,14 @@ fun InformationDialog(
             writer.toString()
         }
 
-    InformationDialog(title = title, textContent = str, buttonColors, onDismiss)
+    InformationDialog(title = title, textContent = str, moreInfo = stack, buttonColors, onDismiss)
 }
 
 @Composable
 fun InformationDialog(
     title: String,
     textContent: String,
+    moreInfo: String? = null,
     buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
     onDismiss: () -> Unit,
 ) {
@@ -85,20 +90,37 @@ fun InformationDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = onDismiss,
-                colors = buttonColors,
-                contentPadding = PaddingValues(horizontal = Size16dp),
+            Row(
+                modifier =
+                    Modifier
+                        .padding(all = 8.dp)
+                        .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                moreInfo?.let {
+                    val clipboardManager = LocalClipboardManager.current
+                    TextButton(onClick = {
+                        clipboardManager.setText(AnnotatedString(it))
+                    }) {
+                        Text(stringRes(R.string.copy_stack_to_clipboard))
+                    }
+                }
+
+                Button(
+                    onClick = onDismiss,
+                    colors = buttonColors,
+                    contentPadding = PaddingValues(horizontal = Size16dp),
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Done,
-                        contentDescription = null,
-                    )
-                    Spacer(StdHorzSpacer)
-                    Text(stringRes(R.string.error_dialog_button_ok))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Done,
+                            contentDescription = null,
+                        )
+                        Spacer(StdHorzSpacer)
+                        Text(stringRes(R.string.error_dialog_button_ok))
+                    }
                 }
             }
         },

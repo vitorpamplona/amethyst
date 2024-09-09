@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.events.EmptyTagList
@@ -44,7 +45,7 @@ fun RenderNIP90ContentDiscoveryResponse(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = note.event as? NIP90ContentDiscoveryResponseEvent ?: return
     val callbackUri = remember(note) { note.toNostrUri() }

@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.actions.relays
 
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -59,8 +58,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -70,6 +71,8 @@ import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.actions.RelayInfoDialog
+import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -101,12 +104,14 @@ fun Kind3RelayListView(
     postViewModel: Kind3RelayListViewModel,
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
-    nav: (String) -> Unit,
+    nav: INav,
     relayToAdd: String,
 ) {
+    val newNav = rememberExtendedNav(nav, onClose)
+
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(contentPadding = FeedPadding) {
-            renderKind3Items(feedState, postViewModel, accountViewModel, onClose, nav, relayToAdd)
+            renderKind3Items(feedState, postViewModel, accountViewModel, newNav, relayToAdd)
         }
     }
 }
@@ -115,8 +120,7 @@ fun LazyListScope.renderKind3Items(
     feedState: List<Kind3BasicRelaySetupInfo>,
     postViewModel: Kind3RelayListViewModel,
     accountViewModel: AccountViewModel,
-    onClose: () -> Unit,
-    nav: (String) -> Unit,
+    nav: INav,
     relayToAdd: String,
 ) {
     itemsIndexed(feedState, key = { _, item -> "kind3" + item.url }) { index, item ->
@@ -131,10 +135,8 @@ fun LazyListScope.renderKind3Items(
             onToggleSearch = { postViewModel.toggleSearch(it) },
             onDelete = { postViewModel.deleteRelay(it) },
             accountViewModel = accountViewModel,
-        ) {
-            onClose()
-            nav(it)
-        }
+            nav = nav,
+        )
     }
 
     item {
@@ -147,8 +149,7 @@ fun LazyListScope.renderKind3ProposalItems(
     feedState: List<Kind3RelayProposalSetupInfo>,
     postViewModel: Kind3RelayListViewModel,
     accountViewModel: AccountViewModel,
-    onClose: () -> Unit,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     itemsIndexed(feedState, key = { _, item -> "kind3proposal" + item.url }) { index, item ->
         Kind3RelaySetupInfoProposalDialog(
@@ -157,10 +158,7 @@ fun LazyListScope.renderKind3ProposalItems(
                 postViewModel.addRelay(item)
             },
             accountViewModel = accountViewModel,
-            nav = {
-                onClose()
-                nav(it)
-            },
+            nav = nav,
         )
         HorizontalDivider(
             thickness = DividerThickness,
@@ -213,7 +211,7 @@ fun LoadRelayInfo(
     onToggleSearch: (Kind3BasicRelaySetupInfo) -> Unit,
     onDelete: (Kind3BasicRelaySetupInfo) -> Unit,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var relayInfo: RelayInfoDialog? by remember { mutableStateOf(null) }
     val context = LocalContext.current
@@ -292,6 +290,7 @@ fun LoadRelayInfo(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ClickableRelayItem(
     item: Kind3BasicRelaySetupInfo,
@@ -307,7 +306,17 @@ fun ClickableRelayItem(
     onDelete: (Kind3BasicRelaySetupInfo) -> Unit,
     onClick: () -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+    val clipboardManager = LocalClipboardManager.current
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    clipboardManager.setText(AnnotatedString(item.briefInfo.url))
+                },
+            ),
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 5.dp),
@@ -677,6 +686,7 @@ private fun ActiveToggles(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FirstLine(
     item: Kind3BasicRelaySetupInfo,
@@ -684,11 +694,18 @@ private fun FirstLine(
     onDelete: (Kind3BasicRelaySetupInfo) -> Unit,
     modifier: Modifier,
 ) {
+    val clipboardManager = LocalClipboardManager.current
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = item.briefInfo.displayUrl,
-                modifier = Modifier.clickable(onClick = onClick),
+                modifier =
+                    Modifier.combinedClickable(
+                        onClick = onClick,
+                        onLongClick = {
+                            clipboardManager.setText(AnnotatedString(item.briefInfo.url))
+                        },
+                    ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

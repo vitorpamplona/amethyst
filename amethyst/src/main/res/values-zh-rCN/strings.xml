@@ -612,7 +612,7 @@
     <string name="push_server_none_explainer">关闭推送通知</string>
     <string name="push_server_uses_app_explainer">使用应用 %1$s</string>
     <string name="push_server_install_app">推送通知设置</string>
-    <string name="push_server_install_app_description">        若要接收推送通知，请安装任何支持 [Unified Push](https://unifiedpus)的应用, 例如 [Nfty](https://ntfy.sh/)。
+    <string name="push_server_install_app_description">        若要接收推送通知，请安装任何支持 [Unified Push](https://unifiedpus)的应用, 例如 [Ntfy](https://ntfy.sh/)。
         安装后，请在设置中选择你想要使用的应用程序。
     </string>
     <string name="payment_required_title">来自 %1$s 的消息</string>
@@ -813,7 +813,6 @@
     <string name="add_a_nip96_server">添加 NIP-96 服务器</string>
     <string name="delete_all">删除所有</string>
     <string name="delete_all_drafts_confirmation">确定要删除所有草稿吗？</string>
-    <string name="and_more">" ... 和 %1$s 更多"</string>
     <string name="stack">堆叠：</string>
     <string name="torrent_file">Torrent 文件</string>
     <string name="torrent_download">下载</string>

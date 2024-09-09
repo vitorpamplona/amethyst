@@ -1876,7 +1876,7 @@ object LocalCache {
         }
 
         try {
-            val cachePath = File(Amethyst.instance.applicationContext.cacheDir, "NIP95")
+            val cachePath = Amethyst.instance.nip95cache()
             cachePath.mkdirs()
             val file = File(cachePath, event.id)
             if (!file.exists()) {

@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.layouts.LeftPictureLayout
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelHeader
@@ -77,7 +78,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.EndedFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.OfflineFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ScheduledFlag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.observeAppDefinition
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.observeAppDefinition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfUrlIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
@@ -116,7 +117,7 @@ fun ChannelCardCompose(
     forceEventKind: Int?,
     isHiddenFeed: Boolean = false,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel) {
         if (forceEventKind == null || baseNote.event?.kind() == forceEventKind) {
@@ -148,7 +149,7 @@ fun NormalChannelCard(
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
         CheckNewAndRenderChannelCard(
@@ -171,7 +172,7 @@ private fun CheckNewAndRenderChannelCard(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     showPopup: () -> Unit,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val backgroundColor =
         calculateBackgroundColor(
@@ -201,7 +202,7 @@ private fun CheckNewAndRenderChannelCard(
 fun InnerChannelCardWithReactions(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     when (baseNote.event) {
         is LiveActivitiesEvent -> {
@@ -226,7 +227,7 @@ fun InnerChannelCardWithReactions(
 fun InnerCardRow(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Column(StdPadding) {
         SensitivityWarning(
@@ -246,7 +247,7 @@ fun InnerCardRow(
 fun InnerCardBox(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Column(HalfPadding) {
         SensitivityWarning(
@@ -262,7 +263,7 @@ fun InnerCardBox(
 private fun RenderNoteRow(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     when (baseNote.event) {
         is LiveActivitiesEvent -> {
@@ -291,7 +292,7 @@ data class ClassifiedsThumb(
 fun RenderClassifiedsThumb(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = baseNote.event as? ClassifiedsEvent ?: return
 
@@ -414,7 +415,7 @@ data class LiveActivityCard(
 fun RenderLiveActivityThumb(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = baseNote.event as? LiveActivitiesEvent ?: return
 
@@ -547,7 +548,7 @@ data class DVMCard(
 fun RenderCommunitiesThumb(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = baseNote.event as? CommunityDefinitionEvent ?: return
 
@@ -757,7 +758,7 @@ private fun LoadParticipants(
 fun RenderContentDVMThumb(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     // downloads user metadata to pre-load the NIP-65 relays.
     val user =
@@ -845,7 +846,7 @@ fun RenderContentDVMThumb(
 fun RenderChannelThumb(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = baseNote.event as? ChannelCreateEvent ?: return
 
@@ -859,7 +860,7 @@ fun RenderChannelThumb(
     baseNote: Note,
     channel: Channel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val channelUpdates by channel.live.observeAsState()
 

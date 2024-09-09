@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.actions.RelayInfoDialog
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
@@ -39,7 +40,7 @@ fun BasicRelaySetupInfoDialog(
     item: BasicRelaySetupInfo,
     onDelete: (BasicRelaySetupInfo) -> Unit,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var relayInfo: RelayInfoDialog? by remember { mutableStateOf(null) }
     val context = LocalContext.current

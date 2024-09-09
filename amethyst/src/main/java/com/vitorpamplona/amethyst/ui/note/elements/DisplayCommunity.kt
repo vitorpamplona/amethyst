@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.quartz.encoders.ATag
@@ -39,7 +40,7 @@ import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 fun DisplayFollowingCommunityInPost(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Column(HalfStartPadding) {
         Row(verticalAlignment = Alignment.CenterVertically) { DisplayCommunity(baseNote, nav) }
@@ -49,7 +50,7 @@ fun DisplayFollowingCommunityInPost(
 @Composable
 private fun DisplayCommunity(
     note: Note,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val communityTag =
         remember(note) { note.event?.getTagOfAddressableKind(CommunityDefinitionEvent.KIND) } ?: return
@@ -59,7 +60,7 @@ private fun DisplayCommunity(
 
     ClickableText(
         text = displayTag,
-        onClick = { nav(route) },
+        onClick = { nav.nav(route) },
         style =
             LocalTextStyle.current.copy(
                 color =

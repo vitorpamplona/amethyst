@@ -20,7 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.relays
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,6 +32,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -41,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChatMaxWidth
 import com.vitorpamplona.amethyst.ui.theme.largeRelayIconModifier
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BasicRelaySetupInfoClickableRow(
     item: BasicRelaySetupInfo,
@@ -50,7 +54,17 @@ fun BasicRelaySetupInfoClickableRow(
     onClick: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+    val clipboardManager = LocalClipboardManager.current
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    clipboardManager.setText(AnnotatedString(item.briefInfo.url))
+                },
+            ),
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = HalfVertPadding,

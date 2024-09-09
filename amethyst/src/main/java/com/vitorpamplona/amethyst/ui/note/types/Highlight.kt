@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.ui.components.DisplayEvent
 import com.vitorpamplona.amethyst.ui.components.RenderUserAsClickableText
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.encoders.ATag
@@ -69,7 +70,7 @@ fun RenderHighlight(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = note.event as? HighlightEvent ?: return
 
@@ -103,7 +104,7 @@ fun DisplayHighlight(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val quote =
         remember {
@@ -149,7 +150,7 @@ private fun DisplayQuoteAuthor(
     postAddress: ATag?,
     postVersion: HexKey?,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var userBase by remember { mutableStateOf<User?>(authorHex?.let { accountViewModel.getUserIfExists(it) }) }
 
@@ -216,7 +217,7 @@ private fun DisplayQuoteAuthor(
 fun DisplayEntryForUser(
     userBase: User,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val userMetadata by userBase.live().userMetadataInfo.observeAsState()
 
@@ -234,7 +235,7 @@ fun DisplayEntryForNote(
     note: Note,
     userBase: User?,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteState by note.live().metadata.observeAsState()
 
@@ -253,7 +254,7 @@ fun DisplayEntryForNote(
     if (description != null) {
         ClickableText(
             text = AnnotatedString(description),
-            onClick = { routeFor(note, accountViewModel.userProfile())?.let { nav(it) } },
+            onClick = { routeFor(note, accountViewModel.userProfile())?.let { nav.nav(it) } },
             style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
         )
     } else {
@@ -266,7 +267,7 @@ fun DisplayEntryForAUrl(
     url: String,
     userBase: User?,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     if (userBase != null) {
         DisplayEntryForUser(userBase, accountViewModel, nav)

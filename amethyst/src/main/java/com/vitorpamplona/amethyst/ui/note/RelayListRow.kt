@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -42,6 +44,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -53,6 +57,7 @@ import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.actions.relays.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
@@ -61,13 +66,14 @@ import com.vitorpamplona.amethyst.ui.theme.Size17dp
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.relayIconModifier
+import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 
 @Composable
 public fun RelayBadgesHorizontal(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val expanded = remember { mutableStateOf(false) }
 
@@ -109,11 +115,12 @@ fun ChatRelayExpandButton(onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RenderRelay(
     relay: RelayBriefInfoCache.RelayBriefInfo,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val relayInfo by
         produceState(
@@ -143,11 +150,17 @@ fun RenderRelay(
         )
     }
 
+    val clipboardManager = LocalClipboardManager.current
     val clickableModifier =
         remember(relay) {
             Modifier
                 .size(Size17dp)
-                .clickable(
+                .combinedClickable(
+                    indication = ripple24dp,
+                    interactionSource = MutableInteractionSource(),
+                    onLongClick = {
+                        clipboardManager.setText(AnnotatedString(relay.url))
+                    },
                     onClick = {
                         accountViewModel.retrieveRelayDocument(
                             relay.url,

@@ -24,7 +24,6 @@ import android.Manifest
 import android.content.Context
 import android.os.Build
 import android.view.View
-import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.animation.AnimatedVisibility
@@ -54,7 +53,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
@@ -141,22 +139,6 @@ fun ZoomableImageDialog(
                         activityWindow.decorView.width,
                         activityWindow.decorView.height,
                     )
-            }
-        }
-
-        DisposableEffect(key1 = Unit) {
-            if (Build.VERSION.SDK_INT >= 30) {
-                view.windowInsetsController?.hide(
-                    WindowInsets.Type.systemBars(),
-                )
-            }
-
-            onDispose {
-                if (Build.VERSION.SDK_INT >= 30) {
-                    view.windowInsetsController?.show(
-                        WindowInsets.Type.systemBars(),
-                    )
-                }
             }
         }
 
@@ -273,34 +255,36 @@ private fun DialogContent(
                     ShareImageAction(accountViewModel = accountViewModel, popupExpanded = popupExpanded, myContent, onDismiss = { popupExpanded.value = false })
                 }
 
-                val localContext = LocalContext.current
+                if (myContent !is MediaUrlContent || !myContent.url.endsWith(".m3u8")) {
+                    val localContext = LocalContext.current
 
-                val writeStoragePermissionState =
-                    rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
-                        if (isGranted) {
-                            saveImage(myContent, localContext, accountViewModel)
+                    val writeStoragePermissionState =
+                        rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
+                            if (isGranted) {
+                                saveImage(myContent, localContext, accountViewModel)
+                            }
                         }
+
+                    OutlinedButton(
+                        onClick = {
+                            if (
+                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
+                                writeStoragePermissionState.status.isGranted
+                            ) {
+                                saveImage(myContent, localContext, accountViewModel)
+                            } else {
+                                writeStoragePermissionState.launchPermissionRequest()
+                            }
+                        },
+                        contentPadding = PaddingValues(horizontal = Size5dp),
+                        colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            modifier = Size20Modifier,
+                            contentDescription = stringRes(R.string.save_to_gallery),
+                        )
                     }
-
-                OutlinedButton(
-                    onClick = {
-                        if (
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
-                            writeStoragePermissionState.status.isGranted
-                        ) {
-                            saveImage(myContent, localContext, accountViewModel)
-                        } else {
-                            writeStoragePermissionState.launchPermissionRequest()
-                        }
-                    },
-                    contentPadding = PaddingValues(horizontal = Size5dp),
-                    colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        modifier = Size20Modifier,
-                        contentDescription = stringRes(R.string.save_to_gallery),
-                    )
                 }
             }
         }

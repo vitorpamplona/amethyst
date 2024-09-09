@@ -132,8 +132,8 @@
     <string name="known">Bekend</string>
     <string name="new_requests">Nieuw verzoek</string>
     <string name="blocked_users">Geblokkeerde gebruikers</string>
-    <string name="new_threads">Nieuwe thread</string>
-    <string name="conversations">Gesprekken</string>
+    <string name="new_threads">Nieuwe onderwerpen</string>
+    <string name="conversations">Discussies</string>
     <string name="notes">Notes</string>
     <string name="replies">Reacties</string>
     <string name="gallery">Galerij</string>
@@ -261,7 +261,7 @@
     <string name="quick_action_unfollow">Ontvolgen</string>
     <string name="quick_action_follow">Volgen</string>
     <string name="quick_action_request_deletion_gallery_title">Verwijderen uit galerij</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Verwijder deze media uit je galerij, je kunt het later lezen</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">Verwijder deze media uit je galerij, je kunt het terug zien in je feed.</string>
     <string name="quick_action_request_deletion_alert_title">Verzoek om te verwijderen</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst zal vragen om uw note te verwijderen van de relays waarmee u momenteel verbonden bent. Er is geen garantie dat uw note permanent wordt verwijderd van deze relays, of van andere relays waar het kan worden opgeslagen.</string>
     <string name="quick_action_block_dialog_btn">Blokkeren</string>
@@ -519,6 +519,7 @@
     <string name="automatically_play_videos_description">Video\'s en GIF\'s automatisch afspelen</string>
     <string name="automatically_show_url_preview_description">Toon URL-voorbeelden</string>
     <string name="load_image_description">Wanneer afbeeldingen te laden</string>
+    <string name="copy_stack_to_clipboard">Kopieer stapel</string>
     <string name="copy_to_clipboard">Kopiëren naar klembord</string>
     <string name="copy_npub_to_clipboard">Kopieer npub naar klembord</string>
     <string name="share_or_save">Delen of opslaan</string>
@@ -612,7 +613,7 @@
     <string name="push_server_none_explainer">Push-notificaties uitschakelen</string>
     <string name="push_server_uses_app_explainer">Gebruikt app %1$s</string>
     <string name="push_server_install_app">Instellen Push-notificaties</string>
-    <string name="push_server_install_app_description">        Om push-notificaties te ontvangen, installeer een app die [Unified Push] ondersteunt](https://unifiedpush.org/), zoals [Nfty](https://ntfy.sh/).
+    <string name="push_server_install_app_description">        Om push-notificaties te ontvangen, installeer een app die [Unified Push] ondersteunt](https://unifiedpush.org/), zoals [Ntfy](https://ntfy.sh/).
         Na installatie selecteer de app die je wilt gebruiken in de instellingen.
     </string>
     <string name="payment_required_title">Bericht van %1$s</string>
@@ -667,6 +668,11 @@
     <string name="could_not_prepare_header">Kon header-informatie niet voorbereiden: %1$s</string>
     <string name="compression_cancelled">Compressie geannuleerd</string>
     <string name="compression_returned_null">Compressie kon een bestand niet terugsturen</string>
+    <string name="media_compression_quality_label">Mediakwaliteit</string>
+    <string name="media_compression_quality_explainer">Selecteer lage kwaliteit om uw media te comprimeren naar een kleiner bestand met minder kwaliteit of selecteer hoge kwaliteit om te comprimeren naar een groter bestand met een hogere kwaliteit.</string>
+    <string name="media_compression_quality_low">Laag</string>
+    <string name="media_compression_quality_medium">Normaal</string>
+    <string name="media_compression_quality_high">Hoog</string>
     <string name="edit_draft">Concept bewerken</string>
     <string name="login_with_qr_code">Inloggen met QR-Code</string>
     <string name="route">Route</string>
@@ -813,10 +819,10 @@
     <string name="add_a_nip96_server">Voeg een NIP-96 Server toe</string>
     <string name="delete_all">Alles verwijderen</string>
     <string name="delete_all_drafts_confirmation">Weet u zeker dat u alle concepten wilt verwijderen?</string>
-    <string name="and_more">" … en %1$s meer"</string>
     <string name="stack">Stack:</string>
     <string name="torrent_file">Torrent-bestand</string>
     <string name="torrent_download">Downloaden</string>
     <string name="torrent_failure">Kon bestand niet openen</string>
     <string name="torrent_no_apps">Geen torrent apps geïnstalleerd om het bestand te openen en te downloaden.</string>
+    <string name="select_list_to_filter">Selecteer een lijst om de feed te filteren</string>
 </resources>

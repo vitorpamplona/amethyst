@@ -602,6 +602,8 @@
     <string name="automatically_show_url_preview_description">Show URL previews</string>
     <string name="load_image_description">When to load images</string>
 
+    <string name="copy_stack_to_clipboard">Copy Stack</string>
+
     <string name="copy_to_clipboard">Copy to clipboard</string>
     <string name="copy_npub_to_clipboard">Copy npub to clipboard</string>
     <string name="share_or_save">Share or Save</string>
@@ -725,7 +727,7 @@
 
     <string name="push_server_install_app">Push Notification Setup</string>
     <string name="push_server_install_app_description">
-        To receive push notifications, install any app that supports [Unified Push](https://unifiedpush.org/), such as [Nfty](https://ntfy.sh/).
+        To receive push notifications, install any app that supports [Unified Push](https://unifiedpush.org/), such as [Ntfy](https://ntfy.sh/).
         After installing, select the app you want to use in the Settings.
     </string>
 
@@ -790,6 +792,12 @@
     <string name="could_not_prepare_header">Could not prepare header information: %1$s</string>
     <string name="compression_cancelled">Compression Cancelled</string>
     <string name="compression_returned_null">Compression failed to return a file</string>
+
+    <string name="media_compression_quality_label">Media Quality</string>
+    <string name="media_compression_quality_explainer">Select Low quality to compress your media to a smaller file with less quality or select High quality to compress to a larger file with higher quality.</string>
+    <string name="media_compression_quality_low">Low</string>
+    <string name="media_compression_quality_medium">Medium</string>
+    <string name="media_compression_quality_high">High</string>
 
     <string name="edit_draft">Edit draft</string>
 
@@ -962,11 +970,13 @@
     <string name="add_a_nip96_server">Add a NIP-96 Server</string>
     <string name="delete_all">Delete all</string>
     <string name="delete_all_drafts_confirmation">Are you sure you want to delete all drafts?</string>
-    <string name="and_more">" … and %1$s more"</string>
+    <string name="and_more" translatable="false">" +%1$s"</string>
     <string name="stack">Stack:</string>
 
     <string name="torrent_file">Torrent File</string>
     <string name="torrent_download">Download</string>
     <string name="torrent_failure">Failed to open file</string>
     <string name="torrent_no_apps">No torrent apps installed to open and download the file.</string>
+
+    <string name="select_list_to_filter">Select a list to filter the feed</string>
 </resources>

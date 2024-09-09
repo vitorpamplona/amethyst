@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.ZapUserSetCard
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -47,7 +48,7 @@ fun ZapUserSetCompose(
     isInnerNote: Boolean = false,
     routeForLastRead: String,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val backgroundColor =
         calculateBackgroundColor(
@@ -59,7 +60,7 @@ fun ZapUserSetCompose(
     Column(
         modifier =
             Modifier.background(backgroundColor.value).clickable {
-                nav("User/${zapSetCard.user.pubkeyHex}")
+                nav.nav("User/${zapSetCard.user.pubkeyHex}")
             },
     ) {
         Row(

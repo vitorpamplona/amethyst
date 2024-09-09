@@ -40,6 +40,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.relays.AddDMRelayListDialog
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
@@ -58,7 +60,7 @@ fun AddInboxRelayForDMCardPreview() {
     ThemeComparisonColumn {
         AddInboxRelayForDMCard(
             accountViewModel = mockAccountViewModel(),
-            nav = {},
+            nav = EmptyNav,
         )
     }
 }
@@ -66,7 +68,7 @@ fun AddInboxRelayForDMCardPreview() {
 @Composable
 fun ObserveRelayListForDMsAndDisplayIfNotFound(
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     ObserveRelayListForDMs(
         accountViewModel = accountViewModel,
@@ -115,7 +117,7 @@ fun ObserveRelayListForDMs(
 @Composable
 fun AddInboxRelayForDMCard(
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Column(modifier = StdPadding) {
         Card(

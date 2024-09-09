@@ -27,7 +27,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -70,6 +70,9 @@ import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.BoostReaction
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
@@ -84,6 +87,7 @@ import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.JustVideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AuthorInfoVideoFeed
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -102,9 +106,21 @@ import com.vitorpamplona.quartz.events.VideoEvent
 
 @Composable
 fun VideoScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    VideoScreen(
+        accountViewModel.feedStates.videoFeed,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
+fun VideoScreen(
     videoFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val lifeCycleOwner = LocalLifecycleOwner.current
 
@@ -123,13 +139,35 @@ fun VideoScreen(
         onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Column(Modifier.fillMaxHeight()) {
-        RenderPage(
-            videoFeedContentState = videoFeedContentState,
-            pagerStateKey = ScrollStateKeys.VIDEO_SCREEN,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+    DisappearingScaffold(
+        isInvertedLayout = false,
+        topBar = {
+            StoriesTopBar(accountViewModel, nav)
+        },
+        bottomBar = {
+            AppBottomBar(Route.Video, accountViewModel) { route, _ ->
+                if (route == Route.Video) {
+                    videoFeedContentState.sendToTop()
+                } else {
+                    nav.newStack(route.base)
+                }
+            }
+        },
+        floatingButton = {
+            NewImageButton(accountViewModel, nav, videoFeedContentState::sendToTop)
+        },
+        accountViewModel = accountViewModel,
+    ) {
+        Column(
+            modifier = Modifier.padding(it).consumeWindowInsets(it),
+        ) {
+            RenderPage(
+                videoFeedContentState = videoFeedContentState,
+                pagerStateKey = ScrollStateKeys.VIDEO_SCREEN,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
     }
 }
 
@@ -152,7 +190,7 @@ fun RenderPage(
     videoFeedContentState: FeedContentState,
     pagerStateKey: String?,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val feedState by videoFeedContentState.feedContent.collectAsStateWithLifecycle()
 
@@ -185,7 +223,7 @@ private fun LoadedState(
     pagerStateKey: String?,
     videoFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     RefresheableBox(invalidateableContent = videoFeedContentState) {
         SlidingCarousel(
@@ -205,7 +243,7 @@ fun SlidingCarousel(
     pagerStateKey: String?,
     videoFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
@@ -220,7 +258,7 @@ fun SlidingCarousel(
 
     VerticalPager(
         state = pagerState,
-        beyondBoundsPageCount = 1,
+        beyondViewportPageCount = 1,
         modifier = Modifier.fillMaxSize(),
         key = { index -> items.list.getOrNull(index)?.idHex ?: "$index" },
     ) { index ->
@@ -249,7 +287,7 @@ fun SlidingCarousel(
 private fun RenderVideoOrPictureNote(
     note: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Column(Modifier.fillMaxSize(1f), verticalArrangement = Arrangement.Center) {
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
@@ -282,7 +320,7 @@ private fun RenderVideoOrPictureNote(
 @Composable
 private fun RenderAuthorInformation(
     note: Note,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
 ) {
     Row(modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -324,7 +362,7 @@ private fun RenderAuthorInformation(
 private fun VideoUserOptionAction(
     note: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val popupExpanded = remember { mutableStateOf(false) }
 
@@ -355,7 +393,7 @@ private fun VideoUserOptionAction(
 fun ReactionsColumn(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var wantsToReplyTo by remember { mutableStateOf<Note?>(null) }
 
@@ -394,7 +432,7 @@ fun ReactionsColumn(
             routeFor(
                 baseNote,
                 accountViewModel.userProfile(),
-            )?.let { nav(it) }
+            )?.let { nav.nav(it) }
         }
         BoostReaction(
             baseNote = baseNote,

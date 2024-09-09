@@ -92,6 +92,10 @@ import com.vitorpamplona.amethyst.ui.actions.PostButton
 import com.vitorpamplona.amethyst.ui.actions.ServerOption
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.components.CompressorQuality
+import com.vitorpamplona.amethyst.ui.components.MediaCompressor
+import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.IncognitoIconOff
 import com.vitorpamplona.amethyst.ui.note.IncognitoIconOn
@@ -103,9 +107,12 @@ import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForDMs
 import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForDMsAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.ui.screen.NostrChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.UserLine
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.UserLine
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
@@ -131,7 +138,106 @@ fun ChatroomScreen(
     roomId: String?,
     draftMessage: String? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
+) {
+    if (roomId == null) return
+
+    DisappearingScaffold(
+        isInvertedLayout = true,
+        topBar = {
+            RoomTopBar(roomId, accountViewModel, nav)
+        },
+        accountViewModel = accountViewModel,
+    ) {
+        Column(Modifier.padding(it)) {
+            Chatroom(roomId, draftMessage, accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
+private fun RoomTopBar(
+    id: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadRoom(roomId = id, accountViewModel) { room ->
+        if (room != null) {
+            RenderRoomTopBar(room, accountViewModel, nav)
+        } else {
+            Spacer(BottomTopHeight)
+        }
+    }
+}
+
+@Composable
+private fun RenderRoomTopBar(
+    room: ChatroomKey,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (room.users.size == 1) {
+        TopBarExtensibleWithBackButton(
+            title = {
+                LoadUser(baseUserHex = room.users.first(), accountViewModel) { baseUser ->
+                    if (baseUser != null) {
+                        ClickableUserPicture(
+                            baseUser = baseUser,
+                            accountViewModel = accountViewModel,
+                            size = Size34dp,
+                        )
+
+                        Spacer(modifier = DoubleHorzSpacer)
+
+                        UsernameDisplay(baseUser, Modifier.weight(1f), fontWeight = FontWeight.Normal, accountViewModel = accountViewModel)
+                    }
+                }
+            },
+            extendableRow = {
+                LoadUser(baseUserHex = room.users.first(), accountViewModel) {
+                    if (it != null) {
+                        UserCompose(
+                            baseUser = it,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
+                }
+            },
+            popBack = nav::popBack,
+        )
+    } else {
+        TopBarExtensibleWithBackButton(
+            title = {
+                NonClickableUserPictures(
+                    room = room,
+                    accountViewModel = accountViewModel,
+                    size = Size34dp,
+                )
+
+                RoomNameOnlyDisplay(
+                    room,
+                    Modifier
+                        .padding(start = 10.dp)
+                        .weight(1f),
+                    fontWeight = FontWeight.Normal,
+                    accountViewModel,
+                )
+            },
+            extendableRow = {
+                LongRoomHeader(room = room, accountViewModel = accountViewModel, nav = nav)
+            },
+            popBack = nav::popBack,
+        )
+    }
+}
+
+@Composable
+fun Chatroom(
+    roomId: String?,
+    draftMessage: String? = null,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     if (roomId == null) return
 
@@ -152,7 +258,44 @@ fun ChatroomScreenByAuthor(
     authorPubKeyHex: String?,
     draftMessage: String? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
+) {
+    if (authorPubKeyHex == null) return
+
+    DisappearingScaffold(
+        isInvertedLayout = true,
+        topBar = {
+            RoomByAuthorTopBar(authorPubKeyHex, accountViewModel, nav)
+        },
+        accountViewModel = accountViewModel,
+    ) {
+        Column(Modifier.padding(it)) {
+            ChatroomByAuthor(authorPubKeyHex, draftMessage, accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
+private fun RoomByAuthorTopBar(
+    authorPubKeyHex: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadRoomByAuthor(authorPubKeyHex = authorPubKeyHex, accountViewModel) { room ->
+        if (room != null) {
+            RenderRoomTopBar(room, accountViewModel, nav)
+        } else {
+            Spacer(BottomTopHeight)
+        }
+    }
+}
+
+@Composable
+fun ChatroomByAuthor(
+    authorPubKeyHex: String?,
+    draftMessage: String? = null,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     if (authorPubKeyHex == null) return
 
@@ -212,7 +355,7 @@ fun PrepareChatroomViewModels(
     room: ChatroomKey,
     draftMessage: String?,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val feedViewModel: NostrChatroomFeedViewModel =
         viewModel(
@@ -262,7 +405,7 @@ fun ChatroomScreen(
     feedViewModel: NostrChatroomFeedViewModel,
     newPostModel: NewPostViewModel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val context = LocalContext.current
 
@@ -443,6 +586,8 @@ fun PrivateMessageEditFieldRow(
                             galleryUri = it,
                             alt = null,
                             sensitiveContent = false,
+                            // use MEDIUM quality
+                            mediaQuality = MediaCompressor().compressorQualityToInt(CompressorQuality.MEDIUM),
                             isPrivate = isPrivate,
                             server = ServerOption(accountViewModel.account.settings.defaultFileServer, false),
                             onError = accountViewModel::toast,
@@ -807,7 +952,7 @@ fun LongRoomHeader(
     room: ChatroomKey,
     lineModifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val list = remember(room) { room.users.toPersistentList() }
 

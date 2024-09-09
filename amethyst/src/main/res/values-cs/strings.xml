@@ -517,6 +517,7 @@
     <string name="automatically_play_videos_description">Automaticky přehrávat videa a GIFy</string>
     <string name="automatically_show_url_preview_description">Zobrazit náhledy URL</string>
     <string name="load_image_description">Kdy načíst obrázek</string>
+    <string name="copy_stack_to_clipboard">Kopírovat zásobník</string>
     <string name="copy_to_clipboard">Kopírovat do schránky</string>
     <string name="copy_npub_to_clipboard">Kopírovat npub do schránky</string>
     <string name="share_or_save">Sdílet nebo Uložit</string>
@@ -610,7 +611,7 @@
     <string name="push_server_none_explainer">Zakázat Push oznámení</string>
     <string name="push_server_uses_app_explainer">Použít aplikaci %1$s</string>
     <string name="push_server_install_app">Nastavení Push-oznámení</string>
-    <string name="push_server_install_app_description">        Pro příjem Push-oznámení nainstalujte libovolnou aplikaci, která podporuje [Unified Push](https://unifiedpush.org/), jako je [Nfty](https://ntfy.sh/).
+    <string name="push_server_install_app_description">        Pro příjem Push-oznámení nainstalujte libovolnou aplikaci, která podporuje [Unified Push](https://unifiedpush.org/), jako je [Ntfy](https://ntfy.sh/).
         Po instalaci vyberte aplikaci kterou chcete používat v Nastavení.
     </string>
     <string name="payment_required_title">Zpráva od %1$s</string>
@@ -665,6 +666,11 @@
     <string name="could_not_prepare_header">Nelze připravit informace v záhlaví: %1$s</string>
     <string name="compression_cancelled">Komprese zrušena</string>
     <string name="compression_returned_null">Komprese se nepodařilo vrátit soubor</string>
+    <string name="media_compression_quality_label">Kvalita médií</string>
+    <string name="media_compression_quality_explainer">Vyberte Nízkou kvalitu pro kompresi médií na menší soubor s nižší kvalitou, nebo vyberte Vysokou kvalitu pro kompresi na větší soubor s vyšší kvalitou.</string>
+    <string name="media_compression_quality_low">Nízká</string>
+    <string name="media_compression_quality_medium">Střední</string>
+    <string name="media_compression_quality_high">Vysoká</string>
     <string name="edit_draft">Upravit koncept</string>
     <string name="login_with_qr_code">Přihlášení pomocí QR kódu</string>
     <string name="route">Trasa</string>
@@ -811,10 +817,10 @@
     <string name="add_a_nip96_server">Přidat NIP-96 server</string>
     <string name="delete_all">Vymazat vše</string>
     <string name="delete_all_drafts_confirmation">Opravdu chcete odstranit všechny koncepty?</string>
-    <string name="and_more">" … a %1$s další"</string>
     <string name="stack">Zásobník:</string>
     <string name="torrent_file">Torrent soubor</string>
     <string name="torrent_download">Stáhnout</string>
     <string name="torrent_failure">Nepodařilo se otevřít soubor</string>
     <string name="torrent_no_apps">Pro otevření a stažení souboru nejsou nainstalovány žádné torrent aplikace.</string>
+    <string name="select_list_to_filter">Vyberte seznam pro filtrování kanálu</string>
 </resources>

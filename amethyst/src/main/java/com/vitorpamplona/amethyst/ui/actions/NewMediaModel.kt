@@ -79,6 +79,7 @@ open class NewMediaModel : ViewModel() {
     fun upload(
         context: Context,
         relayList: List<RelaySetupInfo>? = null,
+        mediaQuality: Int,
         onError: (String) -> Unit = {},
     ) {
         isUploadingImage = true
@@ -166,6 +167,7 @@ open class NewMediaModel : ViewModel() {
                         uploadingDescription.value = null
                         onError(stringRes(context, R.string.error_when_compressing_media, it))
                     },
+                    mediaQuality = MediaCompressor().intToCompressorQuality(mediaQuality),
                 )
         }
     }

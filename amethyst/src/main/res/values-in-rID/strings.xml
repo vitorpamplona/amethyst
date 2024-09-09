@@ -510,7 +510,7 @@ Seharusnya %3$s</string>
     <string name="push_server_none_explainer">Matikan Pemberitahuan Push</string>
     <string name="push_server_uses_app_explainer">Memakai aplikasi %1$s</string>
     <string name="push_server_install_app">Pengaturan Pemberitahuan Push</string>
-    <string name="push_server_install_app_description">        Untuk menerima Pemberitahuan Push, Install aplikasi yang mendukung [Unified Push](https://unifiedpush.org/), seperti [Nfty](https://nfty.sh/).
+    <string name="push_server_install_app_description">        Untuk menerima Pemberitahuan Push, Install aplikasi yang mendukung [Unified Push](https://unifiedpush.org/), seperti [Ntfy](https://ntfy.sh/).
         Setelah diinstall, Pilih aplikasi yang ingin digunakan di pengaturan.
     </string>
 </resources>

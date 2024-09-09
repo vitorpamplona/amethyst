@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
@@ -61,7 +62,7 @@ fun RenderPrivateMessage(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteEvent = note.event as? PrivateDmEvent ?: return
 
@@ -76,7 +77,7 @@ fun RenderPrivateMessage(
         if (it.users.size > 1 || (it.users.size == 1 && note.author == accountViewModel.account.userProfile())) {
             ChatroomHeader(it, MaterialTheme.colorScheme.replyModifier.padding(10.dp), accountViewModel) {
                 routeFor(note, accountViewModel.userProfile())?.let {
-                    nav(it)
+                    nav.nav(it)
                 }
             }
             Spacer(modifier = StdVertSpacer)

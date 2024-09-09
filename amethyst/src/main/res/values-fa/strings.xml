@@ -541,7 +541,7 @@
     <string name="push_server_none_explainer">غیرفعال سازی اعلان ها</string>
     <string name="push_server_uses_app_explainer">از اپلیکیشن %1$s استفاده می کند</string>
     <string name="push_server_install_app">تنظیمات اعلان ها</string>
-    <string name="push_server_install_app_description">برای دریافت اعلان ها، می توانید هر اپلیکیشنی که از [Unified Push](https://unifiedpush.org/) پشتیبانی می کند نصب کنید، مانند[Nfty](https://ntfy.sh/).
+    <string name="push_server_install_app_description">برای دریافت اعلان ها، می توانید هر اپلیکیشنی که از [Unified Push](https://unifiedpush.org/) پشتیبانی می کند نصب کنید، مانند[Ntfy](https://ntfy.sh/).
         پس از نصب، اپلیکیشنی را که می خواهید استفاده کنید در تنظیمات انتخاب کنید.
     </string>
     <string name="payment_required_title">پیغام از طرف %1$s</string>

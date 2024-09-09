@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
@@ -85,13 +86,13 @@ import java.util.Locale
 fun RenderCommunity(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     if (baseNote is AddressableNote) {
         Row(
             MaterialTheme.colorScheme.innerPostModifier
                 .clickable {
-                    routeFor(baseNote, accountViewModel.userProfile())?.let { nav(it) }
+                    routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) }
                 }.padding(Size10dp),
         ) {
             ShortCommunityHeader(
@@ -108,7 +109,7 @@ fun LongCommunityHeader(
     baseNote: AddressableNote,
     lineModifier: Modifier = Modifier.padding(horizontal = Size10dp, vertical = Size5dp),
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteState by baseNote.live().metadata.observeAsState()
     val noteEvent =
@@ -214,7 +215,7 @@ fun LongCommunityHeader(
 
     participantUsers.forEach {
         Row(
-            lineModifier.clickable { nav("User/${it.second.pubkeyHex}") },
+            lineModifier.clickable { nav.nav("User/${it.second.pubkeyHex}") },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             it.first.role?.let { it1 ->
@@ -252,7 +253,7 @@ fun LongCommunityHeader(
 fun ShortCommunityHeader(
     baseNote: AddressableNote,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteState by baseNote.live().metadata.observeAsState()
     val noteEvent =
@@ -304,7 +305,7 @@ fun ShortCommunityHeader(
 private fun ShortCommunityActionOptions(
     note: AddressableNote,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Spacer(modifier = StdHorzSpacer)
     Row(
@@ -337,7 +338,7 @@ private fun ShortCommunityActionOptions(
 private fun LongCommunityActionOptions(
     note: AddressableNote,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     WatchAddressableNoteFollows(note, accountViewModel) { isFollowing ->
         if (isFollowing) {

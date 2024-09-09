@@ -51,7 +51,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -63,6 +62,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.DisplayDraftChat
 import com.vitorpamplona.amethyst.ui.note.FollowingIcon
 import com.vitorpamplona.amethyst.ui.note.InnerUserPicture
@@ -116,7 +116,7 @@ fun ChatroomMessageCompose(
     innerQuote: Boolean = false,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
 ) {
@@ -151,7 +151,7 @@ fun NormalChatNote(
     canPreview: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
 ) {
@@ -192,7 +192,7 @@ fun NormalChatNote(
         parentBackgroundColor = parentBackgroundColor,
         onClick = {
             if (note.event is ChannelCreateEvent) {
-                nav("Channel/${note.idHex}")
+                nav.nav("Channel/${note.idHex}")
                 true
             } else {
                 false
@@ -200,7 +200,7 @@ fun NormalChatNote(
         },
         onAuthorClick = {
             note.author?.let {
-                nav("User/${it.pubkeyHex}")
+                nav.nav("User/${it.pubkeyHex}")
             }
         },
         actionMenu = { onDismiss ->
@@ -288,23 +288,9 @@ fun ChatBubbleLayout(
             }
         }
 
-    val alignment: Arrangement.Horizontal =
-        if (isLoggedInUser) {
-            Arrangement.End
-        } else {
-            Arrangement.Start
-        }
-
-    val shape: Shape =
-        if (isLoggedInUser) {
-            ChatBubbleShapeMe
-        } else {
-            ChatBubbleShapeThem
-        }
-
     Row(
         modifier = if (innerQuote) ChatPaddingInnerQuoteModifier else ChatPaddingModifier,
-        horizontalArrangement = alignment,
+        horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
     ) {
         val popupExpanded = remember { mutableStateOf(false) }
 
@@ -334,19 +320,19 @@ fun ChatBubbleLayout(
             }
 
         Row(
-            horizontalArrangement = alignment,
+            horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
             modifier = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier,
         ) {
             Surface(
                 color = backgroundBubbleColor.value,
-                shape = shape,
+                shape = if (isLoggedInUser) ChatBubbleShapeMe else ChatBubbleShapeThem,
                 modifier = clickableModifier,
             ) {
                 Column(modifier = messageBubbleLimits, verticalArrangement = RowColSpacing5dp) {
                     if (drawAuthorInfo) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = alignment,
+                            horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
                             modifier = HalfHalfVertPadding.clickable(onClick = onAuthorClick),
                         ) {
                             drawAuthorLine()
@@ -495,7 +481,7 @@ private fun MessageBubbleLines(
     onWantsToEditDraft: (Note) -> Unit,
     canPreview: Boolean,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     if (baseNote.event !is DraftEvent) {
         RenderReplyRow(
@@ -527,7 +513,7 @@ private fun RenderReplyRow(
     innerQuote: Boolean,
     backgroundBubbleColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
 ) {
@@ -541,7 +527,7 @@ private fun RenderReply(
     note: Note,
     backgroundBubbleColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
 ) {
@@ -577,7 +563,7 @@ private fun NoteRow(
     onWantsToEditDraft: (Note) -> Unit,
     backgroundBubbleColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         when (note.event) {
@@ -616,7 +602,7 @@ private fun RenderDraftEvent(
     onWantsToEditDraft: (Note) -> Unit,
     backgroundBubbleColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     ObserveDraftEvent(note, accountViewModel) {
         Column {
@@ -692,7 +678,7 @@ private fun RenderRegularTextNote(
     innerQuote: Boolean,
     backgroundBubbleColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     LoadDecryptedContentOrNull(note = note, accountViewModel = accountViewModel) { eventContent ->
         if (eventContent != null) {
@@ -778,7 +764,7 @@ private fun RenderCreateChannelNote(note: Note) {
 private fun DrawAuthorInfo(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     baseNote.author?.let {
         WatchAndDisplayUser(it, accountViewModel, nav)
@@ -803,7 +789,7 @@ fun UserDisplayNameLayout(
 private fun WatchAndDisplayUser(
     author: User,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val userState by author.live().userMetadataInfo.observeAsState()
 

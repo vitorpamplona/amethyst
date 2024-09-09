@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.events.Event
@@ -43,7 +44,7 @@ import kotlinx.coroutines.launch
 fun DisplayUncitedHashtags(
     event: Event,
     callbackUri: String? = null,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     DisplayUncitedHashtags(event, event.content, callbackUri, nav)
 }
@@ -54,7 +55,7 @@ fun DisplayUncitedHashtags(
     event: Event,
     content: String,
     callbackUri: String? = null,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val unusedHashtags by
         produceState(initialValue = emptyList<String>()) {
@@ -102,7 +103,7 @@ fun DisplayUncitedHashtags(
             unusedHashtags.forEach { hashtag ->
                 ClickableText(
                     text = remember { AnnotatedString("#$hashtag ") },
-                    onClick = { nav("Hashtag/$hashtag") },
+                    onClick = { nav.nav("Hashtag/$hashtag") },
                     style = style,
                 )
             }

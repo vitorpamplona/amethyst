@@ -516,6 +516,7 @@
     <string name="automatically_play_videos_description">Spela upp videor och GIFs automatiskt</string>
     <string name="automatically_show_url_preview_description">Visa förhandsgranskning av URL</string>
     <string name="load_image_description">När bilder ska laddas</string>
+    <string name="copy_stack_to_clipboard">Kopiera stacken</string>
     <string name="copy_to_clipboard">Kopiera till Urklipp</string>
     <string name="copy_npub_to_clipboard">Kopiera npub till urklipp</string>
     <string name="share_or_save">Dela eller Spara</string>
@@ -609,7 +610,7 @@
     <string name="push_server_none_explainer">Inaktivera Push-meddelande</string>
     <string name="push_server_uses_app_explainer">Använder appen %1$s</string>
     <string name="push_server_install_app">Inställning av Push-aviseringar</string>
-    <string name="push_server_install_app_description">        För att ta emot push-aviseringar, installera vilken app som helst som stöder [Unified Push](https://unifiedpush.org), till exempel [Nfty](https://ntfy.sh/).
+    <string name="push_server_install_app_description">        För att ta emot push-aviseringar, installera vilken app som helst som stöder [Unified Push](https://unifiedpush.org), till exempel [Ntfy](https://ntfy.sh/).
         Efter installationen väljer du den app du vill använda i inställningarna.
     </string>
     <string name="payment_required_title">Meddelande från %1$s</string>
@@ -664,6 +665,11 @@
     <string name="could_not_prepare_header">Kunde inte förbereda header information: %1$s</string>
     <string name="compression_cancelled">Komprimering avbruten</string>
     <string name="compression_returned_null">Komprimering misslyckades att returnera en fil</string>
+    <string name="media_compression_quality_label">Mediakvalitet</string>
+    <string name="media_compression_quality_explainer">Välj Låg kvalitet för att komprimera ditt media till en mindre fil med lägre kvalitet, eller välj Hög kvalitet för att komprimera till en större fil med högre kvalitet.</string>
+    <string name="media_compression_quality_low">Låg</string>
+    <string name="media_compression_quality_medium">Medel</string>
+    <string name="media_compression_quality_high">Hög</string>
     <string name="edit_draft">Redigera utkast</string>
     <string name="login_with_qr_code">Logga in med QR-kod</string>
     <string name="route">Rutt</string>
@@ -810,10 +816,10 @@
     <string name="add_a_nip96_server">Lägg till en NIP-96 Server</string>
     <string name="delete_all">Radera alla</string>
     <string name="delete_all_drafts_confirmation">Är du säker på att du vill ta bort alla utkast?</string>
-    <string name="and_more">" … och %1$s mer"</string>
     <string name="stack">Stack:</string>
     <string name="torrent_file">Torrent fil</string>
     <string name="torrent_download">Ladda ner</string>
     <string name="torrent_failure">Det gick inte att öppna filen</string>
     <string name="torrent_no_apps">Inga torrent-appar installerade för att öppna och ladda ner filen.</string>
+    <string name="select_list_to_filter">Välj en lista för att filtrera flödet</string>
 </resources>

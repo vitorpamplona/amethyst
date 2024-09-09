@@ -38,7 +38,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.outlined.Bolt
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -73,6 +72,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.StringToastMsg
@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
@@ -99,7 +100,7 @@ fun PollNote(
     canPreview: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val pollViewModel: PollNoteViewModel = viewModel(key = "PollNoteViewModel${baseNote.idHex}")
 
@@ -122,7 +123,7 @@ fun PollNote(
     canPreview: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     WatchZapsAndUpdateTallies(baseNote, pollViewModel)
 
@@ -157,7 +158,7 @@ private fun OptionNote(
     accountViewModel: AccountViewModel,
     canPreview: Boolean,
     backgroundColor: MutableState<Color>,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val tags = remember(baseNote) { baseNote.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
 
@@ -225,7 +226,7 @@ private fun RenderOptionAfterVote(
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Box(
         Modifier
@@ -295,7 +296,7 @@ private fun RenderOptionBeforeVote(
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Box(
         Modifier
@@ -331,7 +332,7 @@ fun ZapVote(
     nonClickablePrepend: @Composable () -> Unit,
     clickablePrepend: @Composable () -> Unit,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val isLoggedUser by remember { derivedStateOf { accountViewModel.isLoggedUser(baseNote.author) } }
 
@@ -356,7 +357,7 @@ fun ZapVote(
             Modifier.combinedClickable(
                 role = Role.Button,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = false, radius = 24.dp),
+                indication = ripple24dp,
                 onClick = {
                     if (!accountViewModel.isWriteable()) {
                         accountViewModel.toast(
@@ -460,7 +461,7 @@ fun ZapVote(
                 title = toast.title,
                 textContent = toast.msg,
                 onClickStartMessage = {
-                    baseNote.author?.let { nav(routeToMessage(it, toast.msg, accountViewModel)) }
+                    baseNote.author?.let { nav.nav(routeToMessage(it, toast.msg, accountViewModel)) }
                 },
                 onDismiss = { showErrorMessageDialog = null },
             )

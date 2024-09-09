@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -34,13 +35,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 fun ClickableNoteTag(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val route = routeFor(baseNote, accountViewModel.userProfile())
 
     ClickableText(
         text = AnnotatedString("@${baseNote.idNote().toShortenHex()}"),
-        onClick = { nav("Note/${baseNote.idHex}") },
+        onClick = { nav.nav("Note/${baseNote.idHex}") },
         style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
     )
 }

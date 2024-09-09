@@ -84,7 +84,7 @@ class PushMessageReceiver : MessagingReceiver() {
         endpoint: String,
         instance: String,
     ) {
-        val sanitizedEndpoint = endpoint.dropLast(5)
+        val sanitizedEndpoint = if (endpoint.endsWith("?up=1")) endpoint.dropLast(5) else endpoint
         if (sanitizedEndpoint != pushHandler.getSavedEndpoint()) {
             Log.d(TAG, "New endpoint provided:- $endpoint for Instance: $instance ${pushHandler.getSavedEndpoint()} $sanitizedEndpoint")
             pushHandler.setEndpoint(sanitizedEndpoint)

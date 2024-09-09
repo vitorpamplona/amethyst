@@ -609,7 +609,7 @@
     <string name="push_server_none_explainer">Push értesítések letiltása</string>
     <string name="push_server_uses_app_explainer">A(z) %1$s alkalmazást használja</string>
     <string name="push_server_install_app">Push értesítések beállítása</string>
-    <string name="push_server_install_app_description">        A push értesítések fogadásához olyan alkalmazást telepíts, amely támogatja a [Unified Push](https://unifiedpush.org/), például az [Nfty](https://ntfy.sh/) alkalmazást.
+    <string name="push_server_install_app_description">        A push értesítések fogadásához olyan alkalmazást telepíts, amely támogatja a [Unified Push](https://unifiedpush.org/), például az [Ntfy](https://ntfy.sh/) alkalmazást.
         A telepítés után a Beállításokban válaszd ki a használni kívánt alkalmazást.
     </string>
     <string name="payment_required_title">Üzenet %1$s-tól</string>
@@ -810,7 +810,6 @@
     <string name="add_a_nip96_server">Adj hozzá egy NIP-96 szervert</string>
     <string name="delete_all">Törlés mind</string>
     <string name="delete_all_drafts_confirmation">Biztosan törölni szeretnéd az összes jegyzetet?</string>
-    <string name="and_more">" … és még további %1$s"</string>
     <string name="stack">Köteg:</string>
     <string name="torrent_file">Torrent Fájl</string>
     <string name="torrent_download">Letöltés</string>

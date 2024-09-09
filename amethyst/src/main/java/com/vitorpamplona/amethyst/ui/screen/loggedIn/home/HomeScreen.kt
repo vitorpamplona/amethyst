@@ -24,7 +24,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -61,9 +60,12 @@ import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
@@ -72,23 +74,36 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
+@Composable
+fun HomeScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    nip47: String? = null,
+) {
+    ResolveNIP47(nip47, accountViewModel)
+
+    HomeScreen(
+        newThreadsFeedState = accountViewModel.feedStates.homeNewThreads,
+        repliesFeedState = accountViewModel.feedStates.homeReplies,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     newThreadsFeedState: FeedContentState,
     repliesFeedState: FeedContentState,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-    nip47: String? = null,
+    nav: INav,
 ) {
-    ResolveNIP47(nip47, accountViewModel)
-
     WatchAccountForHomeScreen(newThreadsFeedState, repliesFeedState, accountViewModel)
 
     WatchLifeCycleChanges(accountViewModel)
 
     AssembleHomeTabs(newThreadsFeedState, repliesFeedState) { pagerState, tabItems ->
-        AssembleHomePage(pagerState, tabItems, accountViewModel, nav)
+        HomePages(pagerState, tabItems, accountViewModel, nav)
     }
 }
 
@@ -106,35 +121,22 @@ private fun AssembleHomeTabs(
             mutableStateOf(
                 listOf(
                     TabItem(
-                        R.string.new_threads,
-                        newThreadsFeedState,
-                        Route.Home.base + "Follows",
-                        ScrollStateKeys.HOME_FOLLOWS,
+                        resource = R.string.new_threads,
+                        feedState = newThreadsFeedState,
+                        routeForLastRead = Route.Home.base + "Follows",
+                        scrollStateKey = ScrollStateKeys.HOME_FOLLOWS,
                     ),
                     TabItem(
-                        R.string.conversations,
-                        repliesFeedState,
-                        Route.Home.base + "FollowsReplies",
-                        ScrollStateKeys.HOME_REPLIES,
+                        resource = R.string.conversations,
+                        feedState = repliesFeedState,
+                        routeForLastRead = Route.Home.base + "FollowsReplies",
+                        scrollStateKey = ScrollStateKeys.HOME_REPLIES,
                     ),
                 ).toImmutableList(),
             )
         }
 
     inner(pagerState, tabs)
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun AssembleHomePage(
-    pagerState: PagerState,
-    tabs: ImmutableList<TabItem>,
-    accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
-) {
-    Column(Modifier.fillMaxHeight()) {
-        HomePages(pagerState, tabs, accountViewModel, nav)
-    }
 }
 
 @Composable
@@ -172,33 +174,57 @@ private fun HomePages(
     pagerState: PagerState,
     tabs: ImmutableList<TabItem>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
-    TabRow(
-        containerColor = Color.Transparent,
-        contentColor = MaterialTheme.colorScheme.onBackground,
-        modifier = TabRowHeight,
-        selectedTabIndex = pagerState.currentPage,
+    DisappearingScaffold(
+        isInvertedLayout = false,
+        topBar = {
+            Column {
+                HomeTopBar(accountViewModel, nav)
+                TabRow(
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onBackground,
+                    modifier = TabRowHeight,
+                    selectedTabIndex = pagerState.currentPage,
+                ) {
+                    val coroutineScope = rememberCoroutineScope()
+                    tabs.forEachIndexed { index, tab ->
+                        Tab(
+                            selected = pagerState.currentPage == index,
+                            text = { Text(text = stringRes(tab.resource)) },
+                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                        )
+                    }
+                }
+            }
+        },
+        bottomBar = {
+            AppBottomBar(Route.Home, accountViewModel) { route, _ ->
+                if (route == Route.Home) {
+                    tabs[pagerState.currentPage].feedState.sendToTop()
+                } else {
+                    nav.newStack(route.base)
+                }
+            }
+        },
+        floatingButton = {
+            NewNoteButton(accountViewModel, nav)
+        },
+        accountViewModel = accountViewModel,
     ) {
-        val coroutineScope = rememberCoroutineScope()
-
-        tabs.forEachIndexed { index, tab ->
-            Tab(
-                selected = pagerState.currentPage == index,
-                text = { Text(text = stringRes(tab.resource)) },
-                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+        HorizontalPager(
+            contentPadding = it,
+            state = pagerState,
+            userScrollEnabled = false,
+        ) { page ->
+            HomeFeeds(
+                feedState = tabs[page].feedState,
+                routeForLastRead = tabs[page].routeForLastRead,
+                scrollStateKey = tabs[page].scrollStateKey,
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         }
-    }
-
-    HorizontalPager(state = pagerState, userScrollEnabled = false) { page ->
-        HomeFeeds(
-            feedState = tabs[page].feedState,
-            routeForLastRead = tabs[page].routeForLastRead,
-            scrollStateKey = tabs[page].scrollStateKey,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
     }
 }
 
@@ -209,7 +235,7 @@ fun HomeFeeds(
     enablePullRefresh: Boolean = true,
     scrollStateKey: String? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     RefresheableBox(feedState, enablePullRefresh) {
         SaveableFeedContentState(feedState, scrollStateKey) { listState ->

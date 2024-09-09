@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.ripple
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -77,6 +78,8 @@ val DoubleVertSpacer = Modifier.height(10.dp)
 
 val HalfDoubleVertSpacer = Modifier.height(7.dp)
 
+val TopBarSize = 50.dp - 64.dp
+
 val Size0dp = 0.dp
 val Size5dp = 5.dp
 val Size10dp = 10.dp
@@ -96,6 +99,7 @@ val Size30dp = 30.dp
 val Size34dp = 34.dp
 val Size35dp = 35.dp
 val Size40dp = 40.dp
+val Size50dp = 50.dp
 val Size55dp = 55.dp
 val Size75dp = 75.dp
 val Size100dp = 100.dp
@@ -281,3 +285,5 @@ val reactionBox =
         .padding(horizontal = 6.dp, vertical = 6.dp)
         .size(Size40dp)
         .padding(5.dp)
+
+val ripple24dp = ripple(bounded = false, radius = Size24dp)

@@ -21,7 +21,11 @@
 package com.vitorpamplona.amethyst.ui.feeds
 
 import android.util.Log
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -54,6 +58,8 @@ class FeedContentState(
 
     private var lastFeedKey: String? = null
 
+    override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
+
     fun sendToTop() {
         if (scrolltoTopPending) return
 
@@ -72,16 +78,21 @@ class FeedContentState(
     fun refreshSuspended() {
         checkNotInMainThread()
 
-        lastFeedKey = localFilter.feedKey()
-        val notes = localFilter.loadTop().distinctBy { it.idHex }.toImmutableList()
+        isRefreshing.value = true
+        try {
+            lastFeedKey = localFilter.feedKey()
+            val notes = localFilter.loadTop().distinctBy { it.idHex }.toImmutableList()
 
-        val oldNotesState = _feedContent.value
-        if (oldNotesState is FeedState.Loaded) {
-            if (!equalImmutableLists(notes, oldNotesState.feed.value.list)) {
+            val oldNotesState = _feedContent.value
+            if (oldNotesState is FeedState.Loaded) {
+                if (!equalImmutableLists(notes, oldNotesState.feed.value.list)) {
+                    updateFeed(notes)
+                }
+            } else {
                 updateFeed(notes)
             }
-        } else {
-            updateFeed(notes)
+        } finally {
+            isRefreshing.value = false
         }
     }
 

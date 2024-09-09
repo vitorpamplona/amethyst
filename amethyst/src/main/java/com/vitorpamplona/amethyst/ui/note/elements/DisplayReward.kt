@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.PostButton
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.ui.note.showAmount
@@ -83,7 +84,7 @@ fun DisplayReward(
     baseReward: Reward,
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     var popupExpanded by remember { mutableStateOf(false) }
 
@@ -94,7 +95,7 @@ fun DisplayReward(
         ) {
             ClickableText(
                 text = AnnotatedString("#bounty"),
-                onClick = { nav("Hashtag/bounty") },
+                onClick = { nav.nav("Hashtag/bounty") },
                 style =
                     LocalTextStyle.current.copy(
                         color =

@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyGridState
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -46,7 +47,7 @@ fun RefresheableFeedView(
     enablePullRefresh: Boolean = true,
     scrollStateKey: String? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     RefresheableBox(viewModel, enablePullRefresh) {
         SaveableFeedState(viewModel, scrollStateKey) { listState ->
@@ -96,7 +97,7 @@ fun RenderFeedState(
     viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
     listState: LazyListState,
-    nav: (String) -> Unit,
+    nav: INav,
     routeForLastRead: String?,
     onLoaded: @Composable (FeedState.Loaded) -> Unit = {
         com.vitorpamplona.amethyst.ui.feeds

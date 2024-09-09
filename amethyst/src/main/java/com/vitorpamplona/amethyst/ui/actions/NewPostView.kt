@@ -92,6 +92,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -141,6 +142,7 @@ import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZapRaiserRequest
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.CancelIcon
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
@@ -203,7 +205,7 @@ fun NewPostView(
     draft: Note? = null,
     enableMessageInterface: Boolean = false,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val postViewModel: NewPostViewModel = viewModel()
@@ -506,8 +508,8 @@ fun NewPostView(
                                         ImageVideoDescription(
                                             url,
                                             accountViewModel.account.settings.defaultFileServer,
-                                            onAdd = { alt, server, sensitiveContent ->
-                                                postViewModel.upload(url, alt, sensitiveContent, false, server, accountViewModel::toast, context)
+                                            onAdd = { alt, server, sensitiveContent, mediaQuality ->
+                                                postViewModel.upload(url, alt, sensitiveContent, mediaQuality, false, server, accountViewModel::toast, context)
                                                 if (!server.isNip95) {
                                                     accountViewModel.account.settings.changeDefaultFileServer(server.server)
                                                 }
@@ -1686,7 +1688,7 @@ fun CreateButton(
 fun ImageVideoDescription(
     uri: Uri,
     defaultServer: Nip96MediaServers.ServerName,
-    onAdd: (String, ServerOption, Boolean) -> Unit,
+    onAdd: (String, ServerOption, Boolean, Int) -> Unit,
     onCancel: () -> Unit,
     onError: (Int) -> Unit,
     accountViewModel: AccountViewModel,
@@ -1744,6 +1746,7 @@ fun ImageVideoDescription(
     }
     var message by remember { mutableStateOf("") }
     var sensitiveContent by remember { mutableStateOf(false) }
+    var mediaQualitySlider by remember { mutableIntStateOf(1) } // 0 = Low, 1 = Medium, 2 = High
 
     Column(
         modifier =
@@ -1922,12 +1925,66 @@ fun ImageVideoDescription(
                 )
             }
 
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                        .padding(vertical = 8.dp),
+            ) {
+                Column(
+                    modifier = Modifier.weight(1.0f),
+                    verticalArrangement = Arrangement.spacedBy(Size5dp),
+                ) {
+                    Text(
+                        text = stringRes(R.string.media_compression_quality_label),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = stringRes(R.string.media_compression_quality_explainer),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text =
+                                when (mediaQualitySlider) {
+                                    0 -> stringRes(R.string.media_compression_quality_low)
+                                    1 -> stringRes(R.string.media_compression_quality_medium)
+                                    2 -> stringRes(R.string.media_compression_quality_high)
+                                    else -> stringRes(R.string.media_compression_quality_medium)
+                                },
+                            modifier = Modifier.align(Alignment.Center),
+                        )
+                    }
+
+                    Slider(
+                        value = mediaQualitySlider.toFloat(),
+                        onValueChange = { mediaQualitySlider = it.toInt() },
+                        valueRange = 0f..2f,
+                        steps = 1,
+                    )
+                }
+            }
+
             Button(
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .padding(vertical = 10.dp),
-                onClick = { onAdd(message, selectedServer, sensitiveContent) },
+                onClick = { onAdd(message, selectedServer, sensitiveContent, mediaQualitySlider) },
                 shape = QuoteBorder,
                 colors =
                     ButtonDefaults.buttonColors(

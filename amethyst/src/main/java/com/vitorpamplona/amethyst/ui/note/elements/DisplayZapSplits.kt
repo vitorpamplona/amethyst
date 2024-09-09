@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.AnnotatedString
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.ZapSplitIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -46,7 +47,7 @@ fun DisplayZapSplits(
     noteEvent: EventInterface,
     useAuthorIfEmpty: Boolean = false,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val list =
         remember(noteEvent) {

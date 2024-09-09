@@ -29,11 +29,12 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.navigation.INav
 
 @Composable
 fun ClickableUserTag(
     user: User,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val route = remember { "User/${user.pubkeyHex}" }
 
@@ -44,7 +45,7 @@ fun ClickableUserTag(
 
     ClickableText(
         text = userName,
-        onClick = { nav(route) },
+        onClick = { nav.nav(route) },
         style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
     )
 }

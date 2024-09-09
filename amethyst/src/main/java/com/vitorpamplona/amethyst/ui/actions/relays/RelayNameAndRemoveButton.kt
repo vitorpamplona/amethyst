@@ -20,7 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.relays
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -34,6 +35,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -41,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RelayNameAndRemoveButton(
     item: BasicRelaySetupInfo,
@@ -48,11 +52,18 @@ fun RelayNameAndRemoveButton(
     onDelete: (BasicRelaySetupInfo) -> Unit,
     modifier: Modifier,
 ) {
+    val clipboardManager = LocalClipboardManager.current
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = item.briefInfo.displayUrl,
-                modifier = Modifier.clickable(onClick = onClick),
+                modifier =
+                    Modifier.combinedClickable(
+                        onClick = onClick,
+                        onLongClick = {
+                            clipboardManager.setText(AnnotatedString(item.briefInfo.url))
+                        },
+                    ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

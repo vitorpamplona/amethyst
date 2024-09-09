@@ -170,7 +170,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
 
         return listOfNotNull(
             TypedFilter(
-                types = setOf(FeedType.GLOBAL),
+                types = if (follows == null) setOf(FeedType.GLOBAL) else setOf(FeedType.FOLLOWS),
                 filter =
                     SinceAuthorPerRelayFilter(
                         authors = followsRelays,
@@ -185,7 +185,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
             ),
             follows?.let {
                 TypedFilter(
-                    types = setOf(FeedType.GLOBAL),
+                    types = setOf(FeedType.FOLLOWS),
                     filter =
                         SincePerRelayFilter(
                             tags = mapOf("p" to it),
@@ -246,7 +246,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
         val follows = account.liveDiscoveryListAuthorsPerRelay.value
 
         return TypedFilter(
-            types = setOf(FeedType.GLOBAL),
+            types = if (follows == null) setOf(FeedType.GLOBAL) else setOf(FeedType.FOLLOWS),
             filter =
                 SinceAuthorPerRelayFilter(
                     authors = follows,

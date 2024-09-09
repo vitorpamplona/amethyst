@@ -47,6 +47,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.AddRelayButton
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -72,7 +74,7 @@ fun Kind3RelaySetupInfoProposalRow(
     onAdd: () -> Unit,
     onClick: () -> Unit,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Column(
         Modifier
@@ -138,7 +140,6 @@ fun Kind3RelaySetupInfoProposalRow(
 @Preview
 @Composable
 fun UsedByPreview() {
-    val accountViewModel = mockAccountViewModel()
     ThemeComparisonColumn {
         UsedBy(
             item =
@@ -151,9 +152,9 @@ fun UsedByPreview() {
                     paidRelay = false,
                     users = listOf("User1", "User2", "User3", "User4"),
                 ),
-            accountViewModel = accountViewModel,
-        ) {
-        }
+            accountViewModel = mockAccountViewModel(),
+            nav = EmptyNav,
+        )
     }
 }
 
@@ -162,7 +163,7 @@ fun UsedByPreview() {
 fun UsedBy(
     item: Kind3RelayProposalSetupInfo,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     FlowRow(verticalArrangement = Arrangement.Center) {
         item.users.getOrNull(0)?.let {

@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
@@ -75,7 +76,7 @@ fun RenderGitPatchEvent(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val event = baseNote.event as? GitPatchEvent ?: return
 
@@ -95,7 +96,7 @@ fun RenderGitPatchEvent(
 private fun RenderShortRepositoryHeader(
     baseNote: AddressableNote,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val noteState by baseNote.live().metadata.observeAsState()
     val noteEvent = noteState?.note?.event as? GitRepositoryEvent ?: return
@@ -132,7 +133,7 @@ private fun RenderGitPatchEvent(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val repository = remember(noteEvent) { noteEvent.repository() }
 
@@ -212,7 +213,7 @@ fun RenderGitIssueEvent(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val event = baseNote.event as? GitIssueEvent ?: return
 
@@ -237,7 +238,7 @@ private fun RenderGitIssueEvent(
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val repository = remember(noteEvent) { noteEvent.repository() }
 
@@ -309,7 +310,7 @@ private fun RenderGitIssueEvent(
 fun RenderGitRepositoryEvent(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val event = baseNote.event as? GitRepositoryEvent ?: return
 
@@ -321,7 +322,7 @@ private fun RenderGitRepositoryEvent(
     noteEvent: GitRepositoryEvent,
     note: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val title = noteEvent.name() ?: noteEvent.dTag()
     val summary = noteEvent.description()

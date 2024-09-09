@@ -87,6 +87,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -153,7 +155,7 @@ fun LongPressToQuickAction(
             note = baseNote,
             onDismiss = { popupExpanded.value = false },
             accountViewModel = accountViewModel,
-            nav = {},
+            nav = EmptyNav,
         )
     }
 }
@@ -174,7 +176,7 @@ fun LongPressToQuickActionGallery(
                 note = baseNote,
                 onDismiss = { popupExpanded.value = false },
                 accountViewModel = accountViewModel,
-                nav = {},
+                nav = EmptyNav,
             )
         }
     }
@@ -185,7 +187,7 @@ fun NoteQuickActionMenuGallery(
     note: Note,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     DeleteFromGalleryDialog(note, accountViewModel) {
         onDismiss()
@@ -197,7 +199,7 @@ fun NoteQuickActionMenu(
     note: Note,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val editDraftDialog = remember { mutableStateOf(false) }
 
@@ -208,7 +210,7 @@ fun NoteQuickActionMenu(
             },
             accountViewModel = accountViewModel,
             draft = note,
-            nav = { },
+            nav = EmptyNav,
         )
     }
 
@@ -227,7 +229,7 @@ fun NoteQuickActionMenu(
     onDismiss: () -> Unit,
     onWantsToEditDraft: () -> Unit,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val showSelectTextDialog = remember { mutableStateOf(false) }
     val showDeleteAlertDialog = remember { mutableStateOf(false) }

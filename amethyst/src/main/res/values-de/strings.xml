@@ -522,6 +522,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="automatically_play_videos_description">Videos und GIFs automatisch abspielen</string>
     <string name="automatically_show_url_preview_description">URL-Vorschauen anzeigen</string>
     <string name="load_image_description">Wann Bilder geladen werden sollen</string>
+    <string name="copy_stack_to_clipboard">Stapel kopieren</string>
     <string name="copy_to_clipboard">In Zwischenablage kopieren</string>
     <string name="copy_npub_to_clipboard">Npub in Zwischenablage kopieren</string>
     <string name="share_or_save">Teilen oder Speichern</string>
@@ -615,7 +616,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="push_server_none_explainer">Push-Benachrichtigungen deaktivieren</string>
     <string name="push_server_uses_app_explainer">Verwendet die App %1$s</string>
     <string name="push_server_install_app">Push-Benachrichtigungen einrichten</string>
-    <string name="push_server_install_app_description">        Um Push-Benachrichtigungen zu erhalten, installieren Sie eine App, die [Unified Push](https://unifiedpush.org/) unterstützt, wie zum Beispiel [Nfty](https://ntfy.sh/).
+    <string name="push_server_install_app_description">        Um Push-Benachrichtigungen zu erhalten, installieren Sie eine App, die [Unified Push](https://unifiedpush.org/) unterstützt, wie zum Beispiel [Ntfy](https://ntfy.sh/).
         Nach der Installation wählen Sie die App aus, die Sie in den Einstellungen verwenden möchten.
     </string>
     <string name="payment_required_title">Nachricht von %1$s</string>
@@ -670,6 +671,11 @@ anz der Bedingungen ist erforderlich</string>
     <string name="could_not_prepare_header">Konnte Kopfzeileninformationen nicht vorbereiten: %1$s</string>
     <string name="compression_cancelled">Komprimierung abgebrochen</string>
     <string name="compression_returned_null">Komprimierung fehlgeschlagen eine Datei zurückzugeben</string>
+    <string name="media_compression_quality_label">Medienqualität</string>
+    <string name="media_compression_quality_explainer">Wählen Sie Niedrige Qualität, um Ihre Medien in eine kleinere Datei mit geringerer Qualität zu komprimieren, oder wählen Sie Hohe Qualität, um sie in eine größere Datei mit höherer Qualität zu komprimieren.</string>
+    <string name="media_compression_quality_low">Niedrig</string>
+    <string name="media_compression_quality_medium">Mittel</string>
+    <string name="media_compression_quality_high">Hoch</string>
     <string name="edit_draft">Entwurf bearbeiten</string>
     <string name="login_with_qr_code">Einloggen mit QR-Code</string>
     <string name="route">Route</string>
@@ -816,10 +822,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="add_a_nip96_server">NIP-96 Server hinzufügen</string>
     <string name="delete_all">Alles löschen</string>
     <string name="delete_all_drafts_confirmation">Möchten Sie wirklich alle Entwürfe löschen?</string>
-    <string name="and_more">" … und %1$s mehr"</string>
     <string name="stack">Stapel:</string>
     <string name="torrent_file">Torrentdatei</string>
     <string name="torrent_download">Herunterladen</string>
     <string name="torrent_failure">Fehler beim Öffnen der Datei</string>
     <string name="torrent_no_apps">Keine Torrent-Apps installiert, um die Datei zu öffnen und herunterzuladen.</string>
+    <string name="select_list_to_filter">Liste zum Filtern des Feeds auswählen</string>
 </resources>

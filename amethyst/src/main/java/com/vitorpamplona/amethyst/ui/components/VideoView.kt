@@ -826,12 +826,18 @@ private fun RenderVideoPlayer(
                 keepPlaying.value = newKeepPlaying
             }
 
-            AnimatedSaveButton(controllerVisible, Modifier.align(Alignment.TopEnd).padding(end = Size110dp)) { context ->
-                saveImage(videoUri, mimeType, context, accountViewModel)
-            }
+            if (!videoUri.endsWith(".m3u8")) {
+                AnimatedSaveButton(controllerVisible, Modifier.align(Alignment.TopEnd).padding(end = Size110dp)) { context ->
+                    saveImage(videoUri, mimeType, context, accountViewModel)
+                }
 
-            AnimatedShareButton(controllerVisible, Modifier.align(Alignment.TopEnd).padding(end = Size165dp)) { popupExpanded, toggle ->
-                ShareImageAction(accountViewModel = accountViewModel, popupExpanded, videoUri, nostrUriCallback, null, null, null, mimeType, toggle)
+                AnimatedShareButton(controllerVisible, Modifier.align(Alignment.TopEnd).padding(end = Size165dp)) { popupExpanded, toggle ->
+                    ShareImageAction(accountViewModel = accountViewModel, popupExpanded, videoUri, nostrUriCallback, null, null, null, mimeType, toggle)
+                }
+            } else {
+                AnimatedShareButton(controllerVisible, Modifier.align(Alignment.TopEnd).padding(end = Size110dp)) { popupExpanded, toggle ->
+                    ShareImageAction(accountViewModel = accountViewModel, popupExpanded, videoUri, nostrUriCallback, null, null, null, mimeType, toggle)
+                }
             }
         } else {
             controller.volume = 0f

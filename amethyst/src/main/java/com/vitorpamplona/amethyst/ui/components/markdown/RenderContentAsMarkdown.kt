@@ -41,6 +41,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.MarkdownTextStyle
@@ -65,7 +67,7 @@ fun RenderContentAsMarkdown(
     backgroundColor: MutableState<Color>,
     callbackUri: String? = null,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val uri = LocalUriHandler.current
     val onClick =
@@ -73,7 +75,7 @@ fun RenderContentAsMarkdown(
             { link: String ->
                 val route = uriToRoute(link)
                 if (route != null) {
-                    nav(route)
+                    nav.nav(route)
                 } else {
                     runCatching { uri.openUri(link) }
                 }
@@ -116,7 +118,7 @@ fun RenderContentAsMarkdown(
 fun RenderContentAsMarkdownPreview() {
     val accountViewModel = mockAccountViewModel()
 
-    val nav: (String) -> Unit = {}
+    val nav = EmptyNav
 
     ThemeComparisonRow {
         val background = MaterialTheme.colorScheme.background
@@ -168,7 +170,7 @@ fun RenderContentAsMarkdownPreview() {
 fun RenderContentAsMarkdownListsPreview() {
     val accountViewModel = mockAccountViewModel()
 
-    val nav: (String) -> Unit = {}
+    val nav = EmptyNav
 
     ThemeComparisonRow {
         val background = MaterialTheme.colorScheme.background
@@ -218,7 +220,7 @@ fun RenderContentAsMarkdownListsPreview() {
 fun RenderContentAsMarkdownCodePreview() {
     val accountViewModel = mockAccountViewModel()
 
-    val nav: (String) -> Unit = {}
+    val nav = EmptyNav
 
     ThemeComparisonRow {
         val background = MaterialTheme.colorScheme.background
@@ -272,7 +274,7 @@ fun RenderContentAsMarkdownCodePreview() {
 fun RenderContentAsMarkdownTablesPreview() {
     val accountViewModel = mockAccountViewModel()
 
-    val nav: (String) -> Unit = {}
+    val nav = EmptyNav
 
     ThemeComparisonRow {
         val background = MaterialTheme.colorScheme.background
@@ -313,7 +315,7 @@ fun RenderContentAsMarkdownTablesPreview() {
 fun RenderContentAsMarkdownFootNotesPreview() {
     val accountViewModel = mockAccountViewModel()
 
-    val nav: (String) -> Unit = {}
+    val nav = EmptyNav
 
     ThemeComparisonRow {
         val background = MaterialTheme.colorScheme.background
@@ -350,7 +352,7 @@ fun RenderContentAsMarkdownFootNotesPreview() {
 fun RenderContentAsMarkdownUserPreview() {
     val accountViewModel = mockAccountViewModel()
 
-    val nav: (String) -> Unit = {}
+    val nav = EmptyNav
 
     runBlocking {
         withContext(Dispatchers.IO) {
@@ -412,7 +414,7 @@ fun RenderContentAsMarkdownUserPreview() {
 fun RenderContentAsMarkdownNotePreview() {
     val accountViewModel = mockAccountViewModel()
 
-    val nav: (String) -> Unit = {}
+    val nav = EmptyNav
 
     runBlocking {
         withContext(Dispatchers.IO) {

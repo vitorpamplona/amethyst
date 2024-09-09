@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import android.util.Log
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -107,19 +108,27 @@ open class UserFeedViewModel(
         viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
     }
 
+    override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
+
     private fun refreshSuspended() {
         checkNotInMainThread()
 
-        val notes = dataSource.loadTop().toImmutableList()
+        try {
+            isRefreshing.value = true
 
-        val oldNotesState = _feedContent.value
-        if (oldNotesState is UserFeedState.Loaded) {
-            // Using size as a proxy for has changed.
-            if (!equalImmutableLists(notes, oldNotesState.feed.value)) {
+            val notes = dataSource.loadTop().toImmutableList()
+
+            val oldNotesState = _feedContent.value
+            if (oldNotesState is UserFeedState.Loaded) {
+                // Using size as a proxy for has changed.
+                if (!equalImmutableLists(notes, oldNotesState.feed.value)) {
+                    updateFeed(notes)
+                }
+            } else {
                 updateFeed(notes)
             }
-        } else {
-            updateFeed(notes)
+        } finally {
+            isRefreshing.value = false
         }
     }
 

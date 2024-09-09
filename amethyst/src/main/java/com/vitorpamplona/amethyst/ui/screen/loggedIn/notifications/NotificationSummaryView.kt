@@ -117,7 +117,7 @@ fun SummaryBar(state: NotificationSummaryState) {
         Row(
             modifier =
                 Modifier
-                    .padding(vertical = 10.dp, horizontal = 20.dp)
+                    .padding(vertical = 0.dp, horizontal = 20.dp)
                     .clickable(onClick = { showChart = !showChart }),
         ) {
             ProvideChartStyle(

@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -50,13 +51,13 @@ import com.vitorpamplona.quartz.events.ChatroomKey
 @Composable
 fun NoteAuthorPicture(
     baseNote: Note,
-    nav: (String) -> Unit,
+    nav: INav,
     accountViewModel: AccountViewModel,
     size: Dp,
     pictureModifier: Modifier = Modifier,
 ) {
     NoteAuthorPicture(baseNote, size, accountViewModel, pictureModifier) {
-        nav("User/${it.pubkeyHex}")
+        nav.nav("User/${it.pubkeyHex}")
     }
 }
 
@@ -102,7 +103,7 @@ fun UserPicture(
     size: Dp,
     pictureModifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     LoadUser(baseUserHex = userHex, accountViewModel) {
         if (it != null) {
@@ -129,14 +130,14 @@ fun UserPicture(
     size: Dp,
     pictureModifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     ClickableUserPicture(
         baseUser = user,
         size = size,
         accountViewModel = accountViewModel,
         modifier = pictureModifier,
-        onClick = { nav("User/${user.pubkeyHex}") },
+        onClick = { nav.nav("User/${user.pubkeyHex}") },
     )
 }
 

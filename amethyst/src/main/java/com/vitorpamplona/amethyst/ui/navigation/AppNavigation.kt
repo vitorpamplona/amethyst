@@ -26,6 +26,10 @@ import android.content.Intent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -36,327 +40,261 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.util.Consumer
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.components.DisplayErrorMessages
+import com.vitorpamplona.amethyst.ui.components.DisplayNotifyMessages
+import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.BookmarkListScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DraftListScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.GeoHashScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.HashtagScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.HiddenUsersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRedirectScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ProfileScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.SearchScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.SettingsScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ThreadScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChatroomListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChatroomScreenByAuthor
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.CommunityScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.NIP90ContentDiscoveryScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SecurityFiltersScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
 
+fun NavBackStackEntry.id(): String? = arguments?.getString("id")
+
+fun NavBackStackEntry.message(): String? =
+    arguments?.getString("message")?.let {
+        URLDecoder.decode(it, "utf-8")
+    }
+
 @Composable
 fun AppNavigation(
-    navController: NavHostController,
     accountViewModel: AccountViewModel,
+    accountStateViewModel: AccountStateViewModel,
     sharedPreferencesViewModel: SharedPreferencesViewModel,
 ) {
-    val scope = rememberCoroutineScope()
-    val nav =
-        remember(navController) {
-            { route: String ->
-                scope.launch {
-                    if (getRouteWithArguments(navController) != route) {
-                        navController.navigate(route)
-                    }
-                }
-                Unit
-            }
-        }
+    val nav = rememberNav()
 
-    NavHost(
-        navController,
-        startDestination = Route.Home.route,
-        enterTransition = { fadeIn(animationSpec = tween(200)) },
-        exitTransition = { fadeOut(animationSpec = tween(200)) },
-    ) {
-        Route.Home.let { route ->
+    AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountStateViewModel, nav) {
+        NavHost(
+            navController = nav.controller,
+            startDestination = Route.Home.route,
+            enterTransition = { fadeIn(animationSpec = tween(200)) },
+            exitTransition = { fadeOut(animationSpec = tween(200)) },
+        ) {
             composable(
-                route.route,
-                route.arguments,
-                content = { it ->
-                    val nip47 = it.arguments?.getString("nip47")
+                Route.Home.route,
+                Route.Home.arguments,
+            ) {
+                val nip47 = it.arguments?.getString("nip47")
 
-                    HomeScreen(
-                        newThreadsFeedState = accountViewModel.feedStates.homeNewThreads,
-                        repliesFeedState = accountViewModel.feedStates.homeReplies,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        nip47 = nip47,
-                    )
+                HomeScreen(accountViewModel, nav, nip47)
 
-                    if (nip47 != null) {
-                        LaunchedEffect(key1 = Unit) {
-                            launch {
-                                delay(1000)
-                                it.arguments?.remove("nip47")
-                            }
+                if (nip47 != null) {
+                    LaunchedEffect(key1 = Unit) {
+                        launch {
+                            delay(1000)
+                            it.arguments?.remove("nip47")
                         }
                     }
-                },
-            )
-        }
+                }
+            }
 
-        composable(
-            Route.Message.route,
-            content = {
-                ChatroomListScreen(
-                    accountViewModel.feedStates.dmKnown,
-                    accountViewModel.feedStates.dmNew,
+            composable(Route.Message.route) { ChatroomListScreen(accountViewModel, nav) }
+            composable(Route.Video.route) { VideoScreen(accountViewModel, nav) }
+            composable(Route.Discover.route) { DiscoverScreen(accountViewModel, nav) }
+            composable(Route.Notification.route) { NotificationScreen(sharedPreferencesViewModel, accountViewModel, nav) }
+
+            composable(Route.Search.route) { SearchScreen(accountViewModel, nav) }
+
+            composable(
+                Route.BlockedUsers.route,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) { SecurityFiltersScreen(accountViewModel, nav) }
+
+            composable(
+                Route.Bookmarks.route,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) { BookmarkListScreen(accountViewModel, nav) }
+
+            composable(
+                Route.Drafts.route,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) { DraftListScreen(accountViewModel, nav) }
+
+            composable(
+                Route.ContentDiscovery.route,
+                Route.ContentDiscovery.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) {
+                DvmContentDiscoveryScreen(it.id(), accountViewModel, nav)
+            }
+
+            composable(
+                Route.Profile.route,
+                Route.Profile.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) {
+                ProfileScreen(it.id(), accountViewModel, nav)
+            }
+
+            composable(
+                Route.Note.route,
+                Route.Note.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) {
+                ThreadScreen(it.id(), accountViewModel, nav)
+            }
+
+            composable(
+                Route.Hashtag.route,
+                Route.Hashtag.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) {
+                HashtagScreen(it.id(), accountViewModel, nav)
+            }
+
+            composable(
+                Route.Geohash.route,
+                Route.Geohash.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) {
+                GeoHashScreen(it.id(), accountViewModel, nav)
+            }
+
+            composable(
+                Route.Community.route,
+                Route.Community.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) {
+                CommunityScreen(it.id(), accountViewModel, nav)
+            }
+
+            composable(
+                Route.Room.route,
+                Route.Room.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) {
+                ChatroomScreen(
+                    roomId = it.id(),
+                    draftMessage = it.message(),
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+
+            composable(
+                Route.RoomByAuthor.route,
+                Route.RoomByAuthor.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) {
+                ChatroomScreenByAuthor(it.id(), null, accountViewModel, nav)
+            }
+
+            composable(
+                Route.Channel.route,
+                Route.Channel.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) {
+                ChannelScreen(
+                    channelId = it.id(),
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+
+            composable(
+                Route.Event.route,
+                Route.Event.arguments,
+            ) {
+                LoadRedirectScreen(
+                    eventId = it.id(),
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+
+            composable(
+                Route.Settings.route,
+                Route.Settings.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) {
+                SettingsScreen(
+                    sharedPreferencesViewModel,
                     accountViewModel,
                     nav,
                 )
-            },
-        )
-
-        Route.Video.let { route ->
-            composable(
-                route.route,
-                route.arguments,
-                content = {
-                    VideoScreen(
-                        videoFeedContentState = accountViewModel.feedStates.videoFeed,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                },
-            )
-        }
-
-        Route.Discover.let { route ->
-            composable(
-                route.route,
-                route.arguments,
-                content = {
-                    DiscoverScreen(
-                        discoveryContentNIP89FeedContentState = accountViewModel.feedStates.discoverDVMs,
-                        discoveryMarketplaceFeedContentState = accountViewModel.feedStates.discoverMarketplace,
-                        discoveryLiveFeedContentState = accountViewModel.feedStates.discoverLive,
-                        discoveryCommunityFeedContentState = accountViewModel.feedStates.discoverCommunities,
-                        discoveryChatFeedContentState = accountViewModel.feedStates.discoverPublicChats,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                },
-            )
-        }
-
-        Route.Search.let { route ->
-            composable(
-                route.route,
-                route.arguments,
-                content = {
-                    SearchScreen(
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                },
-            )
-        }
-
-        Route.Notification.let { route ->
-            composable(
-                route.route,
-                route.arguments,
-                content = {
-                    NotificationScreen(
-                        notifFeedContentState = accountViewModel.feedStates.notifications,
-                        notifSummaryState = accountViewModel.feedStates.notificationSummary,
-                        sharedPreferencesViewModel = sharedPreferencesViewModel,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                },
-            )
-        }
-
-        composable(Route.BlockedUsers.route, content = { HiddenUsersScreen(accountViewModel, nav) })
-        composable(Route.Bookmarks.route, content = { BookmarkListScreen(accountViewModel, nav) })
-        composable(Route.Drafts.route, content = { DraftListScreen(accountViewModel, nav) })
-
-        Route.ContentDiscovery.let { route ->
-            composable(
-                route.route,
-                route.arguments,
-                content = {
-                    it.arguments?.getString("id")?.let { id ->
-                        NIP90ContentDiscoveryScreen(
-                            appDefinitionEventId = id,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
-                },
-            )
-        }
-
-        Route.Profile.let { route ->
-            composable(
-                route.route,
-                route.arguments,
-                content = {
-                    ProfileScreen(
-                        userId = it.arguments?.getString("id"),
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                },
-            )
-        }
-
-        Route.Note.let { route ->
-            composable(
-                route.route,
-                route.arguments,
-                content = {
-                    ThreadScreen(
-                        noteId = it.arguments?.getString("id"),
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                },
-            )
-        }
-
-        Route.Hashtag.let { route ->
-            composable(
-                route.route,
-                route.arguments,
-                content = {
-                    HashtagScreen(
-                        tag = it.arguments?.getString("id"),
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                },
-            )
-        }
-
-        Route.Geohash.let { route ->
-            composable(
-                route.route,
-                route.arguments,
-                content = {
-                    GeoHashScreen(
-                        tag = it.arguments?.getString("id"),
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                },
-            )
-        }
-
-        Route.Community.let { route ->
-            composable(
-                route.route,
-                route.arguments,
-                content = {
-                    CommunityScreen(
-                        aTagHex = it.arguments?.getString("id"),
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                },
-            )
-        }
-
-        Route.Room.let { route ->
-            composable(
-                route.route,
-                route.arguments,
-                content = {
-                    val decodedMessage =
-                        it.arguments?.getString("message")?.let {
-                            URLDecoder.decode(it, "utf-8")
-                        }
-                    ChatroomScreen(
-                        roomId = it.arguments?.getString("id"),
-                        draftMessage = decodedMessage,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                },
-            )
-        }
-
-        Route.RoomByAuthor.let { route ->
-            composable(
-                route.route,
-                route.arguments,
-                content = {
-                    ChatroomScreenByAuthor(
-                        authorPubKeyHex = it.arguments?.getString("id"),
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                },
-            )
-        }
-
-        Route.Channel.let { route ->
-            composable(
-                route.route,
-                route.arguments,
-                content = {
-                    ChannelScreen(
-                        channelId = it.arguments?.getString("id"),
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                },
-            )
-        }
-
-        Route.Event.let { route ->
-            composable(
-                route.route,
-                route.arguments,
-                content = {
-                    LoadRedirectScreen(
-                        eventId = it.arguments?.getString("id"),
-                        accountViewModel = accountViewModel,
-                        navController = navController,
-                    )
-                },
-            )
-        }
-
-        Route.Settings.let { route ->
-            composable(
-                route.route,
-                route.arguments,
-                content = {
-                    SettingsScreen(
-                        sharedPreferencesViewModel,
-                    )
-                },
-            )
+            }
         }
     }
 
+    NavigateIfIntentRequested(nav.controller, accountViewModel)
+
+    DisplayErrorMessages(accountViewModel)
+    DisplayNotifyMessages(accountViewModel, nav)
+}
+
+@Composable
+private fun NavigateIfIntentRequested(
+    navController: NavHostController,
+    accountViewModel: AccountViewModel,
+) {
     val activity = LocalContext.current.getActivity()
 
     var currentIntentNextPage by remember {
@@ -396,6 +334,8 @@ fun AppNavigation(
             currentIntentNextPage = null
         }
     }
+
+    val scope = rememberCoroutineScope()
 
     DisposableEffect(activity) {
         val consumer =
@@ -452,3 +392,9 @@ private fun isSameRoute(
 
     return false
 }
+
+val slideInHorizontallyFromEnd = slideInHorizontally(animationSpec = tween(), initialOffsetX = { it })
+val slideOutHorizontallyToEnd = slideOutHorizontally(animationSpec = tween(), targetOffsetX = { it })
+
+val scaleIn = scaleIn(animationSpec = tween(), initialScale = 0.9f)
+val scaleOut = scaleOut(animationSpec = tween(), targetScale = 0.9f)

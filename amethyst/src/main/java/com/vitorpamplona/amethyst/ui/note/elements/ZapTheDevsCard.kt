@@ -66,6 +66,8 @@ import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
@@ -88,6 +90,7 @@ import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.events.Event
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -171,7 +174,7 @@ fun ZapTheDevsCardPreview() {
                 ZapTheDevsCard(
                     releaseNote,
                     accountViewModel,
-                    nav = {},
+                    nav = EmptyNav,
                 )
             }
         }
@@ -182,7 +185,7 @@ fun ZapTheDevsCardPreview() {
 fun ZapTheDevsCard(
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val releaseNoteState by baseNote.live().metadata.observeAsState()
     val releaseNote = releaseNoteState?.note ?: return
@@ -227,7 +230,7 @@ fun ZapTheDevsCard(
                                 append("#value4value")
                             }
                         },
-                    onClick = { nav("Hashtag/value4value") },
+                    onClick = { nav.nav("Hashtag/value4value") },
                 )
 
                 Spacer(modifier = StdVertSpacer)
@@ -248,7 +251,7 @@ fun ZapTheDevsCard(
                                     }
                                     append(" " + stringRes(id = R.string.brought_to_you_by))
                                 },
-                            onClick = { nav(route) },
+                            onClick = { nav.nav(route) },
                         )
                     } else {
                         Text(stringRes(id = R.string.this_version_brought_to_you_by))
@@ -285,9 +288,9 @@ fun ZapDonationButton(
     iconSize: Dp = Size35dp,
     iconSizeModifier: Modifier = Size20Modifier,
     animationSize: Dp = 14.dp,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
-    var wantsToZap by remember { mutableStateOf<List<Long>?>(null) }
+    var wantsToZap by remember { mutableStateOf<ImmutableList<Long>?>(null) }
     var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
     var wantsToPay by
         remember(baseNote) {
@@ -311,7 +314,7 @@ fun ZapDonationButton(
                 onZappingProgress = { progress: Float ->
                     scope.launch { zappingProgress = progress }
                 },
-                onMultipleChoices = { options -> wantsToZap = options },
+                onMultipleChoices = { options -> wantsToZap = options.toImmutableList() },
                 onError = { _, message ->
                     scope.launch {
                         zappingProgress = 0f
@@ -323,9 +326,10 @@ fun ZapDonationButton(
         },
         modifier = Modifier.fillMaxWidth(),
     ) {
-        if (wantsToZap != null) {
+        wantsToZap?.let {
             ZapAmountChoicePopup(
                 baseNote = baseNote,
+                zapAmountChoices = it,
                 popupYOffset = iconSize,
                 accountViewModel = accountViewModel,
                 onDismiss = {
@@ -356,7 +360,7 @@ fun ZapDonationButton(
                     baseNote.author?.let {
                         scope.launch(Dispatchers.IO) {
                             val route = routeToMessage(it, showErrorMessageDialog, accountViewModel)
-                            nav(route)
+                            nav.nav(route)
                         }
                     }
                 },

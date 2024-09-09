@@ -116,11 +116,15 @@ import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.ServerOption
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.components.CompressorQuality
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
+import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
@@ -135,6 +139,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CrossfadeCheckIfUrlIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -182,7 +187,28 @@ import java.util.Locale
 fun ChannelScreen(
     channelId: String?,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
+) {
+    if (channelId == null) return
+
+    DisappearingScaffold(
+        isInvertedLayout = true,
+        topBar = {
+            ChannelTopBar(channelId, accountViewModel, nav)
+        },
+        accountViewModel = accountViewModel,
+    ) {
+        Column(Modifier.padding(it)) {
+            Channel(channelId, accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
+fun Channel(
+    channelId: String?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     if (channelId == null) return
 
@@ -200,7 +226,7 @@ fun ChannelScreen(
 fun PrepareChannelViewModels(
     baseChannel: Channel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val feedViewModel: NostrChannelFeedViewModel =
         viewModel(
@@ -231,7 +257,7 @@ fun ChannelScreen(
     feedViewModel: NostrChannelFeedViewModel,
     newPostModel: NewPostViewModel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val context = LocalContext.current
 
@@ -328,6 +354,30 @@ fun ChannelScreen(
     }
 }
 
+@Composable
+private fun ChannelTopBar(
+    id: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadChannel(baseChannelHex = id, accountViewModel) { baseChannel ->
+        TopBarExtensibleWithBackButton(
+            title = {
+                ShortChannelHeader(
+                    baseChannel = baseChannel,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    showFlag = true,
+                )
+            },
+            extendableRow = {
+                LongChannelHeader(baseChannel = baseChannel, accountViewModel = accountViewModel, nav = nav)
+            },
+            popBack = nav::popBack,
+        )
+    }
+}
+
 private suspend fun innerSendPost(
     replyTo: MutableState<Note?>,
     channel: Channel,
@@ -375,7 +425,7 @@ private suspend fun innerSendPost(
 fun DisplayReplyingToNote(
     replyingNote: Note?,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     onCancel: () -> Unit,
 ) {
     Row(
@@ -466,6 +516,8 @@ fun EditFieldRow(
                         galleryUri = it,
                         alt = null,
                         sensitiveContent = false,
+                        // Use MEDIUM quality
+                        mediaQuality = MediaCompressor().compressorQualityToInt(CompressorQuality.MEDIUM),
                         server = ServerOption(accountViewModel.account.settings.defaultFileServer, false),
                         onError = accountViewModel::toast,
                         context = context,
@@ -501,7 +553,7 @@ fun MyTextField(
     isError: Boolean = false,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    keyboardActions: KeyboardActions = KeyboardActions(),
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
     singleLine: Boolean = false,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
@@ -527,7 +579,6 @@ fun MyTextField(
 ) {
     // COPIED FROM TEXT FIELD
     // The only change is the contentPadding below
-
     val textColor =
         textStyle.color.takeOrElse {
             val focused by interactionSource.collectIsFocusedAsState()
@@ -597,7 +648,7 @@ fun RenderChannelHeader(
     sendToChannel: Boolean,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     ChannelHeader(
         channelNote = channelNote,
@@ -616,7 +667,7 @@ fun ChannelHeader(
     sendToChannel: Boolean,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val channelHex by remember { derivedStateOf { channelNote.channelHex() } }
     channelHex?.let {
@@ -639,7 +690,7 @@ fun ChannelHeader(
     sendToChannel: Boolean = false,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     LoadChannel(channelHex, accountViewModel) {
         ChannelHeader(
@@ -662,7 +713,7 @@ fun ChannelHeader(
     sendToChannel: Boolean = false,
     modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     Column(Modifier.fillMaxWidth()) {
         if (showVideo && baseChannel is LiveActivitiesChannel) {
@@ -676,7 +727,7 @@ fun ChannelHeader(
             modifier =
                 modifier.clickable {
                     if (sendToChannel) {
-                        nav(routeFor(baseChannel))
+                        nav.nav(routeFor(baseChannel))
                     } else {
                         expanded.value = !expanded.value
                     }
@@ -758,7 +809,7 @@ fun ShowVideoStreaming(
 fun ShortChannelHeader(
     baseChannel: Channel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
     showFlag: Boolean,
 ) {
     val channelState by baseChannel.live.observeAsState()
@@ -827,7 +878,7 @@ fun LongChannelHeader(
     baseChannel: Channel,
     lineModifier: Modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val channelState by baseChannel.live.observeAsState()
     val channel = channelState?.channel ?: return
@@ -946,7 +997,7 @@ fun LongChannelHeader(
 
         participantUsers.forEach {
             Row(
-                lineModifier.clickable { nav("User/${it.second.pubkeyHex}") },
+                lineModifier.clickable { nav.nav("User/${it.second.pubkeyHex}") },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 it.first.role?.let { it1 ->
@@ -988,7 +1039,7 @@ fun NormalTimeAgo(
 private fun ShortChannelActionOptions(
     channel: PublicChatChannel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     LoadNote(baseNoteHex = channel.idHex, accountViewModel) {
         it?.let {
@@ -1041,7 +1092,7 @@ private fun WatchChannelFollows(
 private fun LongChannelActionOptions(
     channel: PublicChatChannel,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val isMe by
         remember(accountViewModel) {
@@ -1064,7 +1115,7 @@ private fun LiveChannelActionOptions(
     channel: LiveActivitiesChannel,
     showFlag: Boolean = true,
     accountViewModel: AccountViewModel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val isLive by remember(channel) { derivedStateOf { channel.info?.status() == STATUS_LIVE } }
 
@@ -1235,7 +1286,7 @@ private fun EditButton(
 fun JoinChatButton(
     accountViewModel: AccountViewModel,
     channel: Channel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -1252,7 +1303,7 @@ fun JoinChatButton(
 fun LeaveChatButton(
     accountViewModel: AccountViewModel,
     channel: Channel,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -1269,7 +1320,7 @@ fun LeaveChatButton(
 fun JoinCommunityButton(
     accountViewModel: AccountViewModel,
     note: AddressableNote,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -1291,7 +1342,7 @@ fun JoinCommunityButton(
 fun LeaveCommunityButton(
     accountViewModel: AccountViewModel,
     note: AddressableNote,
-    nav: (String) -> Unit,
+    nav: INav,
 ) {
     val scope = rememberCoroutineScope()
 
