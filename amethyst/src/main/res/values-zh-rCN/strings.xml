@@ -519,6 +519,7 @@
     <string name="automatically_play_videos_description">自动播放视频和 GIF</string>
     <string name="automatically_show_url_preview_description">显示 URL 预览</string>
     <string name="load_image_description">何时加载图像</string>
+    <string name="copy_stack_to_clipboard">复制 Stack</string>
     <string name="copy_to_clipboard">复制到剪贴板</string>
     <string name="copy_npub_to_clipboard">复制 npub 到剪贴板</string>
     <string name="share_or_save">分享或保存</string>
@@ -667,6 +668,11 @@
     <string name="could_not_prepare_header">无法准备头部信息：%1$s</string>
     <string name="compression_cancelled">压缩已取消</string>
     <string name="compression_returned_null">压缩返回的文件失败</string>
+    <string name="media_compression_quality_label">媒体质量</string>
+    <string name="media_compression_quality_explainer">选择「低质量」来将你的媒体文件压缩到较小体积，或者选择「高质量」来将你的媒体文件压缩到较大体积。</string>
+    <string name="media_compression_quality_low">低质量</string>
+    <string name="media_compression_quality_medium">中等质量</string>
+    <string name="media_compression_quality_high">高质量</string>
     <string name="edit_draft">编辑草稿</string>
     <string name="login_with_qr_code">使用二维码登录</string>
     <string name="route">路径</string>
@@ -818,4 +824,5 @@
     <string name="torrent_download">下载</string>
     <string name="torrent_failure">打开文件失败</string>
     <string name="torrent_no_apps">没有用于打开和下载文件的 Torrent 客户端</string>
+    <string name="select_list_to_filter">选择一个用于过滤订阅源的列表</string>
 </resources>
