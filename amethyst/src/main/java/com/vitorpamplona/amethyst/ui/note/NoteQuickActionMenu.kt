@@ -206,6 +206,7 @@ fun NoteQuickActionMenu(
     if (editDraftDialog.value) {
         NewPostView(
             onClose = {
+                onDismiss()
                 editDraftDialog.value = false
             },
             accountViewModel = accountViewModel,
@@ -427,7 +428,6 @@ private fun RenderMainPopup(
                             Icons.Default.Edit,
                             stringRes(R.string.edit_draft),
                         ) {
-                            onDismiss()
                             onWantsToEditDraft()
                         }
                     } else {
