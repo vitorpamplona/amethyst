@@ -91,7 +91,7 @@
     <string name="about_us">"Informacja o grupie.. "</string>
     <string name="what_s_on_your_mind">Co masz na myśli?</string>
     <string name="post">Wyślij</string>
-    <string name="save">OK</string>
+    <string name="save">Zapisz</string>
     <string name="create">Utwórz</string>
     <string name="cancel">Anuluj</string>
     <string name="failed_to_upload_the_image">Nie udało się przesłać obrazu</string>
@@ -119,7 +119,7 @@
     <string name="ln_address">LN Adres</string>
     <string name="ln_url_outdated">Adres URL LN (nieaktualny)</string>
     <string name="save_to_gallery">Zapisz w galerii</string>
-    <string name="image_saved_to_the_gallery">Zdjęcie zapisane w galerii</string>
+    <string name="image_saved_to_the_gallery">Zdjęcie zostało zapisane w galerii</string>
     <string name="failed_to_save_the_image">Nie udało się zapisać zdjęcia</string>
     <string name="upload_image">Dodaj zdjęcie</string>
     <string name="uploading">Wgrywanie…</string>
@@ -519,6 +519,7 @@
     <string name="automatically_play_videos_description">Automatycznie odtwarzaj filmy i pliki GIF</string>
     <string name="automatically_show_url_preview_description">Pokaż podgląd linków</string>
     <string name="load_image_description">Kiedy załadować obrazki</string>
+    <string name="copy_stack_to_clipboard">Skopiuj</string>
     <string name="copy_to_clipboard">Kopiuj do schowka</string>
     <string name="copy_npub_to_clipboard">Kopiuj npub do schowka</string>
     <string name="share_or_save">Udostępnij lub Zapisz</string>
@@ -667,6 +668,11 @@
     <string name="could_not_prepare_header">Nie można przygotować informacji nagłówkowych: %1$s</string>
     <string name="compression_cancelled">Kompresja anulowana</string>
     <string name="compression_returned_null">Kompresja nie powiodła się przy zwracaniu pliku</string>
+    <string name="media_compression_quality_label">Jakość Załącznika</string>
+    <string name="media_compression_quality_explainer">Wybierz Niską jakość, aby skompresować media do mniejszego pliku o mniejszej jakości lub wybierz Wysoką jakość, aby skompresować do większego pliku o wyższej jakości.</string>
+    <string name="media_compression_quality_low">Niska</string>
+    <string name="media_compression_quality_medium">Średnia</string>
+    <string name="media_compression_quality_high">Wysoka</string>
     <string name="edit_draft">Edytuj wersję roboczą</string>
     <string name="login_with_qr_code">Zaloguj się przy użyciu QR kodu</string>
     <string name="route">Ścieżka</string>
@@ -684,7 +690,7 @@
     <string name="open_all_reactions_to_this_post">Otwórz wszystkie odzewy na ten post</string>
     <string name="close_all_reactions_to_this_post">Zamknij wszystkie odzewy na ten post</string>
     <string name="reply_description">Odpowiedz</string>
-    <string name="boost_or_quote_description">Zrepostuj lub Zacytuj</string>
+    <string name="boost_or_quote_description">Wypromuj lub Zacytuj</string>
     <string name="like_description">Lubię</string>
     <string name="zap_description">Zap</string>
     <string name="change_reaction">Zmień odzew</string>
@@ -818,4 +824,5 @@
     <string name="torrent_download">Pobierz</string>
     <string name="torrent_failure">Nie udało się otworzyć pliku</string>
     <string name="torrent_no_apps">Brak zainstalowanych aplikacji torrent do otwarcia i pobrania pliku.</string>
+    <string name="select_list_to_filter">Wybierz listę, aby filtrować kanał</string>
 </resources>

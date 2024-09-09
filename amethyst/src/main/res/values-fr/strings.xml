@@ -400,7 +400,7 @@
     <string name="content_warning_show_all_sensitive_content">Toujours afficher les contenus sensibles</string>
     <string name="content_warning_see_warnings">Toujours afficher les avertissements de contenu</string>
     <string name="recommended_apps">Recommendations: </string>
-    <string name="filter_spam_from_strangers">Filtrer le spam des étrangers</string>
+    <string name="filter_spam_from_strangers">Filtrer le spam des inconnus</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Avertir lorsque les messages ont été rapportés par vos abonnés</string>
     <string name="new_reaction_symbol">Nouveau symbole de réaction</string>
     <string name="no_reaction_type_setup_long_press_to_change">Aucun type de réaction sélectionné. Appuyer longuement pour changer</string>
