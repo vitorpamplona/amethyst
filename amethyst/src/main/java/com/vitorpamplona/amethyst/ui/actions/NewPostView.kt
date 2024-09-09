@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.Manifest
+import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
@@ -644,10 +645,28 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
     }
 }
 
+fun getPhotoUri(context: Context): Uri {
+    val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+    val storageDir: File? = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+    return File
+        .createTempFile(
+            "JPEG_${timeStamp}_",
+            ".jpg",
+            storageDir,
+        ).let {
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider",
+                it,
+            )
+        }
+}
+
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun TakePictureButton(onPictureTaken: (Uri) -> Unit) {
     var imageUri by remember { mutableStateOf<Uri?>(null) }
+    val scope = rememberCoroutineScope()
     val launcher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.TakePicture(),
@@ -662,6 +681,14 @@ fun TakePictureButton(onPictureTaken: (Uri) -> Unit) {
     val cameraPermissionState =
         rememberPermissionState(
             Manifest.permission.CAMERA,
+            onPermissionResult = {
+                if (it) {
+                    scope.launch(Dispatchers.IO) {
+                        imageUri = getPhotoUri(context)
+                        imageUri?.let { uri -> launcher.launch(uri) }
+                    }
+                }
+            },
         )
 
     Box {
@@ -669,23 +696,9 @@ fun TakePictureButton(onPictureTaken: (Uri) -> Unit) {
             modifier = Modifier.align(Alignment.Center),
             onClick = {
                 if (cameraPermissionState.status.isGranted) {
-                    val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-                    val storageDir: File? = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-                    File
-                        .createTempFile(
-                            "JPEG_${timeStamp}_",
-                            ".jpg",
-                            storageDir,
-                        ).apply {
-                            imageUri =
-                                FileProvider.getUriForFile(
-                                    context,
-                                    "${context.packageName}.provider",
-                                    this,
-                                )
-                        }
-                    imageUri?.let {
-                        launcher.launch(it)
+                    scope.launch(Dispatchers.IO) {
+                        imageUri = getPhotoUri(context)
+                        imageUri?.let { uri -> launcher.launch(uri) }
                     }
                 } else {
                     cameraPermissionState.launchPermissionRequest()
