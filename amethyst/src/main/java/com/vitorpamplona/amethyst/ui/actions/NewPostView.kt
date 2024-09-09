@@ -21,11 +21,9 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.Manifest
-import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
-import android.os.Environment
 import android.util.Log
 import android.util.Size
 import android.widget.Toast
@@ -123,7 +121,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -189,11 +186,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import java.io.File
 import java.lang.Math.round
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
@@ -643,23 +636,6 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
             postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
         }
     }
-}
-
-fun getPhotoUri(context: Context): Uri {
-    val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-    val storageDir: File? = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-    return File
-        .createTempFile(
-            "JPEG_${timeStamp}_",
-            ".jpg",
-            storageDir,
-        ).let {
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.provider",
-                it,
-            )
-        }
 }
 
 @OptIn(ExperimentalPermissionsApi::class)
