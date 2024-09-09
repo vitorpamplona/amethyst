@@ -516,6 +516,7 @@
     <string name="automatically_play_videos_description">A videók és a GIF-ek automatikus lejátszása</string>
     <string name="automatically_show_url_preview_description">URL előnézetek megjelenítése</string>
     <string name="load_image_description">Mikor kell a képeket betölteni</string>
+    <string name="copy_stack_to_clipboard">Köteg másolása</string>
     <string name="copy_to_clipboard">Másolás a vágólapra</string>
     <string name="copy_npub_to_clipboard">Npub másolása a vágólapra</string>
     <string name="share_or_save">Megosztás vagy Mentés</string>
@@ -664,6 +665,11 @@
     <string name="could_not_prepare_header">Nem sikerült előkészíteni a fejléc információkat: %1$s</string>
     <string name="compression_cancelled">Tömörítés megszakítva</string>
     <string name="compression_returned_null">A tömörítés nem tudott visszaadni egy fájlt</string>
+    <string name="media_compression_quality_label">Média Minősége</string>
+    <string name="media_compression_quality_explainer">Válasszd az Alacsony minőség lehetőséget, ha a médiát gyengébb minőségben kisebb fájlba szeretnéd tömöríteni, vagy válasszd a Magas minőség lehetőséget, ha jobb minőségben nagyobb fájlba szeretnéd tömöríteni.</string>
+    <string name="media_compression_quality_low">Alacsony</string>
+    <string name="media_compression_quality_medium">Közepes</string>
+    <string name="media_compression_quality_high">Magas</string>
     <string name="edit_draft">Piszkozat szerkesztése</string>
     <string name="login_with_qr_code">Bejelentkezés QR kóddal</string>
     <string name="route">Útvonal</string>
@@ -815,4 +821,5 @@
     <string name="torrent_download">Letöltés</string>
     <string name="torrent_failure">Nem sikerült megnyitni a fájlt</string>
     <string name="torrent_no_apps">A fájl megnyitásához és letöltéséhez nincsenek torrentalkalmazások telepítve.</string>
+    <string name="select_list_to_filter">Válassz egy listát a hírcsatorna szűréséhez</string>
 </resources>
