@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
+import android.content.Context
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -52,6 +54,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -60,6 +63,10 @@ import com.vitorpamplona.amethyst.ui.GetMediaActivityResultContract
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -123,6 +130,23 @@ private fun UploadBoxButton(
             }
         }
     }
+}
+
+fun getPhotoUri(context: Context): Uri {
+    val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+    val storageDir: File? = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+    return File
+        .createTempFile(
+            "JPEG_${timeStamp}_",
+            ".jpg",
+            storageDir,
+        ).let {
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider",
+                it,
+            )
+        }
 }
 
 val DefaultAnimationColors =

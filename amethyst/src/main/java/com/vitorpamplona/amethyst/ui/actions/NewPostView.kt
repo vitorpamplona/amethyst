@@ -27,6 +27,8 @@ import android.os.Build
 import android.util.Log
 import android.util.Size
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -56,6 +58,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.LocationOn
@@ -118,6 +121,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -197,6 +201,7 @@ fun NewPostView(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
     val postViewModel: NewPostViewModel = viewModel()
     postViewModel.wantsDirectMessage = enableMessageInterface
 
@@ -206,6 +211,9 @@ fun NewPostView(
     val scope = rememberCoroutineScope()
     var showRelaysDialog by remember { mutableStateOf(false) }
     var relayList = remember { accountViewModel.account.activeWriteRelays().toImmutableList() }
+    var showCamera by remember {
+        mutableStateOf(true)
+    }
 
     LaunchedEffect(key1 = postViewModel.draftTag) {
         launch(Dispatchers.IO) {
@@ -563,7 +571,6 @@ fun NewPostView(
 @Composable
 private fun BottomRowActions(postViewModel: NewPostViewModel) {
     val scrollState = rememberScrollState()
-
     Row(
         modifier =
             Modifier
@@ -579,6 +586,12 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
         ) {
             postViewModel.selectImage(it)
         }
+
+        TakePictureButton(
+            onPictureTaken = {
+                postViewModel.selectImage(it)
+            },
+        )
 
         if (postViewModel.canUsePoll) {
             // These should be hashtag recommendations the user selects in the future.
@@ -621,6 +634,59 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
 
         ForwardZapTo(postViewModel) {
             postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
+        }
+    }
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun TakePictureButton(onPictureTaken: (Uri) -> Unit) {
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    val scope = rememberCoroutineScope()
+    val launcher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.TakePicture(),
+        ) { success ->
+            if (success) {
+                imageUri?.let {
+                    onPictureTaken(it)
+                }
+            }
+        }
+    val context = LocalContext.current
+    val cameraPermissionState =
+        rememberPermissionState(
+            Manifest.permission.CAMERA,
+            onPermissionResult = {
+                if (it) {
+                    scope.launch(Dispatchers.IO) {
+                        imageUri = getPhotoUri(context)
+                        imageUri?.let { uri -> launcher.launch(uri) }
+                    }
+                }
+            },
+        )
+
+    Box {
+        IconButton(
+            modifier = Modifier.align(Alignment.Center),
+            onClick = {
+                if (cameraPermissionState.status.isGranted) {
+                    scope.launch(Dispatchers.IO) {
+                        imageUri = getPhotoUri(context)
+                        imageUri?.let { uri -> launcher.launch(uri) }
+                    }
+                } else {
+                    cameraPermissionState.launchPermissionRequest()
+                }
+            },
+        ) {
+            Icon(
+                imageVector = Icons.Default.CameraAlt,
+                contentDescription = stringRes(id = R.string.upload_image),
+                modifier = Modifier.height(25.dp),
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
         }
     }
 }

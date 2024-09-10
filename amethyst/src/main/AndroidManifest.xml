@@ -16,6 +16,9 @@
     <!-- To connect with relays -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- To take pictures -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
     <!-- To Upload media (newer devices) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
@@ -120,6 +123,16 @@
                 <action android:name="android.media.browse.MediaBrowserService"/>
             </intent-filter>
         </service>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 
