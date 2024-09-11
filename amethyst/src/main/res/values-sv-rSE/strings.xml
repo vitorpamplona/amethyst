@@ -666,10 +666,11 @@
     <string name="compression_cancelled">Komprimering avbruten</string>
     <string name="compression_returned_null">Komprimering misslyckades att returnera en fil</string>
     <string name="media_compression_quality_label">Mediakvalitet</string>
-    <string name="media_compression_quality_explainer">Välj Låg kvalitet för att komprimera ditt media till en mindre fil med lägre kvalitet, eller välj Hög kvalitet för att komprimera till en större fil med högre kvalitet.</string>
+    <string name="media_compression_quality_explainer">Välj Låg kvalitet för att komprimera ditt media till en mindre fil med lägre kvalitet, Hög kvalitet för att komprimera till en större fil med högre kvalitet eller Okomprimerad för att ladda upp media utan kompression.</string>
     <string name="media_compression_quality_low">Låg</string>
     <string name="media_compression_quality_medium">Medel</string>
     <string name="media_compression_quality_high">Hög</string>
+    <string name="media_compression_quality_uncompressed">Okomprimerad</string>
     <string name="edit_draft">Redigera utkast</string>
     <string name="login_with_qr_code">Logga in med QR-kod</string>
     <string name="route">Rutt</string>

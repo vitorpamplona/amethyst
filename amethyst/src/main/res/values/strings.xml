@@ -794,10 +794,11 @@
     <string name="compression_returned_null">Compression failed to return a file</string>
 
     <string name="media_compression_quality_label">Media Quality</string>
-    <string name="media_compression_quality_explainer">Select Low quality to compress your media to a smaller file with less quality or select High quality to compress to a larger file with higher quality.</string>
+    <string name="media_compression_quality_explainer">Select Low quality to compress your media to a smaller file with less quality, High quality to compress to a larger file with higher quality or Uncompressed to upload the media without compression.</string>
     <string name="media_compression_quality_low">Low</string>
     <string name="media_compression_quality_medium">Medium</string>
     <string name="media_compression_quality_high">High</string>
+    <string name="media_compression_quality_uncompressed">Uncompressed</string>
 
     <string name="edit_draft">Edit draft</string>
 

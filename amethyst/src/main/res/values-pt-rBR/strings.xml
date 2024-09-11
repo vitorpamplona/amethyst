@@ -667,10 +667,11 @@
     <string name="compression_cancelled">Compressão cancelada</string>
     <string name="compression_returned_null">Compressão falhou ao retornar um arquivo</string>
     <string name="media_compression_quality_label">Qualidade de Mídia</string>
-    <string name="media_compression_quality_explainer">Selecione Baixa qualidade para comprimir sua mídia para um arquivo menor com menor qualidade ou selecione Alta qualidade para comprimir para um arquivo maior com maior qualidade.</string>
+    <string name="media_compression_quality_explainer">Selecione Baixa qualidade para comprimir sua mídia para um arquivo menor com menor qualidade, Alta qualidade para comprimir para um arquivo maior com maior qualidade ou "Sem compressão" para carregar a mídia sem compressão.</string>
     <string name="media_compression_quality_low">Baixa</string>
     <string name="media_compression_quality_medium">Média</string>
     <string name="media_compression_quality_high">Alta</string>
+    <string name="media_compression_quality_uncompressed">Sem compressão</string>
     <string name="edit_draft">Editar rascunho</string>
     <string name="login_with_qr_code">Entrar com Código QR</string>
     <string name="route">Rota</string>

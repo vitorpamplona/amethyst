@@ -210,7 +210,7 @@ fun NewMediaView(
                                     text = stringRes(context, R.string.media_compression_quality_explainer),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.Gray,
-                                    maxLines = 4,
+                                    maxLines = 5,
                                     overflow = TextOverflow.Ellipsis,
                                 )
                             }
@@ -227,7 +227,7 @@ fun NewMediaView(
                                                 0 -> stringRes(R.string.media_compression_quality_low)
                                                 1 -> stringRes(R.string.media_compression_quality_medium)
                                                 2 -> stringRes(R.string.media_compression_quality_high)
-                                                3 -> "UNCOMPRESSED"
+                                                3 -> stringRes(R.string.media_compression_quality_uncompressed)
                                                 else -> stringRes(R.string.media_compression_quality_medium)
                                             },
                                         modifier = Modifier.align(Alignment.Center),
