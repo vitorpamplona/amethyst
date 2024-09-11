@@ -5,7 +5,7 @@
     <string name="profile_image">Profielfoto</string>
     <string name="your_profile_image">Jouw profielfoto</string>
     <string name="scan_qr">Scan QR</string>
-    <string name="show_anyway">Laat toch zien</string>
+    <string name="show_anyway">Toch tonen</string>
     <string name="post_was_hidden">Dit bericht is verborgen omdat het je verborgen gebruikers of woorden noemt</string>
     <string name="post_was_flagged_as_inappropriate_by">Bericht gemarkeerd als ongepast door</string>
     <string name="post_not_found">Bericht niet gevonden</string>
@@ -17,11 +17,11 @@
     <string name="explicit_content">Expliciete inhoud</string>
     <string name="spam">Spam</string>
     <string name="spam_description">Het nummer van spammende gebeurtenissen komende van deze relay</string>
-    <string name="impersonation">Imitatie</string>
+    <string name="impersonation">Impersonatie</string>
     <string name="illegal_behavior">Illegaal gedrag</string>
     <string name="other">Overige</string>
     <string name="unknown">Onbekend</string>
-    <string name="relay_icon">Relay icoon</string>
+    <string name="relay_icon">Relay-icoon</string>
     <string name="unknown_author">Onbekende auteur</string>
     <string name="copy_text">Kopieer tekst</string>
     <string name="copy_user_pubkey">Kopieer auteur ID</string>
@@ -34,7 +34,7 @@
     <string name="block_report">Blokkeren / Rapporteren</string>
     <string name="block_hide_user"><![CDATA[Blokkeer en verberg gebruiker]]></string>
     <string name="report_spam_scam">Meld spam / scam</string>
-    <string name="report_impersonation">Meld imitatie</string>
+    <string name="report_impersonation">Meld impersonatie</string>
     <string name="report_explicit_content">Rapporteer expliciete inhoud</string>
     <string name="report_illegal_behaviour">Rapporteer illegaal gedrag</string>
     <string name="report_malware">Rapporteer malware</string>
