@@ -979,4 +979,6 @@
     <string name="torrent_no_apps">No torrent apps installed to open and download the file.</string>
 
     <string name="select_list_to_filter">Select a list to filter the feed</string>
+
+    <string name="temporary_account">Log off on device lock</string>
 </resources>

@@ -48,6 +48,12 @@ object Nip19Bech32 {
         KIND(3),
     }
 
+    val nip19PlusNip46regex =
+        Pattern.compile(
+            "(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1|nembed1|ncryptsec1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)([\\S]*)",
+            Pattern.CASE_INSENSITIVE,
+        )
+
     val nip19regex =
         Pattern.compile(
             "(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1|nembed1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)([\\S]*)",
@@ -109,6 +115,26 @@ object Nip19Bech32 {
     data class NEmbed(
         val event: Event,
     ) : Entity
+
+    fun tryParseAndClean(uri: String?): String? {
+        if (uri == null) return null
+
+        try {
+            val matcher = nip19PlusNip46regex.matcher(uri)
+            if (!matcher.find()) {
+                return null
+            }
+
+            val type = matcher.group(2) // npub1
+            val key = matcher.group(3) // bech32
+
+            return type + key
+        } catch (e: Throwable) {
+            Log.e("NIP19 Parser", "Issue trying to Decode NIP19 $uri: ${e.message}", e)
+        }
+
+        return null
+    }
 
     fun uriToRoute(uri: String?): ParseReturn? {
         if (uri == null) return null

@@ -94,6 +94,7 @@ class AccountStateViewModel : ViewModel() {
         key: String,
         useProxy: Boolean,
         proxyPort: Int,
+        transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
     ) = withContext(Dispatchers.IO) {
@@ -121,6 +122,7 @@ class AccountStateViewModel : ViewModel() {
             if (loginWithExternalSigner) {
                 AccountSettings(
                     keyPair = KeyPair(pubKey = pubKeyParsed),
+                    transientAccount = transientAccount,
                     externalSignerPackageName = packageName.ifBlank { "com.greenart7c3.nostrsigner" },
                     proxy = proxy,
                     proxyPort = proxyPort,
@@ -128,24 +130,28 @@ class AccountStateViewModel : ViewModel() {
             } else if (key.startsWith("nsec")) {
                 AccountSettings(
                     keyPair = KeyPair(privKey = key.bechToBytes()),
+                    transientAccount = transientAccount,
                     proxy = proxy,
                     proxyPort = proxyPort,
                 )
             } else if (key.contains(" ") && CryptoUtils.isValidMnemonic(key)) {
                 AccountSettings(
                     keyPair = KeyPair(privKey = CryptoUtils.privateKeyFromMnemonic(key)),
+                    transientAccount = transientAccount,
                     proxy = proxy,
                     proxyPort = proxyPort,
                 )
             } else if (pubKeyParsed != null) {
                 AccountSettings(
                     keyPair = KeyPair(pubKey = pubKeyParsed),
+                    transientAccount = transientAccount,
                     proxy = proxy,
                     proxyPort = proxyPort,
                 )
             } else {
                 AccountSettings(
                     keyPair = KeyPair(Hex.decode(key)),
+                    transientAccount = transientAccount,
                     proxy = proxy,
                     proxyPort = proxyPort,
                 )
@@ -194,6 +200,7 @@ class AccountStateViewModel : ViewModel() {
         password: String,
         useProxy: Boolean,
         proxyPort: Int,
+        transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
         onError: (String?) -> Unit,
@@ -213,26 +220,20 @@ class AccountStateViewModel : ViewModel() {
                     onError("Could not decrypt key with provided password")
                     Log.e("Login", "Could not decrypt ncryptsec")
                 } else {
-                    loginSync(newKey, useProxy, proxyPort, loginWithExternalSigner, packageName) {
-                        onError(null)
-                    }
+                    loginSync(newKey, useProxy, proxyPort, transientAccount, loginWithExternalSigner, packageName, onError)
                 }
             } else if (EMAIL_PATTERN.matcher(key).matches()) {
                 Nip05NostrAddressVerifier().verifyNip05(
                     key,
                     onSuccess = { publicKey ->
-                        loginSync(Hex.decode(publicKey).toNpub(), useProxy, proxyPort, loginWithExternalSigner, packageName) {
-                            onError(null)
-                        }
+                        loginSync(Hex.decode(publicKey).toNpub(), useProxy, proxyPort, transientAccount, loginWithExternalSigner, packageName, onError)
                     },
                     onError = {
                         onError(it)
                     },
                 )
             } else {
-                loginSync(key, useProxy, proxyPort, loginWithExternalSigner, packageName) {
-                    onError(null)
-                }
+                loginSync(key, useProxy, proxyPort, transientAccount, loginWithExternalSigner, packageName, onError)
             }
         }
     }
@@ -241,12 +242,13 @@ class AccountStateViewModel : ViewModel() {
         key: String,
         useProxy: Boolean,
         proxyPort: Int,
+        transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
-        onError: () -> Unit,
+        onError: (String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            loginSync(key, useProxy, proxyPort, loginWithExternalSigner, packageName, onError)
+            loginSync(key, useProxy, proxyPort, transientAccount, loginWithExternalSigner, packageName, onError)
         }
     }
 
@@ -254,16 +256,17 @@ class AccountStateViewModel : ViewModel() {
         key: String,
         useProxy: Boolean,
         proxyPort: Int,
+        transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
-        onError: () -> Unit,
+        onError: (String) -> Unit,
     ) {
         try {
-            loginAndStartUI(key, useProxy, proxyPort, loginWithExternalSigner, packageName)
+            loginAndStartUI(key, useProxy, proxyPort, transientAccount, loginWithExternalSigner, packageName)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("Login", "Could not sign in", e)
-            onError()
+            onError("Could not sign in: " + e.message)
         }
     }
 
@@ -273,12 +276,15 @@ class AccountStateViewModel : ViewModel() {
         name: String? = null,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
+            _accountContent.update { AccountState.Loading }
+
             val keyPair = KeyPair()
             val tempSigner = NostrSignerSync(keyPair)
 
             val accountSettings =
                 AccountSettings(
                     keyPair = keyPair,
+                    transientAccount = false,
                     backupUserMetadata = MetadataEvent.newUser(name, tempSigner),
                     backupContactList =
                         ContactListEvent.createFromScratch(

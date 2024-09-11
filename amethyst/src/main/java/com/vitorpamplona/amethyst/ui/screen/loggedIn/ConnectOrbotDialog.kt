@@ -35,7 +35,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,9 +62,9 @@ import kotlinx.coroutines.CancellationException
 @Composable
 fun ConnectOrbotDialog(
     onClose: () -> Unit,
-    onPost: () -> Unit,
+    onPost: (port: Int) -> Unit,
     onError: (String) -> Unit,
-    portNumber: MutableState<String>,
+    currentPortNumber: Int?,
 ) {
     Dialog(
         onDismissRequest = onClose,
@@ -74,6 +74,13 @@ fun ConnectOrbotDialog(
             Column(
                 modifier = Modifier.padding(10.dp),
             ) {
+                val proxyPort =
+                    remember {
+                        mutableStateOf(
+                            currentPortNumber?.toString() ?: "",
+                        )
+                    }
+
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
@@ -85,15 +92,16 @@ fun ConnectOrbotDialog(
 
                     UseOrbotButton(
                         onPost = {
-                            try {
-                                Integer.parseInt(portNumber.value)
-                            } catch (e: Exception) {
-                                if (e is CancellationException) throw e
-                                onError(toastMessage)
-                                return@UseOrbotButton
-                            }
+                            val port =
+                                try {
+                                    Integer.parseInt(proxyPort.value)
+                                } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
+                                    onError(toastMessage)
+                                    return@UseOrbotButton
+                                }
 
-                            onPost()
+                            onPost(port)
                         },
                         isActive = true,
                     )
@@ -137,8 +145,8 @@ fun ConnectOrbotDialog(
                         horizontalArrangement = Arrangement.Center,
                     ) {
                         OutlinedTextField(
-                            value = portNumber.value,
-                            onValueChange = { portNumber.value = it },
+                            value = proxyPort.value,
+                            onValueChange = { proxyPort.value = it },
                             keyboardOptions =
                                 KeyboardOptions.Default.copy(
                                     capitalization = KeyboardCapitalization.None,

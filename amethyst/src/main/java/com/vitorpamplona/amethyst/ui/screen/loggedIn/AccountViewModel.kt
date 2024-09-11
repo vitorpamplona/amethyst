@@ -26,7 +26,6 @@ import android.util.Log
 import android.util.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -1222,12 +1221,16 @@ class AccountViewModel(
         }
     }
 
-    fun enableTor(
-        checked: Boolean,
-        portNumber: MutableState<String>,
-    ) {
+    fun disableTor() {
         viewModelScope.launch(Dispatchers.IO) {
-            account.settings.updateProxy(checked, portNumber.value)
+            account.settings.disableProxy()
+            Amethyst.instance.serviceManager.forceRestart()
+        }
+    }
+
+    fun enableTor(portNumber: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.settings.enableProxy(portNumber)
             Amethyst.instance.serviceManager.forceRestart()
         }
     }
