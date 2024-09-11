@@ -43,13 +43,13 @@ jobs:
         run: ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: Debug APK
           path: amethyst/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload Test Results
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: Build Reports
           path: amethyst/build/reports
