@@ -1735,7 +1735,9 @@ fun ImageVideoDescription(
     }
     var message by remember { mutableStateOf("") }
     var sensitiveContent by remember { mutableStateOf(false) }
-    var mediaQualitySlider by remember { mutableIntStateOf(1) } // 0 = Low, 1 = Medium, 2 = High
+
+    // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
+    var mediaQualitySlider by remember { mutableIntStateOf(1) }
 
     Column(
         modifier =
@@ -1953,6 +1955,7 @@ fun ImageVideoDescription(
                                     0 -> stringRes(R.string.media_compression_quality_low)
                                     1 -> stringRes(R.string.media_compression_quality_medium)
                                     2 -> stringRes(R.string.media_compression_quality_high)
+                                    3 -> "UNCOMPRESSED"
                                     else -> stringRes(R.string.media_compression_quality_medium)
                                 },
                             modifier = Modifier.align(Alignment.Center),
@@ -1962,8 +1965,8 @@ fun ImageVideoDescription(
                     Slider(
                         value = mediaQualitySlider.toFloat(),
                         onValueChange = { mediaQualitySlider = it.toInt() },
-                        valueRange = 0f..2f,
-                        steps = 1,
+                        valueRange = 0f..3f,
+                        steps = 2,
                     )
                 }
             }
