@@ -672,7 +672,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="compression_cancelled">Komprimierung abgebrochen</string>
     <string name="compression_returned_null">Komprimierung fehlgeschlagen eine Datei zurückzugeben</string>
     <string name="media_compression_quality_label">Medienqualität</string>
-    <string name="media_compression_quality_explainer">Wählen Sie Niedrige Qualität, um Ihre Medien in eine kleinere Datei mit geringerer Qualität zu komprimieren, Hohe Qualität, um sie in eine größere Datei mit höherer Qualität zu komprimieren, oder "Ohne Kompression", um die Medien ohne Kompression hochzuladen.</string>
+    <string name="media_compression_quality_explainer">Wählen Sie Niedrige Qualität, um Ihre Medien in eine kleinere Datei mit geringerer Qualität zu komprimieren, Hohe Qualität, um sie in eine größere Datei mit höherer Qualität zu komprimieren, oder \"Ohne Kompression\", um die Medien ohne Kompression hochzuladen.</string>
     <string name="media_compression_quality_low">Niedrig</string>
     <string name="media_compression_quality_medium">Mittel</string>
     <string name="media_compression_quality_high">Hoch</string>
