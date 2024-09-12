@@ -673,6 +673,7 @@
     <string name="media_compression_quality_low">Basse</string>
     <string name="media_compression_quality_medium">Moyenne</string>
     <string name="media_compression_quality_high">Haute</string>
+    <string name="media_compression_quality_uncompressed">Non compressé</string>
     <string name="edit_draft">Modifier le brouillon</string>
     <string name="login_with_qr_code">Se connecter avec un QR Code</string>
     <string name="route">Route</string>
@@ -825,4 +826,5 @@
     <string name="torrent_failure">Échec de l\'ouverture du fichier</string>
     <string name="torrent_no_apps">Aucune application torrent installée pour ouvrir et télécharger le fichier.</string>
     <string name="select_list_to_filter">Sélectionnez une liste pour filtrer le fil</string>
+    <string name="temporary_account">Se déconnecter au verrouillage de l\'appareil</string>
 </resources>
