@@ -667,7 +667,7 @@
     <string name="compression_cancelled">Komprese zrušena</string>
     <string name="compression_returned_null">Komprese se nepodařilo vrátit soubor</string>
     <string name="media_compression_quality_label">Kvalita médií</string>
-    <string name="media_compression_quality_explainer">Vyberte Nízkou kvalitu pro kompresi médií na menší soubor s nižší kvalitou, Vysokou kvalitu pro kompresi na větší soubor s vyšší kvalitou, nebo "Bez komprese" pro nahrání médií bez komprese.</string>
+    <string name="media_compression_quality_explainer">Vyberte Nízkou kvalitu pro kompresi médií na menší soubor s nižší kvalitou, Vysokou kvalitu pro kompresi na větší soubor s vyšší kvalitou, nebo \"Bez komprese\" pro nahrání médií bez komprese.</string>
     <string name="media_compression_quality_low">Nízká</string>
     <string name="media_compression_quality_medium">Střední</string>
     <string name="media_compression_quality_high">Vysoká</string>
