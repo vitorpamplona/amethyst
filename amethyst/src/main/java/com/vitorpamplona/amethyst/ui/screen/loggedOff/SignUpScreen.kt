@@ -25,20 +25,18 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -53,13 +51,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -68,7 +62,6 @@ import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
@@ -100,7 +93,6 @@ fun SignUpPage(
     val acceptedTerms = remember { mutableStateOf(false) }
     var termsAcceptanceIsRequired by remember { mutableStateOf("") }
 
-    val uri = LocalUriHandler.current
     val context = LocalContext.current
     val useProxy = remember { mutableStateOf(false) }
     val proxyPort = remember { mutableStateOf("9050") }
@@ -111,6 +103,7 @@ fun SignUpPage(
         modifier =
             Modifier
                 .fillMaxSize()
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(Size20dp),
         verticalArrangement = Arrangement.Center,
@@ -176,39 +169,10 @@ fun SignUpPage(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(
-                checked = acceptedTerms.value,
-                onCheckedChange = { acceptedTerms.value = it },
-            )
-
-            val regularText = SpanStyle(color = MaterialTheme.colorScheme.onBackground)
-
-            val clickableTextStyle = SpanStyle(color = MaterialTheme.colorScheme.primary)
-
-            val annotatedTermsString =
-                buildAnnotatedString {
-                    withStyle(regularText) { append(stringRes(R.string.i_accept_the)) }
-
-                    withStyle(clickableTextStyle) {
-                        pushStringAnnotation("openTerms", "")
-                        append(stringRes(R.string.terms_of_use))
-                        pop()
-                    }
-                }
-
-            ClickableText(
-                text = annotatedTermsString,
-            ) { spanOffset ->
-                annotatedTermsString.getStringAnnotations(spanOffset, spanOffset).firstOrNull()?.also { span ->
-                    if (span.tag == "openTerms") {
-                        runCatching {
-                            uri.openUri("https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md")
-                        }
-                    }
-                }
-            }
-        }
+        AcceptTerms(
+            checked = acceptedTerms.value,
+            onCheckedChange = { acceptedTerms.value = it },
+        )
 
         if (termsAcceptanceIsRequired.isNotBlank()) {
             Text(
@@ -219,45 +183,29 @@ fun SignUpPage(
         }
 
         if (PackageUtils.isOrbotInstalled(context)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = useProxy.value,
-                    onCheckedChange = {
-                        if (it) {
-                            connectOrbotDialogOpen = true
-                        }
-                    },
-                )
-
-                Text(stringRes(R.string.connect_via_tor))
-            }
-
-            if (connectOrbotDialogOpen) {
-                ConnectOrbotDialog(
-                    onClose = { connectOrbotDialogOpen = false },
-                    onPost = {
-                        connectOrbotDialogOpen = false
-                        useProxy.value = true
-                    },
-                    onError = {
-                        scope.launch {
-                            Toast
-                                .makeText(
-                                    context,
-                                    it,
-                                    Toast.LENGTH_LONG,
-                                ).show()
-                        }
-                    },
-                    proxyPort,
-                )
-            }
+            OrbotCheckBox(
+                currentPort = proxyPort.value.toIntOrNull(),
+                useProxy = useProxy.value,
+                onCheckedChange = {
+                    useProxy.value = it
+                },
+                onError = {
+                    scope.launch {
+                        Toast
+                            .makeText(
+                                context,
+                                it,
+                                Toast.LENGTH_LONG,
+                            ).show()
+                    }
+                },
+            )
         }
 
         Spacer(modifier = Modifier.height(Size10dp))
 
         Box(modifier = Modifier.padding(Size40dp, 0.dp, Size40dp, 0.dp)) {
-            Button(
+            SignUpButton(
                 enabled = acceptedTerms.value,
                 onClick = {
                     if (!acceptedTerms.value) {
@@ -272,14 +220,7 @@ fun SignUpPage(
                         accountStateViewModel.newKey(useProxy.value, proxyPort.value.toInt(), displayName.value.text)
                     }
                 },
-                shape = RoundedCornerShape(Size35dp),
-                modifier = Modifier.height(50.dp),
-            ) {
-                Text(
-                    text = stringRes(R.string.create_account),
-                    modifier = Modifier.padding(horizontal = Size40dp),
-                )
-            }
+            )
         }
 
         Spacer(modifier = Modifier.height(Size40dp))
@@ -289,16 +230,39 @@ fun SignUpPage(
         Spacer(modifier = Modifier.height(Size20dp))
 
         Box(modifier = Modifier.padding(Size40dp, 0.dp, Size40dp, 0.dp)) {
-            OutlinedButton(
-                onClick = onWantsToLogin,
-                shape = RoundedCornerShape(Size35dp),
-                modifier = Modifier.height(50.dp),
-            ) {
-                Text(
-                    text = stringRes(R.string.login),
-                    modifier = Modifier.padding(horizontal = Size40dp),
-                )
-            }
+            LoginButton(onWantsToLogin)
         }
+    }
+}
+
+@Composable
+fun LoginButton(onWantsToLogin: () -> Unit) {
+    OutlinedButton(
+        onClick = onWantsToLogin,
+        shape = RoundedCornerShape(Size35dp),
+        modifier = Modifier.height(50.dp),
+    ) {
+        Text(
+            text = stringRes(R.string.login),
+            modifier = Modifier.padding(horizontal = Size40dp),
+        )
+    }
+}
+
+@Composable
+fun SignUpButton(
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Button(
+        enabled = enabled,
+        onClick = onClick,
+        shape = RoundedCornerShape(Size35dp),
+        modifier = Modifier.height(50.dp),
+    ) {
+        Text(
+            text = stringRes(R.string.create_account),
+            modifier = Modifier.padding(horizontal = Size40dp),
+        )
     }
 }

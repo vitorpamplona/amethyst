@@ -445,13 +445,6 @@ fun ListContent(
     var checked by remember { mutableStateOf(accountViewModel.account.settings.proxy != null) }
     var disconnectTorDialog by remember { mutableStateOf(false) }
     var conectOrbotDialogOpen by remember { mutableStateOf(false) }
-    val proxyPort =
-        remember {
-            mutableStateOf(
-                accountViewModel.account.settings.proxyPort
-                    .toString(),
-            )
-        }
 
     val context = LocalContext.current
 
@@ -575,7 +568,7 @@ fun ListContent(
                 conectOrbotDialogOpen = false
                 disconnectTorDialog = false
                 checked = true
-                accountViewModel.enableTor(true, proxyPort)
+                accountViewModel.enableTor(it)
             },
             onError = {
                 accountViewModel.toast(
@@ -583,7 +576,7 @@ fun ListContent(
                     it,
                 )
             },
-            proxyPort,
+            currentPortNumber = accountViewModel.account.settings.proxyPort,
         )
     }
 
@@ -597,7 +590,7 @@ fun ListContent(
                     onClick = {
                         disconnectTorDialog = false
                         checked = false
-                        accountViewModel.enableTor(false, proxyPort)
+                        accountViewModel.disableTor()
                     },
                 ) {
                     Text(text = stringRes(R.string.yes))

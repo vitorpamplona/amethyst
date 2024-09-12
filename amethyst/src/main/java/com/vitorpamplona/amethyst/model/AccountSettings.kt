@@ -113,6 +113,7 @@ val KIND3_FOLLOWS = " All Follows "
 @Stable
 class AccountSettings(
     val keyPair: KeyPair,
+    val transientAccount: Boolean = false,
     var externalSignerPackageName: String? = null,
     var localRelays: Set<RelaySetupInfo> = Constants.defaultRelays.toSet(),
     var localRelayServers: Set<String> = setOf(),
@@ -246,14 +247,17 @@ class AccountSettings(
 
     fun isProxyEnabled() = proxy != null
 
-    fun updateProxy(
-        enabled: Boolean,
-        portNumber: String,
-    ) {
-        val port = portNumber.toIntOrNull() ?: return
-        if (proxyPort != port || isProxyEnabled() != enabled) {
-            proxyPort = portNumber.toInt()
-            proxy = HttpClientManager.initProxy(enabled, "127.0.0.1", proxyPort)
+    fun disableProxy() {
+        if (isProxyEnabled()) {
+            proxy = HttpClientManager.initProxy(false, "127.0.0.1", proxyPort)
+            saveAccountSettings()
+        }
+    }
+
+    fun enableProxy(portNumber: Int) {
+        if (proxyPort != portNumber || !isProxyEnabled()) {
+            proxyPort = portNumber
+            proxy = HttpClientManager.initProxy(true, "127.0.0.1", proxyPort)
             saveAccountSettings()
         }
     }

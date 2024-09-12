@@ -72,6 +72,7 @@ data class AccountInfo(
     val npub: String,
     val hasPrivKey: Boolean,
     val loggedInWithExternalSigner: Boolean,
+    val isTransient: Boolean = false,
 )
 
 private object PrefKeys {
@@ -135,16 +136,18 @@ object LocalPreferences {
         return currentAccount
     }
 
-    private suspend fun updateCurrentAccount(npub: String?) {
-        if (npub == null) {
+    private suspend fun updateCurrentAccount(info: AccountInfo?) {
+        if (info == null) {
             currentAccount = null
             withContext(Dispatchers.IO) {
                 encryptedPreferences().edit().clear().apply()
             }
-        } else if (currentAccount != npub) {
-            currentAccount = npub
-            withContext(Dispatchers.IO) {
-                encryptedPreferences().edit().apply { putString(PrefKeys.CURRENT_ACCOUNT, npub) }.apply()
+        } else if (currentAccount != info.npub) {
+            currentAccount = info.npub
+            if (!info.isTransient) {
+                withContext(Dispatchers.IO) {
+                    encryptedPreferences().edit().apply { putString(PrefKeys.CURRENT_ACCOUNT, info.npub) }.apply()
+                }
             }
         }
     }
@@ -192,8 +195,12 @@ object LocalPreferences {
 
                 encryptedPreferences()
                     .edit()
-                    .apply { putString(PrefKeys.ALL_ACCOUNT_INFO, Event.mapper.writeValueAsString(accounts)) }
-                    .apply()
+                    .apply {
+                        putString(
+                            PrefKeys.ALL_ACCOUNT_INFO,
+                            Event.mapper.writeValueAsString(accounts.filter { !it.isTransient }),
+                        )
+                    }.apply()
             }
         }
 
@@ -212,12 +219,13 @@ object LocalPreferences {
                 npub,
                 accountSettings.isWriteable(),
                 accountSettings.externalSignerPackageName != null,
+                accountSettings.transientAccount,
             )
-        updateCurrentAccount(npub)
+        updateCurrentAccount(accInfo)
         addAccount(accInfo)
     }
 
-    suspend fun switchToAccount(accountInfo: AccountInfo) = updateCurrentAccount(accountInfo.npub)
+    suspend fun switchToAccount(accountInfo: AccountInfo) = updateCurrentAccount(accountInfo)
 
     /** Removes the account from the app level shared preferences */
     private suspend fun removeAccount(accountInfo: AccountInfo) {
@@ -267,7 +275,7 @@ object LocalPreferences {
             if (savedAccounts().isEmpty()) {
                 updateCurrentAccount(null)
             } else if (currentAccount() == accountInfo.npub) {
-                updateCurrentAccount(savedAccounts().elementAt(0).npub)
+                updateCurrentAccount(savedAccounts().elementAt(0))
             }
         }
     }
@@ -281,145 +289,147 @@ object LocalPreferences {
 
     suspend fun saveToEncryptedStorage(settings: AccountSettings) {
         Log.d("LocalPreferences", "Saving to encrypted storage")
-        withContext(Dispatchers.IO) {
-            val prefs = encryptedPreferences(settings.keyPair.pubKey.toNpub())
-            prefs
-                .edit()
-                .apply {
-                    putBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, settings.externalSignerPackageName != null)
-                    if (settings.externalSignerPackageName != null) {
-                        remove(PrefKeys.NOSTR_PRIVKEY)
-                        putString(PrefKeys.SIGNER_PACKAGE_NAME, settings.externalSignerPackageName)
-                    } else {
-                        remove(PrefKeys.SIGNER_PACKAGE_NAME)
-                        settings.keyPair.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHexKey()) }
-                    }
-                    settings.keyPair.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHexKey()) }
-                    putString(PrefKeys.RELAYS, Event.mapper.writeValueAsString(settings.localRelays))
-                    putStringSet(PrefKeys.DONT_TRANSLATE_FROM, settings.dontTranslateFrom)
-                    putStringSet(PrefKeys.LOCAL_RELAY_SERVERS, settings.localRelayServers)
-                    putString(
-                        PrefKeys.LANGUAGE_PREFS,
-                        Event.mapper.writeValueAsString(settings.languagePreferences),
-                    )
-                    putString(PrefKeys.TRANSLATE_TO, settings.translateTo)
-                    putString(PrefKeys.ZAP_AMOUNTS, Event.mapper.writeValueAsString(settings.zapAmountChoices.value))
-                    putString(
-                        PrefKeys.REACTION_CHOICES,
-                        Event.mapper.writeValueAsString(settings.reactionChoices.value),
-                    )
-                    putString(PrefKeys.DEFAULT_ZAPTYPE, settings.defaultZapType.value.name)
-                    putString(
-                        PrefKeys.DEFAULT_FILE_SERVER,
-                        Event.mapper.writeValueAsString(settings.defaultFileServer),
-                    )
-                    putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, settings.defaultHomeFollowList.value)
-                    putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, settings.defaultStoriesFollowList.value)
-                    putString(
-                        PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST,
-                        settings.defaultNotificationFollowList.value,
-                    )
-                    putString(
-                        PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST,
-                        settings.defaultDiscoveryFollowList.value,
-                    )
-                    putString(
-                        PrefKeys.ZAP_PAYMENT_REQUEST_SERVER,
-                        Event.mapper.writeValueAsString(settings.zapPaymentRequest),
-                    )
-                    if (settings.backupContactList != null) {
+        if (!settings.transientAccount) {
+            withContext(Dispatchers.IO) {
+                val prefs = encryptedPreferences(settings.keyPair.pubKey.toNpub())
+                prefs
+                    .edit()
+                    .apply {
+                        putBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, settings.externalSignerPackageName != null)
+                        if (settings.externalSignerPackageName != null) {
+                            remove(PrefKeys.NOSTR_PRIVKEY)
+                            putString(PrefKeys.SIGNER_PACKAGE_NAME, settings.externalSignerPackageName)
+                        } else {
+                            remove(PrefKeys.SIGNER_PACKAGE_NAME)
+                            settings.keyPair.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHexKey()) }
+                        }
+                        settings.keyPair.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHexKey()) }
+                        putString(PrefKeys.RELAYS, Event.mapper.writeValueAsString(settings.localRelays))
+                        putStringSet(PrefKeys.DONT_TRANSLATE_FROM, settings.dontTranslateFrom)
+                        putStringSet(PrefKeys.LOCAL_RELAY_SERVERS, settings.localRelayServers)
                         putString(
-                            PrefKeys.LATEST_CONTACT_LIST,
-                            Event.mapper.writeValueAsString(settings.backupContactList),
+                            PrefKeys.LANGUAGE_PREFS,
+                            Event.mapper.writeValueAsString(settings.languagePreferences),
                         )
-                    } else {
-                        remove(PrefKeys.LATEST_CONTACT_LIST)
-                    }
-
-                    if (settings.backupUserMetadata != null) {
+                        putString(PrefKeys.TRANSLATE_TO, settings.translateTo)
+                        putString(PrefKeys.ZAP_AMOUNTS, Event.mapper.writeValueAsString(settings.zapAmountChoices.value))
                         putString(
-                            PrefKeys.LATEST_USER_METADATA,
-                            Event.mapper.writeValueAsString(settings.backupUserMetadata),
+                            PrefKeys.REACTION_CHOICES,
+                            Event.mapper.writeValueAsString(settings.reactionChoices.value),
                         )
-                    } else {
-                        remove(PrefKeys.LATEST_USER_METADATA)
-                    }
-
-                    if (settings.backupDMRelayList != null) {
+                        putString(PrefKeys.DEFAULT_ZAPTYPE, settings.defaultZapType.value.name)
                         putString(
-                            PrefKeys.LATEST_DM_RELAY_LIST,
-                            Event.mapper.writeValueAsString(settings.backupDMRelayList),
+                            PrefKeys.DEFAULT_FILE_SERVER,
+                            Event.mapper.writeValueAsString(settings.defaultFileServer),
                         )
-                    } else {
-                        remove(PrefKeys.LATEST_DM_RELAY_LIST)
-                    }
-
-                    if (settings.backupNIP65RelayList != null) {
+                        putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, settings.defaultHomeFollowList.value)
+                        putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, settings.defaultStoriesFollowList.value)
                         putString(
-                            PrefKeys.LATEST_NIP65_RELAY_LIST,
-                            Event.mapper.writeValueAsString(settings.backupNIP65RelayList),
+                            PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST,
+                            settings.defaultNotificationFollowList.value,
                         )
-                    } else {
-                        remove(PrefKeys.LATEST_NIP65_RELAY_LIST)
-                    }
-
-                    if (settings.backupSearchRelayList != null) {
                         putString(
-                            PrefKeys.LATEST_SEARCH_RELAY_LIST,
-                            Event.mapper.writeValueAsString(settings.backupSearchRelayList),
+                            PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST,
+                            settings.defaultDiscoveryFollowList.value,
                         )
-                    } else {
-                        remove(PrefKeys.LATEST_SEARCH_RELAY_LIST)
-                    }
-
-                    if (settings.backupMuteList != null) {
                         putString(
-                            PrefKeys.LATEST_MUTE_LIST,
-                            Event.mapper.writeValueAsString(settings.backupMuteList),
+                            PrefKeys.ZAP_PAYMENT_REQUEST_SERVER,
+                            Event.mapper.writeValueAsString(settings.zapPaymentRequest),
                         )
-                    } else {
-                        remove(PrefKeys.LATEST_MUTE_LIST)
-                    }
-
-                    if (settings.backupPrivateHomeRelayList != null) {
-                        putString(
-                            PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST,
-                            Event.mapper.writeValueAsString(settings.backupPrivateHomeRelayList),
-                        )
-                    } else {
-                        remove(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST)
-                    }
-
-                    putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, settings.hideDeleteRequestDialog)
-                    putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, settings.hideNIP17WarningDialog)
-                    putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, settings.hideBlockAlertDialog)
-                    putBoolean(PrefKeys.USE_PROXY, settings.proxy != null)
-                    putInt(PrefKeys.PROXY_PORT, settings.proxyPort)
-                    putBoolean(PrefKeys.WARN_ABOUT_REPORTS, settings.warnAboutPostsWithReports)
-                    putBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, settings.filterSpamFromStrangers)
-
-                    val regularMap =
-                        settings.lastReadPerRoute.value.mapValues {
-                            it.value.value
+                        if (settings.backupContactList != null) {
+                            putString(
+                                PrefKeys.LATEST_CONTACT_LIST,
+                                Event.mapper.writeValueAsString(settings.backupContactList),
+                            )
+                        } else {
+                            remove(PrefKeys.LATEST_CONTACT_LIST)
                         }
 
-                    putString(
-                        PrefKeys.LAST_READ_PER_ROUTE,
-                        Event.mapper.writeValueAsString(regularMap),
-                    )
-                    putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, settings.hasDonatedInVersion.value)
+                        if (settings.backupUserMetadata != null) {
+                            putString(
+                                PrefKeys.LATEST_USER_METADATA,
+                                Event.mapper.writeValueAsString(settings.backupUserMetadata),
+                            )
+                        } else {
+                            remove(PrefKeys.LATEST_USER_METADATA)
+                        }
 
-                    if (settings.showSensitiveContent.value == null) {
-                        remove(PrefKeys.SHOW_SENSITIVE_CONTENT)
-                    } else {
-                        putBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, settings.showSensitiveContent.value!!)
-                    }
+                        if (settings.backupDMRelayList != null) {
+                            putString(
+                                PrefKeys.LATEST_DM_RELAY_LIST,
+                                Event.mapper.writeValueAsString(settings.backupDMRelayList),
+                            )
+                        } else {
+                            remove(PrefKeys.LATEST_DM_RELAY_LIST)
+                        }
 
-                    putString(
-                        PrefKeys.PENDING_ATTESTATIONS,
-                        Event.mapper.writeValueAsString(settings.pendingAttestations.value),
-                    )
-                }.apply()
+                        if (settings.backupNIP65RelayList != null) {
+                            putString(
+                                PrefKeys.LATEST_NIP65_RELAY_LIST,
+                                Event.mapper.writeValueAsString(settings.backupNIP65RelayList),
+                            )
+                        } else {
+                            remove(PrefKeys.LATEST_NIP65_RELAY_LIST)
+                        }
+
+                        if (settings.backupSearchRelayList != null) {
+                            putString(
+                                PrefKeys.LATEST_SEARCH_RELAY_LIST,
+                                Event.mapper.writeValueAsString(settings.backupSearchRelayList),
+                            )
+                        } else {
+                            remove(PrefKeys.LATEST_SEARCH_RELAY_LIST)
+                        }
+
+                        if (settings.backupMuteList != null) {
+                            putString(
+                                PrefKeys.LATEST_MUTE_LIST,
+                                Event.mapper.writeValueAsString(settings.backupMuteList),
+                            )
+                        } else {
+                            remove(PrefKeys.LATEST_MUTE_LIST)
+                        }
+
+                        if (settings.backupPrivateHomeRelayList != null) {
+                            putString(
+                                PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST,
+                                Event.mapper.writeValueAsString(settings.backupPrivateHomeRelayList),
+                            )
+                        } else {
+                            remove(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST)
+                        }
+
+                        putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, settings.hideDeleteRequestDialog)
+                        putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, settings.hideNIP17WarningDialog)
+                        putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, settings.hideBlockAlertDialog)
+                        putBoolean(PrefKeys.USE_PROXY, settings.proxy != null)
+                        putInt(PrefKeys.PROXY_PORT, settings.proxyPort)
+                        putBoolean(PrefKeys.WARN_ABOUT_REPORTS, settings.warnAboutPostsWithReports)
+                        putBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, settings.filterSpamFromStrangers)
+
+                        val regularMap =
+                            settings.lastReadPerRoute.value.mapValues {
+                                it.value.value
+                            }
+
+                        putString(
+                            PrefKeys.LAST_READ_PER_ROUTE,
+                            Event.mapper.writeValueAsString(regularMap),
+                        )
+                        putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, settings.hasDonatedInVersion.value)
+
+                        if (settings.showSensitiveContent.value == null) {
+                            remove(PrefKeys.SHOW_SENSITIVE_CONTENT)
+                        } else {
+                            putBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, settings.showSensitiveContent.value!!)
+                        }
+
+                        putString(
+                            PrefKeys.PENDING_ATTESTATIONS,
+                            Event.mapper.writeValueAsString(settings.pendingAttestations.value),
+                        )
+                    }.apply()
+            }
         }
     }
 
@@ -550,6 +560,7 @@ object LocalPreferences {
 
                 return@with AccountSettings(
                     keyPair = keyPair,
+                    transientAccount = false,
                     externalSignerPackageName = externalSignerPackageName,
                     localRelays = localRelays,
                     localRelayServers = localRelayServers,
