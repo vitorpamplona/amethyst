@@ -129,9 +129,10 @@ fun LoginPage() {
 fun LoginPage(
     accountStateViewModel: AccountStateViewModel,
     isFirstLogin: Boolean,
+    newAccountKey: String? = null,
     onWantsToLogin: () -> Unit,
 ) {
-    val key = remember { mutableStateOf(TextFieldValue("")) }
+    val key = remember { mutableStateOf(TextFieldValue(newAccountKey ?: "")) }
     var errorMessage by remember { mutableStateOf("") }
     val acceptedTerms = remember { mutableStateOf(!isFirstLogin) }
     var termsAcceptanceIsRequired by remember { mutableStateOf("") }

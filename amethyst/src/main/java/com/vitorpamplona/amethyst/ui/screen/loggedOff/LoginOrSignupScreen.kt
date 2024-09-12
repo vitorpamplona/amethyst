@@ -30,7 +30,8 @@ import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 
 @Composable
 fun LoginOrSignupScreen(
-    accountViewModel: AccountStateViewModel,
+    newAccountKey: String?,
+    accountStateViewModel: AccountStateViewModel,
     isFirstLogin: Boolean,
 ) {
     var wantsNewUser by remember {
@@ -39,11 +40,11 @@ fun LoginOrSignupScreen(
 
     Crossfade(wantsNewUser, label = "LoginOrSignupScreen") {
         if (it) {
-            SignUpPage(accountStateViewModel = accountViewModel) {
+            SignUpPage(accountStateViewModel) {
                 wantsNewUser = false
             }
         } else {
-            LoginPage(accountStateViewModel = accountViewModel, isFirstLogin = isFirstLogin) {
+            LoginPage(accountStateViewModel, isFirstLogin, newAccountKey) {
                 wantsNewUser = true
             }
         }

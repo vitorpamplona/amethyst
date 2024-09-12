@@ -41,7 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.util.Consumer
 import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
@@ -72,7 +71,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SecurityFiltersScr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.uriToRoute
+import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
@@ -284,7 +285,7 @@ fun AppNavigation(
         }
     }
 
-    NavigateIfIntentRequested(nav.controller, accountViewModel)
+    NavigateIfIntentRequested(nav, accountViewModel, accountStateViewModel)
 
     DisplayErrorMessages(accountViewModel)
     DisplayNotifyMessages(accountViewModel, nav)
@@ -292,10 +293,12 @@ fun AppNavigation(
 
 @Composable
 private fun NavigateIfIntentRequested(
-    navController: NavHostController,
+    nav: Nav,
     accountViewModel: AccountViewModel,
+    accountStateViewModel: AccountStateViewModel,
 ) {
     val activity = LocalContext.current.getActivity()
+    var newAccount by remember { mutableStateOf<String?>(null) }
 
     var currentIntentNextPage by remember {
         mutableStateOf(
@@ -314,15 +317,19 @@ private fun NavigateIfIntentRequested(
         LaunchedEffect(intentNextPage) {
             if (actionableNextPage != null) {
                 actionableNextPage?.let {
-                    val currentRoute = getRouteWithArguments(navController)
+                    val currentRoute = getRouteWithArguments(nav.controller)
                     if (!isSameRoute(currentRoute, it)) {
-                        navController.navigate(it) {
-                            popUpTo(Route.Home.route)
-                            launchSingleTop = true
-                        }
+                        nav.newStack(it)
                     }
                     actionableNextPage = null
                 }
+            } else if (intentNextPage.contains("ncryptsec1")) {
+                // login functions
+                Nip19Bech32.tryParseAndClean(intentNextPage)?.let {
+                    newAccount = it
+                }
+
+                actionableNextPage = null
             } else {
                 accountViewModel.toast(
                     R.string.invalid_nip19_uri,
@@ -342,15 +349,18 @@ private fun NavigateIfIntentRequested(
             Consumer<Intent> { intent ->
                 val uri = intent?.data?.toString()
                 if (!uri.isNullOrBlank()) {
+                    // navigation functions
                     val newPage = uriToRoute(uri)
 
                     if (newPage != null) {
-                        val currentRoute = getRouteWithArguments(navController)
+                        val currentRoute = getRouteWithArguments(nav.controller)
                         if (!isSameRoute(currentRoute, newPage)) {
-                            navController.navigate(newPage) {
-                                popUpTo(Route.Home.route)
-                                launchSingleTop = true
-                            }
+                            nav.newStack(newPage)
+                        }
+                    } else if (uri.contains("ncryptsec")) {
+                        // login functions
+                        Nip19Bech32.tryParseAndClean(uri)?.let {
+                            newAccount = it
                         }
                     } else {
                         scope.launch {
@@ -366,6 +376,10 @@ private fun NavigateIfIntentRequested(
             }
         activity.addOnNewIntentListener(consumer)
         onDispose { activity.removeOnNewIntentListener(consumer) }
+    }
+
+    if (newAccount != null) {
+        AddAccountDialog(newAccount, accountStateViewModel) { newAccount = null }
     }
 }
 

@@ -88,7 +88,7 @@ fun AccountScreen(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    LoginOrSignupScreen(accountStateViewModel, isFirstLogin = true)
+                    LoginOrSignupScreen(null, accountStateViewModel, isFirstLogin = true)
                 }
             }
             is AccountState.LoggedIn -> {
