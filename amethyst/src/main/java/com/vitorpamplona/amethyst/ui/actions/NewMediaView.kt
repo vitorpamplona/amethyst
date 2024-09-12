@@ -105,7 +105,9 @@ fun NewMediaView(
 
     var showRelaysDialog by remember { mutableStateOf(false) }
     var relayList = remember { accountViewModel.account.activeWriteRelays().toImmutableList() }
-    var mediaQualitySlider by remember { mutableIntStateOf(1) } // 0 = Low, 1 = Medium, 2 = High
+
+    // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
+    var mediaQualitySlider by remember { mutableIntStateOf(1) }
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -208,7 +210,7 @@ fun NewMediaView(
                                     text = stringRes(context, R.string.media_compression_quality_explainer),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.Gray,
-                                    maxLines = 4,
+                                    maxLines = 5,
                                     overflow = TextOverflow.Ellipsis,
                                 )
                             }
@@ -225,6 +227,7 @@ fun NewMediaView(
                                                 0 -> stringRes(R.string.media_compression_quality_low)
                                                 1 -> stringRes(R.string.media_compression_quality_medium)
                                                 2 -> stringRes(R.string.media_compression_quality_high)
+                                                3 -> stringRes(R.string.media_compression_quality_uncompressed)
                                                 else -> stringRes(R.string.media_compression_quality_medium)
                                             },
                                         modifier = Modifier.align(Alignment.Center),
@@ -234,8 +237,8 @@ fun NewMediaView(
                                 Slider(
                                     value = mediaQualitySlider.toFloat(),
                                     onValueChange = { mediaQualitySlider = it.toInt() },
-                                    valueRange = 0f..2f,
-                                    steps = 1,
+                                    valueRange = 0f..3f,
+                                    steps = 2,
                                 )
                             }
                         }

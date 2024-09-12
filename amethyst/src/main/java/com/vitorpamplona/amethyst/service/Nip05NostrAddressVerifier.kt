@@ -126,7 +126,7 @@ class Nip05NostrAddressVerifier {
                 val hexKey = nip05url?.get("names")?.get(user)?.asText()
 
                 if (hexKey == null) {
-                    onError("Username not found in the NIP05 JSON")
+                    onError("Username not found in the NIP05 JSON [$nip05]")
                 } else {
                     onSuccess(hexKey)
                 }
