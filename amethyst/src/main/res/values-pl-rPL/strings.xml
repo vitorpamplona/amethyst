@@ -133,7 +133,7 @@
     <string name="new_requests">Nowe Prośby</string>
     <string name="blocked_users">Zablokowani użytkownicy</string>
     <string name="new_threads">Nowe Wpisy</string>
-    <string name="conversations">Rozmowy</string>
+    <string name="conversations">Dyskusje</string>
     <string name="notes">Wpisy</string>
     <string name="replies">Odpowiedzi</string>
     <string name="gallery">Galeria</string>
@@ -388,7 +388,7 @@
     <string name="app_notification_zaps_channel_message_from">Od %1$s</string>
     <string name="app_notification_zaps_channel_message_for">dla %1$s</string>
     <string name="reply_notify">Powiadom: </string>
-    <string name="channel_list_join_conversation">Dołącz do rozmowy</string>
+    <string name="channel_list_join_conversation">Dołącz do dyskusji</string>
     <string name="channel_list_user_or_group_id">ID Użytkownika lub Grupy</string>
     <string name="channel_list_user_or_group_id_demo">npub, nevent lub hex</string>
     <string name="channel_list_create_channel">Utwórz</string>
@@ -413,7 +413,7 @@
     <string name="write_to_relay_description">Ilość w bajtach, która została wysłana do tego transmitera, w tym filtry i wydarzenia</string>
     <string name="read_from_relay_description">Ilość w bajtach, która została otrzymana z tego transmitera, w tym filtry i wydarzenia</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Wystąpił błąd podczas próby uzyskania informacji o transmiterze z %1$s</string>
-    <string name="owner">Właściciel</string>
+    <string name="owner">Operator</string>
     <string name="version">Wersja</string>
     <string name="software">Oprogramowanie</string>
     <string name="contact">Kontakt</string>
@@ -673,6 +673,7 @@
     <string name="media_compression_quality_low">Niska</string>
     <string name="media_compression_quality_medium">Średnia</string>
     <string name="media_compression_quality_high">Wysoka</string>
+    <string name="media_compression_quality_uncompressed">Nieskompresowane</string>
     <string name="edit_draft">Edytuj wersję roboczą</string>
     <string name="login_with_qr_code">Zaloguj się przy użyciu QR kodu</string>
     <string name="route">Ścieżka</string>
@@ -825,4 +826,5 @@
     <string name="torrent_failure">Nie udało się otworzyć pliku</string>
     <string name="torrent_no_apps">Brak zainstalowanych aplikacji torrent do otwarcia i pobrania pliku.</string>
     <string name="select_list_to_filter">Wybierz listę, aby filtrować kanał</string>
+    <string name="temporary_account">Wyloguj się przy blokowaniu urządzenia</string>
 </resources>
