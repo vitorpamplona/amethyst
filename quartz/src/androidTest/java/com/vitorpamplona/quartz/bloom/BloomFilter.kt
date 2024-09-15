@@ -41,6 +41,7 @@ class BloomFilter(
     private val size: Int,
     private val rounds: Int,
     private val bits: BitSet = BitSet(size),
+    private val salt: ByteArray = CryptoUtils.random(8),
 ) {
     private val hash = MessageDigest.getInstance("SHA-256")
     private val lock = ReentrantReadWriteLock()
@@ -76,34 +77,33 @@ class BloomFilter(
         return true
     }
 
-    fun encode() = "$size:$rounds:${Base64.getEncoder().encodeToString(bits.toByteArray())}"
+    fun encode() = "$size:$rounds:${Base64.getEncoder().encodeToString(bits.toByteArray())}:${Base64.getEncoder().encodeToString(salt)}"
 
     fun hash(
         seed: Int,
         value: ByteArray,
-    ) = BigInteger(1, hash.digest(value + seed.toByte()))
+    ) = BigInteger(1, hash.digest(value + salt + seed.toByte()))
         .remainder(BigInteger.valueOf(size.toLong()))
         .toInt()
 
     companion object {
         fun decode(encodedStr: String): BloomFilter {
-            val parts = encodedStr.split(":")
-            val size = parts[0].toInt()
-            val rounds = parts[1].toInt()
-            val bitSet = BitSet.valueOf(Base64.getDecoder().decode(parts[2]))
-            return BloomFilter(size, rounds, bitSet)
+            val (sizeStr, roundsStr, filterB64, saltB64) = encodedStr.split(":")
+            val bitSet = BitSet.valueOf(Base64.getDecoder().decode(filterB64))
+            val salt = Base64.getDecoder().decode(saltB64)
+            return BloomFilter(sizeStr.toInt(), roundsStr.toInt(), bitSet, salt)
         }
     }
 }
 
 @RunWith(AndroidJUnit4::class)
 class BloomFilterTest {
-    val testEncoded = "100:10:QGKCgBEBAAhIAApO"
-    val testInBinary = "00000010010001100100000100000001100010001000000000000000000100000001001000000000010100000111001000000000000000000000000000000000"
+    val testEncoded = "100:10:AAAkAQANcYQFCQoB:hZkZYqqdxcE="
+    val testInBinary = "00000000000000000010010010000000000000001011000010001110001000011010000010010000010100001000000000000000000000000000000000000000"
 
     @Test
     fun testCreate() {
-        val bloomFilter = BloomFilter(100, 10)
+        val bloomFilter = BloomFilter(100, 10, salt = Base64.getDecoder().decode("hZkZYqqdxcE="))
         bloomFilter.add("ca29c211f1c72d5b6622268ff43d2288ea2b2cb5b9aa196ff9f1704fc914b71b")
         bloomFilter.add("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
 
