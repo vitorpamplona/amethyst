@@ -248,6 +248,12 @@ object MetaTagsParser {
                         }
 
                         c.isWhitespace() -> {}
+                        c.isLetter() -> {
+                            // If we find a letter instead of EQ we probably passed a property with no value
+                            // so lets reset to state NAME and continue
+                            nameBegin = i
+                            state = State.NAME
+                        }
                         else -> return null
                     }
                 }

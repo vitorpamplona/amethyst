@@ -78,4 +78,36 @@ class MetaTagsParserTest {
             }
         }
     }
+
+    @Test
+    fun testParseExtraAttributeInMetaTag() {
+        val input =
+            """<html>
+            |  <head>
+            |    <meta data-preact-helmet property="og:title" content="What are your most treasured cookbooks?">
+            |    <meta property="og:description" content='description'>
+            |    <meta data-preact-helmet property="second" data-preact-helmet content="What are your most">
+            |  </head>
+            |  <body>
+            |    <meta name="ignore meta tags in body">
+            |  </body>
+            |</html>
+            """.trimMargin()
+
+        val exp =
+            listOf(
+                listOf("property" to "og:title", "content" to "What are your most treasured cookbooks?"),
+                listOf("property" to "og:description", "content" to "description"),
+                listOf("property" to "second", "content" to "What are your most"),
+            )
+
+        val metaTags = MetaTagsParser.parse(input).toList()
+        println(metaTags)
+        assertEquals(exp.size, metaTags.size)
+        metaTags.zip(exp).forEach { (meta, expAttrs) ->
+            expAttrs.forEach { (name, expValue) ->
+                assertEquals(expValue, meta.attr(name))
+            }
+        }
+    }
 }
