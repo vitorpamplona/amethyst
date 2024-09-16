@@ -248,7 +248,14 @@ object MetaTagsParser {
                         }
 
                         c.isWhitespace() -> {}
-                        else -> return null
+
+                        else -> {
+                            // if it is expecting = but gets another name, starts another property
+                            runCatching { attrs.add(Pair(input.slice(nameBegin..<nameEnd), "")) }
+
+                            nameBegin = i
+                            state = State.NAME
+                        }
                     }
                 }
 

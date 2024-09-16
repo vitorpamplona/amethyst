@@ -78,4 +78,29 @@ class MetaTagsParserTest {
             }
         }
     }
+
+    @Test
+    fun testParseWithAdditionalTags() {
+        val input =
+            """<html>
+            |  <head>
+            |    <meta data-preact-helmet property="og:title" content="Uma conversa com Antonio Vargas">
+            |  </head>
+            |</html>
+            """.trimMargin()
+
+        val exp =
+            listOf(
+                listOf("property" to "og:title", "content" to "Uma conversa com Antonio Vargas"),
+            )
+
+        val metaTags = MetaTagsParser.parse(input).toList()
+        println(metaTags)
+        assertEquals(exp.size, metaTags.size)
+        metaTags.zip(exp).forEach { (meta, expAttrs) ->
+            expAttrs.forEach { (name, expValue) ->
+                assertEquals(expValue, meta.attr(name))
+            }
+        }
+    }
 }
