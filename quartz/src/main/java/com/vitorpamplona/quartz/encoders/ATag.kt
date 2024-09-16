@@ -75,7 +75,7 @@ data class ATag(
             relay: String?,
         ): ATag? =
             try {
-                val parts = atag.split(":")
+                val parts = atag.split(":", limit = 3)
                 Hex.decode(parts[1])
                 ATag(parts[0].toInt(), parts[1], parts[2], relay)
             } catch (t: Throwable) {
