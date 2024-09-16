@@ -824,4 +824,5 @@
     <string name="torrent_failure">Falha ao abrir o arquivo</string>
     <string name="torrent_no_apps">Nenhum aplicativo torrent instalado para abrir e baixar o arquivo.</string>
     <string name="select_list_to_filter">Selecione uma lista para filtrar o feed</string>
+    <string name="temporary_account">Terminar sessão no bloqueio do dispositivo</string>
 </resources>

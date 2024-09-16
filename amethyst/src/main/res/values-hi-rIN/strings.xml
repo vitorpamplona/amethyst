@@ -673,6 +673,7 @@
     <string name="media_compression_quality_low">निम्न</string>
     <string name="media_compression_quality_medium">मध्यम</string>
     <string name="media_compression_quality_high">उच्च</string>
+    <string name="media_compression_quality_uncompressed">असंकुचित</string>
     <string name="edit_draft">पाण्डुलिपि का सम्पादन करें</string>
     <string name="login_with_qr_code">क्यूआर॰ क्रमचित्र के साथ प्रवेशांकन करें</string>
     <string name="route">मार्ग</string>
@@ -825,4 +826,5 @@
     <string name="torrent_failure">अभिलेख खोलने में असफल</string>
     <string name="torrent_no_apps">कोई उग्रप्रवाह क्रमक स्थापित नहीं अभिलेख खोलने तथा अवरोहण करने के लिए।</string>
     <string name="select_list_to_filter">सूचनावली छानने के लिए सूची चुनें</string>
+    <string name="temporary_account">यन्त्र ताला लगने पर निर्गमनांकन करें</string>
 </resources>
