@@ -823,4 +823,5 @@
     <string name="torrent_failure">Det gick inte att öppna filen</string>
     <string name="torrent_no_apps">Inga torrent-appar installerade för att öppna och ladda ner filen.</string>
     <string name="select_list_to_filter">Välj en lista för att filtrera flödet</string>
+    <string name="temporary_account">Logga ut när enheten låses</string>
 </resources>

@@ -673,6 +673,7 @@
     <string name="media_compression_quality_low">Laag</string>
     <string name="media_compression_quality_medium">Normaal</string>
     <string name="media_compression_quality_high">Hoog</string>
+    <string name="media_compression_quality_uncompressed">Ongecomprimeerd</string>
     <string name="edit_draft">Concept bewerken</string>
     <string name="login_with_qr_code">Inloggen met QR-Code</string>
     <string name="route">Route</string>
@@ -825,4 +826,5 @@
     <string name="torrent_failure">Kon bestand niet openen</string>
     <string name="torrent_no_apps">Geen torrent apps geïnstalleerd om het bestand te openen en te downloaden.</string>
     <string name="select_list_to_filter">Selecteer een lijst om de feed te filteren</string>
+    <string name="temporary_account">Afmelden bij apparaatvergrendeling</string>
 </resources>
