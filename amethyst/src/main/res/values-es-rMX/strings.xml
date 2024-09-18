@@ -38,6 +38,9 @@
     <string name="report_explicit_content">Reportar contenido explícito</string>
     <string name="report_illegal_behaviour">Reportar comportamiento ilegal</string>
     <string name="report_malware">Reportar malware</string>
+    <string name="report_mod">Reportar mod</string>
+    <string name="malware">Malware</string>
+    <string name="mod">Mod</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para poder responder</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para poder impulsar publicaciones</string>
     <string name="login_with_a_private_key_to_like_posts">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para indicar que te gustan las publicaciones.</string>
@@ -516,6 +519,7 @@
     <string name="automatically_play_videos_description">Reproducir automáticamente videos y GIF</string>
     <string name="automatically_show_url_preview_description">Mostrar vistas previas de URL</string>
     <string name="load_image_description">Cuándo cargar imágenes</string>
+    <string name="copy_stack_to_clipboard">Copiar stack</string>
     <string name="copy_to_clipboard">Copiar al portapapeles</string>
     <string name="copy_npub_to_clipboard">Copiar npub al portapapeles</string>
     <string name="share_or_save">Compartir o guardar</string>
@@ -664,6 +668,12 @@
     <string name="could_not_prepare_header">No se pudo preparar la información del encabezado: %1$s</string>
     <string name="compression_cancelled">Compresión cancelada</string>
     <string name="compression_returned_null">La compresión no pudo devolver un archivo</string>
+    <string name="media_compression_quality_label">Calidad multimedia</string>
+    <string name="media_compression_quality_explainer">Selecciona baja calidad para comprimir tus archivos multimedia a un tamaño más pequeño con menos calidad, alta calidad para comprimir a un archivo más grande con mayor calidad, o sin comprimir para subir los medios sin compresión.</string>
+    <string name="media_compression_quality_low">Baja</string>
+    <string name="media_compression_quality_medium">Media</string>
+    <string name="media_compression_quality_high">Alta</string>
+    <string name="media_compression_quality_uncompressed">Sin comprimir</string>
     <string name="edit_draft">Editar borrador</string>
     <string name="login_with_qr_code">Iniciar sesión con código QR</string>
     <string name="route">Ruta</string>
@@ -811,4 +821,10 @@
     <string name="delete_all">Borrar todo</string>
     <string name="delete_all_drafts_confirmation">¿Seguro quieres eliminar todos los borradores?</string>
     <string name="stack">Stack:</string>
+    <string name="torrent_file">Archivo torrent</string>
+    <string name="torrent_download">Descargar</string>
+    <string name="torrent_failure">Error al abrir el archivo</string>
+    <string name="torrent_no_apps">No hay aplicaciones torrent instaladas para abrir y descargar el archivo.</string>
+    <string name="select_list_to_filter">Selecciona una lista para filtrar el feed</string>
+    <string name="temporary_account">Cerrar sesión al bloquear dispositivo</string>
 </resources>
