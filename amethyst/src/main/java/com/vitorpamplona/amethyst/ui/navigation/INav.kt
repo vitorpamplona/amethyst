@@ -111,7 +111,7 @@ class Nav(
         upTo: String,
     ) {
         scope.launch {
-            controller.navigate(route) { popUpTo(route) { inclusive = true } }
+            controller.navigate(route) { popUpTo(upTo) { inclusive = true } }
         }
     }
 }

@@ -344,11 +344,11 @@ private fun NavigateIfIntentRequested(
 
     val scope = rememberCoroutineScope()
 
-    DisposableEffect(activity) {
+    DisposableEffect(nav, activity) {
         val consumer =
             Consumer<Intent> { intent ->
-                val uri = intent?.data?.toString()
-                if (!uri.isNullOrBlank()) {
+                val uri = intent.data.toString()
+                if (uri.isNotBlank()) {
                     // navigation functions
                     val newPage = uriToRoute(uri)
 
