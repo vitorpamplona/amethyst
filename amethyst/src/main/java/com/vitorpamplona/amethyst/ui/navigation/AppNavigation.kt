@@ -347,8 +347,8 @@ private fun NavigateIfIntentRequested(
     DisposableEffect(nav, activity) {
         val consumer =
             Consumer<Intent> { intent ->
-                val uri = intent.data.toString()
-                if (uri.isNotBlank()) {
+                val uri = intent.data?.toString()
+                if (!uri.isNullOrBlank()) {
                     // navigation functions
                     val newPage = uriToRoute(uri)
 

@@ -111,14 +111,16 @@ suspend fun parseHtml(
         // sniff charset from Content-Type header or BOM
         val sniffedCharset = type.charset() ?: source.readBomAsCharset()
         if (sniffedCharset != null) {
-            val metaTags = MetaTagsParser.parse(source.readByteArray().toString(sniffedCharset))
+            val content = source.readByteArray().toString(sniffedCharset)
+            val metaTags = MetaTagsParser.parse(content)
             return@withContext extractUrlInfo(url, metaTags, type)
         }
 
         // if sniffing was failed, detect charset from content
         val bodyBytes = source.readByteArray()
         val charset = detectCharset(bodyBytes)
-        val metaTags = MetaTagsParser.parse(bodyBytes.toString(charset))
+        val content = bodyBytes.toString(charset)
+        val metaTags = MetaTagsParser.parse(content)
         return@withContext extractUrlInfo(url, metaTags, type)
     }
 

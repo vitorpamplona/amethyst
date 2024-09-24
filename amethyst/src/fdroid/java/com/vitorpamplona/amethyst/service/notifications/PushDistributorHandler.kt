@@ -38,7 +38,6 @@ interface PushDistributorActions {
 }
 
 object PushDistributorHandler : PushDistributorActions {
-    private val appContext = Amethyst.instance.applicationContext
     private val unifiedPush: UnifiedPush = UnifiedPush
 
     private var endpointInternal = ""
@@ -54,11 +53,13 @@ object PushDistributorHandler : PushDistributorActions {
         endpointInternal = ""
     }
 
-    override fun getSavedDistributor(): String = unifiedPush.getSavedDistributor(appContext) ?: ""
+    fun appContext(): Context = Amethyst.instance.applicationContext
+
+    override fun getSavedDistributor(): String = unifiedPush.getSavedDistributor(appContext()) ?: ""
 
     fun savedDistributorExists(): Boolean = getSavedDistributor().isNotEmpty()
 
-    override fun getInstalledDistributors(): List<String> = unifiedPush.getDistributors(appContext)
+    override fun getInstalledDistributors(): List<String> = unifiedPush.getDistributors(appContext())
 
     fun formattedDistributorNames(): List<String> {
         val distributorsArray = getInstalledDistributors().toTypedArray()
@@ -68,16 +69,16 @@ object PushDistributorHandler : PushDistributorActions {
                     try {
                         val ai =
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                appContext.packageManager.getApplicationInfo(
+                                appContext().packageManager.getApplicationInfo(
                                     it,
                                     PackageManager.ApplicationInfoFlags.of(
                                         PackageManager.GET_META_DATA.toLong(),
                                     ),
                                 )
                             } else {
-                                appContext.packageManager.getApplicationInfo(it, 0)
+                                appContext().packageManager.getApplicationInfo(it, 0)
                             }
-                        appContext.packageManager.getApplicationLabel(ai)
+                        appContext().packageManager.getApplicationLabel(ai)
                     } catch (e: PackageManager.NameNotFoundException) {
                         it
                     }
@@ -87,12 +88,12 @@ object PushDistributorHandler : PushDistributorActions {
     }
 
     override fun saveDistributor(distributor: String) {
-        unifiedPush.saveDistributor(appContext, distributor)
-        unifiedPush.registerApp(appContext)
+        unifiedPush.saveDistributor(appContext(), distributor)
+        unifiedPush.registerApp(appContext())
     }
 
     override fun removeSavedDistributor() {
-        unifiedPush.safeRemoveDistributor(appContext)
+        unifiedPush.safeRemoveDistributor(appContext())
     }
 
     fun forceRemoveDistributor(context: Context) {
