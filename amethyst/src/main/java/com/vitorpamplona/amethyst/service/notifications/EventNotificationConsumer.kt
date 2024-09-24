@@ -24,6 +24,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -42,6 +43,7 @@ import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.signers.NostrSigner
+import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
@@ -84,6 +86,12 @@ class EventNotificationConsumer(
         // TODO: Modify the external launcher to launch as different users.
         // Right now it only registers if Amber has already approved this signature
         val signer = account.createSigner()
+        if (signer is NostrSignerExternal) {
+            signer.launcher.registerLauncher(
+                launcher = { },
+                contentResolver = Amethyst.instance::contentResolverFn,
+            )
+        }
 
         pushWrappedEvent.unwrapThrowing(signer) { notificationEvent ->
             val consumed = LocalCache.hasConsumed(notificationEvent)
