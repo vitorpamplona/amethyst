@@ -47,11 +47,14 @@ object Nip96MediaServers {
 
     val cache: MutableMap<String, Nip96Retriever.ServerInfo> = mutableMapOf()
 
-    suspend fun load(url: String): Nip96Retriever.ServerInfo {
+    suspend fun load(
+        url: String,
+        forceProxy: Boolean,
+    ): Nip96Retriever.ServerInfo {
         val cached = cache[url]
         if (cached != null) return cached
 
-        val fetched = Nip96Retriever().loadInfo(url)
+        val fetched = Nip96Retriever().loadInfo(url, forceProxy)
         cache[url] = fetched
         return fetched
     }
@@ -100,7 +103,10 @@ class Nip96Retriever {
         )
     }
 
-    suspend fun loadInfo(baseUrl: String): ServerInfo {
+    suspend fun loadInfo(
+        baseUrl: String,
+        forceProxy: Boolean,
+    ): ServerInfo {
         checkNotInMainThread()
 
         val request: Request =
@@ -110,7 +116,7 @@ class Nip96Retriever {
                 .url(baseUrl.removeSuffix("/") + "/.well-known/nostr/nip96.json")
                 .build()
 
-        HttpClientManager.getHttpClient().newCall(request).execute().use { response ->
+        HttpClientManager.getHttpClient(forceProxy).newCall(request).execute().use { response ->
             checkNotInMainThread()
             response.use {
                 val body = it.body.string()

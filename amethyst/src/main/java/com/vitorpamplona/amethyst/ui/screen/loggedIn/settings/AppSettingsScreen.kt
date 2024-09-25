@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import com.vitorpamplona.amethyst.R
@@ -60,10 +61,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
+import com.vitorpamplona.amethyst.ui.screen.mockSharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
@@ -143,6 +146,15 @@ fun SettingsScreen(
         Column(Modifier.padding(it)) {
             SettingsScreen(sharedPreferencesViewModel)
         }
+    }
+}
+
+@Preview(device = "spec:width=2160px,height=2340px,dpi=440")
+@Composable
+fun SettingsScreenPreview() {
+    val sharedPreferencesViewModel = mockSharedPreferencesViewModel()
+    ThemeComparisonRow {
+        SettingsScreen(sharedPreferencesViewModel)
     }
 }
 
@@ -298,9 +310,27 @@ fun SettingsRow(
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
 ) {
+    SettingsRow(name, description) {
+        TextSpinner(
+            label = "",
+            placeholder = selectedItens[selectedIndex].title,
+            options = selectedItens,
+            onSelect = onSelect,
+            modifier = Modifier.windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
+        )
+    }
+}
+
+@Composable
+fun SettingsRow(
+    name: Int,
+    description: Int,
+    content: @Composable () -> Unit,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         Column(
             modifier = Modifier.weight(2.0f),
@@ -320,12 +350,11 @@ fun SettingsRow(
             )
         }
 
-        TextSpinner(
-            label = "",
-            placeholder = selectedItens[selectedIndex].title,
-            options = selectedItens,
-            onSelect = onSelect,
-            modifier = Modifier.windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)).weight(1f),
-        )
+        Column(
+            Modifier.weight(1f),
+            horizontalAlignment = Alignment.End,
+        ) {
+            content()
+        }
     }
 }

@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
 import com.vitorpamplona.quartz.signers.SignerType
@@ -138,8 +139,7 @@ fun LoginPage(
     var termsAcceptanceIsRequired by remember { mutableStateOf("") }
 
     val context = LocalContext.current
-    val useProxy = remember { mutableStateOf(false) }
-    val proxyPort = remember { mutableStateOf("9050") }
+    val torSettings = remember { mutableStateOf(TorSettings()) }
     val isNFCOrQR = remember { mutableStateOf(false) }
     val isTemporary = remember { mutableStateOf(false) }
 
@@ -172,8 +172,7 @@ fun LoginPage(
             if (acceptedTerms.value && key.value.text.isNotBlank()) {
                 accountStateViewModel.login(
                     key = key.value.text,
-                    useProxy = useProxy.value,
-                    proxyPort = proxyPort.value.toInt(),
+                    torSettings = torSettings.value,
                     transientAccount = isTemporary.value,
                     loginWithExternalSigner = true,
                     packageName = packageName,
@@ -233,8 +232,7 @@ fun LoginPage(
                 accountStateViewModel.login(
                     key = key.value.text,
                     password = password.value.text,
-                    useProxy = useProxy.value,
-                    proxyPort = proxyPort.value.toInt(),
+                    torSettings = torSettings.value,
                     transientAccount = isTemporary.value,
                 ) {
                     processingLogin = false
@@ -283,7 +281,7 @@ fun LoginPage(
 
                 if (acceptedTerms.value && key.value.text.isNotBlank() && !(needsPassword.value && password.value.text.isBlank())) {
                     processingLogin = true
-                    accountStateViewModel.login(key.value.text, password.value.text, useProxy.value, proxyPort.value.toInt(), isTemporary.value) {
+                    accountStateViewModel.login(key.value.text, password.value.text, torSettings.value, isTemporary.value) {
                         processingLogin = false
                         errorMessage =
                             if (it != null) {
@@ -299,10 +297,9 @@ fun LoginPage(
 
         if (PackageUtils.isOrbotInstalled(context)) {
             OrbotCheckBox(
-                currentPort = proxyPort.value.toIntOrNull(),
-                useProxy = useProxy.value,
+                torSettings = torSettings.value,
                 onCheckedChange = {
-                    useProxy.value = it
+                    torSettings.value = it
                 },
                 onError = {
                     scope.launch {
@@ -361,7 +358,7 @@ fun LoginPage(
 
                     if (acceptedTerms.value && key.value.text.isNotBlank() && !(needsPassword.value && password.value.text.isBlank())) {
                         processingLogin = true
-                        accountStateViewModel.login(key.value.text, password.value.text, useProxy.value, proxyPort.value.toInt(), isTemporary.value) {
+                        accountStateViewModel.login(key.value.text, password.value.text, torSettings.value, isTemporary.value) {
                             processingLogin = false
                             errorMessage =
                                 if (it != null) {

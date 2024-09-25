@@ -25,11 +25,8 @@ import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 object Constants {
     val activeTypes = setOf(FeedType.FOLLOWS, FeedType.PRIVATE_DMS)
     val activeTypesChats = setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS)
-    val activeTypesGlobalChats =
-        setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS, FeedType.GLOBAL)
+    val activeTypesGlobalChats = setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS, FeedType.GLOBAL)
     val activeTypesSearch = setOf(FeedType.SEARCH)
-
-    fun convertDefaultRelays(): Array<Relay> = defaultRelays.map { Relay(it.url, it.read, it.write, it.feedTypes) }.toTypedArray()
 
     val defaultRelays =
         arrayOf(

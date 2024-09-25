@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource.user
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.collectSuccessfulSigningOperations
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -60,6 +61,7 @@ class ZapPaymentHandler(
         message: String,
         context: Context,
         showErrorIfNoLnAddress: Boolean,
+        forceProxy: (String) -> Boolean,
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<Payable>) -> Unit,
@@ -116,6 +118,10 @@ class ZapPaymentHandler(
 
         onProgress(0.02f)
         signAllZapRequests(note, pollOption, message, zapType, zapsToSend) { splitZapRequestPairs ->
+            splitZapRequestPairs.forEach {
+                println("AABBCC 1 ${it.key} ${it.value}  $amountMilliSats")
+            }
+
             if (splitZapRequestPairs.isEmpty()) {
                 onProgress(0.00f)
                 return@signAllZapRequests
@@ -123,9 +129,13 @@ class ZapPaymentHandler(
                 onProgress(0.05f)
             }
 
-            assembleAllInvoices(splitZapRequestPairs.toList(), amountMilliSats, message, showErrorIfNoLnAddress, onError, onProgress = {
+            assembleAllInvoices(splitZapRequestPairs.toList(), amountMilliSats, message, showErrorIfNoLnAddress, forceProxy, onError, onProgress = {
                 onProgress(it * 0.7f + 0.05f) // keeps within range.
             }, context) {
+                splitZapRequestPairs.forEach {
+                    println("AABBCC 2 ${it.key} ${it.value}  $amountMilliSats")
+                }
+
                 if (it.isEmpty()) {
                     onProgress(0.00f)
                     return@assembleAllInvoices
@@ -169,7 +179,7 @@ class ZapPaymentHandler(
     }
 
     class SignAllZapRequestsReturn(
-        val zapRequestJson: String,
+        val zapRequestJson: String?,
         val user: User? = null,
     )
 
@@ -215,9 +225,8 @@ class ZapPaymentHandler(
                         ) + (authorRelayList ?: emptySet())
 
                     prepareZapRequestIfNeeded(note, pollOption, message, zapType, user, userRelayList) { zapRequestJson ->
-                        if (zapRequestJson != null) {
-                            onReady(SignAllZapRequestsReturn(zapRequestJson, user))
-                        }
+                        println("AABBCC middle ${user?.toBestDisplayName()} + $zapRequestJson")
+                        onReady(SignAllZapRequestsReturn(zapRequestJson, user))
                     }
                 }
             },
@@ -230,6 +239,7 @@ class ZapPaymentHandler(
         totalAmountMilliSats: Long,
         message: String,
         showErrorIfNoLnAddress: Boolean,
+        forceProxy: (String) -> Boolean,
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         context: Context,
@@ -247,6 +257,7 @@ class ZapPaymentHandler(
                     zapValue = calculateZapValue(totalAmountMilliSats, splitZapRequestPair.first.weight, totalWeight),
                     message = message,
                     showErrorIfNoLnAddress = showErrorIfNoLnAddress,
+                    forceProxy = forceProxy,
                     onError = onError,
                     onProgressStep = { percentStepForThisPayment ->
                         progressAllPayments += percentStepForThisPayment / invoices.size
@@ -273,15 +284,20 @@ class ZapPaymentHandler(
         collectSuccessfulSigningOperations<String, Boolean>(
             operationsInput = invoices,
             runRequestFor = { invoice: String, onReady ->
+                println("AABBCC sending $invoice")
+
                 account.sendZapPaymentRequestFor(
                     bolt11 = invoice,
                     zappedNote = note,
                     onSent = {
+                        println("AABBCC sent $invoice")
                         progressAllPayments += 0.5f / invoices.size
                         onProgress(progressAllPayments)
                         onReady(true)
                     },
                     onResponse = { response ->
+                        println("AABBCC response $invoice")
+
                         if (response is PayInvoiceErrorResponse) {
                             progressAllPayments += 0.5f / invoices.size
                             onProgress(progressAllPayments)
@@ -312,10 +328,11 @@ class ZapPaymentHandler(
 
     private fun assembleInvoice(
         splitSetup: ZapSplitSetup,
-        nostrZapRequest: String,
+        nostrZapRequest: String?,
         zapValue: Long,
         message: String,
         showErrorIfNoLnAddress: Boolean = true,
+        forceProxy: (String) -> Boolean,
         onError: (String, String) -> Unit,
         onProgressStep: (percent: Float) -> Unit,
         context: Context,
@@ -339,6 +356,7 @@ class ZapPaymentHandler(
                     milliSats = zapValue,
                     message = message,
                     nostrRequest = nostrZapRequest,
+                    forceProxy = forceProxy,
                     onError = onError,
                     onProgress = {
                         val step = it - progressThisPayment

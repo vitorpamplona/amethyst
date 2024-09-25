@@ -107,11 +107,11 @@ open class EditPostViewModel : ViewModel() {
         editedFromNote = edit
     }
 
-    fun sendPost(relayList: List<RelaySetupInfo>? = null) {
+    fun sendPost(relayList: List<RelaySetupInfo>) {
         viewModelScope.launch(Dispatchers.IO) { innerSendPost(relayList) }
     }
 
-    suspend fun innerSendPost(relayList: List<RelaySetupInfo>? = null) {
+    suspend fun innerSendPost(relayList: List<RelaySetupInfo>) {
         if (accountViewModel == null) {
             cancel()
             return
@@ -193,6 +193,7 @@ open class EditPostViewModel : ViewModel() {
                                                 sensitiveContent = if (sensitiveContent) "" else null,
                                                 server = server.server,
                                                 contentResolver = contentResolver,
+                                                forceProxy = account?.let { it::shouldUseTorForNIP96 } ?: { false },
                                                 onProgress = {},
                                                 context = context,
                                             )
@@ -202,6 +203,7 @@ open class EditPostViewModel : ViewModel() {
                                         localContentType = contentType,
                                         alt = alt,
                                         sensitiveContent = sensitiveContent,
+                                        forceProxy = account?.let { it::shouldUseTorForNIP96 } ?: { false },
                                         onError = {
                                             onError(stringRes(context, R.string.failed_to_upload_media_no_details), it)
                                         },
@@ -318,6 +320,7 @@ open class EditPostViewModel : ViewModel() {
         localContentType: String?,
         alt: String?,
         sensitiveContent: Boolean,
+        forceProxy: (String) -> Boolean,
         onError: (String) -> Unit = {},
         context: Context,
     ) {
@@ -356,6 +359,7 @@ open class EditPostViewModel : ViewModel() {
             fileUrl = imageUrl,
             mimeType = remoteMimeType ?: localContentType,
             dimPrecomputed = dim,
+            forceProxy = forceProxy(imageUrl),
             onReady = { header: FileHeader ->
                 account?.createHeader(imageUrl, magnet, header, alt, sensitiveContent, originalHash) { event ->
                     isUploadingImage = false

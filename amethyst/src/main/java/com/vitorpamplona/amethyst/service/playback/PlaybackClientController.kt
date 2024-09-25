@@ -38,6 +38,7 @@ object PlaybackClientController {
         controllerID: String,
         videoUri: String,
         callbackUri: String?,
+        proxyPort: Int? = 0,
         context: Context,
         onReady: (MediaController) -> Unit,
     ) {
@@ -48,6 +49,9 @@ object PlaybackClientController {
             bundle.putString("id", controllerID)
             bundle.putString("uri", videoUri)
             bundle.putString("callbackUri", callbackUri)
+            proxyPort?.let {
+                bundle.putInt("proxyPort", it)
+            }
 
             var session = cache.get(context.hashCode())
             if (session == null) {

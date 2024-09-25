@@ -64,6 +64,7 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
             _relays.value.forEach { item ->
                 Nip11CachedRetriever.loadRelayInfo(
                     dirtyUrl = item.url,
+                    forceProxy = account.shouldUseTorForDirty(item.url),
                     onInfo = {
                         togglePaidRelay(item, it.limitation?.payment_required ?: false)
                     },

@@ -116,7 +116,11 @@ fun CashuPreview(
     accountViewModel: AccountViewModel,
 ) {
     tokens.forEach {
-        CashuPreviewNew(it, accountViewModel::meltCashu, accountViewModel::toast)
+        CashuPreviewNew(
+            it,
+            accountViewModel::meltCashu,
+            accountViewModel::toast,
+        )
     }
 }
 

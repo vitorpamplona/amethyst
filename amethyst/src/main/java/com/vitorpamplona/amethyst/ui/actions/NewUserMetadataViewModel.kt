@@ -187,6 +187,7 @@ class NewUserMetadataViewModel : ViewModel() {
                                         sensitiveContent = null,
                                         server = account.settings.defaultFileServer,
                                         contentResolver = contentResolver,
+                                        forceProxy = account::shouldUseTorForNIP96,
                                         onProgress = {},
                                         context = context,
                                     )

@@ -21,6 +21,7 @@
 package com.vitorpamplona.ammolite.service
 
 import android.util.Log
+import com.vitorpamplona.ammolite.service.HttpClientManager.setDefaultProxy
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -29,37 +30,58 @@ import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.time.Duration
-import kotlin.properties.Delegates
+
+class LoggingInterceptor : Interceptor {
+    @Throws(IOException::class)
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val request: Request = chain.request()
+        val t1 = System.nanoTime()
+        val port =
+            (
+                chain
+                    .connection()
+                    ?.route()
+                    ?.proxy
+                    ?.address() as? InetSocketAddress
+            )?.port
+        val response: Response = chain.proceed(request)
+        val t2 = System.nanoTime()
+
+        Log.d("OkHttpLog", "Req $port ${request.url} in ${(t2 - t1) / 1e6}ms")
+
+        return response
+    }
+}
 
 object HttpClientManager {
+    val rootClient =
+        OkHttpClient
+            .Builder()
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build()
+
     val DEFAULT_TIMEOUT_ON_WIFI: Duration = Duration.ofSeconds(10L)
     val DEFAULT_TIMEOUT_ON_MOBILE: Duration = Duration.ofSeconds(30L)
 
-    var proxyChangeListeners = ArrayList<() -> Unit>()
     private var defaultTimeout = DEFAULT_TIMEOUT_ON_WIFI
     private var defaultHttpClient: OkHttpClient? = null
     private var defaultHttpClientWithoutProxy: OkHttpClient? = null
     private var userAgent: String = "Amethyst"
 
-    // fires off every time value of the property changes
-    private var internalProxy: Proxy? by
-        Delegates.observable(null) { _, oldValue, newValue ->
-            if (oldValue != newValue) {
-                proxyChangeListeners.forEach { it() }
-            }
-        }
+    private var currentProxy: Proxy? = null
 
     fun setDefaultProxy(proxy: Proxy?) {
-        if (internalProxy != proxy) {
+        if (currentProxy != proxy) {
             Log.d("HttpClient", "Changing proxy to: ${proxy != null}")
-            this.internalProxy = proxy
+            this.currentProxy = proxy
 
             // recreates singleton
-            this.defaultHttpClient = buildHttpClient(internalProxy, defaultTimeout)
+            this.defaultHttpClient = buildHttpClient(currentProxy, defaultTimeout)
         }
     }
 
-    fun getDefaultProxy(): Proxy? = this.internalProxy
+    fun getCurrentProxy(): Proxy? = this.currentProxy
 
     fun setDefaultTimeout(timeout: Duration) {
         Log.d("HttpClient", "Changing timeout to: $timeout")
@@ -67,17 +89,19 @@ object HttpClientManager {
             this.defaultTimeout = timeout
 
             // recreates singleton
-            this.defaultHttpClient = buildHttpClient(internalProxy, defaultTimeout)
+            this.defaultHttpClient = buildHttpClient(currentProxy, defaultTimeout)
+            this.defaultHttpClientWithoutProxy = buildHttpClient(null, defaultTimeout)
         }
     }
 
     fun setDefaultUserAgent(userAgentHeader: String) {
         Log.d("HttpClient", "Changing userAgent")
-        this.userAgent = userAgentHeader
-        this.defaultHttpClient = buildHttpClient(internalProxy, defaultTimeout)
+        if (userAgent != userAgentHeader) {
+            this.userAgent = userAgentHeader
+            this.defaultHttpClient = buildHttpClient(currentProxy, defaultTimeout)
+            this.defaultHttpClientWithoutProxy = buildHttpClient(null, defaultTimeout)
+        }
     }
-
-    fun getDefaultUserAgentHeader() = this.userAgent
 
     private fun buildHttpClient(
         proxy: Proxy?,
@@ -85,15 +109,14 @@ object HttpClientManager {
     ): OkHttpClient {
         val seconds = if (proxy != null) timeout.seconds * 3 else timeout.seconds
         val duration = Duration.ofSeconds(seconds)
-        return OkHttpClient
-            .Builder()
+        return rootClient
+            .newBuilder()
             .proxy(proxy)
             .readTimeout(duration)
             .connectTimeout(duration)
             .writeTimeout(duration)
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
-            .followRedirects(true)
-            .followSslRedirects(true)
+            .addNetworkInterceptor(LoggingInterceptor())
             .build()
     }
 
@@ -112,20 +135,17 @@ object HttpClientManager {
         }
     }
 
-    fun getHttpClientForUrl(url: String): OkHttpClient {
-        // TODO: How to identify relays on the local network?
-        val isLocalHost = url.startsWith("ws://127.0.0.1") || url.startsWith("ws://localhost")
-        return if (isLocalHost) {
-            getHttpClient(false)
+    fun getCurrentProxyPort(useProxy: Boolean): Int? =
+        if (useProxy) {
+            (currentProxy?.address() as? InetSocketAddress)?.port
         } else {
-            getHttpClient()
+            null
         }
-    }
 
-    fun getHttpClient(useProxy: Boolean = true): OkHttpClient =
+    fun getHttpClient(useProxy: Boolean): OkHttpClient =
         if (useProxy) {
             if (this.defaultHttpClient == null) {
-                this.defaultHttpClient = buildHttpClient(internalProxy, defaultTimeout)
+                this.defaultHttpClient = buildHttpClient(currentProxy, defaultTimeout)
             }
             defaultHttpClient!!
         } else {
@@ -135,9 +155,7 @@ object HttpClientManager {
             defaultHttpClientWithoutProxy!!
         }
 
-    fun initProxy(
-        useProxy: Boolean,
-        hostname: String,
-        port: Int,
-    ): Proxy? = if (useProxy) Proxy(Proxy.Type.SOCKS, InetSocketAddress(hostname, port)) else null
+    fun setDefaultProxyOnPort(port: Int) {
+        setDefaultProxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port)))
+    }
 }

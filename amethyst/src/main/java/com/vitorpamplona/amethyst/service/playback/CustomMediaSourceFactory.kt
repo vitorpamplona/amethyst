@@ -28,17 +28,17 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.ammolite.service.HttpClientManager
+import okhttp3.OkHttpClient
 
 /**
  * HLS LiveStreams cannot use cache.
  */
 @UnstableApi
-class CustomMediaSourceFactory : MediaSource.Factory {
-    private var cachingFactory: MediaSource.Factory =
-        DefaultMediaSourceFactory(Amethyst.instance.videoCache.get(HttpClientManager.getHttpClient()))
-    private var nonCachingFactory: MediaSource.Factory =
-        DefaultMediaSourceFactory(OkHttpDataSource.Factory(HttpClientManager.getHttpClient()))
+class CustomMediaSourceFactory(
+    val okHttpClient: OkHttpClient,
+) : MediaSource.Factory {
+    private var cachingFactory: MediaSource.Factory = DefaultMediaSourceFactory(Amethyst.instance.videoCache.get(okHttpClient))
+    private var nonCachingFactory: MediaSource.Factory = DefaultMediaSourceFactory(OkHttpDataSource.Factory(okHttpClient))
 
     override fun setDrmSessionManagerProvider(drmSessionManagerProvider: DrmSessionManagerProvider): MediaSource.Factory {
         cachingFactory.setDrmSessionManagerProvider(drmSessionManagerProvider)

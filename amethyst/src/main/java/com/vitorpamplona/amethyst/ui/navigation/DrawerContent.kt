@@ -20,11 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -47,7 +45,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,7 +52,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -97,7 +93,6 @@ import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -113,6 +108,7 @@ import com.vitorpamplona.amethyst.ui.theme.bannerModifier
 import com.vitorpamplona.amethyst.ui.theme.drawerSpacing
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.profileContentHeaderModifier
+import com.vitorpamplona.amethyst.ui.tor.ConnectTorDialog
 import com.vitorpamplona.ammolite.relays.RelayPool
 import com.vitorpamplona.ammolite.relays.RelayPoolStatus
 import com.vitorpamplona.quartz.encoders.ATag
@@ -442,8 +438,7 @@ fun ListContent(
     var editMediaServers by remember { mutableStateOf(false) }
 
     var backupDialogOpen by remember { mutableStateOf(false) }
-    var checked by remember { mutableStateOf(accountViewModel.account.settings.proxy != null) }
-    var disconnectTorDialog by remember { mutableStateOf(false) }
+
     var conectOrbotDialogOpen by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -512,25 +507,12 @@ fun ListContent(
         }
 
         IconRow(
-            title =
-                if (checked) {
-                    stringRes(R.string.disconnect_from_your_orbot_setup)
-                } else {
-                    stringRes(R.string.connect_via_tor_short)
-                },
+            title = stringRes(R.string.connect_via_tor_short),
             icon = R.drawable.ic_tor,
             tint = MaterialTheme.colorScheme.onBackground,
-            onLongClick = {
+            onClick = {
                 nav.closeDrawer()
                 conectOrbotDialogOpen = true
-            },
-            onClick = {
-                if (checked) {
-                    disconnectTorDialog = true
-                } else {
-                    nav.closeDrawer()
-                    conectOrbotDialogOpen = true
-                }
             },
         )
 
@@ -562,46 +544,20 @@ fun ListContent(
         AccountBackupDialog(accountViewModel, onClose = { backupDialogOpen = false })
     }
     if (conectOrbotDialogOpen) {
-        ConnectOrbotDialog(
+        ConnectTorDialog(
+            torSettings =
+                accountViewModel.account.settings.torSettings
+                    .toSettings(),
             onClose = { conectOrbotDialogOpen = false },
-            onPost = {
+            onPost = { torSettings ->
                 conectOrbotDialogOpen = false
-                disconnectTorDialog = false
-                checked = true
-                accountViewModel.enableTor(it)
+                accountViewModel.setTorSettings(torSettings)
             },
             onError = {
                 accountViewModel.toast(
                     stringRes(context, R.string.could_not_connect_to_tor),
                     it,
                 )
-            },
-            currentPortNumber = accountViewModel.account.settings.proxyPort,
-        )
-    }
-
-    if (disconnectTorDialog) {
-        AlertDialog(
-            title = { Text(text = stringRes(R.string.do_you_really_want_to_disable_tor_title)) },
-            text = { Text(text = stringRes(R.string.do_you_really_want_to_disable_tor_text)) },
-            onDismissRequest = { disconnectTorDialog = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        disconnectTorDialog = false
-                        checked = false
-                        accountViewModel.disableTor()
-                    },
-                ) {
-                    Text(text = stringRes(R.string.yes))
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { disconnectTorDialog = false },
-                ) {
-                    Text(text = stringRes(R.string.no))
-                }
             },
         )
     }
@@ -658,22 +614,19 @@ fun NavigationRow(
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun IconRow(
     title: String,
     icon: Int,
     tint: Color,
     onClick: () -> Unit,
-    onLongClick: (() -> Unit)? = null,
 ) {
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .combinedClickable(
+                .clickable(
                     onClick = onClick,
-                    onLongClick = onLongClick,
                 ),
     ) {
         Row(

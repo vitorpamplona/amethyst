@@ -45,7 +45,7 @@ class Nip47WalletConnect {
                     throw IllegalArgumentException("Hostname is not a valid Nostr Pubkey")
                 }
 
-            val relay = url.getQueryParameter("relay")
+            val relay = url.getQueryParameter("relay") ?: throw IllegalArgumentException("Relay cannot be null")
             val secret = url.getQueryParameter("secret")
 
             return Nip47URI(pubkeyHex, relay, secret)
@@ -54,7 +54,7 @@ class Nip47WalletConnect {
 
     data class Nip47URI(
         val pubKeyHex: HexKey,
-        val relayUri: String?,
+        val relayUri: String,
         val secret: HexKey?,
     )
 }

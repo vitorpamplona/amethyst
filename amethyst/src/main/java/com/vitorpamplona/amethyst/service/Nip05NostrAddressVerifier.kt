@@ -44,6 +44,7 @@ class Nip05NostrAddressVerifier {
 
     suspend fun fetchNip05Json(
         nip05: String,
+        forceProxy: (String) -> Boolean,
         onSuccess: suspend (String) -> Unit,
         onError: (String) -> Unit,
     ) = withContext(Dispatchers.IO) {
@@ -65,7 +66,7 @@ class Nip05NostrAddressVerifier {
                     .build()
             // Fetchers MUST ignore any HTTP redirects given by the /.well-known/nostr.json endpoint.
             HttpClientManager
-                .getHttpClient()
+                .getHttpClient(forceProxy(url))
                 .newBuilder()
                 .followRedirects(false)
                 .build()
@@ -90,6 +91,7 @@ class Nip05NostrAddressVerifier {
 
     suspend fun verifyNip05(
         nip05: String,
+        forceProxy: (String) -> Boolean,
         onSuccess: suspend (String) -> Unit,
         onError: (String) -> Unit,
     ) {
@@ -100,6 +102,7 @@ class Nip05NostrAddressVerifier {
 
         fetchNip05Json(
             nip05,
+            forceProxy,
             onSuccess = {
                 checkNotInMainThread()
 

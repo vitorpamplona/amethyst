@@ -33,9 +33,10 @@ import com.vitorpamplona.amethyst.model.DefaultDMRelayList
 import com.vitorpamplona.amethyst.model.DefaultNIP65List
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
+import com.vitorpamplona.amethyst.ui.tor.TorSettings
+import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.Constants
-import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.Hex
@@ -92,8 +93,7 @@ class AccountStateViewModel : ViewModel() {
 
     suspend fun loginAndStartUI(
         key: String,
-        useProxy: Boolean,
-        proxyPort: Int,
+        torSettings: TorSettings,
         transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
@@ -112,8 +112,6 @@ class AccountStateViewModel : ViewModel() {
                 else -> null
             }
 
-        val proxy = HttpClientManager.initProxy(useProxy, "127.0.0.1", proxyPort)
-
         if (loginWithExternalSigner && pubKeyParsed == null) {
             throw Exception("Invalid key while trying to login with external signer")
         }
@@ -124,36 +122,31 @@ class AccountStateViewModel : ViewModel() {
                     keyPair = KeyPair(pubKey = pubKeyParsed),
                     transientAccount = transientAccount,
                     externalSignerPackageName = packageName.ifBlank { "com.greenart7c3.nostrsigner" },
-                    proxy = proxy,
-                    proxyPort = proxyPort,
+                    torSettings = TorSettingsFlow.build(torSettings),
                 )
             } else if (key.startsWith("nsec")) {
                 AccountSettings(
                     keyPair = KeyPair(privKey = key.bechToBytes()),
                     transientAccount = transientAccount,
-                    proxy = proxy,
-                    proxyPort = proxyPort,
+                    torSettings = TorSettingsFlow.build(torSettings),
                 )
             } else if (key.contains(" ") && CryptoUtils.isValidMnemonic(key)) {
                 AccountSettings(
                     keyPair = KeyPair(privKey = CryptoUtils.privateKeyFromMnemonic(key)),
                     transientAccount = transientAccount,
-                    proxy = proxy,
-                    proxyPort = proxyPort,
+                    torSettings = TorSettingsFlow.build(torSettings),
                 )
             } else if (pubKeyParsed != null) {
                 AccountSettings(
                     keyPair = KeyPair(pubKey = pubKeyParsed),
                     transientAccount = transientAccount,
-                    proxy = proxy,
-                    proxyPort = proxyPort,
+                    torSettings = TorSettingsFlow.build(torSettings),
                 )
             } else {
                 AccountSettings(
                     keyPair = KeyPair(Hex.decode(key)),
                     transientAccount = transientAccount,
-                    proxy = proxy,
-                    proxyPort = proxyPort,
+                    torSettings = TorSettingsFlow.build(torSettings),
                 )
             }
 
@@ -198,8 +191,7 @@ class AccountStateViewModel : ViewModel() {
     fun login(
         key: String,
         password: String,
-        useProxy: Boolean,
-        proxyPort: Int,
+        torSettings: TorSettings,
         transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
@@ -220,49 +212,48 @@ class AccountStateViewModel : ViewModel() {
                     onError("Could not decrypt key with provided password")
                     Log.e("Login", "Could not decrypt ncryptsec")
                 } else {
-                    loginSync(newKey, useProxy, proxyPort, transientAccount, loginWithExternalSigner, packageName, onError)
+                    loginSync(newKey, torSettings, transientAccount, loginWithExternalSigner, packageName, onError)
                 }
             } else if (EMAIL_PATTERN.matcher(key).matches()) {
                 Nip05NostrAddressVerifier().verifyNip05(
                     key,
+                    forceProxy = { false },
                     onSuccess = { publicKey ->
-                        loginSync(Hex.decode(publicKey).toNpub(), useProxy, proxyPort, transientAccount, loginWithExternalSigner, packageName, onError)
+                        loginSync(Hex.decode(publicKey).toNpub(), torSettings, transientAccount, loginWithExternalSigner, packageName, onError)
                     },
                     onError = {
                         onError(it)
                     },
                 )
             } else {
-                loginSync(key, useProxy, proxyPort, transientAccount, loginWithExternalSigner, packageName, onError)
+                loginSync(key, torSettings, transientAccount, loginWithExternalSigner, packageName, onError)
             }
         }
     }
 
     fun login(
         key: String,
-        useProxy: Boolean,
-        proxyPort: Int,
+        torSettings: TorSettings,
         transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
         onError: (String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            loginSync(key, useProxy, proxyPort, transientAccount, loginWithExternalSigner, packageName, onError)
+            loginSync(key, torSettings, transientAccount, loginWithExternalSigner, packageName, onError)
         }
     }
 
     suspend fun loginSync(
         key: String,
-        useProxy: Boolean,
-        proxyPort: Int,
+        torSettings: TorSettings,
         transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
         onError: (String) -> Unit,
     ) {
         try {
-            loginAndStartUI(key, useProxy, proxyPort, transientAccount, loginWithExternalSigner, packageName)
+            loginAndStartUI(key, torSettings, transientAccount, loginWithExternalSigner, packageName)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("Login", "Could not sign in", e)
@@ -271,8 +262,7 @@ class AccountStateViewModel : ViewModel() {
     }
 
     fun newKey(
-        useProxy: Boolean,
-        proxyPort: Int,
+        torSettings: TorSettings,
         name: String? = null,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -299,8 +289,7 @@ class AccountStateViewModel : ViewModel() {
                     backupNIP65RelayList = AdvertisedRelayListEvent.create(DefaultNIP65List, tempSigner),
                     backupDMRelayList = ChatMessageRelayListEvent.create(DefaultDMRelayList, tempSigner),
                     backupSearchRelayList = SearchRelayListEvent.create(DefaultSearchRelayList, tempSigner),
-                    proxy = HttpClientManager.initProxy(useProxy, "127.0.0.1", proxyPort),
-                    proxyPort = proxyPort,
+                    torSettings = TorSettingsFlow.build(torSettings),
                 )
 
             // saves to local preferences

@@ -78,7 +78,7 @@ open class NewMediaModel : ViewModel() {
 
     fun upload(
         context: Context,
-        relayList: List<RelaySetupInfo>? = null,
+        relayList: List<RelaySetupInfo>,
         mediaQuality: Int,
         onError: (String) -> Unit = {},
     ) {
@@ -136,6 +136,7 @@ open class NewMediaModel : ViewModel() {
                                                 sensitiveContent = if (sensitiveContent) "" else null,
                                                 server = serverToUse.server,
                                                 contentResolver = contentResolver,
+                                                forceProxy = account?.let { it::shouldUseTorForNIP96 } ?: { false },
                                                 onProgress = { percent: Float ->
                                                     uploadingPercentage.value = 0.2f + (0.2f * percent)
                                                 },
@@ -148,6 +149,7 @@ open class NewMediaModel : ViewModel() {
                                         alt = alt,
                                         sensitiveContent = sensitiveContent,
                                         relayList = relayList,
+                                        forceProxy = account?.let { it::shouldUseTorForNIP96 } ?: { false },
                                         onError = onError,
                                         context,
                                     )
@@ -190,7 +192,8 @@ open class NewMediaModel : ViewModel() {
         localContentType: String?,
         alt: String,
         sensitiveContent: Boolean,
-        relayList: List<RelaySetupInfo>? = null,
+        relayList: List<RelaySetupInfo>,
+        forceProxy: (String) -> Boolean,
         onError: (String) -> Unit = {},
         context: Context,
     ) {
@@ -233,7 +236,7 @@ open class NewMediaModel : ViewModel() {
         uploadingDescription.value = "Downloading"
         uploadingPercentage.value = 0.60f
 
-        val imageData: ByteArray? = ImageDownloader().waitAndGetImage(imageUrl)
+        val imageData: ByteArray? = ImageDownloader().waitAndGetImage(imageUrl, forceProxy(imageUrl))
 
         if (imageData != null) {
             uploadingPercentage.value = 0.80f
@@ -284,7 +287,7 @@ open class NewMediaModel : ViewModel() {
         mimeType: String?,
         alt: String,
         sensitiveContent: Boolean,
-        relayList: List<RelaySetupInfo>? = null,
+        relayList: List<RelaySetupInfo>,
         onError: (String) -> Unit = {},
         context: Context,
     ) {

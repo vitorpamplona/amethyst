@@ -30,21 +30,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ConnectOrbotDialog
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.tor.ConnectTorDialog
+import com.vitorpamplona.amethyst.ui.tor.TorSettings
+import com.vitorpamplona.amethyst.ui.tor.TorType
 
 @Composable
 fun OrbotCheckBox(
-    currentPort: Int?,
-    useProxy: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
+    torSettings: TorSettings,
+    onCheckedChange: (TorSettings) -> Unit,
     onError: (String) -> Unit,
 ) {
     var connectOrbotDialogOpen by remember { mutableStateOf(false) }
+    var activeTor by remember { mutableStateOf(false) }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Checkbox(
-            checked = useProxy,
+            checked = activeTor,
             onCheckedChange = {
                 if (it) {
                     connectOrbotDialogOpen = true
@@ -56,14 +58,15 @@ fun OrbotCheckBox(
     }
 
     if (connectOrbotDialogOpen) {
-        ConnectOrbotDialog(
+        ConnectTorDialog(
+            torSettings = torSettings,
             onClose = { connectOrbotDialogOpen = false },
-            onPost = {
+            onPost = { torSettings ->
+                activeTor = torSettings.torType != TorType.OFF
                 connectOrbotDialogOpen = false
-                onCheckedChange(true)
+                onCheckedChange(torSettings)
             },
             onError = onError,
-            currentPort,
         )
     }
 }

@@ -36,6 +36,7 @@ import java.util.concurrent.BlockingQueue
 class OkHttpCalendarAsyncSubmit(
     private val url: String,
     private val digest: ByteArray,
+    private val forceProxy: Boolean,
 ) : ICalendarAsyncSubmit {
     private var queue: BlockingQueue<Optional<Timestamp>>? = null
 
@@ -45,7 +46,7 @@ class OkHttpCalendarAsyncSubmit(
 
     @Throws(Exception::class)
     override fun call(): Optional<Timestamp> {
-        val client = HttpClientManager.getHttpClient()
+        val client = HttpClientManager.getHttpClient(forceProxy)
         val url = "$url/digest"
 
         val mediaType = "application/x-www-form-urlencoded; charset=utf-8".toMediaType()

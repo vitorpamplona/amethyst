@@ -24,9 +24,10 @@ import android.content.res.Resources
 import androidx.compose.runtime.Stable
 import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
+import com.vitorpamplona.amethyst.ui.tor.TorSettings
+import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
-import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
@@ -50,7 +51,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
-import java.net.Proxy
 import java.util.Locale
 
 val DefaultChannels =
@@ -139,8 +139,7 @@ class AccountSettings(
     var backupSearchRelayList: SearchRelayListEvent? = null,
     var backupMuteList: MuteListEvent? = null,
     var backupPrivateHomeRelayList: PrivateOutboxRelayListEvent? = null,
-    var proxy: Proxy? = null,
-    var proxyPort: Int = 9050,
+    val torSettings: TorSettingsFlow = TorSettingsFlow(),
     val showSensitiveContent: MutableStateFlow<Boolean?> = MutableStateFlow(null),
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: Boolean = true,
@@ -149,6 +148,10 @@ class AccountSettings(
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
 ) {
     val saveable = MutableStateFlow(AccountSettingsUpdater(this))
+
+    class AccountSettingsUpdater(
+        val accountSettings: AccountSettings,
+    )
 
     fun saveAccountSettings() {
         saveable.update { AccountSettingsUpdater(this) }
@@ -244,21 +247,12 @@ class AccountSettings(
     // ---
     // proxy settings
     // ---
-
-    fun isProxyEnabled() = proxy != null
-
-    fun disableProxy() {
-        if (isProxyEnabled()) {
-            proxy = HttpClientManager.initProxy(false, "127.0.0.1", proxyPort)
+    fun setTorSettings(newTorSettings: TorSettings): Boolean {
+        if (torSettings.update(newTorSettings)) {
             saveAccountSettings()
-        }
-    }
-
-    fun enableProxy(portNumber: Int) {
-        if (proxyPort != portNumber || !isProxyEnabled()) {
-            proxyPort = portNumber
-            proxy = HttpClientManager.initProxy(true, "127.0.0.1", proxyPort)
-            saveAccountSettings()
+            return true
+        } else {
+            return false
         }
     }
 
@@ -521,7 +515,3 @@ class AccountSettings(
             false
         }
 }
-
-class AccountSettingsUpdater(
-    val accountSettings: AccountSettings,
-)

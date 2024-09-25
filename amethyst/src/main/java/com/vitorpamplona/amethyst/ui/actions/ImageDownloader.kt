@@ -27,7 +27,10 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 class ImageDownloader {
-    suspend fun waitAndGetImage(imageUrl: String): ByteArray? {
+    suspend fun waitAndGetImage(
+        imageUrl: String,
+        forceProxy: Boolean,
+    ): ByteArray? {
         var imageData: ByteArray? = null
         var tentatives = 0
 
@@ -35,11 +38,12 @@ class ImageDownloader {
         while (imageData == null && tentatives < 15) {
             imageData =
                 try {
+                    // TODO: Migrate to OkHttp
                     HttpURLConnection.setFollowRedirects(true)
                     var url = URL(imageUrl)
                     var huc =
-                        if (HttpClientManager.getDefaultProxy() != null) {
-                            url.openConnection(HttpClientManager.getDefaultProxy()) as HttpURLConnection
+                        if (forceProxy) {
+                            url.openConnection(HttpClientManager.getCurrentProxy()) as HttpURLConnection
                         } else {
                             url.openConnection() as HttpURLConnection
                         }
@@ -52,8 +56,8 @@ class ImageDownloader {
                         // open the new connnection again
                         url = URL(newUrl)
                         huc =
-                            if (HttpClientManager.getDefaultProxy() != null) {
-                                url.openConnection(HttpClientManager.getDefaultProxy()) as HttpURLConnection
+                            if (forceProxy) {
+                                url.openConnection(HttpClientManager.getCurrentProxy()) as HttpURLConnection
                             } else {
                                 url.openConnection() as HttpURLConnection
                             }

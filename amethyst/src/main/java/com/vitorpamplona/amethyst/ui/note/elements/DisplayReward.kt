@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
@@ -180,18 +181,21 @@ class AddBountyAmountViewModel : ViewModel() {
 
         if (newValue != null) {
             viewModelScope.launch {
-                account?.sendPost(
-                    message = newValue.toString(),
-                    replyTo = listOfNotNull(bounty),
-                    mentions = listOfNotNull(bounty?.author),
-                    tags = listOf("bounty-added-reward"),
-                    wantsToMarkAsSensitive = false,
-                    replyingTo = null,
-                    root = null,
-                    directMentions = setOf(),
-                    forkedFrom = null,
-                    draftTag = null,
-                )
+                account?.let {
+                    it.sendPost(
+                        message = newValue.toString(),
+                        replyTo = listOfNotNull(bounty),
+                        mentions = listOfNotNull(bounty?.author),
+                        tags = listOf("bounty-added-reward"),
+                        wantsToMarkAsSensitive = false,
+                        replyingTo = null,
+                        root = null,
+                        directMentions = setOf(),
+                        forkedFrom = null,
+                        draftTag = null,
+                        relayList = it.activeWriteRelays().toImmutableList(),
+                    )
+                }
 
                 nextAmount = TextFieldValue("")
             }

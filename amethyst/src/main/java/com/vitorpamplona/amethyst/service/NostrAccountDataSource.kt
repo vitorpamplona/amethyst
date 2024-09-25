@@ -494,10 +494,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
 
         if (this::account.isInitialized) {
             account.createAuthEvent(relay, challenge) {
-                Client.send(
-                    it,
-                    relay.url,
-                )
+                Client.sendIfExists(it, relay)
             }
         }
     }

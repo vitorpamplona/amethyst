@@ -48,11 +48,12 @@ class FileHeader(
             fileUrl: String,
             mimeType: String?,
             dimPrecomputed: String?,
+            forceProxy: Boolean,
             onReady: (FileHeader) -> Unit,
             onError: (String) -> Unit,
         ) {
             try {
-                val imageData: ByteArray? = ImageDownloader().waitAndGetImage(fileUrl)
+                val imageData: ByteArray? = ImageDownloader().waitAndGetImage(fileUrl, forceProxy)
 
                 if (imageData != null) {
                     prepare(imageData, mimeType, dimPrecomputed, onReady, onError)

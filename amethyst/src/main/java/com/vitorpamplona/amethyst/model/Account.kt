@@ -31,13 +31,16 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
+import com.vitorpamplona.ammolite.relays.RelaySetupInfoToConnect
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -115,6 +118,7 @@ import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
@@ -405,6 +409,45 @@ class Account(
                 ).toTypedArray(),
             )
 
+    val connectToRelaysWithProxy =
+        combineTransform(
+            connectToRelays,
+            settings.torSettings.torType,
+            settings.torSettings.trustedRelaysViaTor,
+        ) { relays, torType, forceTor ->
+            emit(
+                relays
+                    .map {
+                        RelaySetupInfoToConnect(
+                            it.url,
+                            torType != TorType.OFF && forceTor,
+                            it.read,
+                            it.write,
+                            it.feedTypes,
+                        )
+                    }.toTypedArray(),
+            )
+        }.flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                normalizeAndCombineRelayListsWithFallbacks(
+                    kind3Relays(),
+                    getDMRelayList(),
+                    getSearchRelayList(),
+                    getPrivateOutboxRelayList(),
+                    getNIP65RelayList(),
+                ).map {
+                    RelaySetupInfoToConnect(
+                        it.url,
+                        settings.torSettings.torType.value != TorType.OFF && settings.torSettings.trustedRelaysViaTor.value,
+                        it.read,
+                        it.write,
+                        it.feedTypes,
+                    )
+                }.toTypedArray(),
+            )
+
     fun buildFollowLists(latestContactList: ContactListEvent?): LiveFollowLists {
         // makes sure the output include only valid p tags
         val verifiedFollowingUsers = latestContactList?.verifiedFollowKeySet() ?: emptySet()
@@ -424,6 +467,36 @@ class Account(
                 ?.toSet() ?: emptySet(),
         )
     }
+
+    fun normalizeDMRelayListWithBackup(note: Note): Set<String> {
+        val event = note.event as? ChatMessageRelayListEvent ?: settings.backupDMRelayList
+        return event?.relays()?.map { RelayUrlFormatter.normalize(it) }?.toSet() ?: emptySet()
+    }
+
+    val normalizedDmRelaySet =
+        getDMRelayListFlow()
+            .map { normalizeDMRelayListWithBackup(it.note) }
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                normalizeDMRelayListWithBackup(getDMRelayListNote()),
+            )
+
+    fun normalizePrivateOutboxRelayListWithBackup(note: Note): Set<String> {
+        val event = note.event as? PrivateOutboxRelayListEvent ?: settings.backupPrivateHomeRelayList
+        return event?.relays()?.map { RelayUrlFormatter.normalize(it) }?.toSet() ?: emptySet()
+    }
+
+    val normalizedPrivateOutBoxRelaySet =
+        getPrivateOutboxRelayListFlow()
+            .map { normalizePrivateOutboxRelayListWithBackup(it.note) }
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                normalizePrivateOutboxRelayListWithBackup(getPrivateOutboxRelayListNote()),
+            )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveKind3FollowsFlow: Flow<LiveFollowLists> =
@@ -562,6 +635,13 @@ class Account(
     fun authorsPerRelay(
         followsNIP65RelayLists: List<Note>,
         defaultRelayList: List<String>,
+        torType: TorType,
+    ): Map<String, List<HexKey>> = authorsPerRelay(followsNIP65RelayLists, defaultRelayList, torType != TorType.OFF)
+
+    fun authorsPerRelay(
+        followsNIP65RelayLists: List<Note>,
+        defaultRelayList: List<String>,
+        acceptOnion: Boolean,
     ): Map<String, List<HexKey>> {
         checkNotInMainThread()
 
@@ -595,7 +675,7 @@ class Account(
                         }
                     }
                 }.toMap(),
-            hasOnionConnection = settings.proxy != null,
+            hasOnionConnection = acceptOnion,
         )
     }
 
@@ -611,12 +691,13 @@ class Account(
             }
 
     val liveHomeListAuthorsPerRelayFlow: Flow<Map<String, List<HexKey>>?> by lazy {
-        combineTransform(liveHomeFollowListAdvertizedRelayListFlow, connectToRelays) { adverisedRelayList, existing ->
+        combineTransform(liveHomeFollowListAdvertizedRelayListFlow, connectToRelays, settings.torSettings.torType) { adverisedRelayList, existing, torStatus ->
             if (adverisedRelayList != null) {
                 emit(
                     authorsPerRelay(
                         adverisedRelayList.map { it.note },
                         existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
+                        torStatus,
                     ),
                 )
             } else {
@@ -632,6 +713,7 @@ class Account(
             authorsPerRelay(
                 liveHomeFollowLists.value?.usersPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
                 connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
+                settings.torSettings.torType.value,
             ).ifEmpty { null },
         )
     }
@@ -692,9 +774,15 @@ class Account(
             }
 
     val liveStoriesListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
-        combineTransform(liveStoriesFollowListAdvertizedRelayListFlow, connectToRelays) { adverisedRelayList, existing ->
+        combineTransform(liveStoriesFollowListAdvertizedRelayListFlow, connectToRelays, settings.torSettings.torType) { adverisedRelayList, existing, torState ->
             if (adverisedRelayList != null) {
-                emit(authorsPerRelay(adverisedRelayList.map { it.note }, existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url }))
+                emit(
+                    authorsPerRelay(
+                        adverisedRelayList.map { it.note },
+                        existing.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
+                        torState,
+                    ),
+                )
             } else {
                 emit(null)
             }
@@ -708,6 +796,7 @@ class Account(
             authorsPerRelay(
                 liveStoriesFollowLists.value?.usersPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
                 connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
+                settings.torSettings.torType.value,
             ).ifEmpty { null },
         )
     }
@@ -746,9 +835,15 @@ class Account(
             }
 
     val liveDiscoveryListAuthorsPerRelayFlow: Flow<Map<String, List<String>>?> by lazy {
-        combineTransform(liveDiscoveryFollowListAdvertizedRelayListFlow, connectToRelays) { adverisedRelayList, existing ->
+        combineTransform(liveDiscoveryFollowListAdvertizedRelayListFlow, connectToRelays, settings.torSettings.torType) { adverisedRelayList, existing, torState ->
             if (adverisedRelayList != null) {
-                emit(authorsPerRelay(adverisedRelayList.map { it.note }, existing.filter { it.read }.map { it.url }))
+                emit(
+                    authorsPerRelay(
+                        adverisedRelayList.map { it.note },
+                        existing.filter { it.read }.map { it.url },
+                        torState,
+                    ),
+                )
             } else {
                 emit(null)
             }
@@ -762,6 +857,7 @@ class Account(
             authorsPerRelay(
                 liveDiscoveryFollowLists.value?.usersPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
                 connectToRelays.value.filter { it.read }.map { it.url },
+                settings.torSettings.torType.value,
             ).ifEmpty { null },
         )
     }
@@ -1192,10 +1288,16 @@ class Account(
 
                 LocalCache.consume(event, zappedNote) { it.response(signer) { onResponse(it) } }
 
-                Client.send(
+                Client.sendSingle(
                     signedEvent = event,
-                    relay = nip47.relayUri,
-                    feedTypes = wcListener.feedTypes,
+                    relayTemplate =
+                        RelaySetupInfoToConnect(
+                            nip47.relayUri,
+                            shouldUseTorForTrustedRelays(), // this is trusted.
+                            true,
+                            true,
+                            wcListener.feedTypes,
+                        ),
                     onDone = { wcListener.destroy() },
                 )
 
@@ -1645,7 +1747,7 @@ class Account(
     fun consumeAndSendNip95(
         data: FileStorageEvent,
         signedEvent: FileStorageHeaderEvent,
-        relayList: List<RelaySetupInfo>? = null,
+        relayList: List<RelaySetupInfo>,
     ): Note? {
         if (!isWriteable()) return null
 
@@ -1671,7 +1773,7 @@ class Account(
     fun sendNip95(
         data: FileStorageEvent,
         signedEvent: FileStorageHeaderEvent,
-        relayList: List<RelaySetupInfo>? = null,
+        relayList: List<RelaySetupInfo>,
     ) {
         Client.send(data, relayList = relayList)
         Client.send(signedEvent, relayList = relayList)
@@ -1679,7 +1781,7 @@ class Account(
 
     fun sendHeader(
         signedEvent: FileHeaderEvent,
-        relayList: List<RelaySetupInfo>? = null,
+        relayList: List<RelaySetupInfo>,
         onReady: (Note) -> Unit,
     ) {
         Client.send(signedEvent, relayList = relayList)
@@ -1723,7 +1825,7 @@ class Account(
         alt: String?,
         sensitiveContent: Boolean,
         originalHash: String? = null,
-        relayList: List<RelaySetupInfo>? = null,
+        relayList: List<RelaySetupInfo>,
         onReady: (Note) -> Unit,
     ) {
         if (!isWriteable()) return
@@ -1758,7 +1860,7 @@ class Account(
         zapReceiver: List<ZapSplitSetup>? = null,
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
-        relayList: List<RelaySetupInfo>? = null,
+        relayList: List<RelaySetupInfo>,
         geohash: String? = null,
         nip94attachments: List<Event>? = null,
         draftTag: String?,
@@ -1796,13 +1898,7 @@ class Account(
                     deleteDraft(draftTag)
                 } else {
                     DraftEvent.create(draftTag, it, emptyList(), signer) { draftEvent ->
-                        val newRelayList = getPrivateOutboxRelayList()?.relays()
-                        if (newRelayList != null) {
-                            Client.sendPrivately(draftEvent, newRelayList)
-                        } else {
-                            Client.send(draftEvent, relayList = relayList)
-                        }
-                        LocalCache.justConsume(draftEvent, null)
+                        sendDraftEvent(draftEvent)
                     }
                 }
             } else {
@@ -1831,7 +1927,7 @@ class Account(
         root: String?,
         directMentions: Set<HexKey>,
         forkedFrom: Event?,
-        relayList: List<RelaySetupInfo>? = null,
+        relayList: List<RelaySetupInfo>,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
         draftTag: String?,
@@ -1865,13 +1961,7 @@ class Account(
                     deleteDraft(draftTag)
                 } else {
                     DraftEvent.create(draftTag, it, signer) { draftEvent ->
-                        val newRelayList = getPrivateOutboxRelayList()?.relays()
-                        if (newRelayList != null) {
-                            Client.sendPrivately(draftEvent, newRelayList)
-                        } else {
-                            Client.send(draftEvent, relayList = relayList)
-                        }
-                        LocalCache.justConsume(draftEvent, null)
+                        sendDraftEvent(draftEvent)
                     }
                 }
             } else {
@@ -1905,7 +1995,7 @@ class Account(
         root: String,
         directMentions: Set<HexKey>,
         forkedFrom: Event?,
-        relayList: List<RelaySetupInfo>? = null,
+        relayList: List<RelaySetupInfo>,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
         draftTag: String?,
@@ -1937,13 +2027,7 @@ class Account(
                     deleteDraft(draftTag)
                 } else {
                     DraftEvent.create(draftTag, it, signer) { draftEvent ->
-                        val newRelayList = getPrivateOutboxRelayList()?.relays()
-                        if (newRelayList != null) {
-                            Client.sendPrivately(draftEvent, newRelayList)
-                        } else {
-                            Client.send(draftEvent, relayList = relayList)
-                        }
-                        LocalCache.justConsume(draftEvent, null)
+                        sendDraftEvent(draftEvent)
                     }
                 }
             } else {
@@ -1972,7 +2056,18 @@ class Account(
             val noteEvent = note.event
             if (noteEvent is DraftEvent) {
                 noteEvent.createDeletedEvent(signer) {
-                    Client.sendPrivately(it, relayList = note.relays.map { it.url })
+                    Client.sendPrivately(
+                        it,
+                        note.relays.map { it.url }.map {
+                            RelaySetupInfoToConnect(
+                                it,
+                                shouldUseTorForClean(it),
+                                false,
+                                true,
+                                emptySet(),
+                            )
+                        },
+                    )
                     LocalCache.justConsume(it, null)
                 }
             }
@@ -1992,7 +2087,7 @@ class Account(
         root: String?,
         directMentions: Set<HexKey>,
         forkedFrom: Event?,
-        relayList: List<RelaySetupInfo>? = null,
+        relayList: List<RelaySetupInfo>,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
         draftTag: String?,
@@ -2026,13 +2121,7 @@ class Account(
                     deleteDraft(draftTag)
                 } else {
                     DraftEvent.create(draftTag, it, signer) { draftEvent ->
-                        val newRelayList = getPrivateOutboxRelayList()?.relays()
-                        if (newRelayList != null) {
-                            Client.sendPrivately(draftEvent, newRelayList)
-                        } else {
-                            Client.send(draftEvent, relayList = relayList)
-                        }
-                        LocalCache.justConsume(draftEvent, null)
+                        sendDraftEvent(draftEvent)
                     }
                 }
             } else {
@@ -2060,7 +2149,7 @@ class Account(
         originalNote: Note,
         notify: HexKey?,
         summary: String? = null,
-        relayList: List<RelaySetupInfo>? = null,
+        relayList: List<RelaySetupInfo>,
     ) {
         if (!isWriteable()) return
 
@@ -2090,7 +2179,7 @@ class Account(
         zapReceiver: List<ZapSplitSetup>? = null,
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
-        relayList: List<RelaySetupInfo>? = null,
+        relayList: List<RelaySetupInfo>,
         geohash: String? = null,
         nip94attachments: List<FileHeaderEvent>? = null,
         draftTag: String?,
@@ -2124,13 +2213,7 @@ class Account(
                     deleteDraft(draftTag)
                 } else {
                     DraftEvent.create(draftTag, it, signer) { draftEvent ->
-                        val newRelayList = getPrivateOutboxRelayList()?.relays()
-                        if (newRelayList != null) {
-                            Client.sendPrivately(draftEvent, newRelayList)
-                        } else {
-                            Client.send(draftEvent, relayList = relayList)
-                        }
-                        LocalCache.justConsume(draftEvent, null)
+                        sendDraftEvent(draftEvent)
                     }
                 }
             } else {
@@ -2183,13 +2266,7 @@ class Account(
                     deleteDraft(draftTag)
                 } else {
                     DraftEvent.create(draftTag, it, signer) { draftEvent ->
-                        val newRelayList = getPrivateOutboxRelayList()?.relays()
-                        if (newRelayList != null) {
-                            Client.sendPrivately(draftEvent, newRelayList)
-                        } else {
-                            Client.send(draftEvent)
-                        }
-                        LocalCache.justConsume(draftEvent, null)
+                        sendDraftEvent(draftEvent)
                     }
                 }
             } else {
@@ -2235,13 +2312,7 @@ class Account(
                     deleteDraft(draftTag)
                 } else {
                     DraftEvent.create(draftTag, it, signer) { draftEvent ->
-                        val newRelayList = getPrivateOutboxRelayList()?.relays()
-                        if (newRelayList != null) {
-                            Client.sendPrivately(draftEvent, newRelayList)
-                        } else {
-                            Client.send(draftEvent)
-                        }
-                        LocalCache.justConsume(draftEvent, null)
+                        sendDraftEvent(draftEvent)
                     }
                 }
             } else {
@@ -2314,13 +2385,7 @@ class Account(
                     deleteDraft(draftTag)
                 } else {
                     DraftEvent.create(draftTag, it, emptyList(), signer) { draftEvent ->
-                        val newRelayList = getPrivateOutboxRelayList()?.relays()
-                        if (newRelayList != null) {
-                            Client.sendPrivately(draftEvent, newRelayList)
-                        } else {
-                            Client.send(draftEvent)
-                        }
-                        LocalCache.justConsume(draftEvent, null)
+                        sendDraftEvent(draftEvent)
                     }
                 }
             } else {
@@ -2367,19 +2432,33 @@ class Account(
                     deleteDraft(draftTag)
                 } else {
                     DraftEvent.create(draftTag, it.msg, emptyList(), signer) { draftEvent ->
-                        val newRelayList = getPrivateOutboxRelayList()?.relays()
-                        if (newRelayList != null) {
-                            Client.sendPrivately(draftEvent, newRelayList)
-                        } else {
-                            Client.send(draftEvent)
-                        }
-                        LocalCache.justConsume(draftEvent, null)
+                        sendDraftEvent(draftEvent)
                     }
                 }
             } else {
                 broadcastPrivately(it)
             }
         }
+    }
+
+    fun sendDraftEvent(draftEvent: DraftEvent) {
+        val relayList =
+            normalizedPrivateOutBoxRelaySet.value.map {
+                RelaySetupInfoToConnect(
+                    it,
+                    shouldUseTorForClean(it),
+                    true,
+                    true,
+                    emptySet(),
+                )
+            }
+
+        if (relayList.isNotEmpty()) {
+            Client.sendPrivately(draftEvent, relayList)
+        } else {
+            Client.send(draftEvent)
+        }
+        LocalCache.justConsume(draftEvent, null)
     }
 
     fun broadcastPrivately(signedEvents: NIP17Factory.Result) {
@@ -2415,7 +2494,16 @@ class Account(
                         LocalCache
                             .getAddressableNoteIfExists(ChatMessageRelayListEvent.createAddressTag(receiver))
                             ?.event as? ChatMessageRelayListEvent
-                    )?.relays()?.ifEmpty { null }
+                    )?.relays()?.ifEmpty { null }?.map {
+                        val normalizedUrl = RelayUrlFormatter.normalize(it)
+                        RelaySetupInfoToConnect(
+                            normalizedUrl,
+                            shouldUseTorForClean(normalizedUrl),
+                            false,
+                            true,
+                            feedTypes = setOf(FeedType.PRIVATE_DMS),
+                        )
+                    }
 
                 if (relayList != null) {
                     Client.sendPrivately(signedEvent = wrap, relayList = relayList)
@@ -2868,7 +2956,22 @@ class Account(
         onReady: (event: NIP90ContentDiscoveryRequestEvent) -> Unit,
     ) {
         NIP90ContentDiscoveryRequestEvent.create(dvmPublicKey, signer.pubKey, getReceivingRelays(), signer) {
-            val relayList = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(dvmPublicKey))?.event as? AdvertisedRelayListEvent)?.readRelays()
+            val relayList =
+                (
+                    LocalCache
+                        .getAddressableNoteIfExists(
+                            AdvertisedRelayListEvent.createAddressTag(dvmPublicKey),
+                        )?.event as? AdvertisedRelayListEvent
+                )?.readRelays()?.ifEmpty { null }?.map {
+                    val normalizedUrl = RelayUrlFormatter.normalize(it)
+                    RelaySetupInfoToConnect(
+                        normalizedUrl,
+                        shouldUseTorForClean(normalizedUrl),
+                        true,
+                        true,
+                        setOf(FeedType.GLOBAL),
+                    )
+                }
 
             if (relayList != null) {
                 Client.sendPrivately(it, relayList)
@@ -3266,6 +3369,98 @@ class Account(
             .stateIn(scope, SharingStarted.Eagerly, hasDonatedInThisVersion())
 
     fun markDonatedInThisVersion() = settings.markDonatedInThisVersion(BuildConfig.VERSION_NAME)
+
+    fun httpClientForCoil() = HttpClientManager.getHttpClient(shouldUseTorForImageDownload())
+
+    fun httpClientForRelay(dirtyUrl: String) = HttpClientManager.getHttpClient(shouldUseTorForDirty(dirtyUrl))
+
+    fun httpClientForPreviewUrl(url: String) = HttpClientManager.getHttpClient(shouldUseTorForPreviewUrl(url))
+
+    fun shouldUseTorForImageDownload() =
+        when (settings.torSettings.torType.value) {
+            TorType.OFF -> false
+            TorType.INTERNAL -> settings.torSettings.imagesViaTor.value
+            TorType.EXTERNAL -> settings.torSettings.imagesViaTor.value
+        }
+
+    fun shouldUseTorForVideoDownload() =
+        when (settings.torSettings.torType.value) {
+            TorType.OFF -> false
+            TorType.INTERNAL -> settings.torSettings.videosViaTor.value
+            TorType.EXTERNAL -> settings.torSettings.videosViaTor.value
+        }
+
+    fun shouldUseTorForVideoDownload(url: String) =
+        when (settings.torSettings.torType.value) {
+            TorType.OFF -> false
+            TorType.INTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.videosViaTor.value)
+            TorType.EXTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.videosViaTor.value)
+        }
+
+    fun shouldUseTorForPreviewUrl(url: String) =
+        when (settings.torSettings.torType.value) {
+            TorType.OFF -> false
+            TorType.INTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.urlPreviewsViaTor.value)
+            TorType.EXTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.urlPreviewsViaTor.value)
+        }
+
+    fun shouldUseTorForTrustedRelays() =
+        when (settings.torSettings.torType.value) {
+            TorType.OFF -> false
+            TorType.INTERNAL -> settings.torSettings.trustedRelaysViaTor.value
+            TorType.EXTERNAL -> settings.torSettings.trustedRelaysViaTor.value
+        }
+
+    fun shouldUseTorForDirty(dirtyUrl: String) = shouldUseTorForClean(RelayUrlFormatter.normalize(dirtyUrl))
+
+    fun shouldUseTorForClean(normalizedUrl: String) =
+        when (settings.torSettings.torType.value) {
+            TorType.OFF -> false
+            TorType.INTERNAL -> shouldUseTor(normalizedUrl)
+            TorType.EXTERNAL -> shouldUseTor(normalizedUrl)
+        }
+
+    private fun shouldUseTor(normalizedUrl: String): Boolean =
+        if (isLocalHost(normalizedUrl)) {
+            false
+        } else if (isOnionUrl(normalizedUrl)) {
+            settings.torSettings.onionRelaysViaTor.value
+        } else if (isDMRelay(normalizedUrl)) {
+            settings.torSettings.dmRelaysViaTor.value
+        } else if (isTrustedRelay(normalizedUrl)) {
+            settings.torSettings.trustedRelaysViaTor.value
+        } else {
+            settings.torSettings.newRelaysViaTor.value
+        }
+
+    fun shouldUseTorForMoneyOperations(url: String) =
+        when (settings.torSettings.torType.value) {
+            TorType.OFF -> false
+            TorType.INTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.moneyOperationsViaTor.value)
+            TorType.EXTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.moneyOperationsViaTor.value)
+        }
+
+    fun shouldUseTorForNIP05(url: String) =
+        when (settings.torSettings.torType.value) {
+            TorType.OFF -> false
+            TorType.INTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.nip05VerificationsViaTor.value)
+            TorType.EXTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.nip05VerificationsViaTor.value)
+        }
+
+    fun shouldUseTorForNIP96(url: String) =
+        when (settings.torSettings.torType.value) {
+            TorType.OFF -> false
+            TorType.INTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.nip96UploadsViaTor.value)
+            TorType.EXTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.nip96UploadsViaTor.value)
+        }
+
+    fun isLocalHost(url: String) = url.contains("//127.0.0.1") || url.contains("//localhost")
+
+    fun isOnionUrl(url: String) = url.contains(".onion")
+
+    fun isDMRelay(url: String) = url in normalizedDmRelaySet.value
+
+    fun isTrustedRelay(url: String): Boolean = connectToRelays.value.any { it.url == url } || url == settings.zapPaymentRequest?.relayUri
 
     init {
         Log.d("AccountRegisterObservers", "Init")

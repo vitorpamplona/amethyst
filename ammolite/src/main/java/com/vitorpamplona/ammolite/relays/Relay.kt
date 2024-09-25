@@ -56,6 +56,7 @@ class Relay(
     val url: String,
     val read: Boolean = true,
     val write: Boolean = true,
+    val forceProxy: Boolean = false,
     val activeTypes: Set<FeedType>,
 ) {
     companion object {
@@ -109,7 +110,7 @@ class Relay(
     private var connectingBlock = AtomicBoolean()
 
     fun connectAndRun(onConnected: (Relay) -> Unit) {
-        Log.d("Relay", "Relay.connect $url isAlreadyConnecting: ${connectingBlock.get()}")
+        Log.d("Relay", "Relay.connect $url proxy: $forceProxy isAlreadyConnecting: ${connectingBlock.get()}")
         // BRB is crashing OkHttp Deflater object :(
         if (url.contains("brb.io")) return
 
@@ -131,11 +132,10 @@ class Relay(
             val request =
                 Request
                     .Builder()
-                    .header("User-Agent", HttpClientManager.getDefaultUserAgentHeader())
                     .url(url.trim())
                     .build()
 
-            socket = HttpClientManager.getHttpClientForUrl(url).newWebSocket(request, RelayListener(onConnected))
+            socket = HttpClientManager.getHttpClient(forceProxy).newWebSocket(request, RelayListener(onConnected))
         } catch (e: Exception) {
             if (e is CancellationException) throw e
 
@@ -558,8 +558,9 @@ class Relay(
         writeToSocket("""["CLOSE","$subscriptionId"]""")
     }
 
-    fun isSameRelayConfig(other: RelaySetupInfo): Boolean =
+    fun isSameRelayConfig(other: RelaySetupInfoToConnect): Boolean =
         url == other.url &&
+            forceProxy == other.forceProxy &&
             write == other.write &&
             read == other.read &&
             activeTypes == other.feedTypes

@@ -44,10 +44,10 @@ object Client : RelayPool.Listener {
 
     @Synchronized
     fun reconnect(
-        relays: Array<RelaySetupInfo>?,
+        relays: Array<RelaySetupInfoToConnect>?,
         onlyIfChanged: Boolean = false,
     ) {
-        Log.d("Relay", "Relay Pool Reconnecting to ${relays?.size} relays: \n${relays?.joinToString("\n") { it.url + " " + it.read + " " + it.write + " " + it.feedTypes.joinToString(",") { it.name } }}")
+        Log.d("Relay", "Relay Pool Reconnecting to ${relays?.size} relays: \n${relays?.joinToString("\n") { it.url + " " + it.forceProxy + " " + it.read + " " + it.write + " " + it.feedTypes.joinToString(",") { it.name } }}")
         checkNotInMainThread()
 
         if (onlyIfChanged) {
@@ -59,7 +59,7 @@ object Client : RelayPool.Listener {
                 }
 
                 if (relays != null) {
-                    val newRelays = relays.map { Relay(it.url, it.read, it.write, it.feedTypes) }
+                    val newRelays = relays.map { Relay(it.url, it.read, it.write, it.forceProxy, it.feedTypes) }
                     RelayPool.register(this)
                     RelayPool.loadRelays(newRelays)
                     RelayPool.requestAndWatch()
@@ -74,7 +74,7 @@ object Client : RelayPool.Listener {
             }
 
             if (relays != null) {
-                val newRelays = relays.map { Relay(it.url, it.read, it.write, it.feedTypes) }
+                val newRelays = relays.map { Relay(it.url, it.read, it.write, it.forceProxy, it.feedTypes) }
                 RelayPool.register(this)
                 RelayPool.loadRelays(newRelays)
                 RelayPool.requestAndWatch()
@@ -83,7 +83,7 @@ object Client : RelayPool.Listener {
         }
     }
 
-    fun isSameRelaySetConfig(newRelayConfig: Array<RelaySetupInfo>?): Boolean {
+    fun isSameRelaySetConfig(newRelayConfig: Array<RelaySetupInfoToConnect>?): Boolean {
         if (relays.size != newRelayConfig?.size) return false
 
         relays.forEach { oldRelayInfo ->
@@ -137,6 +137,7 @@ object Client : RelayPool.Listener {
     suspend fun sendAndWaitForResponse(
         signedEvent: EventInterface,
         relay: String? = null,
+        forceProxy: Boolean = false,
         feedTypes: Set<FeedType>? = null,
         relayList: List<RelaySetupInfo>? = null,
         onDone: (() -> Unit)? = null,
@@ -201,7 +202,13 @@ object Client : RelayPool.Listener {
 
         val job =
             GlobalScope.launch(Dispatchers.IO) {
-                send(signedEvent, relay, feedTypes, relayList, onDone)
+                if (relayList != null) {
+                    send(signedEvent, relayList)
+                } else if (relay == null) {
+                    send(signedEvent)
+                } else {
+                    sendSingle(signedEvent, RelaySetupInfoToConnect(relay, forceProxy, true, true, emptySet()), onDone ?: {})
+                }
             }
         job.join()
 
@@ -224,34 +231,51 @@ object Client : RelayPool.Listener {
         RelayPool.connectAndSendFiltersIfDisconnected()
     }
 
-    fun send(
+    fun sendIfExists(
         signedEvent: EventInterface,
-        relay: String? = null,
-        feedTypes: Set<FeedType>? = null,
-        relayList: List<RelaySetupInfo>? = null,
-        onDone: (() -> Unit)? = null,
+        connectedRelay: Relay,
     ) {
         checkNotInMainThread()
 
-        if (relayList != null) {
-            RelayPool.sendToSelectedRelays(relayList, signedEvent)
-        } else if (relay == null) {
-            RelayPool.send(signedEvent)
-        } else {
-            RelayPool.getOrCreateRelay(relay, feedTypes, onDone) {
-                it.send(signedEvent)
-            }
+        RelayPool.getRelays(connectedRelay.url).forEach {
+            it.send(signedEvent)
         }
+    }
+
+    fun sendSingle(
+        signedEvent: EventInterface,
+        relayTemplate: RelaySetupInfoToConnect,
+        onDone: (() -> Unit),
+    ) {
+        checkNotInMainThread()
+
+        RelayPool.getOrCreateRelay(relayTemplate, onDone) {
+            it.send(signedEvent)
+        }
+    }
+
+    fun send(signedEvent: EventInterface) {
+        checkNotInMainThread()
+        RelayPool.send(signedEvent)
+    }
+
+    fun send(
+        signedEvent: EventInterface,
+        relayList: List<RelaySetupInfo>,
+    ) {
+        checkNotInMainThread()
+
+        RelayPool.sendToSelectedRelays(relayList, signedEvent)
     }
 
     fun sendPrivately(
         signedEvent: EventInterface,
-        relayList: List<String>,
+        relayList: List<RelaySetupInfoToConnect>,
     ) {
         checkNotInMainThread()
 
-        relayList.forEach { relayUrl ->
-            RelayPool.getOrCreateRelay(relayUrl, emptySet(), { }) {
+        relayList.forEach { relayTemplate ->
+            RelayPool.getOrCreateRelay(relayTemplate, { }) {
                 it.sendOverride(signedEvent)
             }
         }

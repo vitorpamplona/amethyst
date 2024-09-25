@@ -65,9 +65,8 @@ class VideoCache {
             CacheDataSource
                 .Factory()
                 .setCache(simpleCache)
-                .setUpstreamDataSourceFactory(
-                    OkHttpDataSource.Factory(client),
-                ).setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+                .setUpstreamDataSourceFactory(OkHttpDataSource.Factory(client))
+                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
     fun get(client: OkHttpClient): CacheDataSource.Factory {

@@ -24,11 +24,13 @@ import com.vitorpamplona.quartz.ots.CalendarBuilder
 import com.vitorpamplona.quartz.ots.ICalendar
 import com.vitorpamplona.quartz.ots.ICalendarAsyncSubmit
 
-class OkHttpCalendarBuilder : CalendarBuilder {
-    override fun newSyncCalendar(url: String): ICalendar = OkHttpCalendar(url)
+class OkHttpCalendarBuilder(
+    val forceProxy: (String) -> Boolean,
+) : CalendarBuilder {
+    override fun newSyncCalendar(url: String): ICalendar = OkHttpCalendar(url, forceProxy(url))
 
     override fun newAsyncCalendar(
         url: String,
         digest: ByteArray,
-    ): ICalendarAsyncSubmit = OkHttpCalendarAsyncSubmit(url, digest)
+    ): ICalendarAsyncSubmit = OkHttpCalendarAsyncSubmit(url, digest, forceProxy(url))
 }

@@ -30,7 +30,6 @@ import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.VideoView
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
@@ -101,7 +100,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.produceCachedState
 import com.vitorpamplona.amethyst.service.playback.PlaybackClientController
-import com.vitorpamplona.amethyst.ui.actions.ImageSaver
+import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.LyricsIcon
 import com.vitorpamplona.amethyst.ui.note.LyricsOffIcon
@@ -120,6 +119,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
+import com.vitorpamplona.ammolite.service.HttpClientManager
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -369,6 +369,7 @@ fun VideoViewInner(
                 videoUri = videoUri,
                 defaultToStart = defaultToStart,
                 nostrUriCallback = nostrUriCallback,
+                proxyPort = HttpClientManager.getCurrentProxyPort(accountViewModel.account.shouldUseTorForVideoDownload(videoUri)),
             ) { controller, keepPlaying ->
                 RenderVideoPlayer(
                     videoUri = videoUri,
@@ -459,6 +460,7 @@ fun GetMediaItem(
 fun GetVideoController(
     mediaItem: State<MediaItem>,
     videoUri: String,
+    proxyPort: Int?,
     defaultToStart: Boolean = false,
     nostrUriCallback: String? = null,
     inner: @Composable (controller: MediaController, keepPlaying: MutableState<Boolean>) -> Unit,
@@ -502,6 +504,7 @@ fun GetVideoController(
                         uid,
                         videoUri,
                         nostrUriCallback,
+                        proxyPort,
                         context,
                     ) {
                         scope.launch(Dispatchers.Main) {
@@ -590,6 +593,7 @@ fun GetVideoController(
                                     uid,
                                     videoUri,
                                     nostrUriCallback,
+                                    proxyPort,
                                     context,
                                 ) {
                                     scope.launch(Dispatchers.Main) {
@@ -828,7 +832,7 @@ private fun RenderVideoPlayer(
 
             if (!videoUri.endsWith(".m3u8")) {
                 AnimatedSaveButton(controllerVisible, Modifier.align(Alignment.TopEnd).padding(end = Size110dp)) { context ->
-                    saveImage(videoUri, mimeType, context, accountViewModel)
+                    saveMediaToGallery(videoUri, mimeType, context, accountViewModel)
                 }
 
                 AnimatedShareButton(controllerVisible, Modifier.align(Alignment.TopEnd).padding(end = Size165dp)) { popupExpanded, toggle ->
@@ -1205,21 +1209,22 @@ fun SaveButton(onSaveClick: (localContext: Context) -> Unit) {
     }
 }
 
-private fun saveImage(
+private fun saveMediaToGallery(
     videoUri: String?,
     mimeType: String?,
     localContext: Context,
     accountViewModel: AccountViewModel,
 ) {
-    ImageSaver.saveImage(
+    MediaSaverToDisk.saveDownloadingIfNeeded(
         videoUri = videoUri,
+        forceProxy = accountViewModel.account.shouldUseTorForVideoDownload(),
         mimeType = mimeType,
         localContext = localContext,
         onSuccess = {
-            accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
+            accountViewModel.toast(R.string.video_saved_to_the_gallery, R.string.video_saved_to_the_gallery)
         },
         onError = {
-            accountViewModel.toast(R.string.failed_to_save_the_image, null, it)
+            accountViewModel.toast(R.string.failed_to_save_the_video, null, it)
         },
     )
 }

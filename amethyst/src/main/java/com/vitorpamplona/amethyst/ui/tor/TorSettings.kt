@@ -18,27 +18,41 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.previews
+package com.vitorpamplona.amethyst.ui.tor
 
-import kotlinx.coroutines.CancellationException
+import com.vitorpamplona.amethyst.R
 
-class BahaUrlPreview(
-    val url: String,
-    var callback: IUrlPreviewCallback?,
+class TorSettings(
+    val torType: TorType = TorType.INTERNAL,
+    val externalSocksPort: Int = 9050,
+    val onionRelaysViaTor: Boolean = true,
+    val dmRelaysViaTor: Boolean = true,
+    val newRelaysViaTor: Boolean = true,
+    val trustedRelaysViaTor: Boolean = false,
+    val urlPreviewsViaTor: Boolean = false,
+    val profilePicsViaTor: Boolean = false,
+    val imagesViaTor: Boolean = false,
+    val videosViaTor: Boolean = false,
+    val moneyOperationsViaTor: Boolean = false,
+    val nip05VerificationsViaTor: Boolean = false,
+    val nip96UploadsViaTor: Boolean = false,
+)
+
+enum class TorType(
+    val screenCode: Int,
+    val resourceId: Int,
 ) {
-    suspend fun fetchUrlPreview(timeOut: Int = 30000) =
-        try {
-            fetch(timeOut)
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            callback?.onFailed(t)
-        }
-
-    private suspend fun fetch(timeOut: Int = 30000) {
-        callback?.onComplete(getDocument(url, timeOut))
-    }
-
-    fun cleanUp() {
-        callback = null
-    }
+    OFF(0, R.string.tor_off),
+    INTERNAL(1, R.string.tor_internal),
+    EXTERNAL(2, R.string.tor_external),
 }
+
+fun parseTorType(code: Int?): TorType =
+    when (code) {
+        TorType.OFF.screenCode -> TorType.OFF
+        TorType.INTERNAL.screenCode -> TorType.INTERNAL
+        TorType.EXTERNAL.screenCode -> TorType.EXTERNAL
+        else -> {
+            TorType.INTERNAL
+        }
+    }

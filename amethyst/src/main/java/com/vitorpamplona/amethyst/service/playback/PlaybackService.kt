@@ -30,18 +30,47 @@ import com.vitorpamplona.ammolite.service.HttpClientManager
 
 class PlaybackService : MediaSessionService() {
     private var videoViewedPositionCache = VideoViewedPositionCache()
-
-    private var managerAllInOne: MultiPlayerPlaybackManager? = null
+    private var managerAllInOneNoProxy: MultiPlayerPlaybackManager? = null
+    private var managerAllInOneProxy: MultiPlayerPlaybackManager? = null
 
     @OptIn(UnstableApi::class)
-    fun lazyDS(): MultiPlayerPlaybackManager {
-        managerAllInOne?.let {
-            return it
-        }
+    fun lazyDS(proxyPort: Int): MultiPlayerPlaybackManager {
+        if (proxyPort <= 0) {
+            // no proxy
+            managerAllInOneNoProxy?.let {
+                return it
+            }
 
-        val newInstance = MultiPlayerPlaybackManager(CustomMediaSourceFactory(), videoViewedPositionCache)
-        managerAllInOne = newInstance
-        return newInstance
+            // creates new
+            val okHttp = HttpClientManager.getHttpClient(false)
+            val newInstance = MultiPlayerPlaybackManager(CustomMediaSourceFactory(okHttp), videoViewedPositionCache)
+            managerAllInOneNoProxy = newInstance
+            return newInstance
+        } else {
+            // with proxy, check if the port is the same.
+            managerAllInOneProxy?.let {
+                val okHttp = HttpClientManager.getHttpClient(true)
+                if (okHttp == it.dataSourceFactory.okHttpClient.proxy) {
+                    return it
+                }
+
+                val toDestroyAllInOne = managerAllInOneProxy
+
+                val newInstance = MultiPlayerPlaybackManager(CustomMediaSourceFactory(okHttp), videoViewedPositionCache)
+
+                managerAllInOneProxy = newInstance
+
+                toDestroyAllInOne?.releaseAppPlayers()
+
+                return newInstance
+            }
+
+            // creates new
+            val okHttp = HttpClientManager.getHttpClient(true)
+            val newInstance = MultiPlayerPlaybackManager(CustomMediaSourceFactory(okHttp), videoViewedPositionCache)
+            managerAllInOneProxy = newInstance
+            return newInstance
+        }
     }
 
     // Create your Player and MediaSession in the onCreate lifecycle event
@@ -50,18 +79,6 @@ class PlaybackService : MediaSessionService() {
         super.onCreate()
 
         Log.d("Lifetime Event", "PlaybackService.onCreate")
-
-        // Stop all videos and recreates all managers when the proxy changes.
-        HttpClientManager.proxyChangeListeners.add(this@PlaybackService::onProxyUpdated)
-    }
-
-    @OptIn(UnstableApi::class)
-    private fun onProxyUpdated() {
-        val toDestroyAllInOne = managerAllInOne
-
-        managerAllInOne = MultiPlayerPlaybackManager(CustomMediaSourceFactory(), videoViewedPositionCache)
-
-        toDestroyAllInOne?.releaseAppPlayers()
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -73,9 +90,8 @@ class PlaybackService : MediaSessionService() {
     override fun onDestroy() {
         Log.d("Lifetime Event", "PlaybackService.onDestroy")
 
-        HttpClientManager.proxyChangeListeners.remove(this@PlaybackService::onProxyUpdated)
-
-        managerAllInOne?.releaseAppPlayers()
+        managerAllInOneProxy?.releaseAppPlayers()
+        managerAllInOneNoProxy?.releaseAppPlayers()
 
         super.onDestroy()
     }
@@ -88,14 +104,28 @@ class PlaybackService : MediaSessionService() {
         super.onUpdateNotification(session, startInForegroundRequired)
 
         // Overrides the notification with any player actually playing
-        managerAllInOne?.playingContent()?.forEach {
+        managerAllInOneProxy?.playingContent()?.forEach {
             if (it.player.isPlaying) {
                 super.onUpdateNotification(it, startInForegroundRequired)
             }
         }
 
         // Overrides again with playing with audio
-        managerAllInOne?.playingContent()?.forEach {
+        managerAllInOneProxy?.playingContent()?.forEach {
+            if (it.player.isPlaying && it.player.volume > 0) {
+                super.onUpdateNotification(it, startInForegroundRequired)
+            }
+        }
+
+        // Overrides the notification with any player actually playing
+        managerAllInOneNoProxy?.playingContent()?.forEach {
+            if (it.player.isPlaying) {
+                super.onUpdateNotification(it, startInForegroundRequired)
+            }
+        }
+
+        // Overrides again with playing with audio
+        managerAllInOneNoProxy?.playingContent()?.forEach {
             if (it.player.isPlaying && it.player.volume > 0) {
                 super.onUpdateNotification(it, startInForegroundRequired)
             }
@@ -108,8 +138,9 @@ class PlaybackService : MediaSessionService() {
         val id = controllerInfo.connectionHints.getString("id") ?: return null
         val uri = controllerInfo.connectionHints.getString("uri") ?: return null
         val callbackUri = controllerInfo.connectionHints.getString("callbackUri")
+        val proxyPort = controllerInfo.connectionHints.getInt("proxyPort")
 
-        val manager = lazyDS()
+        val manager = lazyDS(proxyPort)
 
         return manager.getMediaSession(
             id,

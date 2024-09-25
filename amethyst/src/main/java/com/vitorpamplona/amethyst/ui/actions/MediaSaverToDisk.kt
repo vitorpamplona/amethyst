@@ -46,9 +46,10 @@ import okio.source
 import java.io.File
 import java.util.UUID
 
-object ImageSaver {
-    fun saveImage(
+object MediaSaverToDisk {
+    fun saveDownloadingIfNeeded(
         videoUri: String?,
+        forceProxy: Boolean,
         mimeType: String?,
         localContext: Context,
         onSuccess: () -> Any?,
@@ -56,14 +57,15 @@ object ImageSaver {
     ) {
         if (videoUri != null) {
             if (!videoUri.startsWith("file")) {
-                saveImage(
+                downloadAndSave(
                     context = localContext,
+                    forceProxy = forceProxy,
                     url = videoUri,
                     onSuccess = onSuccess,
                     onError = onError,
                 )
             } else {
-                saveImage(
+                save(
                     context = localContext,
                     localFile = videoUri.toUri().toFile(),
                     mimeType = mimeType,
@@ -79,13 +81,14 @@ object ImageSaver {
      *
      * @see PICTURES_SUBDIRECTORY
      */
-    fun saveImage(
+    fun downloadAndSave(
         url: String,
+        forceProxy: Boolean,
         context: Context,
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
     ) {
-        val client = HttpClientManager.getHttpClient()
+        val client = HttpClientManager.getHttpClient(forceProxy)
 
         val request =
             Request
@@ -142,7 +145,7 @@ object ImageSaver {
             )
     }
 
-    fun saveImage(
+    fun save(
         localFile: File,
         mimeType: String?,
         context: Context,

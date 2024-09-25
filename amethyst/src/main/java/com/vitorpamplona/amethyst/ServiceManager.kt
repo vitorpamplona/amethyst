@@ -48,11 +48,17 @@ import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
+import com.vitorpamplona.amethyst.service.ots.OkHttpBlockstreamExplorer
+import com.vitorpamplona.amethyst.service.ots.OkHttpCalendarBuilder
+import com.vitorpamplona.amethyst.ui.tor.TorManager
+import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.events.OtsEvent
+import com.vitorpamplona.quartz.ots.OpenTimestamps
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -88,8 +94,27 @@ class ServiceManager(
         val myAccount = account
 
         // Resets Proxy Use
-        HttpClientManager.setDefaultProxy(account?.settings?.proxy)
-        HttpClientManager.setDefaultUserAgent("Amethyst/${BuildConfig.VERSION_NAME}")
+        if (myAccount != null) {
+            when (myAccount.settings.torSettings.torType.value) {
+                TorType.INTERNAL -> {
+                    Log.d("TorManager", "Relays Service Connected ${TorManager.socksPort()}")
+                    HttpClientManager.setDefaultProxyOnPort(TorManager.socksPort())
+                }
+                TorType.EXTERNAL -> HttpClientManager.setDefaultProxyOnPort(myAccount.settings.torSettings.externalSocksPort.value)
+                else -> HttpClientManager.setDefaultProxy(null)
+            }
+
+            OtsEvent.otsInstance =
+                OpenTimestamps(
+                    OkHttpBlockstreamExplorer(myAccount::shouldUseTorForMoneyOperations),
+                    OkHttpCalendarBuilder(myAccount::shouldUseTorForMoneyOperations),
+                )
+        } else {
+            OtsEvent.otsInstance = OpenTimestamps(OkHttpBlockstreamExplorer { false }, OkHttpCalendarBuilder { false })
+
+            HttpClientManager.setDefaultProxy(null)
+        }
+
         LocalCache.antiSpam.active = account?.settings?.filterSpamFromStrangers ?: true
         Coil.setImageLoader {
             Amethyst.instance
@@ -106,22 +131,23 @@ class ServiceManager(
                     if (BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark") {
                         this.logger(DebugLogger())
                     }
-                }.okHttpClient { HttpClientManager.getHttpClient() }
-                .precision(Precision.INEXACT)
+                }.okHttpClient {
+                    myAccount?.shouldUseTorForImageDownload()?.let { HttpClientManager.getHttpClient(it) }
+                        ?: HttpClientManager.getHttpClient(false)
+                }.precision(Precision.INEXACT)
                 .respectCacheHeaders(false)
                 .build()
         }
 
         if (myAccount != null) {
-            val relaySet = myAccount.connectToRelays.value
-            Log.d("Relay", "Service Manager Connect Connecting ${relaySet.size}")
+            val relaySet = myAccount.connectToRelaysWithProxy.value
             Client.reconnect(relaySet)
 
             collectorJob?.cancel()
             collectorJob = null
             collectorJob =
                 scope.launch {
-                    myAccount.connectToRelaysFlow.collectLatest {
+                    myAccount.connectToRelaysWithProxy.collectLatest {
                         delay(500)
                         if (isStarted) {
                             Client.reconnect(it, onlyIfChanged = true)

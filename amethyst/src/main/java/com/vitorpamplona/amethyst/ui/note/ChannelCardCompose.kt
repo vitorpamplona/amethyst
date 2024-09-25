@@ -79,7 +79,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.OfflineFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.observeAppDefinition
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfUrlIsOnline
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -480,7 +480,7 @@ fun RenderLiveActivityThumb(
                             if (url.isNullOrBlank()) {
                                 LiveFlag()
                             } else {
-                                CheckIfUrlIsOnline(url, accountViewModel) { isOnline ->
+                                CheckIfVideoIsOnline(url, accountViewModel) { isOnline ->
                                     if (isOnline) {
                                         LiveFlag()
                                     } else {

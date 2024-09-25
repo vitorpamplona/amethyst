@@ -79,6 +79,7 @@ class RegisterAccounts(
                                             contentResolver = Amethyst.instance::contentResolverFn,
                                         )
                                     }
+
                                     RelayAuthEvent.create(accountRelayPair.second, notificationToken, signer) { result ->
                                         continuation.resume(result)
                                     }
@@ -165,7 +166,8 @@ class RegisterAccounts(
                     .post(body)
                     .build()
 
-            val client = HttpClientManager.getHttpClient()
+            // Always try via Tor for Amethyst.
+            val client = HttpClientManager.getHttpClient(true)
 
             val isSucess = client.newCall(request).execute().use { it.isSuccessful }
             Log.i(tag, "Server registration $isSucess")

@@ -62,6 +62,7 @@ class Nip96Uploader(
         sensitiveContent: String?,
         server: Nip96MediaServers.ServerName,
         contentResolver: ContentResolver,
+        forceProxy: (String) -> Boolean,
         onProgress: (percentage: Float) -> Unit,
         context: Context,
     ): PartialEvent {
@@ -69,6 +70,7 @@ class Nip96Uploader(
             Nip96Retriever()
                 .loadInfo(
                     server.baseUrl,
+                    forceProxy(server.baseUrl),
                 )
 
         return uploadImage(
@@ -79,6 +81,7 @@ class Nip96Uploader(
             sensitiveContent,
             serverInfo,
             contentResolver,
+            forceProxy,
             onProgress,
             context,
         )
@@ -92,6 +95,7 @@ class Nip96Uploader(
         sensitiveContent: String?,
         server: Nip96Retriever.ServerInfo,
         contentResolver: ContentResolver,
+        forceProxy: (String) -> Boolean,
         onProgress: (percentage: Float) -> Unit,
         context: Context,
     ): PartialEvent {
@@ -118,6 +122,7 @@ class Nip96Uploader(
             alt,
             sensitiveContent,
             server,
+            forceProxy,
             onProgress,
             context,
         )
@@ -130,6 +135,7 @@ class Nip96Uploader(
         alt: String?,
         sensitiveContent: String?,
         server: Nip96Retriever.ServerInfo,
+        forceProxy: (String) -> Boolean,
         onProgress: (percentage: Float) -> Unit,
         context: Context,
     ): PartialEvent {
@@ -139,7 +145,7 @@ class Nip96Uploader(
         val extension =
             contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
-        val client = HttpClientManager.getHttpClient()
+        val client = HttpClientManager.getHttpClient(forceProxy(server.apiUrl))
         val requestBuilder = Request.Builder()
 
         val requestBody: RequestBody =
@@ -182,7 +188,7 @@ class Nip96Uploader(
                     val result = parseResults(str)
 
                     if (!result.processingUrl.isNullOrBlank()) {
-                        return waitProcessing(result, server, onProgress)
+                        return waitProcessing(result, server, forceProxy, onProgress)
                     } else if (result.status == "success" && result.nip94Event != null) {
                         return result.nip94Event
                     } else {
@@ -222,12 +228,13 @@ class Nip96Uploader(
         hash: String,
         contentType: String?,
         server: Nip96Retriever.ServerInfo,
+        forceProxy: (String) -> Boolean,
         context: Context,
     ): Boolean {
         val extension =
             contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
-        val client = HttpClientManager.getHttpClient()
+        val client = HttpClientManager.getHttpClient(forceProxy(server.apiUrl))
 
         val requestBuilder = Request.Builder()
 
@@ -261,9 +268,9 @@ class Nip96Uploader(
     private suspend fun waitProcessing(
         result: Nip96Result,
         server: Nip96Retriever.ServerInfo,
+        forceProxy: (String) -> Boolean,
         onProgress: (percentage: Float) -> Unit,
     ): PartialEvent {
-        val client = HttpClientManager.getHttpClient()
         var currentResult = result
 
         while (!result.processingUrl.isNullOrBlank() && (currentResult.percentage ?: 100) < 100) {
@@ -276,6 +283,7 @@ class Nip96Uploader(
                     .url(result.processingUrl)
                     .build()
 
+            val client = HttpClientManager.getHttpClient(forceProxy(result.processingUrl))
             client.newCall(request).execute().use {
                 if (it.isSuccessful) {
                     it.body.use { currentResult = parseResults(it.string()) }

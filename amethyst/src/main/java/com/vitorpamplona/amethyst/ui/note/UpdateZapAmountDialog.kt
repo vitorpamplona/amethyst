@@ -164,14 +164,10 @@ class UpdateZapAmountViewModel(
                     null
                 }
 
-            val relayUrl =
-                walletConnectRelay.text
-                    .ifBlank { null }
-                    ?.let { RelayUrlFormatter.normalize(it) }
-
+            val relayUrl = walletConnectRelay.text.ifBlank { null }?.let { RelayUrlFormatter.normalize(it) }
             val privKeyHex = walletConnectSecret.text.ifBlank { null }?.let { decodePrivateKeyAsHexOrNull(it) }
 
-            if (pubkeyHex != null) {
+            if (pubkeyHex != null && relayUrl != null) {
                 accountSettings.changeZapPaymentRequest(
                     Nip47WalletConnect.Nip47URI(
                         pubkeyHex,

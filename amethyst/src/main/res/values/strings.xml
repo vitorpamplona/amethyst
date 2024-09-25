@@ -124,8 +124,10 @@
     <string name="ln_address">LN Address</string>
     <string name="ln_url_outdated">LN URL (outdated)</string>
     <string name="save_to_gallery">Save to Gallery</string>
-    <string name="image_saved_to_the_gallery">Image saved to the gallery</string>
+    <string name="image_saved_to_the_gallery">Image saved to the phone\'s photo gallery</string>
     <string name="failed_to_save_the_image">Failed to save the image</string>
+    <string name="video_saved_to_the_gallery">Video saved to the phone\'s video gallery</string>
+    <string name="failed_to_save_the_video">Failed to save the video</string>
     <string name="upload_image">Upload Image</string>
     <string name="uploading">Uploading…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">User does not have a lightning address set up to receive sats</string>
@@ -412,6 +414,8 @@
     <string name="follow_list_kind3follows">All Follows</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Mute List</string>
+
+    <string name="connect_through_your_orbot_setup_short">Default port is 9050</string>
     <string name="connect_through_your_orbot_setup_markdown">
         ## Connect through Tor with Orbot
         \n\n1. Install [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
@@ -422,6 +426,47 @@
         \n6. Press the Activate button to use Orbot as a proxy
     </string>
     <string name="orbot_socks_port">Orbot Socks Port</string>
+
+    <string name="use_internal_tor">Active Tor Engine</string>
+    <string name="use_internal_tor_explainer">Use the internal version or Orbot</string>
+
+    <string name="tor_use_onion_address">Onion Relays</string>
+    <string name="tor_use_onion_address_explainer">Enables .onion urls from your relay list</string>
+
+    <string name="tor_use_dm_relays">DM Relays</string>
+    <string name="tor_use_dm_relays_explainer">Force Tor to send and receive DMs</string>
+
+    <string name="tor_use_new_relays">Untrusted Relays</string>
+    <string name="tor_use_new_relays_explainer">Force Tor on outbox/inbox relays</string>
+
+    <string name="tor_use_trusted_relays">Trusted Relays</string>
+    <string name="tor_use_trusted_relays_explainer">Force Tor on all relays in your lists</string>
+
+    <string name="tor_use_profile_pictures">Profile Pictures</string>
+    <string name="tor_use_profile_pictures_explainer">Force Tor when loading profile pictures</string>
+
+    <string name="tor_use_url_previews">URL Previews</string>
+    <string name="tor_use_url_previews_explainer">Force Tor when loading url previews</string>
+
+    <string name="tor_use_images">Images</string>
+    <string name="tor_use_images_explainer">Force Tor when loading images</string>
+
+    <string name="tor_use_videos">Videos</string>
+    <string name="tor_use_videos_explainer">Force Tor when loading videos</string>
+
+    <string name="tor_use_money_operations">Money Operations</string>
+    <string name="tor_use_money_operations_explainer">Force Tor on zaps, lightning and cashu transfers</string>
+
+    <string name="tor_use_nip05_verification">Nostr Address Verification</string>
+    <string name="tor_use_nip05_verification_explainer">Force Tor when verifying NIP-05 addresses</string>
+
+    <string name="tor_use_nip96_uploads">Media Uploads</string>
+    <string name="tor_use_nip96_uploads_explainer">Force Tor when uploading content</string>
+
+    <string name="tor_internal">Internal</string>
+    <string name="tor_external">Orbot</string>
+    <string name="tor_off">Off</string>
+
     <string name="invalid_port_number">Invalid port number</string>
     <string name="use_orbot">Use Orbot</string>
     <string name="disconnect_from_your_orbot_setup">Disconnect Tor/Orbot</string>

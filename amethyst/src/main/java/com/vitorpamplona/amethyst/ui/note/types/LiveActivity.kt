@@ -59,8 +59,8 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ScheduledFlag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfUrlIsOnline
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CrossfadeCheckIfUrlIsOnline
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfVideoIsOnline
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CrossfadeCheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -159,7 +159,7 @@ fun RenderLiveActivityEventInner(
         CrossfadeIfEnabled(targetState = status, label = "RenderLiveActivityEventInner", accountViewModel = accountViewModel) {
             when (it) {
                 LiveActivitiesEvent.STATUS_LIVE -> {
-                    media?.let { CrossfadeCheckIfUrlIsOnline(it, accountViewModel) { LiveFlag() } }
+                    media?.let { CrossfadeCheckIfVideoIsOnline(it, accountViewModel) { LiveFlag() } }
                 }
 
                 LiveActivitiesEvent.STATUS_PLANNED -> {
@@ -171,7 +171,7 @@ fun RenderLiveActivityEventInner(
 
     media?.let { media ->
         if (status == LiveActivitiesEvent.STATUS_LIVE) {
-            CheckIfUrlIsOnline(media, accountViewModel) { isOnline ->
+            CheckIfVideoIsOnline(media, accountViewModel) { isOnline ->
                 if (isOnline) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

@@ -49,7 +49,10 @@ object OnlineChecker {
         return false
     }
 
-    fun isOnline(url: String?): Boolean {
+    fun isOnline(
+        url: String?,
+        forceProxy: Boolean,
+    ): Boolean {
         checkNotInMainThread()
 
         if (url.isNullOrBlank()) return false
@@ -74,7 +77,7 @@ object OnlineChecker {
 
                     val client =
                         HttpClientManager
-                            .getHttpClient()
+                            .getHttpClient(forceProxy)
                             .newBuilder()
                             .eventListener(EventListener.NONE)
                             .protocols(listOf(Protocol.HTTP_1_1))
@@ -93,7 +96,7 @@ object OnlineChecker {
                             .get()
                             .build()
 
-                    HttpClientManager.getHttpClient().newCall(request).execute().use {
+                    HttpClientManager.getHttpClient(forceProxy).newCall(request).execute().use {
                         checkNotInMainThread()
                         it.isSuccessful
                     }

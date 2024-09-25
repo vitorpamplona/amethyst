@@ -218,6 +218,7 @@ class CashuProcessor {
     suspend fun melt(
         token: CashuToken,
         lud16: String,
+        forceProxy: (url: String) -> Boolean,
         onSuccess: (String, String) -> Unit,
         onError: (String, String) -> Unit,
         context: Context,
@@ -231,10 +232,12 @@ class CashuProcessor {
                     // Make invoice and leave room for fees
                     milliSats = token.totalAmount * 1000,
                     message = "Calculate Fees for Cashu",
+                    forceProxy = forceProxy,
                     onSuccess = { baseInvoice ->
                         feeCalculator(
                             token.mint,
                             baseInvoice,
+                            forceProxy = forceProxy,
                             onSuccess = { fees ->
                                 LightningAddressResolver()
                                     .lnAddressInvoice(
@@ -242,8 +245,9 @@ class CashuProcessor {
                                         // Make invoice and leave room for fees
                                         milliSats = (token.totalAmount - fees) * 1000,
                                         message = "Redeem Cashu",
+                                        forceProxy = forceProxy,
                                         onSuccess = { invoice ->
-                                            meltInvoice(token, invoice, fees, onSuccess, onError, context)
+                                            meltInvoice(token, invoice, fees, forceProxy, onSuccess, onError, context)
                                         },
                                         onProgress = {},
                                         onError = onError,
@@ -264,6 +268,7 @@ class CashuProcessor {
     fun feeCalculator(
         mintAddress: String,
         invoice: String,
+        forceProxy: (String) -> Boolean,
         onSuccess: (Int) -> Unit,
         onError: (String, String) -> Unit,
         context: Context,
@@ -271,8 +276,8 @@ class CashuProcessor {
         checkNotInMainThread()
 
         try {
-            val client = HttpClientManager.getHttpClient()
             val url = "$mintAddress/checkfees" // Melt cashu tokens at Mint
+            val client = HttpClientManager.getHttpClient(forceProxy(url))
 
             val factory = Event.mapper.nodeFactory
 
@@ -329,13 +334,14 @@ class CashuProcessor {
         token: CashuToken,
         invoice: String,
         fees: Int,
+        forceProxy: (String) -> Boolean,
         onSuccess: (String, String) -> Unit,
         onError: (String, String) -> Unit,
         context: Context,
     ) {
         try {
-            val client = HttpClientManager.getHttpClient()
             val url = token.mint + "/melt" // Melt cashu tokens at Mint
+            val client = HttpClientManager.getHttpClient(forceProxy(url))
 
             val factory = Event.mapper.nodeFactory
 

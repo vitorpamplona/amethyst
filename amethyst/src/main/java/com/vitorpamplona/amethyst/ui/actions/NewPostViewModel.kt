@@ -473,7 +473,7 @@ open class NewPostViewModel : ViewModel() {
         urlPreview = findUrlInMessage()
     }
 
-    fun sendPost(relayList: List<RelaySetupInfo>? = null) {
+    fun sendPost(relayList: List<RelaySetupInfo>) {
         viewModelScope.launch(Dispatchers.IO) {
             innerSendPost(relayList, null)
             accountViewModel?.deleteDraft(draftTag)
@@ -481,18 +481,18 @@ open class NewPostViewModel : ViewModel() {
         }
     }
 
-    fun sendDraft(relayList: List<RelaySetupInfo>? = null) {
+    fun sendDraft(relayList: List<RelaySetupInfo>) {
         viewModelScope.launch {
             sendDraftSync(relayList)
         }
     }
 
-    suspend fun sendDraftSync(relayList: List<RelaySetupInfo>? = null) {
+    suspend fun sendDraftSync(relayList: List<RelaySetupInfo>) {
         innerSendPost(relayList, draftTag)
     }
 
     private suspend fun innerSendPost(
-        relayList: List<RelaySetupInfo>? = null,
+        relayList: List<RelaySetupInfo>,
         localDraft: String?,
     ) = withContext(Dispatchers.IO) {
         if (accountViewModel == null) {
@@ -879,6 +879,7 @@ open class NewPostViewModel : ViewModel() {
                                                 sensitiveContent = if (sensitiveContent) "" else null,
                                                 server = server.server,
                                                 contentResolver = contentResolver,
+                                                forceProxy = account?.let { it::shouldUseTorForNIP96 } ?: { false },
                                                 onProgress = {},
                                                 context = context,
                                             )
@@ -888,6 +889,7 @@ open class NewPostViewModel : ViewModel() {
                                         localContentType = contentType,
                                         alt = alt,
                                         sensitiveContent = sensitiveContent,
+                                        forceProxy = account?.let { it::shouldUseTorForNIP96 } ?: { false },
                                         onError = {
                                             onError(stringRes(context, R.string.failed_to_upload_media_no_details), it)
                                         },
@@ -1146,6 +1148,7 @@ open class NewPostViewModel : ViewModel() {
         localContentType: String?,
         alt: String?,
         sensitiveContent: Boolean,
+        forceProxy: (String) -> Boolean,
         onError: (message: String) -> Unit,
         context: Context,
     ) {
@@ -1184,6 +1187,7 @@ open class NewPostViewModel : ViewModel() {
             fileUrl = imageUrl,
             mimeType = remoteMimeType ?: localContentType,
             dimPrecomputed = dim,
+            forceProxy = forceProxy(imageUrl),
             onReady = { header: FileHeader ->
                 account?.createHeader(imageUrl, magnet, header, alt, sensitiveContent, originalHash) { event ->
                     isUploadingImage = false

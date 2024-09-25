@@ -29,3 +29,12 @@ data class RelaySetupInfo(
     val write: Boolean,
     val feedTypes: Set<FeedType>,
 )
+
+@Immutable
+data class RelaySetupInfoToConnect(
+    val url: String,
+    val forceProxy: Boolean,
+    val read: Boolean,
+    val write: Boolean,
+    val feedTypes: Set<FeedType>,
+)

@@ -30,6 +30,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.Player.PositionInfo
 import androidx.media3.common.Player.STATE_IDLE
 import androidx.media3.common.Player.STATE_READY
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import com.vitorpamplona.amethyst.ui.MainActivity
@@ -40,7 +41,8 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 class MultiPlayerPlaybackManager(
-    private val dataSourceFactory: androidx.media3.exoplayer.source.MediaSource.Factory? = null,
+    @UnstableApi
+    val dataSourceFactory: CustomMediaSourceFactory,
     private val cachedPositions: VideoViewedPositionCache,
 ) {
     // protects from LruCache killing playing sessions

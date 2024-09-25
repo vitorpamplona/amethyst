@@ -80,7 +80,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaPreloadedContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
-import com.vitorpamplona.amethyst.ui.actions.ImageSaver
+import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -261,7 +261,7 @@ private fun DialogContent(
                     val writeStoragePermissionState =
                         rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
                             if (isGranted) {
-                                saveImage(myContent, localContext, accountViewModel)
+                                saveMediaToGallery(myContent, localContext, accountViewModel)
                             }
                         }
 
@@ -271,7 +271,7 @@ private fun DialogContent(
                                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
                                 writeStoragePermissionState.status.isGranted
                             ) {
-                                saveImage(myContent, localContext, accountViewModel)
+                                saveMediaToGallery(myContent, localContext, accountViewModel)
                             } else {
                                 writeStoragePermissionState.launchPermissionRequest()
                             }
@@ -291,33 +291,46 @@ private fun DialogContent(
     }
 }
 
-private fun saveImage(
+private fun saveMediaToGallery(
     content: BaseMediaContent,
     localContext: Context,
     accountViewModel: AccountViewModel,
 ) {
+    val isImage = content is MediaUrlImage && content is MediaLocalImage
+
+    val success = if (isImage) R.string.image_saved_to_the_gallery else R.string.video_saved_to_the_gallery
+    val failure = if (isImage) R.string.failed_to_save_the_image else R.string.failed_to_save_the_video
+
     if (content is MediaUrlContent) {
-        ImageSaver.saveImage(
+        val useTor =
+            if (isImage) {
+                accountViewModel.account.shouldUseTorForImageDownload()
+            } else {
+                accountViewModel.account.shouldUseTorForVideoDownload()
+            }
+
+        MediaSaverToDisk.downloadAndSave(
             content.url,
+            forceProxy = useTor,
             localContext,
             onSuccess = {
-                accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
+                accountViewModel.toast(success, success)
             },
             onError = {
-                accountViewModel.toast(R.string.failed_to_save_the_image, null, it)
+                accountViewModel.toast(failure, null, it)
             },
         )
     } else if (content is MediaPreloadedContent) {
         content.localFile?.let {
-            ImageSaver.saveImage(
+            MediaSaverToDisk.save(
                 it,
                 content.mimeType,
                 localContext,
                 onSuccess = {
-                    accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
+                    accountViewModel.toast(success, success)
                 },
                 onError = {
-                    accountViewModel.toast(R.string.failed_to_save_the_image, null, it)
+                    accountViewModel.toast(failure, null, it)
                 },
             )
         }

@@ -58,20 +58,22 @@ object RelayPool : Relay.Listener {
     fun getAll() = relays
 
     fun getOrCreateRelay(
-        url: String,
-        feedTypes: Set<FeedType>? = null,
+        relayTemplate: RelaySetupInfoToConnect,
         onDone: (() -> Unit)? = null,
         whenConnected: (Relay) -> Unit,
     ) {
         synchronized(this) {
-            val matching = getRelays(url)
+            val matching = getRelays(relayTemplate.url)
             if (matching.isNotEmpty()) {
                 matching.forEach { whenConnected(it) }
             } else {
                 /** temporary connection */
                 newSporadicRelay(
-                    url,
-                    feedTypes,
+                    relayTemplate.url,
+                    relayTemplate.read,
+                    relayTemplate.write,
+                    relayTemplate.forceProxy,
+                    relayTemplate.feedTypes,
                     onConnected = whenConnected,
                     onDone = onDone,
                 )
@@ -82,12 +84,15 @@ object RelayPool : Relay.Listener {
     @OptIn(DelicateCoroutinesApi::class)
     fun newSporadicRelay(
         url: String,
+        read: Boolean,
+        write: Boolean,
+        forceProxy: Boolean,
         feedTypes: Set<FeedType>?,
         onConnected: (Relay) -> Unit,
         onDone: (() -> Unit)?,
         timeout: Long = 60000,
     ) {
-        val relay = Relay(url, true, true, feedTypes ?: emptySet())
+        val relay = Relay(url, read, write, forceProxy, feedTypes ?: emptySet())
         addRelay(relay)
 
         relay.connectAndRun {
@@ -110,11 +115,8 @@ object RelayPool : Relay.Listener {
     }
 
     fun loadRelays(relayList: List<Relay>) {
-        if (!relayList.isNullOrEmpty()) {
-            relayList.forEach { addRelay(it) }
-        } else {
-            Constants.convertDefaultRelays().forEach { addRelay(it) }
-        }
+        check(relayList.isNotEmpty()) { "Relay list should never be empty" }
+        relayList.forEach { addRelay(it) }
     }
 
     fun unloadRelays() {

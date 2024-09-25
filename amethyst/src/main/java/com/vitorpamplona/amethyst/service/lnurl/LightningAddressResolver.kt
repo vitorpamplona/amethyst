@@ -36,8 +36,6 @@ import java.net.URLEncoder
 import kotlin.coroutines.cancellation.CancellationException
 
 class LightningAddressResolver {
-    val client = HttpClientManager.getHttpClient()
-
     fun assembleUrl(lnaddress: String): String? {
         val parts = lnaddress.split("@")
 
@@ -54,6 +52,7 @@ class LightningAddressResolver {
 
     private fun fetchLightningAddressJson(
         lnaddress: String,
+        forceProxy: (url: String) -> Boolean,
         onSuccess: (String) -> Unit,
         onError: (String, String) -> Unit,
         context: Context,
@@ -73,6 +72,8 @@ class LightningAddressResolver {
             )
             return
         }
+
+        val client = HttpClientManager.getHttpClient(forceProxy(url))
 
         try {
             val request: Request =
@@ -121,6 +122,7 @@ class LightningAddressResolver {
         milliSats: Long,
         message: String,
         nostrRequest: String? = null,
+        forceProxy: (url: String) -> Boolean,
         onSuccess: (String) -> Unit,
         onError: (String, String) -> Unit,
         context: Context,
@@ -136,6 +138,8 @@ class LightningAddressResolver {
             val encodedNostrRequest = URLEncoder.encode(nostrRequest, "utf-8")
             url += "&nostr=$encodedNostrRequest"
         }
+
+        val client = HttpClientManager.getHttpClient(forceProxy(url))
 
         val request: Request =
             Request
@@ -161,6 +165,7 @@ class LightningAddressResolver {
         milliSats: Long,
         message: String,
         nostrRequest: String? = null,
+        forceProxy: (url: String) -> Boolean,
         onSuccess: (String) -> Unit,
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
@@ -170,6 +175,7 @@ class LightningAddressResolver {
 
         fetchLightningAddressJson(
             lnaddress,
+            forceProxy,
             onSuccess = { lnAddressJson ->
                 onProgress(0.4f)
 
@@ -210,6 +216,7 @@ class LightningAddressResolver {
                         milliSats,
                         message,
                         if (allowsNostr) nostrRequest else null,
+                        forceProxy,
                         onSuccess = {
                             onProgress(0.6f)
 

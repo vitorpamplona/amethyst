@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import kotlinx.coroutines.launch
 
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")
@@ -94,9 +95,7 @@ fun SignUpPage(
     var termsAcceptanceIsRequired by remember { mutableStateOf("") }
 
     val context = LocalContext.current
-    val useProxy = remember { mutableStateOf(false) }
-    val proxyPort = remember { mutableStateOf("9050") }
-    var connectOrbotDialogOpen by remember { mutableStateOf(false) }
+    val torSettings = remember { mutableStateOf(TorSettings()) }
     val scope = rememberCoroutineScope()
 
     Column(
@@ -154,7 +153,7 @@ fun SignUpPage(
                         }
 
                         if (acceptedTerms.value && displayName.value.text.isNotBlank()) {
-                            accountStateViewModel.newKey(useProxy.value, proxyPort.value.toInt(), displayName.value.text)
+                            accountStateViewModel.newKey(torSettings.value, displayName.value.text)
                         }
                     },
                 ),
@@ -184,10 +183,9 @@ fun SignUpPage(
 
         if (PackageUtils.isOrbotInstalled(context)) {
             OrbotCheckBox(
-                currentPort = proxyPort.value.toIntOrNull(),
-                useProxy = useProxy.value,
+                torSettings = torSettings.value,
                 onCheckedChange = {
-                    useProxy.value = it
+                    torSettings.value = it
                 },
                 onError = {
                     scope.launch {
@@ -217,7 +215,7 @@ fun SignUpPage(
                     }
 
                     if (acceptedTerms.value && displayName.value.text.isNotBlank()) {
-                        accountStateViewModel.newKey(useProxy.value, proxyPort.value.toInt(), displayName.value.text)
+                        accountStateViewModel.newKey(torSettings.value, displayName.value.text)
                     }
                 },
             )

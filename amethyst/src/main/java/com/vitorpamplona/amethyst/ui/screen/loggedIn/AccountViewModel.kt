@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
@@ -707,6 +708,7 @@ class AccountViewModel(
                     message = message,
                     context = context,
                     showErrorIfNoLnAddress = showErrorIfNoLnAddress,
+                    forceProxy = account::shouldUseTorForMoneyOperations,
                     onError = onError,
                     onProgress = {
                         onProgress(it)
@@ -955,7 +957,9 @@ class AccountViewModel(
         url: String,
         onResult: suspend (UrlPreviewState) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) { UrlCachedPreviewer.previewInfo(url, onResult) }
+        viewModelScope.launch(Dispatchers.IO) {
+            UrlCachedPreviewer.previewInfo(url, account.shouldUseTorForPreviewUrl(url), onResult)
+        }
     }
 
     suspend fun loadReactionTo(note: Note?): String? {
@@ -975,6 +979,7 @@ class AccountViewModel(
             Nip05NostrAddressVerifier()
                 .verifyNip05(
                     nip05,
+                    forceProxy = account::shouldUseTorForNIP05,
                     onSuccess = {
                         // Marks user as verified
                         if (it == pubkeyHex) {
@@ -1007,7 +1012,12 @@ class AccountViewModel(
         onError: (String, Nip11Retriever.ErrorCode, String?) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            Nip11CachedRetriever.loadRelayInfo(dirtyUrl, onInfo, onError)
+            Nip11CachedRetriever.loadRelayInfo(
+                dirtyUrl,
+                account.shouldUseTorForDirty(dirtyUrl),
+                onInfo,
+                onError,
+            )
         }
     }
 
@@ -1156,11 +1166,13 @@ class AccountViewModel(
         }
     }
 
-    fun checkIsOnline(
-        media: String?,
+    fun checkVideoIsOnline(
+        videoUrl: String,
         onDone: (Boolean) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) { onDone(OnlineChecker.isOnline(media)) }
+        viewModelScope.launch(Dispatchers.IO) {
+            onDone(OnlineChecker.isOnline(videoUrl, account.shouldUseTorForVideoDownload(videoUrl)))
+        }
     }
 
     fun loadAndMarkAsRead(
@@ -1221,17 +1233,12 @@ class AccountViewModel(
         }
     }
 
-    fun disableTor() {
+    fun setTorSettings(newTorSettings: TorSettings) {
         viewModelScope.launch(Dispatchers.IO) {
-            account.settings.disableProxy()
-            Amethyst.instance.serviceManager.forceRestart()
-        }
-    }
-
-    fun enableTor(portNumber: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            account.settings.enableProxy(portNumber)
-            Amethyst.instance.serviceManager.forceRestart()
+            // Only restart relay connections if port or type changes
+            if (account.settings.setTorSettings(newTorSettings)) {
+                Amethyst.instance.serviceManager.forceRestart()
+            }
         }
     }
 
@@ -1353,6 +1360,7 @@ class AccountViewModel(
                     .melt(
                         token,
                         lud16,
+                        forceProxy = account::shouldUseTorForMoneyOperations,
                         onSuccess = { title, message -> onDone(title, message) },
                         onError = { title, message -> onDone(title, message) },
                         context,
@@ -1538,6 +1546,7 @@ class AccountViewModel(
                         milliSats,
                         message,
                         null,
+                        forceProxy = account::shouldUseTorForMoneyOperations,
                         onSuccess = onSuccess,
                         onError = onError,
                         onProgress = onProgress,
@@ -1552,6 +1561,7 @@ class AccountViewModel(
                             milliSats,
                             message,
                             zapRequest.toJson(),
+                            forceProxy = account::shouldUseTorForMoneyOperations,
                             onSuccess = onSuccess,
                             onError = onError,
                             onProgress = onProgress,

@@ -29,7 +29,9 @@ import com.vitorpamplona.quartz.ots.BlockHeader
 import com.vitorpamplona.quartz.ots.exceptions.UrlException
 import okhttp3.Request
 
-class OkHttpBlockstreamExplorer : BitcoinExplorer {
+class OkHttpBlockstreamExplorer(
+    val forceProxy: (String) -> Boolean,
+) : BitcoinExplorer {
     /**
      * Retrieve the block information from the block hash.
      *
@@ -38,8 +40,8 @@ class OkHttpBlockstreamExplorer : BitcoinExplorer {
      * @throws Exception desc
      */
     override fun block(hash: String): BlockHeader {
-        val client = HttpClientManager.getHttpClient()
         val url = "$BLOCKSTREAM_API_URL/block/$hash"
+        val client = HttpClientManager.getHttpClient(forceProxy(url))
 
         val request =
             Request
@@ -75,9 +77,8 @@ class OkHttpBlockstreamExplorer : BitcoinExplorer {
      */
     @Throws(Exception::class)
     override fun blockHash(height: Int): String {
-        val client = HttpClientManager.getHttpClient()
-
         val url = "$BLOCKSTREAM_API_URL/block-height/$height"
+        val client = HttpClientManager.getHttpClient(forceProxy(url))
 
         val request =
             Request

@@ -34,8 +34,10 @@ import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.Settings
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.ui.tor.TorSettings
+import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
+import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
-import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
@@ -104,6 +106,7 @@ private object PrefKeys {
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
     const val HIDE_NIP_17_WARNING_DIALOG = "hide_nip24_warning_dialog" // delete later
+    const val TOR_SETTINGS = "tor_settings"
     const val USE_PROXY = "use_proxy"
     const val PROXY_PORT = "proxy_port"
     const val SHOW_SENSITIVE_CONTENT = "show_sensitive_content"
@@ -402,8 +405,13 @@ object LocalPreferences {
                         putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, settings.hideDeleteRequestDialog)
                         putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, settings.hideNIP17WarningDialog)
                         putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, settings.hideBlockAlertDialog)
-                        putBoolean(PrefKeys.USE_PROXY, settings.proxy != null)
-                        putInt(PrefKeys.PROXY_PORT, settings.proxyPort)
+
+                        // migrating from previous design
+                        remove(PrefKeys.USE_PROXY)
+                        remove(PrefKeys.PROXY_PORT)
+
+                        putString(PrefKeys.TOR_SETTINGS, Event.mapper.writeValueAsString(settings.torSettings.toSettings()))
+
                         putBoolean(PrefKeys.WARN_ABOUT_REPORTS, settings.warnAboutPostsWithReports)
                         putBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, settings.filterSpamFromStrangers)
 
@@ -538,8 +546,28 @@ object LocalPreferences {
                 val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
                 val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
                 val useProxy = getBoolean(PrefKeys.USE_PROXY, false)
-                val proxyPort = getInt(PrefKeys.PROXY_PORT, 9050)
-                val proxy = HttpClientManager.initProxy(useProxy, "127.0.0.1", proxyPort)
+
+                val torSettings =
+                    if (useProxy) {
+                        // old settings, means Orbot
+                        TorSettings(
+                            TorType.EXTERNAL,
+                            getInt(PrefKeys.PROXY_PORT, 9050),
+                            true,
+                            true,
+                            true,
+                            true,
+                            true,
+                            true,
+                            true,
+                            true,
+                            true,
+                            true,
+                            true,
+                        )
+                    } else {
+                        parseOrNull<TorSettings>(PrefKeys.TOR_SETTINGS) ?: TorSettings()
+                    }
 
                 val showSensitiveContent =
                     if (contains(PrefKeys.SHOW_SENSITIVE_CONTENT)) {
@@ -586,8 +614,7 @@ object LocalPreferences {
                     backupSearchRelayList = latestSearchRelayList,
                     backupPrivateHomeRelayList = latestPrivateHomeRelayList,
                     backupMuteList = latestMuteList,
-                    proxy = proxy,
-                    proxyPort = proxyPort,
+                    torSettings = TorSettingsFlow.build(torSettings),
                     showSensitiveContent = MutableStateFlow(showSensitiveContent),
                     warnAboutPostsWithReports = warnAboutReports,
                     filterSpamFromStrangers = filterSpam,

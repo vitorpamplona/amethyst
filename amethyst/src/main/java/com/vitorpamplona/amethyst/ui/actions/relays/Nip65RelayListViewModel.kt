@@ -83,6 +83,7 @@ class Nip65RelayListViewModel : ViewModel() {
             _homeRelays.value.forEach { item ->
                 Nip11CachedRetriever.loadRelayInfo(
                     dirtyUrl = item.url,
+                    forceProxy = account.shouldUseTorForDirty(item.url),
                     onInfo = {
                         toggleHomePaidRelay(item, it.limitation?.payment_required ?: false)
                     },
@@ -93,6 +94,7 @@ class Nip65RelayListViewModel : ViewModel() {
             _notificationRelays.value.forEach { item ->
                 Nip11CachedRetriever.loadRelayInfo(
                     dirtyUrl = item.url,
+                    forceProxy = account.shouldUseTorForDirty(item.url),
                     onInfo = {
                         toggleNotifPaidRelay(item, it.limitation?.payment_required ?: false)
                     },

@@ -60,6 +60,7 @@ object Nip11CachedRetriever {
 
     suspend fun loadRelayInfo(
         dirtyUrl: String,
+        forceProxy: Boolean,
         onInfo: (Nip11RelayInformation) -> Unit,
         onError: (String, Nip11Retriever.ErrorCode, String?) -> Unit,
     ) {
@@ -74,23 +75,24 @@ object Nip11CachedRetriever {
                 if (TimeUtils.now() - doc.time < TimeUtils.ONE_MINUTE) {
                     // just wait.
                 } else {
-                    retrieve(url, dirtyUrl, onInfo, onError)
+                    retrieve(url, dirtyUrl, forceProxy, onInfo, onError)
                 }
             } else if (doc is RetrieveResultError) {
                 if (TimeUtils.now() - doc.time < TimeUtils.ONE_HOUR) {
                     onError(dirtyUrl, doc.error, null)
                 } else {
-                    retrieve(url, dirtyUrl, onInfo, onError)
+                    retrieve(url, dirtyUrl, forceProxy, onInfo, onError)
                 }
             }
         } else {
-            retrieve(url, dirtyUrl, onInfo, onError)
+            retrieve(url, dirtyUrl, forceProxy, onInfo, onError)
         }
     }
 
     private suspend fun retrieve(
         url: String,
         dirtyUrl: String,
+        forceProxy: Boolean,
         onInfo: (Nip11RelayInformation) -> Unit,
         onError: (String, Nip11Retriever.ErrorCode, String?) -> Unit,
     ) {
@@ -98,6 +100,7 @@ object Nip11CachedRetriever {
         retriever.loadRelayInfo(
             url = url,
             dirtyUrl = dirtyUrl,
+            forceProxy = forceProxy,
             onInfo = {
                 checkNotInMainThread()
                 relayInformationDocumentCache.put(url, RetrieveResultSuccess(it))
@@ -123,6 +126,7 @@ class Nip11Retriever {
     suspend fun loadRelayInfo(
         url: String,
         dirtyUrl: String,
+        forceProxy: Boolean,
         onInfo: (Nip11RelayInformation) -> Unit,
         onError: (String, ErrorCode, String?) -> Unit,
     ) {
@@ -136,7 +140,7 @@ class Nip11Retriever {
                     .build()
 
             HttpClientManager
-                .getHttpClientForUrl(dirtyUrl)
+                .getHttpClient(forceProxy)
                 .newCall(request)
                 .enqueue(
                     object : Callback {

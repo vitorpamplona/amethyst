@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -31,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.window.layout.DisplayFeature
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.BooleanType
@@ -239,4 +241,11 @@ class SharedPreferencesViewModel : ViewModel() {
             )
         }
     }
+}
+
+@Composable
+fun mockSharedPreferencesViewModel(): SharedPreferencesViewModel {
+    val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
+    sharedPreferencesViewModel.init()
+    return sharedPreferencesViewModel
 }

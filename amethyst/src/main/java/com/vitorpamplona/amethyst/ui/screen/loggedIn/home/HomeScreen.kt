@@ -273,7 +273,7 @@ fun HomeFeedEmpty(onRefresh: () -> Unit) {
 }
 
 @Composable
-fun CheckIfUrlIsOnline(
+fun CheckIfVideoIsOnline(
     url: String,
     accountViewModel: AccountViewModel,
     whenOnline: @Composable (Boolean) -> Unit,
@@ -285,7 +285,7 @@ fun CheckIfUrlIsOnline(
     }
 
     LaunchedEffect(key1 = url) {
-        accountViewModel.checkIsOnline(url) { isOnline ->
+        accountViewModel.checkVideoIsOnline(url) { isOnline ->
             if (online != isOnline) {
                 online = isOnline
             }
@@ -296,7 +296,7 @@ fun CheckIfUrlIsOnline(
 }
 
 @Composable
-fun CrossfadeCheckIfUrlIsOnline(
+fun CrossfadeCheckIfVideoIsOnline(
     url: String,
     accountViewModel: AccountViewModel,
     whenOnline: @Composable () -> Unit,
@@ -308,7 +308,7 @@ fun CrossfadeCheckIfUrlIsOnline(
     }
 
     LaunchedEffect(key1 = url) {
-        accountViewModel.checkIsOnline(url) { isOnline ->
+        accountViewModel.checkVideoIsOnline(url) { isOnline ->
             if (online != isOnline) {
                 online = isOnline
             }
