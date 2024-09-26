@@ -777,7 +777,7 @@ fun UserDisplayNameLayout(
     picture: @Composable () -> Unit,
     name: @Composable () -> Unit,
 ) {
-    Box(chatAuthorBox, contentAlignment = Alignment.Center) {
+    Box(chatAuthorBox, contentAlignment = Alignment.TopEnd) {
         picture()
     }
 
