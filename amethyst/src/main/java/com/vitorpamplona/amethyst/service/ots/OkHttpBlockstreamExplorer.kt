@@ -95,7 +95,7 @@ class OkHttpBlockstreamExplorer(
                 Log.d("OkHttpBlockstreamExplorer", "$url $blockHash")
                 return blockHash
             } else {
-                throw UrlException(it.message)
+                throw UrlException("Couldn't open $url: " + it.message + " " + it.code)
             }
         }
     }
