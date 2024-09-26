@@ -1094,9 +1094,7 @@ object LocalCache {
         if (version.event?.id() == event.id()) return
 
         // makes sure the OTS has a valid certificate
-        val verif = event.cacheVerify()
-        Log.d("AABBCC", "" + verif)
-        if (verif is VerificationState.Error) return // no valid OTS
+        if (event.cacheVerify() is VerificationState.Error) return // no valid OTS
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
