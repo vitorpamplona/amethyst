@@ -60,12 +60,12 @@ class Nip05NostrAddressVerifierTest {
             val expectedPubKey = "ca29c211f1c72d5b6622268ff43d2288ea2b2cb5b9aa196ff9f1704fc914b71b"
 
             val nostrJson =
-                "{\n" + "  \"names\": {\n" + "    \"$userNameToTest\": \"$expectedPubKey\" \n" + "  }\n" + "}"
+                "{\n  \"names\": {\n    \"$userNameToTest\": \"$expectedPubKey\" \n  }\n}"
 
-            coEvery { nip05Verifier.fetchNip05Json(any(), any(), any()) } answers
+            coEvery { nip05Verifier.fetchNip05Json(any(), any(), any(), any()) } answers
                 {
                     runBlocking {
-                        secondArg<suspend (String) -> Unit>().invoke(nostrJson)
+                        thirdArg<suspend (String) -> Unit>().invoke(nostrJson)
                     }
                 }
 
@@ -75,6 +75,7 @@ class Nip05NostrAddressVerifierTest {
             // Execution
             nip05Verifier.verifyNip05(
                 nip05,
+                forceProxy = { false },
                 onSuccess = { actualPubkeyHex = it },
                 onError = { fail("Test failure") },
             )
@@ -89,16 +90,11 @@ class Nip05NostrAddressVerifierTest {
             // Set-up
             val expectedPubKey = "ca29c211f1c72d5b6622268ff43d2288ea2b2cb5b9aa196ff9f1704fc914b71b"
 
-            val nostrJson =
-                "{\n" +
-                    "  \"names\": {\n" +
-                    "    \"$ALL_UPPER_CASE_USER_NAME\": \"$expectedPubKey\" \n" +
-                    "  }\n" +
-                    "}"
-            coEvery { nip05Verifier.fetchNip05Json(any(), any(), any()) } answers
+            val nostrJson = "{ \"names\": { \"$ALL_UPPER_CASE_USER_NAME\": \"$expectedPubKey\" }}"
+            coEvery { nip05Verifier.fetchNip05Json(any(), any(), any(), any()) } answers
                 {
                     runBlocking {
-                        secondArg<suspend (String) -> Unit>().invoke(nostrJson)
+                        thirdArg<suspend (String) -> Unit>().invoke(nostrJson)
                     }
                 }
 
@@ -108,6 +104,7 @@ class Nip05NostrAddressVerifierTest {
             // Execution
             nip05Verifier.verifyNip05(
                 nip05,
+                forceProxy = { false },
                 onSuccess = { actualPubkeyHex = it },
                 onError = { fail("Test failure") },
             )
