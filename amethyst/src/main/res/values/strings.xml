@@ -433,6 +433,9 @@
     <string name="use_internal_tor">Active Tor Engine</string>
     <string name="use_internal_tor_explainer">Use the internal version or Orbot</string>
 
+    <string name="tor_preset">Tor/Privacy Presets</string>
+    <string name="tor_preset_explainer">Quickly modify all settings below</string>
+
     <string name="tor_use_onion_address">Onion Url/Relays</string>
     <string name="tor_use_onion_address_explainer">Use Tor for any .onion url</string>
 
@@ -469,6 +472,18 @@
     <string name="tor_internal">Internal</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Off</string>
+
+    <string name="tor_when_needed">Basic</string>
+    <string name="tor_default">Default</string>
+    <string name="tor_small_payloads">All but Media</string>
+    <string name="tor_full_privacy">Full Privacy</string>
+    <string name="tor_custom">Custom</string>
+
+    <string name="tor_when_needed_explainer">Use Tor when it\'s required by the server</string>
+    <string name="tor_default_explainer">Hide your IP from random relays</string>
+    <string name="tor_small_payloads_explainer">Hide your IP from everything, but images and videos</string>
+    <string name="tor_full_privacy_explainer">Hide your IP in all connections</string>
+    <string name="tor_custom_explainer">Make your own</string>
 
     <string name="invalid_port_number">Invalid port number</string>
     <string name="use_orbot">Use Orbot</string>

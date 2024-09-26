@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 
@@ -40,6 +41,27 @@ class TorDialogViewModel : ViewModel() {
     val moneyOperationsViaTor = mutableStateOf(false)
     val nip05VerificationsViaTor = mutableStateOf(false)
     val nip96UploadsViaTor = mutableStateOf(false)
+
+    val preset =
+        derivedStateOf {
+            whichPreset(
+                TorSettings(
+                    torType = TorType.INTERNAL,
+                    externalSocksPort = -1,
+                    onionRelaysViaTor = onionRelaysViaTor.value,
+                    dmRelaysViaTor = dmRelaysViaTor.value,
+                    newRelaysViaTor = newRelaysViaTor.value,
+                    trustedRelaysViaTor = trustedRelaysViaTor.value,
+                    urlPreviewsViaTor = urlPreviewsViaTor.value,
+                    profilePicsViaTor = profilePicsViaTor.value,
+                    imagesViaTor = imagesViaTor.value,
+                    videosViaTor = videosViaTor.value,
+                    moneyOperationsViaTor = moneyOperationsViaTor.value,
+                    nip05VerificationsViaTor = nip05VerificationsViaTor.value,
+                    nip96UploadsViaTor = nip96UploadsViaTor.value,
+                ),
+            )
+        }
 
     fun reset(torSettings: TorSettings) {
         torType.value = torSettings.torType
@@ -73,4 +95,28 @@ class TorDialogViewModel : ViewModel() {
             nip05VerificationsViaTor = nip05VerificationsViaTor.value,
             nip96UploadsViaTor = nip96UploadsViaTor.value,
         )
+
+    fun setPreset(preset: TorPresetType) {
+        when (preset) {
+            TorPresetType.DEFAULT -> resetOnlyFlags(torDefaultPreset)
+            TorPresetType.ONLY_WHEN_NEEDED -> resetOnlyFlags(torOnlyWhenNeededPreset)
+            TorPresetType.SMALL_PAYLOADS -> resetOnlyFlags(torSmallPayloadsPreset)
+            TorPresetType.FULL_PRIVACY -> resetOnlyFlags(torFullyPrivate)
+            TorPresetType.CUSTOM -> { }
+        }
+    }
+
+    fun resetOnlyFlags(torSettings: TorSettings) {
+        onionRelaysViaTor.value = torSettings.onionRelaysViaTor
+        dmRelaysViaTor.value = torSettings.dmRelaysViaTor
+        newRelaysViaTor.value = torSettings.newRelaysViaTor
+        trustedRelaysViaTor.value = torSettings.trustedRelaysViaTor
+        urlPreviewsViaTor.value = torSettings.urlPreviewsViaTor
+        profilePicsViaTor.value = torSettings.profilePicsViaTor
+        imagesViaTor.value = torSettings.imagesViaTor
+        videosViaTor.value = torSettings.videosViaTor
+        moneyOperationsViaTor.value = torSettings.moneyOperationsViaTor
+        nip05VerificationsViaTor.value = torSettings.nip05VerificationsViaTor
+        nip96UploadsViaTor.value = torSettings.nip96UploadsViaTor
+    }
 }

@@ -56,3 +56,107 @@ fun parseTorType(code: Int?): TorType =
             TorType.INTERNAL
         }
     }
+
+enum class TorPresetType(
+    val screenCode: Int,
+    val resourceId: Int,
+    val explainerId: Int,
+) {
+    ONLY_WHEN_NEEDED(0, R.string.tor_when_needed, R.string.tor_when_needed_explainer),
+    DEFAULT(1, R.string.tor_default, R.string.tor_default_explainer),
+    SMALL_PAYLOADS(2, R.string.tor_small_payloads, R.string.tor_small_payloads_explainer),
+    FULL_PRIVACY(3, R.string.tor_full_privacy, R.string.tor_full_privacy_explainer),
+    CUSTOM(4, R.string.tor_custom, R.string.tor_custom_explainer),
+}
+
+fun parseTorPresetType(code: Int?): TorPresetType =
+    when (code) {
+        TorPresetType.ONLY_WHEN_NEEDED.screenCode -> TorPresetType.ONLY_WHEN_NEEDED
+        TorPresetType.DEFAULT.screenCode -> TorPresetType.DEFAULT
+        TorPresetType.SMALL_PAYLOADS.screenCode -> TorPresetType.SMALL_PAYLOADS
+        TorPresetType.FULL_PRIVACY.screenCode -> TorPresetType.FULL_PRIVACY
+        else -> {
+            TorPresetType.CUSTOM
+        }
+    }
+
+fun isPreset(
+    torSettings: TorSettings,
+    preset: TorSettings,
+): Boolean =
+    torSettings.onionRelaysViaTor == preset.onionRelaysViaTor &&
+        torSettings.dmRelaysViaTor == preset.dmRelaysViaTor &&
+        torSettings.newRelaysViaTor == preset.newRelaysViaTor &&
+        torSettings.trustedRelaysViaTor == preset.trustedRelaysViaTor &&
+        torSettings.urlPreviewsViaTor == preset.urlPreviewsViaTor &&
+        // torSettings.profilePicsViaTor == preset.profilePicsViaTor &&
+        torSettings.imagesViaTor == preset.imagesViaTor &&
+        torSettings.videosViaTor == preset.videosViaTor &&
+        torSettings.moneyOperationsViaTor == preset.moneyOperationsViaTor &&
+        torSettings.nip05VerificationsViaTor == preset.nip05VerificationsViaTor &&
+        torSettings.nip96UploadsViaTor == preset.nip96UploadsViaTor
+
+fun whichPreset(torSettings: TorSettings): TorPresetType {
+    if (isPreset(torSettings, torOnlyWhenNeededPreset)) return TorPresetType.ONLY_WHEN_NEEDED
+    if (isPreset(torSettings, torDefaultPreset)) return TorPresetType.DEFAULT
+    if (isPreset(torSettings, torSmallPayloadsPreset)) return TorPresetType.SMALL_PAYLOADS
+    if (isPreset(torSettings, torFullyPrivate)) return TorPresetType.FULL_PRIVACY
+    return TorPresetType.CUSTOM
+}
+
+val torOnlyWhenNeededPreset =
+    TorSettings(
+        onionRelaysViaTor = true,
+        dmRelaysViaTor = false,
+        newRelaysViaTor = false,
+        trustedRelaysViaTor = false,
+        urlPreviewsViaTor = false,
+        profilePicsViaTor = false,
+        imagesViaTor = false,
+        videosViaTor = false,
+        moneyOperationsViaTor = false,
+        nip05VerificationsViaTor = false,
+        nip96UploadsViaTor = false,
+    )
+val torDefaultPreset =
+    TorSettings(
+        onionRelaysViaTor = true,
+        dmRelaysViaTor = true,
+        newRelaysViaTor = true,
+        trustedRelaysViaTor = false,
+        urlPreviewsViaTor = false,
+        profilePicsViaTor = false,
+        imagesViaTor = false,
+        videosViaTor = false,
+        moneyOperationsViaTor = false,
+        nip05VerificationsViaTor = false,
+        nip96UploadsViaTor = false,
+    )
+val torSmallPayloadsPreset =
+    TorSettings(
+        onionRelaysViaTor = true,
+        dmRelaysViaTor = true,
+        newRelaysViaTor = true,
+        trustedRelaysViaTor = true,
+        urlPreviewsViaTor = true,
+        profilePicsViaTor = true,
+        imagesViaTor = false,
+        videosViaTor = false,
+        moneyOperationsViaTor = true,
+        nip05VerificationsViaTor = true,
+        nip96UploadsViaTor = false,
+    )
+val torFullyPrivate =
+    TorSettings(
+        onionRelaysViaTor = true,
+        dmRelaysViaTor = true,
+        newRelaysViaTor = true,
+        trustedRelaysViaTor = true,
+        urlPreviewsViaTor = true,
+        profilePicsViaTor = true,
+        imagesViaTor = true,
+        videosViaTor = true,
+        moneyOperationsViaTor = true,
+        nip05VerificationsViaTor = true,
+        nip96UploadsViaTor = true,
+    )
