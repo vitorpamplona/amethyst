@@ -810,4 +810,6 @@
     <string name="torrent_file">ไฟล์ Torrent</string>
     <string name="torrent_download">ดาวน์โหลด</string>
     <string name="torrent_failure">ไม่สามารถเปิดไฟล์ได้</string>
+    <string name="select_list_to_filter">แลือกลิสต์เพื่อโชว์</string>
+    <string name="temporary_account">ออกจากระบบ</string>
 </resources>

@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="mod">Administrator</string>
+    <string name="login_with_a_private_key_to_like_posts">Uporabljaš javni ključ in javni ključi omogočajo le branje.
+Prijavi se s privatnim ključem za všečkanje sporočila</string>
+    <string name="view_count">Števec vpogledov</string>
+    <string name="following">""</string>
 </resources>
