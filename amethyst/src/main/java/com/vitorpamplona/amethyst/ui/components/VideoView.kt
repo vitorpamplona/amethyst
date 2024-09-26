@@ -755,6 +755,7 @@ private fun RenderVideoPlayer(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.WRAP_CONTENT,
                         )
+                    setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
                     setBackgroundColor(Color.Transparent.toArgb())
                     setShutterBackgroundColor(Color.Transparent.toArgb())
                     controllerAutoShow = false
