@@ -121,6 +121,8 @@
     <string name="save_to_gallery">Zapisz w galerii</string>
     <string name="image_saved_to_the_gallery">Zdjęcie zostało zapisane w galerii</string>
     <string name="failed_to_save_the_image">Nie udało się zapisać zdjęcia</string>
+    <string name="video_saved_to_the_gallery">Film zapisany w galerii filmów</string>
+    <string name="failed_to_save_the_video">Nie udało się zapisać filmu</string>
     <string name="upload_image">Dodaj zdjęcie</string>
     <string name="uploading">Wgrywanie…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik nie ma skonfigurowanego adresu LN, aby odbierać saty</string>
@@ -368,6 +370,7 @@
     <string name="follow_list_kind3follows">Obserwowane</string>
     <string name="follow_list_global">Wszystkie</string>
     <string name="follow_list_mute_list">Zablokowane</string>
+    <string name="connect_through_your_orbot_setup_short">Domyślny port to 9050</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Połącz przez Tor z Orbotem
         \n\n1. Zainstaluj [Orbota](https://play.google. om/store/apps/details?id= org.torproject.android)
         \n2. Uruchom Orbota
@@ -377,6 +380,12 @@
         \n6. Naciśnij przycisk Aktywuj, aby użyć Orbota jako proxy
     </string>
     <string name="orbot_socks_port">Port Socks Orbota</string>
+    <string name="use_internal_tor">Aktywny silnik Tor</string>
+    <string name="use_internal_tor_explainer">Użyj wersji wewnętrznej lub Orbota</string>
+    <string name="tor_use_onion_address">Adres Onion /Transmitery</string>
+    <string name="tor_use_onion_address_explainer">Użyj Tor dla dowolnego adresu .onion</string>
+    <string name="tor_use_dm_relays">Transmitery DM</string>
+    <string name="tor_use_dm_relays_explainer">Zmuś Tor do wysyłania i odbierania DM</string>
     <string name="invalid_port_number">Nieprawidłowy numer portu</string>
     <string name="use_orbot">Użyj Orbota</string>
     <string name="disconnect_from_your_orbot_setup">Odłącz Tor/Orbota</string>
