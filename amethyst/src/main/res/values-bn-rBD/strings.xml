@@ -187,6 +187,9 @@
     <string name="nip_05">নস্টার ঠিকানা</string>
     <string name="never">কখনো না</string>
     <string name="now">এখন</string>
+    <string name="h">h</string>
+    <string name="m">m</string>
+    <string name="d">d</string>
     <string name="nudity">নগ্নতা</string>
     <string name="profanity_hateful_speech">অশ্লীলতা / বিদ্বেষপূর্ণ বক্তব্য</string>
     <string name="report_hateful_speech">বিদ্বেষপূর্ণ বক্তব্য হিসেবে অভিযোগ জানান</string>
@@ -196,9 +199,21 @@
     <string name="mark_all_new_as_read">নতুন সবগুলোকে পঠিত হিসেবে চিহ্নিত করুন</string>
     <string name="mark_all_as_read">সবগুলোকে পঠিত হিসেবে চিহ্নিত করুন</string>
     <string name="backup_keys">ব্যাকআপ চাবিগুলি</string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## মূল ব্যাকআপ এবং নিরাপত্তা টিপস
+        \n\n আপনার অ্যাকাউন্ট একটি গোপন কী দ্বারা সুরক্ষিত। মূলটি হল অক্ষরগুলির একটি দীর্ঘ ক্রম যা শুরু হয় **nsec1**. যে কেউ এই গোপন কী অ্যাক্সেস করতে পারে পোস্ট এবং আপনার পরিচয় পরিবর্তন করতে পারেন.
+        \n\n- আপনি বিশ্বাস করেন না এমন কোনো ওয়েবসাইট বা সফ্টওয়্যারে আপনার গোপন কী **করবেন না**.
+        \n- অ্যামেথিস্ট ডেভেলপাররা **কখনই** আপনার গোপন কী চাইবে না.
+        \n- **করুন** অ্যাকাউন্ট পুনরুদ্ধারের জন্য আপনার গোপন কীটির একটি নিরাপদ ব্যাকআপ রাখুন৷. আমরা একটি পাসওয়ার্ড ম্যানেজার ব্যবহার করার পরামর্শ দিই।.
+    </string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">        অতিরিক্ত নিরাপত্তার জন্য, আপনি একটি পাসওয়ার্ড দিয়ে আপনার কী এনক্রিপ্ট করতে পারেন. এই কী দিয়ে শুরু হয় **ncryptsec1** এবং আপনার পাসওয়ার্ড ছাড়া ব্যবহার করা যাবে না।.
+        \n\n আপনি যদি আপনার পাসওয়ার্ড হারিয়ে ফেলেন, আপনি আপনার কী পুনরুদ্ধার করতে পারবেন না।.
+    </string>
+    <string name="failed_to_encrypt_key">আপনার ব্যক্তিগত কী এনক্রিপ্ট করতে ব্যর্থ হয়েছে৷</string>
     <string name="secret_key_copied_to_clipboard">ব্যক্তিগত চাবি (nsec) ক্লিপবোর্ডে কপি করা হয়েছে</string>
     <string name="copy_my_secret_key">আমার ব্যক্তিগত চাবিটি কপি করুন</string>
+    <string name="encrypt_and_copy_my_secret_key">এনক্রিপ্ট এবং আমার গোপন কী অনুলিপি</string>
     <string name="biometric_authentication_failed">প্রমাণীকরণ ব্যর্থ হয়েছে।</string>
+    <string name="biometric_authentication_failed_explainer">বায়োমেট্রিক্স এই ফোনের মালিককে প্রমাণ করতে ব্যর্থ হয়েছে৷</string>
     <string name="biometric_error">ত্রুটি</string>
     <string name="badge_created_by">"%1$s দ্বারা নির্মিত"</string>
     <string name="badge_award_image_for">"%1$s -এর জন্য ব্যাজ পুরষ্কারের ছবি"</string>

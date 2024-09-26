@@ -673,6 +673,7 @@
     <string name="media_compression_quality_low">低质量</string>
     <string name="media_compression_quality_medium">中等质量</string>
     <string name="media_compression_quality_high">高质量</string>
+    <string name="media_compression_quality_uncompressed">未压缩</string>
     <string name="edit_draft">编辑草稿</string>
     <string name="login_with_qr_code">使用二维码登录</string>
     <string name="route">路径</string>
@@ -825,4 +826,5 @@
     <string name="torrent_failure">打开文件失败</string>
     <string name="torrent_no_apps">没有用于打开和下载文件的 Torrent 客户端</string>
     <string name="select_list_to_filter">选择一个用于过滤订阅源的列表</string>
+    <string name="temporary_account">当设备锁定时注销</string>
 </resources>
