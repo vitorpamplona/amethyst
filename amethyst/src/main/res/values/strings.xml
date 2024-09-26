@@ -430,8 +430,8 @@
     <string name="use_internal_tor">Active Tor Engine</string>
     <string name="use_internal_tor_explainer">Use the internal version or Orbot</string>
 
-    <string name="tor_use_onion_address">Onion Relays</string>
-    <string name="tor_use_onion_address_explainer">Enables .onion urls from your relay list</string>
+    <string name="tor_use_onion_address">Onion Url/Relays</string>
+    <string name="tor_use_onion_address_explainer">Use Tor for any .onion url</string>
 
     <string name="tor_use_dm_relays">DM Relays</string>
     <string name="tor_use_dm_relays_explainer">Force Tor to send and receive DMs</string>

@@ -3393,15 +3393,15 @@ class Account(
     fun shouldUseTorForVideoDownload(url: String) =
         when (settings.torSettings.torType.value) {
             TorType.OFF -> false
-            TorType.INTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.videosViaTor.value)
-            TorType.EXTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.videosViaTor.value)
+            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.videosViaTor.value)
+            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.videosViaTor.value)
         }
 
     fun shouldUseTorForPreviewUrl(url: String) =
         when (settings.torSettings.torType.value) {
             TorType.OFF -> false
-            TorType.INTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.urlPreviewsViaTor.value)
-            TorType.EXTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.urlPreviewsViaTor.value)
+            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.urlPreviewsViaTor.value)
+            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.urlPreviewsViaTor.value)
         }
 
     fun shouldUseTorForTrustedRelays() =
@@ -3420,6 +3420,18 @@ class Account(
             TorType.EXTERNAL -> shouldUseTor(normalizedUrl)
         }
 
+    private fun checkLocalHostOnionAndThen(
+        normalizedUrl: String,
+        final: Boolean,
+    ): Boolean =
+        if (isLocalHost(normalizedUrl)) {
+            false
+        } else if (isOnionUrl(normalizedUrl)) {
+            settings.torSettings.onionRelaysViaTor.value
+        } else {
+            final
+        }
+
     private fun shouldUseTor(normalizedUrl: String): Boolean =
         if (isLocalHost(normalizedUrl)) {
             false
@@ -3436,22 +3448,22 @@ class Account(
     fun shouldUseTorForMoneyOperations(url: String) =
         when (settings.torSettings.torType.value) {
             TorType.OFF -> false
-            TorType.INTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.moneyOperationsViaTor.value)
-            TorType.EXTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.moneyOperationsViaTor.value)
+            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.moneyOperationsViaTor.value)
+            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.moneyOperationsViaTor.value)
         }
 
     fun shouldUseTorForNIP05(url: String) =
         when (settings.torSettings.torType.value) {
             TorType.OFF -> false
-            TorType.INTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.nip05VerificationsViaTor.value)
-            TorType.EXTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.nip05VerificationsViaTor.value)
+            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.nip05VerificationsViaTor.value)
+            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.nip05VerificationsViaTor.value)
         }
 
     fun shouldUseTorForNIP96(url: String) =
         when (settings.torSettings.torType.value) {
             TorType.OFF -> false
-            TorType.INTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.nip96UploadsViaTor.value)
-            TorType.EXTERNAL -> !isLocalHost(url) && (isOnionUrl(url) || settings.torSettings.nip96UploadsViaTor.value)
+            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.nip96UploadsViaTor.value)
+            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.nip96UploadsViaTor.value)
         }
 
     fun isLocalHost(url: String) = url.contains("//127.0.0.1") || url.contains("//localhost")
