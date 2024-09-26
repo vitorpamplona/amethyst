@@ -89,11 +89,9 @@ fun CashuPreview(
         initialValue = CachedCashuProcessor.cached(cashutoken),
         key1 = cashutoken,
     ) {
-        withContext(Dispatchers.IO) {
-            val newToken = CachedCashuProcessor.parse(cashutoken)
-            if (value != newToken) {
-                value = newToken
-            }
+        val newToken = withContext(Dispatchers.Default) { CachedCashuProcessor.parse(cashutoken) }
+        if (value != newToken) {
+            value = newToken
         }
     }
 
