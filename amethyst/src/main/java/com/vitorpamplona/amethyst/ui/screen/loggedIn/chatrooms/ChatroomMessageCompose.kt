@@ -532,6 +532,7 @@ private fun RenderReply(
     onWantsToEditDraft: (Note) -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
+        @Suppress("ProduceStateDoesNotAssignValue")
         val replyTo =
             produceState(initialValue = note.replyTo?.lastOrNull()) {
                 accountViewModel.unwrapIfNeeded(value) {

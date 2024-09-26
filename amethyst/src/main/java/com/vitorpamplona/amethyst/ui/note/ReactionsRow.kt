@@ -892,6 +892,7 @@ fun ObserveLikeIcon(
 ) {
     val reactionsState by baseNote.live().reactions.observeAsState()
 
+    @Suppress("ProduceStateDoesNotAssignValue")
     val reactionType by
         produceState(initialValue = null as String?, key1 = reactionsState) {
             val newReactionType = accountViewModel.loadReactionTo(reactionsState?.note)
@@ -1226,6 +1227,7 @@ fun ObserveZapAmountText(
     val zapsState by baseNote.live().zaps.observeAsState()
 
     if (zapsState?.note?.zapPayments?.isNotEmpty() == true) {
+        @Suppress("ProduceStateDoesNotAssignValue")
         val zapAmountTxt by
             produceState(initialValue = showAmount(baseNote.zapsAmount), key1 = zapsState) {
                 zapsState?.note?.let {

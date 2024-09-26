@@ -73,6 +73,7 @@ fun LoadDecryptedContentOrNull(
     accountViewModel: AccountViewModel,
     inner: @Composable (String?) -> Unit,
 ) {
+    @Suppress("ProduceStateDoesNotAssignValue")
     val decryptedContent by
         produceState(initialValue = accountViewModel.cachedDecrypt(note), key1 = note.event?.id()) {
             accountViewModel.decrypt(note) {

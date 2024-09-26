@@ -122,6 +122,7 @@ fun RenderRelay(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    @Suppress("ProduceStateDoesNotAssignValue")
     val relayInfo by
         produceState(
             initialValue = Nip11CachedRetriever.getFromCache(relay.url),

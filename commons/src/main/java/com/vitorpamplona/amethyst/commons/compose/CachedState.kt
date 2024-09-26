@@ -30,6 +30,7 @@ fun <K, V> produceCachedState(
     cache: CachedState<K, V>,
     key: K,
 ): State<V?> =
+    @Suppress("ProduceStateDoesNotAssignValue")
     produceState(initialValue = cache.cached(key), key1 = key) {
         val newValue = cache.update(key)
         if (value != newValue) {
@@ -43,6 +44,7 @@ fun <K, V> produceCachedState(
     key: String,
     updateValue: K,
 ): State<V?> =
+    @Suppress("ProduceStateDoesNotAssignValue")
     produceState(initialValue = cache.cached(updateValue), key1 = key) {
         val newValue = cache.update(updateValue)
         if (value != newValue) {

@@ -229,6 +229,7 @@ fun DecryptAndRenderZapGallery(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    @Suppress("ProduceStateDoesNotAssignValue")
     val zapEvents by
         produceState(initialValue = accountViewModel.cachedDecryptAmountMessageInGroup(multiSetCard.zapEvents)) {
             accountViewModel.decryptAmountMessageInGroup(multiSetCard.zapEvents) { value = it }

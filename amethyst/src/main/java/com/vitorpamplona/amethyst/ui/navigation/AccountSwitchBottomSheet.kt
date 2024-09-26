@@ -81,6 +81,7 @@ fun AccountSwitchBottomSheet(
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel,
 ) {
+    @Suppress("ProduceStateDoesNotAssignValue")
     val accounts by
         produceState(initialValue = LocalPreferences.cachedAccounts()) {
             if (value == null) {

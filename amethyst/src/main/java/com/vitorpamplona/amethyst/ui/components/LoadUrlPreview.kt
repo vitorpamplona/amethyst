@@ -41,6 +41,7 @@ fun LoadUrlPreview(
     if (!accountViewModel.settings.showUrlPreview.value) {
         ClickableUrl(urlText, url)
     } else {
+        @Suppress("ProduceStateDoesNotAssignValue")
         val urlPreviewState by
             produceState(
                 initialValue = UrlCachedPreviewer.cache.get(url) ?: UrlPreviewState.Loading,

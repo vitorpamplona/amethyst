@@ -85,6 +85,7 @@ fun CashuPreview(
     cashutoken: String,
     accountViewModel: AccountViewModel,
 ) {
+    @Suppress("ProduceStateDoesNotAssignValue")
     val cashuData by produceState(
         initialValue = CachedCashuProcessor.cached(cashutoken),
         key1 = cashutoken,

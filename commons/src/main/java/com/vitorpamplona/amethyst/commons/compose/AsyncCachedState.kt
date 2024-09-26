@@ -30,6 +30,7 @@ fun <K, V> produceCachedStateAsync(
     cache: AsyncCachedState<K, V>,
     key: K,
 ): State<V?> =
+    @Suppress("ProduceStateDoesNotAssignValue")
     produceState(initialValue = cache.cached(key), key1 = key) {
         cache.update(key) {
             value = it
@@ -42,6 +43,7 @@ fun <K, V> produceCachedStateAsync(
     key: String,
     updateValue: K,
 ): State<V?> =
+    @Suppress("ProduceStateDoesNotAssignValue")
     produceState(initialValue = cache.cached(updateValue), key1 = key) {
         cache.update(updateValue) {
             value = it

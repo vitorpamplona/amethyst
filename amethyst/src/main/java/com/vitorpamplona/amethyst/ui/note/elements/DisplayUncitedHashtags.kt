@@ -57,6 +57,7 @@ fun DisplayUncitedHashtags(
     callbackUri: String? = null,
     nav: INav,
 ) {
+    @Suppress("ProduceStateDoesNotAssignValue")
     val unusedHashtags by
         produceState(initialValue = emptyList<String>()) {
             val tagsInEvent = event.hashtags()
