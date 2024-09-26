@@ -48,7 +48,8 @@ class OkHttpBlockstreamExplorer(
             return it
         }
 
-        val url = "$BLOCKSTREAM_API_URL/block/$hash"
+        val usingTor = forceProxy(BLOCKSTREAM_API_URL)
+        val url = "${getAPI(usingTor)}/block/$hash"
         val client = HttpClientManager.getHttpClient(forceProxy(url))
 
         val request =
@@ -92,8 +93,9 @@ class OkHttpBlockstreamExplorer(
             return it
         }
 
-        val url = "$BLOCKSTREAM_API_URL/block-height/$height"
-        val client = HttpClientManager.getHttpClient(forceProxy(url))
+        val usingTor = forceProxy(BLOCKSTREAM_API_URL)
+        val url = "${getAPI(usingTor)}/block-height/$height"
+        val client = HttpClientManager.getHttpClient(usingTor)
 
         val request =
             Request
@@ -119,5 +121,13 @@ class OkHttpBlockstreamExplorer(
 
     companion object {
         private const val BLOCKSTREAM_API_URL = "https://blockstream.info/api"
+        private const val MEMPOOL_API_URL = "https://mempool.space/api/"
+
+        fun getAPI(usingTor: Boolean) =
+            if (usingTor) {
+                MEMPOOL_API_URL
+            } else {
+                BLOCKSTREAM_API_URL
+            }
     }
 }
