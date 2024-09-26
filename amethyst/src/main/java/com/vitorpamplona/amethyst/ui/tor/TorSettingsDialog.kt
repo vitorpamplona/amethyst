@@ -213,11 +213,14 @@ fun TorDialogContents(
                 dialogViewModel.moneyOperationsViaTor,
             )
 
-            SwitchSettingsRow(
-                R.string.tor_use_profile_pictures,
-                R.string.tor_use_profile_pictures_explainer,
-                dialogViewModel.profilePicsViaTor,
-            )
+            /**
+             * Too hard to separate Coil into regular images and profile pics
+             SwitchSettingsRow(
+             R.string.tor_use_profile_pictures,
+             R.string.tor_use_profile_pictures_explainer,
+             dialogViewModel.profilePicsViaTor,
+             )
+             */
 
             SwitchSettingsRow(
                 R.string.tor_use_nip05_verification,
