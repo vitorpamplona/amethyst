@@ -295,24 +295,22 @@ fun LoginPage(
         }
         Spacer(modifier = Modifier.height(10.dp))
 
-        if (PackageUtils.isOrbotInstalled(context)) {
-            OrbotCheckBox(
-                torSettings = torSettings.value,
-                onCheckedChange = {
-                    torSettings.value = it
-                },
-                onError = {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                it,
-                                Toast.LENGTH_LONG,
-                            ).show()
-                    }
-                },
-            )
-        }
+        TorSettingsSetup(
+            torSettings = torSettings.value,
+            onCheckedChange = {
+                torSettings.value = it
+            },
+            onError = {
+                scope.launch {
+                    Toast
+                        .makeText(
+                            context,
+                            it,
+                            Toast.LENGTH_LONG,
+                        ).show()
+                }
+            },
+        )
 
         if (isNFCOrQR.value) {
             OfferTemporaryAccount(

@@ -60,7 +60,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
-import com.vitorpamplona.amethyst.service.PackageUtils
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -181,24 +180,22 @@ fun SignUpPage(
             )
         }
 
-        if (PackageUtils.isOrbotInstalled(context)) {
-            OrbotCheckBox(
-                torSettings = torSettings.value,
-                onCheckedChange = {
-                    torSettings.value = it
-                },
-                onError = {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                it,
-                                Toast.LENGTH_LONG,
-                            ).show()
-                    }
-                },
-            )
-        }
+        TorSettingsSetup(
+            torSettings = torSettings.value,
+            onCheckedChange = {
+                torSettings.value = it
+            },
+            onError = {
+                scope.launch {
+                    Toast
+                        .makeText(
+                            context,
+                            it,
+                            Toast.LENGTH_LONG,
+                        ).show()
+                }
+            },
+        )
 
         Spacer(modifier = Modifier.height(Size10dp))
 

@@ -20,23 +20,27 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedOff
 
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.ConnectTorDialog
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorType
 
 @Composable
-fun OrbotCheckBox(
+fun TorSettingsSetup(
     torSettings: TorSettings,
     onCheckedChange: (TorSettings) -> Unit,
     onError: (String) -> Unit,
@@ -44,17 +48,19 @@ fun OrbotCheckBox(
     var connectOrbotDialogOpen by remember { mutableStateOf(false) }
     var activeTor by remember { mutableStateOf(false) }
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(
-            checked = activeTor,
-            onCheckedChange = {
-                if (it) {
-                    connectOrbotDialogOpen = true
-                }
-            },
-        )
+    val text =
+        buildAnnotatedString {
+            append(stringRes(R.string.connect_via_tor1) + " ")
+            withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
+                append(stringRes(R.string.connect_via_tor2))
+            }
+        }
 
-        Text(stringRes(R.string.connect_via_tor))
+    ClickableText(
+        text = text,
+        modifier = Modifier.padding(vertical = 10.dp),
+    ) {
+        connectOrbotDialogOpen = true
     }
 
     if (connectOrbotDialogOpen) {

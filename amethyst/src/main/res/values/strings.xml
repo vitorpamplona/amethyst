@@ -404,6 +404,9 @@
     <string name="connect_via_tor_short">Tor/Orbot setup</string>
     <string name="connect_via_tor">Connect through your Orbot setup</string>
 
+    <string name="connect_via_tor1">Adjust</string>
+    <string name="connect_via_tor2">Tor Settings</string>
+
     <string name="do_you_really_want_to_disable_tor_title">Disconnect from your Orbot/Tor?</string>
     <string name="do_you_really_want_to_disable_tor_text">Your data will be immediately transferred in the regular network</string>
     <string name="yes">Yes</string>
