@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.ots
 
 import android.util.Log
+import android.util.LruCache
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.ammolite.service.HttpClientManager
@@ -32,6 +33,9 @@ import okhttp3.Request
 class OkHttpBlockstreamExplorer(
     val forceProxy: (String) -> Boolean,
 ) : BitcoinExplorer {
+    private val cacheHeaders = LruCache<String, BlockHeader>(100)
+    private val cacheHeights = LruCache<Int, String>(100)
+
     /**
      * Retrieve the block information from the block hash.
      *
@@ -40,6 +44,10 @@ class OkHttpBlockstreamExplorer(
      * @throws Exception desc
      */
     override fun block(hash: String): BlockHeader {
+        cacheHeaders.get(hash)?.let {
+            return it
+        }
+
         val url = "$BLOCKSTREAM_API_URL/block/$hash"
         val client = HttpClientManager.getHttpClient(forceProxy(url))
 
@@ -61,6 +69,9 @@ class OkHttpBlockstreamExplorer(
                 blockHeader.setTime(jsonObject["timestamp"].asInt().toString())
                 blockHeader.blockHash = hash
                 Log.d("OkHttpBlockstreamExplorer", "$BLOCKSTREAM_API_URL/block/$hash")
+
+                cacheHeaders.put(hash, blockHeader)
+
                 return blockHeader
             } else {
                 throw UrlException("Couldn't open $url: " + it.message + " " + it.code)
@@ -77,6 +88,10 @@ class OkHttpBlockstreamExplorer(
      */
     @Throws(Exception::class)
     override fun blockHash(height: Int): String {
+        cacheHeights[height]?.let {
+            return it
+        }
+
         val url = "$BLOCKSTREAM_API_URL/block-height/$height"
         val client = HttpClientManager.getHttpClient(forceProxy(url))
 
@@ -93,6 +108,8 @@ class OkHttpBlockstreamExplorer(
                 val blockHash = it.body.string()
 
                 Log.d("OkHttpBlockstreamExplorer", "$url $blockHash")
+
+                cacheHeights.put(height, blockHash)
                 return blockHash
             } else {
                 throw UrlException("Couldn't open $url: " + it.message + " " + it.code)

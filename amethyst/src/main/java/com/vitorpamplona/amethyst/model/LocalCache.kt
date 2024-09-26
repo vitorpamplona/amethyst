@@ -116,6 +116,7 @@ import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteModificationEvent
 import com.vitorpamplona.quartz.events.TorrentCommentEvent
 import com.vitorpamplona.quartz.events.TorrentEvent
+import com.vitorpamplona.quartz.events.VerificationState
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
@@ -1093,7 +1094,9 @@ object LocalCache {
         if (version.event?.id() == event.id()) return
 
         // makes sure the OTS has a valid certificate
-        if (event.cacheVerify() == null) return // no valid OTS
+        val verif = event.cacheVerify()
+        Log.d("AABBCC", "" + verif)
+        if (verif is VerificationState.Error) return // no valid OTS
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
@@ -2155,7 +2158,7 @@ object LocalCache {
         notes.forEach { _, item ->
             val noteEvent = item.event
             if ((noteEvent is OtsEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time))) {
-                noteEvent.verifiedTime?.let { stampedTime ->
+                (noteEvent.cacheVerify() as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
                     if (minTime == null || stampedTime < (minTime ?: Long.MAX_VALUE)) {
                         minTime = stampedTime
                     }

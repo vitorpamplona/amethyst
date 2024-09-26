@@ -106,7 +106,7 @@ open class BaseCacheBenchmark {
 }
 
 @RunWith(AndroidJUnit4::class)
-class CacheLoadingBenchmark : BaseCacheBenchmark() {
+class CacheNotStartedBenchmark : BaseCacheBenchmark() {
     @get:Rule val benchmarkRule = BenchmarkRule()
 
     @Test
