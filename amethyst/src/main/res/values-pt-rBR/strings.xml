@@ -720,7 +720,7 @@
     <string name="dm_relays_not_found">Configurar seus relés de Caixa de Entrada Privada</string>
     <string name="dm_relays_not_found_description">Esta configuração permite que todos saibam quais relés usar ao enviar mensagens para você. Sem eles, você pode perder algumas mensagens.</string>
     <string name="dm_relays_not_found_examples">Boas opções são:\n - inbox.nostr.wine (pago)\n - you.nostr1.com (relés pessoais - pago)</string>
-    <string name="dm_relays_not_found_editing">Insira entre 1-3 relés para servir como sua caixa de entrada privada. Relés de Caixa de Entrada de DM devem aceitar qualquer mensagem de qualquer pessoa, mas permitir apenas você a baixá-las.</string>
+    <string name="dm_relays_not_found_editing">Insira entre 1–3 relés para servir como sua caixa de entrada privada. Relés de Caixa de Entrada de DM devem aceitar qualquer mensagem de qualquer pessoa, mas permitir apenas você a baixá-las.</string>
     <string name="dm_relays_not_found_create_now">Configurar agora</string>
     <string name="search_relays_title">Relés de Pesquisa</string>
     <string name="search_relays_not_found">Configurar seus relés de Pesquisa</string>
@@ -735,7 +735,7 @@
     <string name="private_inbox_section">Relés de Caixa de Entrada de DM</string>
     <string name="private_inbox_section_explainer">Insira entre 1–3 relés para servir como sua caixa de entrada privada. Outros usarão esses relés para enviar DMs para você. Relés de Caixa de Entrada de DM devem aceitar qualquer mensagem de qualquer pessoa, mas permitir apenas você baixá-las. Boas opções são:\n - inbox.nostr.wine (pago)\n - you.nostr1.com (relés pessoais - pago)</string>
     <string name="private_outbox_section">Relés privados</string>
-    <string name="private_outbox_section_explainer">Insira entre 1-3 retransmissores para armazenar eventos que ninguém mais possa ver, como seus rascunhos e/ou configurações de aplicativo. Idealmente, esses relés são locais ou requerem autenticação antes de baixar o conteúdo de cada usuário.</string>
+    <string name="private_outbox_section_explainer">Insira entre 1–3 retransmissores para armazenar eventos que ninguém mais possa ver, como seus rascunhos e/ou configurações de aplicativo. Idealmente, esses relés são locais ou requerem autenticação antes de baixar o conteúdo de cada usuário.</string>
     <string name="kind_3_section">Relés Gerais</string>
     <string name="kind_3_section_description">Amethyst usa esses relés para baixar postagens para você.</string>
     <string name="kind_3_recommended_section">Relés Recomendados</string>
@@ -825,4 +825,66 @@
     <string name="torrent_no_apps">Nenhum aplicativo torrent instalado para abrir e baixar o arquivo.</string>
     <string name="select_list_to_filter">Selecione uma lista para filtrar o feed</string>
     <string name="temporary_account">Terminar sessão no bloqueio do dispositivo</string>
+
+    <string name="video_saved_to_the_gallery">Vídeo salvo na galeria de vídeos do telefone</string>
+    <string name="failed_to_save_the_video">Falha ao salvar o vídeo</string>
+    <string name="use_internal_tor">Motor Tor Ativo</string>
+    <string name="use_internal_tor_explainer">Use a versão interna ou o Orbot</string>
+
+    <string name="tor_preset">Predefinições Tor/Privacidade</string>
+    <string name="tor_preset_explainer">Modifique rapidamente todas as configurações abaixo</string>
+
+    <string name="tor_use_onion_address">Endereço Onion/Relés</string>
+    <string name="tor_use_onion_address_explainer">Use Tor para qualquer URL .onion</string>
+
+    <string name="tor_use_dm_relays">Relés de Mensagem Direta</string>
+    <string name="tor_use_dm_relays_explainer">Forçar Tor para enviar e receber mensagens diretas</string>
+
+    <string name="tor_use_new_relays">Relés Não Confiáveis</string>
+    <string name="tor_use_new_relays_explainer">Forçar Tor em relés de entrada/saída</string>
+
+    <string name="tor_use_trusted_relays">Relés Confiáveis</string>
+    <string name="tor_use_trusted_relays_explainer">Forçar Tor em todos os relés nas suas listas</string>
+
+    <string name="tor_use_profile_pictures">Fotos de Perfil</string>
+    <string name="tor_use_profile_pictures_explainer">Forçar Tor ao carregar fotos de perfil</string>
+
+    <string name="tor_use_url_previews">Pré-visualizações de URL</string>
+    <string name="tor_use_url_previews_explainer">Forçar Tor ao carregar pré-visualizações de URL</string>
+
+    <string name="tor_use_images">Imagens</string>
+    <string name="tor_use_images_explainer">Forçar Tor ao carregar imagens</string>
+
+    <string name="tor_use_videos">Vídeos</string>
+    <string name="tor_use_videos_explainer">Forçar Tor ao carregar vídeos</string>
+
+    <string name="tor_use_money_operations">Operações Financeiras</string>
+    <string name="tor_use_money_operations_explainer">Forçar Tor em zaps, transfers relâmpago e cashu</string>
+
+    <string name="tor_use_nip05_verification">Verificação de Endereço Nostr</string>
+    <string name="tor_use_nip05_verification_explainer">Forçar Tor ao verificar endereços NIP-05</string>
+
+    <string name="tor_use_nip96_uploads">Envio de Mídia</string>
+    <string name="tor_use_nip96_uploads_explainer">Forçar Tor ao enviar conteúdo</string>
+
+    <string name="tor_internal">Interno</string>
+    <string name="tor_external">Orbot</string>
+    <string name="tor_off">Desativado</string>
+
+    <string name="tor_when_needed">Básico</string>
+    <string name="tor_default">Padrão</string>
+    <string name="tor_small_payloads">Tudo exceto Mídia</string>
+    <string name="tor_full_privacy">Privacidade Completa</string>
+    <string name="tor_custom">Personalizado</string>
+
+    <string name="tor_when_needed_explainer">Use Tor quando for necessário pelo servidor</string>
+    <string name="tor_default_explainer">Oculte seu IP de relés aleatórios</string>
+    <string name="tor_small_payloads_explainer">Oculte seu IP de tudo, exceto imagens e vídeos</string>
+    <string name="tor_full_privacy_explainer">Oculte seu IP em todas as conexões</string>
+    <string name="tor_custom_explainer">Faça o seu próprio</string>
+
+    <string name="connect_through_your_orbot_setup_short">Porta padrão é 9050</string>
+    <string name="connect_via_tor1">Ajustar</string>
+    <string name="connect_via_tor2">Configurações Tor</string>
+
 </resources>

@@ -720,7 +720,7 @@
     <string name="dm_relays_not_found">Nastavte svá relé soukromé schránky</string>
     <string name="dm_relays_not_found_description">Toto nastavení umožňuje všem vědět, která relé použít při posílání zpráv vám. Bez nich můžete některé zprávy zmeškat.</string>
     <string name="dm_relays_not_found_examples">Dobré možnosti jsou:\n - inbox.nostr.wine (placené)\n - you.nostr1.com (osobní relé - placené)</string>
-    <string name="dm_relays_not_found_editing">Vložte 1-3 relé, která budou sloužit jako vaše soukromá schránka. Relé DM schránky by měla přijímat jakékoli zprávy od kohokoli, ale pouze vám umožnit jejich stahování.</string>
+    <string name="dm_relays_not_found_editing">Vložte 1–3 relé, která budou sloužit jako vaše soukromá schránka. Relé DM schránky by měla přijímat jakékoli zprávy od kohokoli, ale pouze vám umožnit jejich stahování.</string>
     <string name="dm_relays_not_found_create_now">Nastavit nyní</string>
     <string name="search_relays_title">Vyhledávací relé</string>
     <string name="search_relays_not_found">Nastavte svá vyhledávací relé</string>
@@ -825,4 +825,64 @@
     <string name="torrent_no_apps">Pro otevření a stažení souboru nejsou nainstalovány žádné torrent aplikace.</string>
     <string name="select_list_to_filter">Vyberte seznam pro filtrování kanálu</string>
     <string name="temporary_account">Odhlásit se na zámek zařízení</string>
+    <string name="video_saved_to_the_gallery">Video uloženo do video galerie telefonu</string>
+    <string name="failed_to_save_the_video">Nepodařilo se uložit video</string>
+    <string name="use_internal_tor">Aktivní Tor Engine</string>
+    <string name="use_internal_tor_explainer">Použijte interní verzi nebo Orbot</string>
+
+    <string name="tor_preset">Tor/Privacy předvolby</string>
+    <string name="tor_preset_explainer">Rychle upravte všechna nastavení níže</string>
+
+    <string name="tor_use_onion_address">Onion URL/Relays</string>
+    <string name="tor_use_onion_address_explainer">Používat Tor pro jakoukoli .onion adresu</string>
+
+    <string name="tor_use_dm_relays">DM Relays</string>
+    <string name="tor_use_dm_relays_explainer">Vynutit Tor pro odesílání a přijímání DMs</string>
+
+    <string name="tor_use_new_relays">Nedůvěryhodné relé</string>
+    <string name="tor_use_new_relays_explainer">Vynutit Tor na odchozí/příchozí relé</string>
+
+    <string name="tor_use_trusted_relays">Důvěryhodné relé</string>
+    <string name="tor_use_trusted_relays_explainer">Vynutit Tor na všech relé ve vašich seznamech</string>
+
+    <string name="tor_use_profile_pictures">Profilové obrázky</string>
+    <string name="tor_use_profile_pictures_explainer">Vynutit Tor při načítání profilových obrázků</string>
+
+    <string name="tor_use_url_previews">URL náhledy</string>
+    <string name="tor_use_url_previews_explainer">Vynutit Tor při načítání náhledů URL</string>
+
+    <string name="tor_use_images">Obrázky</string>
+    <string name="tor_use_images_explainer">Vynutit Tor při načítání obrázků</string>
+
+    <string name="tor_use_videos">Videa</string>
+    <string name="tor_use_videos_explainer">Vynutit Tor při načítání videí</string>
+
+    <string name="tor_use_money_operations">Finanční operace</string>
+    <string name="tor_use_money_operations_explainer">Vynutit Tor na zaps, lightning a cashu převody</string>
+
+    <string name="tor_use_nip05_verification">Ověření Nostr adresy</string>
+    <string name="tor_use_nip05_verification_explainer">Vynutit Tor při ověřování NIP-05 adres</string>
+
+    <string name="tor_use_nip96_uploads">Nahrávání médií</string>
+    <string name="tor_use_nip96_uploads_explainer">Vynutit Tor při nahrávání obsahu</string>
+
+    <string name="tor_internal">Interní</string>
+    <string name="tor_external">Orbot</string>
+    <string name="tor_off">Vypnuto</string>
+
+    <string name="tor_when_needed">Základní</string>
+    <string name="tor_default">Výchozí</string>
+    <string name="tor_small_payloads">Vše kromě médií</string>
+    <string name="tor_full_privacy">Plná anonymita</string>
+    <string name="tor_custom">Vlastní</string>
+
+    <string name="tor_when_needed_explainer">Používejte Tor, když je to vyžadováno serverem</string>
+    <string name="tor_default_explainer">Skryjte svou IP před náhodnými relé</string>
+    <string name="tor_small_payloads_explainer">Skryjte svou IP před vším kromě obrázků a videí</string>
+    <string name="tor_full_privacy_explainer">Skryjte svou IP ve všech připojeních</string>
+    <string name="tor_custom_explainer">Vytvořte si vlastní</string>
+
+    <string name="connect_through_your_orbot_setup_short">Výchozí port je 9050</string>
+    <string name="connect_via_tor1">Upravit</string>
+    <string name="connect_via_tor2">Nastavení Tor</string>
 </resources>

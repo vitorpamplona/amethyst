@@ -725,7 +725,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="dm_relays_not_found">Richten Sie Ihre privaten Posteingangs-Relais ein</string>
     <string name="dm_relays_not_found_description">Diese Einstellung lässt alle wissen, welche Relais verwendet werden sollen, wenn sie Nachrichten an Sie senden. Ohne diese könnten Sie einige Nachrichten verpassen.</string>
     <string name="dm_relays_not_found_examples">Gute Optionen sind:\n - inbox.nostr.wine (bezahlt)\n - you.nostr1.com (persönliche Relais - bezahlt)</string>
-    <string name="dm_relays_not_found_editing">Fügen Sie 1-3 Relais ein, die als Ihr privater Posteingang dienen sollen. DM Posteingangs-Relais sollten Nachrichten von jedem akzeptieren, aber nur Ihnen erlauben, sie herunterzuladen.</string>
+    <string name="dm_relays_not_found_editing">Fügen Sie 1–3 Relais ein, die als Ihr privater Posteingang dienen sollen. DM Posteingangs-Relais sollten Nachrichten von jedem akzeptieren, aber nur Ihnen erlauben, sie herunterzuladen.</string>
     <string name="dm_relays_not_found_create_now">Jetzt einrichten</string>
     <string name="search_relays_title">Suchrelais</string>
     <string name="search_relays_not_found">Richten Sie Ihre Suchrelais ein</string>
@@ -830,4 +830,66 @@ anz der Bedingungen ist erforderlich</string>
     <string name="torrent_no_apps">Keine Torrent-Apps installiert, um die Datei zu öffnen und herunterzuladen.</string>
     <string name="select_list_to_filter">Liste zum Filtern des Feeds auswählen</string>
     <string name="temporary_account">Beim Sperren des Geräts abmelden</string>
+
+    <string name="video_saved_to_the_gallery">Video in der Videogalerie des Telefons gespeichert</string>
+    <string name="failed_to_save_the_video">Video konnte nicht gespeichert werden</string>
+    <string name="use_internal_tor">Aktiver Tor-Engine</string>
+    <string name="use_internal_tor_explainer">Verwenden Sie die interne Version oder Orbot</string>
+
+    <string name="tor_preset">Tor/Datenschutz-Presets</string>
+    <string name="tor_preset_explainer">Ändern Sie schnell alle untenstehenden Einstellungen</string>
+
+    <string name="tor_use_onion_address">Onion URL/Relays</string>
+    <string name="tor_use_onion_address_explainer">Verwenden Sie Tor für jede .onion URL</string>
+
+    <string name="tor_use_dm_relays">DM-Relays</string>
+    <string name="tor_use_dm_relays_explainer">Tor erzwingen, um DMs zu senden und empfangen</string>
+
+    <string name="tor_use_new_relays">Nicht vertrauenswürdige Relays</string>
+    <string name="tor_use_new_relays_explainer">Erzwingen Sie Tor für ausgehende/eingehende Relays</string>
+
+    <string name="tor_use_trusted_relays">Vertrauenswürdige Relays</string>
+    <string name="tor_use_trusted_relays_explainer">Erzwingen Sie Tor für alle Relays in Ihren Listen</string>
+
+    <string name="tor_use_profile_pictures">Profilbilder</string>
+    <string name="tor_use_profile_pictures_explainer">Erzwingen Sie Tor beim Laden von Profilbildern</string>
+
+    <string name="tor_use_url_previews">URL-Vorschauen</string>
+    <string name="tor_use_url_previews_explainer">Erzwingen Sie Tor beim Laden von URL-Vorschauen</string>
+
+    <string name="tor_use_images">Bilder</string>
+    <string name="tor_use_images_explainer">Erzwingen Sie Tor beim Laden von Bildern</string>
+
+    <string name="tor_use_videos">Videos</string>
+    <string name="tor_use_videos_explainer">Erzwingen Sie Tor beim Laden von Videos</string>
+
+    <string name="tor_use_money_operations">Geldtransaktionen</string>
+    <string name="tor_use_money_operations_explainer">Erzwingen Sie Tor bei Zaps, Lightning und Cashu-Transfers</string>
+
+    <string name="tor_use_nip05_verification">Nostr Adressverifizierung</string>
+    <string name="tor_use_nip05_verification_explainer">Erzwingen Sie Tor bei der Überprüfung von NIP-05-Adressen</string>
+
+    <string name="tor_use_nip96_uploads">Medien-Uploads</string>
+    <string name="tor_use_nip96_uploads_explainer">Erzwingen Sie Tor beim Hochladen von Inhalten</string>
+
+    <string name="tor_internal">Intern</string>
+    <string name="tor_external">Orbot</string>
+    <string name="tor_off">Aus</string>
+
+    <string name="tor_when_needed">Grundlegend</string>
+    <string name="tor_default">Standard</string>
+    <string name="tor_small_payloads">Alles außer Medien</string>
+    <string name="tor_full_privacy">Volle Privatsphäre</string>
+    <string name="tor_custom">Benutzerdefiniert</string>
+
+    <string name="tor_when_needed_explainer">Verwenden Sie Tor, wenn es vom Server benötigt wird</string>
+    <string name="tor_default_explainer">Verbergen Sie Ihre IP vor zufälligen Relays</string>
+    <string name="tor_small_payloads_explainer">Verbergen Sie Ihre IP vor allem außer Bildern und Videos</string>
+    <string name="tor_full_privacy_explainer">Verbergen Sie Ihre IP bei allen Verbindungen</string>
+    <string name="tor_custom_explainer">Erstellen Sie Ihre eigenen</string>
+
+    <string name="connect_through_your_orbot_setup_short">Standard-Port ist 9050</string>
+    <string name="connect_via_tor1">Anpassen</string>
+    <string name="connect_via_tor2">Tor-Einstellungen</string>
+
 </resources>
