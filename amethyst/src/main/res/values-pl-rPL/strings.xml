@@ -132,7 +132,7 @@
     <string name="edits_the_channel_metadata">Edytuje metadane kanału</string>
     <string name="join">Dołącz</string>
     <string name="known">Znajomi</string>
-    <string name="new_requests">Nowe Prośby</string>
+    <string name="new_requests">Nowe Kontakty</string>
     <string name="blocked_users">Zablokowani użytkownicy</string>
     <string name="new_threads">Nowe Wpisy</string>
     <string name="conversations">Konwersacje</string>
@@ -362,6 +362,8 @@
     <string name="upload_server_relays_nip95_explainer">Pliki są przechowywane przez Twoje retransmitery. Nowy NIP: sprawdź, czy jest obsługiwany</string>
     <string name="connect_via_tor_short">Tor/Orbot - Ustawienia</string>
     <string name="connect_via_tor">Połącz przez swoją konfigurację Orbota</string>
+    <string name="connect_via_tor1">Dostosuj</string>
+    <string name="connect_via_tor2">Ustawienia TORa</string>
     <string name="do_you_really_want_to_disable_tor_title">Odłączyć od Orbota i Tora?</string>
     <string name="do_you_really_want_to_disable_tor_text">Twoje dane zostaną natychmiast przekazane w ramach zwykłej sieci</string>
     <string name="yes">Tak</string>
