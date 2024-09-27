@@ -384,6 +384,8 @@
     <string name="orbot_socks_port">Port Socks Orbota</string>
     <string name="use_internal_tor">Aktywny silnik Tor</string>
     <string name="use_internal_tor_explainer">Użyj wersji wewnętrznej lub Orbota</string>
+    <string name="tor_preset">TOR wstępne ustawienia prywatności</string>
+    <string name="tor_preset_explainer">Szybka modyfikacja wszystkich ustawień poniżej</string>
     <string name="tor_use_onion_address">Adres Onion /Transmitery</string>
     <string name="tor_use_onion_address_explainer">Użyj Tor dla dowolnego adresu .onion</string>
     <string name="tor_use_dm_relays">Transmitery DM</string>
@@ -409,6 +411,8 @@
     <string name="tor_internal">Wewnętrzny</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Wył.</string>
+    <string name="tor_when_needed">Podstawowe</string>
+    <string name="tor_default">Domyślne</string>
     <string name="invalid_port_number">Nieprawidłowy numer portu</string>
     <string name="use_orbot">Użyj Orbota</string>
     <string name="disconnect_from_your_orbot_setup">Odłącz Tor/Orbota</string>
