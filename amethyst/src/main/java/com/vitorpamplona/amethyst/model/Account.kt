@@ -1298,11 +1298,11 @@ class Account(
                     signedEvent = event,
                     relayTemplate =
                         RelaySetupInfoToConnect(
-                            nip47.relayUri,
-                            shouldUseTorForTrustedRelays(), // this is trusted.
-                            true,
-                            true,
-                            wcListener.feedTypes,
+                            url = nip47.relayUri,
+                            forceProxy = shouldUseTorForTrustedRelays(), // this is trusted.
+                            read = true,
+                            write = true,
+                            feedTypes = wcListener.feedTypes,
                         ),
                     onDone = { wcListener.destroy() },
                 )

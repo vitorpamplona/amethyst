@@ -118,10 +118,6 @@ class ZapPaymentHandler(
 
         onProgress(0.02f)
         signAllZapRequests(note, pollOption, message, zapType, zapsToSend) { splitZapRequestPairs ->
-            splitZapRequestPairs.forEach {
-                println("AABBCC 1 ${it.key} ${it.value}  $amountMilliSats")
-            }
-
             if (splitZapRequestPairs.isEmpty()) {
                 onProgress(0.00f)
                 return@signAllZapRequests
@@ -132,10 +128,6 @@ class ZapPaymentHandler(
             assembleAllInvoices(splitZapRequestPairs.toList(), amountMilliSats, message, showErrorIfNoLnAddress, forceProxy, onError, onProgress = {
                 onProgress(it * 0.7f + 0.05f) // keeps within range.
             }, context) {
-                splitZapRequestPairs.forEach {
-                    println("AABBCC 2 ${it.key} ${it.value}  $amountMilliSats")
-                }
-
                 if (it.isEmpty()) {
                     onProgress(0.00f)
                     return@assembleAllInvoices
@@ -225,7 +217,6 @@ class ZapPaymentHandler(
                         ) + (authorRelayList ?: emptySet())
 
                     prepareZapRequestIfNeeded(note, pollOption, message, zapType, user, userRelayList) { zapRequestJson ->
-                        println("AABBCC middle ${user?.toBestDisplayName()} + $zapRequestJson")
                         onReady(SignAllZapRequestsReturn(zapRequestJson, user))
                     }
                 }
@@ -284,20 +275,15 @@ class ZapPaymentHandler(
         collectSuccessfulSigningOperations<String, Boolean>(
             operationsInput = invoices,
             runRequestFor = { invoice: String, onReady ->
-                println("AABBCC sending $invoice")
-
                 account.sendZapPaymentRequestFor(
                     bolt11 = invoice,
                     zappedNote = note,
                     onSent = {
-                        println("AABBCC sent $invoice")
                         progressAllPayments += 0.5f / invoices.size
                         onProgress(progressAllPayments)
                         onReady(true)
                     },
                     onResponse = { response ->
-                        println("AABBCC response $invoice")
-
                         if (response is PayInvoiceErrorResponse) {
                             progressAllPayments += 0.5f / invoices.size
                             onProgress(progressAllPayments)

@@ -99,7 +99,7 @@ class Relay(
         }
     }
 
-    private fun sendOutbox() {
+    fun sendOutbox() {
         synchronized(outboxCache) {
             outboxCache.values.forEach {
                 send(it)

@@ -96,9 +96,8 @@ object RelayPool : Relay.Listener {
         addRelay(relay)
 
         relay.connectAndRun {
-            Client.allSubscriptions().forEach {
-                relay.sendFilter(it.key, it.value)
-            }
+            relay.renewFilters()
+            relay.sendOutbox()
 
             onConnected(relay)
 
