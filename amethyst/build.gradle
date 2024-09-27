@@ -16,9 +16,9 @@ android {
         applicationId "com.vitorpamplona.amethyst"
         minSdk libs.versions.android.minSdk.get().toInteger()
         targetSdk libs.versions.android.targetSdk.get().toInteger()
-        versionCode 404
-        versionName "0.91.0"
-        buildConfigField "String", "RELEASE_NOTES_ID", "\"fba090fe820d4ca42c2d808400268be68389337e4cac552e5aaa876e929a0eaf\""
+        versionCode 405
+        versionName "0.92.0"
+        buildConfigField "String", "RELEASE_NOTES_ID", "\"98f2acaf9b3eb70d87607942e576f9a086ac28adf37869da9a29f4815cecac86\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
