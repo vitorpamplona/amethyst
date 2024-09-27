@@ -5,4 +5,6 @@
 Prijavi se s privatnim ključem za všečkanje sporočila</string>
     <string name="view_count">Števec vpogledov</string>
     <string name="following">""</string>
+    <string name="home_feed"></string>
+    <string name="public_chat_feed">Javni vir novic</string>
 </resources>

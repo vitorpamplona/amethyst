@@ -132,7 +132,7 @@
     <string name="edits_the_channel_metadata">Edytuje metadane kanału</string>
     <string name="join">Dołącz</string>
     <string name="known">Znajomi</string>
-    <string name="new_requests">Nowe Prośby</string>
+    <string name="new_requests">Nowe Kontakty</string>
     <string name="blocked_users">Zablokowani użytkownicy</string>
     <string name="new_threads">Nowe Wpisy</string>
     <string name="conversations">Konwersacje</string>
@@ -362,6 +362,8 @@
     <string name="upload_server_relays_nip95_explainer">Pliki są przechowywane przez Twoje retransmitery. Nowy NIP: sprawdź, czy jest obsługiwany</string>
     <string name="connect_via_tor_short">Tor/Orbot - Ustawienia</string>
     <string name="connect_via_tor">Połącz przez swoją konfigurację Orbota</string>
+    <string name="connect_via_tor1">Dostosuj</string>
+    <string name="connect_via_tor2">Ustawienia TORa</string>
     <string name="do_you_really_want_to_disable_tor_title">Odłączyć od Orbota i Tora?</string>
     <string name="do_you_really_want_to_disable_tor_text">Twoje dane zostaną natychmiast przekazane w ramach zwykłej sieci</string>
     <string name="yes">Tak</string>
@@ -382,6 +384,8 @@
     <string name="orbot_socks_port">Port Socks Orbota</string>
     <string name="use_internal_tor">Aktywny silnik Tor</string>
     <string name="use_internal_tor_explainer">Użyj wersji wewnętrznej lub Orbota</string>
+    <string name="tor_preset">TOR wstępne ustawienia prywatności</string>
+    <string name="tor_preset_explainer">Szybka modyfikacja wszystkich ustawień poniżej</string>
     <string name="tor_use_onion_address">Adres Onion /Transmitery</string>
     <string name="tor_use_onion_address_explainer">Użyj Tor dla dowolnego adresu .onion</string>
     <string name="tor_use_dm_relays">Transmitery DM</string>
@@ -407,6 +411,16 @@
     <string name="tor_internal">Wewnętrzny</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Wył.</string>
+    <string name="tor_when_needed">Podstawowe</string>
+    <string name="tor_default">Domyślne</string>
+    <string name="tor_small_payloads">Wszystko oprócz mediów</string>
+    <string name="tor_full_privacy">Pełna prywatność</string>
+    <string name="tor_custom">Niestandardowy</string>
+    <string name="tor_when_needed_explainer">Użyj Tor, gdy jest wymagany przez serwer</string>
+    <string name="tor_default_explainer">Ukryj swój adres IP przed przypadkowymi transmiterami</string>
+    <string name="tor_small_payloads_explainer">Ukryj swój adres IP od wszystkiego oprócz zdjęć i filmów</string>
+    <string name="tor_full_privacy_explainer">Ukryj swój adres IP przy wszystkich połączeniach</string>
+    <string name="tor_custom_explainer">Stwórz swój własny</string>
     <string name="invalid_port_number">Nieprawidłowy numer portu</string>
     <string name="use_orbot">Użyj Orbota</string>
     <string name="disconnect_from_your_orbot_setup">Odłącz Tor/Orbota</string>
