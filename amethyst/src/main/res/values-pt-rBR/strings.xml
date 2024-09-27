@@ -121,6 +121,8 @@
     <string name="save_to_gallery">Salvar na Galeria</string>
     <string name="image_saved_to_the_gallery">Imagem salva para a galeria</string>
     <string name="failed_to_save_the_image">Falha ao salvar a imagem</string>
+    <string name="video_saved_to_the_gallery">Vídeo salvo na galeria de vídeos do telefone</string>
+    <string name="failed_to_save_the_video">Falha ao salvar o vídeo</string>
     <string name="upload_image">Enviar Imagem</string>
     <string name="uploading">Enviando…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Usuário não tem um endereço lightning configurado para receber sats</string>
@@ -358,6 +360,8 @@
     <string name="upload_server_relays_nip95_explainer">Os arquivos são hospedados por seus relays. Novo NIP: verifique se eles suportam</string>
     <string name="connect_via_tor_short">Configuração do Tor/Orbot</string>
     <string name="connect_via_tor">Conecte-se através da configuração do Orbot</string>
+    <string name="connect_via_tor1">Ajustar</string>
+    <string name="connect_via_tor2">Configurações Tor</string>
     <string name="do_you_really_want_to_disable_tor_title">Desconectar do Orbot/Tor?</string>
     <string name="do_you_really_want_to_disable_tor_text">Seus dados serão transferidos imediatamente na rede aberta</string>
     <string name="yes">Sim</string>
@@ -366,6 +370,7 @@
     <string name="follow_list_kind3follows">Seguindo</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Lista Silenciada</string>
+    <string name="connect_through_your_orbot_setup_short">Porta padrão é 9050</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Conecte-se através do Tor com o Orbot
         \n\n1. Instale o [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. Iniciar Orbot
@@ -375,6 +380,44 @@
         \n6. Pressione o botão Ativar para usar o Orbot como proxy
     </string>
     <string name="orbot_socks_port">Porta Socks Orbot</string>
+    <string name="use_internal_tor">Motor Tor Ativo</string>
+    <string name="use_internal_tor_explainer">Use a versão interna ou o Orbot</string>
+    <string name="tor_preset">Predefinições Tor/Privacidade</string>
+    <string name="tor_preset_explainer">Modifique rapidamente todas as configurações abaixo</string>
+    <string name="tor_use_onion_address">Endereço Onion/Relés</string>
+    <string name="tor_use_onion_address_explainer">Use Tor para qualquer URL .onion</string>
+    <string name="tor_use_dm_relays">Relés de Mensagem Direta</string>
+    <string name="tor_use_dm_relays_explainer">Forçar Tor para enviar e receber mensagens diretas</string>
+    <string name="tor_use_new_relays">Relés Não Confiáveis</string>
+    <string name="tor_use_new_relays_explainer">Forçar Tor em relés de entrada/saída</string>
+    <string name="tor_use_trusted_relays">Relés Confiáveis</string>
+    <string name="tor_use_trusted_relays_explainer">Forçar Tor em todos os relés nas suas listas</string>
+    <string name="tor_use_profile_pictures">Fotos de Perfil</string>
+    <string name="tor_use_profile_pictures_explainer">Forçar Tor ao carregar fotos de perfil</string>
+    <string name="tor_use_url_previews">Pré-visualizações de URL</string>
+    <string name="tor_use_url_previews_explainer">Forçar Tor ao carregar pré-visualizações de URL</string>
+    <string name="tor_use_images">Imagens</string>
+    <string name="tor_use_images_explainer">Forçar Tor ao carregar imagens</string>
+    <string name="tor_use_videos">Vídeos</string>
+    <string name="tor_use_videos_explainer">Forçar Tor ao carregar vídeos</string>
+    <string name="tor_use_money_operations">Operações Financeiras</string>
+    <string name="tor_use_money_operations_explainer">Forçar Tor em zaps, transfers relâmpago e cashu</string>
+    <string name="tor_use_nip05_verification">Verificação de Endereço Nostr</string>
+    <string name="tor_use_nip05_verification_explainer">Forçar Tor ao verificar endereços NIP-05</string>
+    <string name="tor_use_nip96_uploads">Envio de Mídia</string>
+    <string name="tor_use_nip96_uploads_explainer">Forçar Tor ao enviar conteúdo</string>
+    <string name="tor_internal">Interno</string>
+    <string name="tor_off">Desativado</string>
+    <string name="tor_when_needed">Básico</string>
+    <string name="tor_default">Padrão</string>
+    <string name="tor_small_payloads">Tudo exceto Mídia</string>
+    <string name="tor_full_privacy">Privacidade Completa</string>
+    <string name="tor_custom">Personalizado</string>
+    <string name="tor_when_needed_explainer">Use Tor quando for necessário pelo servidor</string>
+    <string name="tor_default_explainer">Oculte seu IP de relés aleatórios</string>
+    <string name="tor_small_payloads_explainer">Oculte seu IP de tudo, exceto imagens e vídeos</string>
+    <string name="tor_full_privacy_explainer">Oculte seu IP em todas as conexões</string>
+    <string name="tor_custom_explainer">Faça o seu próprio</string>
     <string name="invalid_port_number">Número de porta inválido</string>
     <string name="use_orbot">Usar Orbot</string>
     <string name="disconnect_from_your_orbot_setup">Desconectar Tor/Orbot</string>
@@ -825,66 +868,4 @@
     <string name="torrent_no_apps">Nenhum aplicativo torrent instalado para abrir e baixar o arquivo.</string>
     <string name="select_list_to_filter">Selecione uma lista para filtrar o feed</string>
     <string name="temporary_account">Terminar sessão no bloqueio do dispositivo</string>
-
-    <string name="video_saved_to_the_gallery">Vídeo salvo na galeria de vídeos do telefone</string>
-    <string name="failed_to_save_the_video">Falha ao salvar o vídeo</string>
-    <string name="use_internal_tor">Motor Tor Ativo</string>
-    <string name="use_internal_tor_explainer">Use a versão interna ou o Orbot</string>
-
-    <string name="tor_preset">Predefinições Tor/Privacidade</string>
-    <string name="tor_preset_explainer">Modifique rapidamente todas as configurações abaixo</string>
-
-    <string name="tor_use_onion_address">Endereço Onion/Relés</string>
-    <string name="tor_use_onion_address_explainer">Use Tor para qualquer URL .onion</string>
-
-    <string name="tor_use_dm_relays">Relés de Mensagem Direta</string>
-    <string name="tor_use_dm_relays_explainer">Forçar Tor para enviar e receber mensagens diretas</string>
-
-    <string name="tor_use_new_relays">Relés Não Confiáveis</string>
-    <string name="tor_use_new_relays_explainer">Forçar Tor em relés de entrada/saída</string>
-
-    <string name="tor_use_trusted_relays">Relés Confiáveis</string>
-    <string name="tor_use_trusted_relays_explainer">Forçar Tor em todos os relés nas suas listas</string>
-
-    <string name="tor_use_profile_pictures">Fotos de Perfil</string>
-    <string name="tor_use_profile_pictures_explainer">Forçar Tor ao carregar fotos de perfil</string>
-
-    <string name="tor_use_url_previews">Pré-visualizações de URL</string>
-    <string name="tor_use_url_previews_explainer">Forçar Tor ao carregar pré-visualizações de URL</string>
-
-    <string name="tor_use_images">Imagens</string>
-    <string name="tor_use_images_explainer">Forçar Tor ao carregar imagens</string>
-
-    <string name="tor_use_videos">Vídeos</string>
-    <string name="tor_use_videos_explainer">Forçar Tor ao carregar vídeos</string>
-
-    <string name="tor_use_money_operations">Operações Financeiras</string>
-    <string name="tor_use_money_operations_explainer">Forçar Tor em zaps, transfers relâmpago e cashu</string>
-
-    <string name="tor_use_nip05_verification">Verificação de Endereço Nostr</string>
-    <string name="tor_use_nip05_verification_explainer">Forçar Tor ao verificar endereços NIP-05</string>
-
-    <string name="tor_use_nip96_uploads">Envio de Mídia</string>
-    <string name="tor_use_nip96_uploads_explainer">Forçar Tor ao enviar conteúdo</string>
-
-    <string name="tor_internal">Interno</string>
-    <string name="tor_external">Orbot</string>
-    <string name="tor_off">Desativado</string>
-
-    <string name="tor_when_needed">Básico</string>
-    <string name="tor_default">Padrão</string>
-    <string name="tor_small_payloads">Tudo exceto Mídia</string>
-    <string name="tor_full_privacy">Privacidade Completa</string>
-    <string name="tor_custom">Personalizado</string>
-
-    <string name="tor_when_needed_explainer">Use Tor quando for necessário pelo servidor</string>
-    <string name="tor_default_explainer">Oculte seu IP de relés aleatórios</string>
-    <string name="tor_small_payloads_explainer">Oculte seu IP de tudo, exceto imagens e vídeos</string>
-    <string name="tor_full_privacy_explainer">Oculte seu IP em todas as conexões</string>
-    <string name="tor_custom_explainer">Faça o seu próprio</string>
-
-    <string name="connect_through_your_orbot_setup_short">Porta padrão é 9050</string>
-    <string name="connect_via_tor1">Ajustar</string>
-    <string name="connect_via_tor2">Configurações Tor</string>
-
 </resources>
