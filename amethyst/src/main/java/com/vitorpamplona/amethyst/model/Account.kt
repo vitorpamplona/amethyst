@@ -413,14 +413,15 @@ class Account(
         combineTransform(
             connectToRelays,
             settings.torSettings.torType,
+            settings.torSettings.onionRelaysViaTor,
             settings.torSettings.trustedRelaysViaTor,
-        ) { relays, torType, forceTor ->
+        ) { relays, torType, useTorForOnionRelays, useTorForTrustedRelays ->
             emit(
                 relays
                     .map {
                         RelaySetupInfoToConnect(
                             it.url,
-                            torType != TorType.OFF && forceTor,
+                            torType != TorType.OFF && checkLocalHostOnionAndThen(it.url, useTorForOnionRelays, useTorForTrustedRelays),
                             it.read,
                             it.write,
                             it.feedTypes,
@@ -440,7 +441,12 @@ class Account(
                 ).map {
                     RelaySetupInfoToConnect(
                         it.url,
-                        settings.torSettings.torType.value != TorType.OFF && settings.torSettings.trustedRelaysViaTor.value,
+                        settings.torSettings.torType.value != TorType.OFF &&
+                            checkLocalHostOnionAndThen(
+                                it.url,
+                                settings.torSettings.onionRelaysViaTor.value,
+                                settings.torSettings.trustedRelaysViaTor.value,
+                            ),
                         it.read,
                         it.write,
                         it.feedTypes,
@@ -3423,11 +3429,17 @@ class Account(
     private fun checkLocalHostOnionAndThen(
         normalizedUrl: String,
         final: Boolean,
+    ): Boolean = checkLocalHostOnionAndThen(normalizedUrl, settings.torSettings.onionRelaysViaTor.value, final)
+
+    private fun checkLocalHostOnionAndThen(
+        normalizedUrl: String,
+        isOnionRelaysActive: Boolean,
+        final: Boolean,
     ): Boolean =
         if (isLocalHost(normalizedUrl)) {
             false
         } else if (isOnionUrl(normalizedUrl)) {
-            settings.torSettings.onionRelaysViaTor.value
+            isOnionRelaysActive
         } else {
             final
         }
