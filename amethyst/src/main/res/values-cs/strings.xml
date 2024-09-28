@@ -386,6 +386,7 @@
     <string name="tor_preset_explainer">Rychle upravte všechna nastavení níže</string>
     <string name="tor_use_onion_address">Onion URL/Relays</string>
     <string name="tor_use_onion_address_explainer">Používat Tor pro jakoukoli .onion adresu</string>
+    <string name="tor_use_dm_relays">Relé pro DM</string>
     <string name="tor_use_dm_relays_explainer">Vynutit Tor pro odesílání a přijímání DMs</string>
     <string name="tor_use_new_relays">Nedůvěryhodné relé</string>
     <string name="tor_use_new_relays_explainer">Vynutit Tor na odchozí/příchozí relé</string>
@@ -406,6 +407,7 @@
     <string name="tor_use_nip96_uploads">Nahrávání médií</string>
     <string name="tor_use_nip96_uploads_explainer">Vynutit Tor při nahrávání obsahu</string>
     <string name="tor_internal">Interní</string>
+    <string name="tor_external">Orbot</string>
     <string name="tor_off">Vypnuto</string>
     <string name="tor_when_needed">Základní</string>
     <string name="tor_default">Výchozí</string>

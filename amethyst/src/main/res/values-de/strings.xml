@@ -403,6 +403,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="tor_use_url_previews_explainer">Erzwingen Sie Tor beim Laden von URL-Vorschauen</string>
     <string name="tor_use_images">Bilder</string>
     <string name="tor_use_images_explainer">Erzwingen Sie Tor beim Laden von Bildern</string>
+    <string name="tor_use_videos">Video</string>
     <string name="tor_use_videos_explainer">Erzwingen Sie Tor beim Laden von Videos</string>
     <string name="tor_use_money_operations">Geldtransaktionen</string>
     <string name="tor_use_money_operations_explainer">Erzwingen Sie Tor bei Zaps, Lightning und Cashu-Transfers</string>
@@ -411,6 +412,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="tor_use_nip96_uploads">Medien-Uploads</string>
     <string name="tor_use_nip96_uploads_explainer">Erzwingen Sie Tor beim Hochladen von Inhalten</string>
     <string name="tor_internal">Intern</string>
+    <string name="tor_external">Orbot</string>
     <string name="tor_off">Aus</string>
     <string name="tor_when_needed">Grundlegend</string>
     <string name="tor_default">Standard</string>
