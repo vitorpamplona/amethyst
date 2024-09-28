@@ -401,6 +401,7 @@
     <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Files are hosted by your relays. New NIP: check if they support</string>
 
+    <string name="privacy_options">Privacy Options</string>
     <string name="connect_via_tor_short">Tor/Orbot setup</string>
     <string name="connect_via_tor">Connect through your Orbot setup</string>
 
@@ -592,6 +593,9 @@
 
     <string name="add_sensitive_content_label">Sensitive Content</string>
     <string name="add_sensitive_content_description">Adds sensitive content warning before showing this content</string>
+
+    <string name="preferences">App Preferences</string>
+
     <string name="settings">Settings</string>
     <string name="connectivity_type_always">Always</string>
     <string name="connectivity_type_wifi_only">Wifi-only</string>

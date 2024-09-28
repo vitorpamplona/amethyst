@@ -45,6 +45,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -65,6 +67,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -478,7 +481,7 @@ fun ListContent(
 
         IconRow(
             title = stringRes(R.string.media_servers),
-            icon = androidx.media3.ui.R.drawable.exo_icon_repeat_all,
+            icon = Icons.Outlined.CloudUpload,
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = {
                 nav.closeDrawer()
@@ -494,6 +497,16 @@ fun ListContent(
             route = Route.BlockedUsers.route,
         )
 
+        IconRow(
+            title = stringRes(R.string.privacy_options),
+            icon = R.drawable.ic_tor,
+            tint = MaterialTheme.colorScheme.onBackground,
+            onClick = {
+                nav.closeDrawer()
+                conectOrbotDialogOpen = true
+            },
+        )
+
         accountViewModel.account.settings.keyPair.privKey?.let {
             IconRow(
                 title = stringRes(R.string.backup_keys),
@@ -506,18 +519,8 @@ fun ListContent(
             )
         }
 
-        IconRow(
-            title = stringRes(R.string.connect_via_tor_short),
-            icon = R.drawable.ic_tor,
-            tint = MaterialTheme.colorScheme.onBackground,
-            onClick = {
-                nav.closeDrawer()
-                conectOrbotDialogOpen = true
-            },
-        )
-
         NavigationRow(
-            title = stringRes(R.string.settings),
+            title = stringRes(R.string.preferences),
             icon = Route.Settings.icon,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
@@ -528,7 +531,7 @@ fun ListContent(
 
         IconRow(
             title = stringRes(R.string.drawer_accounts),
-            icon = R.drawable.manage_accounts,
+            icon = Icons.Outlined.GroupAdd,
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = openSheet,
         )
@@ -635,6 +638,41 @@ fun IconRow(
         ) {
             Icon(
                 painter = painterResource(icon),
+                null,
+                modifier = Size22Modifier,
+                tint = tint,
+            )
+            Text(
+                modifier = IconRowTextModifier,
+                text = title,
+                fontSize = Font18SP,
+            )
+        }
+    }
+}
+
+@Composable
+fun IconRow(
+    title: String,
+    icon: ImageVector,
+    tint: Color,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(
+                    onClickLabel = title,
+                    onClick = onClick,
+                ),
+    ) {
+        Row(
+            modifier = IconRowModifier,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
                 null,
                 modifier = Size22Modifier,
                 tint = tint,
