@@ -7,4 +7,5 @@ Prijavi se s privatnim ključem za všečkanje sporočila</string>
     <string name="following">""</string>
     <string name="home_feed"></string>
     <string name="public_chat_feed">Javni vir novic</string>
+    <string name="add_a_relay">Dodaj rele</string>
 </resources>
