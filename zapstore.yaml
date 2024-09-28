@@ -2,7 +2,8 @@ amethyst:
   android:
     identifier: com.vitorpamplona.amethyst
     name: Amethyst
-    description: A Nostr client for Android
+    description: The all-in-one Nostr client
+    license: MIT
     builder: npub142gywvjkq0dv6nupggyn2euhx4nduwc7yz5f24ah9rpmunr2s39se3xrj0
     repository: https://github.com/vitorpamplona/amethyst
     artifacts:
