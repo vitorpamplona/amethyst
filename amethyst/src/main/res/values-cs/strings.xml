@@ -358,6 +358,7 @@
     <string name="delete_media_server">Odstranit server médií</string>
     <string name="upload_server_relays_nip95">Vaše relé (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Soubory jsou hostovány vašimi relé. Nový NIP: zkontrolujte, zda je podporují</string>
+    <string name="privacy_options">Nastavení ochrany soukromí</string>
     <string name="connect_via_tor_short">Nastavení Tor/Orbot</string>
     <string name="connect_via_tor">Připojit se přes váš Orbot</string>
     <string name="connect_via_tor1">Upravit</string>
@@ -504,6 +505,7 @@
     <string name="community_no_descriptor">Tato komunita nemá popis. Promluvte si s majitelem, aby ho přidal/a.</string>
     <string name="add_sensitive_content_label">Citlivý obsah</string>
     <string name="add_sensitive_content_description">Před zobrazením tohoto obsahu přidá upozornění na citlivý obsah.</string>
+    <string name="preferences">Nastavení aplikace</string>
     <string name="settings">Nastavení</string>
     <string name="connectivity_type_always">Vždy</string>
     <string name="connectivity_type_wifi_only">Pouze Wi-Fi</string>

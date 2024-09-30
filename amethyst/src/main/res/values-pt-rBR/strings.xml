@@ -358,6 +358,7 @@
     <string name="delete_media_server">Apagar servidor de mídia</string>
     <string name="upload_server_relays_nip95">Seus relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Os arquivos são hospedados por seus relays. Novo NIP: verifique se eles suportam</string>
+    <string name="privacy_options">Opções de Privacidade</string>
     <string name="connect_via_tor_short">Configuração do Tor/Orbot</string>
     <string name="connect_via_tor">Conecte-se através da configuração do Orbot</string>
     <string name="connect_via_tor1">Ajustar</string>
@@ -407,6 +408,7 @@
     <string name="tor_use_nip96_uploads">Envio de Mídia</string>
     <string name="tor_use_nip96_uploads_explainer">Forçar Tor ao enviar conteúdo</string>
     <string name="tor_internal">Interno</string>
+    <string name="tor_external">Orbot</string>
     <string name="tor_off">Desativado</string>
     <string name="tor_when_needed">Básico</string>
     <string name="tor_default">Padrão</string>
@@ -503,6 +505,7 @@
     <string name="community_no_descriptor">Esta comunidade não tem uma descrição. Fale com o proprietário para adicionar</string>
     <string name="add_sensitive_content_label">Conteúdo sensível</string>
     <string name="add_sensitive_content_description">Adiciona aviso de conteúdo sensível antes de mostrar este conteúdo</string>
+    <string name="preferences">Preferências do aplicativo</string>
     <string name="settings">Configurações</string>
     <string name="connectivity_type_always">Sempre</string>
     <string name="connectivity_type_wifi_only">Somente wifi</string>

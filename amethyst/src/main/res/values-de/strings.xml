@@ -364,6 +364,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="delete_media_server">Medienserver löschen</string>
     <string name="upload_server_relays_nip95">Deine Relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Dateien werden von deinen Relays gehostet. Neuer NIP: Überprüfe, ob sie unterstützt werden</string>
+    <string name="privacy_options">Privatsphäre-Optionen</string>
     <string name="connect_via_tor_short">Tor/Orbot-Einrichtung</string>
     <string name="connect_via_tor">Verbindung über deine Orbot-Einrichtung herstellen</string>
     <string name="connect_via_tor1">Anpassen</string>
@@ -509,6 +510,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="community_no_descriptor">Diese Community hat keine Beschreibung. Sprechen Sie mit dem Eigentümer, um eine hinzuzufügen.</string>
     <string name="add_sensitive_content_label">Sensibler Inhalt</string>
     <string name="add_sensitive_content_description">Fügt eine Warnung für sensiblen Inhalt hinzu, bevor dieser Inhalt angezeigt wird.</string>
+    <string name="preferences">App Einstellungen</string>
     <string name="settings">Einstellungen</string>
     <string name="connectivity_type_always">Immer</string>
     <string name="connectivity_type_wifi_only">Nur WLAN</string>
