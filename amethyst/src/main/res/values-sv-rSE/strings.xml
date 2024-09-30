@@ -358,6 +358,7 @@
     <string name="delete_media_server">Radera mediaserver</string>
     <string name="upload_server_relays_nip95">Dina Reläer (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Filer är värd för dina reläer. Nytt NIP: kontrollera om de stöder</string>
+    <string name="privacy_options">Sekretess Alternativ</string>
     <string name="connect_via_tor_short">Tor/Orbot Inställningar</string>
     <string name="connect_via_tor">Anslut via dina Orbot-inställiningar</string>
     <string name="connect_via_tor1">Justera</string>
@@ -406,6 +407,7 @@
     <string name="tor_use_nip96_uploads">Mediauppladdningar</string>
     <string name="tor_use_nip96_uploads_explainer">Tvinga Tor vid uppladdning av innehåll</string>
     <string name="tor_internal">Intern</string>
+    <string name="tor_external">Orbot</string>
     <string name="tor_off">Av</string>
     <string name="tor_when_needed">Grundläggande</string>
     <string name="tor_default">Standard</string>
@@ -502,6 +504,7 @@
     <string name="community_no_descriptor">Denna gemenskap har ingen beskrivning. Prata med ägaren för att lägga till en.</string>
     <string name="add_sensitive_content_label">Känsligt innehåll</string>
     <string name="add_sensitive_content_description">Lägger till varning för känsligt innehåll innan detta innehåll visas.</string>
+    <string name="preferences">Appinställningar</string>
     <string name="settings">Inställningar</string>
     <string name="connectivity_type_always">Alltid</string>
     <string name="connectivity_type_wifi_only">Endast Wi-Fi</string>

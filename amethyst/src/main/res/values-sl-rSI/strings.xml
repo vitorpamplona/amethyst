@@ -8,4 +8,18 @@ Prijavi se s privatnim ključem za všečkanje sporočila</string>
     <string name="home_feed"></string>
     <string name="public_chat_feed">Javni vir novic</string>
     <string name="add_a_relay">Dodaj rele</string>
+    <string name="display_name">Prikazno ime</string>
+    <string name="npub_hex_username">"npub, uporabniško ime, tekst"</string>
+    <string name="quick_action_share_browser_link">Deli povezavo brskalnika</string>
+    <string name="quick_action_request_deletion_gallery_title">Izbris iz galerije</string>
+    <string name="quick_action_block_dialog_btn">Blokiraj</string>
+    <string name="quick_action_delete_button">Izbriši</string>
+    <string name="quick_action_dont_show_again_button">Ne prikaži ponovno</string>
+    <string name="report_dialog_select_reason_label">Razlog</string>
+    <string name="poll_closing_time">Zapri po</string>
+    <string name="follow_list_global">Globalno</string>
+    <string name="tor_use_profile_pictures_explainer">Prisili tor pri nalaganju profilnih slik</string>
+    <string name="ui_feature_set_type_complete">Končaj</string>
+    <string name="mute_button">Zvok je prižgan. Klikni da ga utišaš</string>
+    <string name="relay_information_document_error_failed_to_reach_server">Neuspela povezava z %1$s: %2$s</string>
 </resources>

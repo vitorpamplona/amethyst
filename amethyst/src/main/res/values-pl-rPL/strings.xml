@@ -25,7 +25,7 @@
     <string name="unknown_author">Autor nieznany</string>
     <string name="copy_text">Skopiuj tekst</string>
     <string name="copy_user_pubkey">Kopiuj identyfikator autora</string>
-    <string name="copy_note_id">Kopiuj identyfikator notatki</string>
+    <string name="copy_note_id">Kopiuj identyfikator wpisu</string>
     <string name="broadcast">Roześlij</string>
     <string name="timestamp_it">Znacznik czasowy</string>
     <string name="timestamp_pending">Znacznik czasowy: Oczekujące potwierdzenia</string>
@@ -257,7 +257,7 @@
     <string name="quick_action_share_browser_link">Udostępnij link przeglądarki</string>
     <string name="quick_action_share">Udostępnij</string>
     <string name="quick_action_copy_user_id">ID autora</string>
-    <string name="quick_action_copy_note_id">ID notatki</string>
+    <string name="quick_action_copy_note_id">ID wpisu</string>
     <string name="quick_action_copy_text">Skopiuj tekst</string>
     <string name="quick_action_delete">Usuń</string>
     <string name="quick_action_unfollow">Porzuć</string>
@@ -265,7 +265,7 @@
     <string name="quick_action_request_deletion_gallery_title">Usuń z Galerii</string>
     <string name="quick_action_request_deletion_gallery_alert_body">Usuń te media z galerii, możesz dodać je ponownie później</string>
     <string name="quick_action_request_deletion_alert_title">Poproś o usunięcie</string>
-    <string name="quick_action_request_deletion_alert_body">Amethyst poprosi o usunięcie Twojej notatki z aktualnie podłączonych transmiterów. Nie ma gwarancji, że Twoja notatka zostanie trwale usunięta z tych lub z innych transmiterów, gdzie może być przechowywana.</string>
+    <string name="quick_action_request_deletion_alert_body">Amethyst poprosi o usunięcie Twojego wpisu z aktualnie podłączonych transmiterów. Nie ma gwarancji, że Twój wpis zostanie trwale usunięty z tych lub z innych transmiterów, gdzie może być przechowywany.</string>
     <string name="quick_action_block_dialog_btn">Zablokuj</string>
     <string name="quick_action_delete_dialog_btn">Usuń</string>
     <string name="quick_action_block">Zablokuj</string>
@@ -278,7 +278,7 @@
     <string name="report_dialog_nudity">Nagość lub obraźliwa grafika</string>
     <string name="report_dialog_illegal">Antyspołeczne zachowanie</string>
     <string name="report_dialog_malware">Złośliwe oprogramowanie</string>
-    <string name="report_dialog_blocking_a_user">Zablokowanie użytkownika ukryje jego zawartość w aplikacji. Twoje notatki są nadal widoczne publicznie, w tym dla osób, które blokujesz. Zablokowani użytkownicy są wymienieni na ekranie filtrów bezpieczeństwa.</string>
+    <string name="report_dialog_blocking_a_user">Zablokowanie użytkownika ukryje jego zawartość w aplikacji. Twoje wpisy będą nadal widoczne publicznie, w tym dla osób, które blokujesz. Zablokowani użytkownicy są wymienieni na ekranie filtrów bezpieczeństwa.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Zablokuj i ukryj użytkownika]]></string>
     <string name="report_dialog_report_btn">Zgłoś nadużycie</string>
     <string name="report_dialog_reminder_public">Wszystkie wysłane zgłoszenia będą publicznie dostępne.</string>
@@ -360,6 +360,7 @@
     <string name="delete_media_server">Usuń serwer multimediów</string>
     <string name="upload_server_relays_nip95">Twoje transmitery (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Pliki są przechowywane przez Twoje retransmitery. Nowy NIP: sprawdź, czy jest obsługiwany</string>
+    <string name="privacy_options">Ustawienia prywatności</string>
     <string name="connect_via_tor_short">Tor/Orbot - Ustawienia</string>
     <string name="connect_via_tor">Połącz przez swoją konfigurację Orbota</string>
     <string name="connect_via_tor1">Dostosuj</string>
@@ -506,6 +507,7 @@
     <string name="community_no_descriptor">Ta społeczność nie ma opisu. Porozmawiaj z właścicielem, aby go dodać</string>
     <string name="add_sensitive_content_label">Treść wrażliwa</string>
     <string name="add_sensitive_content_description">Dodaje ostrzeżenie o wrażliwej treści przed wyświetleniem tej zawartości</string>
+    <string name="preferences">Ustawienia Aplikacji</string>
     <string name="settings">Ustawienia</string>
     <string name="connectivity_type_always">Zawsze</string>
     <string name="connectivity_type_wifi_only">Tylko WiFi</string>
