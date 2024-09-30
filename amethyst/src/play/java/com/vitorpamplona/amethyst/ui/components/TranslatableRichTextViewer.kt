@@ -46,6 +46,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
@@ -230,7 +231,7 @@ private fun TranslationMessage(
         ) {
             DropdownMenuItem(
                 text = {
-                    Row {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         if (source in accountViewModel.account.settings.dontTranslateFrom) {
                             Icon(
                                 imageVector = Icons.Default.Check,
@@ -252,14 +253,14 @@ private fun TranslationMessage(
                     }
                 },
                 onClick = {
-                    accountViewModel.account.settings.addDontTranslateFrom(source)
+                    accountViewModel.account.settings.toggleDontTranslateFrom(source)
                     langSettingsPopupExpanded = false
                 },
             )
             HorizontalDivider(thickness = DividerThickness)
             DropdownMenuItem(
                 text = {
-                    Row {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         if (accountViewModel.account.settings.preferenceBetween(source, target) == source) {
                             Icon(
                                 imageVector = Icons.Default.Check,
@@ -289,7 +290,7 @@ private fun TranslationMessage(
             )
             DropdownMenuItem(
                 text = {
-                    Row {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         if (accountViewModel.account.settings.preferenceBetween(source, target) == target) {
                             Icon(
                                 imageVector = Icons.Default.Check,
@@ -324,7 +325,7 @@ private fun TranslationMessage(
                 languageList.get(i)?.let { lang ->
                     DropdownMenuItem(
                         text = {
-                            Row {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (accountViewModel.account.settings.translateToContains(lang)) {
                                     Icon(
                                         imageVector = Icons.Default.Check,

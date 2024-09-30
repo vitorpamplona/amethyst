@@ -259,9 +259,12 @@ class AccountSettings(
     // ---
     // language services
     // ---
-    fun addDontTranslateFrom(languageCode: String) {
+    fun toggleDontTranslateFrom(languageCode: String) {
         if (!dontTranslateFrom.contains(languageCode)) {
             dontTranslateFrom = dontTranslateFrom.plus(languageCode)
+            saveAccountSettings()
+        } else {
+            dontTranslateFrom = dontTranslateFrom.minus(languageCode)
             saveAccountSettings()
         }
     }
@@ -284,6 +287,12 @@ class AccountSettings(
         if (key !in languagePreferences) {
             languagePreferences = languagePreferences + Pair(key, preference)
             saveAccountSettings()
+        } else {
+            if (languagePreferences.get(key) == preference) {
+                languagePreferences = languagePreferences.minus(key)
+            } else {
+                languagePreferences = languagePreferences + Pair(key, preference)
+            }
         }
     }
 
