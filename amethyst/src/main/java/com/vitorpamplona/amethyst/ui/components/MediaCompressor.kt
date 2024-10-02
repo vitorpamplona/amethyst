@@ -160,7 +160,7 @@ class MediaCompressor {
         }
     }
 
-    fun from(
+    private fun from(
         uri: Uri?,
         contentType: String?,
         context: Context,
