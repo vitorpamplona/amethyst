@@ -167,8 +167,8 @@ class MediaCompressor {
 
         val inputStream = context.contentResolver.openInputStream(uri!!)
         val fileName: String = UUID.randomUUID().toString() + ".$extension"
-        val splitName: Array<String> = splitFileName(fileName)
-        val tempFile = File.createTempFile(splitName[0], splitName[1])
+        val (name, ext) = splitFileName(fileName)
+        val tempFile = File.createTempFile(name, ext)
         inputStream?.use { input ->
             FileOutputStream(tempFile).use { output ->
                 val buffer = ByteArray(1024 * 50)
@@ -183,15 +183,13 @@ class MediaCompressor {
         return tempFile
     }
 
-    private fun splitFileName(fileName: String): Array<String> {
-        var name = fileName
-        var extension = ""
+    private fun splitFileName(fileName: String): Pair<String, String> {
         val i = fileName.lastIndexOf(".")
-        if (i != -1) {
-            name = fileName.substring(0, i)
-            extension = fileName.substring(i)
+        return if (i != -1) {
+            fileName.substring(0, i) to fileName.substring(i)
+        } else {
+            fileName to ""
         }
-        return arrayOf(name, extension)
     }
 
     fun intToCompressorQuality(mediaQualityFloat: Int): CompressorQuality =
