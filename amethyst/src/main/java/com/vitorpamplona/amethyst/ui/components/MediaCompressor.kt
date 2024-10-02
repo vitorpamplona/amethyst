@@ -60,10 +60,12 @@ class MediaCompressor {
 
         // branch into compression based on content type
         when {
-            contentType?.startsWith("video", ignoreCase = true) == true
-            -> compressVideo(uri, contentType, applicationContext, onReady, onError, mediaQuality)
-            contentType?.startsWith("image", ignoreCase = true) == true && !contentType.contains("gif") && !contentType.contains("svg")
-            -> compressImage(uri, contentType, applicationContext, onReady, onError, mediaQuality)
+            contentType?.startsWith("video", ignoreCase = true) == true ->
+                compressVideo(uri, contentType, applicationContext, onReady, onError, mediaQuality)
+            contentType?.startsWith("image", ignoreCase = true) == true &&
+                !contentType.contains("gif") &&
+                !contentType.contains("svg") ->
+                compressImage(uri, contentType, applicationContext, onReady, onError, mediaQuality)
             else -> onReady(uri, contentType, null)
         }
     }
