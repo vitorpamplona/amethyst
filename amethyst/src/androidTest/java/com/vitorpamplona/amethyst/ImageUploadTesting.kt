@@ -52,6 +52,7 @@ class ImageUploadTesting {
             Nip96Retriever()
                 .loadInfo(
                     server.baseUrl,
+                    false,
                 )
 
         val bitmap = Bitmap.createBitmap(200, 300, Bitmap.Config.ARGB_8888)
@@ -80,6 +81,7 @@ class ImageUploadTesting {
                     alt = null,
                     sensitiveContent = null,
                     serverInfo,
+                    forceProxy = { false },
                     onProgress = {},
                     context = InstrumentationRegistry.getInstrumentation().targetContext,
                 )
@@ -106,7 +108,7 @@ class ImageUploadTesting {
         Assert.assertTrue("${server.name}: Invalid result url", url.startsWith("http"))
 
         val imageData: ByteArray =
-            ImageDownloader().waitAndGetImage(url)
+            ImageDownloader().waitAndGetImage(url, false)
                 ?: run {
                     fail("${server.name}: Should not be null")
                     return

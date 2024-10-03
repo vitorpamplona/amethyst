@@ -46,7 +46,7 @@ class OkHttpOtsTest {
 
     @Before
     fun setup() {
-        OtsEvent.otsInstance = OpenTimestamps(OkHttpBlockstreamExplorer(), OkHttpCalendarBuilder())
+        OtsEvent.otsInstance = OpenTimestamps(OkHttpBlockstreamExplorer(forceProxy = { false }), OkHttpCalendarBuilder(forceProxy = { false }))
     }
 
     @Test
