@@ -38,6 +38,8 @@ import id.zelory.compressor.constraint.default
 import kotlinx.coroutines.CancellationException
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
+import java.io.OutputStream
 import java.util.UUID
 
 class MediaCompressor {
@@ -169,7 +171,7 @@ class MediaCompressor {
 
         try {
             Log.d("MediaCompressor", "Using image compression $mediaQuality")
-            val tempFile = from(uri, contentType, context)
+            val tempFile = from(uri, context)
             val compressedImageFile =
                 Compressor.compress(context, tempFile) {
                     default(width = 640, format = Bitmap.CompressFormat.JPEG, quality = imageQuality)
@@ -185,28 +187,30 @@ class MediaCompressor {
     }
 
     private fun from(
-        uri: Uri?,
-        contentType: String?,
+        uri: Uri,
         context: Context,
     ): File {
-        val extension = contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
-
-        val inputStream = context.contentResolver.openInputStream(uri!!)
-        val fileName: String = UUID.randomUUID().toString() + ".$extension"
+        val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(context.contentResolver.getType(uri)) ?: ""
+        val inputStream = context.contentResolver.openInputStream(uri)!!
+        val fileName = UUID.randomUUID().toString() + ".$extension"
         val (name, ext) = splitFileName(fileName)
         val tempFile = File.createTempFile(name, ext)
-        inputStream?.use { input ->
-            FileOutputStream(tempFile).use { output ->
-                val buffer = ByteArray(1024 * 50)
-                var read: Int = input.read(buffer)
-                while (read != -1) {
-                    output.write(buffer, 0, read)
-                    read = input.read(buffer)
-                }
-            }
-        }
+
+        copyStream(inputStream, FileOutputStream(tempFile))
 
         return tempFile
+    }
+
+    private fun copyStream(
+        input: InputStream,
+        output: OutputStream,
+    ) {
+        val buffer = ByteArray(1024 * 50)
+        var read = input.read(buffer)
+        while (read != -1) {
+            output.write(buffer, 0, read)
+            read = input.read(buffer)
+        }
     }
 
     private fun splitFileName(fileName: String): Pair<String, String> {
