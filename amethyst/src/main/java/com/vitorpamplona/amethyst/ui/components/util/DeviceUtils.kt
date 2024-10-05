@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.components.util
 import android.app.Activity
 import android.content.Context
 import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
+import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.window.core.layout.WindowHeightSizeClass
@@ -38,6 +40,31 @@ object DeviceUtils {
      */
     fun isLandscapeMetric(context: Context): Boolean = context.resources.displayMetrics.heightPixels < context.resources.displayMetrics.widthPixels
 
+    /**
+     * Checks if the device's orientation is set to locked.
+     *
+     * Credits: NewPipe devs
+     */
+    fun screenOrientationIsLocked(context: Context): Boolean {
+        // 1: Screen orientation changes using accelerometer
+        // 0: Screen orientation is locked
+        // if the accelerometer sensor is missing completely, assume locked orientation
+        return (
+            Settings.System.getInt(
+                context.contentResolver,
+                Settings.System.ACCELEROMETER_ROTATION,
+                0,
+            ) == 0 ||
+                !context.packageManager.hasSystemFeature(PackageManager.FEATURE_SENSOR_ACCELEROMETER)
+        )
+    }
+
+    /**
+     * Changes the device's orientation. This works even if the device's orientation
+     * is set to locked.
+     * Thus, to prevent unwanted behaviour,
+     * it's use can be guarded by conditions such as [screenOrientationIsLocked].
+     */
     fun changeDeviceOrientation(
         isInLandscape: Boolean,
         currentActivity: Activity,
