@@ -360,6 +360,7 @@
     <string name="delete_media_server">Supprimer le serveur média</string>
     <string name="upload_server_relays_nip95">Vos relais (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Les fichiers sont hébergés par vos relais. Nouveau NIP: vérifiez s\'ils sont supportés</string>
+    <string name="privacy_options">Options de confidentialité</string>
     <string name="connect_via_tor_short">Configuration Tor/Orbot</string>
     <string name="connect_via_tor">Se connecter à travers la configuration Orbot</string>
     <string name="connect_via_tor1">Ajuster</string>
@@ -506,6 +507,7 @@
     <string name="community_no_descriptor">Cette communauté n\'a pas de description. Parlez au propriétaire pour en ajouter une</string>
     <string name="add_sensitive_content_label">Contenu sensible</string>
     <string name="add_sensitive_content_description">Ajouter un avertissement de contenu sensible avant de montrer ce contenu</string>
+    <string name="preferences">Préférences de l\'application</string>
     <string name="settings">Paramètres</string>
     <string name="connectivity_type_always">Toujours</string>
     <string name="connectivity_type_wifi_only">Wifi uniquement</string>
@@ -765,7 +767,7 @@
     <string name="dm_relays_regular">Utilisation des relais réguliers</string>
     <string name="dm_relays_not_found">Configurer vos relais de messagerie privée</string>
     <string name="dm_relays_not_found_description">Ce paramètre informe tout le monde les relais à utiliser pour vous envoyer des messages. Sans eux, vous risquez de manquer certains messages.</string>
-    <string name="dm_relays_not_found_examples">Les bonnes options sont:\n - inbox.nostr.wine (payant)\n - you.nostr1.com (relais personnels - payant)</string>
+    <string name="dm_relays_not_found_examples">Les bonnes options sont:\n - inbox.nostr.wine (payant)\n - auth.nostr1.com (gratuit)\n - you.nostr1.com (relais personnels - payant)</string>
     <string name="dm_relays_not_found_editing">Insérez entre 1-3 relais pour utiliser de boîte de réception privée. Les relais de boîte de réception MP doivent accepter les messages de tout le monde, mais ne vous permet que de les télécharger.</string>
     <string name="dm_relays_not_found_create_now">Configurer maintenant</string>
     <string name="search_relays_title">Relais de recherche</string>
@@ -779,7 +781,7 @@
     <string name="public_notif_section">Relais de messagerie publique</string>
     <string name="public_notif_section_explainer">Ce type de relais reçoit toutes les réponses, commentaires, likes et zaps de vos messages. Insérez de 1 à 3 relais et assurez-vous qu\'ils acceptent les messages de n\'importe qui.</string>
     <string name="private_inbox_section">Relais de la boîte de réception MP</string>
-    <string name="private_inbox_section_explainer">Insérez de 1 à 3 relais pour servir de boîte de réception privée. Les autres utilisateurs utiliseront ces relais pour vous envoyer des MPs. Les relais de la boîte de réception MP doivent accepter tout message de tout le monde, mais ne vous permet que de les télécharger. De bonnes options sont:\n - inbox.nostr.wine (payant)\n - you.nostr1.com (relais personnels - payant)</string>
+    <string name="private_inbox_section_explainer">Insérez de 1 à 3 relais pour servir de boîte de réception privée. Les autres utilisateurs utiliseront ces relais pour vous envoyer des MPs. Les relais de la boîte de réception MP doivent accepter tout message de tout le monde, mais ne vous permet que de les télécharger. De bonnes options sont:\n - inbox.nostr.wine (payant)\n - auth.nostr1.com (gratuit)\n - you.nostr1.com (relais personnels - payant)</string>
     <string name="private_outbox_section">Relais privés</string>
     <string name="private_outbox_section_explainer">Insérez entre 1 et 3 relais pour stocker des événements que personne d\'autre ne peut voir, comme vos Brouillons et/ou paramètres d\'application. Idéalement, ces relais sont soit locaux soit nécessitent une authentification avant de télécharger le contenu de chaque utilisateur.</string>
     <string name="kind_3_section">Relais généraux</string>

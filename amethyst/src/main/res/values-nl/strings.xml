@@ -360,6 +360,7 @@
     <string name="delete_media_server">Mediaserver verwijderen</string>
     <string name="upload_server_relays_nip95">Uw relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Bestanden worden geüpload naar en gehost door relays. Ze zijn vrij van een vaste url (afhankelijkheid van derden). Zorg ervoor dat u een NIP-95 relay in uw lijst met relays hebt.</string>
+    <string name="privacy_options">Privacyopties</string>
     <string name="connect_via_tor_short">Orbot/Tor setup</string>
     <string name="connect_via_tor">Verbinden via Orbot setup</string>
     <string name="connect_via_tor1">Aanpassen</string>
@@ -506,6 +507,7 @@
     <string name="community_no_descriptor">Deze community heeft geen beschrijving. Praat met de eigenaar om er een toe te voegen</string>
     <string name="add_sensitive_content_label">Gevoelige content</string>
     <string name="add_sensitive_content_description">Voegt waarschuwing voor gevoelige content toe voordat deze content wordt weergegeven</string>
+    <string name="preferences">App-voorkeuren</string>
     <string name="settings">Instellingen</string>
     <string name="connectivity_type_always">Altijd</string>
     <string name="connectivity_type_wifi_only">Alleen wifi</string>
