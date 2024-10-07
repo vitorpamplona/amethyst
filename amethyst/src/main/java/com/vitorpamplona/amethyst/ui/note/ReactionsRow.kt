@@ -89,6 +89,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
@@ -1329,6 +1330,7 @@ fun ReactionChoicePopup(
         alignment = Alignment.BottomCenter,
         offset = IntOffset(0, iconSizePx),
         onDismissRequest = { onDismiss() },
+        properties = PopupProperties(focusable = true),
     ) {
         ReactionChoicePopupContent(
             reactions,
@@ -1507,6 +1509,7 @@ fun ZapAmountChoicePopup(
         alignment = Alignment.BottomCenter,
         offset = IntOffset(0, yOffset),
         onDismissRequest = { onDismiss() },
+        properties = PopupProperties(focusable = true),
     ) {
         FlowRow(horizontalArrangement = Arrangement.Center) {
             zapAmountChoices.forEach { amountInSats ->
