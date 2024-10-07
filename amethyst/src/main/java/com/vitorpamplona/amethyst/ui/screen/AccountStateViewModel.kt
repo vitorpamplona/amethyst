@@ -109,7 +109,12 @@ class AccountStateViewModel : ViewModel() {
                 is Nip19Bech32.NEmbed -> null
                 is Nip19Bech32.NRelay -> null
                 is Nip19Bech32.NAddress -> null
-                else -> null
+                else ->
+                    try {
+                        if (loginWithExternalSigner) Hex.decode(key) else null
+                    } catch (e: Exception) {
+                        null
+                    }
             }
 
         if (loginWithExternalSigner && pubKeyParsed == null) {
