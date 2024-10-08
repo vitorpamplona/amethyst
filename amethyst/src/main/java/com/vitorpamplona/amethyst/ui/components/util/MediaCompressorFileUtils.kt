@@ -35,7 +35,8 @@ object MediaCompressorFileUtils {
         context: Context,
     ): File {
         val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(context.contentResolver.getType(uri)) ?: ""
-        val tempFile = File.createTempFile(UUID.randomUUID().toString(), extension)
+        val suffix = if (extension.isNotEmpty()) ".$extension" else ""
+        val tempFile = File.createTempFile(UUID.randomUUID().toString(), suffix)
 
         context.contentResolver.openInputStream(uri)?.use { inputStream ->
             FileOutputStream(tempFile).use { outputStream ->
