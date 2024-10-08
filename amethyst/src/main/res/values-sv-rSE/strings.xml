@@ -517,6 +517,7 @@
     <string name="light">Ljus</string>
     <string name="dark">Mörk</string>
     <string name="application_preferences">Applikationsinställningar</string>
+    <string name="wallet_connect">Plånboksanslut</string>
     <string name="language">Språk</string>
     <string name="theme">Tema</string>
     <string name="automatically_load_images_gifs">Ladda automatiskt bilder/gif</string>
