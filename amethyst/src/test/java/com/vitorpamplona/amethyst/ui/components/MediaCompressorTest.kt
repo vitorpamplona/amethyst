@@ -84,6 +84,29 @@ class MediaCompressorTest {
         }
 
     @Test
+    fun `Unknown media type should be skipped`() =
+        runTest {
+            // setup
+            val mediaQuality = CompressorQuality.MEDIUM
+            val uri = mockk<Uri>()
+            val contentType = "test"
+
+            // Execution
+            MediaCompressor().compress(
+                uri,
+                contentType,
+                applicationContext = mockk(),
+                onReady = { _, _, _ -> },
+                onError = { },
+                mediaQuality = mediaQuality,
+            )
+
+            // Verify
+            verify(exactly = 0) { VideoCompressor.start(any(), any(), any(), any(), any(), any(), any()) }
+            coVerify(exactly = 0) { Compressor.compress(any(), any(), any(), any()) }
+        }
+
+    @Test
     fun `Video media should invoke video compressor`() =
         runTest {
             // setup
@@ -107,7 +130,6 @@ class MediaCompressorTest {
             verify(exactly = 1) { VideoCompressor.start(any(), any(), any(), any(), any(), any(), any()) }
         }
 
-    // @Ignore("Bug in mockk https://github.com/mockk/mockk/issues/944")
     @Test
     fun `Image media should invoke image compressor`() =
         runTest {
