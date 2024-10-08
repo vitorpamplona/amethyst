@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.feeds
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.pager.PagerState
@@ -115,20 +114,35 @@ fun rememberForeverLazyListState(
     return scrollState
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun rememberForeverPagerState(
     key: String,
     initialFirstVisibleItemIndex: Int = 0,
     initialFirstVisibleItemScrollOffset: Float = 0.0f,
     pageCount: () -> Int,
+): PagerState =
+    rememberForeverPagerState(key, initialFirstVisibleItemIndex, initialFirstVisibleItemScrollOffset, pageCount) { initialPage, initialPageOffsetFraction, pageCount ->
+        rememberPagerState(initialPage, initialPageOffsetFraction, pageCount)
+    }
+
+@Composable
+fun rememberForeverPagerState(
+    key: String,
+    initialFirstVisibleItemIndex: Int = 0,
+    initialFirstVisibleItemScrollOffset: Float = 0.0f,
+    pageCount: () -> Int,
+    rememberPagerStateFunction: @Composable (
+        initialPage: Int,
+        initialPageOffsetFraction: Float,
+        pageCount: () -> Int,
+    ) -> PagerState,
 ): PagerState {
     val savedValue = savedScrollStates[key]
     val savedIndex = savedValue?.index ?: initialFirstVisibleItemIndex
     val savedOffset = savedValue?.scrollOffsetFraction ?: initialFirstVisibleItemScrollOffset
 
     val scrollState =
-        rememberPagerState(
+        rememberPagerStateFunction(
             savedIndex,
             savedOffset,
             pageCount,
