@@ -610,6 +610,7 @@
     <string name="light">Light</string>
     <string name="dark">Dark</string>
     <string name="application_preferences">Application Preferences</string>
+    <string name="wallet_connect">Wallet Connect</string>
     <string name="language">Language</string>
     <string name="theme">Theme</string>
     <string name="automatically_load_images_gifs">Image Preview</string>

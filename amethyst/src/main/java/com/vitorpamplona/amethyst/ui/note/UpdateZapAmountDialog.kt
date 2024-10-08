@@ -31,7 +31,6 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -221,14 +220,64 @@ fun UpdateZapAmountDialog(
     nip47uri: String? = null,
     accountViewModel: AccountViewModel,
 ) {
+    Dialog(
+        onDismissRequest = { onClose() },
+        properties =
+            DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnClickOutside = false,
+                decorFitsSystemWindows = false,
+            ),
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column {
+                val postViewModel: UpdateZapAmountViewModel =
+                    viewModel(
+                        key = "UpdateZapAmountViewModel",
+                        factory = UpdateZapAmountViewModel.Factory(accountViewModel.account.settings),
+                    )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CloseButton(
+                        onPress = {
+                            postViewModel.cancel()
+                            onClose()
+                        },
+                    )
+
+                    SaveButton(
+                        onPost = {
+                            postViewModel.sendPost()
+                            onClose()
+                        },
+                        isActive = postViewModel.hasChanged(),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                UpdateZapAmountContent(postViewModel, onClose, nip47uri, accountViewModel)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun UpdateZapAmountContent(
+    postViewModel: UpdateZapAmountViewModel,
+    onClose: () -> Unit,
+    nip47uri: String? = null,
+    accountViewModel: AccountViewModel,
+) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
-
-    val postViewModel: UpdateZapAmountViewModel =
-        viewModel(
-            key = "UpdateZapAmountViewModel",
-            factory = UpdateZapAmountViewModel.Factory(accountViewModel.account.settings),
-        )
 
     val uri = LocalUriHandler.current
 
@@ -282,336 +331,294 @@ fun UpdateZapAmountDialog(
         }
     }
 
-    Dialog(
-        onDismissRequest = { onClose() },
-        properties =
-            DialogProperties(
-                usePlatformDefaultWidth = false,
-                dismissOnClickOutside = false,
-                decorFitsSystemWindows = false,
-            ),
+    Column(
+        modifier =
+            Modifier
+                .padding(10.dp)
+                .fillMaxWidth()
+                .imePadding()
+                .verticalScroll(rememberScrollState()),
     ) {
-        Surface(
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
         ) {
-            Column(modifier = Modifier.padding(10.dp).imePadding()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+            postViewModel.amountSet.forEach { amountInSats ->
+                Button(
+                    modifier = Modifier.padding(horizontal = 3.dp),
+                    shape = ButtonBorder,
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                        ),
+                    onClick = { postViewModel.removeAmount(amountInSats) },
                 ) {
-                    CloseButton(
-                        onPress = {
-                            postViewModel.cancel()
-                            onClose()
-                        },
-                    )
-
-                    SaveButton(
-                        onPost = {
-                            postViewModel.sendPost()
-                            onClose()
-                        },
-                        isActive = postViewModel.hasChanged(),
+                    Text(
+                        "⚡ ${
+                            showAmount(
+                                amountInSats.toBigDecimal().setScale(1),
+                            )
+                        } ✖",
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
                     )
                 }
+            }
+        }
 
-                Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(
-                        modifier = Modifier.verticalScroll(rememberScrollState()),
-                    ) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.animateContentSize()) {
-                                FlowRow(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.Center,
-                                ) {
-                                    postViewModel.amountSet.forEach { amountInSats ->
-                                        Button(
-                                            modifier = Modifier.padding(horizontal = 3.dp),
-                                            shape = ButtonBorder,
-                                            colors =
-                                                ButtonDefaults.buttonColors(
-                                                    containerColor = MaterialTheme.colorScheme.primary,
-                                                ),
-                                            onClick = { postViewModel.removeAmount(amountInSats) },
-                                        ) {
-                                            Text(
-                                                "⚡ ${
-                                                    showAmount(
-                                                        amountInSats.toBigDecimal().setScale(1),
-                                                    )
-                                                } ✖",
-                                                color = Color.White,
-                                                textAlign = TextAlign.Center,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                label = { Text(text = stringRes(R.string.new_amount_in_sats)) },
+                value = postViewModel.nextAmount,
+                onValueChange = { postViewModel.nextAmount = it },
+                keyboardOptions =
+                    KeyboardOptions.Default.copy(
+                        capitalization = KeyboardCapitalization.None,
+                        keyboardType = KeyboardType.Number,
+                    ),
+                placeholder = {
+                    Text(
+                        text = "100, 1000, 5000",
+                        color = MaterialTheme.colorScheme.placeholderText,
+                    )
+                },
+                singleLine = true,
+                modifier = Modifier.padding(end = 10.dp).weight(1f),
+            )
 
-                        Spacer(modifier = Modifier.height(10.dp))
+            Button(
+                onClick = { postViewModel.addAmount() },
+                shape = ButtonBorder,
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                    ),
+            ) {
+                Text(text = stringRes(R.string.add), color = Color.White)
+            }
+        }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            OutlinedTextField(
-                                label = { Text(text = stringRes(R.string.new_amount_in_sats)) },
-                                value = postViewModel.nextAmount,
-                                onValueChange = { postViewModel.nextAmount = it },
-                                keyboardOptions =
-                                    KeyboardOptions.Default.copy(
-                                        capitalization = KeyboardCapitalization.None,
-                                        keyboardType = KeyboardType.Number,
-                                    ),
-                                placeholder = {
-                                    Text(
-                                        text = "100, 1000, 5000",
-                                        color = MaterialTheme.colorScheme.placeholderText,
-                                    )
-                                },
-                                singleLine = true,
-                                modifier = Modifier.padding(end = 10.dp).weight(1f),
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextSpinner(
+                label = stringRes(id = R.string.zap_type_explainer),
+                placeholder =
+                    zapTypes.filter { it.first == accountViewModel.defaultZapType() }.first().second,
+                options = zapOptions,
+                onSelect = { postViewModel.selectedZapType = zapTypes[it].first },
+                modifier = Modifier.weight(1f).padding(end = 5.dp),
+            )
+        }
+
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 10.dp),
+            thickness = DividerThickness,
+        )
+
+        var qrScanning by remember { mutableStateOf(false) }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringRes(id = R.string.wallet_connect_service),
+                Modifier.weight(1f),
+            )
+
+            IconButton(
+                onClick = {
+                    onClose()
+                    runCatching { uri.openUri("https://nwc.getalby.com/apps/new?c=Amethyst") }
+                },
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.alby),
+                    contentDescription = stringRes(id = R.string.accessibility_navigate_to_alby),
+                    modifier = Modifier.size(24.dp),
+                    tint = Color.Unspecified,
+                )
+            }
+
+            IconButton(
+                onClick = {
+                    clipboardManager.getText()?.let { postViewModel.copyFromClipboard(it.text) }
+                },
+            ) {
+                Icon(
+                    Icons.Outlined.ContentPaste,
+                    contentDescription = stringRes(id = R.string.paste_from_clipboard),
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            IconButton(onClick = { qrScanning = true }) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_qrcode),
+                    contentDescription = stringRes(id = R.string.accessibility_scan_qr_code),
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringRes(id = R.string.wallet_connect_service_explainer),
+                Modifier.weight(1f),
+                color = MaterialTheme.colorScheme.placeholderText,
+                fontSize = Font14SP,
+            )
+        }
+
+        if (qrScanning) {
+            SimpleQrCodeScanner {
+                qrScanning = false
+                if (!it.isNullOrEmpty()) {
+                    try {
+                        postViewModel.updateNIP47(it)
+                    } catch (e: IllegalArgumentException) {
+                        if (e.message != null) {
+                            accountViewModel.toast(
+                                stringRes(context, R.string.error_parsing_nip47_title),
+                                stringRes(context, R.string.error_parsing_nip47, it, e.message!!),
                             )
-
-                            Button(
-                                onClick = { postViewModel.addAmount() },
-                                shape = ButtonBorder,
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                    ),
-                            ) {
-                                Text(text = stringRes(R.string.add), color = Color.White)
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            TextSpinner(
-                                label = stringRes(id = R.string.zap_type_explainer),
-                                placeholder =
-                                    zapTypes.filter { it.first == accountViewModel.defaultZapType() }.first().second,
-                                options = zapOptions,
-                                onSelect = { postViewModel.selectedZapType = zapTypes[it].first },
-                                modifier = Modifier.weight(1f).padding(end = 5.dp),
-                            )
-                        }
-
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 10.dp),
-                            thickness = DividerThickness,
-                        )
-
-                        var qrScanning by remember { mutableStateOf(false) }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                stringRes(id = R.string.wallet_connect_service),
-                                Modifier.weight(1f),
-                            )
-
-                            IconButton(
-                                onClick = {
-                                    onClose()
-                                    runCatching { uri.openUri("https://nwc.getalby.com/apps/new?c=Amethyst") }
-                                },
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.alby),
-                                    contentDescription = stringRes(id = R.string.accessibility_navigate_to_alby),
-                                    modifier = Modifier.size(24.dp),
-                                    tint = Color.Unspecified,
-                                )
-                            }
-
-                            IconButton(
-                                onClick = {
-                                    clipboardManager.getText()?.let { postViewModel.copyFromClipboard(it.text) }
-                                },
-                            ) {
-                                Icon(
-                                    Icons.Outlined.ContentPaste,
-                                    contentDescription = stringRes(id = R.string.paste_from_clipboard),
-                                    modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
-                            }
-
-                            IconButton(onClick = { qrScanning = true }) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_qrcode),
-                                    contentDescription = stringRes(id = R.string.accessibility_scan_qr_code),
-                                    modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                stringRes(id = R.string.wallet_connect_service_explainer),
-                                Modifier.weight(1f),
-                                color = MaterialTheme.colorScheme.placeholderText,
-                                fontSize = Font14SP,
-                            )
-                        }
-
-                        if (qrScanning) {
-                            SimpleQrCodeScanner {
-                                qrScanning = false
-                                if (!it.isNullOrEmpty()) {
-                                    try {
-                                        postViewModel.updateNIP47(it)
-                                    } catch (e: IllegalArgumentException) {
-                                        if (e.message != null) {
-                                            accountViewModel.toast(
-                                                stringRes(context, R.string.error_parsing_nip47_title),
-                                                stringRes(context, R.string.error_parsing_nip47, it, e.message!!),
-                                            )
-                                        } else {
-                                            accountViewModel.toast(
-                                                stringRes(context, R.string.error_parsing_nip47_title),
-                                                stringRes(context, R.string.error_parsing_nip47_no_error, it),
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            OutlinedTextField(
-                                label = { Text(text = stringRes(R.string.wallet_connect_service_pubkey)) },
-                                value = postViewModel.walletConnectPubkey,
-                                onValueChange = { postViewModel.walletConnectPubkey = it },
-                                keyboardOptions =
-                                    KeyboardOptions.Default.copy(
-                                        capitalization = KeyboardCapitalization.None,
-                                    ),
-                                placeholder = {
-                                    Text(
-                                        text = "npub, hex",
-                                        color = MaterialTheme.colorScheme.placeholderText,
-                                    )
-                                },
-                                singleLine = true,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            OutlinedTextField(
-                                label = { Text(text = stringRes(R.string.wallet_connect_service_relay)) },
-                                modifier = Modifier.weight(1f),
-                                value = postViewModel.walletConnectRelay,
-                                onValueChange = { postViewModel.walletConnectRelay = it },
-                                placeholder = {
-                                    Text(
-                                        text = "wss://relay.server.com",
-                                        color = MaterialTheme.colorScheme.placeholderText,
-                                        maxLines = 1,
-                                    )
-                                },
-                                singleLine = true,
-                            )
-                        }
-
-                        var showPassword by remember { mutableStateOf(false) }
-
-                        val context = LocalContext.current
-
-                        val keyguardLauncher =
-                            rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
-                                if (result.resultCode == Activity.RESULT_OK) {
-                                    showPassword = true
-                                }
-                            }
-
-                        val authTitle = stringRes(id = R.string.wallet_connect_service_show_secret)
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            OutlinedTextField(
-                                label = { Text(text = stringRes(R.string.wallet_connect_service_secret)) },
-                                modifier = Modifier.weight(1f),
-                                value = postViewModel.walletConnectSecret,
-                                onValueChange = { postViewModel.walletConnectSecret = it },
-                                keyboardOptions =
-                                    KeyboardOptions(
-                                        autoCorrect = false,
-                                        keyboardType = KeyboardType.Password,
-                                        imeAction = ImeAction.Go,
-                                    ),
-                                placeholder = {
-                                    Text(
-                                        text = stringRes(R.string.wallet_connect_service_secret_placeholder),
-                                        color = MaterialTheme.colorScheme.placeholderText,
-                                    )
-                                },
-                                trailingIcon = {
-                                    IconButton(
-                                        onClick = {
-                                            if (!showPassword) {
-                                                authenticate(
-                                                    title = authTitle,
-                                                    context = context,
-                                                    keyguardLauncher = keyguardLauncher,
-                                                    onApproved = { showPassword = true },
-                                                    onError = { title, message -> accountViewModel.toast(title, message) },
-                                                )
-                                            } else {
-                                                showPassword = false
-                                            }
-                                        },
-                                    ) {
-                                        Icon(
-                                            imageVector =
-                                                if (showPassword) {
-                                                    Icons.Outlined.VisibilityOff
-                                                } else {
-                                                    Icons.Outlined.Visibility
-                                                },
-                                            contentDescription =
-                                                if (showPassword) {
-                                                    stringRes(R.string.show_password)
-                                                } else {
-                                                    stringRes(
-                                                        R.string.hide_password,
-                                                    )
-                                                },
-                                        )
-                                    }
-                                },
-                                visualTransformation =
-                                    if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                        } else {
+                            accountViewModel.toast(
+                                stringRes(context, R.string.error_parsing_nip47_title),
+                                stringRes(context, R.string.error_parsing_nip47_no_error, it),
                             )
                         }
                     }
                 }
             }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                label = { Text(text = stringRes(R.string.wallet_connect_service_pubkey)) },
+                value = postViewModel.walletConnectPubkey,
+                onValueChange = { postViewModel.walletConnectPubkey = it },
+                keyboardOptions =
+                    KeyboardOptions.Default.copy(
+                        capitalization = KeyboardCapitalization.None,
+                    ),
+                placeholder = {
+                    Text(
+                        text = "npub, hex",
+                        color = MaterialTheme.colorScheme.placeholderText,
+                    )
+                },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                label = { Text(text = stringRes(R.string.wallet_connect_service_relay)) },
+                modifier = Modifier.weight(1f),
+                value = postViewModel.walletConnectRelay,
+                onValueChange = { postViewModel.walletConnectRelay = it },
+                placeholder = {
+                    Text(
+                        text = "wss://relay.server.com",
+                        color = MaterialTheme.colorScheme.placeholderText,
+                        maxLines = 1,
+                    )
+                },
+                singleLine = true,
+            )
+        }
+
+        var showPassword by remember { mutableStateOf(false) }
+
+        val context = LocalContext.current
+
+        val keyguardLauncher =
+            rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+                if (result.resultCode == Activity.RESULT_OK) {
+                    showPassword = true
+                }
+            }
+
+        val authTitle = stringRes(id = R.string.wallet_connect_service_show_secret)
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                label = { Text(text = stringRes(R.string.wallet_connect_service_secret)) },
+                modifier = Modifier.weight(1f),
+                value = postViewModel.walletConnectSecret,
+                onValueChange = { postViewModel.walletConnectSecret = it },
+                keyboardOptions =
+                    KeyboardOptions(
+                        autoCorrect = false,
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Go,
+                    ),
+                placeholder = {
+                    Text(
+                        text = stringRes(R.string.wallet_connect_service_secret_placeholder),
+                        color = MaterialTheme.colorScheme.placeholderText,
+                    )
+                },
+                trailingIcon = {
+                    IconButton(
+                        onClick = {
+                            if (!showPassword) {
+                                authenticate(
+                                    title = authTitle,
+                                    context = context,
+                                    keyguardLauncher = keyguardLauncher,
+                                    onApproved = { showPassword = true },
+                                    onError = { title, message -> accountViewModel.toast(title, message) },
+                                )
+                            } else {
+                                showPassword = false
+                            }
+                        },
+                    ) {
+                        Icon(
+                            imageVector =
+                                if (showPassword) {
+                                    Icons.Outlined.VisibilityOff
+                                } else {
+                                    Icons.Outlined.Visibility
+                                },
+                            contentDescription =
+                                if (showPassword) {
+                                    stringRes(R.string.show_password)
+                                } else {
+                                    stringRes(
+                                        R.string.hide_password,
+                                    )
+                                },
+                        )
+                    }
+                },
+                visualTransformation =
+                    if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+            )
         }
     }
 }

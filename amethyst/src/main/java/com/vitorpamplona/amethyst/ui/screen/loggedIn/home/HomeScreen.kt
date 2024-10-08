@@ -63,7 +63,6 @@ import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -78,10 +77,7 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
-    nip47: String? = null,
 ) {
-    ResolveNIP47(nip47, accountViewModel)
-
     HomeScreen(
         newThreadsFeedState = accountViewModel.feedStates.homeNewThreads,
         repliesFeedState = accountViewModel.feedStates.homeReplies,
@@ -140,18 +136,6 @@ private fun AssembleHomeTabs(
 }
 
 @Composable
-fun ResolveNIP47(
-    nip47: String?,
-    accountViewModel: AccountViewModel,
-) {
-    var wantsToAddNip47 by remember(nip47) { mutableStateOf(nip47) }
-
-    if (wantsToAddNip47 != null) {
-        UpdateZapAmountDialog({ wantsToAddNip47 = null }, wantsToAddNip47, accountViewModel)
-    }
-}
-
-@Composable
 private fun WatchLifeCycleChanges(accountViewModel: AccountViewModel) {
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifeCycleOwner) {
@@ -169,7 +153,6 @@ private fun WatchLifeCycleChanges(accountViewModel: AccountViewModel) {
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 private fun HomePages(
     pagerState: PagerState,
     tabs: ImmutableList<TabItem>,

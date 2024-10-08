@@ -324,7 +324,7 @@ fun uriToRoute(uri: String?): String? =
                 uri?.let {
                     Nip47WalletConnect.parse(it)
                     val encodedUri = URLEncoder.encode(it, StandardCharsets.UTF_8.toString())
-                    Route.Home.base + "?nip47=" + encodedUri
+                    Route.NIP47Setup.base + "?nip47=" + encodedUri
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
