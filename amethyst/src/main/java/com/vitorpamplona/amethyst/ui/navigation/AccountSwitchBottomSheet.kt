@@ -47,7 +47,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -55,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.forEach
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,14 +82,6 @@ fun AccountSwitchBottomSheet(
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel,
 ) {
-    @Suppress("ProduceStateDoesNotAssignValue")
-    val accounts by
-        produceState(initialValue = LocalPreferences.cachedAccounts()) {
-            if (value == null) {
-                value = LocalPreferences.allSavedAccounts()
-            }
-        }
-
     var popupExpanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
@@ -103,7 +96,7 @@ fun AccountSwitchBottomSheet(
         ) {
             Text(stringRes(R.string.account_switch_select_account), fontWeight = FontWeight.Bold)
         }
-        accounts?.forEach { acc -> DisplayAccount(acc, accountViewModel, accountStateViewModel) }
+        DisplayAllAccounts(accountViewModel, accountStateViewModel)
         Row(
             modifier =
                 Modifier
@@ -124,12 +117,21 @@ fun AccountSwitchBottomSheet(
 }
 
 @Composable
+private fun DisplayAllAccounts(
+    accountViewModel: AccountViewModel,
+    accountStateViewModel: AccountStateViewModel,
+) {
+    val accounts by LocalPreferences.accountsFlow().collectAsStateWithLifecycle()
+    accounts?.forEach { acc -> DisplayAccount(acc, accountViewModel, accountStateViewModel) }
+}
+
+@Composable
 fun DisplayAccount(
     acc: AccountInfo,
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel,
 ) {
-    var baseUser by remember {
+    var baseUser by remember(acc) {
         mutableStateOf<User?>(
             decodePublicKeyAsHexOrNull(acc.npub)?.let {
                 LocalCache.getUserIfExists(it)

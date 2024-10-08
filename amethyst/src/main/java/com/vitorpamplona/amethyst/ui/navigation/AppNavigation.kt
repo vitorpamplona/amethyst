@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SecurityFiltersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
@@ -100,24 +101,7 @@ fun AppNavigation(
             enterTransition = { fadeIn(animationSpec = tween(200)) },
             exitTransition = { fadeOut(animationSpec = tween(200)) },
         ) {
-            composable(
-                Route.Home.route,
-                Route.Home.arguments,
-            ) {
-                val nip47 = it.arguments?.getString("nip47")
-
-                HomeScreen(accountViewModel, nav, nip47)
-
-                if (nip47 != null) {
-                    LaunchedEffect(key1 = Unit) {
-                        launch {
-                            delay(1000)
-                            it.arguments?.remove("nip47")
-                        }
-                    }
-                }
-            }
-
+            composable(Route.Home.route) { HomeScreen(accountViewModel, nav) }
             composable(Route.Message.route) { ChatroomListScreen(accountViewModel, nav) }
             composable(Route.Video.route) { VideoScreen(accountViewModel, nav) }
             composable(Route.Discover.route) { DiscoverScreen(accountViewModel, nav) }
@@ -281,6 +265,19 @@ fun AppNavigation(
                     accountViewModel,
                     nav,
                 )
+            }
+
+            composable(
+                Route.NIP47Setup.route,
+                Route.NIP47Setup.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) {
+                val nip47 = it.arguments?.getString("nip47")
+
+                NIP47SetupScreen(accountViewModel, nav, nip47)
             }
         }
     }
