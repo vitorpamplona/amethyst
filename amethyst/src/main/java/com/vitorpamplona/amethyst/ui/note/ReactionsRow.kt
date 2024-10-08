@@ -24,8 +24,10 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -147,6 +149,7 @@ import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -1326,24 +1329,52 @@ fun ReactionChoicePopup(
         .collectAsStateWithLifecycle()
     val toRemove = remember { baseNote.reactedBy(accountViewModel.userProfile()).toImmutableSet() }
 
+    // Define animation specs
+    val animationDuration = 250
+    val fadeAnimationSpec = tween<Float>(durationMillis = animationDuration)
+
+    // Prevent multiple calls to onDismiss()
+    var dismissed by remember { mutableStateOf(false) }
+
+    val visibilityState = remember { MutableTransitionState(false).apply { targetState = true } }
+    LaunchedEffect(visibilityState.targetState) {
+        if (!visibilityState.targetState && !dismissed) {
+            delay(animationDuration.toLong())
+            dismissed = true
+            onDismiss()
+        }
+    }
+
     Popup(
         alignment = Alignment.BottomCenter,
         offset = IntOffset(0, iconSizePx),
-        onDismissRequest = { onDismiss() },
+        onDismissRequest = { visibilityState.targetState = false },
         properties = PopupProperties(focusable = true),
     ) {
-        ReactionChoicePopupContent(
-            reactions,
-            toRemove = toRemove,
-            onClick = { reactionType ->
-                accountViewModel.reactToOrDelete(
-                    baseNote,
-                    reactionType,
-                )
-                onDismiss()
-            },
-            onChangeAmount,
-        )
+        AnimatedVisibility(
+            visibleState = visibilityState,
+            enter =
+                slideInVertically(
+                    initialOffsetY = { it / 2 },
+                ) + fadeIn(animationSpec = fadeAnimationSpec),
+            exit =
+                slideOutVertically(
+                    targetOffsetY = { it / 2 },
+                ) + fadeOut(animationSpec = fadeAnimationSpec),
+        ) {
+            ReactionChoicePopupContent(
+                reactions,
+                toRemove = toRemove,
+                onClick = { reactionType ->
+                    accountViewModel.reactToOrDelete(
+                        baseNote,
+                        reactionType,
+                    )
+                    visibilityState.targetState = false
+                },
+                onChangeAmount,
+            )
+        }
     }
 }
 
@@ -1505,59 +1536,87 @@ fun ZapAmountChoicePopup(
 
     val yOffset = with(LocalDensity.current) { -popupYOffset.toPx().toInt() }
 
+    // Define animation specs
+    val animationDuration = 250
+    val fadeAnimationSpec = tween<Float>(durationMillis = animationDuration)
+
+    // Prevent multiple calls to onDismiss()
+    var dismissed by remember { mutableStateOf(false) }
+
+    val visibilityState = remember { MutableTransitionState(false).apply { targetState = true } }
+    LaunchedEffect(visibilityState.targetState) {
+        if (!visibilityState.targetState && !dismissed) {
+            delay(animationDuration.toLong())
+            dismissed = true
+            onDismiss()
+        }
+    }
+
     Popup(
         alignment = Alignment.BottomCenter,
         offset = IntOffset(0, yOffset),
-        onDismissRequest = { onDismiss() },
+        onDismissRequest = { visibilityState.targetState = false },
         properties = PopupProperties(focusable = true),
     ) {
-        FlowRow(horizontalArrangement = Arrangement.Center) {
-            zapAmountChoices.forEach { amountInSats ->
-                Button(
-                    modifier = Modifier.padding(horizontal = 3.dp),
-                    onClick = {
-                        accountViewModel.zap(
-                            baseNote,
-                            amountInSats * 1000,
-                            null,
-                            zapMessage,
-                            context,
-                            true,
-                            onError,
-                            onProgress,
-                            onPayViaIntent,
-                        )
-                        onDismiss()
-                    },
-                    shape = ButtonBorder,
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        ),
-                ) {
-                    Text(
-                        "⚡ ${showAmount(amountInSats.toBigDecimal().setScale(1))}",
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        modifier =
-                            Modifier.combinedClickable(
-                                onClick = {
-                                    accountViewModel.zap(
-                                        baseNote,
-                                        amountInSats * 1000,
-                                        null,
-                                        zapMessage,
-                                        context,
-                                        true,
-                                        onError,
-                                        onProgress,
-                                        onPayViaIntent,
-                                    )
-                                    onDismiss()
-                                },
-                                onLongClick = { onChangeAmount() },
+        AnimatedVisibility(
+            visibleState = visibilityState,
+            enter =
+                slideInVertically(
+                    initialOffsetY = { it / 2 },
+                ) + fadeIn(animationSpec = fadeAnimationSpec),
+            exit =
+                slideOutVertically(
+                    targetOffsetY = { it / 2 },
+                ) + fadeOut(animationSpec = fadeAnimationSpec),
+        ) {
+            FlowRow(horizontalArrangement = Arrangement.Center) {
+                zapAmountChoices.forEach { amountInSats ->
+                    Button(
+                        modifier = Modifier.padding(horizontal = 3.dp),
+                        onClick = {
+                            accountViewModel.zap(
+                                baseNote,
+                                amountInSats * 1000,
+                                null,
+                                zapMessage,
+                                context,
+                                true,
+                                onError,
+                                onProgress,
+                                onPayViaIntent,
+                            )
+                            visibilityState.targetState = false
+                        },
+                        shape = ButtonBorder,
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
                             ),
-                    )
+                    ) {
+                        Text(
+                            "⚡ ${showAmount(amountInSats.toBigDecimal().setScale(1))}",
+                            color = Color.White,
+                            textAlign = TextAlign.Center,
+                            modifier =
+                                Modifier.combinedClickable(
+                                    onClick = {
+                                        accountViewModel.zap(
+                                            baseNote,
+                                            amountInSats * 1000,
+                                            null,
+                                            zapMessage,
+                                            context,
+                                            true,
+                                            onError,
+                                            onProgress,
+                                            onPayViaIntent,
+                                        )
+                                        visibilityState.targetState = false
+                                    },
+                                    onLongClick = { onChangeAmount() },
+                                ),
+                        )
+                    }
                 }
             }
         }
