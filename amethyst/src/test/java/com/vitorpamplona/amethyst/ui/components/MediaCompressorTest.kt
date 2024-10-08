@@ -23,19 +23,21 @@ package com.vitorpamplona.amethyst.ui.components
 import android.net.Uri
 import android.os.Looper
 import com.abedelazizshe.lightcompressorlibrary.VideoCompressor
+import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import id.zelory.compressor.Compressor
 import io.mockk.MockKAnnotations
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkClass
+import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import java.io.File
 
@@ -43,9 +45,8 @@ class MediaCompressorTest {
     @Before
     fun setUp() {
         // Mock compressors
-        mockkStatic(android.content.Context::class)
         mockkStatic(VideoCompressor::class)
-        mockkStatic(Compressor::class)
+        mockkObject(Compressor)
 
         // mock out main thread check
         mockkStatic(Looper::class)
@@ -79,6 +80,7 @@ class MediaCompressorTest {
 
             // Verify
             verify(exactly = 0) { VideoCompressor.start(any(), any(), any(), any(), any(), any(), any()) }
+            coVerify(exactly = 0) { Compressor.compress(any(), any(), any(), any()) }
         }
 
     @Test
@@ -105,8 +107,8 @@ class MediaCompressorTest {
             verify(exactly = 1) { VideoCompressor.start(any(), any(), any(), any(), any(), any(), any()) }
         }
 
+    // @Ignore("Bug in mockk https://github.com/mockk/mockk/issues/944")
     @Test
-    @Ignore("Bug in mockk https://github.com/mockk/mockk/issues/944")
     fun `Image media should invoke image compressor`() =
         runTest {
             // setup
@@ -114,19 +116,21 @@ class MediaCompressorTest {
             val uri = mockk<Uri>()
             val contentType = "image"
 
+            mockkObject(MediaCompressorFileUtils)
+            every { MediaCompressorFileUtils.from(any(), any()) } returns File("test")
             coEvery { Compressor.compress(any(), any(), any(), any()) } returns File("test")
 
             // Execution
             MediaCompressor().compress(
                 uri,
                 contentType,
-                applicationContext = mockk(),
+                applicationContext = mockkClass(android.content.Context::class, relaxed = true),
                 onReady = { _, _, _ -> },
                 onError = { },
                 mediaQuality = mediaQuality,
             )
 
             // Verify
-            coVerify(exactly = 0) { Compressor.compress(any(), any(), any(), any()) }
+            coVerify(exactly = 1) { Compressor.compress(any(), any(), any(), any()) }
         }
 }

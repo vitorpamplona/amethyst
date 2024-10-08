@@ -24,7 +24,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
-import android.webkit.MimeTypeMap
 import androidx.core.net.toUri
 import com.abedelazizshe.lightcompressorlibrary.CompressionListener
 import com.abedelazizshe.lightcompressorlibrary.VideoCompressor
@@ -33,13 +32,11 @@ import com.abedelazizshe.lightcompressorlibrary.config.AppSpecificStorageConfigu
 import com.abedelazizshe.lightcompressorlibrary.config.Configuration
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import id.zelory.compressor.Compressor
 import id.zelory.compressor.constraint.default
 import kotlinx.coroutines.CancellationException
 import java.io.File
-import java.io.FileOutputStream
-import java.io.InputStream
-import java.io.OutputStream
 import java.util.UUID
 
 class MediaCompressor {
@@ -171,7 +168,7 @@ class MediaCompressor {
 
         try {
             Log.d("MediaCompressor", "Using image compression $mediaQuality")
-            val tempFile = from(uri, context)
+            val tempFile = MediaCompressorFileUtils.from(uri, context)
             val compressedImageFile =
                 Compressor.compress(context, tempFile) {
                     default(width = 640, format = Bitmap.CompressFormat.JPEG, quality = imageQuality)
@@ -183,42 +180,6 @@ class MediaCompressor {
             if (e is CancellationException) throw e
             e.printStackTrace()
             onReady(uri, contentType, null)
-        }
-    }
-
-    private fun from(
-        uri: Uri,
-        context: Context,
-    ): File {
-        val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(context.contentResolver.getType(uri)) ?: ""
-        val inputStream = context.contentResolver.openInputStream(uri)!!
-        val fileName = UUID.randomUUID().toString() + ".$extension"
-        val (name, ext) = splitFileName(fileName)
-        val tempFile = File.createTempFile(name, ext)
-
-        copyStream(inputStream, FileOutputStream(tempFile))
-
-        return tempFile
-    }
-
-    private fun copyStream(
-        input: InputStream,
-        output: OutputStream,
-    ) {
-        val buffer = ByteArray(1024 * 50)
-        var read = input.read(buffer)
-        while (read != -1) {
-            output.write(buffer, 0, read)
-            read = input.read(buffer)
-        }
-    }
-
-    private fun splitFileName(fileName: String): Pair<String, String> {
-        val i = fileName.lastIndexOf(".")
-        return if (i != -1) {
-            fileName.substring(0, i) to fileName.substring(i)
-        } else {
-            fileName to ""
         }
     }
 

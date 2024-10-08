@@ -1,0 +1,68 @@
+/**
+ * Copyright (c) 2024 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.components.util
+
+import android.content.Context
+import android.net.Uri
+import android.webkit.MimeTypeMap
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
+import java.io.OutputStream
+import java.util.UUID
+
+object MediaCompressorFileUtils {
+    fun from(
+        uri: Uri,
+        context: Context,
+    ): File {
+        val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(context.contentResolver.getType(uri)) ?: ""
+        val inputStream = context.contentResolver.openInputStream(uri)!!
+        val fileName = UUID.randomUUID().toString() + ".$extension"
+        val (name, ext) = splitFileName(fileName)
+        val tempFile = File.createTempFile(name, ext)
+
+        copyStream(inputStream, FileOutputStream(tempFile))
+
+        return tempFile
+    }
+
+    private fun copyStream(
+        input: InputStream,
+        output: OutputStream,
+    ) {
+        val buffer = ByteArray(1024 * 50)
+        var read = input.read(buffer)
+        while (read != -1) {
+            output.write(buffer, 0, read)
+            read = input.read(buffer)
+        }
+    }
+
+    private fun splitFileName(fileName: String): Pair<String, String> {
+        val i = fileName.lastIndexOf(".")
+        return if (i != -1) {
+            fileName.substring(0, i) to fileName.substring(i)
+        } else {
+            fileName to ""
+        }
+    }
+}
