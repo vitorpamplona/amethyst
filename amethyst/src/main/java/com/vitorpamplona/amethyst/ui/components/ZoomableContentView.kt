@@ -161,9 +161,9 @@ fun ZoomableContentView(
                         nostrUriCallback = content.uri,
                         onDialog = {
                             dialogOpen = true
-                            if (!isFoldableOrLarge && !isOrientationLocked) {
-                                DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
-                            }
+                            // if (!isFoldableOrLarge && !isOrientationLocked) {
+                            //    DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
+                            // }
                         },
                         accountViewModel = accountViewModel,
                     )
@@ -201,7 +201,7 @@ fun ZoomableContentView(
             images,
             onDismiss = {
                 dialogOpen = false
-                if (!isFoldableOrLarge && !isOrientationLocked) DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
+                // if (!isFoldableOrLarge && !isOrientationLocked) DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
             },
             accountViewModel,
         )
