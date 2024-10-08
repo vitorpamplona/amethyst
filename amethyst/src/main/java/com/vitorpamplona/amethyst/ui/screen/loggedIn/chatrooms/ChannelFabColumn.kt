@@ -20,6 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -38,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -76,45 +83,55 @@ fun ChannelFabColumn(
     }
 
     Column {
-        if (isOpen) {
-            FloatingActionButton(
-                onClick = {
-                    wantsToSendNewMessage = true
-                    isOpen = false
-                },
-                modifier = Size55Modifier,
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-            ) {
-                Text(
-                    text = stringRes(R.string.messages_new_message),
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                    fontSize = Font12SP,
-                )
+        AnimatedVisibility(
+            visible = isOpen,
+            enter = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut(),
+        ) {
+            Column {
+                FloatingActionButton(
+                    onClick = {
+                        wantsToSendNewMessage = true
+                        isOpen = false
+                    },
+                    modifier = Size55Modifier,
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ) {
+                    Text(
+                        text = stringRes(R.string.messages_new_message),
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        fontSize = Font12SP,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                FloatingActionButton(
+                    onClick = {
+                        wantsToCreateChannel = true
+                        isOpen = false
+                    },
+                    modifier = Size55Modifier,
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ) {
+                    Text(
+                        text = stringRes(R.string.messages_create_public_chat),
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        fontSize = Font12SP,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            FloatingActionButton(
-                onClick = {
-                    wantsToCreateChannel = true
-                    isOpen = false
-                },
-                modifier = Size55Modifier,
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-            ) {
-                Text(
-                    text = stringRes(R.string.messages_create_public_chat),
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                    fontSize = Font12SP,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
         }
+
+        val rotationDegree by animateFloatAsState(
+            targetValue = if (isOpen) 45f else 0f,
+        )
 
         FloatingActionButton(
             onClick = { isOpen = !isOpen },
@@ -125,7 +142,10 @@ fun ChannelFabColumn(
             Icon(
                 imageVector = Icons.Outlined.Add,
                 contentDescription = stringRes(R.string.messages_create_public_private_chat_description),
-                modifier = Modifier.size(26.dp),
+                modifier =
+                    Modifier.size(26.dp).graphicsLayer {
+                        rotationZ = rotationDegree
+                    },
                 tint = Color.White,
             )
         }

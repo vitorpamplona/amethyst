@@ -25,7 +25,12 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +41,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -186,44 +192,51 @@ fun NewImageButton(
         ShowProgress(postViewModel)
     } else {
         Column {
-            if (isOpen) {
-                FloatingActionButton(
-                    onClick = {
-                        wantsToPostFromCamera = true
-                        isOpen = false
-                    },
-                    modifier = Size55Modifier,
-                    shape = CircleShape,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CameraAlt,
-                        contentDescription = stringRes(id = R.string.upload_image),
-                        modifier = Modifier.size(26.dp),
-                        tint = Color.White,
-                    )
+//            if (isOpen) {
+            AnimatedVisibility(
+                visible = isOpen,
+                enter = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut(),
+            ) {
+                Column {
+                    FloatingActionButton(
+                        onClick = {
+                            wantsToPostFromCamera = true
+                            isOpen = false
+                        },
+                        modifier = Size55Modifier,
+                        shape = CircleShape,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = stringRes(id = R.string.upload_image),
+                            modifier = Modifier.size(26.dp),
+                            tint = Color.White,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    FloatingActionButton(
+                        onClick = {
+                            wantsToPostFromGallery = true
+                            isOpen = false
+                        },
+                        modifier = Size55Modifier,
+                        shape = CircleShape,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AddPhotoAlternate,
+                            contentDescription = stringRes(id = R.string.upload_image),
+                            modifier = Modifier.size(26.dp),
+                            tint = Color.White,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
                 }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                FloatingActionButton(
-                    onClick = {
-                        wantsToPostFromGallery = true
-                        isOpen = false
-                    },
-                    modifier = Size55Modifier,
-                    shape = CircleShape,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AddPhotoAlternate,
-                        contentDescription = stringRes(id = R.string.upload_image),
-                        modifier = Modifier.size(26.dp),
-                        tint = Color.White,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
             }
 
             FloatingActionButton(
@@ -234,12 +247,31 @@ fun NewImageButton(
                 shape = CircleShape,
                 containerColor = MaterialTheme.colorScheme.primary,
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_compose),
-                    contentDescription = stringRes(id = R.string.new_short),
-                    modifier = Modifier.size(26.dp),
-                    tint = Color.White,
-                )
+                AnimatedVisibility(
+                    visible = isOpen,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = stringRes(id = R.string.new_short),
+                        modifier = Modifier.size(26.dp),
+                        tint = Color.White,
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = !isOpen,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_compose),
+                        contentDescription = stringRes(id = R.string.new_short),
+                        modifier = Modifier.size(26.dp),
+                        tint = Color.White,
+                    )
+                }
             }
         }
     }
