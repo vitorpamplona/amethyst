@@ -49,12 +49,7 @@ object MediaCompressorFileUtils {
         input: InputStream,
         output: OutputStream,
     ) {
-        val buffer = ByteArray(1024 * 50)
-        var read = input.read(buffer)
-        while (read != -1) {
-            output.write(buffer, 0, read)
-            read = input.read(buffer)
-        }
+        input.copyTo(output, bufferSize = 1024 * 50)
     }
 
     private fun splitFileName(fileName: String): Pair<String, String> {
