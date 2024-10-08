@@ -277,8 +277,6 @@ fun AppNavigation(
             ) {
                 val nip47 = it.arguments?.getString("nip47")
 
-                println("AABBCC NavHost Home $nip47")
-
                 NIP47SetupScreen(accountViewModel, nav, nip47)
             }
         }
@@ -296,8 +294,6 @@ private fun NavigateIfIntentRequested(
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel,
 ) {
-    println("AABBCC NavigateIfIntentRequested")
-
     val activity = LocalContext.current.getActivity()
     var newAccount by remember { mutableStateOf<String?>(null) }
 
@@ -316,7 +312,6 @@ private fun NavigateIfIntentRequested(
         }
 
         LaunchedEffect(intentNextPage) {
-            println("AABBCC NavigateIfIntentRequested LaunchedEffect(intentNextPage)")
             if (actionableNextPage != null) {
                 actionableNextPage?.let {
                     val currentRoute = getRouteWithArguments(nav.controller)
@@ -349,8 +344,6 @@ private fun NavigateIfIntentRequested(
     DisposableEffect(nav, activity) {
         val consumer =
             Consumer<Intent> { intent ->
-                println("AABBCC NavigateIfIntentRequested DisposableEffect(nav, activity)")
-
                 val uri = intent.data?.toString()
                 if (!uri.isNullOrBlank()) {
                     // navigation functions
