@@ -518,6 +518,7 @@
     <string name="light">Claro</string>
     <string name="dark">Escuro</string>
     <string name="application_preferences">Preferências do aplicativo</string>
+    <string name="wallet_connect">Conectar Carteira</string>
     <string name="language">Linguagem</string>
     <string name="theme">Tema</string>
     <string name="automatically_load_images_gifs">Carregar imagens/gifs automaticamente</string>

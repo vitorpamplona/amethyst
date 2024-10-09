@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -73,7 +78,11 @@ fun SummaryBar(state: NotificationSummaryState) {
 
     UserReactionsRow(state) { showChart = !showChart }
 
-    if (showChart) {
+    AnimatedVisibility(
+        visible = showChart,
+        enter = slideInVertically() + expandVertically(),
+        exit = slideOutVertically() + shrinkVertically(),
+    ) {
         val lineChartCount =
             lineChart(
                 lines =

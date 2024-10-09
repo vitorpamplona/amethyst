@@ -518,6 +518,7 @@
     <string name="light">Světlý</string>
     <string name="dark">Tmavý</string>
     <string name="application_preferences">Předvolby aplikace</string>
+    <string name="wallet_connect">Připojení peněženky</string>
     <string name="language">Jazyk</string>
     <string name="theme">Motiv</string>
     <string name="automatically_load_images_gifs">Automaticky načítat obrázky/gif</string>

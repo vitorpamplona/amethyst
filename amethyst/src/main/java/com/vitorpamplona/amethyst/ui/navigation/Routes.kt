@@ -52,18 +52,10 @@ sealed class Route(
 ) {
     object Home :
         Route(
-            route = "Home?nip47={nip47}",
+            route = "Home",
             icon = R.drawable.ic_home,
             notifSize = Modifier.size(Size25dp),
             iconSize = Modifier.size(Size24dp),
-            arguments =
-                listOf(
-                    navArgument("nip47") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                    },
-                ).toImmutableList(),
             contentDescriptor = R.string.route_home,
         )
 
@@ -92,9 +84,6 @@ sealed class Route(
         Route(
             route = "Discover",
             icon = R.drawable.ic_sensors,
-            // hasNewItems = { accountViewModel, newNotes ->
-            //    DiscoverLatestItem.hasNewItems(accountViewModel, newNotes)
-            // },
             contentDescriptor = R.string.route_discover,
         )
 
@@ -223,6 +212,20 @@ sealed class Route(
         Route(
             route = "Settings",
             icon = R.drawable.ic_settings,
+        )
+
+    object NIP47Setup :
+        Route(
+            route = "NIP47Setup?nip47={nip47}",
+            icon = R.drawable.ic_home,
+            arguments =
+                listOf(
+                    navArgument("nip47") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ).toImmutableList(),
         )
 }
 

@@ -57,6 +57,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -74,7 +75,7 @@ data class AccountInfo(
     val npub: String,
     val hasPrivKey: Boolean,
     val loggedInWithExternalSigner: Boolean,
-    val isTransient: Boolean = false,
+    val isTransient: Boolean,
 )
 
 private object PrefKeys {
@@ -126,7 +127,7 @@ object LocalPreferences {
     private const val COMMA = ","
 
     private var currentAccount: String? = null
-    private var savedAccounts: List<AccountInfo>? = null
+    private var savedAccounts: MutableStateFlow<List<AccountInfo>?> = MutableStateFlow(null)
     private var cachedAccounts: MutableMap<String, AccountSettings?> = mutableMapOf()
 
     suspend fun currentAccount(): String? {
@@ -156,7 +157,7 @@ object LocalPreferences {
     }
 
     private suspend fun savedAccounts(): List<AccountInfo> {
-        if (savedAccounts == null) {
+        if (savedAccounts.value == null) {
             withContext(Dispatchers.IO) {
                 with(encryptedPreferences()) {
                     val newSystemOfAccounts =
@@ -165,7 +166,7 @@ object LocalPreferences {
                         }
 
                     if (!newSystemOfAccounts.isNullOrEmpty()) {
-                        savedAccounts = newSystemOfAccounts
+                        savedAccounts.emit(newSystemOfAccounts)
                     } else {
                         val oldAccounts = getString(PrefKeys.SAVED_ACCOUNTS, null)?.split(COMMA) ?: listOf()
 
@@ -174,27 +175,28 @@ object LocalPreferences {
                                 AccountInfo(
                                     npub,
                                     encryptedPreferences(npub).getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false),
-                                    (encryptedPreferences(npub).getString(PrefKeys.NOSTR_PRIVKEY, "") ?: "")
-                                        .isNotBlank(),
+                                    (encryptedPreferences(npub).getString(PrefKeys.NOSTR_PRIVKEY, "") ?: "").isNotBlank(),
+                                    false,
                                 )
                             }
 
-                        savedAccounts = migrated
+                        savedAccounts.emit(migrated)
 
-                        edit().apply { putString(PrefKeys.ALL_ACCOUNT_INFO, Event.mapper.writeValueAsString(savedAccounts)) }.apply()
+                        edit().apply { putString(PrefKeys.ALL_ACCOUNT_INFO, Event.mapper.writeValueAsString(savedAccounts.value)) }.apply()
                     }
                 }
             }
         }
-        return savedAccounts!!
+        // it's always not null when it gets here.
+        return savedAccounts.value!!
     }
 
-    fun cachedAccounts() = savedAccounts
+    fun accountsFlow() = savedAccounts
 
     private suspend fun updateSavedAccounts(accounts: List<AccountInfo>) =
         withContext(Dispatchers.IO) {
             if (savedAccounts != accounts) {
-                savedAccounts = accounts
+                savedAccounts.emit(accounts)
 
                 encryptedPreferences()
                     .edit()
@@ -269,7 +271,7 @@ object LocalPreferences {
      */
     @SuppressLint("ApplySharedPref")
     suspend fun updatePrefsForLogout(accountInfo: AccountInfo) {
-        Log.d("LocalPreferences", "Saving to encrypted storage updatePrefsForLogout")
+        Log.d("LocalPreferences", "Saving to encrypted storage updatePrefsForLogout ${accountInfo.npub}")
         withContext(Dispatchers.IO) {
             encryptedPreferences(accountInfo.npub).edit().clear().commit()
             removeAccount(accountInfo)

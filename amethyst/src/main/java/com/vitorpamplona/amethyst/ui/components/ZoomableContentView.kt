@@ -126,6 +126,7 @@ fun ZoomableContentView(
 
     val isLandscapeMode = DeviceUtils.isLandscapeMetric(LocalContext.current)
     val isFoldableOrLarge = DeviceUtils.windowIsLarge(windowSize = currentWindowSize, isInLandscapeMode = isLandscapeMode)
+    val isOrientationLocked = DeviceUtils.screenOrientationIsLocked(LocalContext.current)
 
     val contentScale =
         if (isFiniteHeight) {
@@ -160,7 +161,7 @@ fun ZoomableContentView(
                         nostrUriCallback = content.uri,
                         onDialog = {
                             dialogOpen = true
-                            // if (!isFoldableOrLarge) {
+                            // if (!isFoldableOrLarge && !isOrientationLocked) {
                             //    DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
                             // }
                         },
@@ -200,7 +201,7 @@ fun ZoomableContentView(
             images,
             onDismiss = {
                 dialogOpen = false
-                // if (!isFoldableOrLarge) DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
+                // if (!isFoldableOrLarge && !isOrientationLocked) DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
             },
             accountViewModel,
         )

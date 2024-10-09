@@ -27,6 +27,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.LocalPreferences.currentAccount
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.DefaultChannels
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
@@ -109,7 +110,12 @@ class AccountStateViewModel : ViewModel() {
                 is Nip19Bech32.NEmbed -> null
                 is Nip19Bech32.NRelay -> null
                 is Nip19Bech32.NAddress -> null
-                else -> null
+                else ->
+                    try {
+                        if (loginWithExternalSigner) Hex.decode(key) else null
+                    } catch (e: Exception) {
+                        null
+                    }
             }
 
         if (loginWithExternalSigner && pubKeyParsed == null) {
@@ -316,11 +322,30 @@ class AccountStateViewModel : ViewModel() {
         }
     }
 
+    fun currentAccount() =
+        when (val state = _accountContent.value) {
+            is AccountState.LoggedIn ->
+                state.accountSettings.keyPair.pubKey
+                    .toNpub()
+
+            is AccountState.LoggedInViewOnly ->
+                state.accountSettings.keyPair.pubKey
+                    .toNpub()
+
+            else -> null
+        }
+
     fun logOff(accountInfo: AccountInfo) {
         viewModelScope.launch(Dispatchers.IO) {
-            prepareLogoutOrSwitch()
-            LocalPreferences.updatePrefsForLogout(accountInfo)
-            tryLoginExistingAccount()
+            if (accountInfo.npub == currentAccount()) {
+                // log off and relogin with the 0 account
+                prepareLogoutOrSwitch()
+                LocalPreferences.updatePrefsForLogout(accountInfo)
+                tryLoginExistingAccount()
+            } else {
+                // delete without login off
+                LocalPreferences.updatePrefsForLogout(accountInfo)
+            }
         }
     }
 }
