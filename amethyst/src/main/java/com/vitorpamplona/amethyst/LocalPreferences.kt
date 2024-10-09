@@ -182,7 +182,7 @@ object LocalPreferences {
 
                         savedAccounts.emit(migrated)
 
-                        edit().apply { putString(PrefKeys.ALL_ACCOUNT_INFO, Event.mapper.writeValueAsString(savedAccounts)) }.apply()
+                        edit().apply { putString(PrefKeys.ALL_ACCOUNT_INFO, Event.mapper.writeValueAsString(savedAccounts.value)) }.apply()
                     }
                 }
             }
