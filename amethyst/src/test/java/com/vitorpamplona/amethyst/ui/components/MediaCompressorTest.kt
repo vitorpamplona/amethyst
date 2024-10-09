@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import android.content.Context
 import android.net.Uri
 import android.os.Looper
 import com.abedelazizshe.lightcompressorlibrary.VideoCompressor
@@ -30,7 +31,6 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkClass
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
@@ -146,7 +146,7 @@ class MediaCompressorTest {
             MediaCompressor().compress(
                 uri,
                 contentType,
-                applicationContext = mockkClass(android.content.Context::class, relaxed = true),
+                applicationContext = mockk<Context>(relaxed = true),
                 onReady = { _, _, _ -> },
                 onError = { },
                 mediaQuality = mediaQuality,
@@ -154,5 +154,31 @@ class MediaCompressorTest {
 
             // Verify
             coVerify(exactly = 1) { Compressor.compress(any(), any(), any(), any()) }
+        }
+
+    @Test
+    fun `Image compression should return back same uri on exception`() =
+        runTest {
+            // setup
+            val mockContext = mockk<Context>(relaxed = true)
+            val mockUri = mockk<Uri>()
+            val mockOnReady = mockk<(Uri, String?, Long?) -> Unit>(relaxed = true)
+
+            mockkObject(MediaCompressorFileUtils)
+            every { MediaCompressorFileUtils.from(any(), any()) } returns File("test")
+            coEvery { Compressor.compress(any(), any<File>(), any(), any()) } throws Exception("Compression error")
+
+            // Execute
+            MediaCompressor().compress(
+                uri = mockUri,
+                contentType = "image/jpeg",
+                applicationContext = mockContext,
+                onReady = mockOnReady,
+                onError = { },
+                mediaQuality = CompressorQuality.MEDIUM,
+            )
+
+            // Verify: onReady should be called with original uri, content type, and null size
+            verify { mockOnReady.invoke(mockUri, "image/jpeg", null) }
         }
 }
