@@ -45,6 +45,8 @@ import com.vitorpamplona.amethyst.model.LensSpecification
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.Patient
 import com.vitorpamplona.amethyst.model.Practitioner
+import com.vitorpamplona.amethyst.model.Prism
+import com.vitorpamplona.amethyst.model.Reference
 import com.vitorpamplona.amethyst.model.Resource
 import com.vitorpamplona.amethyst.model.VisionPrescription
 import com.vitorpamplona.amethyst.model.findReferenceInDb
@@ -58,10 +60,12 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FhirResourceEvent
 import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.DecimalFormat
 import java.text.NumberFormat
+import kotlin.math.abs
 
 @Preview
 @Composable
@@ -72,6 +76,97 @@ fun RenderEyeGlassesPrescriptionPreview() {
         ) as FhirResourceEvent
 
     RenderFhirResource(prescriptionEvent)
+}
+
+@Preview
+@Composable
+fun RenderEyeGlassesPrescription2Preview() {
+    val vision =
+        VisionPrescription(
+            id = "1",
+            status = null,
+            created = null,
+            patient = Reference(),
+            encounter = Reference(),
+            dateWritten = null,
+            prescriber = Reference(),
+            lensSpecification =
+                listOf(
+                    LensSpecification(
+                        product = "lens",
+                        eye = "right",
+                        sphere = -1.00,
+                        cylinder = -2.00,
+                        axis = 180.0,
+                        pd = 31.0,
+                        interAdd = 1.50,
+                        add = 1.75,
+                        prism = Prism(12.0, "down"),
+                        power = null,
+                        diameter = null,
+                        color = null,
+                        brand = null,
+                        note = null,
+                    ),
+                    LensSpecification(
+                        product = "lens",
+                        eye = "left",
+                        sphere = -1.00,
+                        cylinder = -2.00,
+                        axis = 180.0,
+                        pd = 31.0,
+                        interAdd = 1.50,
+                        add = 1.75,
+                        prism = Prism(12.0, "down"),
+                        power = null,
+                        diameter = null,
+                        color = null,
+                        brand = null,
+                        note = null,
+                    ),
+                    LensSpecification(
+                        product = "contacts",
+                        eye = "right",
+                        sphere = -1.00,
+                        cylinder = -2.00,
+                        axis = 180.0,
+                        pd = null,
+                        interAdd = null,
+                        add = null,
+                        prism = null,
+                        backCurve = 12.0,
+                        power = 1.2,
+                        diameter = 1.2,
+                        color = "blue",
+                        brand = "Blue Glasses",
+                        note = "note",
+                    ),
+                    LensSpecification(
+                        product = "contacts",
+                        eye = "left",
+                        sphere = -1.00,
+                        cylinder = -2.00,
+                        axis = 180.0,
+                        pd = null,
+                        interAdd = null,
+                        add = null,
+                        prism = null,
+                        backCurve = 12.0,
+                        power = 1.2,
+                        diameter = 1.2,
+                        color = "blue",
+                        brand = "Blue Glasses",
+                        note = "note",
+                    ),
+                ),
+        )
+
+    val db =
+        mapOf(
+            "1" to vision,
+        ).toImmutableMap()
+
+    RenderEyeGlassesPrescription(vision, db)
 }
 
 @Composable
@@ -99,7 +194,7 @@ fun RenderFhirResource(event: FhirResourceEvent) {
     state.baseResource?.let { resource ->
         when (resource) {
             is Bundle -> {
-                val vision = resource.entry.filterIsInstance(VisionPrescription::class.java)
+                val vision = resource.entry.filterIsInstance<VisionPrescription>()
 
                 vision.firstOrNull()?.let {
                     RenderEyeGlassesPrescription(it, state.localDb)
@@ -125,11 +220,25 @@ fun RenderEyeGlassesPrescription(
                 .fillMaxWidth()
                 .padding(horizontal = Size10dp),
     ) {
-        val rightEye = visionPrescription.lensSpecification.firstOrNull { it.eye == "right" }
-        val leftEye = visionPrescription.lensSpecification.firstOrNull { it.eye == "left" }
+        val glassesRightEye = visionPrescription.glassesRightEyes().firstOrNull()
+        val glassesLeftEye = visionPrescription.glassesLeftEyes().firstOrNull()
+
+        val contactsRightEye = visionPrescription.contactsRightEyes().firstOrNull()
+        val contactsLeftEye = visionPrescription.contactsLeftEyes().firstOrNull()
+
+        val isGlasses = glassesRightEye != null || glassesLeftEye != null
+        val isContacts = contactsRightEye != null || contactsLeftEye != null
 
         Text(
-            "Eyeglasses Prescription",
+            if (isGlasses && isContacts) {
+                "Vision Prescription"
+            } else if (isGlasses) {
+                "Glasses Prescription"
+            } else if (isContacts) {
+                "Contact Lenses Prescription"
+            } else {
+                "Empty Prescription"
+            },
             modifier = Modifier.padding(4.dp).fillMaxWidth(),
             textAlign = TextAlign.Center,
         )
@@ -155,17 +264,36 @@ fun RenderEyeGlassesPrescription(
 
         Spacer(DoubleVertSpacer)
 
-        RenderEyeGlassesPrescriptionHeaderRow()
-        HorizontalDivider(thickness = DividerThickness)
-
-        rightEye?.let {
-            RenderEyeGlassesPrescriptionRow(data = it)
+        if (isGlasses) {
+            RenderEyeGlassesPrescriptionHeaderRow()
             HorizontalDivider(thickness = DividerThickness)
+
+            glassesRightEye?.let {
+                RenderEyeGlassesPrescriptionRow(data = it)
+                HorizontalDivider(thickness = DividerThickness)
+            }
+
+            glassesLeftEye?.let {
+                RenderEyeGlassesPrescriptionRow(data = it)
+                HorizontalDivider(thickness = DividerThickness)
+            }
         }
 
-        leftEye?.let {
-            RenderEyeGlassesPrescriptionRow(data = it)
+        Spacer(DoubleVertSpacer)
+
+        if (isContacts) {
+            RenderEyeContactsPrescriptionHeaderRow()
             HorizontalDivider(thickness = DividerThickness)
+
+            contactsRightEye?.let {
+                RenderEyeContactsPrescriptionRow(data = it)
+                HorizontalDivider(thickness = DividerThickness)
+            }
+
+            contactsLeftEye?.let {
+                RenderEyeContactsPrescriptionRow(data = it)
+                HorizontalDivider(thickness = DividerThickness)
+            }
         }
 
         visionPrescription.prescriber?.reference?.let {
@@ -211,7 +339,7 @@ fun RenderEyeGlassesPrescriptionHeaderRow() {
         )
         VerticalDivider(thickness = DividerThickness)
         Text(
-            text = "Add",
+            text = "PD",
             textAlign = TextAlign.Right,
             modifier = Modifier.padding(4.dp).weight(1f),
         )
@@ -220,14 +348,15 @@ fun RenderEyeGlassesPrescriptionHeaderRow() {
 
 @Composable
 fun RenderEyeGlassesPrescriptionRow(data: LensSpecification) {
+    val numberFormat = DecimalFormat("##.00")
+    val pdFormat = DecimalFormat("##.0")
+    val integerFormat = DecimalFormat("###")
+
     Row(
         modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val numberFormat = DecimalFormat("##.00")
-        val integerFormat = DecimalFormat("###")
-
         Text(
             text = data.eye?.capitalize() ?: "Unknown",
             modifier = Modifier.padding(4.dp).weight(1f),
@@ -250,10 +379,240 @@ fun RenderEyeGlassesPrescriptionRow(data: LensSpecification) {
         )
         VerticalDivider(thickness = DividerThickness)
         Text(
-            text = formatOrBlank(data.add, numberFormat),
+            text = formatOrBlank(data.pd, pdFormat),
             textAlign = TextAlign.Right,
             modifier = Modifier.padding(4.dp).weight(1f),
         )
+    }
+
+    if (data.interAdd != null) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "",
+                modifier = Modifier.padding(4.dp).weight(1f),
+            )
+            VerticalDivider(thickness = DividerThickness)
+
+            if (data.interAdd != null) {
+                Text(
+                    text = "Inter Add:",
+                    textAlign = TextAlign.Right,
+                    modifier = Modifier.padding(4.dp).weight(2f),
+                )
+
+                Text(
+                    text = formatOrBlank(data.interAdd, numberFormat),
+                    textAlign = TextAlign.Right,
+                    modifier = Modifier.padding(4.dp).weight(2f),
+                )
+            }
+        }
+    }
+
+    if (data.add != null) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "",
+                modifier = Modifier.padding(4.dp).weight(1f),
+            )
+            VerticalDivider(thickness = DividerThickness)
+
+            if (data.add != null) {
+                Text(
+                    text = "Add:",
+                    textAlign = TextAlign.Right,
+                    modifier = Modifier.padding(4.dp).weight(2f),
+                )
+
+                Text(
+                    text = formatOrBlank(data.add, numberFormat),
+                    textAlign = TextAlign.Right,
+                    modifier = Modifier.padding(4.dp).weight(2f),
+                )
+            }
+        }
+    }
+
+    if (data.prism?.amount != null || data.prism?.base != null) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "",
+                modifier = Modifier.padding(4.dp).weight(1f),
+            )
+            VerticalDivider(thickness = DividerThickness)
+
+            Text(
+                text = "Prism:",
+                textAlign = TextAlign.Right,
+                modifier = Modifier.padding(4.dp).weight(2f),
+            )
+
+            Text(
+                text = formatOrBlank(data.prism?.amount, numberFormat),
+                textAlign = TextAlign.Right,
+                modifier = Modifier.padding(4.dp).weight(1f),
+            )
+
+            Text(
+                text = data.prism?.base ?: "",
+                textAlign = TextAlign.Right,
+                modifier = Modifier.padding(4.dp).weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+fun RenderEyeContactsPrescriptionHeaderRow() {
+    Row(
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = "Eye",
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        VerticalDivider(thickness = DividerThickness)
+        Text(
+            text = "Sph",
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        Text(
+            text = "Cyl",
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        Text(
+            text = "Axis",
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+    }
+}
+
+@Composable
+fun RenderEyeContactsPrescriptionRow(data: LensSpecification) {
+    val numberFormat = DecimalFormat("##.00")
+    val integerFormat = DecimalFormat("###")
+
+    Row(
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = data.eye?.capitalize() ?: "Unknown",
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        VerticalDivider(thickness = DividerThickness)
+        Text(
+            text = formatOrBlank(data.sphere, numberFormat),
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        Text(
+            text = formatOrBlank(data.cylinder, numberFormat),
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+        Text(
+            text = formatOrBlank(data.axis, integerFormat),
+            textAlign = TextAlign.Right,
+            modifier = Modifier.padding(4.dp).weight(1f),
+        )
+    }
+
+    if (data.backCurve != null || data.diameter != null) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "",
+                textAlign = TextAlign.Right,
+                modifier = Modifier.padding(4.dp).weight(1f),
+            )
+            VerticalDivider(thickness = DividerThickness)
+            Text(
+                text = "",
+                textAlign = TextAlign.Right,
+                modifier = Modifier.padding(4.dp).weight(1f),
+            )
+            Text(
+                text = "Curve:",
+                textAlign = TextAlign.Right,
+                modifier = Modifier.padding(4.dp).weight(1f),
+            )
+            Text(
+                text = formatOrBlank(data.backCurve, numberFormat),
+                textAlign = TextAlign.Right,
+                modifier = Modifier.padding(4.dp).weight(1f),
+            )
+        }
+    }
+
+    if (data.backCurve != null || data.diameter != null) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "",
+                textAlign = TextAlign.Right,
+                modifier = Modifier.padding(4.dp).weight(1f),
+            )
+            VerticalDivider(thickness = DividerThickness)
+            Text(
+                text = "",
+                textAlign = TextAlign.Right,
+                modifier = Modifier.padding(4.dp).weight(1f),
+            )
+            Text(
+                text = "Diameter:",
+                textAlign = TextAlign.Right,
+                modifier = Modifier.padding(4.dp).weight(1f),
+            )
+            Text(
+                text = formatOrBlank(data.diameter, numberFormat),
+                textAlign = TextAlign.Right,
+                modifier = Modifier.padding(4.dp).weight(1f),
+            )
+        }
+    }
+
+    if (data.brand != null) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "",
+                textAlign = TextAlign.Right,
+                modifier = Modifier.padding(4.dp).weight(1f),
+            )
+            VerticalDivider(thickness = DividerThickness)
+            Text(
+                text = data.brand ?: "",
+                textAlign = TextAlign.Right,
+                modifier = Modifier.padding(4.dp).weight(3f),
+            )
+        }
     }
 }
 
@@ -262,6 +621,6 @@ fun formatOrBlank(
     numberFormat: NumberFormat,
 ): String {
     if (amount == null) return ""
-    if (Math.abs(amount) < 0.01) return ""
+    if (abs(amount) < 0.01) return ""
     return numberFormat.format(amount)
 }

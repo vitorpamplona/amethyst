@@ -94,16 +94,31 @@ class VisionPrescription(
     var dateWritten: String? = null,
     var prescriber: Reference? = Reference(),
     var lensSpecification: List<LensSpecification> = arrayListOf(),
-) : Resource(resourceType, id)
+) : Resource(resourceType, id) {
+    fun glasses() = lensSpecification.filter { it.product == "lens" }
+
+    fun contacts() = lensSpecification.filter { it.product == "contacts" }
+
+    fun glassesRightEyes() = lensSpecification.filter { it.product == "lens" && it.eye == "right" }
+
+    fun glassesLeftEyes() = lensSpecification.filter { it.product == "lens" && it.eye == "left" }
+
+    fun contactsRightEyes() = lensSpecification.filter { it.product == "contacts" && it.eye == "right" }
+
+    fun contactsLeftEyes() = lensSpecification.filter { it.product == "contacts" && it.eye == "left" }
+}
 
 @Stable
 class LensSpecification(
+    var product: String? = null,
     var eye: String? = null,
     var sphere: Double? = null,
     var cylinder: Double? = null,
     var axis: Double? = null,
+    var pd: Double? = null,
+    var interAdd: Double? = null,
     var add: Double? = null,
-    var prism: List<Prism> = arrayListOf(),
+    var prism: Prism? = null,
     // contact lenses
     var power: Double? = null,
     var backCurve: Double? = null,
