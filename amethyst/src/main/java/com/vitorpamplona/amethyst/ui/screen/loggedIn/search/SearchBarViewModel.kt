@@ -74,8 +74,13 @@ class SearchBarViewModel(
         _searchResultsUsers.emit(
             LocalCache
                 .findUsersStartingWith(searchValue)
-                .sortedWith(compareBy({ account.isFollowing(it) }, { it.toBestDisplayName() }))
-                .reversed(),
+                .sortedWith(
+                    compareBy(
+                        { it.toBestDisplayName().startsWith(searchValue, true) },
+                        { account.isFollowing(it) },
+                        { it.toBestDisplayName() },
+                    ),
+                ).reversed(),
         )
         _searchResultsNotes.emit(
             LocalCache
