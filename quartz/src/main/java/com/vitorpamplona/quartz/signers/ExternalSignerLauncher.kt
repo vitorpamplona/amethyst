@@ -58,6 +58,7 @@ class Permission(
 class Result(
     @JsonProperty("package") val `package`: String?,
     @JsonProperty("signature") val signature: String?,
+    @JsonProperty("result") val result: String?,
     @JsonProperty("id") val id: String?,
 ) {
     companion object {
@@ -76,7 +77,8 @@ class Result(
                 val jsonObject: JsonNode = jp.codec.readTree(jp)
                 return Result(
                     jsonObject.get("package").asText().intern(),
-                    jsonObject.get("signature").asText().intern(),
+                    jsonObject.get("signature")?.asText()?.intern(),
+                    jsonObject.get("result")?.asText()?.intern(),
                     jsonObject.get("id").asText().intern(),
                 )
             }
@@ -120,7 +122,7 @@ class ExternalSignerLauncher(
         if (results != null) {
             val localResults: Array<Result> = Result.fromJsonArray(results)
             localResults.forEach {
-                val signature = it.signature ?: ""
+                val signature = it.result ?: it.signature ?: ""
                 val packageName = it.`package`?.let { "-$it" } ?: ""
                 val id = it.id ?: ""
                 if (id.isNotBlank()) {
@@ -130,7 +132,7 @@ class ExternalSignerLauncher(
                 }
             }
         } else {
-            val signature = data.getStringExtra("signature") ?: ""
+            val signature = data.getStringExtra("result") ?: data.getStringExtra("signature") ?: ""
             val packageName = data.getStringExtra("package")?.let { "-$it" } ?: ""
             val id = data.getStringExtra("id") ?: ""
             if (id.isNotBlank()) {
@@ -239,13 +241,11 @@ class ExternalSignerLauncher(
 
     fun openSigner(
         event: EventInterface,
-        columnName: String = "signature",
         onReady: (String) -> Unit,
     ) {
         getDataFromResolver(
             SignerType.SIGN_EVENT,
             arrayOf(event.toJson(), event.pubKey()),
-            columnName,
         ).fold(
             onFailure = { },
             onSuccess = {
@@ -267,13 +267,11 @@ class ExternalSignerLauncher(
     private fun getDataFromResolver(
         signerType: SignerType,
         data: Array<out String>,
-        columnName: String = "signature",
-    ): kotlin.Result<String?> = getDataFromResolver(signerType, data, columnName, contentResolver)
+    ): kotlin.Result<String?> = getDataFromResolver(signerType, data, contentResolver)
 
     private fun getDataFromResolver(
         signerType: SignerType,
         data: Array<out String>,
-        columnName: String = "signature",
         contentResolver: (() -> ContentResolver)? = null,
     ): kotlin.Result<String?> {
         val localData =
@@ -301,9 +299,12 @@ class ExternalSignerLauncher(
                             Log.d("getDataFromResolver", "Permission denied")
                             return kotlin.Result.failure(Exception("Permission denied"))
                         }
-                        val index = it.getColumnIndex(columnName)
+                        var index = it.getColumnIndex("result")
                         if (index < 0) {
-                            Log.d("getDataFromResolver", "column '$columnName' not found")
+                            index = it.getColumnIndex("signature")
+                        }
+                        if (index < 0) {
+                            Log.d("getDataFromResolver", "column 'signature' not found")
                             return kotlin.Result.success(null)
                         }
                         return kotlin.Result.success(it.getString(index))
