@@ -56,7 +56,6 @@ import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
@@ -70,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.BoostReaction
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
@@ -391,29 +391,29 @@ fun ReactionsColumn(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var wantsToReplyTo by remember { mutableStateOf<Note?>(null) }
+//    var wantsToReplyTo by remember { mutableStateOf<Note?>(null) }
 
-    var wantsToQuote by remember { mutableStateOf<Note?>(null) }
+//    var wantsToQuote by remember { mutableStateOf<Note?>(null) }
 
-    if (wantsToReplyTo != null) {
-        NewPostView(
-            onClose = { wantsToReplyTo = null },
-            baseReplyTo = wantsToReplyTo,
-            quote = null,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
+//    if (wantsToReplyTo != null) {
+//        NewPostView(
+//            onClose = { wantsToReplyTo = null },
+//            baseReplyTo = wantsToReplyTo,
+//            quote = null,
+//            accountViewModel = accountViewModel,
+//            nav = nav,
+//        )
+//    }
 
-    if (wantsToQuote != null) {
-        NewPostView(
-            onClose = { wantsToQuote = null },
-            baseReplyTo = null,
-            quote = wantsToQuote,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
+//    if (wantsToQuote != null) {
+//        NewPostView(
+//            onClose = { wantsToQuote = null },
+//            baseReplyTo = null,
+//            quote = wantsToQuote,
+//            accountViewModel = accountViewModel,
+//            nav = nav,
+//        )
+//    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -437,7 +437,12 @@ fun ReactionsColumn(
             iconSizeModifier = Size40Modifier,
             iconSize = Size40dp,
             onQuotePress = {
-                wantsToQuote = baseNote
+//                wantsToQuote = baseNote
+                val route =
+                    buildNewPostRoute(
+                        quote = baseNote.idHex,
+                    )
+                nav.nav(route)
             },
             onForkPress = {
             },

@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRedirectScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.NewPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChatroomListScreen
@@ -278,6 +279,32 @@ fun AppNavigation(
                 val nip47 = it.arguments?.getString("nip47")
 
                 NIP47SetupScreen(accountViewModel, nav, nip47)
+            }
+
+            composable(
+                Route.NewPost.route,
+                Route.NewPost.arguments,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) {
+                val baseReplyTo = it.arguments?.getString("baseReplyTo")
+                val quote = it.arguments?.getString("quote")
+                val fork = it.arguments?.getString("fork")
+                val version = it.arguments?.getString("version")
+                val draft = it.arguments?.getString("draft")
+                val enableMessageInterface = it.arguments?.getBoolean("enableMessageInterface") ?: false
+                NewPostScreen(
+                    baseReplyTo = baseReplyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    quote = quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    fork = fork?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    version = version?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    draft = draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    enableMessageInterface = enableMessageInterface,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
             }
         }
     }

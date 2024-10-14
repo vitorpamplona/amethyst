@@ -85,10 +85,10 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -201,24 +201,16 @@ fun NoteQuickActionMenu(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val editDraftDialog = remember { mutableStateOf(false) }
-
-    if (editDraftDialog.value) {
-        NewPostView(
-            onClose = {
-                onDismiss()
-                editDraftDialog.value = false
-            },
-            accountViewModel = accountViewModel,
-            draft = note,
-            nav = EmptyNav,
-        )
-    }
-
     NoteQuickActionMenu(
         note = note,
         onDismiss = onDismiss,
-        onWantsToEditDraft = { editDraftDialog.value = true },
+        onWantsToEditDraft = {
+            val route =
+                buildNewPostRoute(
+                    draft = note.idHex,
+                )
+            nav.nav(route)
+        },
         accountViewModel = accountViewModel,
         nav = nav,
     )
