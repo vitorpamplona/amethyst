@@ -520,6 +520,7 @@
     <string name="light">浅色</string>
     <string name="dark">深色</string>
     <string name="application_preferences">应用程序首选项</string>
+    <string name="wallet_connect">钱包绑定</string>
     <string name="language">语言</string>
     <string name="theme">主题</string>
     <string name="automatically_load_images_gifs">图像预览</string>
