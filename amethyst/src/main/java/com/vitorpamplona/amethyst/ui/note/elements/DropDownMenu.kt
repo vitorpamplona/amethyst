@@ -43,10 +43,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
-import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.note.types.EditState
@@ -124,11 +124,6 @@ fun NoteDropDownMenu(
             mutableStateOf(false)
         }
 
-    val wantsToEditDraft =
-        remember {
-            mutableStateOf(false)
-        }
-
     if (wantsToEditPost.value) {
         // avoids changing while drafting a note and a new event shows up.
         val versionLookingAt =
@@ -144,18 +139,6 @@ fun NoteDropDownMenu(
             edit = note,
             versionLookingAt = versionLookingAt,
             accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
-
-    if (wantsToEditDraft.value) {
-        NewPostView(
-            onClose = {
-                onDismiss()
-                wantsToEditDraft.value = false
-            },
-            accountViewModel = accountViewModel,
-            draft = note,
             nav = nav,
         )
     }
@@ -243,7 +226,11 @@ fun NoteDropDownMenu(
             DropdownMenuItem(
                 text = { Text(stringRes(R.string.edit_draft)) },
                 onClick = {
-                    wantsToEditDraft.value = true
+                    val route =
+                        buildNewPostRoute(
+                            draft = note.idHex,
+                        )
+                    nav.nav(route)
                 },
             )
         }

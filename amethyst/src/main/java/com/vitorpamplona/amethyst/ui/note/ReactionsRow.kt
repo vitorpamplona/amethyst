@@ -105,11 +105,11 @@ import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
@@ -569,14 +569,17 @@ private fun BoostWithDialog(
     var wantsToFork by remember { mutableStateOf<Note?>(null) }
 
     if (wantsToQuote != null) {
-        NewPostView(
-            onClose = { wantsToQuote = null },
-            baseReplyTo = null,
-            quote = wantsToQuote,
-            version = (editState.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        val route =
+            buildNewPostRoute(
+                quote = wantsToQuote?.idHex,
+                version =
+                    (editState.value as? GenericLoadable.Loaded)
+                        ?.loaded
+                        ?.modificationToShow
+                        ?.value
+                        ?.idHex,
+            )
+        nav.nav(route)
     }
 
     if (wantsToFork != null) {
@@ -591,14 +594,19 @@ private fun BoostWithDialog(
                 }
             }
 
-        NewPostView(
-            onClose = { wantsToFork = null },
-            baseReplyTo = replyTo,
-            fork = wantsToFork,
-            version = (editState.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        val route =
+            buildNewPostRoute(
+                quote = wantsToQuote?.idHex,
+                baseReplyTo = replyTo?.idHex,
+                fork = wantsToFork?.idHex,
+                version =
+                    (editState.value as? GenericLoadable.Loaded)
+                        ?.loaded
+                        ?.modificationToShow
+                        ?.value
+                        ?.idHex,
+            )
+        nav.nav(route)
     }
 
     BoostReaction(
@@ -620,13 +628,12 @@ private fun ReplyReactionWithDialog(
     var wantsToReplyTo by remember { mutableStateOf<Note?>(null) }
 
     if (wantsToReplyTo != null) {
-        NewPostView(
-            onClose = { wantsToReplyTo = null },
-            baseReplyTo = wantsToReplyTo,
-            quote = null,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        val route =
+            buildNewPostRoute(
+                baseReplyTo = wantsToReplyTo?.idHex,
+                quote = null,
+            )
+        nav.nav(route)
     }
 
     ReplyReaction(baseNote, grayTint, accountViewModel) { wantsToReplyTo = baseNote }
