@@ -23,4 +23,5 @@ Prijavi se s privatnim ključem za všečkanje sporočila</string>
     <string name="ui_feature_set_type_complete">Končaj</string>
     <string name="mute_button">Zvok je prižgan. Klikni da ga utišaš</string>
     <string name="relay_information_document_error_failed_to_reach_server">Neuspela povezava z %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">Neuspešna analiza odgovora %1$s: %2$s</string>
 </resources>
