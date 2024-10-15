@@ -520,6 +520,7 @@
     <string name="light">प्रकाशवान</string>
     <string name="dark">अन्धकारमय</string>
     <string name="application_preferences">क्रमक आद्यताएँ</string>
+    <string name="wallet_connect">धनकोष संयोजन</string>
     <string name="language">भाषा</string>
     <string name="theme">प्रदर्शनशैली</string>
     <string name="automatically_load_images_gifs">चित्र पूर्वीक्षण</string>

@@ -520,6 +520,7 @@
     <string name="light">Jasny</string>
     <string name="dark">Ciemny</string>
     <string name="application_preferences">Ustawienia Aplikacji</string>
+    <string name="wallet_connect">Podłącz portfel</string>
     <string name="language">Język</string>
     <string name="theme">Motyw</string>
     <string name="automatically_load_images_gifs">Podgląd obrazu</string>
