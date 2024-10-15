@@ -78,6 +78,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -241,8 +242,7 @@ fun NewPostScreen(
             NostrSearchEventOrUserDataSource.stop()
         }
     }
-    DisappearingScaffold(
-        isInvertedLayout = false,
+    Scaffold(
         topBar = {
             TopAppBar(
                 title = {
@@ -299,7 +299,6 @@ fun NewPostScreen(
                     ),
             )
         },
-        accountViewModel = accountViewModel,
     ) { pad ->
         if (showRelaysDialog) {
             RelaySelectionDialog(
