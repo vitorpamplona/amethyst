@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.VerticalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
@@ -67,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -245,9 +247,9 @@ fun SlidingCarousel(
 
     val pagerState =
         if (pagerStateKey != null) {
-            myRememberForeverPagerState(pagerStateKey, items.list.size) { items.list.size }
+            rememberForeverPagerState(pagerStateKey, items.list.size) { items.list.size }
         } else {
-            myRememberPagerState(items.list.size) { items.list.size }
+            rememberPagerState(items.list.size) { items.list.size }
         }
 
     WatchScrollToTop(videoFeedContentState, pagerState)
