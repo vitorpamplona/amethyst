@@ -26,6 +26,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.FocusRequester
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.Account
@@ -43,6 +44,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class SearchBarViewModel(
     val account: Account,
 ) : ViewModel() {
+    val focusRequester = FocusRequester()
     var searchValue by mutableStateOf("")
 
     private var _searchResultsUsers = MutableStateFlow<List<User>>(emptyList())

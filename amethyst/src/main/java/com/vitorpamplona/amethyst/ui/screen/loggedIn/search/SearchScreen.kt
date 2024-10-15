@@ -52,7 +52,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -91,7 +90,6 @@ import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -147,6 +145,10 @@ fun SearchScreen(
     }
 
     val listState = rememberLazyListState()
+
+    LaunchedEffect(searchBarViewModel.focusRequester) {
+        searchBarViewModel.focusRequester.requestFocus()
+    }
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -234,15 +236,6 @@ private fun SearchTextField(
     modifier: Modifier,
     onTextChanges: (String) -> Unit,
 ) {
-    val focusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        launch {
-            delay(100)
-            focusRequester.requestFocus()
-        }
-    }
-
     Row(
         modifier = modifier.padding(10.dp).fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -264,7 +257,7 @@ private fun SearchTextField(
                 Modifier
                     .weight(1f, true)
                     .defaultMinSize(minHeight = 20.dp)
-                    .focusRequester(focusRequester),
+                    .focusRequester(searchBarViewModel.focusRequester),
             placeholder = {
                 Text(
                     text = stringRes(R.string.npub_hex_username),
