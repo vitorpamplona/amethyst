@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.theme
 
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -40,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 
 val Shapes =
@@ -287,3 +289,7 @@ val reactionBox =
         .padding(5.dp)
 
 val ripple24dp = ripple(bounded = false, radius = Size24dp)
+
+val defaultTweenDuration = 100
+val defaultTweenFloatSpec = tween<Float>(durationMillis = defaultTweenDuration)
+val defaultTweenIntOffsetSpec = tween<IntOffset>(durationMillis = defaultTweenDuration)
