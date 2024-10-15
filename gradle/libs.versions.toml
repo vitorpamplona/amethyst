@@ -1,10 +1,10 @@
 [versions]
 accompanistAdaptive = "0.34.0"
 activityCompose = "1.9.2"
-agp = "8.7.0"
-android-compileSdk = "34"
+agp = "8.7.1"
+android-compileSdk = "35"
 android-minSdk = "26"
-android-targetSdk = "34"
+android-targetSdk = "35"
 androidKotlinGeohash = "1.0"
 androidxJunit = "1.2.1"
 appcompat = "1.7.0"
