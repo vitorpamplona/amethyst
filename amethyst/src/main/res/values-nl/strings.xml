@@ -520,6 +520,7 @@
     <string name="light">Licht</string>
     <string name="dark">Donker</string>
     <string name="application_preferences">Application preferences</string>
+    <string name="wallet_connect">Wallet Connect</string>
     <string name="language">Taal</string>
     <string name="theme">Thema</string>
     <string name="automatically_load_images_gifs">Automatisch afbeeldingen/gifs laden</string>
