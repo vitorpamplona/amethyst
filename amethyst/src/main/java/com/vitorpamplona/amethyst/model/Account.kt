@@ -357,7 +357,7 @@ class Account(
             mappedRelaySet.map { relay ->
                 val nip65setup = nip65RelaySet?.firstOrNull { relay.url == it.relayUrl }
                 if (nip65setup != null) {
-                    val write = nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
+                    val write = nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || nip65setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.WRITE
 
                     RelaySetupInfo(
                         relay.url,
@@ -377,7 +377,7 @@ class Account(
 
         nip65RelaySet?.forEach { newNip65Setup ->
             if (mappedRelaySet.none { it.url == newNip65Setup.relayUrl }) {
-                val write = newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.READ
+                val write = newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.BOTH || newNip65Setup.type == AdvertisedRelayListEvent.AdvertisedRelayType.WRITE
 
                 mappedRelaySet = mappedRelaySet +
                     RelaySetupInfo(

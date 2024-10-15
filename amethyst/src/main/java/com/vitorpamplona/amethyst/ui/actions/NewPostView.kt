@@ -121,7 +121,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -201,7 +200,6 @@ fun NewPostView(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val lifecycleOwner = LocalLifecycleOwner.current
     val postViewModel: NewPostViewModel = viewModel()
     postViewModel.wantsDirectMessage = enableMessageInterface
 
@@ -211,6 +209,7 @@ fun NewPostView(
     val scope = rememberCoroutineScope()
     var showRelaysDialog by remember { mutableStateOf(false) }
     var relayList = remember { accountViewModel.account.activeWriteRelays().toImmutableList() }
+
     var showCamera by remember {
         mutableStateOf(true)
     }
