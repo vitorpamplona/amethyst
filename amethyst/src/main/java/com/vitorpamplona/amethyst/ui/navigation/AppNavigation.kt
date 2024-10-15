@@ -29,7 +29,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -271,10 +273,10 @@ fun AppNavigation(
             composable(
                 Route.NIP47Setup.route,
                 Route.NIP47Setup.arguments,
-                enterTransition = { slideInHorizontallyFromEnd },
+                enterTransition = { slideInVerticallyFromBottom },
                 exitTransition = { scaleOut },
                 popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
+                popExitTransition = { slideOutVerticallyToBottom },
             ) {
                 val nip47 = it.arguments?.getString("nip47")
 
@@ -284,10 +286,10 @@ fun AppNavigation(
             composable(
                 Route.NewPost.route,
                 Route.NewPost.arguments,
-                enterTransition = { slideInHorizontallyFromEnd },
+                enterTransition = { slideInVerticallyFromBottom },
                 exitTransition = { scaleOut },
                 popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
+                popExitTransition = { slideOutVerticallyToBottom },
             ) {
                 val baseReplyTo = it.arguments?.getString("baseReplyTo")
                 val quote = it.arguments?.getString("quote")
@@ -430,6 +432,9 @@ private fun isSameRoute(
 
     return false
 }
+
+val slideInVerticallyFromBottom = slideInVertically(animationSpec = tween(), initialOffsetY = { it })
+val slideOutVerticallyToBottom = slideOutVertically(animationSpec = tween(), targetOffsetY = { it })
 
 val slideInHorizontallyFromEnd = slideInHorizontally(animationSpec = tween(), initialOffsetX = { it })
 val slideOutHorizontallyToEnd = slideOutHorizontally(animationSpec = tween(), targetOffsetX = { it })
