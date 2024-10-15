@@ -9,6 +9,7 @@ Prijavi se s privatnim ključem za všečkanje sporočila</string>
     <string name="public_chat_feed">Javni vir novic</string>
     <string name="add_a_relay">Dodaj rele</string>
     <string name="display_name">Prikazno ime</string>
+    <string name="uploading">Nalaganje …</string>
     <string name="npub_hex_username">"npub, uporabniško ime, tekst"</string>
     <string name="quick_action_share_browser_link">Deli povezavo brskalnika</string>
     <string name="quick_action_request_deletion_gallery_title">Izbris iz galerije</string>
