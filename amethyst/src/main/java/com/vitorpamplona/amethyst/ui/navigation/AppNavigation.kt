@@ -336,13 +336,25 @@ private fun NavigateIfIntentRequested(
     var newAccount by remember { mutableStateOf<String?>(null) }
 
     if (activity.intent.action == Intent.ACTION_SEND) {
-        activity.intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
-            nav.newStack(buildNewPostRoute(draftMessage = it))
+        // saves the intent to avoid processing again
+        var message by remember {
+            mutableStateOf(
+                activity.intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
+                    it.ifBlank { null }
+                },
+            )
         }
 
-        (activity.intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)?.let {
-            nav.newStack(buildNewPostRoute(attachment = it))
+        var media by remember {
+            mutableStateOf(
+                (activity.intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri),
+            )
         }
+
+        nav.newStack(buildNewPostRoute(draftMessage = message, attachment = media))
+
+        media = null
+        message = null
     } else {
         var currentIntentNextPage by remember {
             mutableStateOf(

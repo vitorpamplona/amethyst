@@ -140,7 +140,10 @@ class Amethyst : Application() {
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         println("Trim Memory $level")
-        GlobalScope.launch(Dispatchers.Default) { serviceManager.trimMemory() }
+        GlobalScope.launch(Dispatchers.Default) {
+            println("Trim Memory Inside $level")
+            serviceManager.trimMemory()
+        }
     }
 
     companion object {
