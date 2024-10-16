@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -196,9 +197,9 @@ import com.vitorpamplona.quartz.events.TorrentCommentEvent
 import com.vitorpamplona.quartz.events.TorrentEvent
 import com.vitorpamplona.quartz.events.VideoEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -235,26 +236,32 @@ fun RenderThreadFeed(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+    val firstTimeScrolled = remember { TimeUtils.now() }
 
-    LaunchedEffect(noteId) {
-        // waits to load the thread to scroll to item.
-        delay(100)
-        val noteForPosition =
-            items.list
-                .filter { it.idHex == noteId }
-                .firstOrNull()
-        var position = items.list.indexOf(noteForPosition)
-
-        if (position >= 0) {
-            if (position >= 1 && position < items.list.size - 1) {
-                position-- // show the replying note
+    LaunchedEffect(noteId, items.list) {
+        // hack to allow multiple scrolls to Item while posts on the screen load.
+        // This is important when clicking on a reply of an older thread in Notifications
+        // In that case, this screen will open with 0-1 items, and the scrollToItem below
+        // will not change the state of the screen (too few items, scroll is not available)
+        // as the app loads the reaming of the thread the position of the reply changes
+        // and becuase there wasn't a possibility to scroll before and now there is one,
+        // the screen stays at the top. Once the thread has enough replies, the lazy column
+        // updates with new items correctly. It just needs a few items to start the scrool.
+        //
+        // This hack allows the list 1 second to fill up with more
+        // records before setting up the position on the feed.
+        //
+        // It jumps around, but it is the best we can do.
+        if (TimeUtils.now() - firstTimeScrolled < 1000) {
+            val position = items.list.indexOfFirst { it.idHex == noteId }
+            if (position >= 0) {
+                listState.scrollToItem(position, -200)
             }
-
-            listState.scrollToItem(position)
         }
     }
 
     LazyColumn(
+        modifier = Modifier.fillMaxSize(),
         contentPadding = FeedPadding,
         state = listState,
     ) {

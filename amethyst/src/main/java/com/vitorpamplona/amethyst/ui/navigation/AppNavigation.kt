@@ -29,7 +29,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -52,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRedirectScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.NewPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChatroomListScreen
@@ -270,14 +273,40 @@ fun AppNavigation(
             composable(
                 Route.NIP47Setup.route,
                 Route.NIP47Setup.arguments,
-                enterTransition = { slideInHorizontallyFromEnd },
+                enterTransition = { slideInVerticallyFromBottom },
                 exitTransition = { scaleOut },
                 popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
+                popExitTransition = { slideOutVerticallyToBottom },
             ) {
                 val nip47 = it.arguments?.getString("nip47")
 
                 NIP47SetupScreen(accountViewModel, nav, nip47)
+            }
+
+            composable(
+                Route.NewPost.route,
+                Route.NewPost.arguments,
+                enterTransition = { slideInVerticallyFromBottom },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutVerticallyToBottom },
+            ) {
+                val baseReplyTo = it.arguments?.getString("baseReplyTo")
+                val quote = it.arguments?.getString("quote")
+                val fork = it.arguments?.getString("fork")
+                val version = it.arguments?.getString("version")
+                val draft = it.arguments?.getString("draft")
+                val enableMessageInterface = it.arguments?.getBoolean("enableMessageInterface") ?: false
+                NewPostScreen(
+                    baseReplyTo = baseReplyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    quote = quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    fork = fork?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    version = version?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    draft = draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    enableMessageInterface = enableMessageInterface,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
             }
         }
     }
@@ -403,6 +432,9 @@ private fun isSameRoute(
 
     return false
 }
+
+val slideInVerticallyFromBottom = slideInVertically(animationSpec = tween(), initialOffsetY = { it })
+val slideOutVerticallyToBottom = slideOutVertically(animationSpec = tween(), targetOffsetY = { it })
 
 val slideInHorizontallyFromEnd = slideInHorizontally(animationSpec = tween(), initialOffsetX = { it })
 val slideOutHorizontallyToEnd = slideOutHorizontally(animationSpec = tween(), targetOffsetX = { it })

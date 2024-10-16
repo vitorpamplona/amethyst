@@ -1267,7 +1267,7 @@ class AccountViewModel(
                 LocalCache.live.newEventBundles.collect { newNotes ->
                     Log.d(
                         "Rendering Metrics",
-                        "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()}",
+                        "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
                     )
                     feedStates.updateFeedsWith(newNotes)
                     upgradeAttestations()

@@ -49,8 +49,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
-import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
@@ -63,23 +63,10 @@ fun ChannelFabColumn(
 ) {
     var isOpen by remember { mutableStateOf(false) }
 
-    var wantsToSendNewMessage by remember { mutableStateOf(false) }
-
     var wantsToCreateChannel by remember { mutableStateOf(false) }
 
     if (wantsToCreateChannel) {
         NewChannelView({ wantsToCreateChannel = false }, accountViewModel = accountViewModel)
-    }
-
-    if (wantsToSendNewMessage) {
-        NewPostView(
-            onClose = { wantsToSendNewMessage = false },
-            enableMessageInterface = true,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-        // JoinUserOrChannelView({ wantsToJoinChannelOrUser = false }, accountViewModel =
-        // accountViewModel, nav = nav)
     }
 
     Column {
@@ -91,7 +78,11 @@ fun ChannelFabColumn(
             Column {
                 FloatingActionButton(
                     onClick = {
-                        wantsToSendNewMessage = true
+                        val route =
+                            buildNewPostRoute(
+                                enableMessageInterface = true,
+                            )
+                        nav.nav(route)
                         isOpen = false
                     },
                     modifier = Size55Modifier,

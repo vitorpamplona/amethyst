@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.VerticalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
@@ -56,7 +57,6 @@ import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
@@ -67,9 +67,11 @@ import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.BoostReaction
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
@@ -245,9 +247,9 @@ fun SlidingCarousel(
 
     val pagerState =
         if (pagerStateKey != null) {
-            myRememberForeverPagerState(pagerStateKey, items.list.size) { items.list.size }
+            rememberForeverPagerState(pagerStateKey, items.list.size) { items.list.size }
         } else {
-            myRememberPagerState(items.list.size) { items.list.size }
+            rememberPagerState(items.list.size) { items.list.size }
         }
 
     WatchScrollToTop(videoFeedContentState, pagerState)
@@ -391,29 +393,29 @@ fun ReactionsColumn(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var wantsToReplyTo by remember { mutableStateOf<Note?>(null) }
+//    var wantsToReplyTo by remember { mutableStateOf<Note?>(null) }
 
-    var wantsToQuote by remember { mutableStateOf<Note?>(null) }
+//    var wantsToQuote by remember { mutableStateOf<Note?>(null) }
 
-    if (wantsToReplyTo != null) {
-        NewPostView(
-            onClose = { wantsToReplyTo = null },
-            baseReplyTo = wantsToReplyTo,
-            quote = null,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
+//    if (wantsToReplyTo != null) {
+//        NewPostView(
+//            onClose = { wantsToReplyTo = null },
+//            baseReplyTo = wantsToReplyTo,
+//            quote = null,
+//            accountViewModel = accountViewModel,
+//            nav = nav,
+//        )
+//    }
 
-    if (wantsToQuote != null) {
-        NewPostView(
-            onClose = { wantsToQuote = null },
-            baseReplyTo = null,
-            quote = wantsToQuote,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
+//    if (wantsToQuote != null) {
+//        NewPostView(
+//            onClose = { wantsToQuote = null },
+//            baseReplyTo = null,
+//            quote = wantsToQuote,
+//            accountViewModel = accountViewModel,
+//            nav = nav,
+//        )
+//    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -437,7 +439,12 @@ fun ReactionsColumn(
             iconSizeModifier = Size40Modifier,
             iconSize = Size40dp,
             onQuotePress = {
-                wantsToQuote = baseNote
+//                wantsToQuote = baseNote
+                val route =
+                    buildNewPostRoute(
+                        quote = baseNote.idHex,
+                    )
+                nav.nav(route)
             },
             onForkPress = {
             },

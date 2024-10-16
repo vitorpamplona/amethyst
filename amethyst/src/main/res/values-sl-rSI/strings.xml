@@ -9,6 +9,7 @@ Prijavi se s privatnim ključem za všečkanje sporočila</string>
     <string name="public_chat_feed">Javni vir novic</string>
     <string name="add_a_relay">Dodaj rele</string>
     <string name="display_name">Prikazno ime</string>
+    <string name="uploading">Nalaganje …</string>
     <string name="npub_hex_username">"npub, uporabniško ime, tekst"</string>
     <string name="quick_action_share_browser_link">Deli povezavo brskalnika</string>
     <string name="quick_action_request_deletion_gallery_title">Izbris iz galerije</string>
@@ -22,4 +23,14 @@ Prijavi se s privatnim ključem za všečkanje sporočila</string>
     <string name="ui_feature_set_type_complete">Končaj</string>
     <string name="mute_button">Zvok je prižgan. Klikni da ga utišaš</string>
     <string name="relay_information_document_error_failed_to_reach_server">Neuspela povezava z %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">Neuspešna analiza odgovora %1$s: %2$s</string>
+    <string name="cashu_failed_redemption">Cashu-ja ni bilo mogoče unovčiti</string>
+    <string name="cashu_no_wallet_found">Na sistemu ni najdene združljive Cashu denarnice</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Prejemnikova \"lightning\" storitev na %1$s ni na voljo. Izračunana je bila iz \"lightning\" naslova \'%2$s\'. Napaka: %3$s. Preverite, ali strežnik deluje in ali je \"lightning\" naslov pravilen</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Napaka pri razčlenjevanju JSON med pridobivanjem fakture iz %1$s. Preverite uporabnikove nastavitve za \"Lightning\"</string>
+    <string name="select_push_server">Izberi \"UnifiedPush\" aplikacijo</string>
+    <string name="push_server_install_app_description">        Za prejemanje potisnih obvestil namestite aplikacijo, ki podpira [Unified Push](https://unifiedpush.org/), na primer [Ntfy](https://ntfy.sh/).
+        Po namestitvi izberite aplikacijo, ki jo želite uporabljati, v nastavitvah.
+    </string>
+    <string name="http_status_416">Razpon ni zadovoljiv – Strežnik ne more izpolniti vrednosti, navedene v \"request’s Range header\" polju. </string>
 </resources>

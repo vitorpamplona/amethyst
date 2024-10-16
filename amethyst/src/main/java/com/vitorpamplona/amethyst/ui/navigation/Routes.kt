@@ -227,6 +227,21 @@ sealed class Route(
                     },
                 ).toImmutableList(),
         )
+
+    object NewPost :
+        Route(
+            route = "NewPost?baseReplyTo={baseReplyTo}&quote={quote}&fork={fork}&version={version}&draft={draft}&enableMessageInterface={enableMessageInterface}",
+            icon = R.drawable.ic_moments,
+            arguments =
+                listOf(
+                    navArgument("baseReplyTo") { type = NavType.StringType },
+                    navArgument("quote") { type = NavType.StringType },
+                    navArgument("fork") { type = NavType.StringType },
+                    navArgument("version") { type = NavType.StringType },
+                    navArgument("draft") { type = NavType.StringType },
+                    navArgument("enableMessageInterface") { type = NavType.BoolType },
+                ).toImmutableList(),
+        )
 }
 
 fun getRouteWithArguments(navController: NavHostController): String? {
@@ -277,3 +292,19 @@ private fun getRouteWithArguments(
     }
     return route
 }
+
+fun buildNewPostRoute(
+    baseReplyTo: String? = null,
+    quote: String? = null,
+    fork: String? = null,
+    version: String? = null,
+    draft: String? = null,
+    enableMessageInterface: Boolean = false,
+): String =
+    "NewPost?" +
+        "baseReplyTo=${baseReplyTo ?: ""}&" +
+        "quote=${quote ?: ""}&" +
+        "fork=${fork ?: ""}&" +
+        "version=${version ?: ""}&" +
+        "draft=${draft ?: ""}&" +
+        "enableMessageInterface=$enableMessageInterface"

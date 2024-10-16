@@ -26,6 +26,8 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
@@ -103,13 +105,14 @@ import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.actions.NewPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.types.EditState
+import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -135,6 +138,9 @@ import com.vitorpamplona.amethyst.ui.theme.Size28Modifier
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.TinyBorders
+import com.vitorpamplona.amethyst.ui.theme.defaultTweenDuration
+import com.vitorpamplona.amethyst.ui.theme.defaultTweenFloatSpec
+import com.vitorpamplona.amethyst.ui.theme.defaultTweenIntOffsetSpec
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
@@ -563,14 +569,17 @@ private fun BoostWithDialog(
     var wantsToFork by remember { mutableStateOf<Note?>(null) }
 
     if (wantsToQuote != null) {
-        NewPostView(
-            onClose = { wantsToQuote = null },
-            baseReplyTo = null,
-            quote = wantsToQuote,
-            version = (editState.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        val route =
+            buildNewPostRoute(
+                quote = wantsToQuote?.idHex,
+                version =
+                    (editState.value as? GenericLoadable.Loaded)
+                        ?.loaded
+                        ?.modificationToShow
+                        ?.value
+                        ?.idHex,
+            )
+        nav.nav(route)
     }
 
     if (wantsToFork != null) {
@@ -585,14 +594,19 @@ private fun BoostWithDialog(
                 }
             }
 
-        NewPostView(
-            onClose = { wantsToFork = null },
-            baseReplyTo = replyTo,
-            fork = wantsToFork,
-            version = (editState.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        val route =
+            buildNewPostRoute(
+                quote = wantsToQuote?.idHex,
+                baseReplyTo = replyTo?.idHex,
+                fork = wantsToFork?.idHex,
+                version =
+                    (editState.value as? GenericLoadable.Loaded)
+                        ?.loaded
+                        ?.modificationToShow
+                        ?.value
+                        ?.idHex,
+            )
+        nav.nav(route)
     }
 
     BoostReaction(
@@ -614,13 +628,12 @@ private fun ReplyReactionWithDialog(
     var wantsToReplyTo by remember { mutableStateOf<Note?>(null) }
 
     if (wantsToReplyTo != null) {
-        NewPostView(
-            onClose = { wantsToReplyTo = null },
-            baseReplyTo = wantsToReplyTo,
-            quote = null,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        val route =
+            buildNewPostRoute(
+                baseReplyTo = wantsToReplyTo?.idHex,
+                quote = null,
+            )
+        nav.nav(route)
     }
 
     ReplyReaction(baseNote, grayTint, accountViewModel) { wantsToReplyTo = baseNote }
@@ -1014,20 +1027,26 @@ fun ZapReaction(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple24dp,
                 onClick = {
-                    zapClick(
-                        baseNote,
-                        accountViewModel,
-                        context,
-                        onZappingProgress = { progress: Float -> scope.launch { zappingProgress = progress } },
-                        onMultipleChoices = { wantsToZap = true },
-                        onError = { _, message ->
-                            scope.launch {
-                                zappingProgress = 0f
-                                showErrorMessageDialog = showErrorMessageDialog + message
-                            }
-                        },
-                        onPayViaIntent = { wantsToPay = it },
-                    )
+                    scope.launch {
+                        zapClick(
+                            baseNote,
+                            accountViewModel,
+                            context,
+                            onZappingProgress = { progress: Float -> scope.launch { zappingProgress = progress } },
+                            onMultipleChoices = {
+                                scope.launch {
+                                    wantsToZap = true
+                                }
+                            },
+                            onError = { _, message ->
+                                scope.launch {
+                                    zappingProgress = 0f
+                                    showErrorMessageDialog = showErrorMessageDialog + message
+                                }
+                            },
+                            onPayViaIntent = { wantsToPay = it },
+                        )
+                    }
                 },
                 onLongClick = { wantsToChangeZapAmount = true },
                 onDoubleClick = { wantsToSetCustomZap = true },
@@ -1043,8 +1062,10 @@ fun ZapReaction(
                     zappingProgress = 0f
                 },
                 onChangeAmount = {
-                    wantsToZap = false
-                    wantsToChangeZapAmount = true
+                    scope.launch {
+                        wantsToZap = false
+                        wantsToChangeZapAmount = true
+                    }
                 },
                 onError = { _, message ->
                     scope.launch {
@@ -1249,7 +1270,6 @@ fun ObserveZapAmountText(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BoostTypeChoicePopup(
     baseNote: Note,
@@ -1260,59 +1280,117 @@ private fun BoostTypeChoicePopup(
     onRepost: () -> Unit,
     onFork: () -> Unit,
 ) {
+    val visibilityState = rememberVisibilityState(onDismiss)
+    BoostTypeChoicePopup(
+        baseNote,
+        iconSize,
+        accountViewModel,
+        visibilityState,
+        onQuote,
+        onRepost,
+        onFork,
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun BoostTypeChoicePopup(
+    baseNote: Note,
+    iconSize: Dp,
+    accountViewModel: AccountViewModel,
+    visibilityState: MutableTransitionState<Boolean>,
+    onQuote: () -> Unit,
+    onRepost: () -> Unit,
+    onFork: () -> Unit,
+) {
     val iconSizePx = with(LocalDensity.current) { -iconSize.toPx().toInt() }
 
     Popup(
         alignment = Alignment.BottomCenter,
         offset = IntOffset(0, iconSizePx),
-        onDismissRequest = { onDismiss() },
+        onDismissRequest = { visibilityState.targetState = false },
     ) {
-        FlowRow {
-            Button(
-                modifier = Modifier.padding(horizontal = 3.dp),
-                onClick = {
-                    if (accountViewModel.isWriteable()) {
-                        accountViewModel.boost(baseNote)
-                        onDismiss()
-                    } else {
-                        onRepost()
-                        onDismiss()
-                    }
-                },
-                shape = ButtonBorder,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                    ),
-            ) {
-                Text(stringRes(R.string.boost), color = Color.White, textAlign = TextAlign.Center)
-            }
+        AnimatedVisibility(
+            visibleState = visibilityState,
+            enter = popupAnimationEnter,
+            exit = popupAnimationExit,
+        ) {
+            FlowRow {
+                Button(
+                    modifier = Modifier.padding(horizontal = 3.dp),
+                    onClick = {
+                        if (accountViewModel.isWriteable()) {
+                            accountViewModel.boost(baseNote)
+                            visibilityState.targetState = false
+                        } else {
+                            onRepost()
+                            visibilityState.targetState = false
+                        }
+                    },
+                    shape = ButtonBorder,
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                        ),
+                ) {
+                    Text(stringRes(R.string.boost), color = Color.White, textAlign = TextAlign.Center)
+                }
 
-            Button(
-                modifier = Modifier.padding(horizontal = 3.dp),
-                onClick = onQuote,
-                shape = ButtonBorder,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                    ),
-            ) {
-                Text(stringRes(R.string.quote), color = Color.White, textAlign = TextAlign.Center)
-            }
+                Button(
+                    modifier = Modifier.padding(horizontal = 3.dp),
+                    onClick = onQuote,
+                    shape = ButtonBorder,
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                        ),
+                ) {
+                    Text(stringRes(R.string.quote), color = Color.White, textAlign = TextAlign.Center)
+                }
 
-            Button(
-                modifier = Modifier.padding(horizontal = 3.dp),
-                onClick = onFork,
-                shape = ButtonBorder,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                    ),
-            ) {
-                Text(stringRes(R.string.fork), color = Color.White, textAlign = TextAlign.Center)
+                Button(
+                    modifier = Modifier.padding(horizontal = 3.dp),
+                    onClick = onFork,
+                    shape = ButtonBorder,
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                        ),
+                ) {
+                    Text(stringRes(R.string.fork), color = Color.White, textAlign = TextAlign.Center)
+                }
             }
         }
     }
+}
+
+val popupAnimationEnter: EnterTransition =
+    slideInVertically(
+        animationSpec = defaultTweenIntOffsetSpec,
+        initialOffsetY = { it / 2 },
+    ) + fadeIn(animationSpec = defaultTweenFloatSpec)
+
+val popupAnimationExit: ExitTransition =
+    slideOutVertically(
+        animationSpec = defaultTweenIntOffsetSpec,
+        targetOffsetY = { it / 2 },
+    ) + fadeOut(animationSpec = defaultTweenFloatSpec)
+
+@Composable
+fun rememberVisibilityState(onDismiss: () -> Unit): MutableTransitionState<Boolean> {
+    // Prevent multiple calls to onDismiss()
+    var dismissed by remember { mutableStateOf(false) }
+
+    val visibilityState = remember { MutableTransitionState(false).apply { targetState = true } }
+    LaunchedEffect(visibilityState.targetState) {
+        if (!visibilityState.targetState && !dismissed) {
+            delay(defaultTweenDuration.toLong())
+            dismissed = true
+            onDismiss()
+        }
+    }
+
+    return visibilityState
 }
 
 @Composable
@@ -1323,27 +1401,23 @@ fun ReactionChoicePopup(
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
 ) {
+    val visibilityState = rememberVisibilityState(onDismiss)
+    ReactionChoicePopup(baseNote, iconSize, accountViewModel, visibilityState, onChangeAmount)
+}
+
+@Composable
+fun ReactionChoicePopup(
+    baseNote: Note,
+    iconSize: Dp,
+    accountViewModel: AccountViewModel,
+    visibilityState: MutableTransitionState<Boolean>,
+    onChangeAmount: () -> Unit,
+) {
     val iconSizePx = with(LocalDensity.current) { -iconSize.toPx().toInt() }
 
     val reactions by accountViewModel.account.settings.reactionChoices
         .collectAsStateWithLifecycle()
     val toRemove = remember { baseNote.reactedBy(accountViewModel.userProfile()).toImmutableSet() }
-
-    // Define animation specs
-    val animationDuration = 250
-    val fadeAnimationSpec = tween<Float>(durationMillis = animationDuration)
-
-    // Prevent multiple calls to onDismiss()
-    var dismissed by remember { mutableStateOf(false) }
-
-    val visibilityState = remember { MutableTransitionState(false).apply { targetState = true } }
-    LaunchedEffect(visibilityState.targetState) {
-        if (!visibilityState.targetState && !dismissed) {
-            delay(animationDuration.toLong())
-            dismissed = true
-            onDismiss()
-        }
-    }
 
     Popup(
         alignment = Alignment.BottomCenter,
@@ -1353,14 +1427,8 @@ fun ReactionChoicePopup(
     ) {
         AnimatedVisibility(
             visibleState = visibilityState,
-            enter =
-                slideInVertically(
-                    initialOffsetY = { it / 2 },
-                ) + fadeIn(animationSpec = fadeAnimationSpec),
-            exit =
-                slideOutVertically(
-                    targetOffsetY = { it / 2 },
-                ) + fadeOut(animationSpec = fadeAnimationSpec),
+            enter = popupAnimationEnter,
+            exit = popupAnimationExit,
         ) {
             ReactionChoicePopupContent(
                 reactions,
@@ -1518,7 +1586,6 @@ fun ZapAmountChoicePopup(
     ZapAmountChoicePopup(baseNote, zapAmountChoices, accountViewModel, popupYOffset, onDismiss, onChangeAmount, onError, onProgress, onPayViaIntent)
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun ZapAmountChoicePopup(
     baseNote: Note,
@@ -1531,26 +1598,27 @@ fun ZapAmountChoicePopup(
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
 ) {
+    val visibilityState = rememberVisibilityState(onDismiss)
+    ZapAmountChoicePopup(baseNote, zapAmountChoices, accountViewModel, popupYOffset, visibilityState, onChangeAmount, onError, onProgress, onPayViaIntent)
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@Composable
+fun ZapAmountChoicePopup(
+    baseNote: Note,
+    zapAmountChoices: ImmutableList<Long>,
+    accountViewModel: AccountViewModel,
+    popupYOffset: Dp,
+    visibilityState: MutableTransitionState<Boolean>,
+    onChangeAmount: () -> Unit,
+    onError: (title: String, text: String) -> Unit,
+    onProgress: (percent: Float) -> Unit,
+    onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
+) {
     val context = LocalContext.current
     val zapMessage = ""
 
     val yOffset = with(LocalDensity.current) { -popupYOffset.toPx().toInt() }
-
-    // Define animation specs
-    val animationDuration = 250
-    val fadeAnimationSpec = tween<Float>(durationMillis = animationDuration)
-
-    // Prevent multiple calls to onDismiss()
-    var dismissed by remember { mutableStateOf(false) }
-
-    val visibilityState = remember { MutableTransitionState(false).apply { targetState = true } }
-    LaunchedEffect(visibilityState.targetState) {
-        if (!visibilityState.targetState && !dismissed) {
-            delay(animationDuration.toLong())
-            dismissed = true
-            onDismiss()
-        }
-    }
 
     Popup(
         alignment = Alignment.BottomCenter,
@@ -1560,14 +1628,8 @@ fun ZapAmountChoicePopup(
     ) {
         AnimatedVisibility(
             visibleState = visibilityState,
-            enter =
-                slideInVertically(
-                    initialOffsetY = { it / 2 },
-                ) + fadeIn(animationSpec = fadeAnimationSpec),
-            exit =
-                slideOutVertically(
-                    targetOffsetY = { it / 2 },
-                ) + fadeOut(animationSpec = fadeAnimationSpec),
+            enter = popupAnimationEnter,
+            exit = popupAnimationExit,
         ) {
             FlowRow(horizontalArrangement = Arrangement.Center) {
                 zapAmountChoices.forEach { amountInSats ->

@@ -72,7 +72,7 @@ class VideoFeedFilter(
                 (noteEvent is FileStorageHeaderEvent && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET))
         ) &&
             params.match(noteEvent) &&
-            account.isAcceptable(it)
+            (params.isHiddenList || account.isAcceptable(it))
     }
 
     fun buildFilterParams(account: Account): FilterByListParams =
