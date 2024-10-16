@@ -387,7 +387,7 @@ fun PrepareChatroomViewModels(
     }
 
     if (draftMessage != null) {
-        LaunchedEffect(key1 = draftMessage) { newPostModel.message = TextFieldValue(draftMessage) }
+        LaunchedEffect(key1 = draftMessage) { newPostModel.updateMessage(TextFieldValue(draftMessage)) }
     }
 
     ChatroomScreen(

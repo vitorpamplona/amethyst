@@ -30,8 +30,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
@@ -40,13 +42,17 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -70,6 +76,7 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
+import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -80,6 +87,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.FileServersEvent
 import kotlinx.collections.immutable.toImmutableList
@@ -87,6 +95,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewMediaView(
     uri: Uri,
@@ -121,9 +130,66 @@ fun NewMediaView(
                 decorFitsSystemWindows = false,
             ),
     ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
+        SetDialogToEdgeToEdge()
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Spacer(modifier = StdHorzSpacer)
+
+                            Box {
+                                IconButton(
+                                    modifier = Modifier.align(Alignment.Center),
+                                    onClick = { showRelaysDialog = true },
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.relays),
+                                        contentDescription = null,
+                                        modifier = Modifier.height(25.dp),
+                                        tint = MaterialTheme.colorScheme.onBackground,
+                                    )
+                                }
+                            }
+
+                            PostButton(
+                                onPost = {
+                                    onClose()
+                                    postViewModel.upload(context, relayList, mediaQualitySlider) {
+                                        accountViewModel.toast(stringRes(context, R.string.failed_to_upload_media_no_details), it)
+                                    }
+                                    postViewModel.selectedServer?.let {
+                                        if (!it.isNip95) {
+                                            account.settings.changeDefaultFileServer(it.server)
+                                        }
+                                    }
+                                },
+                                isActive = postViewModel.canPost(),
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        Row {
+                            Spacer(modifier = StdHorzSpacer)
+                            CloseButton(
+                                onPress = {
+                                    postViewModel.cancel()
+                                    onClose()
+                                },
+                            )
+                        }
+                    },
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                )
+            },
+        ) { pad ->
             if (showRelaysDialog) {
                 RelaySelectionDialog(
                     preSelectedList = relayList,
@@ -134,61 +200,21 @@ fun NewMediaView(
                 )
             }
 
-            Column(
+            Surface(
                 modifier =
                     Modifier
-                        .padding(start = 10.dp, end = 10.dp, top = 10.dp)
-                        .fillMaxWidth()
-                        .fillMaxHeight()
+                        .padding(pad)
+                        .consumeWindowInsets(pad)
                         .imePadding(),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CloseButton(
-                        onPress = {
-                            postViewModel.cancel()
-                            onClose()
-                        },
-                    )
-
-                    Box {
-                        IconButton(
-                            modifier = Modifier.align(Alignment.Center),
-                            onClick = { showRelaysDialog = true },
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.relays),
-                                contentDescription = null,
-                                modifier = Modifier.height(25.dp),
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        }
-                    }
-
-                    PostButton(
-                        onPost = {
-                            onClose()
-                            postViewModel.upload(context, relayList, mediaQualitySlider) {
-                                accountViewModel.toast(stringRes(context, R.string.failed_to_upload_media_no_details), it)
-                            }
-                            postViewModel.selectedServer?.let {
-                                if (!it.isNip95) {
-                                    account.settings.changeDefaultFileServer(it.server)
-                                }
-                            }
-                        },
-                        isActive = postViewModel.canPost(),
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
                 ) {
                     Column(
-                        modifier = Modifier.fillMaxWidth().verticalScroll(scrollState),
+                        modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(scrollState),
                     ) {
                         ImageVideoPost(postViewModel, accountViewModel)
 
@@ -197,7 +223,6 @@ fun NewMediaView(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
                                     .padding(vertical = 8.dp),
                         ) {
                             Column(

@@ -194,6 +194,8 @@ import java.lang.Math.round
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
 fun NewPostScreen(
+    message: String? = null,
+    attachment: Uri? = null,
     baseReplyTo: Note? = null,
     quote: Note? = null,
     fork: Note? = null,
@@ -231,6 +233,12 @@ fun NewPostScreen(
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
             postViewModel.load(accountViewModel, baseReplyTo, quote, fork, version, draft)
+            message?.ifBlank { null }?.let {
+                postViewModel.updateMessage(TextFieldValue(it))
+            }
+            attachment?.let {
+                postViewModel.selectImage(it)
+            }
         }
     }
 
@@ -318,16 +326,16 @@ fun NewPostScreen(
         ) {
             Column(
                 modifier =
-                    Modifier.fillMaxSize().padding(
-                        start = Size10dp,
-                        end = Size10dp,
-                    ),
+                    Modifier.fillMaxSize(),
             ) {
                 Row(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .weight(1f),
+                            .padding(
+                                start = Size10dp,
+                                end = Size10dp,
+                            ).weight(1f),
                 ) {
                     Column(
                         modifier =

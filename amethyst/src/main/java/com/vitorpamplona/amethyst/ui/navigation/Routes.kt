@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Immutable
@@ -39,6 +40,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import java.net.URLEncoder
 
 @Immutable
 sealed class Route(
@@ -230,10 +232,12 @@ sealed class Route(
 
     object NewPost :
         Route(
-            route = "NewPost?baseReplyTo={baseReplyTo}&quote={quote}&fork={fork}&version={version}&draft={draft}&enableMessageInterface={enableMessageInterface}",
+            route = "NewPost?message={message}&attachment={attachment}&baseReplyTo={baseReplyTo}&quote={quote}&fork={fork}&version={version}&draft={draft}&enableMessageInterface={enableMessageInterface}",
             icon = R.drawable.ic_moments,
             arguments =
                 listOf(
+                    navArgument("message") { type = NavType.StringType },
+                    navArgument("attachment") { type = NavType.StringType },
                     navArgument("baseReplyTo") { type = NavType.StringType },
                     navArgument("quote") { type = NavType.StringType },
                     navArgument("fork") { type = NavType.StringType },
@@ -294,6 +298,8 @@ private fun getRouteWithArguments(
 }
 
 fun buildNewPostRoute(
+    draftMessage: String? = null,
+    attachment: Uri? = null,
     baseReplyTo: String? = null,
     quote: String? = null,
     fork: String? = null,
@@ -302,6 +308,8 @@ fun buildNewPostRoute(
     enableMessageInterface: Boolean = false,
 ): String =
     "NewPost?" +
+        "message=${draftMessage?.let { URLEncoder.encode(it, "utf-8") } ?: ""}&" +
+        "attachment=${attachment?.let { URLEncoder.encode(it.toString(), "utf-8") } ?: ""}&" +
         "baseReplyTo=${baseReplyTo ?: ""}&" +
         "quote=${quote ?: ""}&" +
         "fork=${fork ?: ""}&" +

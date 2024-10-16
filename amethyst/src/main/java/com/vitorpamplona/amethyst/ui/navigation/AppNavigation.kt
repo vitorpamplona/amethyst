@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.navigation
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import android.net.Uri
+import android.os.Parcelable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -291,6 +293,11 @@ fun AppNavigation(
                 popEnterTransition = { scaleIn },
                 popExitTransition = { slideOutVerticallyToBottom },
             ) {
+                val draftMessage = it.message()
+                val attachment =
+                    it.arguments?.getString("attachment")?.ifBlank { null }?.let {
+                        Uri.parse(it)
+                    }
                 val baseReplyTo = it.arguments?.getString("baseReplyTo")
                 val quote = it.arguments?.getString("quote")
                 val fork = it.arguments?.getString("fork")
@@ -298,6 +305,8 @@ fun AppNavigation(
                 val draft = it.arguments?.getString("draft")
                 val enableMessageInterface = it.arguments?.getBoolean("enableMessageInterface") ?: false
                 NewPostScreen(
+                    message = draftMessage,
+                    attachment = attachment,
                     baseReplyTo = baseReplyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     quote = quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     fork = fork?.let { hex -> accountViewModel.getNoteIfExists(hex) },
@@ -326,86 +335,106 @@ private fun NavigateIfIntentRequested(
     val activity = LocalContext.current.getActivity()
     var newAccount by remember { mutableStateOf<String?>(null) }
 
-    var currentIntentNextPage by remember {
-        mutableStateOf(
-            activity.intent
-                ?.data
-                ?.toString()
-                ?.ifBlank { null },
-        )
-    }
-
-    currentIntentNextPage?.let { intentNextPage ->
-        var actionableNextPage by remember {
-            mutableStateOf(uriToRoute(intentNextPage))
+    if (activity.intent.action == Intent.ACTION_SEND) {
+        activity.intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
+            nav.newStack(buildNewPostRoute(draftMessage = it))
         }
 
-        LaunchedEffect(intentNextPage) {
-            if (actionableNextPage != null) {
-                actionableNextPage?.let {
-                    val currentRoute = getRouteWithArguments(nav.controller)
-                    if (!isSameRoute(currentRoute, it)) {
-                        nav.newStack(it)
-                    }
-                    actionableNextPage = null
-                }
-            } else if (intentNextPage.contains("ncryptsec1")) {
-                // login functions
-                Nip19Bech32.tryParseAndClean(intentNextPage)?.let {
-                    newAccount = it
-                }
+        (activity.intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)?.let {
+            nav.newStack(buildNewPostRoute(attachment = it))
+        }
+    } else {
+        var currentIntentNextPage by remember {
+            mutableStateOf(
+                activity.intent
+                    ?.data
+                    ?.toString()
+                    ?.ifBlank { null },
+            )
+        }
 
-                actionableNextPage = null
-            } else {
-                accountViewModel.toast(
-                    R.string.invalid_nip19_uri,
-                    R.string.invalid_nip19_uri_description,
-                    intentNextPage,
-                )
+        currentIntentNextPage?.let { intentNextPage ->
+            var actionableNextPage by remember {
+                mutableStateOf(uriToRoute(intentNextPage))
             }
 
-            currentIntentNextPage = null
-        }
-    }
-
-    val scope = rememberCoroutineScope()
-
-    DisposableEffect(nav, activity) {
-        val consumer =
-            Consumer<Intent> { intent ->
-                val uri = intent.data?.toString()
-                if (!uri.isNullOrBlank()) {
-                    // navigation functions
-                    val newPage = uriToRoute(uri)
-
-                    if (newPage != null) {
+            LaunchedEffect(intentNextPage) {
+                if (actionableNextPage != null) {
+                    actionableNextPage?.let {
                         val currentRoute = getRouteWithArguments(nav.controller)
-                        if (!isSameRoute(currentRoute, newPage)) {
-                            nav.newStack(newPage)
+                        if (!isSameRoute(currentRoute, it)) {
+                            nav.newStack(it)
                         }
-                    } else if (uri.contains("ncryptsec")) {
-                        // login functions
-                        Nip19Bech32.tryParseAndClean(uri)?.let {
-                            newAccount = it
+                        actionableNextPage = null
+                    }
+                } else if (intentNextPage.contains("ncryptsec1")) {
+                    // login functions
+                    Nip19Bech32.tryParseAndClean(intentNextPage)?.let {
+                        newAccount = it
+                    }
+
+                    actionableNextPage = null
+                } else {
+                    accountViewModel.toast(
+                        R.string.invalid_nip19_uri,
+                        R.string.invalid_nip19_uri_description,
+                        intentNextPage,
+                    )
+                }
+
+                currentIntentNextPage = null
+            }
+        }
+
+        val scope = rememberCoroutineScope()
+
+        DisposableEffect(nav, activity) {
+            val consumer =
+                Consumer<Intent> { intent ->
+                    if (intent.action == Intent.ACTION_SEND) {
+                        intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
+                            nav.newStack(buildNewPostRoute(draftMessage = it))
+                        }
+
+                        (intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)?.let {
+                            nav.newStack(buildNewPostRoute(attachment = it))
                         }
                     } else {
-                        scope.launch {
-                            delay(1000)
-                            accountViewModel.toast(
-                                R.string.invalid_nip19_uri,
-                                R.string.invalid_nip19_uri_description,
-                                uri,
-                            )
+                        val uri = intent.data?.toString()
+                        if (!uri.isNullOrBlank()) {
+                            // navigation functions
+                            val newPage = uriToRoute(uri)
+
+                            if (newPage != null) {
+                                val currentRoute = getRouteWithArguments(nav.controller)
+                                if (!isSameRoute(currentRoute, newPage)) {
+                                    nav.newStack(newPage)
+                                }
+                            } else if (uri.contains("ncryptsec")) {
+                                // login functions
+                                Nip19Bech32.tryParseAndClean(uri)?.let {
+                                    newAccount = it
+                                }
+                            } else {
+                                scope.launch {
+                                    delay(1000)
+                                    accountViewModel.toast(
+                                        R.string.invalid_nip19_uri,
+                                        R.string.invalid_nip19_uri_description,
+                                        uri,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
-            }
-        activity.addOnNewIntentListener(consumer)
-        onDispose { activity.removeOnNewIntentListener(consumer) }
-    }
+            activity.addOnNewIntentListener(consumer)
+            onDispose { activity.removeOnNewIntentListener(consumer) }
+        }
 
-    if (newAccount != null) {
-        AddAccountDialog(newAccount, accountStateViewModel) { newAccount = null }
+        if (newAccount != null) {
+            AddAccountDialog(newAccount, accountStateViewModel) { newAccount = null }
+        }
     }
 }
 
