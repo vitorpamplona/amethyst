@@ -393,17 +393,16 @@ class Relay(
                         }
 
                     if (relayFilters.isNotEmpty()) {
-                        val request =
+                        writeToSocket(
                             relayFilters.joinToStringLimited(
                                 separator = ",",
-                                limit = 20,
+                                limit = 19,
                                 prefix = """["REQ","$requestId",""",
                                 postfix = "]",
                             ) {
                                 it.filter.toJson(url)
-                            }
-
-                        writeToSocket(request)
+                            },
+                        )
 
                         afterEOSEPerSubscription[requestId] = false
                     }
