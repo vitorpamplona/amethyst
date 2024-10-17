@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.StringToastMsg
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockVitorAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BigPadding
@@ -150,8 +151,61 @@ fun PollNotePreview() {
     runBlocking {
         withContext(Dispatchers.IO) {
             LocalCache.justConsume(event, null)
-            LocalCache.justConsume(zapVote, null)
+            LocalCache.consume(zapVote.zapRequest!!)
+            LocalCache.consume(zapVote, null)
             baseNote = LocalCache.getOrCreateNote("6ff9bc13d27490f6e3953325260bd996901a143de89886a0608c39e7d0160a72")
+        }
+    }
+
+    val color = MaterialTheme.colorScheme.background
+
+    if (baseNote != null) {
+        ThemeComparisonColumn(
+            toPreview = {
+                Column(
+                    Modifier.padding(10.dp),
+                ) {
+                    PollNote(
+                        baseNote = baseNote,
+                        true,
+                        remember { mutableStateOf(color) },
+                        accountViewModel,
+                        nav,
+                    )
+                }
+            },
+        )
+    }
+}
+
+@Preview
+@Composable
+fun PollNotePreview2() {
+    val event =
+        PollNoteEvent(
+            id = "3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab",
+            pubKey = "f8ff11c7a7d3478355d3b4d174e5a473797a906ea4aa61aa9b6bc0652c1ea17a",
+            createdAt = 1729191389,
+            content = "Test",
+            sig = "fc7f83e4dc84082a9a473338d9df2fdb876c59fbc94d49fdbce1e0bfd85cc7d50b14d4f0d08e8a84ef46f99a4e889e261cc898e2caeca4a153d8925254c5a761",
+            tags =
+                arrayOf(
+                    arrayOf("poll_option", "0", "Pesquisa em portugues"),
+                    arrayOf("poll_option", "1", "Pesquisa em ingles"),
+                    arrayOf("value_maximum", "2"),
+                    arrayOf("value_minimum", "2"),
+                    arrayOf("alt", "Poll event"),
+                ),
+        )
+
+    val accountViewModel = mockAccountViewModel()
+    val nav = EmptyNav
+    val baseNote: Note?
+
+    runBlocking {
+        withContext(Dispatchers.IO) {
+            LocalCache.justConsume(event, null)
+            baseNote = LocalCache.getOrCreateNote("3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab")
         }
     }
 
@@ -284,6 +338,7 @@ private fun OptionNote(
                 nonClickablePrepend = {},
                 clickablePrepend = {
                     RenderOptionBeforeVote(
+                        baseNote,
                         poolOption.descriptor,
                         canPreview,
                         tags,
@@ -376,6 +431,7 @@ private fun RenderOptionAfterVote(
 
 @Composable
 private fun RenderOptionBeforeVote(
+    baseNote: Note,
     description: String,
     canPreview: Boolean,
     tags: ImmutableListOfLists<String>,
@@ -393,17 +449,19 @@ private fun RenderOptionBeforeVote(
                 QuoteBorder,
             ),
     ) {
-        TranslatableRichTextViewer(
-            content = description,
-            canPreview = canPreview,
-            quotesLeft = 1,
-            modifier = BigPadding,
-            tags = tags,
-            backgroundColor = backgroundColor,
-            id = description,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        Column(BigPadding) {
+            TranslatableRichTextViewer(
+                content = description,
+                canPreview = canPreview,
+                quotesLeft = 1,
+                modifier = Modifier,
+                tags = tags,
+                backgroundColor = backgroundColor,
+                id = baseNote.idHex + description,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
     }
 }
 
