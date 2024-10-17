@@ -1309,6 +1309,7 @@ private fun BoostTypeChoicePopup(
         alignment = Alignment.BottomCenter,
         offset = IntOffset(0, iconSizePx),
         onDismissRequest = { visibilityState.targetState = false },
+        properties = PopupProperties(focusable = true),
     ) {
         AnimatedVisibility(
             visibleState = visibilityState,
