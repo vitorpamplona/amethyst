@@ -1699,3 +1699,21 @@ fun mockAccountViewModel(): AccountViewModel {
         sharedPreferencesViewModel.sharedPrefs,
     )
 }
+
+@Composable
+fun mockVitorAccountViewModel(): AccountViewModel {
+    val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
+    sharedPreferencesViewModel.init()
+
+    return AccountViewModel(
+        AccountSettings(
+            // blank keys
+            keyPair =
+                KeyPair(
+                    pubKey = Hex.decode("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
+                    forcePubKeyCheck = false,
+                ),
+        ),
+        sharedPreferencesViewModel.sharedPrefs,
+    )
+}
