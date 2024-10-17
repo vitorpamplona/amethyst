@@ -53,3 +53,6 @@ val DarkWarningColor = Color(0xFFF8DE22)
 
 val LightAllGoodColor = Color(0xFF339900)
 val DarkAllGoodColor = Color(0xFF99cc33)
+
+val LightFundraiserProgressColor = Color(0xFF3DB601)
+val DarkFundraiserProgressColor = Color(0xFF61A229)

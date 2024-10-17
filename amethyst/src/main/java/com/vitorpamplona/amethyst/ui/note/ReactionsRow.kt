@@ -48,7 +48,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -81,6 +80,7 @@ import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
@@ -116,10 +116,11 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.DarkerGreen
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
+import com.vitorpamplona.amethyst.ui.theme.Height24dpFilledModifier
+import com.vitorpamplona.amethyst.ui.theme.Height4dpFilledModifier
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.NoSoTinyBorders
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowExpandButton
@@ -141,7 +142,7 @@ import com.vitorpamplona.amethyst.ui.theme.TinyBorders
 import com.vitorpamplona.amethyst.ui.theme.defaultTweenDuration
 import com.vitorpamplona.amethyst.ui.theme.defaultTweenFloatSpec
 import com.vitorpamplona.amethyst.ui.theme.defaultTweenIntOffsetSpec
-import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
+import com.vitorpamplona.amethyst.ui.theme.fundraiserProgressColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
@@ -348,22 +349,13 @@ fun RenderZapRaiser(
         }
     }
 
-    val color =
-        if (zapraiserStatus.progress > 0.99) {
-            DarkerGreen
-        } else {
-            MaterialTheme.colorScheme.mediumImportanceLink
-        }
-
     LinearProgressIndicator(
-        modifier =
-            remember(details) {
-                Modifier
-                    .fillMaxWidth()
-                    .height(if (details) 24.dp else 4.dp)
-            },
-        color = color,
+        modifier = if (details) Height24dpFilledModifier else Height4dpFilledModifier,
+        color = MaterialTheme.colorScheme.fundraiserProgressColor,
         progress = { zapraiserStatus.progress },
+        gapSize = 0.dp,
+        strokeCap = StrokeCap.Square,
+        drawStopIndicator = {},
     )
 
     if (details) {
@@ -380,7 +372,7 @@ fun RenderZapRaiser(
                 text =
                     stringRes(id = R.string.sats_to_complete, totalPercentage, zapraiserStatus.left),
                 modifier = NoSoTinyBorders,
-                color = MaterialTheme.colorScheme.placeholderText,
+                // color = MaterialTheme.colorScheme.placeholderText,
                 fontSize = Font14SP,
                 maxLines = 1,
             )
