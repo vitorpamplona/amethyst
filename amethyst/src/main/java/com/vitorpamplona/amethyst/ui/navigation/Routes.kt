@@ -241,6 +241,15 @@ sealed class Route(
         )
 }
 
+fun isBaseRoute(
+    navController: NavHostController,
+    startsWith: String,
+): Boolean =
+    navController.currentBackStackEntry
+        ?.destination
+        ?.route
+        ?.startsWith(startsWith) ?: false
+
 fun getRouteWithArguments(navController: NavHostController): String? {
     val currentEntry = navController.currentBackStackEntry ?: return null
     return getRouteWithArguments(currentEntry.destination, currentEntry.arguments)
