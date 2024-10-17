@@ -397,6 +397,9 @@ val ColorScheme.warningColor: Color
 val ColorScheme.allGoodColor: Color
     get() = if (isLight) LightAllGoodColor else DarkAllGoodColor
 
+val ColorScheme.fundraiserProgressColor: Color
+    get() = if (isLight) LightFundraiserProgressColor else DarkFundraiserProgressColor
+
 val ColorScheme.markdownStyle: RichTextStyle
     get() = if (isLight) MarkDownStyleOnLight else MarkDownStyleOnDark
 

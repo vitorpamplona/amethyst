@@ -178,6 +178,9 @@ val UserNameMaxRowHeight = Modifier.fillMaxWidth()
 val Height24dpModifier = Modifier.height(24.dp)
 val Height4dpModifier = Modifier.height(4.dp)
 
+val Height24dpFilledModifier = Modifier.fillMaxWidth().height(24.dp)
+val Height4dpFilledModifier = Modifier.fillMaxWidth().height(4.dp)
+
 val AccountPictureModifier = Modifier.size(55.dp).clip(shape = CircleShape)
 val HeaderPictureModifier = Modifier.size(34.dp).clip(shape = CircleShape)
 

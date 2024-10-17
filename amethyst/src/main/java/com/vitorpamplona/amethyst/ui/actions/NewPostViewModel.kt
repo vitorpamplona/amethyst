@@ -981,6 +981,10 @@ open class NewPostViewModel : ViewModel() {
         draftTextChanges.trySend("")
     }
 
+    open fun addToMessage(it: String) {
+        updateMessage(TextFieldValue(message.text + " " + it))
+    }
+
     open fun updateMessage(it: TextFieldValue) {
         message = it
         urlPreview = findUrlInMessage()

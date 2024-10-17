@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.Manifest
+import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
+import android.os.Parcelable
 import android.util.Log
 import android.util.Size
 import android.widget.Toast
@@ -119,6 +121,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.util.Consumer
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -146,7 +149,8 @@ import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZapRaiserRequest
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Nav
+import com.vitorpamplona.amethyst.ui.navigation.getActivity
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.CancelIcon
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
@@ -203,12 +207,13 @@ fun NewPostScreen(
     draft: Note? = null,
     enableMessageInterface: Boolean = false,
     accountViewModel: AccountViewModel,
-    nav: INav,
+    nav: Nav,
 ) {
     val postViewModel: NewPostViewModel = viewModel()
     postViewModel.wantsDirectMessage = enableMessageInterface
 
     val context = LocalContext.current
+    val activity = context.getActivity()
 
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
@@ -250,6 +255,27 @@ fun NewPostScreen(
             NostrSearchEventOrUserDataSource.stop()
         }
     }
+
+    DisposableEffect(nav, activity) {
+        // Microsoft's swift key sends Gifs as new actions
+
+        val consumer =
+            Consumer<Intent> { intent ->
+                if (intent.action == Intent.ACTION_SEND) {
+                    intent.getStringExtra(Intent.EXTRA_TEXT)?.ifBlank { null }?.let {
+                        postViewModel.addToMessage(it)
+                    }
+
+                    (intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)?.let {
+                        postViewModel.selectImage(it)
+                    }
+                }
+            }
+
+        activity.addOnNewIntentListener(consumer)
+        onDispose { activity.removeOnNewIntentListener(consumer) }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

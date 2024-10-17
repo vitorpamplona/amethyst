@@ -293,7 +293,7 @@ fun AppNavigation(
                 popEnterTransition = { scaleIn },
                 popExitTransition = { slideOutVerticallyToBottom },
             ) {
-                val draftMessage = it.message()
+                val draftMessage = it.arguments?.getString("message")?.ifBlank { null }
                 val attachment =
                     it.arguments?.getString("attachment")?.ifBlank { null }?.let {
                         Uri.parse(it)
@@ -304,6 +304,7 @@ fun AppNavigation(
                 val version = it.arguments?.getString("version")
                 val draft = it.arguments?.getString("draft")
                 val enableMessageInterface = it.arguments?.getBoolean("enableMessageInterface") ?: false
+
                 NewPostScreen(
                     message = draftMessage,
                     attachment = attachment,
@@ -333,9 +334,12 @@ private fun NavigateIfIntentRequested(
     accountStateViewModel: AccountStateViewModel,
 ) {
     val activity = LocalContext.current.getActivity()
-    var newAccount by remember { mutableStateOf<String?>(null) }
 
     if (activity.intent.action == Intent.ACTION_SEND) {
+        // avoids restarting the new Post screen when the intent is for the screen.
+        // Microsoft's swift key sends Gifs as new actions
+        if (isBaseRoute(nav.controller, Route.NewPost.base)) return
+
         // saves the intent to avoid processing again
         var message by remember {
             mutableStateOf(
@@ -356,6 +360,8 @@ private fun NavigateIfIntentRequested(
         media = null
         message = null
     } else {
+        var newAccount by remember { mutableStateOf<String?>(null) }
+
         var currentIntentNextPage by remember {
             mutableStateOf(
                 activity.intent
@@ -404,12 +410,16 @@ private fun NavigateIfIntentRequested(
             val consumer =
                 Consumer<Intent> { intent ->
                     if (intent.action == Intent.ACTION_SEND) {
-                        intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
-                            nav.newStack(buildNewPostRoute(draftMessage = it))
-                        }
+                        // avoids restarting the new Post screen when the intent is for the screen.
+                        // Microsoft's swift key sends Gifs as new actions
+                        if (!isBaseRoute(nav.controller, Route.NewPost.base)) {
+                            intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
+                                nav.newStack(buildNewPostRoute(draftMessage = it))
+                            }
 
-                        (intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)?.let {
-                            nav.newStack(buildNewPostRoute(attachment = it))
+                            (intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)?.let {
+                                nav.newStack(buildNewPostRoute(attachment = it))
+                            }
                         }
                     } else {
                         val uri = intent.data?.toString()
