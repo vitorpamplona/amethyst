@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
@@ -212,6 +213,7 @@ private fun TranslationMessage(
                         MaterialTheme.colorScheme.onSurface.copy(
                             alpha = 0.32f,
                         ),
+                    fontSize = Font14SP,
                 ),
             overflow = TextOverflow.Visible,
             maxLines = 3,
