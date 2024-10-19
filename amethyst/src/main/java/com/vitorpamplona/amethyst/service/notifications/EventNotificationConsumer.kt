@@ -154,8 +154,9 @@ class EventNotificationConsumer(
         acc: AccountSettings,
     ) {
         if (
-            event.createdAt > TimeUtils.fifteenMinutesAgo() &&
             // old event being re-broadcasted
+            event.createdAt > TimeUtils.fifteenMinutesAgo() &&
+            // don't display if it comes from me.
             event.pubKey != signer.pubKey
         ) { // from the user
             Log.d(TAG, "Notifying")
