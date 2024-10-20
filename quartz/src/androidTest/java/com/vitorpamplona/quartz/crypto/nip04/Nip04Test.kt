@@ -93,4 +93,21 @@ class Nip04Test {
         assertTrue(Nip04.isNIP04("zJxfaJ32rN5Dg1ODjOlEew==?iv=EV5bUjcc4OX2Km/zPp4ndQ=="))
         assertTrue(Nip04.isNIP04("6f8dMstm+udOu7yipSn33orTmwQpWbtfuY95NH+eTU1kArysWJIDkYgI2D25EAGIDJsNd45jOJ2NbVOhFiL3ZP/NWsTwXokk34iyHyA/lkjzugQ1bHXoMD1fP/Ay4hB4al1NHb8HXHKZaxPrErwdRDb8qa/I6dXb/1xxyVvNQBHHvmsM5yIFaPwnCN1DZqXf2KbTA/Ekz7Hy+7R+Sy3TXLQDFpWYqykppkXc7Fs0qSuPRyxz5+anuN0dxZa9GTwTEnBrZPbthKkNRrvZMdTGJ6WumOh9aUq8OJJWy9aOgsXvs7qjN1UqcCqQqYaVnEOhCaqWNDsVtsFrVDj+SaLIBvCiomwF4C4nIgngJ5I69tx0UNI0q+ZnvOGQZ7m1PpW2NYP7Yw43HJNdeUEQAmdCPnh/PJwzLTnIxHmQU7n7SPlMdV0SFa6H8y2HHvex697GAkyE5t8c2uO24OnqIwF1tR3blIqXzTSRl0GA6QvrSj2p4UtnWjvF7xT7RiIEyTtgU/AsihTrXyXzWWZaIBJogpgw6erlZqWjCH7sZy/WoGYEiblobOAqMYxax6vRbeuGtoYksr/myX+x9rfLrYuoDRTw4woXOLmMrrj+Mf0TbAgc3SjdkqdsPU1553rlSqIEZXuFgoWmxvVQDtekgTYyS97G81TDSK9nTJT5ilku8NVq2LgtBXGwsNIw/xekcOUzJke3kpnFPutNaexR1VF3ohIuqRKYRGcd8ADJP2lfwMcaGRiplAmFoaVS1YUhQwYFNq9rMLf7YauRGV4BJg/t9srdGxf5RoKCvRo+XM/nLxxysTR9MVaEP/3lDqjwChMxs+eWfLHE5vRWV8hUEqdrWNZV29gsx5nQpzJ4PARGZVu310pQzc6JAlc2XAhhFk6RamkYJnmCSMnb/RblzIATBi2kNrCVAlaXIon188inB62rEpZGPkRIP7PUfu27S/elLQHBHeGDsxOXsBRo1gl3te+raoBHsxo6zvRnYbwdAQa5taDE63eh+fT6kFI+xYmXNAQkU8Dp0MVhEh4JQI06Ni/AKrvYpC95TXXIphZcF+/Pv/vaGkhG2X9S3uhugwWK?iv=2vWkOQQi0WynNJz/aZ4k2g=="))
     }
+
+    @Test
+    fun isNIP04EncodeWithBug() {
+        assertTrue(
+            Nip04.isNIP04(
+                "QOAYBWa88ConWs2C4kSvNqAcowCtg0ZRtAl7FyLSv9VMaJH4oCiDx0h8VLBnV97HdE4lv" +
+                    "TW7AYC1eEw8/t1dbe0qRc3XrOt7MrPAO8yqpy1/3lFB1+10kip0+KdgT8Quvv02wTP8Dqi" +
+                    "xpr2fliAIG2ONvDn+O5V0q9aVUN9HitgL/myTyR0T42edmxWeZoMBEOKvJyO80FekSsgVL" +
+                    "ASafA/T5z4xs8oG88pSe9wSbSsw0xNjJeh3xLRCLuEuA9KI8hQ1Ys9nEax2UlaB/IL3o77" +
+                    "OwBL+rrdUbNHTxYifgygRhg3BaXMsXRFNJbqYeMaRaNbvHkLVAQV2jLY4P/cKHBjEcTC/f" +
+                    "lrCc2NCYF34rOQUY5EJVnFzM8qYVw6xNupBHTS7WFx1r60cPjG19P/+yoiTZ6bPdHTU0X2" +
+                    "t64ovF2YWUq6/iKAclMaZDhWfrKqf82e62oIff55WQw2bw8A/jtBQVCf66EtEJ2OSFxNaZ" +
+                    "rO+A4oLkHDCnAV+6fYzwo89gPOvORcVvSvg55yGiBFUZx9EHS6kdH1SU80/Mbxe2oI=" +
+                    "?iv=gxz9pUFJFZHuV+D+hgKEOw==-null",
+            ),
+        )
+    }
 }

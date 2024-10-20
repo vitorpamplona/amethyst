@@ -153,14 +153,21 @@ class Nip04(
             }
 
             fun isNIP04(encoded: String): Boolean {
-                val l = encoded.length
+                // cleaning up some bug from some client.
+                val cleanedUp = encoded.removeSuffix("-null")
+
+                val l = cleanedUp.length
                 if (l < 28) return false
-                return encoded[l - 28] == '?' && encoded[l - 27] == 'i' && encoded[l - 26] == 'v' && encoded[l - 25] == '='
+                return cleanedUp[l - 28] == '?' &&
+                    cleanedUp[l - 27] == 'i' &&
+                    cleanedUp[l - 26] == 'v' &&
+                    cleanedUp[l - 25] == '='
             }
 
             fun decodeFromNIP04(payload: String): EncryptedInfo? =
                 try {
-                    val parts = payload.split("?iv=")
+                    // cleaning up some bug from some client.
+                    val parts = payload.removeSuffix("-null").split("?iv=")
                     EncryptedInfo(
                         ciphertext = Base64.getDecoder().decode(parts[0]),
                         nonce = Base64.getDecoder().decode(parts[1]),
