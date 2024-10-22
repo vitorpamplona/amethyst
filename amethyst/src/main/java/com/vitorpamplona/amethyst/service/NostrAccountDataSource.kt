@@ -33,6 +33,7 @@ import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.events.AppSpecificDataEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
 import com.vitorpamplona.quartz.events.BookmarkListEvent
@@ -78,35 +79,15 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
     val latestEOSEs = EOSEAccount()
     val hasLoadedTheBasics = mutableMapOf<User, Boolean>()
 
-    fun createAccountContactListFilter(): TypedFilter =
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(ContactListEvent.KIND),
-                    authors = listOf(account.userProfile().pubkeyHex),
-                    limit = 1,
-                ),
-        )
-
     fun createAccountMetadataFilter(): TypedFilter =
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(MetadataEvent.KIND),
-                    authors = listOf(account.userProfile().pubkeyHex),
-                    limit = 1,
-                ),
-        )
-
-    fun createAccountRelayListFilter(): TypedFilter =
         TypedFilter(
             types = COMMON_FEED_TYPES,
             filter =
                 SincePerRelayFilter(
                     kinds =
                         listOf(
+                            MetadataEvent.KIND,
+                            ContactListEvent.KIND,
                             StatusEvent.KIND,
                             AdvertisedRelayListEvent.KIND,
                             ChatMessageRelayListEvent.KIND,
@@ -138,7 +119,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                             PeopleListEvent.KIND,
                         ),
                     authors = otherAuthors,
-                    limit = 100,
+                    limit = otherAuthors.size * 10,
                 ),
         )
     }
@@ -151,6 +132,18 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                     kinds = listOf(BookmarkListEvent.KIND, PeopleListEvent.KIND, MuteListEvent.KIND, BadgeProfilesEvent.KIND, EmojiPackSelectionEvent.KIND),
                     authors = listOf(account.userProfile().pubkeyHex),
                     limit = 100,
+                ),
+        )
+
+    fun createAccountSettings2Filter(): TypedFilter =
+        TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                SincePerRelayFilter(
+                    kinds = listOf(AppSpecificDataEvent.KIND),
+                    authors = listOf(account.userProfile().pubkeyHex),
+                    tags = mapOf("d" to listOf(Account.APP_SPECIFIC_DATA_D_TAG)),
+                    limit = 1,
                 ),
         )
 
@@ -465,8 +458,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
             accountChannel.typedFilters =
                 listOfNotNull(
                     createAccountMetadataFilter(),
-                    createAccountContactListFilter(),
-                    createAccountRelayListFilter(),
+                    createAccountSettings2Filter(),
                     createNotificationFilter(),
                     createNotificationFilter2(),
                     createGiftWrapsToMeFilter(),
@@ -480,9 +472,8 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
             accountChannel.typedFilters =
                 listOf(
                     createAccountMetadataFilter(),
-                    createAccountContactListFilter(),
-                    createAccountRelayListFilter(),
                     createAccountSettingsFilter(),
+                    createAccountSettings2Filter(),
                 ).ifEmpty { null }
         }
 

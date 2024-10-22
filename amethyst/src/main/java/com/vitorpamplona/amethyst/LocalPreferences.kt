@@ -26,7 +26,12 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.amethyst.model.AccountLanguagePreferencesInternal
+import com.vitorpamplona.amethyst.model.AccountReactionPreferencesInternal
+import com.vitorpamplona.amethyst.model.AccountSecurityPreferencesInternal
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.AccountSyncedSettingsInternal
+import com.vitorpamplona.amethyst.model.AccountZapPreferencesInternal
 import com.vitorpamplona.amethyst.model.DefaultReactions
 import com.vitorpamplona.amethyst.model.DefaultZapAmounts
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
@@ -45,6 +50,7 @@ import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.events.AppSpecificDataEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.Event
@@ -53,11 +59,9 @@ import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.events.SearchRelayListEvent
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -104,6 +108,7 @@ private object PrefKeys {
     const val LATEST_SEARCH_RELAY_LIST = "latestSearchRelayList"
     const val LATEST_MUTE_LIST = "latestMuteList"
     const val LATEST_PRIVATE_HOME_RELAY_LIST = "latestPrivateHomeRelayList"
+    const val LATEST_APP_SPECIFIC_DATA = "latestAppSpecificData"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
     const val HIDE_NIP_17_WARNING_DIALOG = "hide_nip24_warning_dialog" // delete later
@@ -310,19 +315,7 @@ object LocalPreferences {
                         }
                         settings.keyPair.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHexKey()) }
                         putString(PrefKeys.RELAYS, Event.mapper.writeValueAsString(settings.localRelays))
-                        putStringSet(PrefKeys.DONT_TRANSLATE_FROM, settings.dontTranslateFrom)
-                        putStringSet(PrefKeys.LOCAL_RELAY_SERVERS, settings.localRelayServers)
-                        putString(
-                            PrefKeys.LANGUAGE_PREFS,
-                            Event.mapper.writeValueAsString(settings.languagePreferences),
-                        )
-                        putString(PrefKeys.TRANSLATE_TO, settings.translateTo)
-                        putString(PrefKeys.ZAP_AMOUNTS, Event.mapper.writeValueAsString(settings.zapAmountChoices.value))
-                        putString(
-                            PrefKeys.REACTION_CHOICES,
-                            Event.mapper.writeValueAsString(settings.reactionChoices.value),
-                        )
-                        putString(PrefKeys.DEFAULT_ZAPTYPE, settings.defaultZapType.value.name)
+
                         putString(
                             PrefKeys.DEFAULT_FILE_SERVER,
                             Event.mapper.writeValueAsString(settings.defaultFileServer),
@@ -404,6 +397,15 @@ object LocalPreferences {
                             remove(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST)
                         }
 
+                        if (settings.backupAppSpecificData != null) {
+                            putString(
+                                PrefKeys.LATEST_APP_SPECIFIC_DATA,
+                                Event.mapper.writeValueAsString(settings.backupAppSpecificData),
+                            )
+                        } else {
+                            remove(PrefKeys.LATEST_APP_SPECIFIC_DATA)
+                        }
+
                         putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, settings.hideDeleteRequestDialog)
                         putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, settings.hideNIP17WarningDialog)
                         putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, settings.hideBlockAlertDialog)
@@ -413,9 +415,6 @@ object LocalPreferences {
                         remove(PrefKeys.PROXY_PORT)
 
                         putString(PrefKeys.TOR_SETTINGS, Event.mapper.writeValueAsString(settings.torSettings.toSettings()))
-
-                        putBoolean(PrefKeys.WARN_ABOUT_REPORTS, settings.warnAboutPostsWithReports)
-                        putBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, settings.filterSpamFromStrangers)
 
                         val regularMap =
                             settings.lastReadPerRoute.value.mapValues {
@@ -427,12 +426,6 @@ object LocalPreferences {
                             Event.mapper.writeValueAsString(regularMap),
                         )
                         putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, settings.hasDonatedInVersion.value)
-
-                        if (settings.showSensitiveContent.value == null) {
-                            remove(PrefKeys.SHOW_SENSITIVE_CONTENT)
-                        } else {
-                            putBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, settings.showSensitiveContent.value!!)
-                        }
 
                         putString(
                             PrefKeys.PENDING_ATTESTATIONS,
@@ -510,9 +503,6 @@ object LocalPreferences {
                     getString(PrefKeys.SIGNER_PACKAGE_NAME, null)
                         ?: if (getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)) "com.greenart7c3.nostrsigner" else null
 
-                val dontTranslateFrom = getStringSet(PrefKeys.DONT_TRANSLATE_FROM, null) ?: setOf()
-                val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
-                val translateTo = getString(PrefKeys.TRANSLATE_TO, null) ?: Locale.getDefault().language
                 val defaultHomeFollowList =
                     getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null) ?: KIND3_FOLLOWS
                 val defaultStoriesFollowList =
@@ -528,13 +518,12 @@ object LocalPreferences {
                     } ?: LnZapEvent.ZapType.PUBLIC
 
                 val localRelays = parseOrNull<Set<RelaySetupInfo>>(PrefKeys.RELAYS) ?: emptySet()
-                val reactionChoices = parseOrNull<List<String>>(PrefKeys.REACTION_CHOICES)?.ifEmpty { DefaultReactions } ?: DefaultReactions
-                val zapAmountChoices = parseOrNull<List<Long>>(PrefKeys.ZAP_AMOUNTS)?.ifEmpty { DefaultZapAmounts } ?: DefaultZapAmounts
 
-                val defaultFileServer = parseOrNull<Nip96MediaServers.ServerName>(PrefKeys.DEFAULT_FILE_SERVER) ?: Nip96MediaServers.DEFAULT[0]
                 val zapPaymentRequestServer = parseOrNull<Nip47WalletConnect.Nip47URI>(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER)
+                val defaultFileServer = parseOrNull<Nip96MediaServers.ServerName>(PrefKeys.DEFAULT_FILE_SERVER) ?: Nip96MediaServers.DEFAULT[0]
+
                 val pendingAttestations = parseOrNull<Map<HexKey, String>>(PrefKeys.PENDING_ATTESTATIONS) ?: mapOf()
-                val languagePreferences = parseOrNull<Map<String, String>>(PrefKeys.LANGUAGE_PREFS) ?: mapOf()
+                val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
 
                 val latestUserMetadata = parseEventOrNull<MetadataEvent>(PrefKeys.LATEST_USER_METADATA)
                 val latestContactList = parseEventOrNull<ContactListEvent>(PrefKeys.LATEST_CONTACT_LIST)
@@ -543,6 +532,54 @@ object LocalPreferences {
                 val latestSearchRelayList = parseEventOrNull<SearchRelayListEvent>(PrefKeys.LATEST_SEARCH_RELAY_LIST)
                 val latestMuteList = parseEventOrNull<MuteListEvent>(PrefKeys.LATEST_MUTE_LIST)
                 val latestPrivateHomeRelayList = parseEventOrNull<PrivateOutboxRelayListEvent>(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST)
+                val latestAppSpecificData = parseEventOrNull<AppSpecificDataEvent>(PrefKeys.LATEST_APP_SPECIFIC_DATA)
+
+                val syncedSettings =
+                    if (latestAppSpecificData != null) {
+                        null
+                    } else {
+                        // previous version. Delete this when ready.
+                        val reactionChoices = parseOrNull<List<String>>(PrefKeys.REACTION_CHOICES)?.ifEmpty { DefaultReactions } ?: DefaultReactions
+                        val zapAmountChoices = parseOrNull<List<Long>>(PrefKeys.ZAP_AMOUNTS)?.ifEmpty { DefaultZapAmounts } ?: DefaultZapAmounts
+
+                        val languagePreferences = parseOrNull<Map<String, String>>(PrefKeys.LANGUAGE_PREFS) ?: mapOf()
+
+                        val showSensitiveContent =
+                            if (contains(PrefKeys.SHOW_SENSITIVE_CONTENT)) {
+                                getBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, false)
+                            } else {
+                                null
+                            }
+                        val filterSpam = getBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, true)
+                        val warnAboutReports = getBoolean(PrefKeys.WARN_ABOUT_REPORTS, true)
+
+                        val dontTranslateFrom = getStringSet(PrefKeys.DONT_TRANSLATE_FROM, null) ?: setOf()
+                        val translateTo = getString(PrefKeys.TRANSLATE_TO, null) ?: Locale.getDefault().language
+
+                        AccountSyncedSettingsInternal(
+                            reactions =
+                                AccountReactionPreferencesInternal(
+                                    reactionChoices = reactionChoices,
+                                ),
+                            zaps =
+                                AccountZapPreferencesInternal(
+                                    zapAmountChoices = zapAmountChoices,
+                                    defaultZapType = defaultZapType,
+                                ),
+                            languages =
+                                AccountLanguagePreferencesInternal(
+                                    dontTranslateFrom = dontTranslateFrom,
+                                    languagePreferences = languagePreferences,
+                                    translateTo = translateTo,
+                                ),
+                            security =
+                                AccountSecurityPreferencesInternal(
+                                    showSensitiveContent = showSensitiveContent,
+                                    warnAboutPostsWithReports = warnAboutReports,
+                                    filterSpamFromStrangers = filterSpam,
+                                ),
+                        )
+                    }
 
                 val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
                 val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
@@ -571,15 +608,6 @@ object LocalPreferences {
                         parseOrNull<TorSettings>(PrefKeys.TOR_SETTINGS) ?: TorSettings()
                     }
 
-                val showSensitiveContent =
-                    if (contains(PrefKeys.SHOW_SENSITIVE_CONTENT)) {
-                        getBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, false)
-                    } else {
-                        null
-                    }
-                val filterSpam = getBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, true)
-                val warnAboutReports = getBoolean(PrefKeys.WARN_ABOUT_REPORTS, true)
-
                 val lastReadPerRoute =
                     parseOrNull<Map<String, Long>>(PrefKeys.LAST_READ_PER_ROUTE)?.mapValues {
                         MutableStateFlow(it.value)
@@ -594,12 +622,6 @@ object LocalPreferences {
                     externalSignerPackageName = externalSignerPackageName,
                     localRelays = localRelays,
                     localRelayServers = localRelayServers,
-                    dontTranslateFrom = dontTranslateFrom,
-                    languagePreferences = languagePreferences,
-                    translateTo = translateTo,
-                    zapAmountChoices = MutableStateFlow(zapAmountChoices.toImmutableList()),
-                    reactionChoices = MutableStateFlow(reactionChoices.toImmutableList()),
-                    defaultZapType = MutableStateFlow(defaultZapType),
                     defaultFileServer = defaultFileServer,
                     defaultHomeFollowList = MutableStateFlow(defaultHomeFollowList),
                     defaultStoriesFollowList = MutableStateFlow(defaultStoriesFollowList),
@@ -616,10 +638,9 @@ object LocalPreferences {
                     backupSearchRelayList = latestSearchRelayList,
                     backupPrivateHomeRelayList = latestPrivateHomeRelayList,
                     backupMuteList = latestMuteList,
+                    backupAppSpecificData = latestAppSpecificData,
+                    backupSyncedSettings = syncedSettings,
                     torSettings = TorSettingsFlow.build(torSettings),
-                    showSensitiveContent = MutableStateFlow(showSensitiveContent),
-                    warnAboutPostsWithReports = warnAboutReports,
-                    filterSpamFromStrangers = filterSpam,
                     lastReadPerRoute = MutableStateFlow(lastReadPerRoute),
                     hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
                     pendingAttestations = MutableStateFlow(pendingAttestations),

@@ -157,15 +157,15 @@ fun SecurityFiltersScreen(
         Column(Modifier.padding(it).fillMaxHeight()) {
             val pagerState = rememberPagerState { 3 }
             val coroutineScope = rememberCoroutineScope()
-            var warnAboutReports by remember { mutableStateOf(accountViewModel.account.settings.warnAboutPostsWithReports) }
-            var filterSpam by remember { mutableStateOf(accountViewModel.account.settings.filterSpamFromStrangers) }
+            var warnAboutReports by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.warnAboutPostsWithReports) }
+            var filterSpam by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.filterSpamFromStrangers) }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(
                     checked = warnAboutReports,
                     onCheckedChange = {
                         warnAboutReports = it
-                        accountViewModel.account.updateOptOutOptions(warnAboutReports, filterSpam)
+                        accountViewModel.updateOptOutOptions(warnAboutReports, filterSpam)
                     },
                 )
 
@@ -177,7 +177,7 @@ fun SecurityFiltersScreen(
                     checked = filterSpam,
                     onCheckedChange = {
                         filterSpam = it
-                        accountViewModel.account.updateOptOutOptions(warnAboutReports, filterSpam)
+                        accountViewModel.updateOptOutOptions(warnAboutReports, filterSpam)
                     },
                 )
 

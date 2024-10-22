@@ -42,19 +42,25 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
 import com.vitorpamplona.amethyst.ui.stringRes
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NIP47SetupScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
     nip47: String?,
 ) {
-    val postViewModel: UpdateZapAmountViewModel =
-        viewModel(
-            key = "UpdateZapAmountViewModel",
-            factory = UpdateZapAmountViewModel.Factory(accountViewModel.account.settings),
-        )
+    val postViewModel: UpdateZapAmountViewModel = viewModel()
+    postViewModel.load(accountViewModel.account)
+    NIP47SetupScreen(postViewModel, accountViewModel, nav, nip47)
+}
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NIP47SetupScreen(
+    postViewModel: UpdateZapAmountViewModel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    nip47: String?,
+) {
     Scaffold(
         topBar = {
             TopAppBar(

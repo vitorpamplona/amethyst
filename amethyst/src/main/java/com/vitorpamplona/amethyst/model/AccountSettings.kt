@@ -20,9 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.content.res.Resources
 import androidx.compose.runtime.Stable
-import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
@@ -34,6 +32,7 @@ import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.events.AppSpecificDataEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
@@ -44,8 +43,6 @@ import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -59,17 +56,6 @@ val DefaultChannels =
         "25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb",
         // Amethyst's Group
         "42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5",
-    )
-
-val DefaultReactions =
-    persistentListOf(
-        "\uD83D\uDE80",
-        "\uD83E\uDEC2",
-        "\uD83D\uDC40",
-        "\uD83D\uDE02",
-        "\uD83C\uDF89",
-        "\uD83E\uDD14",
-        "\uD83D\uDE31",
     )
 
 val DefaultNIP65List =
@@ -93,17 +79,6 @@ val DefaultSearchRelayList =
         RelayUrlFormatter.normalize("wss://relay.noswhere.com"),
     )
 
-val DefaultZapAmounts = persistentListOf(100L, 500L, 1000L)
-
-fun getLanguagesSpokenByUser(): Set<String> {
-    val languageList = ConfigurationCompat.getLocales(Resources.getSystem().getConfiguration())
-    val codedList = mutableSetOf<String>()
-    for (i in 0 until languageList.size()) {
-        languageList.get(i)?.let { codedList.add(it.language) }
-    }
-    return codedList
-}
-
 // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
 val GLOBAL_FOLLOWS = " Global "
 
@@ -117,12 +92,6 @@ class AccountSettings(
     var externalSignerPackageName: String? = null,
     var localRelays: Set<RelaySetupInfo> = Constants.defaultRelays.toSet(),
     var localRelayServers: Set<String> = setOf(),
-    var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
-    var languagePreferences: Map<String, String> = mapOf(),
-    var translateTo: String = Locale.getDefault().language,
-    var zapAmountChoices: MutableStateFlow<ImmutableList<Long>> = MutableStateFlow(DefaultZapAmounts),
-    var reactionChoices: MutableStateFlow<ImmutableList<String>> = MutableStateFlow(DefaultReactions),
-    val defaultZapType: MutableStateFlow<LnZapEvent.ZapType> = MutableStateFlow(LnZapEvent.ZapType.PUBLIC),
     var defaultFileServer: Nip96MediaServers.ServerName = Nip96MediaServers.DEFAULT[0],
     val defaultHomeFollowList: MutableStateFlow<String> = MutableStateFlow(KIND3_FOLLOWS),
     val defaultStoriesFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
@@ -139,15 +108,18 @@ class AccountSettings(
     var backupSearchRelayList: SearchRelayListEvent? = null,
     var backupMuteList: MuteListEvent? = null,
     var backupPrivateHomeRelayList: PrivateOutboxRelayListEvent? = null,
+    var backupAppSpecificData: AppSpecificDataEvent? = null,
+    backupSyncedSettings: AccountSyncedSettingsInternal? = null, // only exist for migration purposes
     val torSettings: TorSettingsFlow = TorSettingsFlow(),
-    val showSensitiveContent: MutableStateFlow<Boolean?> = MutableStateFlow(null),
-    var warnAboutPostsWithReports: Boolean = true,
-    var filterSpamFromStrangers: Boolean = true,
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     var hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf<String>()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
 ) {
     val saveable = MutableStateFlow(AccountSettingsUpdater(this))
+
+    val syncedSettings: AccountSyncedSettings =
+        backupSyncedSettings?.let { AccountSyncedSettings(it) }
+            ?: AccountSyncedSettings(AccountSyncedSettingsInternal())
 
     class AccountSettingsUpdater(
         val accountSettings: AccountSettings,
@@ -173,32 +145,40 @@ class AccountSettings(
     // Zaps and Reactions
     // ---
 
-    fun changeDefaultZapType(zapType: LnZapEvent.ZapType) {
-        if (defaultZapType.value != zapType) {
-            defaultZapType.tryEmit(zapType)
+    fun changeDefaultZapType(zapType: LnZapEvent.ZapType): Boolean {
+        if (syncedSettings.zaps.defaultZapType.value != zapType) {
+            syncedSettings.zaps.defaultZapType.tryEmit(zapType)
             saveAccountSettings()
+            return true
         }
+        return false
     }
 
-    fun changeZapAmounts(newAmounts: List<Long>) {
-        if (zapAmountChoices.value != newAmounts) {
-            zapAmountChoices.tryEmit(newAmounts.toImmutableList())
+    fun changeZapAmounts(newAmounts: List<Long>): Boolean {
+        if (syncedSettings.zaps.zapAmountChoices.value != newAmounts) {
+            syncedSettings.zaps.zapAmountChoices.tryEmit(newAmounts.toImmutableList())
             saveAccountSettings()
+            return true
         }
+        return false
     }
 
-    fun changeZapPaymentRequest(newServer: Nip47WalletConnect.Nip47URI?) {
+    fun changeReactionTypes(newTypes: List<String>): Boolean {
+        if (syncedSettings.reactions.reactionChoices.value != newTypes) {
+            syncedSettings.reactions.reactionChoices.tryEmit(newTypes.toImmutableList())
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
+    fun changeZapPaymentRequest(newServer: Nip47WalletConnect.Nip47URI?): Boolean {
         if (zapPaymentRequest != newServer) {
             zapPaymentRequest = newServer
             saveAccountSettings()
+            return true
         }
-    }
-
-    fun changeReactionTypes(newTypes: List<String>) {
-        if (reactionChoices.value != newTypes) {
-            reactionChoices.tryEmit(newTypes.toImmutableList())
-            saveAccountSettings()
-        }
+        return false
     }
 
     // ---
@@ -260,22 +240,18 @@ class AccountSettings(
     // language services
     // ---
     fun toggleDontTranslateFrom(languageCode: String) {
-        if (!dontTranslateFrom.contains(languageCode)) {
-            dontTranslateFrom = dontTranslateFrom.plus(languageCode)
-            saveAccountSettings()
-        } else {
-            dontTranslateFrom = dontTranslateFrom.minus(languageCode)
-            saveAccountSettings()
-        }
+        syncedSettings.languages.toggleDontTranslateFrom(languageCode)
+        saveAccountSettings()
     }
 
-    fun translateToContains(languageCode: Locale) = translateTo.contains(languageCode.language)
+    fun translateToContains(languageCode: Locale) = syncedSettings.languages.translateTo.contains(languageCode.language)
 
-    fun updateTranslateTo(languageCode: Locale) {
-        if (translateTo != languageCode.language) {
-            translateTo = languageCode.language
+    fun updateTranslateTo(languageCode: Locale): Boolean {
+        if (syncedSettings.languages.updateTranslateTo(languageCode)) {
             saveAccountSettings()
+            return true
         }
+        return false
     }
 
     fun prefer(
@@ -283,23 +259,14 @@ class AccountSettings(
         target: String,
         preference: String,
     ) {
-        val key = "$source,$target"
-        if (key !in languagePreferences) {
-            languagePreferences = languagePreferences + Pair(key, preference)
-            saveAccountSettings()
-        } else {
-            if (languagePreferences.get(key) == preference) {
-                languagePreferences = languagePreferences.minus(key)
-            } else {
-                languagePreferences = languagePreferences + Pair(key, preference)
-            }
-        }
+        syncedSettings.languages.prefer(source, target, preference)
+        saveAccountSettings()
     }
 
     fun preferenceBetween(
         source: String,
         target: String,
-    ): String? = languagePreferences["$source,$target"]
+    ): String? = syncedSettings.languages.preferenceBetween(source, target)
 
     // ----
     // Backup Lists
@@ -382,6 +349,22 @@ class AccountSettings(
         }
     }
 
+    fun updateAppSpecificData(
+        appSettings: AppSpecificDataEvent?,
+        newSyncedSettings: AccountSyncedSettingsInternal,
+    ) {
+        if (appSettings == null || appSettings.content().isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupAppSpecificData?.id != appSettings.id) {
+            println("AABBCC Update App Specific Data")
+            backupAppSpecificData = appSettings
+            syncedSettings.updateFrom(newSyncedSettings)
+
+            saveAccountSettings()
+        }
+    }
+
     // ----
     // Warning dialogs
     // ----
@@ -405,15 +388,6 @@ class AccountSettings(
             hideBlockAlertDialog = true
             saveAccountSettings()
         }
-    }
-
-    fun updateShowSensitiveContent(show: Boolean?): Boolean {
-        if (showSensitiveContent.value != show) {
-            showSensitiveContent.update { show }
-            saveAccountSettings()
-            return true
-        }
-        return false
     }
 
     // ---
@@ -509,16 +483,20 @@ class AccountSettings(
     // ---
     // filters
     // ---
+    fun updateShowSensitiveContent(show: Boolean?): Boolean {
+        if (syncedSettings.security.updateShowSensitiveContent(show)) {
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
     fun updateOptOutOptions(
         warnReports: Boolean,
         filterSpam: Boolean,
     ): Boolean =
-        if (warnAboutPostsWithReports != warnReports || filterSpam != filterSpamFromStrangers) {
-            warnAboutPostsWithReports = warnReports
-            filterSpamFromStrangers = filterSpam
-
+        if (syncedSettings.security.updateOptOutOptions(warnReports, filterSpam)) {
             saveAccountSettings()
-
             true
         } else {
             false

@@ -82,10 +82,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
@@ -106,10 +106,12 @@ import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.LnZapEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
-class UpdateZapAmountViewModel(
-    val accountSettings: AccountSettings,
-) : ViewModel() {
+class UpdateZapAmountViewModel : ViewModel() {
+    var account: Account? = null
+
     var nextAmount by mutableStateOf(TextFieldValue(""))
     var amountSet by mutableStateOf(listOf<Long>())
     var walletConnectRelay by mutableStateOf(TextFieldValue(""))
@@ -124,15 +126,23 @@ class UpdateZapAmountViewModel(
         updateNIP47(text)
     }
 
-    fun load() {
-        this.amountSet = accountSettings.zapAmountChoices.value
+    fun load(myAccount: Account) {
+        this.account = myAccount
+        this.amountSet = myAccount.settings.syncedSettings.zaps.zapAmountChoices.value
+        this.selectedZapType = myAccount.settings.syncedSettings.zaps.defaultZapType.value
+
         this.walletConnectPubkey =
-            accountSettings.zapPaymentRequest?.pubKeyHex?.let { TextFieldValue(it) } ?: TextFieldValue("")
+            myAccount.settings.zapPaymentRequest
+                ?.pubKeyHex
+                ?.let { TextFieldValue(it) } ?: TextFieldValue("")
         this.walletConnectRelay =
-            accountSettings.zapPaymentRequest?.relayUri?.let { TextFieldValue(it) } ?: TextFieldValue("")
+            myAccount.settings.zapPaymentRequest
+                ?.relayUri
+                ?.let { TextFieldValue(it) } ?: TextFieldValue("")
         this.walletConnectSecret =
-            accountSettings.zapPaymentRequest?.secret?.let { TextFieldValue(it) } ?: TextFieldValue("")
-        this.selectedZapType = accountSettings.defaultZapType.value
+            myAccount.settings.zapPaymentRequest
+                ?.secret
+                ?.let { TextFieldValue(it) } ?: TextFieldValue("")
     }
 
     fun toListOfAmounts(commaSeparatedAmounts: String): List<Long> = commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
@@ -151,37 +161,37 @@ class UpdateZapAmountViewModel(
     }
 
     fun sendPost() {
-        accountSettings.changeZapAmounts(amountSet)
-        accountSettings.changeDefaultZapType(selectedZapType)
+        val nip47Update =
+            if (walletConnectRelay.text.isNotBlank() && walletConnectPubkey.text.isNotBlank()) {
+                val pubkeyHex =
+                    try {
+                        decodePublicKey(walletConnectPubkey.text.trim()).toHexKey()
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        null
+                    }
 
-        if (walletConnectRelay.text.isNotBlank() && walletConnectPubkey.text.isNotBlank()) {
-            val pubkeyHex =
-                try {
-                    decodePublicKey(walletConnectPubkey.text.trim()).toHexKey()
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    null
-                }
+                val relayUrl = walletConnectRelay.text.ifBlank { null }?.let { RelayUrlFormatter.normalize(it) }
+                val privKeyHex = walletConnectSecret.text.ifBlank { null }?.let { decodePrivateKeyAsHexOrNull(it) }
 
-            val relayUrl = walletConnectRelay.text.ifBlank { null }?.let { RelayUrlFormatter.normalize(it) }
-            val privKeyHex = walletConnectSecret.text.ifBlank { null }?.let { decodePrivateKeyAsHexOrNull(it) }
-
-            if (pubkeyHex != null && relayUrl != null) {
-                accountSettings.changeZapPaymentRequest(
+                if (pubkeyHex != null && relayUrl != null) {
                     Nip47WalletConnect.Nip47URI(
                         pubkeyHex,
                         relayUrl,
                         privKeyHex,
-                    ),
-                )
+                    )
+                } else {
+                    null
+                }
             } else {
-                accountSettings.changeZapPaymentRequest(null)
+                null
             }
-        } else {
-            accountSettings.changeZapPaymentRequest(null)
-        }
 
-        nextAmount = TextFieldValue("")
+        viewModelScope.launch(Dispatchers.IO) {
+            account?.updateZapAmounts(amountSet, selectedZapType, nip47Update)
+
+            nextAmount = TextFieldValue("")
+        }
     }
 
     fun cancel() {
@@ -190,11 +200,23 @@ class UpdateZapAmountViewModel(
 
     fun hasChanged(): Boolean =
         (
-            selectedZapType != accountSettings.defaultZapType.value ||
-                amountSet != accountSettings.zapAmountChoices.value ||
-                walletConnectPubkey.text != (accountSettings.zapPaymentRequest?.pubKeyHex ?: "") ||
-                walletConnectRelay.text != (accountSettings.zapPaymentRequest?.relayUri ?: "") ||
-                walletConnectSecret.text != (accountSettings.zapPaymentRequest?.secret ?: "")
+            selectedZapType !=
+                account
+                    ?.settings
+                    ?.syncedSettings
+                    ?.zaps
+                    ?.defaultZapType
+                    ?.value ||
+                amountSet !=
+                account
+                    ?.settings
+                    ?.syncedSettings
+                    ?.zaps
+                    ?.zapAmountChoices
+                    ?.value ||
+                walletConnectPubkey.text != (account?.settings?.zapPaymentRequest?.pubKeyHex ?: "") ||
+                walletConnectRelay.text != (account?.settings?.zapPaymentRequest?.relayUri ?: "") ||
+                walletConnectSecret.text != (account?.settings?.zapPaymentRequest?.secret ?: "")
         )
 
     fun updateNIP47(uri: String) {
@@ -205,17 +227,22 @@ class UpdateZapAmountViewModel(
             walletConnectSecret = TextFieldValue(contact.secret ?: "")
         }
     }
-
-    class Factory(
-        val accountSettings: AccountSettings,
-    ) : ViewModelProvider.Factory {
-        override fun <UpdateZapAmountViewModel : ViewModel> create(modelClass: Class<UpdateZapAmountViewModel>): UpdateZapAmountViewModel = UpdateZapAmountViewModel(accountSettings) as UpdateZapAmountViewModel
-    }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun UpdateZapAmountDialog(
+    onClose: () -> Unit,
+    nip47uri: String? = null,
+    accountViewModel: AccountViewModel,
+) {
+    val postViewModel: UpdateZapAmountViewModel = viewModel()
+    postViewModel.load(accountViewModel.account)
+    UpdateZapAmountDialog(postViewModel, onClose, nip47uri, accountViewModel)
+}
+
+@Composable
+fun UpdateZapAmountDialog(
+    postViewModel: UpdateZapAmountViewModel,
     onClose: () -> Unit,
     nip47uri: String? = null,
     accountViewModel: AccountViewModel,
@@ -233,12 +260,6 @@ fun UpdateZapAmountDialog(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column {
-                val postViewModel: UpdateZapAmountViewModel =
-                    viewModel(
-                        key = "UpdateZapAmountViewModel",
-                        factory = UpdateZapAmountViewModel.Factory(accountViewModel.account.settings),
-                    )
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -311,7 +332,6 @@ fun UpdateZapAmountContent(
         }
 
     LaunchedEffect(accountViewModel, nip47uri) {
-        postViewModel.load()
         if (nip47uri != null) {
             try {
                 postViewModel.updateNIP47(nip47uri)

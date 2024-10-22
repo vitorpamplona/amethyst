@@ -455,9 +455,9 @@ fun customZapClick(
         return
     }
 
-    if (accountViewModel.account.settings.zapAmountChoices.value
-            .isEmpty()
-    ) {
+    val choices = accountViewModel.zapAmountChoices()
+
+    if (choices.isEmpty()) {
         accountViewModel.toast(
             stringRes(context, R.string.error_dialog_zap_error),
             stringRes(context, R.string.no_zap_amount_setup_long_press_to_change),
@@ -467,10 +467,8 @@ fun customZapClick(
             stringRes(context, R.string.error_dialog_zap_error),
             stringRes(context, R.string.login_with_a_private_key_to_be_able_to_send_zaps),
         )
-    } else if (accountViewModel.account.settings.zapAmountChoices.value.size == 1) {
-        val amount =
-            accountViewModel.account.settings.zapAmountChoices.value
-                .first()
+    } else if (choices.size == 1) {
+        val amount = choices.first()
 
         if (amount > 1100) {
             accountViewModel.zap(
@@ -488,11 +486,9 @@ fun customZapClick(
             onMultipleChoices(listOf(1000L, 5_000L, 10_000L))
             // recommends amounts for a monthly release.
         }
-    } else if (accountViewModel.account.settings.zapAmountChoices.value.size > 1) {
-        if (accountViewModel.account.settings.zapAmountChoices.value
-                .any { it > 1100 }
-        ) {
-            onMultipleChoices(accountViewModel.account.settings.zapAmountChoices.value)
+    } else if (choices.size > 1) {
+        if (choices.any { it > 1100 }) {
+            onMultipleChoices(choices)
         } else {
             onMultipleChoices(listOf(1000L, 5_000L, 10_000L))
         }

@@ -153,7 +153,7 @@ fun ZapCustomDialog(
         }
 
     var selectedZapType by
-        remember(accountViewModel) { mutableStateOf(accountViewModel.account.settings.defaultZapType.value) }
+        remember(accountViewModel) { mutableStateOf(accountViewModel.defaultZapType()) }
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -224,7 +224,7 @@ fun ZapCustomDialog(
                         label = stringRes(id = R.string.zap_type),
                         placeholder =
                             zapTypes
-                                .filter { it.first == accountViewModel.account.settings.defaultZapType.value }
+                                .filter { it.first == accountViewModel.defaultZapType() }
                                 .first()
                                 .second,
                         options = zapOptions,

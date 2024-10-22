@@ -965,9 +965,9 @@ private fun likeClick(
         )
         return
     }
-    if (accountViewModel.account.settings.reactionChoices.value
-            .isEmpty()
-    ) {
+
+    val choices = accountViewModel.reactionChoices()
+    if (choices.isEmpty()) {
         accountViewModel.toast(
             R.string.no_reactions_setup,
             R.string.no_reaction_type_setup_long_press_to_change,
@@ -977,9 +977,9 @@ private fun likeClick(
             R.string.read_only_user,
             R.string.login_with_a_private_key_to_like_posts,
         )
-    } else if (accountViewModel.account.settings.reactionChoices.value.size == 1) {
+    } else if (choices.size == 1) {
         onWantsToSignReaction()
-    } else if (accountViewModel.account.settings.reactionChoices.value.size > 1) {
+    } else if (choices.size > 1) {
         onMultipleChoices()
     }
 }
@@ -1181,9 +1181,9 @@ fun zapClick(
         return
     }
 
-    if (accountViewModel.account.settings.zapAmountChoices.value
-            .isEmpty()
-    ) {
+    val choices = accountViewModel.zapAmountChoices()
+
+    if (choices.isEmpty()) {
         accountViewModel.toast(
             R.string.error_dialog_zap_error,
             R.string.no_zap_amount_setup_long_press_to_change,
@@ -1193,11 +1193,10 @@ fun zapClick(
             R.string.error_dialog_zap_error,
             R.string.login_with_a_private_key_to_be_able_to_send_zaps,
         )
-    } else if (accountViewModel.account.settings.zapAmountChoices.value.size == 1) {
+    } else if (choices.size == 1) {
         accountViewModel.zap(
             baseNote,
-            accountViewModel.account.settings.zapAmountChoices.value
-                .first() * 1000,
+            choices.first() * 1000,
             null,
             "",
             context,
@@ -1205,7 +1204,7 @@ fun zapClick(
             onProgress = { onZappingProgress(it) },
             onPayViaIntent = onPayViaIntent,
         )
-    } else if (accountViewModel.account.settings.zapAmountChoices.value.size > 1) {
+    } else if (choices.size > 1) {
         onMultipleChoices()
     }
 }
@@ -1408,8 +1407,7 @@ fun ReactionChoicePopup(
 ) {
     val iconSizePx = with(LocalDensity.current) { -iconSize.toPx().toInt() }
 
-    val reactions by accountViewModel.account.settings.reactionChoices
-        .collectAsStateWithLifecycle()
+    val reactions by accountViewModel.reactionChoicesFlow().collectAsStateWithLifecycle()
     val toRemove = remember { baseNote.reactedBy(accountViewModel.userProfile()).toImmutableSet() }
 
     Popup(
@@ -1573,7 +1571,7 @@ fun ZapAmountChoicePopup(
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
 ) {
     val zapAmountChoices by
-        accountViewModel.account.settings.zapAmountChoices
+        accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices
             .collectAsStateWithLifecycle()
 
     ZapAmountChoicePopup(baseNote, zapAmountChoices, accountViewModel, popupYOffset, onDismiss, onChangeAmount, onError, onProgress, onPayViaIntent)

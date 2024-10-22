@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.AppRecommendationEvent
+import com.vitorpamplona.quartz.events.AppSpecificDataEvent
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
@@ -1227,6 +1228,13 @@ object LocalCache {
 
     fun consume(
         event: AppRecommendationEvent,
+        relay: Relay?,
+    ) {
+        consumeBaseReplaceable(event, relay)
+    }
+
+    fun consume(
+        event: AppSpecificDataEvent,
         relay: Relay?,
     ) {
         consumeBaseReplaceable(event, relay)
@@ -2645,6 +2653,7 @@ object LocalCache {
                 is AdvertisedRelayListEvent -> consume(event, relay)
                 is AppDefinitionEvent -> consume(event, relay)
                 is AppRecommendationEvent -> consume(event, relay)
+                is AppSpecificDataEvent -> consume(event, relay)
                 is AudioHeaderEvent -> consume(event, relay)
                 is AudioTrackEvent -> consume(event, relay)
                 is BadgeAwardEvent -> consume(event)
