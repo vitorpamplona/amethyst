@@ -519,6 +519,7 @@
     <string name="light">Világos</string>
     <string name="dark">Sötét</string>
     <string name="application_preferences">Alkalmazás beállítások</string>
+    <string name="wallet_connect">Tárca Csatlakoztatás</string>
     <string name="language">Nyelv</string>
     <string name="theme">Téma</string>
     <string name="automatically_load_images_gifs">Képek/GIF-ek automatikus betöltése</string>
