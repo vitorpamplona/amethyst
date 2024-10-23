@@ -120,6 +120,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -328,9 +329,7 @@ class AccountViewModel(
 
     fun reactToOrDelete(note: Note) {
         viewModelScope.launch(Dispatchers.IO) {
-            val reaction =
-                account.settings.reactionChoices.value
-                    .first()
+            val reaction = reactionChoices().first()
             if (hasReactedTo(note, reaction)) {
                 deleteReactionTo(note, reaction)
             } else {
@@ -714,7 +713,7 @@ class AccountViewModel(
                         onProgress(it)
                     },
                     onPayViaIntent = onPayViaIntent,
-                    zapType = zapType ?: account.settings.defaultZapType.value,
+                    zapType = zapType ?: defaultZapType(),
                 )
         }
     }
@@ -885,24 +884,55 @@ class AccountViewModel(
     fun isFollowing(user: HexKey): Boolean = account.isFollowing(user)
 
     fun hideSensitiveContent() {
-        account.updateShowSensitiveContent(false)
-    }
-
-    fun disableContentWarnings() {
-        account.updateShowSensitiveContent(true)
-    }
-
-    fun seeContentWarnings() {
-        account.updateShowSensitiveContent(null)
-    }
-
-    fun markDonatedInThisVersion() {
-        viewModelScope.launch {
-            account.markDonatedInThisVersion()
+        viewModelScope.launch(Dispatchers.IO) {
+            account.updateShowSensitiveContent(false)
         }
     }
 
-    fun defaultZapType(): LnZapEvent.ZapType = account.settings.defaultZapType.value
+    fun disableContentWarnings() {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.updateShowSensitiveContent(true)
+        }
+    }
+
+    fun seeContentWarnings() {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.updateShowSensitiveContent(null)
+        }
+    }
+
+    fun markDonatedInThisVersion() {
+        account.markDonatedInThisVersion()
+    }
+
+    fun dontTranslateFrom() = account.settings.syncedSettings.languages.dontTranslateFrom
+
+    fun translateTo() = account.settings.syncedSettings.languages.translateTo
+
+    fun defaultZapType() = account.settings.syncedSettings.zaps.defaultZapType.value
+
+    fun showSensitiveContent(): MutableStateFlow<Boolean?> = account.settings.syncedSettings.security.showSensitiveContent
+
+    fun zapAmountChoicesFlow() = account.settings.syncedSettings.zaps.zapAmountChoices
+
+    fun zapAmountChoices() = zapAmountChoicesFlow().value
+
+    fun reactionChoicesFlow() = account.settings.syncedSettings.reactions.reactionChoices
+
+    fun reactionChoices() = reactionChoicesFlow().value
+
+    fun filterSpamFromStrangers() = account.settings.syncedSettings.security.filterSpamFromStrangers
+
+    fun updateOptOutOptions(
+        warnReports: Boolean,
+        filterSpam: Boolean,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (account.updateOptOutOptions(warnReports, filterSpam)) {
+                LocalCache.antiSpam.active = filterSpamFromStrangers()
+            }
+        }
+    }
 
     fun unwrap(
         event: GiftWrapEvent,
@@ -1539,7 +1569,7 @@ class AccountViewModel(
         context: Context,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            if (account.settings.defaultZapType.value == LnZapEvent.ZapType.NONZAP) {
+            if (defaultZapType() == LnZapEvent.ZapType.NONZAP) {
                 LightningAddressResolver()
                     .lnAddressInvoice(
                         lnaddress,
@@ -1553,7 +1583,7 @@ class AccountViewModel(
                         context = context,
                     )
             } else {
-                account.createZapRequestFor(toUserPubKeyHex, message, account.settings.defaultZapType.value) { zapRequest ->
+                account.createZapRequestFor(toUserPubKeyHex, message, defaultZapType()) { zapRequest ->
                     LocalCache.justConsume(zapRequest, null)
                     LightningAddressResolver()
                         .lnAddressInvoice(

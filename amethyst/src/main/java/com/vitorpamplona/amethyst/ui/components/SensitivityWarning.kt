@@ -97,9 +97,7 @@ fun SensitivityWarning(
     accountViewModel: AccountViewModel,
     content: @Composable () -> Unit,
 ) {
-    val accountState =
-        accountViewModel.account.settings.showSensitiveContent
-            .collectAsStateWithLifecycle()
+    val accountState = accountViewModel.showSensitiveContent().collectAsStateWithLifecycle()
 
     var showContentWarningNote by remember(accountState) { mutableStateOf(accountState.value != true) }
 

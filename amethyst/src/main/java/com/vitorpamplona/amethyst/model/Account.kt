@@ -27,6 +27,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.switchMap
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
@@ -44,9 +45,11 @@ import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.events.AppSpecificDataEvent
 import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
@@ -128,7 +131,9 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import java.math.BigDecimal
+import java.util.Locale
 import java.util.UUID
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 
 @OptIn(DelicateCoroutinesApi::class)
@@ -138,6 +143,10 @@ class Account(
     val signer: NostrSigner = settings.createSigner(),
     val scope: CoroutineScope,
 ) {
+    companion object {
+        const val APP_SPECIFIC_DATA_D_TAG = "AmethystSettings"
+    }
+
     var transientHiddenUsers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf())
 
     data class PaymentRequest(
@@ -959,7 +968,7 @@ class Account(
             getBlockListNote().flow().metadata.stateFlow,
             getMuteListNote().flow().metadata.stateFlow,
             transientHiddenUsers,
-            settings.showSensitiveContent,
+            settings.syncedSettings.security.showSensitiveContent,
         ) { blockList, muteList, transientHiddenUsers, showSensitiveContent ->
             checkNotInMainThread()
             emit(assembleLiveHiddenUsers(blockList.note, muteList.note, transientHiddenUsers, showSensitiveContent))
@@ -972,7 +981,7 @@ class Account(
                         getBlockListNote(),
                         getMuteListNote(),
                         transientHiddenUsers.value,
-                        settings.showSensitiveContent.value,
+                        settings.syncedSettings.security.showSensitiveContent.value,
                     )
                 },
             )
@@ -1025,13 +1034,82 @@ class Account(
     fun updateOptOutOptions(
         warnReports: Boolean,
         filterSpam: Boolean,
-    ) {
+    ): Boolean {
         if (settings.updateOptOutOptions(warnReports, filterSpam)) {
-            LocalCache.antiSpam.active = settings.filterSpamFromStrangers
-            if (!settings.filterSpamFromStrangers) {
+            if (!settings.syncedSettings.security.filterSpamFromStrangers) {
                 transientHiddenUsers.update {
                     emptySet()
                 }
+            }
+
+            sendNewAppSpecificData()
+            return true
+        }
+        return false
+    }
+
+    fun updateShowSensitiveContent(show: Boolean?) {
+        if (settings.updateShowSensitiveContent(show)) {
+            sendNewAppSpecificData()
+        }
+    }
+
+    fun changeReactionTypes(reactionSet: List<String>) {
+        if (settings.changeReactionTypes(reactionSet)) {
+            sendNewAppSpecificData()
+        }
+    }
+
+    fun updateZapAmounts(
+        amountSet: List<Long>,
+        selectedZapType: LnZapEvent.ZapType,
+        nip47Update: Nip47WalletConnect.Nip47URI?,
+    ) {
+        var changed = false
+
+        if (settings.changeZapAmounts(amountSet)) changed = true
+        if (settings.changeDefaultZapType(selectedZapType)) changed = true
+        if (settings.changeZapPaymentRequest(nip47Update)) changed = true
+
+        if (changed) {
+            sendNewAppSpecificData()
+        }
+    }
+
+    fun toggleDontTranslateFrom(languageCode: String) {
+        settings.toggleDontTranslateFrom(languageCode)
+        sendNewAppSpecificData()
+    }
+
+    fun updateTranslateTo(languageCode: Locale) {
+        if (settings.updateTranslateTo(languageCode)) {
+            sendNewAppSpecificData()
+        }
+    }
+
+    fun prefer(
+        source: String,
+        target: String,
+        preference: String,
+    ) {
+        settings.prefer(source, target, preference)
+        sendNewAppSpecificData()
+    }
+
+    private fun sendNewAppSpecificData() {
+        sendNewAppSpecificData(settings.syncedSettings.toInternal())
+    }
+
+    private fun sendNewAppSpecificData(toInternal: AccountSyncedSettingsInternal) {
+        signer.nip44Encrypt(Event.mapper.writeValueAsString(toInternal), signer.pubKey) { encrypted ->
+            AppSpecificDataEvent.create(
+                dTag = APP_SPECIFIC_DATA_D_TAG,
+                description = encrypted,
+                otherTags = emptyArray(),
+                signer = signer,
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
             }
         }
     }
@@ -2788,6 +2866,13 @@ class Account(
         }
     }
 
+    fun getAppSpecificDataNote(): AddressableNote {
+        val aTag = AppSpecificDataEvent.createTag(userProfile().pubkeyHex, APP_SPECIFIC_DATA_D_TAG)
+        return LocalCache.getOrCreateAddressableNote(aTag)
+    }
+
+    fun getAppSpecificDataFlow(): StateFlow<NoteState> = getAppSpecificDataNote().flow().metadata.stateFlow
+
     fun getBlockListNote(): AddressableNote {
         val aTag =
             ATag(
@@ -3118,7 +3203,7 @@ class Account(
             return true
         }
 
-        if (!settings.warnAboutPostsWithReports) {
+        if (!settings.syncedSettings.security.warnAboutPostsWithReports) {
             return !isHidden(user) &&
                 // if user hasn't hided this author
                 user.reportsBy(userProfile()).isEmpty() // if user has not reported this post
@@ -3131,7 +3216,7 @@ class Account(
     }
 
     private fun isAcceptableDirect(note: Note): Boolean {
-        if (!settings.warnAboutPostsWithReports) {
+        if (!settings.syncedSettings.security.warnAboutPostsWithReports) {
             return !note.hasReportsBy(userProfile())
         }
         return !note.hasReportsBy(userProfile()) &&
@@ -3355,8 +3440,6 @@ class Account(
                     (event.hasAnyTaggedUser() || event.publicAndPrivateUserCache?.isNotEmpty() == true)
             }
 
-    fun updateShowSensitiveContent(show: Boolean?) = settings.updateShowSensitiveContent(show)
-
     fun markAsRead(
         route: String,
         timestampInSecs: Long,
@@ -3516,10 +3599,28 @@ class Account(
         }
 
         settings.backupPrivateHomeRelayList?.let { event ->
-            Log.d("AccountRegisterObservers", "Loading saved search relay list ${event.toJson()}")
+            Log.d("AccountRegisterObservers", "Loading saved private home relay list ${event.toJson()}")
             GlobalScope.launch(Dispatchers.IO) {
                 event.privateTags(signer) {
                     LocalCache.verifyAndConsume(event, null)
+                }
+            }
+        }
+
+        settings.backupAppSpecificData?.let { event ->
+            Log.d("AccountRegisterObservers", "Loading saved app specific data ${event.toJson()}")
+            GlobalScope.launch(Dispatchers.IO) {
+                LocalCache.verifyAndConsume(event, null)
+                signer.decrypt(event.content, event.pubKey) { decrypted ->
+                    try {
+                        val syncedSettings = Event.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
+                        settings.syncedSettings.updateFrom(syncedSettings)
+                    } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
+                        Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences with value $decrypted", e)
+                        e.printStackTrace()
+                        AccountSyncedSettingsInternal()
+                    }
                 }
             }
         }
@@ -3593,6 +3694,28 @@ class Account(
                 Log.d("AccountRegisterObservers", "Updating Mute List for ${userProfile().toBestDisplayName()}")
                 (it.note.event as? MuteListEvent)?.let {
                     settings.updateMuteList(it)
+                }
+            }
+        }
+
+        scope.launch(Dispatchers.Default) {
+            Log.d("AccountRegisterObservers", "AppSpecificData Collector Start")
+            getAppSpecificDataFlow().collect {
+                Log.d("AccountRegisterObservers", "Updating AppSpecificData for ${userProfile().toBestDisplayName()}")
+                (it.note.event as? AppSpecificDataEvent)?.let {
+                    signer.decrypt(it.content, it.pubKey) { decrypted ->
+                        val syncedSettings =
+                            try {
+                                Event.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
+                            } catch (e: Throwable) {
+                                if (e is CancellationException) throw e
+                                Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences with value $decrypted", e)
+                                e.printStackTrace()
+                                AccountSyncedSettingsInternal()
+                            }
+
+                        settings.updateAppSpecificData(it, syncedSettings)
+                    }
                 }
             }
         }

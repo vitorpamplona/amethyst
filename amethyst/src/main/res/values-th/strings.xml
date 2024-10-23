@@ -375,8 +375,12 @@
         \n6. กดปุ่มเปิดใช้งานเพื่อใช้ Orbot เป็น proxy
     </string>
     <string name="orbot_socks_port">พอร์ต Orbot Socks</string>
+    <string name="tor_use_dm_relays">รีเลย์สำหรีบข้อความส่วนตัว</string>
     <string name="tor_off">ปิด</string>
+    <string name="tor_default">ค่าเริ่มต้น</string>
     <string name="tor_custom">ปรับแต่ง</string>
+    <string name="tor_small_payloads_explainer">ซ่อน IP ของคุณจากทุกอย่าง ยกเว้นรูปภาพและวิดีโอ</string>
+    <string name="tor_full_privacy_explainer">ซ่อน IP ของคุณจากทุกการเชื่อมต่อ</string>
     <string name="invalid_port_number">เลข port ไม่ถูกต้องr</string>
     <string name="use_orbot">ใช้ Orbot</string>
     <string name="disconnect_from_your_orbot_setup">ตัดการเชื่อมต่อจาก Tor/Orbot</string>

@@ -315,10 +315,8 @@ fun NoteDropDownMenu(
             DropdownMenuItem(
                 text = { Text(stringRes(R.string.content_warning_hide_all_sensitive_content)) },
                 onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.hideSensitiveContent()
-                        onDismiss()
-                    }
+                    accountViewModel.hideSensitiveContent()
+                    onDismiss()
                 },
             )
         }
@@ -326,10 +324,8 @@ fun NoteDropDownMenu(
             DropdownMenuItem(
                 text = { Text(stringRes(R.string.content_warning_show_all_sensitive_content)) },
                 onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.disableContentWarnings()
-                        onDismiss()
-                    }
+                    accountViewModel.disableContentWarnings()
+                    onDismiss()
                 },
             )
         }
@@ -337,10 +333,8 @@ fun NoteDropDownMenu(
             DropdownMenuItem(
                 text = { Text(stringRes(R.string.content_warning_see_warnings)) },
                 onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.seeContentWarnings()
-                        onDismiss()
-                    }
+                    accountViewModel.seeContentWarnings()
+                    onDismiss()
                 },
             )
         }
@@ -385,7 +379,8 @@ fun WatchBookmarksFollowsAndAccount(
         .live()
         .bookmarks
         .observeAsState()
-    val showSensitiveContent by accountViewModel.account.settings.showSensitiveContent
+    val showSensitiveContent by accountViewModel
+        .showSensitiveContent()
         .collectAsStateWithLifecycle()
 
     LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = showSensitiveContent) {

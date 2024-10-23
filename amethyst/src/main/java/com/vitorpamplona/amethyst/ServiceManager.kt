@@ -115,7 +115,12 @@ class ServiceManager(
             HttpClientManager.setDefaultProxy(null)
         }
 
-        LocalCache.antiSpam.active = account?.settings?.filterSpamFromStrangers ?: true
+        // Convert this into a flow
+        LocalCache.antiSpam.active = account
+            ?.settings
+            ?.syncedSettings
+            ?.security
+            ?.filterSpamFromStrangers ?: true
         Coil.setImageLoader {
             Amethyst.instance
                 .imageLoaderBuilder()

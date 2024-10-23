@@ -39,26 +39,22 @@ class EventFactory {
             content: String,
             sig: String,
         ) = when (kind) {
-            AdvertisedRelayListEvent.KIND ->
-                AdvertisedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
+            AdvertisedRelayListEvent.KIND -> AdvertisedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
             AppDefinitionEvent.KIND -> AppDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
-            AppRecommendationEvent.KIND ->
-                AppRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
+            AppRecommendationEvent.KIND -> AppRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
+            AppSpecificDataEvent.KIND -> AppSpecificDataEvent(id, pubKey, createdAt, tags, content, sig)
             AudioHeaderEvent.KIND -> AudioHeaderEvent(id, pubKey, createdAt, tags, content, sig)
             AudioTrackEvent.KIND -> AudioTrackEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeAwardEvent.KIND -> BadgeAwardEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeDefinitionEvent.KIND -> BadgeDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeProfilesEvent.KIND -> BadgeProfilesEvent(id, pubKey, createdAt, tags, content, sig)
             BookmarkListEvent.KIND -> BookmarkListEvent(id, pubKey, createdAt, tags, content, sig)
-            CalendarDateSlotEvent.KIND ->
-                CalendarDateSlotEvent(id, pubKey, createdAt, tags, content, sig)
+            CalendarDateSlotEvent.KIND -> CalendarDateSlotEvent(id, pubKey, createdAt, tags, content, sig)
             CalendarEvent.KIND -> CalendarEvent(id, pubKey, createdAt, tags, content, sig)
-            CalendarTimeSlotEvent.KIND ->
-                CalendarTimeSlotEvent(id, pubKey, createdAt, tags, content, sig)
+            CalendarTimeSlotEvent.KIND -> CalendarTimeSlotEvent(id, pubKey, createdAt, tags, content, sig)
             CalendarRSVPEvent.KIND -> CalendarRSVPEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelCreateEvent.KIND -> ChannelCreateEvent(id, pubKey, createdAt, tags, content, sig)
-            ChannelHideMessageEvent.KIND ->
-                ChannelHideMessageEvent(id, pubKey, createdAt, tags, content, sig)
+            ChannelHideMessageEvent.KIND -> ChannelHideMessageEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelListEvent.KIND -> ChannelListEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMessageEvent.KIND -> ChannelMessageEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMetadataEvent.KIND -> ChannelMetadataEvent(id, pubKey, createdAt, tags, content, sig)
@@ -79,23 +75,19 @@ class EventFactory {
             }
             ChatMessageRelayListEvent.KIND -> ChatMessageRelayListEvent(id, pubKey, createdAt, tags, content, sig)
             ClassifiedsEvent.KIND -> ClassifiedsEvent(id, pubKey, createdAt, tags, content, sig)
-            CommunityDefinitionEvent.KIND ->
-                CommunityDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
+            CommunityDefinitionEvent.KIND -> CommunityDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityListEvent.KIND -> CommunityListEvent(id, pubKey, createdAt, tags, content, sig)
-            CommunityPostApprovalEvent.KIND ->
-                CommunityPostApprovalEvent(id, pubKey, createdAt, tags, content, sig)
+            CommunityPostApprovalEvent.KIND -> CommunityPostApprovalEvent(id, pubKey, createdAt, tags, content, sig)
             ContactListEvent.KIND -> ContactListEvent(id, pubKey, createdAt, tags, content, sig)
             DeletionEvent.KIND -> DeletionEvent(id, pubKey, createdAt, tags, content, sig)
             DraftEvent.KIND -> DraftEvent(id, pubKey, createdAt, tags, content, sig)
             EmojiPackEvent.KIND -> EmojiPackEvent(id, pubKey, createdAt, tags, content, sig)
-            EmojiPackSelectionEvent.KIND ->
-                EmojiPackSelectionEvent(id, pubKey, createdAt, tags, content, sig)
+            EmojiPackSelectionEvent.KIND -> EmojiPackSelectionEvent(id, pubKey, createdAt, tags, content, sig)
             FileHeaderEvent.KIND -> FileHeaderEvent(id, pubKey, createdAt, tags, content, sig)
             ProfileGalleryEntryEvent.KIND -> ProfileGalleryEntryEvent(id, pubKey, createdAt, tags, content, sig)
             FileServersEvent.KIND -> FileServersEvent(id, pubKey, createdAt, tags, content, sig)
             FileStorageEvent.KIND -> FileStorageEvent(id, pubKey, createdAt, tags, content, sig)
-            FileStorageHeaderEvent.KIND ->
-                FileStorageHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+            FileStorageHeaderEvent.KIND -> FileStorageHeaderEvent(id, pubKey, createdAt, tags, content, sig)
             FhirResourceEvent.KIND -> FhirResourceEvent(id, pubKey, createdAt, tags, content, sig)
             GenericRepostEvent.KIND -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)
             GiftWrapEvent.KIND -> GiftWrapEvent(id, pubKey, createdAt, tags, content, sig)
@@ -105,16 +97,12 @@ class EventFactory {
             GitRepositoryEvent.KIND -> GitRepositoryEvent(id, pubKey, createdAt, tags, content, sig)
             GoalEvent.KIND -> GoalEvent(id, pubKey, createdAt, tags, content, sig)
             HighlightEvent.KIND -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
-            HTTPAuthorizationEvent.KIND ->
-                HTTPAuthorizationEvent(id, pubKey, createdAt, tags, content, sig)
-            LiveActivitiesChatMessageEvent.KIND ->
-                LiveActivitiesChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
+            HTTPAuthorizationEvent.KIND -> HTTPAuthorizationEvent(id, pubKey, createdAt, tags, content, sig)
+            LiveActivitiesChatMessageEvent.KIND -> LiveActivitiesChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
             LiveActivitiesEvent.KIND -> LiveActivitiesEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapEvent.KIND -> LnZapEvent(id, pubKey, createdAt, tags, content, sig)
-            LnZapPaymentRequestEvent.KIND ->
-                LnZapPaymentRequestEvent(id, pubKey, createdAt, tags, content, sig)
-            LnZapPaymentResponseEvent.KIND ->
-                LnZapPaymentResponseEvent(id, pubKey, createdAt, tags, content, sig)
+            LnZapPaymentRequestEvent.KIND -> LnZapPaymentRequestEvent(id, pubKey, createdAt, tags, content, sig)
+            LnZapPaymentResponseEvent.KIND -> LnZapPaymentResponseEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapPrivateEvent.KIND -> LnZapPrivateEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapRequestEvent.KIND -> LnZapRequestEvent(id, pubKey, createdAt, tags, content, sig)
             LongTextNoteEvent.KIND -> LongTextNoteEvent(id, pubKey, createdAt, tags, content, sig)

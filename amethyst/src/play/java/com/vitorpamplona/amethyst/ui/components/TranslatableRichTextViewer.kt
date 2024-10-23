@@ -234,7 +234,7 @@ private fun TranslationMessage(
             DropdownMenuItem(
                 text = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (source in accountViewModel.account.settings.dontTranslateFrom) {
+                        if (source in accountViewModel.dontTranslateFrom()) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
@@ -255,7 +255,7 @@ private fun TranslationMessage(
                     }
                 },
                 onClick = {
-                    accountViewModel.account.settings.toggleDontTranslateFrom(source)
+                    accountViewModel.account.toggleDontTranslateFrom(source)
                     langSettingsPopupExpanded = false
                 },
             )
@@ -285,7 +285,7 @@ private fun TranslationMessage(
                 },
                 onClick = {
                     scope.launch(Dispatchers.IO) {
-                        accountViewModel.account.settings.prefer(source, target, source)
+                        accountViewModel.account.prefer(source, target, source)
                         langSettingsPopupExpanded = false
                     }
                 },
@@ -293,7 +293,9 @@ private fun TranslationMessage(
             DropdownMenuItem(
                 text = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (accountViewModel.account.settings.preferenceBetween(source, target) == target) {
+                        if (accountViewModel.account.settings.syncedSettings.languages
+                                .preferenceBetween(source, target) == target
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
@@ -315,7 +317,7 @@ private fun TranslationMessage(
                 },
                 onClick = {
                     scope.launch(Dispatchers.IO) {
-                        accountViewModel.account.settings.prefer(source, target, target)
+                        accountViewModel.account.prefer(source, target, target)
                         langSettingsPopupExpanded = false
                     }
                 },
@@ -350,7 +352,7 @@ private fun TranslationMessage(
                         },
                         onClick = {
                             scope.launch(Dispatchers.IO) {
-                                accountViewModel.account.settings.updateTranslateTo(lang)
+                                accountViewModel.account.updateTranslateTo(lang)
                                 langSettingsPopupExpanded = false
                             }
                         },
@@ -377,8 +379,8 @@ fun TranslateAndWatchLanguageChanges(
             LanguageTranslatorService
                 .autoTranslate(
                     content,
-                    accountViewModel.account.settings.dontTranslateFrom,
-                    accountViewModel.account.settings.translateTo,
+                    accountViewModel.dontTranslateFrom(),
+                    accountViewModel.translateTo(),
                 ).addOnCompleteListener { task ->
                     if (task.isSuccessful && !content.equals(task.result.result, true)) {
                         if (task.result.sourceLang != null && task.result.targetLang != null) {

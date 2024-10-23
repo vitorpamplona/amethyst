@@ -525,16 +525,12 @@ fun ZapVote(
                         )
                         return@combinedClickable
                     } else if (
-                        accountViewModel.account.settings.zapAmountChoices.value.size == 1 &&
-                        pollViewModel.isValidInputVoteAmount(
-                            accountViewModel.account.settings.zapAmountChoices.value
-                                .first(),
-                        )
+                        accountViewModel.zapAmountChoices().size == 1 &&
+                        pollViewModel.isValidInputVoteAmount(accountViewModel.zapAmountChoices().first())
                     ) {
                         accountViewModel.zap(
                             baseNote,
-                            accountViewModel.account.settings.zapAmountChoices.value
-                                .first() * 1000,
+                            accountViewModel.zapAmountChoices().first() * 1000,
                             poolOption.option,
                             "",
                             context,
@@ -667,7 +663,7 @@ fun FilteredZapAmountChoicePopup(
     val context = LocalContext.current
 
     // TODO: Move this to the viewModel
-    val zapPaymentChoices by accountViewModel.account.settings.zapAmountChoices
+    val zapPaymentChoices by accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices
         .collectAsStateWithLifecycle()
 
     val zapMessage = ""

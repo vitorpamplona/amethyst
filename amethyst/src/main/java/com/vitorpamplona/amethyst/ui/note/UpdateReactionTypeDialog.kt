@@ -49,7 +49,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -69,12 +68,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.firstFullChar
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
@@ -94,16 +93,17 @@ import com.vitorpamplona.quartz.events.EmojiUrl
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class UpdateReactionTypeViewModel(
-    val accountSettings: AccountSettings,
-) : ViewModel() {
+class UpdateReactionTypeViewModel : ViewModel() {
+    var account: Account? = null
     var nextChoice by mutableStateOf(TextFieldValue(""))
     var reactionSet by mutableStateOf(listOf<String>())
 
-    fun load() {
-        this.reactionSet = accountSettings.reactionChoices.value
+    fun load(myAccount: Account) {
+        this.account = myAccount
+        this.reactionSet = myAccount.settings.syncedSettings.reactions.reactionChoices.value
     }
 
     fun toListOfChoices(commaSeparatedAmounts: String): List<Long> = commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
@@ -124,21 +124,24 @@ class UpdateReactionTypeViewModel(
     }
 
     fun sendPost() {
-        accountSettings.changeReactionTypes(reactionSet)
-        nextChoice = TextFieldValue("")
+        viewModelScope.launch(Dispatchers.IO) {
+            account?.changeReactionTypes(reactionSet)
+            nextChoice = TextFieldValue("")
+        }
     }
 
     fun cancel() {
         nextChoice = TextFieldValue("")
     }
 
-    fun hasChanged(): Boolean = reactionSet != accountSettings.reactionChoices.value
-
-    class Factory(
-        val accountSettings: AccountSettings,
-    ) : ViewModelProvider.Factory {
-        override fun <UpdateReactionTypeViewModel : ViewModel> create(modelClass: Class<UpdateReactionTypeViewModel>): UpdateReactionTypeViewModel = UpdateReactionTypeViewModel(accountSettings) as UpdateReactionTypeViewModel
-    }
+    fun hasChanged(): Boolean =
+        reactionSet !=
+            account
+                ?.settings
+                ?.syncedSettings
+                ?.reactions
+                ?.reactionChoices
+                ?.value
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -148,14 +151,20 @@ fun UpdateReactionTypeDialog(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val postViewModel: UpdateReactionTypeViewModel =
-        viewModel(
-            key = "UpdateReactionTypeViewModel",
-            factory = UpdateReactionTypeViewModel.Factory(accountViewModel.account.settings),
-        )
+    val postViewModel: UpdateReactionTypeViewModel = viewModel()
+    postViewModel.load(accountViewModel.account)
 
-    LaunchedEffect(accountViewModel) { postViewModel.load() }
+    UpdateReactionTypeDialog(postViewModel, onClose, accountViewModel, nav)
+}
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun UpdateReactionTypeDialog(
+    postViewModel: UpdateReactionTypeViewModel,
+    onClose: () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     Dialog(
         onDismissRequest = { onClose() },
         properties =
