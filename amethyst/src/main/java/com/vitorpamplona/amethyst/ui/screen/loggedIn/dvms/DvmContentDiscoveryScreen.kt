@@ -68,7 +68,9 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.DVMCard
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
@@ -116,6 +118,11 @@ fun DvmContentDiscoveryScreen(
         isInvertedLayout = false,
         topBar = {
             DvmTopBar(appDefinitionEventId, accountViewModel, nav)
+        },
+        bottomBar = {
+            AppBottomBar(Route.Discover, accountViewModel) { route, _ ->
+                nav.newStack(route.base)
+            }
         },
         accountViewModel = accountViewModel,
     ) {
