@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -42,7 +44,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -59,7 +60,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -375,16 +375,7 @@ private fun RenderOptionAfterVote(
                 QuoteBorder,
             ),
     ) {
-        LinearProgressIndicator(
-            modifier = Modifier.matchParentSize(),
-            color = color,
-            gapSize = 0.dp,
-            strokeCap = StrokeCap.Square,
-            drawStopIndicator = {},
-            progress = {
-                poolOption.tally.value.toFloat()
-            },
-        )
+        DisplayProgress(poolOption, color, modifier = Modifier.matchParentSize())
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -398,10 +389,7 @@ private fun RenderOptionAfterVote(
                             .width(45.dp)
                     },
             ) {
-                Text(
-                    text = "${(poolOption.tally.value.toFloat() * 100).roundToInt()}%",
-                    fontWeight = FontWeight.Bold,
-                )
+                TallyText(poolOption)
             }
 
             Column(
@@ -427,6 +415,43 @@ private fun RenderOptionAfterVote(
             }
         }
     }
+}
+
+@Composable
+fun DisplayProgress(
+    poolOption: PollOption,
+    color: Color,
+    modifier: Modifier,
+) {
+    val progress by poolOption.tally
+
+    // The LinearProgressIndicator has some weird update issues and renders inaccurate percentages.
+    Box(modifier = modifier) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth(progress)
+                    .fillMaxHeight()
+                    .background(color = color),
+        ) {
+        }
+    }
+}
+
+@Composable
+private fun TallyText(poolOption: PollOption) {
+    val state = poolOption.tally
+    val progressTxt by
+        remember {
+            derivedStateOf {
+                "${(state.value * 100).roundToInt()}%"
+            }
+        }
+
+    Text(
+        text = progressTxt,
+        fontWeight = FontWeight.Bold,
+    )
 }
 
 @Composable
