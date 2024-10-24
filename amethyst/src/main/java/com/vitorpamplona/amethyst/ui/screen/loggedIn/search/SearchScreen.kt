@@ -36,7 +36,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -178,7 +177,7 @@ fun WatchAccountForSearchScreen(accountViewModel: AccountViewModel) {
     }
 }
 
-@OptIn(FlowPreview::class, ExperimentalMaterial3Api::class)
+@OptIn(FlowPreview::class)
 @Composable
 private fun SearchBar(
     searchBarViewModel: SearchBarViewModel,

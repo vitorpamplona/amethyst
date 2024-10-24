@@ -64,6 +64,7 @@ class GeoHashFeedFilter(
                 it.event is AudioHeaderEvent
         ) &&
             it.event?.isTaggedGeoHash(geoTag) == true &&
+            !it.isHiddenFor(account.flowHiddenUsers.value) &&
             account.isAcceptable(it)
 
     override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)

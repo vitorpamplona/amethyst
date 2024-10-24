@@ -45,6 +45,8 @@ import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import com.vitorpamplona.quartz.utils.DualCase
+import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -369,6 +371,36 @@ class User(
             it.event is ReportEvent &&
                 (it.event as ReportEvent).reportedAuthor().any { it.reportType == type }
         } != null
+
+    fun containsAny(hiddenWordsCase: List<DualCase>): Boolean {
+        if (hiddenWordsCase.isEmpty()) return false
+
+        if (toBestDisplayName().containsAny(hiddenWordsCase)) {
+            return true
+        }
+
+        if (profilePicture()?.containsAny(hiddenWordsCase) == true) {
+            return true
+        }
+
+        if (info?.banner?.containsAny(hiddenWordsCase) == true) {
+            return true
+        }
+
+        if (info?.about?.containsAny(hiddenWordsCase) == true) {
+            return true
+        }
+
+        if (info?.lud06?.containsAny(hiddenWordsCase) == true) {
+            return true
+        }
+
+        if (info?.lud16?.containsAny(hiddenWordsCase) == true) {
+            return true
+        }
+
+        return false
+    }
 
     fun anyNameStartsWith(username: String): Boolean = info?.anyNameStartsWith(username) ?: false
 

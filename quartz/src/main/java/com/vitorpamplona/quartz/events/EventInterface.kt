@@ -121,6 +121,8 @@ interface EventInterface {
 
     fun forEachHashTag(onEach: (eventId: HexKey) -> Unit)
 
+    fun anyHashTag(onEach: (str: String) -> Boolean): Boolean
+
     fun <R> mapTaggedEvent(map: (eventId: HexKey) -> R): List<R>
 
     fun <R> mapTaggedAddress(map: (address: String) -> R): List<R>

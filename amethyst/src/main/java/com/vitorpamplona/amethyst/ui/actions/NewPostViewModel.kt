@@ -1002,7 +1002,7 @@ open class NewPostViewModel : ViewModel() {
                 viewModelScope.launch(Dispatchers.IO) {
                     userSuggestions =
                         LocalCache
-                            .findUsersStartingWith(lastWord.removePrefix("@"))
+                            .findUsersStartingWith(lastWord.removePrefix("@"), account)
                             .sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() }, { it.pubkeyHex }))
                             .reversed()
                 }
@@ -1031,7 +1031,7 @@ open class NewPostViewModel : ViewModel() {
                 viewModelScope.launch(Dispatchers.IO) {
                     userSuggestions =
                         LocalCache
-                            .findUsersStartingWith(lastWord.removePrefix("@"))
+                            .findUsersStartingWith(lastWord.removePrefix("@"), account)
                             .sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() }, { it.pubkeyHex }))
                             .reversed()
                 }
@@ -1059,7 +1059,7 @@ open class NewPostViewModel : ViewModel() {
                 viewModelScope.launch(Dispatchers.IO) {
                     userSuggestions =
                         LocalCache
-                            .findUsersStartingWith(lastWord.removePrefix("@"))
+                            .findUsersStartingWith(lastWord.removePrefix("@"), account)
                             .sortedWith(
                                 compareBy(
                                     { account?.isFollowing(it) },
