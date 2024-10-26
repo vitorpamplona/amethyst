@@ -76,6 +76,13 @@ class PeopleListEvent(
         }
     }
 
+    class FollowSet(
+        val isPrivate: Boolean,
+        val title: String,
+        val description: String?,
+        val profileList: Set<String>,
+    )
+
     @Immutable
     class UsersAndWords(
         val users: Set<String> = setOf(),
