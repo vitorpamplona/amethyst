@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.compose.ui.util.fastFilter
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
@@ -2903,6 +2904,15 @@ class Account(
             .flowOn(Dispatchers.IO)
             .stateIn(scope)
 
+    fun loadUserFollowSets() {
+        val sets =
+            getFollowSetNotes()
+                .fastFilter { !it.dTag().isNullOrBlank() }
+                .associate { note -> note.dTag().toString() to note.event as PeopleListEvent }
+
+        userProfile().followSets = sets
+    }
+
     fun getMuteListFlow(): StateFlow<NoteState> = getMuteListNote().flow().metadata.stateFlow
 
     fun getBlockList(): PeopleListEvent? = getBlockListNote().event as? PeopleListEvent
@@ -3694,6 +3704,11 @@ class Account(
                     settings.updatePrivateHomeRelayList(it)
                 }
             }
+        }
+
+        scope.launch(Dispatchers.IO) {
+            Log.d("AccountFollowSetsWorker", "Loading Follow Sets for Account")
+            loadUserFollowSets()
         }
 
         scope.launch(Dispatchers.Default) {
