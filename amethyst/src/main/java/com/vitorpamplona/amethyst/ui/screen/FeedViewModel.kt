@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.ui.dal.ChatroomFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.CommunityFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DraftEventsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
+import com.vitorpamplona.amethyst.ui.dal.FollowSetFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.GeoHashFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NIP90ContentDiscoveryResponseFilter
@@ -212,6 +213,16 @@ class NostrBookmarkPrivateFeedViewModel(
         val account: Account,
     ) : ViewModelProvider.Factory {
         override fun <NostrBookmarkPrivateFeedViewModel : ViewModel> create(modelClass: Class<NostrBookmarkPrivateFeedViewModel>): NostrBookmarkPrivateFeedViewModel = NostrBookmarkPrivateFeedViewModel(account) as NostrBookmarkPrivateFeedViewModel
+    }
+}
+
+class NostrUserFollowSetFeedViewModel(
+    val account: Account,
+) : FeedViewModel(FollowSetFeedFilter(account)) {
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <NostrUserFollowSetFeedViewModel : ViewModel> create(modelClass: Class<NostrUserFollowSetFeedViewModel>): NostrUserFollowSetFeedViewModel = NostrUserFollowSetFeedViewModel(account) as NostrUserFollowSetFeedViewModel
     }
 }
 

@@ -108,6 +108,7 @@ import com.vitorpamplona.quartz.events.ZapSplitSetup
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.DualCase
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -2902,9 +2903,8 @@ class Account(
         val sets =
             getFollowSetNotes()
                 .fastFilter { !it.dTag().isNullOrBlank() }
-                .associate { note -> note.dTag().toString() to note.event as PeopleListEvent }
 
-        userProfile().followSets = sets
+        userProfile().followSets = sets.toImmutableList()
     }
 
     fun followSetNotesFlow() = userProfile().flow().followSets.stateFlow

@@ -21,11 +21,12 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.events.PeopleListEvent
 
 class FollowSetFeedFilter(
     val account: Account,
-) : FeedFilter<PeopleListEvent.FollowSet>() {
+) : FeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex
 
     private fun mapEventToSet(event: PeopleListEvent): PeopleListEvent.FollowSet {
@@ -54,11 +55,10 @@ class FollowSetFeedFilter(
         }
     }
 
-    override fun feed(): List<PeopleListEvent.FollowSet> =
+    override fun feed(): List<Note> =
         account
             .followSetNotesFlow()
             .value
             .user
             .followSets
-            .map { setEntry -> mapEventToSet(setEntry.value) }
 }
