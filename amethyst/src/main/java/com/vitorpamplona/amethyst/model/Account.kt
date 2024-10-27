@@ -121,7 +121,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
@@ -2899,11 +2898,6 @@ class Account(
 
     fun getFollowSetNotes(): List<AddressableNote> = LocalCache.getFollowSetsFor(userProfile())
 
-    suspend fun followSetNotesFlow() =
-        flowOf(getFollowSetNotes())
-            .flowOn(Dispatchers.IO)
-            .stateIn(scope)
-
     fun loadUserFollowSets() {
         val sets =
             getFollowSetNotes()
@@ -2912,6 +2906,8 @@ class Account(
 
         userProfile().followSets = sets
     }
+
+    fun followSetNotesFlow() = userProfile().flow().followSets.stateFlow
 
     fun getMuteListFlow(): StateFlow<NoteState> = getMuteListNote().flow().metadata.stateFlow
 
