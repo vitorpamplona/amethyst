@@ -35,7 +35,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -210,17 +209,15 @@ fun ThreadFeedView(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val listState = rememberLazyListState()
-
     RefresheableBox(viewModel) {
         RenderFeedState(
             viewModel = viewModel,
             accountViewModel = accountViewModel,
-            listState = listState,
+            listState = viewModel.llState,
             nav = nav,
             routeForLastRead = null,
             onLoaded = {
-                RenderThreadFeed(noteId, it, listState, accountViewModel, nav)
+                RenderThreadFeed(noteId, it, viewModel.llState, accountViewModel, nav)
             },
         )
     }
