@@ -3,18 +3,23 @@
     <string name="point_to_the_qr_code">کد QR را نشانه بگیرید</string>
     <string name="show_qr">کد QR را نشان بده</string>
     <string name="profile_image">تصویر نمایه</string>
+    <string name="your_profile_image">تصویر نمایه شما</string>
     <string name="scan_qr">اسکن کد QR</string>
     <string name="show_anyway">بهر حال نشان بده</string>
+    <string name="post_was_hidden">این پست پنهان شده چون به کلمات یا کاربران پنهان شده شما اشاره دارد</string>
     <string name="post_was_flagged_as_inappropriate_by">این یادداشت توسط این افراد گزارش شده:</string>
     <string name="post_not_found">این یادداشت یافت نشد</string>
+    <string name="post_not_found_short">👀</string>
     <string name="channel_image">تصویر کانال</string>
     <string name="referenced_event_not_found">رویداد مورد نظر یافت نشد</string>
     <string name="could_not_decrypt_the_message">پیام رمزگشایی نشد</string>
     <string name="group_picture">تصویر گروه</string>
     <string name="explicit_content">محتوای نامناسب</string>
     <string name="spam">اسپم</string>
+    <string name="spam_description">تعداد رویدادهای اسپم که از این رله می آید</string>
     <string name="impersonation">جعل هویت</string>
     <string name="illegal_behavior">رفتار ناهنجار</string>
+    <string name="other">سایر</string>
     <string name="unknown">ناشناس</string>
     <string name="relay_icon">آیکن رله</string>
     <string name="unknown_author">نویسنده ناشناس</string>
@@ -22,6 +27,9 @@
     <string name="copy_user_pubkey">کپی شناسه نویسنده</string>
     <string name="copy_note_id">کپی شناسه یادداشت</string>
     <string name="broadcast">انتشار</string>
+    <string name="timestamp_it">مهر زمان و تاریخ بزن</string>
+    <string name="timestamp_pending">مهر زمان: در انتظار تایید</string>
+    <string name="timestamp_pending_short">OTS: در حال انتظار</string>
     <string name="request_deletion">درخواست حذف/string&gt;</string>
     <string name="block_report">مسدود/گزارش</string>
     <string name="block_hide_user"><![CDATA[بلاک/پنهان کردن کاربر]]></string>
@@ -29,6 +37,10 @@
     <string name="report_impersonation">گزارش جعل هویت</string>
     <string name="report_explicit_content">گزارش محتوای نامناسب</string>
     <string name="report_illegal_behaviour">گزارش رفتار ناهنجار</string>
+    <string name="report_malware">گزارش بدافزار</string>
+    <string name="report_mod">گزارش مود</string>
+    <string name="malware">بدافزار</string>
+    <string name="mod">مود</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">با کلید خصوصی وارد شوید تا بتوانید پاسخ دهید</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">با کلید خصوصی وارد شوید تا بتوانید یادداشت را بازنشر کنید</string>
     <string name="login_with_a_private_key_to_like_posts">با کلید خصوصی وارد شوید تا بتوانید یادداشت را لایک کنید</string>
@@ -42,7 +54,12 @@
     <string name="view_count">دیدن تعداد</string>
     <string name="boost">بازنشر</string>
     <string name="boosted">بازنشر شده</string>
+    <string name="edited">ویرایش شده</string>
+    <string name="edited_number">ویرایش#%1$s</string>
+    <string name="original">اورجینال</string>
     <string name="quote">نقل قول</string>
+    <string name="fork">فورک</string>
+    <string name="propose_an_edit">پیشنهاد ویرایش</string>
     <string name="new_amount_in_sats">مبلغ جدید به ساتوشی</string>
     <string name="add">افزودن</string>
     <string name="replying_to">" پاسخ به"</string>
@@ -82,6 +99,7 @@
     <string name="posts">یادداشت ها</string>
     <string name="bytes">بایت</string>
     <string name="errors">خطاها</string>
+    <string name="errors_description">تعداد خطاهای اتصال در این نوبت</string>
     <string name="home_feed">خبرنامه اصلی</string>
     <string name="private_message_feed">پیام خصوصی</string>
     <string name="public_chat_feed">گفتگوی عمومی</string>
@@ -100,8 +118,11 @@
     <string name="website_url">آدری وبسایت</string>
     <string name="ln_address">آدرس لایتنینگ</string>
     <string name="ln_url_outdated">آدرس لایتنینگ(نقل شده)</string>
+    <string name="save_to_gallery">در گالری ذخیره کن</string>
     <string name="image_saved_to_the_gallery">تصویر در گالری ذخیره شد</string>
     <string name="failed_to_save_the_image">تصویر ذخیره نشد</string>
+    <string name="video_saved_to_the_gallery">ویدئو در گالری گوشی ذخیره شد</string>
+    <string name="failed_to_save_the_video">ویدئو ذخیره نشد</string>
     <string name="upload_image">بارگذاری تصویر</string>
     <string name="uploading">...در حال بارگذاری</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">این کاربر آدرس لایتنینگ برای دریافت ساتوشی تنظیم نکرده است</string>
@@ -117,6 +138,7 @@
     <string name="conversations">گفتگوها</string>
     <string name="notes">یادداشت ها</string>
     <string name="replies">پاسخ ها</string>
+    <string name="gallery">گالری</string>
     <string name="follows">"دنبال شوندگان"</string>
     <string name="reports">"گزارش ها"</string>
     <string name="more_options">انتخاب های بیشتر</string>
@@ -138,12 +160,15 @@
     <string name="clear">پاک کردن</string>
     <string name="app_logo">لوگوی اپ</string>
     <string name="nsec_npub_hex_private_key">nsec / npub / hex کلید خصوصی</string>
+    <string name="ncryptsec_password">پسورد باز کردن کلید</string>
     <string name="show_password">نشان دادن گذرواژه</string>
     <string name="hide_password">پنهان کردن گذرواژه</string>
     <string name="invalid_key">کلید نامعتبر</string>
+    <string name="invalid_key_with_message">کلید نامعتبر: %1$s</string>
     <string name="i_accept_the">"می پذیرم "</string>
     <string name="terms_of_use">شرایط استفاده</string>
     <string name="acceptance_of_terms_is_required">پذیرش شرایط الازمیست</string>
+    <string name="password_is_required">رمز عبور لازم است</string>
     <string name="key_is_required">کلید الزامیست</string>
     <string name="name_is_required">نام الزامی است</string>
     <string name="login">ورود</string>
@@ -194,8 +219,10 @@
     <string name="mark_all_new_as_read">همه جدیدها را خوانده شده کن</string>
     <string name="mark_all_as_read">همه را خوانده شده کن</string>
     <string name="backup_keys">بازیابی کلیدها</string>
+    <string name="failed_to_encrypt_key">کلید خصوصی شما رمزنگاری نشد</string>
     <string name="secret_key_copied_to_clipboard">کلید خصوصی در کلیپبورد کپی شد</string>
     <string name="copy_my_secret_key">کلید خصوصیم را کپی کن</string>
+    <string name="encrypt_and_copy_my_secret_key">رمزنگاری و کپی کلید من</string>
     <string name="biometric_authentication_failed">احراز هویت انجام نشد</string>
     <string name="biometric_authentication_failed_explainer">مشخصات بیومتریک نتوانست مالک این تلفن را احراز هویت کند</string>
     <string name="biometric_authentication_failed_explainer_with_error">مشخصات بیومتریک نتوانست مالک این تلفن را احراز هویت کند. خطا: %1$s</string>
@@ -226,6 +253,8 @@
     <string name="quick_action_delete">حذف</string>
     <string name="quick_action_unfollow">دنبال نکردن</string>
     <string name="quick_action_follow">دنبال کردن</string>
+    <string name="quick_action_request_deletion_gallery_title">حذف از گالری</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">حذف این رسانه از گالری، بعدا می توانید آن را بخوانید</string>
     <string name="quick_action_request_deletion_alert_title">درخواست حذف</string>
     <string name="quick_action_request_deletion_alert_body">آماتیست درخواست می کند که یادداشت شما از رله هایی که درحال حاضر به آن متصل هستید حذف شود. هیچ تضمینی نیست که یادداشت شما برای همیشه از آن رله ها یا از رله های دیگری که ممکن است در آنها ذخیره شده باشد حذف خواهد شد.. </string>
     <string name="quick_action_block_dialog_btn">بلاک</string>
@@ -239,6 +268,7 @@
     <string name="report_dialog_impersonation">جعل هویت بدخواهانه</string>
     <string name="report_dialog_nudity">محتوای برهنگی یا نمایان</string>
     <string name="report_dialog_illegal">رفتار ناهنجار</string>
+    <string name="report_dialog_malware">نرم‌افزار خرابکار</string>
     <string name="report_dialog_blocking_a_user">بلاک کردن کاربر محتوای ایشان را در اپ شما پنهان می کند. یادداشت های شما همچنان بطور عمومی دیده می شوند که شامل کاربران بلاک شده توسط شما نیز هست. کاربران بلاک شده در صفحه فیلترهای ایمنی فهرست می شوند.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[مسدود و پنهان کردن کاربر]]></string>
     <string name="report_dialog_report_btn">گزارش سواستفاده</string>
@@ -251,6 +281,7 @@
     <string name="report_dialog_title">بلاک و گزارش</string>
     <string name="block_only">بلاک</string>
     <string name="bookmarks">علامت گذاشته ها</string>
+    <string name="drafts">پیش‌نویس‌</string>
     <string name="private_bookmarks">علامت گاشته های خصوصی</string>
     <string name="public_bookmarks">علامت گذاشته های عمومی</string>
     <string name="add_to_private_bookmarks">افزودن به علامت گذاشته های خصوصی</string>
@@ -275,6 +306,7 @@
     <string name="poll_zap_value_min">حداقل زپ</string>
     <string name="poll_zap_value_max">حداکثر زپ</string>
     <string name="poll_consensus_threshold">توافق نظر</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">بسته شدن پس از</string>
     <string name="poll_closing_time_days">روز</string>
     <string name="poll_unable_to_vote">نمی توان رای داد</string>
@@ -309,10 +341,21 @@
     <string name="zap_type_nonzap_explainer">هیچ ردی در نوستر نمی ماند، فقط در شبکه لایتنینگ انجام می شود</string>
     <string name="file_server">سرور فایل</string>
     <string name="zap_forward_lnAddress">آدرس لایتنینگ یا @User</string>
+    <string name="media_servers">سرورهای رسانه</string>
+    <string name="set_preferred_media_servers">سرورهای مورد علاقه خود برای بارگزاری رسانه را انتخاب کنید.</string>
+    <string name="no_media_server_message">هیچ مجموعه سرور سفارشی ندارید. می توانید از لیست امتیست استفاده کنید، یا از لیست زیر اضافه کنید↓</string>
+    <string name="built_in_media_servers_title">سرورهای داخلی رسانه</string>
+    <string name="built_in_servers_description">لیست پیش فرض امتیست. می توانید تک به تک یا تمام لیست را اضافه کنید.</string>
+    <string name="use_default_servers">استفاده از لیست پیش فرض</string>
+    <string name="add_media_server">افزودن سرور رسانه</string>
+    <string name="delete_media_server">حذف سرور رسانه</string>
     <string name="upload_server_relays_nip95">رله های شما (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">فایل ها در رله های شما میزبانی می شوند. NIPجدید: بررسی کنید آیا پشتیبانی می کنند یا خیر </string>
+    <string name="privacy_options">گزینه های حریم خصوصی</string>
     <string name="connect_via_tor_short">Tor/Orbot تنظیمات</string>
     <string name="connect_via_tor"> از طریق تنظیم Orbot متصل شوید</string>
+    <string name="connect_via_tor1">تنظیم</string>
+    <string name="connect_via_tor2">تنظیمات تور</string>
     <string name="do_you_really_want_to_disable_tor_title">قطع اتصال از Orbot/Tor?</string>
     <string name="do_you_really_want_to_disable_tor_text">داده های شما بلافاصله در شبکه معمولی منتقل می شوند</string>
     <string name="yes">بله</string>
@@ -321,6 +364,7 @@
     <string name="follow_list_kind3follows">همه دنبال ها</string>
     <string name="follow_list_global">همگانی</string>
     <string name="follow_list_mute_list">لیست خموش</string>
+    <string name="connect_through_your_orbot_setup_short">درگاه پیش فرض 9050 است</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## از طریق Tor با Orbot متصل شوید
         \n\n1. نصب کنید [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
         \n2. شروع Orbot
@@ -330,6 +374,13 @@
         \n6. دکمه Activate را بفشارید تا از Orbot به عنوان پراکسی استفده نمایید
     </string>
     <string name="orbot_socks_port">درگاه Orbot Socks</string>
+    <string name="use_internal_tor">موتور فعال تور</string>
+    <string name="use_internal_tor_explainer">استفاده از نسخه درونی یا Orbot</string>
+    <string name="tor_preset">تنظیمات پیش فرض حریم خصوصی/ تور</string>
+    <string name="tor_preset_explainer">تغییر سریع تمام تنظیمات زیر</string>
+    <string name="tor_use_onion_address">رله ها / آدرس های Onion </string>
+    <string name="tor_use_onion_address_explainer">از تور برای هر آدرس اونیون استفاده کن</string>
+    <string name="tor_use_dm_relays">رله های پیام خصوصی</string>
     <string name="invalid_port_number">شماره پورت نامعتبر</string>
     <string name="use_orbot">استفاده از Orbot</string>
     <string name="disconnect_from_your_orbot_setup">قطع اتصال Tor/Orbot</string>
