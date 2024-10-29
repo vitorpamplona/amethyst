@@ -635,6 +635,7 @@
     <string name="nip05_checking">Checking Nostr address</string>
     <string name="select_deselect_all">Select/Deselect all</string>
     <string name="default_relays">Default</string>
+    <string name="default_relays_longer">Reset to Defaults</string>
     <string name="select_a_relay_to_continue">Select a relay to continue</string>
 
     <string name="zap_forward_title">Forward Zaps to:</string>

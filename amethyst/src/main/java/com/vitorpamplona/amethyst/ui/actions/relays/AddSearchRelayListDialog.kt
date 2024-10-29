@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -42,6 +43,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
@@ -50,6 +52,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import com.vitorpamplona.ammolite.relays.Constants
+import com.vitorpamplona.ammolite.relays.RelayStat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,6 +70,7 @@ fun AddSearchRelayListDialog(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
+        SetDialogToEdgeToEdge()
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -114,7 +119,7 @@ fun AddSearchRelayListDialog(
                     ),
                 verticalArrangement = Arrangement.SpaceAround,
             ) {
-                Explanation()
+                Explanation(postViewModel)
 
                 SearchRelayList(postViewModel, accountViewModel, onClose, nav)
             }
@@ -123,7 +128,7 @@ fun AddSearchRelayListDialog(
 }
 
 @Composable
-private fun Explanation() {
+private fun Explanation(postViewModel: SearchRelayListViewModel) {
     Card(modifier = MaterialTheme.colorScheme.imageModifier) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -135,6 +140,23 @@ private fun Explanation() {
             Text(
                 text = stringRes(id = R.string.search_relays_not_found_examples),
             )
+
+            Spacer(modifier = StdVertSpacer)
+
+            ResetSearchRelaysLonger(postViewModel)
         }
+    }
+}
+
+@Composable
+fun ResetSearchRelaysLonger(postViewModel: SearchRelayListViewModel) {
+    OutlinedButton(
+        onClick = {
+            postViewModel.deleteAll()
+            Constants.defaultSearchRelaySet.forEach { postViewModel.addRelay(BasicRelaySetupInfo(it, RelayStat())) }
+            postViewModel.loadRelayDocuments()
+        },
+    ) {
+        Text(stringRes(R.string.default_relays_longer))
     }
 }

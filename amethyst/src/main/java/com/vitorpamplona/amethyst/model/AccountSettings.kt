@@ -67,9 +67,9 @@ val DefaultNIP65List =
 
 val DefaultDMRelayList =
     listOf(
-        RelayUrlFormatter.normalize("wss://auth.nostr1.com/"),
-        RelayUrlFormatter.normalize("wss://nostr.mom/"),
-        RelayUrlFormatter.normalize("wss://nos.lol/"),
+        RelayUrlFormatter.normalize("wss://auth.nostr1.com"),
+        RelayUrlFormatter.normalize("wss://relay.0xchat.com"),
+        RelayUrlFormatter.normalize("wss://nos.lol"),
     )
 
 val DefaultSearchRelayList =
@@ -357,7 +357,6 @@ class AccountSettings(
 
         // Events might be different objects, we have to compare their ids.
         if (backupAppSpecificData?.id != appSettings.id) {
-            println("AABBCC Update App Specific Data")
             backupAppSpecificData = appSettings
             syncedSettings.updateFrom(newSyncedSettings)
 

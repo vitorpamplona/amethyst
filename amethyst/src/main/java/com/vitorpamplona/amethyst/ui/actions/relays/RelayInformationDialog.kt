@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableEmail
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
+import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.rememberExtendedNav
@@ -104,6 +105,7 @@ fun RelayInformationDialog(
                 dismissOnClickOutside = false,
             ),
     ) {
+        SetDialogToEdgeToEdge()
         Surface {
             val color =
                 remember {
