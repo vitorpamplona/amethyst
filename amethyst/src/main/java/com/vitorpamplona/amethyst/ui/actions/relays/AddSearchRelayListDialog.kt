@@ -43,6 +43,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -52,7 +53,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
-import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.relays.RelayStat
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -153,7 +153,7 @@ fun ResetSearchRelaysLonger(postViewModel: SearchRelayListViewModel) {
     OutlinedButton(
         onClick = {
             postViewModel.deleteAll()
-            Constants.defaultSearchRelaySet.forEach { postViewModel.addRelay(BasicRelaySetupInfo(it, RelayStat())) }
+            DefaultSearchRelayList.forEach { postViewModel.addRelay(BasicRelaySetupInfo(it, RelayStat())) }
             postViewModel.loadRelayDocuments()
         },
     ) {

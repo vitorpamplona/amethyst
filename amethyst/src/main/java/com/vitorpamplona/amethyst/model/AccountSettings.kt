@@ -77,6 +77,7 @@ val DefaultSearchRelayList =
         RelayUrlFormatter.normalize("wss://relay.nostr.band"),
         RelayUrlFormatter.normalize("wss://nostr.wine"),
         RelayUrlFormatter.normalize("wss://relay.noswhere.com"),
+        RelayUrlFormatter.normalize("wss://search.nos.today"),
     )
 
 // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
