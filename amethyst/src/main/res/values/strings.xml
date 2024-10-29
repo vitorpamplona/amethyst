@@ -930,6 +930,7 @@
     <string name="dm_relays_not_found">Set up your Private Inbox relays</string>
     <string name="dm_relays_not_found_description">This setting lets everybody know which relays to use when sending messages to you. Without them you might miss some messages.</string>
     <string name="dm_relays_not_found_examples">Good options are:\n - inbox.nostr.wine (paid)\n - auth.nostr1.com (free)\n - you.nostr1.com (personal relays - paid)</string>
+    <string name="dm_relays_not_found_examples2">Good options are:\n - auth.nostr1.com (free)\n - inbox.nostr.wine (paid)\n - relay.0xchat.com (free)</string>
     <string name="dm_relays_not_found_editing">Insert between 1–3 relays to serve as your private inbox. DM Inbox relays should accept any message from anyone, but only allow you to download them.</string>
     <string name="dm_relays_not_found_create_now">Set up now</string>
 
