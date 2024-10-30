@@ -83,7 +83,38 @@ class PeopleListEvent(
         val title: String,
         val description: String?,
         val profileList: Set<String>,
-    )
+    ) {
+        companion object {
+            fun mapEventToSet(
+                event: PeopleListEvent,
+                signer: NostrSigner,
+            ): FollowSet {
+                val dTag = event.dTag()
+                val listTitle = event.title() ?: dTag
+                val listDescription = event.description() ?: ""
+                val publicFollows = event.filterTagList("p", null)
+                val privateFollows = mutableListOf<String>()
+                event.privateTaggedUsers(signer) { userList -> privateFollows.addAll(userList) }
+                return if (publicFollows.isEmpty() && privateFollows.isNotEmpty()) {
+                    FollowSet(
+                        isPrivate = true,
+                        title = listTitle,
+                        description = listDescription,
+                        profileList = privateFollows.toSet(),
+                    )
+                } else if (publicFollows.isNotEmpty() && privateFollows.isEmpty()) {
+                    FollowSet(
+                        isPrivate = false,
+                        title = listTitle,
+                        description = listDescription,
+                        profileList = publicFollows.toSet(),
+                    )
+                } else {
+                    throw Exception("Mixed follow sets are not yet supported.")
+                }
+            }
+        }
+    }
 
     @Immutable
     class UsersAndWords(
