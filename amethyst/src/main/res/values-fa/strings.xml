@@ -531,6 +531,7 @@
     <string name="nip05_checking">بررسی آدرس ناستر</string>
     <string name="select_deselect_all">انتخاب یا لغو انتخاب همه</string>
     <string name="default_relays">پیش‌فرض</string>
+    <string name="default_relays_longer">بازگشت به حالت پیش فرض</string>
     <string name="select_a_relay_to_continue">برای ادامه یک رله انتخاب کنید</string>
     <string name="zap_forward_title">باز ارسال زپ ها به:</string>
     <string name="zap_forward_explainer">کلاینت هایی که این قابلیت را دارند زپ ها را به جای شما به LNAddress یا نمایه کاربر زیر می فرستند</string>
@@ -701,6 +702,11 @@
     <string name="could_not_prepare_local_file_to_upload">فایل محلی برای بارگذاری آماده نشد: %1$s</string>
     <string name="failed_to_upload_with_message">بارگذاری نشد: %1$s</string>
     <string name="failed_to_delete_with_message">حذف نشد: %1$s</string>
+    <string name="media_too_big_for_nip95">رسانه برای NIP-95 بسیار بزرگ است</string>
+    <string name="unable_to_load_thumbnail">ریزتصویر بارگیری نشد</string>
+    <string name="could_not_prepare_header">اطلاعات سربرگ آماده نشد: %1$s</string>
+    <string name="compression_cancelled">فشرده سازی لغو شد</string>
+    <string name="compression_returned_null">فشرده سازی فایل خروجی نساخت</string>
     <string name="media_compression_quality_label">کیفیت رسانه</string>
     <string name="media_compression_quality_low">پایین</string>
     <string name="media_compression_quality_medium">متوسط</string>
@@ -718,11 +724,20 @@
     <string name="route_video">کوتاه</string>
     <string name="route_security_filters">فیلترهای ایمنی</string>
     <string name="new_post">نوشته جدید</string>
+    <string name="new_short">رسانه های کوتاه جدید: تصاویر یا ویدئوها</string>
+    <string name="new_community_note">یادداشت جدید در انجمن</string>
+    <string name="open_all_reactions_to_this_post">باز کردن تمام واکنش ها به این پست</string>
+    <string name="close_all_reactions_to_this_post">بستن تمام واکنش ها به این پست</string>
     <string name="reply_description">پاسخ</string>
     <string name="boost_or_quote_description">بازنشر یا نقل قول</string>
     <string name="like_description">پسند</string>
     <string name="zap_description">زَپ</string>
     <string name="change_reaction">تغییر واکنش های سریع</string>
+    <string name="profile_image_of_user">تصویر نمایه %1$s</string>
+    <string name="relay_info">رله %1$s</string>
+    <string name="expand_relay_list">گسترش لیست رله</string>
+    <string name="note_options">گزینه های یادداشت</string>
+    <string name="relay_list_selector">انتخابگر لیست رله</string>
     <string name="poll">نظرسنجی</string>
     <string name="disable_poll">غیرفعال کردن نظرسنجی</string>
     <string name="add_bitcoin_invoice">صورت حساب بیتکوین</string>
@@ -739,4 +754,15 @@
     <string name="show_npub_as_a_qr_code">کلید عمومی را به شکل کد QR نشان بده</string>
     <string name="invalid_nip19_uri">آدرس نامعتبر</string>
     <string name="invalid_nip19_uri_description">امتیست آدرسی برای باز کردن دریافت کرد ولی آدرس نامعتبر بود: %1$s</string>
+    <string name="dm_relays_title">رله های صندوق پیام خصوصی</string>
+    <string name="dm_relays_through">رله ها: %1$s</string>
+    <string name="dm_relays_regular">استفاده از رله های معمولی</string>
+    <string name="dm_relays_not_found">تنظیم رله های صندوق ورودی خصوصی</string>
+    <string name="dm_relays_not_found_create_now">هم اکنون تنظیم شود</string>
+    <string name="search_relays_title">رله های جستجو</string>
+    <string name="search_relays_not_found">تنظیم رله های جستجو</string>
+    <string name="zap_the_devs_title">به توسعه دهندگان رپ دهید!</string>
+    <string name="accessibility_lyrics_off">متن خاموش</string>
+    <string name="accessibility_send">ارسال</string>
+    <string name="draft_note">پیش نویس یادداشت</string>
 </resources>
