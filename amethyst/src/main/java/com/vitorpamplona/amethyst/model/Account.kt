@@ -567,15 +567,12 @@ class Account(
         location: Location?,
     ): LiveFollowList? =
         if (listName == GLOBAL_FOLLOWS) {
-            println("AABBCC combinePeopleList $listName Global $listName")
             null
         } else if (listName == KIND3_FOLLOWS) {
-            println("AABBCC combinePeopleList $listName Kind3 $kind3")
             kind3
         } else if (listName == AROUND_ME) {
             val hash = location?.toGeoHash(com.vitorpamplona.amethyst.ui.actions.GeohashPrecision.KM_5_X_5.digits)
             if (hash != null) {
-                println("AABBCC combinePeopleList AROUND ME Started $listName Kind3 $kind3")
                 // 2 neighbors deep = 25x25km
                 val hashes =
                     listOf(hash.toString()) +
@@ -583,8 +580,6 @@ class Account(
                             .map { listOf(it.toString()) + it.adjacent.map { it.toString() } }
                             .flatten()
                             .distinct()
-
-                println("AABBCC combinePeopleList AROUND ME Finished $listName Kind3 $kind3")
 
                 LiveFollowList(
                     authorsPlusMe = setOf(signer.pubKey),
@@ -595,7 +590,6 @@ class Account(
             }
         } else {
             val peopleList = noteState.note.event as? GeneralListEvent
-            println("AABBCC combinePeopleList $listName General List ${noteState.note.idHex}")
             if (peopleList != null) {
                 waitToDecrypt(peopleList) ?: LiveFollowList(authorsPlusMe = setOf(signer.pubKey))
             } else {
