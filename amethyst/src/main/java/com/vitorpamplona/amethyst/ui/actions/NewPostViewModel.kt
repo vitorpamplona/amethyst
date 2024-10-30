@@ -35,6 +35,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fonfon.kgeohash.toGeoHash
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -43,7 +44,6 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.FileHeader
-import com.vitorpamplona.amethyst.service.LocationUtil
 import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
@@ -78,7 +78,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -163,8 +166,7 @@ open class NewPostViewModel : ViewModel() {
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
-    var locUtil: LocationUtil? = null
-    var location: Flow<String>? = null
+    var location: StateFlow<String?>? = null
 
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
@@ -530,14 +532,7 @@ open class NewPostViewModel : ViewModel() {
                 null
             }
 
-        val geoLocation = locUtil?.locationStateFlow?.value
-        val geoHash =
-            if (wantsToAddGeoHash && geoLocation != null) {
-                geoLocation.toGeoHash(GeohashPrecision.KM_5_X_5.digits).toString()
-            } else {
-                null
-            }
-
+        val geoHash = location?.value
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount else null
 
         nip95attachments.forEach {
@@ -1262,28 +1257,20 @@ open class NewPostViewModel : ViewModel() {
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun startLocation(context: Context) {
-        locUtil = LocationUtil(context)
-        locUtil?.let {
+    fun locationFlow(): Flow<String?> {
+        if (location == null) {
             location =
-                it.locationStateFlow.mapLatest { it.toGeoHash(GeohashPrecision.KM_5_X_5.digits).toString() }
-            saveDraft()
+                Amethyst.instance.locationManager.locationStateFlow
+                    .mapLatest { it.toGeoHash(GeohashPrecision.KM_5_X_5.digits).toString() }
+                    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
         }
-        viewModelScope.launch(Dispatchers.IO) { locUtil?.start() }
-    }
 
-    fun stopLocation() {
-        viewModelScope.launch(Dispatchers.IO) { locUtil?.stop() }
-        location = null
-        locUtil = null
+        return location!!
     }
 
     override fun onCleared() {
         super.onCleared()
         Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
-        viewModelScope.launch(Dispatchers.IO) { locUtil?.stop() }
-        location = null
-        locUtil = null
     }
 
     fun toggleNIP04And24() {
@@ -1386,7 +1373,7 @@ open class NewPostViewModel : ViewModel() {
                 elementList[i] = elementList[nextIndex].also { elementList[nextIndex] = "null" }
             }
         }
-        elementList.removeLast()
+        elementList.removeAt(elementList.size - 1)
         val newEntries = keyList.zip(elementList) { key, content -> Pair(key, content) }
         this.clear()
         this.putAll(newEntries)

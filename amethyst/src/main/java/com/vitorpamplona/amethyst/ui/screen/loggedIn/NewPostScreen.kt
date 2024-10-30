@@ -188,7 +188,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -1335,21 +1334,9 @@ fun LocationAsHash(postViewModel: NewPostViewModel) {
 
 @Composable
 fun DisplayLocationObserver(postViewModel: NewPostViewModel) {
-    val context = LocalContext.current
-    var locationDescriptionFlow by remember(postViewModel) { mutableStateOf<Flow<String>?>(null) }
+    val location by postViewModel.locationFlow().collectAsStateWithLifecycle(null)
 
-    DisposableEffect(key1 = context) {
-        postViewModel.startLocation(context = context)
-        locationDescriptionFlow = postViewModel.location
-
-        onDispose { postViewModel.stopLocation() }
-    }
-
-    locationDescriptionFlow?.let {
-        val location by it.collectAsStateWithLifecycle(null)
-
-        location?.let { DisplayLocationInTitle(geohash = it) }
-    }
+    location?.let { DisplayLocationInTitle(geohash = it) }
 }
 
 @Composable

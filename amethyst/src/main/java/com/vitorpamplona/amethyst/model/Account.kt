@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import android.location.Location
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
@@ -28,6 +29,8 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.switchMap
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.fonfon.kgeohash.toGeoHash
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
@@ -119,10 +122,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
@@ -158,17 +159,19 @@ class Account(
     val transientPaymentRequests: MutableStateFlow<Set<PaymentRequest>> = MutableStateFlow(emptySet())
 
     @Immutable
-    class LiveFollowLists(
-        val users: Set<String> = emptySet(),
-        val usersPlusMe: Set<String>,
+    class LiveFollowList(
+        val authors: Set<String> = emptySet(),
+        val authorsPlusMe: Set<String>,
         val hashtags: Set<String> = emptySet(),
         val geotags: Set<String> = emptySet(),
-        val communities: Set<String> = emptySet(),
+        val addresses: Set<String> = emptySet(),
     )
 
-    class ListNameNotePair(
+    class FeedsBaseFlows(
         val listName: String,
-        val event: GeneralListEvent?,
+        val peopleList: StateFlow<NoteState> = MutableStateFlow(NoteState(Note(" "))),
+        val kind3: StateFlow<Account.LiveFollowList?> = MutableStateFlow(null),
+        val location: StateFlow<Location?> = MutableStateFlow(null),
     )
 
     val connectToRelaysFlow =
@@ -216,7 +219,7 @@ class Account(
         localRelayList: Set<String>,
     ): List<RelaySetupInfo> {
         val newDMRelaySet = newDMRelayEvent?.relays()?.map { RelayUrlFormatter.normalize(it) }?.toSet() ?: emptySet()
-        val searchRelaySet = (searchRelayEvent?.relays() ?: Constants.defaultSearchRelaySet).map { RelayUrlFormatter.normalize(it) }.toSet()
+        val searchRelaySet = (searchRelayEvent?.relays() ?: DefaultSearchRelayList).map { RelayUrlFormatter.normalize(it) }.toSet()
         val nip65RelaySet =
             nip65RelayEvent?.relays()?.map {
                 AdvertisedRelayListEvent.AdvertisedRelayInfo(
@@ -463,23 +466,26 @@ class Account(
                 }.toTypedArray(),
             )
 
-    fun buildFollowLists(latestContactList: ContactListEvent?): LiveFollowLists {
+    fun buildFollowLists(latestContactList: ContactListEvent?): LiveFollowList {
         // makes sure the output include only valid p tags
         val verifiedFollowingUsers = latestContactList?.verifiedFollowKeySet() ?: emptySet()
 
-        return LiveFollowLists(
-            verifiedFollowingUsers,
-            verifiedFollowingUsers + signer.pubKey,
-            latestContactList
-                ?.unverifiedFollowTagSet()
-                ?.map { it.lowercase() }
-                ?.toSet() ?: emptySet(),
-            latestContactList
-                ?.unverifiedFollowGeohashSet()
-                ?.toSet() ?: emptySet(),
-            latestContactList
-                ?.verifiedFollowAddressSet()
-                ?.toSet() ?: emptySet(),
+        return LiveFollowList(
+            authors = verifiedFollowingUsers,
+            authorsPlusMe = verifiedFollowingUsers + signer.pubKey,
+            hashtags =
+                latestContactList
+                    ?.unverifiedFollowTagSet()
+                    ?.map { it.lowercase() }
+                    ?.toSet() ?: emptySet(),
+            geotags =
+                latestContactList
+                    ?.unverifiedFollowGeohashSet()
+                    ?.toSet() ?: emptySet(),
+            addresses =
+                latestContactList
+                    ?.verifiedFollowAddressSet()
+                    ?.toSet() ?: emptySet(),
         )
     }
 
@@ -514,7 +520,7 @@ class Account(
             )
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveKind3FollowsFlow: Flow<LiveFollowLists> =
+    val liveKind3FollowsFlow: Flow<LiveFollowList> =
         userProfile().flow().follows.stateFlow.transformLatest {
             checkNotInMainThread()
             emit(buildFollowLists(it.user.latestContactList))
@@ -529,78 +535,106 @@ class Account(
                 buildFollowLists(userProfile().latestContactList ?: settings.backupContactList),
             )
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val liveHomeList: Flow<ListNameNotePair> =
-        settings.defaultHomeFollowList.flatMapLatest { listName ->
-            loadPeopleListFlowFromListName(listName)
-        }
-
-    fun peopleListFromListNameStarter(listName: String): ListNameNotePair =
-        if (listName != GLOBAL_FOLLOWS && listName != KIND3_FOLLOWS) {
-            val note = LocalCache.checkGetOrCreateAddressableNote(listName)
-            val noteEvent = note?.event as? GeneralListEvent
-            ListNameNotePair(listName, noteEvent)
-        } else {
-            ListNameNotePair(listName, null)
-        }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    fun loadPeopleListFlowFromListName(listName: String): Flow<ListNameNotePair> =
-        if (listName != GLOBAL_FOLLOWS && listName != KIND3_FOLLOWS) {
-            val note = LocalCache.checkGetOrCreateAddressableNote(listName)
-            note?.flow()?.metadata?.stateFlow?.mapLatest {
-                val noteEvent = it.note.event as? GeneralListEvent
-                ListNameNotePair(listName, noteEvent)
-            } ?: MutableStateFlow(ListNameNotePair(listName, null))
-        } else {
-            MutableStateFlow(ListNameNotePair(listName, null))
-        }
-
-    suspend fun combinePeopleList(
-        kind3Follows: LiveFollowLists,
-        peopleListFollows: ListNameNotePair,
-    ): LiveFollowLists? =
-        if (peopleListFollows.listName == GLOBAL_FOLLOWS) {
-            null
-        } else if (peopleListFollows.listName == KIND3_FOLLOWS) {
-            kind3Follows
-        } else if (peopleListFollows.event == null) {
-            LiveFollowLists(usersPlusMe = setOf(signer.pubKey))
-        } else {
-            val result = waitToDecrypt(peopleListFollows.event)
-            if (result == null) {
-                LiveFollowLists(usersPlusMe = setOf(signer.pubKey))
-            } else {
-                result
+    fun loadFlowsFor(listName: String): FeedsBaseFlows =
+        when (listName) {
+            GLOBAL_FOLLOWS -> FeedsBaseFlows(listName)
+            KIND3_FOLLOWS -> FeedsBaseFlows(listName, kind3 = liveKind3Follows)
+            AROUND_ME ->
+                FeedsBaseFlows(
+                    listName,
+                    location = Amethyst.instance.locationManager.locationStateFlow,
+                )
+            else -> {
+                val note = LocalCache.checkGetOrCreateAddressableNote(listName)
+                if (note != null) {
+                    FeedsBaseFlows(
+                        listName,
+                        peopleList =
+                            note
+                                .flow()
+                                .metadata.stateFlow,
+                    )
+                } else {
+                    FeedsBaseFlows(listName)
+                }
             }
         }
 
-    fun combinePeopleListFlows(
-        kind3FollowsSource: Flow<LiveFollowLists>,
-        peopleListFollowsSource: Flow<ListNameNotePair>,
-    ): Flow<LiveFollowLists?> =
-        combineTransform(kind3FollowsSource, peopleListFollowsSource) { kind3Follows, peopleListFollows ->
-            checkNotInMainThread()
-            emit(combinePeopleList(kind3Follows, peopleListFollows))
+    suspend fun mapIntoFollowLists(
+        listName: String,
+        kind3: LiveFollowList?,
+        noteState: NoteState,
+        location: Location?,
+    ): LiveFollowList? =
+        if (listName == GLOBAL_FOLLOWS) {
+            println("AABBCC combinePeopleList $listName Global $listName")
+            null
+        } else if (listName == KIND3_FOLLOWS) {
+            println("AABBCC combinePeopleList $listName Kind3 $kind3")
+            kind3
+        } else if (listName == AROUND_ME) {
+            val hash = location?.toGeoHash(com.vitorpamplona.amethyst.ui.actions.GeohashPrecision.KM_5_X_5.digits)
+            if (hash != null) {
+                println("AABBCC combinePeopleList AROUND ME Started $listName Kind3 $kind3")
+                // 2 neighbors deep = 25x25km
+                val hashes =
+                    listOf(hash.toString()) +
+                        hash.adjacent
+                            .map { listOf(it.toString()) + it.adjacent.map { it.toString() } }
+                            .flatten()
+                            .distinct()
+
+                println("AABBCC combinePeopleList AROUND ME Finished $listName Kind3 $kind3")
+
+                LiveFollowList(
+                    authorsPlusMe = setOf(signer.pubKey),
+                    geotags = hashes.toSet(),
+                )
+            } else {
+                LiveFollowList(authorsPlusMe = setOf(signer.pubKey))
+            }
+        } else {
+            val peopleList = noteState.note.event as? GeneralListEvent
+            println("AABBCC combinePeopleList $listName General List ${noteState.note.idHex}")
+            if (peopleList != null) {
+                waitToDecrypt(peopleList) ?: LiveFollowList(authorsPlusMe = setOf(signer.pubKey))
+            } else {
+                LiveFollowList(authorsPlusMe = setOf(signer.pubKey))
+            }
         }
 
-    val liveHomeFollowListFlow: Flow<LiveFollowLists?> by lazy {
-        combinePeopleListFlows(liveKind3Follows, liveHomeList)
-    }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun combinePeopleListFlows(peopleListFollowsSource: Flow<String>): Flow<LiveFollowList?> =
+        peopleListFollowsSource
+            .transformLatest { listName ->
+                val followList = loadFlowsFor(listName)
+                emitAll(
+                    combine(followList.kind3, followList.peopleList, followList.location) { kind3, peopleList, location ->
+                        mapIntoFollowLists(followList.listName, kind3, peopleList, location)
+                    },
+                )
+            }
 
-    val liveHomeFollowLists: StateFlow<LiveFollowLists?> by lazy {
-        liveHomeFollowListFlow
+    val liveHomeFollowLists: StateFlow<LiveFollowList?> by lazy {
+        combinePeopleListFlows(settings.defaultHomeFollowList)
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
                 runBlocking {
-                    combinePeopleList(
-                        liveKind3Follows.value,
-                        peopleListFromListNameStarter(settings.defaultHomeFollowList.value),
-                    )
+                    loadAndCombineFlows(settings.defaultHomeFollowList.value)
                 },
             )
+    }
+
+    suspend fun loadAndCombineFlows(listName: String): LiveFollowList? {
+        val flows = loadFlowsFor(listName)
+        return mapIntoFollowLists(
+            flows.listName,
+            flows.kind3.value,
+            flows.peopleList.value,
+            flows.location.value,
+        )
     }
 
     /**
@@ -699,7 +733,7 @@ class Account(
         liveHomeFollowLists
             .transformLatest { followList ->
                 if (followList != null) {
-                    emitAll(combine(followList.usersPlusMe.map { getNIP65RelayListFlow(it) }) { it })
+                    emitAll(combine(followList.authorsPlusMe.map { getNIP65RelayListFlow(it) }) { it })
                 } else {
                     emit(null)
                 }
@@ -726,53 +760,33 @@ class Account(
             scope,
             SharingStarted.Eagerly,
             authorsPerRelay(
-                liveHomeFollowLists.value?.usersPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
+                liveHomeFollowLists.value?.authorsPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
                 connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
                 settings.torSettings.torType.value,
             ).ifEmpty { null },
         )
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val liveNotificationList: Flow<ListNameNotePair> by lazy {
-        settings.defaultNotificationFollowList.flatMapLatest { listName ->
-            loadPeopleListFlowFromListName(listName)
-        }
-    }
-
-    val liveNotificationFollowLists: StateFlow<LiveFollowLists?> by lazy {
-        combinePeopleListFlows(liveKind3FollowsFlow, liveNotificationList)
+    val liveNotificationFollowLists: StateFlow<LiveFollowList?> by lazy {
+        combinePeopleListFlows(settings.defaultNotificationFollowList)
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
                 runBlocking {
-                    combinePeopleList(
-                        liveKind3Follows.value,
-                        peopleListFromListNameStarter(settings.defaultNotificationFollowList.value),
-                    )
+                    loadAndCombineFlows(settings.defaultNotificationFollowList.value)
                 },
             )
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val liveStoriesList: Flow<ListNameNotePair> by lazy {
-        settings.defaultStoriesFollowList.flatMapLatest { listName ->
-            loadPeopleListFlowFromListName(listName)
-        }
-    }
-
-    val liveStoriesFollowLists: StateFlow<LiveFollowLists?> by lazy {
-        combinePeopleListFlows(liveKind3FollowsFlow, liveStoriesList)
+    val liveStoriesFollowLists: StateFlow<LiveFollowList?> by lazy {
+        combinePeopleListFlows(settings.defaultStoriesFollowList)
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
                 runBlocking {
-                    combinePeopleList(
-                        liveKind3Follows.value,
-                        peopleListFromListNameStarter(settings.defaultStoriesFollowList.value),
-                    )
+                    loadAndCombineFlows(settings.defaultStoriesFollowList.value)
                 },
             )
     }
@@ -782,7 +796,7 @@ class Account(
         liveStoriesFollowLists
             .transformLatest { followList ->
                 if (followList != null) {
-                    emitAll(combine(followList.usersPlusMe.map { getNIP65RelayListFlow(it) }) { it })
+                    emitAll(combine(followList.authorsPlusMe.map { getNIP65RelayListFlow(it) }) { it })
                 } else {
                     emit(null)
                 }
@@ -809,31 +823,21 @@ class Account(
             scope,
             SharingStarted.Eagerly,
             authorsPerRelay(
-                liveStoriesFollowLists.value?.usersPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
+                liveStoriesFollowLists.value?.authorsPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
                 connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
                 settings.torSettings.torType.value,
             ).ifEmpty { null },
         )
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val liveDiscoveryList: Flow<ListNameNotePair> by lazy {
-        settings.defaultDiscoveryFollowList.flatMapLatest { listName ->
-            loadPeopleListFlowFromListName(listName)
-        }
-    }
-
-    val liveDiscoveryFollowLists: StateFlow<LiveFollowLists?> by lazy {
-        combinePeopleListFlows(liveKind3FollowsFlow, liveDiscoveryList)
+    val liveDiscoveryFollowLists: StateFlow<LiveFollowList?> by lazy {
+        combinePeopleListFlows(settings.defaultDiscoveryFollowList)
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
                 runBlocking {
-                    combinePeopleList(
-                        liveKind3Follows.value,
-                        peopleListFromListNameStarter(settings.defaultDiscoveryFollowList.value),
-                    )
+                    loadAndCombineFlows(settings.defaultDiscoveryFollowList.value)
                 },
             )
     }
@@ -843,7 +847,7 @@ class Account(
         liveDiscoveryFollowLists
             .transformLatest { followList ->
                 if (followList != null) {
-                    emitAll(combine(followList.usersPlusMe.map { getNIP65RelayListFlow(it) }) { it })
+                    emitAll(combine(followList.authorsPlusMe.map { getNIP65RelayListFlow(it) }) { it })
                 } else {
                     emit(null)
                 }
@@ -870,7 +874,7 @@ class Account(
             scope,
             SharingStarted.Eagerly,
             authorsPerRelay(
-                liveDiscoveryFollowLists.value?.usersPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
+                liveDiscoveryFollowLists.value?.authorsPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
                 connectToRelays.value.filter { it.read }.map { it.url },
                 settings.torSettings.torType.value,
             ).ifEmpty { null },
@@ -879,19 +883,17 @@ class Account(
 
     private fun decryptLiveFollows(
         listEvent: GeneralListEvent,
-        onReady: (LiveFollowLists) -> Unit,
+        onReady: (LiveFollowList) -> Unit,
     ) {
         listEvent.privateTags(signer) { privateTagList ->
             val users = (listEvent.bookmarkedPeople() + listEvent.filterUsers(privateTagList)).toSet()
             onReady(
-                LiveFollowLists(
-                    users = users,
-                    usersPlusMe = users + userProfile().pubkeyHex,
-                    hashtags =
-                        (listEvent.hashtags() + listEvent.filterHashtags(privateTagList)).toSet(),
-                    geotags =
-                        (listEvent.geohashes() + listEvent.filterGeohashes(privateTagList)).toSet(),
-                    communities =
+                LiveFollowList(
+                    authors = users,
+                    authorsPlusMe = users + userProfile().pubkeyHex,
+                    hashtags = (listEvent.hashtags() + listEvent.filterHashtags(privateTagList)).toSet(),
+                    geotags = (listEvent.geohashes() + listEvent.filterGeohashes(privateTagList)).toSet(),
+                    addresses =
                         (listEvent.taggedAddresses() + listEvent.filterAddresses(privateTagList))
                             .map { it.toTag() }
                             .toSet(),
@@ -900,7 +902,7 @@ class Account(
         }
     }
 
-    suspend fun waitToDecrypt(peopleListFollows: GeneralListEvent): LiveFollowLists? =
+    suspend fun waitToDecrypt(peopleListFollows: GeneralListEvent): LiveFollowList? =
         withTimeoutOrNull(1000) {
             suspendCancellableCoroutine { continuation ->
                 decryptLiveFollows(peopleListFollows) {
@@ -3192,7 +3194,7 @@ class Account(
         flowHiddenUsers.value.hiddenUsers.contains(userHex) ||
             flowHiddenUsers.value.spammers.contains(userHex)
 
-    fun followingKeySet(): Set<HexKey> = liveKind3Follows.value.users
+    fun followingKeySet(): Set<HexKey> = liveKind3Follows.value.authors
 
     fun isAcceptable(user: User): Boolean {
         if (userProfile().pubkeyHex == user.pubkeyHex) {
@@ -3250,8 +3252,8 @@ class Account(
             }
 
         return (
-            note.reportsBy(liveKind3Follows.value.usersPlusMe) +
-                (note.author?.reportsBy(liveKind3Follows.value.usersPlusMe) ?: emptyList()) +
+            note.reportsBy(liveKind3Follows.value.authorsPlusMe) +
+                (note.author?.reportsBy(liveKind3Follows.value.authorsPlusMe) ?: emptyList()) +
                 innerReports
         ).toSet()
     }

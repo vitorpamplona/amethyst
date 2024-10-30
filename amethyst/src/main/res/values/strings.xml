@@ -416,6 +416,7 @@
 
     <string name="follow_list_selection">Follow List</string>
     <string name="follow_list_kind3follows">All Follows</string>
+    <string name="follow_list_aroundme">Around Me</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Mute List</string>
 

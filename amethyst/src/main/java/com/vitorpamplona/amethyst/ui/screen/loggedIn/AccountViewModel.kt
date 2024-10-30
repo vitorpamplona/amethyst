@@ -120,7 +120,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -396,7 +395,7 @@ class AccountViewModel(
                 note.flow().metadata.stateFlow,
                 note.flow().reports.stateFlow,
             ) { hiddenUsers, followingUsers, autor, metadata, reports ->
-                emit(isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.users))
+                emit(isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.authors))
             }.flowOn(Dispatchers.Default)
                 .stateIn(
                     viewModelScope,

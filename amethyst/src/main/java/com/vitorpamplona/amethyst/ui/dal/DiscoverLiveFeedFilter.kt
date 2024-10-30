@@ -67,7 +67,7 @@ open class DiscoverLiveFeedFilter(
 
     override fun sort(collection: Set<Note>): List<Note> {
         val followingKeySet =
-            account.liveDiscoveryFollowLists.value?.users ?: account.liveKind3Follows.value.users
+            account.liveDiscoveryFollowLists.value?.authors ?: account.liveKind3Follows.value.authors
 
         val counter = ParticipantListBuilder()
         val participantCounts =
