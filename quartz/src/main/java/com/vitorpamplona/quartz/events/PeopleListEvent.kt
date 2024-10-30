@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.events
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -76,6 +77,7 @@ class PeopleListEvent(
         }
     }
 
+    @Stable
     class FollowSet(
         val isPrivate: Boolean,
         val title: String,
