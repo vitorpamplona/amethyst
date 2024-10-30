@@ -53,7 +53,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
+import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.NostrUserFollowSetFeedViewModel
@@ -114,15 +117,20 @@ fun CustomListsScreen(
         },
     ) {
         when (followSetsState) {
-            FeedState.Empty -> TODO()
-            is FeedState.FeedError -> TODO()
+            FeedState.Empty -> FeedEmpty { followSetsViewModel.invalidateData() }
+            is FeedState.FeedError ->
+                FeedError(
+                    (followSetsState as FeedState.FeedError).errorMessage,
+                ) {
+                    followSetsViewModel.invalidateData()
+                }
             is FeedState.Loaded -> {
                 FollowListLoaded(
                     nostrSigner = accountViewModel.account.signer,
                     loadedFeedState = followSetsState as FeedState.Loaded,
                 )
             }
-            FeedState.Loading -> TODO()
+            FeedState.Loading -> LoadingFeed()
         }
     }
 }
