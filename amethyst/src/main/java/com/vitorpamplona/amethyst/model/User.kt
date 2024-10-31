@@ -60,7 +60,7 @@ class User(
     var latestMetadataRelay: String? = null
     var latestContactList: ContactListEvent? = null
     var latestBookmarkList: BookmarkListEvent? = null
-    val followSets: MutableList<AddressableNote> = mutableListOf()
+    var followSets: List<AddressableNote> = listOf()
 
     var reports = mapOf<User, Set<Note>>()
         private set
