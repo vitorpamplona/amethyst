@@ -219,6 +219,14 @@
     <string name="mark_all_new_as_read">همه جدیدها را خوانده شده کن</string>
     <string name="mark_all_as_read">همه را خوانده شده کن</string>
     <string name="backup_keys">بازیابی کلیدها</string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">نکات ایمنی و ذخیره کلید
+
+حساب کاربری شما با یک کلید خصوصی محافظت می شود. این کلید دنباله ای بلند از کاراکترها است که با **nsec1** آغاز می گردد. هر کس به این کلید خصوصی دسترسی داشته باشد می تواند بجای شما یادداشت پست کرده یا هویت شما را تغییر دهد.
+هرگز کلید خصوصی خود را در هیچ وبسایت با نرم افزاری که به آن اطمینان ندارید **وارد نکنید**.
+سازندگان امتیست **هرگز** کلیدتان را از شما نمی خواهند.
+یک پشتیبان یدکی مخفی از کلید خود به منظور بازیابی **نگه دارید**. ما استفاده از نرم افزار مدیریت پسورد را توصیه می کنیم.</string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">برای ایمنی بیشتر، می توانید کلید خود را با یک رمزعبور رمزنگاری کنید. این نوع کلید با **ncryptsec1** آغاز می شود و نمی تواند بدون رمز عبور شما استفاده شود.
+اگر پسوردتان را گم کنید، نخواهید توانست کلیدتان را بازیابی کنید.</string>
     <string name="failed_to_encrypt_key">کلید خصوصی شما رمزنگاری نشد</string>
     <string name="secret_key_copied_to_clipboard">کلید خصوصی در کلیپبورد کپی شد</string>
     <string name="copy_my_secret_key">کلید خصوصیم را کپی کن</string>
@@ -362,6 +370,7 @@
     <string name="no">خیر</string>
     <string name="follow_list_selection">لیست دنبال ها</string>
     <string name="follow_list_kind3follows">همه دنبال ها</string>
+    <string name="follow_list_aroundme">اطراف من</string>
     <string name="follow_list_global">همگانی</string>
     <string name="follow_list_mute_list">لیست خموش</string>
     <string name="connect_through_your_orbot_setup_short">درگاه پیش فرض 9050 است</string>
@@ -708,6 +717,7 @@
     <string name="compression_cancelled">فشرده سازی لغو شد</string>
     <string name="compression_returned_null">فشرده سازی فایل خروجی نساخت</string>
     <string name="media_compression_quality_label">کیفیت رسانه</string>
+    <string name="media_compression_quality_explainer">کیفیت کم را انتخاب کنید تا رسانه را به شکل فایل کوچکتری ذخیره کند، کیفیت بالا برای ذخیره به شکل فایل بزرگتر و نافشرده برای بارگذاری رسانه بدون فشرده سازی است.</string>
     <string name="media_compression_quality_low">پایین</string>
     <string name="media_compression_quality_medium">متوسط</string>
     <string name="media_compression_quality_high">بالا</string>
@@ -758,6 +768,15 @@
     <string name="dm_relays_through">رله ها: %1$s</string>
     <string name="dm_relays_regular">استفاده از رله های معمولی</string>
     <string name="dm_relays_not_found">تنظیم رله های صندوق ورودی خصوصی</string>
+    <string name="dm_relays_not_found_description">با این تنظیمات همه می توانند بدانند که هنگام ارسال پیام به شما از کدام رله ها استفاده کنند. بدون این تنظیمات ممکن است برخی پیام ها را از دست بدهید.</string>
+    <string name="dm_relays_not_found_examples">گزینه های خوب:
+- inbox.nostr.wine (پولی)
+- auth.nostr1.com (رایگان)
+- you.nostr1.com (رله شخصی - پولی)</string>
+    <string name="dm_relays_not_found_examples2">گزینه های خوب:
+- inbox.nostr.wine (پولی)
+- auth.nostr1.com (رایگان)
+- you.nostr1.com (رله شخصی - پولی)</string>
     <string name="dm_relays_not_found_create_now">هم اکنون تنظیم شود</string>
     <string name="search_relays_title">رله های جستجو</string>
     <string name="search_relays_not_found">تنظیم رله های جستجو</string>
