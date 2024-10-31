@@ -455,11 +455,12 @@ fun ListContent(
             route = route,
         )
 
-        IconRow(
+        NavigationRow(
             title = stringRes(Route.Lists.contentDescriptor),
             icon = Route.Lists.icon,
             tint = MaterialTheme.colorScheme.onBackground,
-            onClick = { /*TODO*/ },
+            nav = nav,
+            route = Route.Lists.route,
         )
 
         NavigationRow(
