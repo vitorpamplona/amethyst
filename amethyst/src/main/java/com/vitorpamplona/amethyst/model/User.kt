@@ -45,8 +45,6 @@ import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.UserMetadata
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,7 +60,7 @@ class User(
     var latestMetadataRelay: String? = null
     var latestContactList: ContactListEvent? = null
     var latestBookmarkList: BookmarkListEvent? = null
-    var followSets: ImmutableList<AddressableNote> = persistentListOf()
+    val followSets: MutableList<AddressableNote> = mutableListOf()
 
     var reports = mapOf<User, Set<Note>>()
         private set

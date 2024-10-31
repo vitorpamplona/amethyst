@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetFeedViewModel
 import com.vitorpamplona.quartz.events.ChatroomKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -218,7 +219,7 @@ class NostrBookmarkPrivateFeedViewModel(
 
 class NostrUserFollowSetFeedViewModel(
     val account: Account,
-) : FeedViewModel(FollowSetFeedFilter(account)) {
+) : FollowSetFeedViewModel(FollowSetFeedFilter(account)) {
     class Factory(
         val account: Account,
     ) : ViewModelProvider.Factory {
