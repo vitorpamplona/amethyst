@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -42,6 +43,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.DefaultDMRelayList
+import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
@@ -50,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import com.vitorpamplona.ammolite.relays.RelayStat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,6 +70,7 @@ fun AddDMRelayListDialog(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
+        SetDialogToEdgeToEdge()
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -114,7 +119,7 @@ fun AddDMRelayListDialog(
                     ),
                 verticalArrangement = Arrangement.SpaceAround,
             ) {
-                Explanation()
+                Explanation(postViewModel)
 
                 DMRelayList(postViewModel, accountViewModel, onClose, nav)
             }
@@ -123,7 +128,7 @@ fun AddDMRelayListDialog(
 }
 
 @Composable
-private fun Explanation() {
+private fun Explanation(postViewModel: DMRelayListViewModel) {
     Card(modifier = MaterialTheme.colorScheme.imageModifier) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -133,8 +138,25 @@ private fun Explanation() {
             Spacer(modifier = StdVertSpacer)
 
             Text(
-                text = stringRes(id = R.string.dm_relays_not_found_examples),
+                text = stringRes(id = R.string.dm_relays_not_found_examples2),
             )
+
+            Spacer(modifier = StdVertSpacer)
+
+            ResetDMRelaysLonger(postViewModel)
         }
+    }
+}
+
+@Composable
+fun ResetDMRelaysLonger(postViewModel: DMRelayListViewModel) {
+    OutlinedButton(
+        onClick = {
+            postViewModel.deleteAll()
+            DefaultDMRelayList.forEach { postViewModel.addRelay(BasicRelaySetupInfo(it, RelayStat())) }
+            postViewModel.loadRelayDocuments()
+        },
+    ) {
+        Text(stringRes(R.string.default_relays_longer))
     }
 }

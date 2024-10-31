@@ -37,7 +37,7 @@ class ThreadFeedFilter(
 
     override fun feed(): List<Note> {
         val cachedSignatures: MutableMap<Note, LevelSignature> = mutableMapOf()
-        val followingKeySet = account.liveKind3Follows.value.users
+        val followingKeySet = account.liveKind3Follows.value.authors
         val eventsToWatch = ThreadAssembler().findThreadFor(noteId)
         val eventsInHex = eventsToWatch.map { it.idHex }.toSet()
         val now = TimeUtils.now()

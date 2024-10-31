@@ -26,73 +26,91 @@ import android.location.Geocoder
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.os.HandlerThread
+import android.os.Looper
+import android.util.Log
 import android.util.LruCache
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
+import com.fonfon.kgeohash.toGeoHash
+import com.vitorpamplona.amethyst.service.LocationState.Companion.MIN_DISTANCE
+import com.vitorpamplona.amethyst.service.LocationState.Companion.MIN_TIME
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
-class LocationUtil(
-    context: Context,
+class LocationFlow(
+    private val context: Context,
 ) {
-    companion object {
-        const val MIN_TIME: Long = 1000L
-        const val MIN_DISTANCE: Float = 0.0f
-    }
-
-    private val locationManager =
-        context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-    private var locationListener: LocationListener? = null
-
-    val locationStateFlow = MutableStateFlow<Location>(Location(LocationManager.NETWORK_PROVIDER))
-    val providerState = mutableStateOf(false)
-    val isStart: MutableState<Boolean> = mutableStateOf(false)
-
-    private val locHandlerThread = HandlerThread("LocationUtil Thread")
-
-    init {
-        locHandlerThread.start()
-    }
-
     @SuppressLint("MissingPermission")
-    fun start(
+    fun get(
         minTimeMs: Long = MIN_TIME,
         minDistanceM: Float = MIN_DISTANCE,
-    ) {
-        locationListener().let {
-            locationListener = it
+    ): Flow<Location> =
+        callbackFlow {
+            val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+            val locationCallback =
+                object : LocationListener {
+                    override fun onLocationChanged(location: Location) {
+                        launch { send(location) }
+                    }
+
+                    override fun onProviderEnabled(provider: String) {}
+
+                    override fun onProviderDisabled(provider: String) {}
+                }
+
+            Log.d("Location Service", "LocationState Start")
             locationManager.requestLocationUpdates(
                 LocationManager.NETWORK_PROVIDER,
                 minTimeMs,
                 minDistanceM,
-                it,
-                locHandlerThread.looper,
+                locationCallback,
+                Looper.getMainLooper(),
             )
-        }
-        providerState.value = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-        isStart.value = true
-    }
 
-    fun stop() {
-        locationListener?.let { locationManager.removeUpdates(it) }
-        isStart.value = false
-    }
-
-    private fun locationListener() =
-        object : LocationListener {
-            override fun onLocationChanged(location: Location) {
-                locationStateFlow.value = location
-            }
-
-            override fun onProviderEnabled(provider: String) {
-                providerState.value = true
-            }
-
-            override fun onProviderDisabled(provider: String) {
-                providerState.value = false
+            awaitClose {
+                locationManager.removeUpdates(locationCallback)
+                Log.d("Location Service", "LocationState Stop")
             }
         }
+}
+
+class LocationState(
+    context: Context,
+    scope: CoroutineScope,
+) {
+    companion object {
+        const val MIN_TIME: Long = 10000L
+        const val MIN_DISTANCE: Float = 100.0f
+    }
+
+    private var latestLocation: Location = Location(LocationManager.NETWORK_PROVIDER)
+
+    val locationStateFlow =
+        LocationFlow(context)
+            .get(MIN_TIME, MIN_DISTANCE)
+            .onEach {
+                latestLocation = it
+            }.stateIn(
+                scope,
+                SharingStarted.WhileSubscribed(5000),
+                latestLocation,
+            )
+
+    val geohashStateFlow =
+        locationStateFlow
+            .map { it.toGeoHash(com.vitorpamplona.amethyst.ui.actions.GeohashPrecision.KM_5_X_5.digits).toString() }
+            .stateIn(
+                scope,
+                SharingStarted.WhileSubscribed(5000),
+                "",
+            )
 }
 
 object CachedGeoLocations {

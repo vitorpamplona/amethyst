@@ -27,10 +27,16 @@ Prijavi se s privatnim ključem za všečkanje sporočila</string>
     <string name="cashu_failed_redemption">Cashu-ja ni bilo mogoče unovčiti</string>
     <string name="cashu_no_wallet_found">Na sistemu ni najdene združljive Cashu denarnice</string>
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">Prejemnikova \"lightning\" storitev na %1$s ni na voljo. Izračunana je bila iz \"lightning\" naslova \'%2$s\'. Napaka: %3$s. Preverite, ali strežnik deluje in ali je \"lightning\" naslov pravilen</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Ni bilo mogoče razrešiti %1$s. Preverite, ali ste povezani, ali je strežnik dosegljiv in ali je lightning naslov %2$s pravilen.\n\nIzjema je bila: %3$s</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Napaka pri razčlenjevanju JSON med pridobivanjem fakture iz %1$s. Preverite uporabnikove nastavitve za \"Lightning\"</string>
     <string name="select_push_server">Izberi \"UnifiedPush\" aplikacijo</string>
     <string name="push_server_install_app_description">        Za prejemanje potisnih obvestil namestite aplikacijo, ki podpira [Unified Push](https://unifiedpush.org/), na primer [Ntfy](https://ntfy.sh/).
         Po namestitvi izberite aplikacijo, ki jo želite uporabljati, v nastavitvah.
     </string>
+    <string name="classifieds_condition_fair_explainer">V zadovoljivem stanju</string>
+    <string name="classifieds_category_clothing">Oblačila</string>
+    <string name="classifieds_category_crafts">Rokodelstvo</string>
+    <string name="classifieds_category_other">Drugo</string>
+    <string name="it_s_not_possible_to_zap_to_a_draft_note">Osnutkom zapisa ni mogoče pošiljati mikro plačil (zap)</string>
     <string name="http_status_416">Razpon ni zadovoljiv – Strežnik ne more izpolniti vrednosti, navedene v \"request’s Range header\" polju. </string>
 </resources>

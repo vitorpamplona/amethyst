@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.Manifest
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,6 +35,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -41,12 +45,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.map
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.note.LoadCityName
-import com.vitorpamplona.amethyst.ui.screen.CodeName
+import com.vitorpamplona.amethyst.ui.screen.AroundMeFeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.CommunityName
+import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.GeoHashName
 import com.vitorpamplona.amethyst.ui.screen.HashtagName
 import com.vitorpamplona.amethyst.ui.screen.Name
@@ -55,15 +67,18 @@ import com.vitorpamplona.amethyst.ui.screen.ResourceName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.flow.map
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun FeedFilterSpinner(
     placeholderCode: String,
     explainer: String,
-    options: ImmutableList<CodeName>,
+    options: ImmutableList<FeedDefinition>,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -75,11 +90,18 @@ fun FeedFilterSpinner(
             id = R.string.select_an_option,
         )
 
-    var currentText by
+    var selected by
         remember(placeholderCode, options) {
             mutableStateOf(
-                options.firstOrNull { it.code == placeholderCode }?.name?.name(context) ?: selectAnOption,
+                options.firstOrNull { it.code == placeholderCode },
             )
+        }
+
+    val currentText by
+        remember(placeholderCode, options) {
+            derivedStateOf {
+                selected?.name?.name(context) ?: selectAnOption
+            }
         }
 
     Box(
@@ -88,7 +110,41 @@ fun FeedFilterSpinner(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Spacer(modifier = Size20Modifier)
-            Text(currentText)
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(currentText)
+
+                if (selected is AroundMeFeedDefinition) {
+                    val locationPermissionState =
+                        rememberPermissionState(
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                        )
+
+                    if (!locationPermissionState.status.isGranted) {
+                        LaunchedEffect(locationPermissionState) { locationPermissionState.launchPermissionRequest() }
+                    } else {
+                        val location by Amethyst.instance.locationManager.geohashStateFlow
+                            .collectAsStateWithLifecycle(null)
+
+                        location?.let {
+                            LoadCityName(
+                                geohashStr = it,
+                                onLoading = {
+                                    Spacer(modifier = StdHorzSpacer)
+                                    LoadingAnimation()
+                                },
+                            ) { cityName ->
+                                Text(
+                                    text = "($cityName)",
+                                    fontSize = 12.sp,
+                                    lineHeight = 12.sp,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             Icon(
                 imageVector = Icons.Default.ExpandMore,
                 contentDescription = explainer,
@@ -115,7 +171,7 @@ fun FeedFilterSpinner(
                 options = options,
                 onDismiss = { optionsShowing = false },
                 onSelect = {
-                    currentText = options[it].name.name(context)
+                    selected = options[it]
                     optionsShowing = false
                     onSelect(it)
                 },

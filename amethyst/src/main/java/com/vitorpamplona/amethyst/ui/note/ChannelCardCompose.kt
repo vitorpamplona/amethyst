@@ -671,13 +671,13 @@ fun LoadModerators(
 
             val followingKeySet =
                 accountViewModel.account.liveDiscoveryFollowLists.value
-                    ?.users
+                    ?.authors
             val allParticipants =
                 ParticipantListBuilder().followsThatParticipateOn(baseNote, followingKeySet).minus(hosts)
 
             val newParticipantUsers =
                 if (followingKeySet == null) {
-                    val allFollows = accountViewModel.account.liveKind3Follows.value.users
+                    val allFollows = accountViewModel.account.liveKind3Follows.value.authors
                     val followingParticipants =
                         ParticipantListBuilder().followsThatParticipateOn(baseNote, allFollows).minus(hosts)
 
@@ -724,7 +724,7 @@ private fun LoadParticipants(
 
             val followingKeySet =
                 accountViewModel.account.liveDiscoveryFollowLists.value
-                    ?.users
+                    ?.authors
 
             val allParticipants =
                 ParticipantListBuilder()
@@ -733,7 +733,7 @@ private fun LoadParticipants(
 
             val newParticipantUsers =
                 if (followingKeySet == null) {
-                    val allFollows = accountViewModel.account.liveKind3Follows.value.users
+                    val allFollows = accountViewModel.account.liveKind3Follows.value.authors
                     val followingParticipants =
                         ParticipantListBuilder()
                             .followsThatParticipateOn(baseNote, allFollows)
@@ -882,7 +882,7 @@ fun RenderChannelThumb(
         launch(Dispatchers.IO) {
             val followingKeySet =
                 accountViewModel.account.liveDiscoveryFollowLists.value
-                    ?.users
+                    ?.authors
             val allParticipants =
                 ParticipantListBuilder()
                     .followsThatParticipateOn(baseNote, followingKeySet)
@@ -890,7 +890,7 @@ fun RenderChannelThumb(
 
             val newParticipantUsers =
                 if (followingKeySet == null) {
-                    val allFollows = accountViewModel.account.liveKind3Follows.value.users
+                    val allFollows = accountViewModel.account.liveKind3Follows.value.authors
                     val followingParticipants =
                         ParticipantListBuilder().followsThatParticipateOn(baseNote, allFollows).toList()
 

@@ -35,7 +35,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -197,7 +196,6 @@ import com.vitorpamplona.quartz.events.TorrentCommentEvent
 import com.vitorpamplona.quartz.events.TorrentEvent
 import com.vitorpamplona.quartz.events.VideoEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -211,17 +209,15 @@ fun ThreadFeedView(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val listState = rememberLazyListState()
-
     RefresheableBox(viewModel) {
         RenderFeedState(
             viewModel = viewModel,
             accountViewModel = accountViewModel,
-            listState = listState,
+            listState = viewModel.llState,
             nav = nav,
             routeForLastRead = null,
             onLoaded = {
-                RenderThreadFeed(noteId, it, listState, accountViewModel, nav)
+                RenderThreadFeed(noteId, it, viewModel.llState, accountViewModel, nav)
             },
         )
     }
@@ -236,7 +232,6 @@ fun RenderThreadFeed(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
-    val firstTimeScrolled = remember { TimeUtils.now() }
 
     LaunchedEffect(noteId, items.list) {
         // hack to allow multiple scrolls to Item while posts on the screen load.
@@ -252,10 +247,15 @@ fun RenderThreadFeed(
         // records before setting up the position on the feed.
         //
         // It jumps around, but it is the best we can do.
-        if (TimeUtils.now() - firstTimeScrolled < 1000) {
+        if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 && items.list.size > 3) {
             val position = items.list.indexOfFirst { it.idHex == noteId }
+
             if (position >= 0) {
-                listState.scrollToItem(position, -200)
+                if (position > items.list.size - 3) {
+                    listState.scrollToItem(position, 0)
+                } else {
+                    listState.scrollToItem(position, -200)
+                }
             }
         }
     }

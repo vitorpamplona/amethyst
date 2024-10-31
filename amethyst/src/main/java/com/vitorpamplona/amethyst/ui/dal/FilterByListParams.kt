@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 class FilterByListParams(
     val isGlobal: Boolean,
     val isHiddenList: Boolean,
-    val followLists: Account.LiveFollowLists?,
+    val followLists: Account.LiveFollowList?,
     val hiddenLists: Account.LiveHiddenUsers,
     val now: Long = TimeUtils.oneMinuteFromNow(),
 ) {
@@ -45,22 +45,22 @@ class FilterByListParams(
         if (followLists == null) return false
 
         return if (noteEvent is LiveActivitiesEvent) {
-            noteEvent.participantsIntersect(followLists.users) ||
+            noteEvent.participantsIntersect(followLists.authors) ||
                 noteEvent.isTaggedHashes(followLists.hashtags) ||
                 noteEvent.isTaggedGeoHashes(followLists.geotags) ||
-                noteEvent.isTaggedAddressableNotes(followLists.communities)
+                noteEvent.isTaggedAddressableNotes(followLists.addresses)
         } else {
-            noteEvent.pubKey in followLists.users ||
+            noteEvent.pubKey in followLists.authors ||
                 noteEvent.isTaggedHashes(followLists.hashtags) ||
                 noteEvent.isTaggedGeoHashes(followLists.geotags) ||
-                noteEvent.isTaggedAddressableNotes(followLists.communities)
+                noteEvent.isTaggedAddressableNotes(followLists.addresses)
         }
     }
 
     fun isATagInList(aTag: ATag): Boolean {
         if (followLists == null) return false
 
-        return aTag.pubKeyHex in followLists.users
+        return aTag.pubKeyHex in followLists.authors
     }
 
     fun match(
@@ -89,7 +89,7 @@ class FilterByListParams(
         fun create(
             userHex: String,
             selectedListName: String,
-            followLists: Account.LiveFollowLists?,
+            followLists: Account.LiveFollowList?,
             hiddenUsers: Account.LiveHiddenUsers,
         ): FilterByListParams =
             FilterByListParams(

@@ -67,9 +67,9 @@ val DefaultNIP65List =
 
 val DefaultDMRelayList =
     listOf(
-        RelayUrlFormatter.normalize("wss://auth.nostr1.com/"),
-        RelayUrlFormatter.normalize("wss://nostr.mom/"),
-        RelayUrlFormatter.normalize("wss://nos.lol/"),
+        RelayUrlFormatter.normalize("wss://auth.nostr1.com"),
+        RelayUrlFormatter.normalize("wss://relay.0xchat.com"),
+        RelayUrlFormatter.normalize("wss://nos.lol"),
     )
 
 val DefaultSearchRelayList =
@@ -77,6 +77,7 @@ val DefaultSearchRelayList =
         RelayUrlFormatter.normalize("wss://relay.nostr.band"),
         RelayUrlFormatter.normalize("wss://nostr.wine"),
         RelayUrlFormatter.normalize("wss://relay.noswhere.com"),
+        RelayUrlFormatter.normalize("wss://search.nos.today"),
     )
 
 // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
@@ -84,6 +85,9 @@ val GLOBAL_FOLLOWS = " Global "
 
 // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
 val KIND3_FOLLOWS = " All Follows "
+
+// This has spaces to avoid mixing with a potential NIP-51 list with the same name.
+val AROUND_ME = " Around Me "
 
 @Stable
 class AccountSettings(
@@ -357,7 +361,6 @@ class AccountSettings(
 
         // Events might be different objects, we have to compare their ids.
         if (backupAppSpecificData?.id != appSettings.id) {
-            println("AABBCC Update App Specific Data")
             backupAppSpecificData = appSettings
             syncedSettings.updateFrom(newSyncedSettings)
 

@@ -144,12 +144,6 @@ fun AddInboxRelayForDMCard(
 
                 Spacer(modifier = StdVertSpacer)
 
-                Text(
-                    text = stringRes(id = R.string.dm_relays_not_found_examples),
-                )
-
-                Spacer(modifier = StdVertSpacer)
-
                 var wantsToEditRelays by remember { mutableStateOf(false) }
                 if (wantsToEditRelays) {
                     AddDMRelayListDialog({ wantsToEditRelays = false }, accountViewModel, nav = nav)
