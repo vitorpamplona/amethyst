@@ -107,6 +107,19 @@ open class Event(
         }
     }
 
+    override fun anyHashTag(onEach: (str: String) -> Boolean) = anyTagged("t", onEach)
+
+    private fun anyTagged(
+        tagName: String,
+        onEach: (str: String) -> Boolean,
+    ) = tags.any {
+        if (it.size > 1 && it[0] == tagName) {
+            onEach(it[1])
+        } else {
+            false
+        }
+    }
+
     override fun <R> mapTaggedEvent(map: (eventId: HexKey) -> R) = mapTagged("e", map)
 
     override fun <R> mapTaggedAddress(map: (address: String) -> R) = mapTagged("a", map)

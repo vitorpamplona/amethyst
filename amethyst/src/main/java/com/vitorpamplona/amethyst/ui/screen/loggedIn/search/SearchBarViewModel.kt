@@ -75,7 +75,7 @@ class SearchBarViewModel(
         _hashtagResults.emit(findHashtags(searchValue))
         _searchResultsUsers.emit(
             LocalCache
-                .findUsersStartingWith(searchValue)
+                .findUsersStartingWith(searchValue, account)
                 .sortedWith(
                     compareBy(
                         { it.toBestDisplayName().startsWith(searchValue, true) },
@@ -86,7 +86,7 @@ class SearchBarViewModel(
         )
         _searchResultsNotes.emit(
             LocalCache
-                .findNotesStartingWith(searchValue)
+                .findNotesStartingWith(searchValue, account)
                 .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
                 .reversed(),
         )

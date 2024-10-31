@@ -539,6 +539,7 @@
     <string name="nip05_checking">A Nostr cím ellenőrzése</string>
     <string name="select_deselect_all">Mind kijelölése/kijelölés visszavonása</string>
     <string name="default_relays">Alapértelmezett</string>
+    <string name="default_relays_longer">Visszaállítás alaphelyzetbe</string>
     <string name="select_a_relay_to_continue">A folytatáshoz válassz egy csomópontot</string>
     <string name="zap_forward_title">Zap-ek továbbítása:</string>
     <string name="zap_forward_explainer">A funkciót támogató kliensek a Zap-eket az Ön tárcája helyett, az alábbi LN-címre vagy felhasználói profilra továbbítják</string>
@@ -768,6 +769,7 @@
     <string name="dm_relays_not_found">Állítsd be a Privát postafiókod közvetítőit</string>
     <string name="dm_relays_not_found_description">Ez a beállítás mindenkit tájékoztat, hogy melyik közvetítőt használod, amikor üzeneteket küldenek neked. Nélkülük néhány üzenetről lemaradhatsz.</string>
     <string name="dm_relays_not_found_examples">Jó lehetőségek a következők:\n - inbox.nostr.wine (fizetős)\n - you.nostr1.com (személyes csomópontok - fizetős)</string>
+    <string name="dm_relays_not_found_examples2">Jó lehetőségek:\n - auth.nostr1.com (ingyenes)\n - inbox.nostr.wine (fizetős)\n - relay.0xchat.com (ingyenes)</string>
     <string name="dm_relays_not_found_editing">Adj hozzá 1–3 csomópontot, hogy privát postafiókodként szolgáljon. A PÜ Bejővő csomópontoknak el kell fogadniuk bármely üzenetet bárkitől, de azok letöltését csak Te általad teszik lehetővé.</string>
     <string name="dm_relays_not_found_create_now">Állítsd be most</string>
     <string name="search_relays_title">Kereső Csomópontok</string>

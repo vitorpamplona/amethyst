@@ -211,7 +211,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                         mapOf(
                             "g" to
                                 hashToLoad
-                                    .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
+                                    .map { listOf(it.lowercase()) }
                                     .flatten(),
                         ),
                     limit = 100,
@@ -225,7 +225,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
     }
 
     fun createFollowCommunitiesFilter(): TypedFilter? {
-        val communitiesToLoad = account.liveHomeFollowLists.value?.communities ?: return null
+        val communitiesToLoad = account.liveHomeFollowLists.value?.addresses ?: return null
 
         if (communitiesToLoad.isEmpty()) return null
 

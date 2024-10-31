@@ -32,6 +32,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import coil.ImageLoader
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.playback.VideoCache
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import kotlinx.coroutines.CoroutineScope
@@ -50,6 +51,7 @@ class Amethyst : Application() {
 
     // Service Manager is only active when the activity is active.
     val serviceManager = ServiceManager(applicationIOScope)
+    val locationManager = LocationState(this, applicationIOScope)
 
     override fun onTerminate() {
         super.onTerminate()

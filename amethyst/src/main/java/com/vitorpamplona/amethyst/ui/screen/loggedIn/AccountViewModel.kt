@@ -395,7 +395,7 @@ class AccountViewModel(
                 note.flow().metadata.stateFlow,
                 note.flow().reports.stateFlow,
             ) { hiddenUsers, followingUsers, autor, metadata, reports ->
-                emit(isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.users))
+                emit(isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.authors))
             }.flowOn(Dispatchers.Default)
                 .stateIn(
                     viewModelScope,

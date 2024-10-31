@@ -119,6 +119,8 @@ class ContactListEvent(
         const val KIND = 3
         const val ALT = "Follow List"
 
+        fun blockListFor(pubKeyHex: HexKey): String = "3:$pubKeyHex:"
+
         fun createFromScratch(
             followUsers: List<Contact> = emptyList(),
             followTags: List<String> = emptyList(),

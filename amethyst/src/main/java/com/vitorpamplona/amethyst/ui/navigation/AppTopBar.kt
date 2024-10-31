@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
-import com.vitorpamplona.amethyst.ui.screen.CodeName
+import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.FollowListState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -112,7 +112,7 @@ private fun LoggedInUserPictureDrawer(
 fun FollowListWithRoutes(
     followListsModel: FollowListState,
     listName: String,
-    onChange: (CodeName) -> Unit,
+    onChange: (FeedDefinition) -> Unit,
 ) {
     val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsStateWithLifecycle()
 
@@ -128,7 +128,7 @@ fun FollowListWithRoutes(
 fun FollowListWithoutRoutes(
     followListsModel: FollowListState,
     listName: String,
-    onChange: (CodeName) -> Unit,
+    onChange: (FeedDefinition) -> Unit,
 ) {
     val allLists by followListsModel.kind3GlobalPeople.collectAsStateWithLifecycle()
 

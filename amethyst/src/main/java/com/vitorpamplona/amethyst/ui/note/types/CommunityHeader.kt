@@ -355,5 +355,5 @@ fun WatchAddressableNoteFollows(
 ) {
     val state by accountViewModel.account.liveKind3Follows.collectAsStateWithLifecycle()
 
-    onFollowChanges(state.communities.contains(note.idHex))
+    onFollowChanges(state.addresses.contains(note.idHex))
 }

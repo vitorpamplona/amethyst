@@ -115,7 +115,7 @@ class NotificationFeedFilter(
             it.event !is NIP90ContentDiscoveryRequestEvent &&
             it.event !is GiftWrapEvent &&
             (it.event is LnZapEvent || notifAuthor != loggedInUserHex) &&
-            (filterParams.isGlobal || filterParams.followLists?.users?.contains(notifAuthor) == true) &&
+            (filterParams.isGlobal || filterParams.followLists?.authors?.contains(notifAuthor) == true) &&
             it.event?.isTaggedUser(loggedInUserHex) ?: false &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
             tagsAnEventByUser(it, loggedInUserHex)

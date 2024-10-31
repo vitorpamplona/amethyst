@@ -373,6 +373,6 @@ fun WatchUserFollows(
     } else {
         val state by accountViewModel.account.liveKind3Follows.collectAsStateWithLifecycle()
 
-        onFollowChanges(state.users.contains(userHex))
+        onFollowChanges(state.authors.contains(userHex))
     }
 }

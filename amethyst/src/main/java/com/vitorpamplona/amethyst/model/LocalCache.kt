@@ -2043,7 +2043,10 @@ object LocalCache {
         }
     }
 
-    fun findUsersStartingWith(username: String): List<User> {
+    fun findUsersStartingWith(
+        username: String,
+        forAccount: Account?,
+    ): List<User> {
         checkNotInMainThread()
 
         val key = decodePublicKeyAsHexOrNull(username)
@@ -2056,26 +2059,19 @@ object LocalCache {
         }
 
         return users.filter { _, user: User ->
-            (user.anyNameStartsWith(username)) ||
-                user.pubkeyHex.startsWith(username, true) ||
-                user.pubkeyNpub().startsWith(username, true)
+            (
+                (user.anyNameStartsWith(username)) ||
+                    user.pubkeyHex.startsWith(username, true) ||
+                    user.pubkeyNpub().startsWith(username, true)
+            ) &&
+                (forAccount == null || (!forAccount.isHidden(user) && !user.containsAny(forAccount.flowHiddenUsers.value.hiddenWordsCase)))
         }
     }
 
-    fun getFollowSetsFor(user: User): List<AddressableNote> {
-        checkNotInMainThread()
-
-        return addressables
-            .filter { _, note ->
-                val listEvent = note.event
-                (
-                    listEvent is PeopleListEvent &&
-                        user.pubkeyHex == listEvent.pubKey
-                )
-            }
-    }
-
-    fun findNotesStartingWith(text: String): List<Note> {
+    fun findNotesStartingWith(
+        text: String,
+        forAccount: Account,
+    ): List<Note> {
         checkNotInMainThread()
 
         val key = decodeEventIdAsHexOrNull(text)
@@ -2102,11 +2098,19 @@ object LocalCache {
                 note.idHex.startsWith(text, true) ||
                 note.idNote().startsWith(text, true)
             ) {
-                return@filter true
+                if (!note.isHiddenFor(forAccount.flowHiddenUsers.value)) {
+                    return@filter true
+                } else {
+                    return@filter false
+                }
             }
 
             if (note.event?.isContentEncoded() == false) {
-                return@filter note.event?.content()?.contains(text, true) ?: false
+                if (!note.isHiddenFor(forAccount.flowHiddenUsers.value)) {
+                    return@filter note.event?.content()?.contains(text, true) ?: false
+                } else {
+                    return@filter false
+                }
             }
 
             return@filter false
@@ -2125,11 +2129,19 @@ object LocalCache {
                 if (addressable.event?.matchTag1With(text) == true ||
                     addressable.idHex.startsWith(text, true)
                 ) {
-                    return@filter true
+                    if (!addressable.isHiddenFor(forAccount.flowHiddenUsers.value)) {
+                        return@filter true
+                    } else {
+                        return@filter false
+                    }
                 }
 
                 if (addressable.event?.isContentEncoded() == false) {
-                    return@filter addressable.event?.content()?.contains(text, true) ?: false
+                    if (!addressable.isHiddenFor(forAccount.flowHiddenUsers.value)) {
+                        return@filter addressable.event?.content()?.contains(text, true) ?: false
+                    } else {
+                        return@filter false
+                    }
                 }
 
                 return@filter false

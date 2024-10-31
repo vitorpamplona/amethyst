@@ -143,7 +143,7 @@ class Kind3RelayListViewModel : ViewModel() {
             val proposed =
                 RelayListRecommendationProcessor
                     .reliableRelaySetFor(
-                        account.liveKind3Follows.value.users.mapNotNull {
+                        account.liveKind3Follows.value.authors.mapNotNull {
                             account.getNIP65RelayList(it)
                         },
                         relayUrlsToIgnore =

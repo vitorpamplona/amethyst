@@ -771,29 +771,11 @@ open class Note(
                 return true
             }
 
-            if (author?.toBestDisplayName()?.containsAny(accountChoices.hiddenWordsCase) == true) {
+            if (thisEvent.anyHashTag { it.containsAny(accountChoices.hiddenWordsCase) }) {
                 return true
             }
 
-            if (author?.profilePicture()?.containsAny(accountChoices.hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (author?.info?.banner?.containsAny(accountChoices.hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (author?.info?.about?.containsAny(accountChoices.hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (author?.info?.lud06?.containsAny(accountChoices.hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (author?.info?.lud16?.containsAny(accountChoices.hiddenWordsCase) == true) {
-                return true
-            }
+            if (author?.containsAny(accountChoices.hiddenWordsCase) == true) return true
         }
 
         return false

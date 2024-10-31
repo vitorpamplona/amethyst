@@ -46,7 +46,7 @@ data class PollOption(
     val option: Int,
     val descriptor: String,
     var zappedValue: MutableState<BigDecimal> = mutableStateOf(BigDecimal.ZERO),
-    var tally: MutableState<BigDecimal> = mutableStateOf(BigDecimal.ZERO),
+    var tally: MutableState<Float> = mutableStateOf(0f),
     var consensusThreadhold: MutableState<Boolean> = mutableStateOf(false),
     var zappedByLoggedIn: MutableState<Boolean> = mutableStateOf(false),
 )
@@ -126,7 +126,7 @@ class PollNoteViewModel : ViewModel() {
                     }
 
                 it.zappedValue.value = zappedValue
-                it.tally.value = tallyValue
+                it.tally.value = tallyValue.toFloat()
                 it.consensusThreadhold.value = consensusThreshold != null && tallyValue >= consensusThreshold!!
                 it.zappedByLoggedIn.value = account?.userProfile()?.let { it1 -> cachedIsPollOptionZappedBy(it.option, it1) } ?: false
             }

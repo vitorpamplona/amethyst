@@ -394,7 +394,7 @@ private fun FollowingAndFollowerCounts(
     ) {
         Text(
             text =
-                followingCount.value.users.size
+                followingCount.value.authors.size
                     .toString(),
             fontWeight = FontWeight.Bold,
         )

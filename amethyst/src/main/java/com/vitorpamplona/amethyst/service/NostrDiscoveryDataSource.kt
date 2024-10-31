@@ -162,7 +162,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     fun createLiveStreamFilter(): List<TypedFilter> {
         val follows =
             account.liveDiscoveryFollowLists.value
-                ?.users
+                ?.authors
                 ?.toList()
                 ?.ifEmpty { null }
 
