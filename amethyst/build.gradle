@@ -230,6 +230,8 @@ dependencies {
     implementation libs.coil.gif
     // view svgs
     implementation libs.coil.svg
+    // enables network for coil
+    implementation libs.coil.okhttp
 
     // create blurhash
     implementation libs.trbl.blurhash

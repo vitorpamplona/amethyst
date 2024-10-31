@@ -29,9 +29,11 @@ import android.os.StrictMode.ThreadPolicy
 import android.os.StrictMode.VmPolicy
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
-import coil.ImageLoader
-import coil.disk.DiskCache
-import coil.memory.MemoryCache
+import coil3.ImageLoader
+import coil3.disk.DiskCache
+import coil3.disk.directory
+import coil3.memory.MemoryCache
+import coil3.request.crossfade
 import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.playback.VideoCache
 import com.vitorpamplona.ammolite.service.HttpClientManager
@@ -43,6 +45,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import okio.Path.Companion.toOkioPath
 import java.io.File
 import kotlin.time.measureTimedValue
 
@@ -74,15 +77,16 @@ class Amethyst : Application() {
     val coilCache: DiskCache by lazy {
         DiskCache
             .Builder()
-            .directory(safeCacheDir.resolve("image_cache"))
+            .directory(safeCacheDir.resolve("image_cache").toOkioPath())
             .maxSizePercent(0.2)
             .maximumMaxSizeBytes(1024 * 1024 * 1024) // 1GB
             .build()
     }
 
-    val coilMemCache: MemoryCache by lazy {
+    val memoryCache: MemoryCache by lazy {
         MemoryCache
-            .Builder(this)
+            .Builder()
+            .maxSizePercent(this)
             .build()
     }
 
@@ -128,7 +132,7 @@ class Amethyst : Application() {
         ImageLoader
             .Builder(this)
             .diskCache { coilCache }
-            .memoryCache { coilMemCache }
+            .memoryCache { memoryCache }
             .crossfade(true)
 
     fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences = EncryptedStorage.preferences(instance, npub)

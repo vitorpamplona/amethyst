@@ -31,8 +31,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.imageLoader
-import coil.request.ImageRequest
+import coil3.asDrawable
+import coil3.imageLoader
+import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
@@ -1321,7 +1322,11 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val request = ImageRequest.Builder(context).data(thumbUri).build()
-                val myCover = context.imageLoader.execute(request).drawable
+                val myCover =
+                    context.imageLoader
+                        .execute(request)
+                        .image
+                        ?.asDrawable(context.resources)
                 onReady(myCover)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

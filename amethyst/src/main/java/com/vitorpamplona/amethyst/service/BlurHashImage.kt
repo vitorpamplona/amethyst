@@ -23,14 +23,14 @@ package com.vitorpamplona.amethyst.service
 import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.Stable
-import androidx.core.graphics.drawable.toDrawable
-import coil.ImageLoader
-import coil.decode.DataSource
-import coil.fetch.DrawableResult
-import coil.fetch.FetchResult
-import coil.fetch.Fetcher
-import coil.request.ImageRequest
-import coil.request.Options
+import coil3.ImageLoader
+import coil3.asImage
+import coil3.decode.DataSource
+import coil3.fetch.FetchResult
+import coil3.fetch.Fetcher
+import coil3.fetch.ImageFetchResult
+import coil3.request.ImageRequest
+import coil3.request.Options
 import com.vitorpamplona.amethyst.commons.preview.BlurHashDecoder
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -47,8 +47,8 @@ class BlurHashFetcher(
 
         val bitmap = BlurHashDecoder.decodeKeepAspectRatio(hash, 25) ?: throw Exception("Unable to convert Bluehash $data")
 
-        return DrawableResult(
-            drawable = bitmap.toDrawable(options.context.resources),
+        return ImageFetchResult(
+            image = bitmap.asImage(true),
             isSampled = false,
             dataSource = DataSource.MEMORY,
         )

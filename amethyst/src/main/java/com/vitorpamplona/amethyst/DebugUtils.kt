@@ -26,7 +26,6 @@ import android.content.pm.ApplicationInfo
 import android.os.Debug
 import android.util.Log
 import androidx.core.content.getSystemService
-import coil.Coil
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
@@ -92,14 +91,13 @@ fun debugState(context: Context) {
 
     Log.d("STATE DUMP", "Connected Relays: " + RelayPool.connectedRelays())
 
-    val imageLoader = Coil.imageLoader(context)
     Log.d(
         "STATE DUMP",
-        "Image Disk Cache ${(imageLoader.diskCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.diskCache?.maxSize ?: 0) / (1024 * 1024)} MB",
+        "Image Disk Cache ${(Amethyst.instance.coilCache.size) / (1024 * 1024)}/${(Amethyst.instance.coilCache.maxSize) / (1024 * 1024)} MB",
     )
     Log.d(
         "STATE DUMP",
-        "Image Memory Cache ${(imageLoader.memoryCache?.size ?: 0) / (1024 * 1024)}/${(imageLoader.memoryCache?.maxSize ?: 0) / (1024 * 1024)} MB",
+        "Image Memory Cache ${(Amethyst.instance.memoryCache.size) / (1024 * 1024)}/${(Amethyst.instance.memoryCache.size) / (1024 * 1024)} MB",
     )
 
     Log.d(
