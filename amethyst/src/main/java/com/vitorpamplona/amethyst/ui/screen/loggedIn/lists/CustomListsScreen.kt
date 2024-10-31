@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
 
+import android.util.Log
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -34,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -52,10 +55,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
-import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
@@ -66,9 +67,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.quartz.events.PeopleListEvent
-import com.vitorpamplona.quartz.events.PeopleListEvent.FollowSet
-import com.vitorpamplona.quartz.signers.NostrSigner
+import kotlinx.collections.immutable.ImmutableList
 
 @Composable
 fun ListsScreen(
@@ -77,8 +76,14 @@ fun ListsScreen(
 ) {
     val followSetsViewModel: NostrUserFollowSetFeedViewModel =
         viewModel(
+            key = "NostrUserFollowSetFeedViewModel",
             factory = NostrUserFollowSetFeedViewModel.Factory(accountViewModel.account),
         )
+
+    val followSetsFlow by followSetsViewModel.account.followSetNotesFlow().collectAsState()
+    LaunchedEffect(followSetsFlow) {
+        followSetsViewModel.invalidateData()
+    }
 
     CustomListsScreen(
         followSetsViewModel,
@@ -94,7 +99,7 @@ fun CustomListsScreen(
     nav: INav,
 ) {
     val lifeCycleOwner = LocalLifecycleOwner.current
-    val followSetsState by followSetsViewModel.feedState.feedContent.collectAsStateWithLifecycle()
+    val setsState by followSetsViewModel.feedContent.collectAsStateWithLifecycle()
 
     DisposableEffect(lifeCycleOwner) {
         val observer =
@@ -116,21 +121,26 @@ fun CustomListsScreen(
             TopBarWithBackButton(stringRes(R.string.my_lists), nav::popBack)
         },
     ) {
-        when (followSetsState) {
-            FeedState.Empty -> FeedEmpty { followSetsViewModel.invalidateData() }
-            is FeedState.FeedError ->
-                FeedError(
-                    (followSetsState as FeedState.FeedError).errorMessage,
-                ) {
-                    followSetsViewModel.invalidateData()
+        Column(Modifier.padding(it).fillMaxHeight()) {
+            when (setsState) {
+                FollowSetState.Empty ->
+                    FeedEmpty {
+                        followSetsViewModel.invalidateData()
+                    }
+                is FollowSetState.FeedError ->
+                    FeedError(
+                        (setsState as FollowSetState.FeedError).errorMessage,
+                    ) {
+                        followSetsViewModel.invalidateData()
+                    }
+                is FollowSetState.Loaded -> {
+                    val followSetFeed by (setsState as FollowSetState.Loaded).feed
+                    FollowListLoaded(
+                        loadedFeedState = followSetFeed,
+                    )
                 }
-            is FeedState.Loaded -> {
-                FollowListLoaded(
-                    nostrSigner = accountViewModel.account.signer,
-                    loadedFeedState = followSetsState as FeedState.Loaded,
-                )
+                FollowSetState.Loading -> LoadingFeed()
             }
-            FeedState.Loading -> LoadingFeed()
         }
     }
 }
@@ -138,25 +148,19 @@ fun CustomListsScreen(
 @Composable
 fun FollowListLoaded(
     modifier: Modifier = Modifier,
-    nostrSigner: NostrSigner,
-    loadedFeedState: FeedState.Loaded,
+    loadedFeedState: ImmutableList<FollowSet>,
 ) {
-    val feedState by loadedFeedState.feed.collectAsState()
     val listState = rememberLazyListState()
-
-    val followSetList = feedState.list.map { it.mapToFollowSet(nostrSigner) }
-
+    Log.d("FollowSetComposable", "FollowListLoaded: Follow Set size: ${loadedFeedState.size}")
     LazyColumn(
         state = listState,
         contentPadding = FeedPadding,
     ) {
-        itemsIndexed(followSetList, key = { _, item -> item.title }) { index, set ->
+        itemsIndexed(loadedFeedState, key = { _, item -> item.title }) { index, set ->
             CustomListItem(followSet = set)
         }
     }
 }
-
-private fun Note.mapToFollowSet(nostrSigner: NostrSigner): FollowSet = FollowSet.mapEventToSet(event = this.event as PeopleListEvent, nostrSigner)
 
 @Composable
 fun CustomListItem(
