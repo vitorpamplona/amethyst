@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
+import android.util.Log
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 class FollowSetFeedFilter(
     val account: Account,
@@ -32,7 +34,13 @@ class FollowSetFeedFilter(
     override fun feed(): List<FollowSet> {
         if (account.userProfile().followSets.isEmpty()) {
             account.scope.launch {
-                account.getFollowSetNotes()
+                try {
+                    account.getFollowSetNotes()
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.e("HiddenAccountsFeedFilter", "Failed to load follow lists: ${e.message}")
+                    null
+                }
             }
         }
         return account.followSetNotesFlow().value.map { account.mapNoteToFollowSet(it) }
