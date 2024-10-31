@@ -40,6 +40,7 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,11 +60,11 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.core.net.toUri
-import coil.annotation.ExperimentalCoilApi
-import coil.compose.AsyncImage
-import coil.compose.AsyncImagePainter
-import coil.compose.SubcomposeAsyncImage
-import coil.compose.SubcomposeAsyncImageContent
+import coil3.annotation.ExperimentalCoilApi
+import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImageContent
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -306,7 +307,8 @@ fun LocalImageView(
                     contentScale = contentScale,
                     modifier = mainImageModifier,
                 ) {
-                    when (painter.state) {
+                    val state by painter.state.collectAsState()
+                    when (state) {
                         is AsyncImagePainter.State.Loading,
                         -> {
                             if (content.blurhash != null) {
@@ -404,7 +406,8 @@ fun UrlImageView(
                 contentScale = contentScale,
                 modifier = mainImageModifier,
             ) {
-                when (painter.state) {
+                val state by painter.state.collectAsState()
+                when (state) {
                     is AsyncImagePainter.State.Loading,
                     -> {
                         if (content.blurhash != null) {

@@ -57,9 +57,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.get
-import coil.compose.AsyncImage
-import coil.compose.AsyncImagePainter
-import coil.request.SuccessResult
+import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.request.SuccessResult
+import coil3.toBitmap
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -92,10 +93,9 @@ fun BadgeDisplay(baseNote: Note) {
         launch(Dispatchers.IO) {
             imageResult?.let {
                 val backgroundColor =
-                    it.drawable
+                    it.image
                         .toBitmap(200, 200)
-                        .copy(Bitmap.Config.ARGB_8888, false)
-                        .get(0, 199)
+                        .copy(Bitmap.Config.ARGB_8888, false)[0, 199]
                 val colorFromImage = Color(backgroundColor)
                 val textBackground =
                     if (colorFromImage.luminance() > 0.5) {

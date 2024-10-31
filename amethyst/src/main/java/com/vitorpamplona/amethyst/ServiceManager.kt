@@ -23,12 +23,13 @@ package com.vitorpamplona.amethyst
 import android.os.Build
 import android.util.Log
 import androidx.compose.runtime.Stable
-import coil.Coil
-import coil.decode.GifDecoder
-import coil.decode.ImageDecoderDecoder
-import coil.decode.SvgDecoder
-import coil.size.Precision
-import coil.util.DebugLogger
+import coil3.SingletonImageLoader
+import coil3.gif.AnimatedImageDecoder
+import coil3.gif.GifDecoder
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import coil3.size.Precision
+import coil3.svg.SvgDecoder
+import coil3.util.DebugLogger
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.Base64Fetcher
@@ -121,26 +122,31 @@ class ServiceManager(
             ?.syncedSettings
             ?.security
             ?.filterSpamFromStrangers ?: true
-        Coil.setImageLoader {
+
+        SingletonImageLoader.setSafe {
             Amethyst.instance
                 .imageLoaderBuilder()
                 .components {
                     if (Build.VERSION.SDK_INT >= 28) {
-                        add(ImageDecoderDecoder.Factory())
+                        add(AnimatedImageDecoder.Factory())
                     } else {
                         add(GifDecoder.Factory())
                     }
                     add(SvgDecoder.Factory())
                     add(Base64Fetcher.Factory)
+                    add(
+                        OkHttpNetworkFetcherFactory(
+                            callFactory = {
+                                myAccount?.shouldUseTorForImageDownload()?.let { HttpClientManager.getHttpClient(it) }
+                                    ?: HttpClientManager.getHttpClient(false)
+                            },
+                        ),
+                    )
                 }.apply {
                     if (BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark") {
                         this.logger(DebugLogger())
                     }
-                }.okHttpClient {
-                    myAccount?.shouldUseTorForImageDownload()?.let { HttpClientManager.getHttpClient(it) }
-                        ?: HttpClientManager.getHttpClient(false)
                 }.precision(Precision.INEXACT)
-                .respectCacheHeaders(false)
                 .build()
         }
 

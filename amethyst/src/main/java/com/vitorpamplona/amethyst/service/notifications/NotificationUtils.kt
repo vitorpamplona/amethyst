@@ -29,9 +29,10 @@ import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
-import coil.ImageLoader
-import coil.executeBlocking
-import coil.request.ImageRequest
+import coil3.ImageLoader
+import coil3.asDrawable
+import coil3.executeBlocking
+import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -157,7 +158,7 @@ object NotificationUtils {
                 messageBody = messageBody,
                 messageTitle = messageTitle,
                 time = time,
-                picture = imageResult.drawable as? BitmapDrawable,
+                picture = imageResult.image?.asDrawable(applicationContext.resources) as? BitmapDrawable,
                 uri = uri,
                 channelId,
                 notificationGroupKey,
