@@ -21,17 +21,20 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
+import kotlinx.coroutines.launch
 
 class FollowSetFeedFilter(
     val account: Account,
-) : FeedFilter<Note>() {
+) : FeedFilter<FollowSet>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex
 
-    override fun feed(): List<Note> =
-        account
-            .followSetNotesFlow()
-            .value
-            .user
-            .followSets
+    override fun feed(): List<FollowSet> {
+        if (account.userProfile().followSets.isEmpty()) {
+            account.scope.launch {
+                account.getFollowSetNotes()
+            }
+        }
+        return account.followSetNotesFlow().value.map { account.mapNoteToFollowSet(it) }
+    }
 }

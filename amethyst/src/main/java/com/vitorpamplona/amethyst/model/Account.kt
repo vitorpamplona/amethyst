@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.model
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.compose.ui.util.fastFilter
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
@@ -33,6 +32,7 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.Constants
@@ -108,7 +108,6 @@ import com.vitorpamplona.quartz.events.ZapSplitSetup
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.DualCase
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -131,6 +130,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.math.BigDecimal
 import java.util.Locale
@@ -2897,17 +2897,25 @@ class Account(
         return LocalCache.getOrCreateAddressableNote(aTag)
     }
 
-    fun getFollowSetNotes(): List<AddressableNote> = LocalCache.getFollowSetsFor(userProfile())
+    suspend fun getFollowSetNotes() =
+        withContext(Dispatchers.Default) {
+            val followSetNotes = LocalCache.getFollowSetsFor(userProfile())
+            userProfile().followSets.addAll(followSetNotes)
+            println("Number of follow sets: ${followSetNotes.size}")
+        }
 
-    fun loadUserFollowSets() {
-        val sets =
-            getFollowSetNotes()
-                .fastFilter { !it.dTag().isNullOrBlank() }
+    fun mapNoteToFollowSet(note: Note): FollowSet =
+        FollowSet
+            .mapEventToSet(
+                event = note.event as PeopleListEvent,
+                signer,
+            )
 
-        userProfile().followSets = sets.toImmutableList()
+    fun followSetNotesFlow(): MutableStateFlow<List<AddressableNote>> {
+        val setStateFlow = MutableStateFlow(userProfile().followSets.toList())
+        println("Follow set flow value: ${setStateFlow.value}")
+        return setStateFlow
     }
-
-    fun followSetNotesFlow() = userProfile().flow().followSets.stateFlow
 
     fun getMuteListFlow(): StateFlow<NoteState> = getMuteListNote().flow().metadata.stateFlow
 
@@ -3700,11 +3708,6 @@ class Account(
                     settings.updatePrivateHomeRelayList(it)
                 }
             }
-        }
-
-        scope.launch(Dispatchers.IO) {
-            Log.d("AccountFollowSetsWorker", "Loading Follow Sets for Account")
-            loadUserFollowSets()
         }
 
         scope.launch(Dispatchers.Default) {
