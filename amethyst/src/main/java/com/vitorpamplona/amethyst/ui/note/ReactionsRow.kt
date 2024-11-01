@@ -103,6 +103,7 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.zap
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -129,6 +130,7 @@ import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightWithPadding
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiserWithPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
+import com.vitorpamplona.amethyst.ui.theme.Size14dp
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size18dp
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
@@ -992,7 +994,7 @@ fun ZapReaction(
     accountViewModel: AccountViewModel,
     iconSize: Dp = Size20dp,
     iconSizeModifier: Modifier = Size20Modifier,
-    animationSize: Dp = 14.dp,
+    animationSize: Dp = Size14dp,
     nav: INav,
 ) {
     var wantsToZap by remember { mutableStateOf(false) }
