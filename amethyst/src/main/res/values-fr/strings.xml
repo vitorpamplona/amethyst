@@ -371,6 +371,7 @@
     <string name="no">Non</string>
     <string name="follow_list_selection">Liste des Abonnés</string>
     <string name="follow_list_kind3follows">Tous les abonnements</string>
+    <string name="follow_list_aroundme">Autour de moi</string>
     <string name="follow_list_global">Général</string>
     <string name="follow_list_mute_list">Liste en Sourdine</string>
     <string name="connect_through_your_orbot_setup_short">Le port par défaut est 9050</string>
