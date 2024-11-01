@@ -118,11 +118,17 @@ object ThreadLevelCalculator {
         if (
             note.event is RepostEvent || note.event is GenericRepostEvent || replyTo == null || replyTo.isEmpty()
         ) {
+            cachedLevels[note] = 0
             return 0
         }
 
-        return replyTo.maxOf {
-            cachedLevels[it] ?: replyLevel(it, cachedLevels).apply { cachedLevels.put(it, this) }
-        } + 1
+        val thisLevel =
+            replyTo.maxOf {
+                cachedLevels[it] ?: replyLevel(it, cachedLevels)
+            } + 1
+
+        cachedLevels[note] = thisLevel
+
+        return thisLevel
     }
 }
