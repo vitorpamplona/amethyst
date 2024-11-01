@@ -47,6 +47,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,7 +75,6 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.ThreadLevelCalculator
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InlineCarrousel
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -141,7 +141,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.LevelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelHeader
@@ -198,6 +198,7 @@ import com.vitorpamplona.quartz.events.VideoEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -205,7 +206,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun ThreadFeedView(
     noteId: String,
-    viewModel: FeedViewModel,
+    viewModel: LevelFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -217,7 +218,7 @@ fun ThreadFeedView(
             nav = nav,
             routeForLastRead = null,
             onLoaded = {
-                RenderThreadFeed(noteId, it, viewModel.llState, accountViewModel, nav)
+                RenderThreadFeed(noteId, it, viewModel.llState, viewModel::levelFlowForItem, accountViewModel, nav)
             },
         )
     }
@@ -228,6 +229,7 @@ fun RenderThreadFeed(
     noteId: String,
     loaded: FeedState.Loaded,
     listState: LazyListState,
+    createLevelFlow: (Note) -> Flow<Int>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -266,20 +268,27 @@ fun RenderThreadFeed(
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { index, item ->
+            val level = createLevelFlow(item).collectAsStateWithLifecycle(0)
+
+            val modifier =
+                Modifier
+                    .drawReplyLevel(
+                        note = item,
+                        level = level,
+                        color = MaterialTheme.colorScheme.placeholderText,
+                        selected =
+                            if (item.idHex == noteId) {
+                                MaterialTheme.colorScheme.lessImportantLink
+                            } else {
+                                MaterialTheme.colorScheme.placeholderText
+                            },
+                    )
+
             if (index == 0) {
                 ProvideTextStyle(TextStyle(fontSize = 18.sp, lineHeight = 1.20.em)) {
                     NoteMaster(
-                        item,
-                        modifier =
-                            Modifier.drawReplyLevel(
-                                ThreadLevelCalculator.replyLevel(item),
-                                MaterialTheme.colorScheme.placeholderText,
-                                if (item.idHex == noteId) {
-                                    MaterialTheme.colorScheme.lessImportantLink
-                                } else {
-                                    MaterialTheme.colorScheme.placeholderText
-                                },
-                            ),
+                        baseNote = item,
+                        modifier = modifier,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
@@ -292,17 +301,8 @@ fun RenderThreadFeed(
                     }
 
                 NoteCompose(
-                    item,
-                    modifier =
-                        Modifier.drawReplyLevel(
-                            ThreadLevelCalculator.replyLevel(item),
-                            MaterialTheme.colorScheme.placeholderText,
-                            if (item.idHex == noteId) {
-                                MaterialTheme.colorScheme.lessImportantLink
-                            } else {
-                                MaterialTheme.colorScheme.placeholderText
-                            },
-                        ),
+                    baseNote = item,
+                    modifier = modifier,
                     isBoostedNote = false,
                     unPackReply = false,
                     quotesLeft = 3,
@@ -321,7 +321,8 @@ fun RenderThreadFeed(
 
 // Creates a Zebra pattern where each bar is a reply level.
 fun Modifier.drawReplyLevel(
-    level: Int,
+    note: Note,
+    level: State<Int>,
     color: Color,
     selected: Color,
 ): Modifier =
@@ -335,9 +336,9 @@ fun Modifier.drawReplyLevel(
             val strokeWidth = strokeWidthDp.dp.toPx()
             val levelWidth = levelWidthDp.dp.toPx()
 
-            repeat(level) {
+            repeat(level.value) {
                 this.drawLine(
-                    if (it == level - 1) selected else color,
+                    if (it == level.value - 1) selected else color,
                     Offset(padding + it * levelWidth, 0f),
                     Offset(padding + it * levelWidth, size.height),
                     strokeWidth = strokeWidth,
@@ -345,7 +346,7 @@ fun Modifier.drawReplyLevel(
             }
 
             return@drawBehind
-        }.padding(start = (2 + (level * 3)).dp)
+        }.padding(start = (2 + (level.value * 3)).dp)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

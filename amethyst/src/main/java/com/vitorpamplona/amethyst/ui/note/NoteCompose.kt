@@ -428,7 +428,7 @@ fun ClickableNote(
     content: @Composable () -> Unit,
 ) {
     val updatedModifier =
-        remember(baseNote, backgroundColor.value) {
+        remember(baseNote, backgroundColor.value, modifier) {
             modifier
                 .combinedClickable(
                     onClick = {
