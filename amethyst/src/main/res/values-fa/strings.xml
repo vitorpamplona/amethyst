@@ -777,6 +777,7 @@
 - inbox.nostr.wine (پولی)
 - auth.nostr1.com (رایگان)
 - you.nostr1.com (رله شخصی - پولی)</string>
+    <string name="dm_relays_not_found_editing">از ۱ تا ۳ رله به عنوان رله خصوصی وارد کنید. رله های صندوق ورودی پیام های خصوصی می بایست هر پیامی از هرکس را بپذیرند، ولی تنها به شما اجازه بارگیری پیام ها را می دهند.</string>
     <string name="dm_relays_not_found_create_now">هم اکنون تنظیم شود</string>
     <string name="search_relays_title">رله های جستجو</string>
     <string name="search_relays_not_found">تنظیم رله های جستجو</string>
