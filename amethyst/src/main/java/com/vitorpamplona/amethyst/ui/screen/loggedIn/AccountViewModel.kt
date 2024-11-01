@@ -36,6 +36,7 @@ import coil3.imageLoader
 import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.collectSuccessfulOperations
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.model.Account
@@ -108,9 +109,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -121,12 +120,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.coroutines.resume
 
 @Immutable open class ToastMsg
 
@@ -524,8 +519,8 @@ class AccountViewModel(
                             )
                     }.toMutableMap()
 
-            collectSuccessfulSigningOperations<CombinedZap, ZapAmountCommentNotification>(
-                operationsInput = zaps.filter { (it.request.event as? LnZapRequestEvent)?.isPrivateZap() == true },
+            collectSuccessfulOperations<CombinedZap, ZapAmountCommentNotification>(
+                items = zaps.filter { (it.request.event as? LnZapRequestEvent)?.isPrivateZap() == true },
                 runRequestFor = { next, onReady ->
                     checkNotInMainThread()
 
@@ -628,8 +623,8 @@ class AccountViewModel(
                             )
                     }.toMutableMap()
 
-            collectSuccessfulSigningOperations<Pair<Note, Note?>, ZapAmountCommentNotification>(
-                operationsInput = myList,
+            collectSuccessfulOperations<Pair<Note, Note?>, ZapAmountCommentNotification>(
+                items = myList,
                 runRequestFor = { next, onReady ->
                     innerDecryptAmountMessage(next.first, next.second, onReady)
                 },
@@ -1678,42 +1673,6 @@ class AccountViewModel(
     val baseNote: Note?,
     val nip19: Nip19Bech32.ParseReturn,
 )
-
-public suspend fun <T, K> collectSuccessfulSigningOperations(
-    operationsInput: List<T>,
-    runRequestFor: (T, (K) -> Unit) -> Unit,
-    output: MutableMap<T, K> = mutableMapOf(),
-    onReady: suspend (MutableMap<T, K>) -> Unit,
-) {
-    if (operationsInput.isEmpty()) {
-        onReady(output)
-        return
-    }
-
-    coroutineScope {
-        val jobs =
-            operationsInput.map {
-                async {
-                    val result =
-                        withTimeoutOrNull(10000) {
-                            suspendCancellableCoroutine { continuation ->
-                                runRequestFor(it) { result: K -> continuation.resume(result) }
-                            }
-                        }
-                    if (result != null) {
-                        output[it] = result
-                    }
-                }
-            }
-
-        // runs in parallel to avoid overcrowding Amber.
-        withTimeoutOrNull(15000) {
-            jobs.joinAll()
-        }
-    }
-
-    onReady(output)
-}
 
 @Composable
 fun mockAccountViewModel(): AccountViewModel {

@@ -32,11 +32,10 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.tryAndWait
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.Request
@@ -304,10 +303,8 @@ class Nip96Uploader(
     }
 
     suspend fun nip98Header(url: String): String? =
-        withTimeoutOrNull(5000) {
-            suspendCancellableCoroutine { continuation ->
-                nip98Header(url, "POST") { authorizationToken -> continuation.resume(authorizationToken) }
-            }
+        tryAndWait { continuation ->
+            nip98Header(url, "POST") { authorizationToken -> continuation.resume(authorizationToken) }
         }
 
     fun nip98Header(

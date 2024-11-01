@@ -23,13 +23,12 @@ package com.vitorpamplona.amethyst.service
 import android.content.Context
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.collectSuccessfulOperations
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource.user
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.collectSuccessfulSigningOperations
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
@@ -195,8 +194,8 @@ class ZapPaymentHandler(
                     )?.readRelays()
                 }?.toSet()
 
-        collectSuccessfulSigningOperations<ZapSplitSetup, SignAllZapRequestsReturn>(
-            operationsInput = zapsToSend,
+        collectSuccessfulOperations<ZapSplitSetup, SignAllZapRequestsReturn>(
+            items = zapsToSend,
             runRequestFor = { next: ZapSplitSetup, onReady ->
                 if (next.isLnAddress) {
                     prepareZapRequestIfNeeded(note, pollOption, message, zapType) { zapRequestJson ->
@@ -239,8 +238,8 @@ class ZapPaymentHandler(
         var progressAllPayments = 0.00f
         val totalWeight = invoices.sumOf { it.first.weight }
 
-        collectSuccessfulSigningOperations<Pair<ZapSplitSetup, SignAllZapRequestsReturn>, AssembleInvoiceReturn>(
-            operationsInput = invoices,
+        collectSuccessfulOperations<Pair<ZapSplitSetup, SignAllZapRequestsReturn>, AssembleInvoiceReturn>(
+            items = invoices,
             runRequestFor = { splitZapRequestPair: Pair<ZapSplitSetup, SignAllZapRequestsReturn>, onReady ->
                 assembleInvoice(
                     splitSetup = splitZapRequestPair.first,
@@ -272,8 +271,8 @@ class ZapPaymentHandler(
     ) {
         var progressAllPayments = 0.00f
 
-        collectSuccessfulSigningOperations<String, Boolean>(
-            operationsInput = invoices,
+        collectSuccessfulOperations<String, Boolean>(
+            items = invoices,
             runRequestFor = { invoice: String, onReady ->
                 account.sendZapPaymentRequestFor(
                     bolt11 = invoice,

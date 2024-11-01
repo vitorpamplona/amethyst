@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.tryAndWait
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.Constants
@@ -129,8 +130,6 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withTimeoutOrNull
 import java.math.BigDecimal
 import java.util.Locale
 import java.util.UUID
@@ -897,11 +896,9 @@ class Account(
     }
 
     suspend fun waitToDecrypt(peopleListFollows: GeneralListEvent): LiveFollowList? =
-        withTimeoutOrNull(1000) {
-            suspendCancellableCoroutine { continuation ->
-                decryptLiveFollows(peopleListFollows) {
-                    continuation.resume(it)
-                }
+        tryAndWait { continuation ->
+            decryptLiveFollows(peopleListFollows) {
+                continuation.resume(it)
             }
         }
 
@@ -921,11 +918,9 @@ class Account(
     suspend fun decryptPeopleList(event: PeopleListEvent?): PeopleListEvent.UsersAndWords {
         if (event == null) return PeopleListEvent.UsersAndWords()
 
-        return withTimeoutOrNull(1000) {
-            suspendCancellableCoroutine { continuation ->
-                event.publicAndPrivateUsersAndWords(signer) {
-                    continuation.resume(it)
-                }
+        return tryAndWait { continuation ->
+            event.publicAndPrivateUsersAndWords(signer) {
+                continuation.resume(it)
             }
         } ?: PeopleListEvent.UsersAndWords()
     }
@@ -933,11 +928,9 @@ class Account(
     suspend fun decryptMuteList(event: MuteListEvent?): PeopleListEvent.UsersAndWords {
         if (event == null) return PeopleListEvent.UsersAndWords()
 
-        return withTimeoutOrNull(1000) {
-            suspendCancellableCoroutine { continuation ->
-                event.publicAndPrivateUsersAndWords(signer) {
-                    continuation.resume(it)
-                }
+        return tryAndWait { continuation ->
+            event.publicAndPrivateUsersAndWords(signer) {
+                continuation.resume(it)
             }
         } ?: PeopleListEvent.UsersAndWords()
     }
@@ -992,11 +985,9 @@ class Account(
                     emit(null)
                 } else {
                     emit(
-                        withTimeoutOrNull(1000) {
-                            suspendCancellableCoroutine { continuation ->
-                                userState.user.latestBookmarkList?.privateTags(signer) {
-                                    continuation.resume(userState.user.latestBookmarkList)
-                                }
+                        tryAndWait { continuation ->
+                            userState.user.latestBookmarkList?.privateTags(signer) {
+                                continuation.resume(userState.user.latestBookmarkList)
                             }
                         },
                     )
@@ -1337,7 +1328,7 @@ class Account(
         zappedNote?.isZappedBy(userProfile(), this, onWasZapped)
     }
 
-    fun calculateZappedAmount(
+    suspend fun calculateZappedAmount(
         zappedNote: Note?,
         onReady: (BigDecimal) -> Unit,
     ) {
