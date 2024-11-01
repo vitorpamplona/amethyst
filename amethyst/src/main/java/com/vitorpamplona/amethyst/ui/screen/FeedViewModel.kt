@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.ThreadLevelCalculator
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPrivateFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPublicFeedFilter
@@ -54,11 +55,22 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileGalleryFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetFeedViewModel
 import com.vitorpamplona.quartz.events.ChatroomKey
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 
 class NostrChannelFeedViewModel(
@@ -88,7 +100,7 @@ class NostrChatroomFeedViewModel(
 class NostrThreadFeedViewModel(
     account: Account,
     noteId: String,
-) : FeedViewModel(ThreadFeedFilter(account, noteId)) {
+) : LevelFeedViewModel(ThreadFeedFilter(account, noteId)) {
     class Factory(
         val account: Account,
         val noteId: String,
@@ -269,6 +281,44 @@ class NostrUserAppRecommendationsFeedViewModel(
     }
 }
 
+abstract class LevelFeedViewModel(
+    localFilter: FeedFilter<Note>,
+) : FeedViewModel(localFilter) {
+    var llState: LazyListState by mutableStateOf(LazyListState(0, 0))
+
+    // val cachedLevels = mutableMapOf<Note, MutableStateFlow<Int>>()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val levelCacheFlow: StateFlow<Map<Note, Int>> =
+        feedState.feedContent
+            .transformLatest { feed ->
+                emitAll(
+                    if (feed is FeedState.Loaded) {
+                        feed.feed.map {
+                            val cache = mutableMapOf<Note, Int>()
+                            it.list.forEach {
+                                ThreadLevelCalculator.replyLevel(it, cache)
+                            }
+                            cache
+                        }
+                    } else {
+                        MutableStateFlow(mapOf())
+                    },
+                )
+            }.flowOn(Dispatchers.Default)
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                mapOf(),
+            )
+
+    fun levelFlowForItem(note: Note) =
+        levelCacheFlow
+            .map {
+                it[note] ?: 0
+            }.distinctUntilChanged()
+}
+
 @Stable
 abstract class FeedViewModel(
     localFilter: FeedFilter<Note>,
@@ -283,8 +333,6 @@ abstract class FeedViewModel(
     suspend fun sentToTop() = feedState.sentToTop()
 
     override fun invalidateData(ignoreIfDoing: Boolean) = feedState.invalidateData(ignoreIfDoing)
-
-    var llState: LazyListState by mutableStateOf(LazyListState(0, 0))
 
     private var collectorJob: Job? = null
 
