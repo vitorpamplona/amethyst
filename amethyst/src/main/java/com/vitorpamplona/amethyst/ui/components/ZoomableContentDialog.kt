@@ -66,7 +66,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
-import androidx.core.view.ViewCompat
 import coil3.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -112,7 +111,6 @@ fun ZoomableImageDialog(
             ),
     ) {
         val view = LocalView.current
-        val insets = ViewCompat.getRootWindowInsets(view)
 
         val orientation = LocalConfiguration.current.orientation
         println("This Log only exists to force orientation listener $orientation")
