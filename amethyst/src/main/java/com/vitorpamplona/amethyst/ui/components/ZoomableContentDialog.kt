@@ -324,8 +324,8 @@ private fun saveMediaToGallery(
                 onSuccess = {
                     accountViewModel.toast(success, success)
                 },
-                onError = {
-                    accountViewModel.toast(failure, null, it)
+                onError = { innerIt ->
+                    accountViewModel.toast(failure, null, innerIt)
                 },
             )
         }
@@ -379,7 +379,7 @@ private fun RenderImageOrVideo(
     onToggleControllerVisibility: (() -> Unit)? = null,
     accountViewModel: AccountViewModel,
 ) {
-    val automaticallyStartPlayback = remember { mutableStateOf<Boolean>(true) }
+    val automaticallyStartPlayback = remember { mutableStateOf(true) }
     val contentScale =
         if (isFiniteHeight) {
             ContentScale.Fit
