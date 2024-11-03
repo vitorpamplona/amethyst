@@ -296,7 +296,7 @@ private fun saveMediaToGallery(
     localContext: Context,
     accountViewModel: AccountViewModel,
 ) {
-    val isImage = content is MediaUrlImage && content is MediaLocalImage
+    val isImage = content is MediaUrlImage || content is MediaLocalImage
 
     val success = if (isImage) R.string.image_saved_to_the_gallery else R.string.video_saved_to_the_gallery
     val failure = if (isImage) R.string.failed_to_save_the_image else R.string.failed_to_save_the_video
