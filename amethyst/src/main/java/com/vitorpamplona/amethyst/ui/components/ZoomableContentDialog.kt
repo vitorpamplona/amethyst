@@ -104,8 +104,6 @@ fun ZoomableImageDialog(
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    val orientation = LocalConfiguration.current.orientation
-
     Dialog(
         onDismissRequest = onDismiss,
         properties =
