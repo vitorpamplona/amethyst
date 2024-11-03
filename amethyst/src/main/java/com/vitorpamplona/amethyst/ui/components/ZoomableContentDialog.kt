@@ -388,81 +388,41 @@ private fun RenderImageOrVideo(
         }
 
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-        if (content is MediaUrlImage) {
-            val mainModifier =
-                Modifier
-                    .fillMaxWidth()
-                    .zoomable(
-                        rememberZoomState(),
-                        onTap = {
-                            if (onToggleControllerVisibility != null) {
-                                onToggleControllerVisibility()
-                            }
-                        },
-                    )
+        when (content) {
+            is MediaUrlImage -> {
+                val mainModifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .zoomable(
+                            rememberZoomState(),
+                            onTap = {
+                                if (onToggleControllerVisibility != null) {
+                                    onToggleControllerVisibility()
+                                }
+                            },
+                        )
 
-            UrlImageView(
-                content = content,
-                contentScale = contentScale,
-                mainImageModifier = mainModifier,
-                loadedImageModifier = Modifier.fillMaxWidth(),
-                controllerVisible = controllerVisible,
-                accountViewModel = accountViewModel,
-                alwayShowImage = true,
-            )
-        } else if (content is MediaUrlVideo) {
-            val borderModifier =
-                if (roundedCorner) {
-                    MaterialTheme.colorScheme.imageModifier
-                } else {
-                    Modifier.fillMaxWidth()
-                }
+                UrlImageView(
+                    content = content,
+                    contentScale = contentScale,
+                    mainImageModifier = mainModifier,
+                    loadedImageModifier = Modifier.fillMaxWidth(),
+                    controllerVisible = controllerVisible,
+                    accountViewModel = accountViewModel,
+                    alwayShowImage = true,
+                )
+            }
 
-            VideoViewInner(
-                videoUri = content.url,
-                mimeType = content.mimeType,
-                title = content.description,
-                artworkUri = content.artworkUri,
-                authorName = content.authorName,
-                borderModifier = borderModifier,
-                isFiniteHeight = isFiniteHeight,
-                automaticallyStartPlayback = automaticallyStartPlayback,
-                onControllerVisibilityChanged = onControllerVisibilityChanged,
-                accountViewModel = accountViewModel,
-            )
-        } else if (content is MediaLocalImage) {
-            val mainModifier =
-                Modifier
-                    .fillMaxWidth()
-                    .zoomable(
-                        rememberZoomState(),
-                        onTap = {
-                            if (onToggleControllerVisibility != null) {
-                                onToggleControllerVisibility()
-                            }
-                        },
-                    )
+            is MediaUrlVideo -> {
+                val borderModifier =
+                    if (roundedCorner) {
+                        MaterialTheme.colorScheme.imageModifier
+                    } else {
+                        Modifier.fillMaxWidth()
+                    }
 
-            LocalImageView(
-                content = content,
-                contentScale = contentScale,
-                mainImageModifier = mainModifier,
-                loadedImageModifier = Modifier.fillMaxWidth(),
-                controllerVisible = controllerVisible,
-                accountViewModel = accountViewModel,
-                alwayShowImage = true,
-            )
-        } else if (content is MediaLocalVideo) {
-            val borderModifier =
-                if (roundedCorner) {
-                    MaterialTheme.colorScheme.imageModifier
-                } else {
-                    Modifier.fillMaxWidth()
-                }
-
-            content.localFile?.let {
                 VideoViewInner(
-                    videoUri = it.toUri().toString(),
+                    videoUri = content.url,
                     mimeType = content.mimeType,
                     title = content.description,
                     artworkUri = content.artworkUri,
@@ -473,6 +433,54 @@ private fun RenderImageOrVideo(
                     onControllerVisibilityChanged = onControllerVisibilityChanged,
                     accountViewModel = accountViewModel,
                 )
+            }
+
+            is MediaLocalImage -> {
+                val mainModifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .zoomable(
+                            rememberZoomState(),
+                            onTap = {
+                                if (onToggleControllerVisibility != null) {
+                                    onToggleControllerVisibility()
+                                }
+                            },
+                        )
+
+                LocalImageView(
+                    content = content,
+                    contentScale = contentScale,
+                    mainImageModifier = mainModifier,
+                    loadedImageModifier = Modifier.fillMaxWidth(),
+                    controllerVisible = controllerVisible,
+                    accountViewModel = accountViewModel,
+                    alwayShowImage = true,
+                )
+            }
+
+            is MediaLocalVideo -> {
+                val borderModifier =
+                    if (roundedCorner) {
+                        MaterialTheme.colorScheme.imageModifier
+                    } else {
+                        Modifier.fillMaxWidth()
+                    }
+
+                content.localFile?.let {
+                    VideoViewInner(
+                        videoUri = it.toUri().toString(),
+                        mimeType = content.mimeType,
+                        title = content.description,
+                        artworkUri = content.artworkUri,
+                        authorName = content.authorName,
+                        borderModifier = borderModifier,
+                        isFiniteHeight = isFiniteHeight,
+                        automaticallyStartPlayback = automaticallyStartPlayback,
+                        onControllerVisibilityChanged = onControllerVisibilityChanged,
+                        accountViewModel = accountViewModel,
+                    )
+                }
             }
         }
     }
