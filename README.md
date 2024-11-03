@@ -31,7 +31,7 @@ height="70">](https://github.com/vitorpamplona/amethyst/releases)
 [<img src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png"
      alt="Get it on Google Play"
      height="70">](https://play.google.com/store/apps/details?id=com.vitorpamplona.amethyst)
-[<img src="https://raw.githubusercontent.com/ilcompratoreconsapevole/ilcompratoreconsapevole.github.io/f7417a39bd4e2493332f028891cc15b9a22e1e99/assets/images/Get_it_On_Zap_Store.svg"
+[<img src="https://raw.githubusercontent.com/ilcompratoreconsapevole/SVG-file/refs/heads/master/Zap%20Store/Get_it_On_Zap_Store.svg"
     alt="Get it on Zap Store"
     height="70">](https://github.com/zapstore/zapstore/releases)
 
