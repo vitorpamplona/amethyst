@@ -29,7 +29,6 @@ import android.widget.FrameLayout
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
@@ -149,7 +148,7 @@ fun ZoomableImageDialog(
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class, ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalPermissionsApi::class)
 private fun DialogContent(
     allImages: ImmutableList<BaseMediaContent>,
     imageUrl: BaseMediaContent,
@@ -336,7 +335,6 @@ private fun saveMediaToGallery(
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 fun InlineCarrousel(
     allImages: ImmutableList<String>,
     imageUrl: String,
