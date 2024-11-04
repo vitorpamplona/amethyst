@@ -45,14 +45,14 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Debug APK
-          path: amethyst/build/outputs/apk/**/debug/amethyst-play-universal-debug.apk
+          name: Play Debug APK
+          path: amethyst/build/outputs/apk/play/debug/amethyst-play-universal-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Debug APK
-          path: amethyst/build/outputs/apk/**/debug/amethyst-fdroid-universal-debug.apk
+          name: FDroid Debug APK
+          path: amethyst/build/outputs/apk/fdroid/debug/amethyst-fdroid-universal-debug.apk
 
       - name: Upload Compose Reports
         uses: actions/upload-artifact@v4
