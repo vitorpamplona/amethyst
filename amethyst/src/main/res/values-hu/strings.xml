@@ -370,6 +370,7 @@
     <string name="no">Nem</string>
     <string name="follow_list_selection">Követek Lista</string>
     <string name="follow_list_kind3follows">Mindenki akit követek</string>
+    <string name="follow_list_aroundme">Körülöttem</string>
     <string name="follow_list_global">Globális</string>
     <string name="follow_list_mute_list">Némítottak listája</string>
     <string name="connect_through_your_orbot_setup_short">Alapértelmezett port a 9050</string>

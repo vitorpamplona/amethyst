@@ -371,6 +371,7 @@
     <string name="no">Nie</string>
     <string name="follow_list_selection">Lista obserwowanych</string>
     <string name="follow_list_kind3follows">Obserwowane</string>
+    <string name="follow_list_aroundme">W pobliżu</string>
     <string name="follow_list_global">Wszystkie</string>
     <string name="follow_list_mute_list">Zablokowane</string>
     <string name="connect_through_your_orbot_setup_short">Domyślny port to 9050</string>
@@ -540,6 +541,7 @@
     <string name="nip05_checking">Sprawdzanie adresu Nostr</string>
     <string name="select_deselect_all">Zaznacz/Odznacz wszystko</string>
     <string name="default_relays">Domyślne</string>
+    <string name="default_relays_longer">Przywróć ustawienia domyślne</string>
     <string name="select_a_relay_to_continue">Wybierz Transmiter, aby kontynuować</string>
     <string name="zap_forward_title">Przekaż zapy do:</string>
     <string name="zap_forward_explainer">Wspierający klient podzieli i przekaże zapy na LNAdres lub profil użytkownika poniżej zamiast Ciebie</string>
@@ -769,6 +771,7 @@
     <string name="dm_relays_not_found">Skonfiguruj prywatne transmitery odbiorcze</string>
     <string name="dm_relays_not_found_description">To ustawienie pozwala wszystkim wiedzieć, których transmiterów użyć podczas wysyłania wiadomości do Ciebie. Bez nich możesz przegapić niektóre wiadomości.</string>
     <string name="dm_relays_not_found_examples">Dobre opcje to:\n - inbox.nostr.wine (płatny)\n - you.nostr1.com (transmitery osobiste - płatny)</string>
+    <string name="dm_relays_not_found_examples2">Dobre opcje to:\n - auth.nostr1.com (darmowe)\n - inbox.nostr.wine (płatne)\n - relay.0xchat.com (darmowe)</string>
     <string name="dm_relays_not_found_editing">Wstaw od 1 do 3 transmiterów, które będą służyć jako Twoja prywatna skrzynka odbiorcza. Transmitery DM powinny akceptować dowolne wiadomości od każdego, ale pozwalać tylko na ich pobieranie.</string>
     <string name="dm_relays_not_found_create_now">Konfiguruj</string>
     <string name="search_relays_title">Transmitery wyszukujące</string>

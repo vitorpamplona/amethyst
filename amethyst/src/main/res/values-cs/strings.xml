@@ -369,6 +369,7 @@
     <string name="no">Ne</string>
     <string name="follow_list_selection">Seznam sledovaných</string>
     <string name="follow_list_kind3follows">Všechna sledování</string>
+    <string name="follow_list_aroundme">Kolem mě</string>
     <string name="follow_list_global">Globální</string>
     <string name="follow_list_mute_list">Seznam ztlumení</string>
     <string name="connect_through_your_orbot_setup_short">Výchozí port je 9050</string>
@@ -538,6 +539,7 @@
     <string name="nip05_checking">Kontrola adresy Nostr</string>
     <string name="select_deselect_all">Vybrat/Zrušit vše</string>
     <string name="default_relays">Výchozí</string>
+    <string name="default_relays_longer">Obnovit výchozí nastavení</string>
     <string name="select_a_relay_to_continue">Vyberte relé pro pokračování</string>
     <string name="zap_forward_title">Přeposílat Zapy na:</string>
     <string name="zap_forward_explainer">Podporující klienti budou přeposílat Zapy na níže uvedenou LN adresu nebo uživatelský profil místo vaší</string>
@@ -767,6 +769,7 @@
     <string name="dm_relays_not_found">Nastavte svá relé soukromé schránky</string>
     <string name="dm_relays_not_found_description">Toto nastavení umožňuje všem vědět, která relé použít při posílání zpráv vám. Bez nich můžete některé zprávy zmeškat.</string>
     <string name="dm_relays_not_found_examples">Dobré možnosti jsou:\n - inbox.nostr.wine (placené)\n - you.nostr1.com (osobní relé - placené)</string>
+    <string name="dm_relays_not_found_examples2">Dobré možnosti jsou:\n - auth.nostr1.com (zdarma)\n - inbox.nostr.wine (placeno)\n - relay.0xchat.com (zdarma)</string>
     <string name="dm_relays_not_found_editing">Vložte 1–3 relé, která budou sloužit jako vaše soukromá schránka. Relé DM schránky by měla přijímat jakékoli zprávy od kohokoli, ale pouze vám umožnit jejich stahování.</string>
     <string name="dm_relays_not_found_create_now">Nastavit nyní</string>
     <string name="search_relays_title">Vyhledávací relé</string>
