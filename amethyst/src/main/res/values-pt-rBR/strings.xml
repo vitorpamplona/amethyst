@@ -369,6 +369,7 @@
     <string name="no">Não</string>
     <string name="follow_list_selection">Lista de seguidores</string>
     <string name="follow_list_kind3follows">Seguindo</string>
+    <string name="follow_list_aroundme">Perto de mim</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Lista Silenciada</string>
     <string name="connect_through_your_orbot_setup_short">Porta padrão é 9050</string>
@@ -538,6 +539,7 @@
     <string name="nip05_checking">Verificando o endereço Nostr</string>
     <string name="select_deselect_all">Selecionar/desmarcar tudo</string>
     <string name="default_relays">Padrão</string>
+    <string name="default_relays_longer">Redefinir para os Padrões</string>
     <string name="select_a_relay_to_continue">Selecione um relay para continuar</string>
     <string name="zap_forward_title">Encaminhar Zaps para:</string>
     <string name="zap_forward_explainer">Os clientes que suportam encaminharão zaps para o endereço lightning ou perfil de usuário abaixo, em vez do seu</string>
@@ -767,6 +769,7 @@
     <string name="dm_relays_not_found">Configurar seus relés de Caixa de Entrada Privada</string>
     <string name="dm_relays_not_found_description">Esta configuração permite que todos saibam quais relés usar ao enviar mensagens para você. Sem eles, você pode perder algumas mensagens.</string>
     <string name="dm_relays_not_found_examples">Boas opções são:\n - inbox.nostr.wine (pago)\n - you.nostr1.com (relés pessoais - pago)</string>
+    <string name="dm_relays_not_found_examples2">Opções boas são:\n - auth.nostr1.com (free)\n - inbox.nostr.wine (paid)\n - relay.0xchat.com (gratuito)</string>
     <string name="dm_relays_not_found_editing">Insira entre 1–3 relés para servir como sua caixa de entrada privada. Relés de Caixa de Entrada de DM devem aceitar qualquer mensagem de qualquer pessoa, mas permitir apenas você a baixá-las.</string>
     <string name="dm_relays_not_found_create_now">Configurar agora</string>
     <string name="search_relays_title">Relés de Pesquisa</string>
