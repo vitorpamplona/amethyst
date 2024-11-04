@@ -625,6 +625,7 @@
 
     <string name="reset_translated_languages">Reset translated languages</string>
     <string name="reset_translated_languages_description">This will reset the previously selected \'Never translate from\' languages and all languages will be translated again.</string>
+    <string name="reset_translated_languages_toast">Translated languages have been reset.</string>
 
     <string name="load_image">Load Image</string>
 

@@ -378,6 +378,7 @@ fun ResetTranslatedLanguagesButton(accountViewModel: AccountViewModel) {
     Button(
         onClick = {
             accountViewModel.resetDontTranslateFrom()
+            accountViewModel.toast(R.string.reset_translated_languages, R.string.reset_translated_languages_toast)
         },
         colors =
             ButtonDefaults.buttonColors(

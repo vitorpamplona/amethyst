@@ -878,5 +878,5 @@
 
     <string name="reset_translated_languages">Obnovit přeložené jazyky</string>
     <string name="reset_translated_languages_description">Tím se obnoví dříve vybrané jazyky \'Nikdy nepřekládat z\' a všechny jazyky budou znovu přeloženy.</string>
-
+    <string name="reset_translated_languages_toast">Přeložené jazyky byly obnovený.</string>
 </resources>

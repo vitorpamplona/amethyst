@@ -883,5 +883,5 @@ anz der Bedingungen ist erforderlich</string>
 
     <string name="reset_translated_languages">Übersetzte Sprachen zurücksetzen</string>
     <string name="reset_translated_languages_description">Dies wird die zuvor ausgewählten \'Nie übersetzen von\'-Sprachen zurücksetzen, und alle Sprachen werden erneut übersetzt.</string>
-
+    <string name="reset_translated_languages_toast">Übersetzte Sprachen wurden zurückgesetzt.</string>
 </resources>

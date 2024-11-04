@@ -877,5 +877,5 @@
 
     <string name="reset_translated_languages">Återställ översatta språk</string>
     <string name="reset_translated_languages_description">Detta kommer att återställa tidigare valda språk under \'Översätt aldrig från\', och alla språk kommer att översättas igen.</string>
-
+    <string name="reset_translated_languages_toast">Översatta språk har återställts.</string>
 </resources>
