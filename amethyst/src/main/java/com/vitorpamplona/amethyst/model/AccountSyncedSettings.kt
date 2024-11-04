@@ -143,6 +143,10 @@ class AccountLanguagePreferences(
         }
     }
 
+    fun resetDontTranslateFrom() {
+        dontTranslateFrom = emptySet()
+    }
+
     fun translateToContains(languageCode: Locale) = translateTo.contains(languageCode.language)
 
     fun updateTranslateTo(languageCode: Locale): Boolean {

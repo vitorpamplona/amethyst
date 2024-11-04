@@ -1068,6 +1068,11 @@ class Account(
         sendNewAppSpecificData()
     }
 
+    fun resetDontTranslateFrom() {
+        settings.resetDontTranslateFrom()
+        sendNewAppSpecificData()
+    }
+
     fun updateTranslateTo(languageCode: Locale) {
         if (settings.updateTranslateTo(languageCode)) {
             sendNewAppSpecificData()

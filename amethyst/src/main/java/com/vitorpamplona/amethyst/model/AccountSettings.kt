@@ -248,6 +248,11 @@ class AccountSettings(
         saveAccountSettings()
     }
 
+    fun resetDontTranslateFrom() {
+        syncedSettings.languages.resetDontTranslateFrom()
+        saveAccountSettings()
+    }
+
     fun translateToContains(languageCode: Locale) = syncedSettings.languages.translateTo.contains(languageCode.language)
 
     fun updateTranslateTo(languageCode: Locale): Boolean {

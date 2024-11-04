@@ -900,6 +900,12 @@ class AccountViewModel(
         account.markDonatedInThisVersion()
     }
 
+    fun resetDontTranslateFrom() {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.resetDontTranslateFrom()
+        }
+    }
+
     fun dontTranslateFrom() = account.settings.syncedSettings.languages.dontTranslateFrom
 
     fun translateTo() = account.settings.syncedSettings.languages.translateTo

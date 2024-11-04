@@ -32,6 +32,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,7 +44,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import com.vitorpamplona.amethyst.R
@@ -61,12 +62,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
-import com.vitorpamplona.amethyst.ui.screen.mockSharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
@@ -144,22 +143,16 @@ fun SettingsScreen(
         accountViewModel = accountViewModel,
     ) {
         Column(Modifier.padding(it)) {
-            SettingsScreen(sharedPreferencesViewModel)
+            SettingsScreen(sharedPreferencesViewModel, accountViewModel)
         }
     }
 }
 
-@Preview(device = "spec:width=2160px,height=2340px,dpi=440")
 @Composable
-fun SettingsScreenPreview() {
-    val sharedPreferencesViewModel = mockSharedPreferencesViewModel()
-    ThemeComparisonRow {
-        SettingsScreen(sharedPreferencesViewModel)
-    }
-}
-
-@Composable
-fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
+fun SettingsScreen(
+    sharedPreferencesViewModel: SharedPreferencesViewModel,
+    accountViewModel: AccountViewModel,
+) {
     val selectedItens =
         persistentListOf(
             TitleExplainer(stringRes(ConnectivityType.ALWAYS.resourceId)),
@@ -295,7 +288,20 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
         ) {
             sharedPreferencesViewModel.updateFeatureSetType(parseFeatureSetType(it))
         }
+        Spacer(modifier = HalfVertSpacer)
 
+        Button(
+            onClick = {
+                accountViewModel.resetDontTranslateFrom()
+            },
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        ) {
+            Text("Reset translations configuration", color = Color.White)
+        }
         Spacer(modifier = HalfVertSpacer)
 
         PushNotificationSettingsRow(sharedPreferencesViewModel)
