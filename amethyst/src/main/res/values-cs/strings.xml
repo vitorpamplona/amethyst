@@ -875,4 +875,8 @@
     <string name="torrent_no_apps">Pro otevření a stažení souboru nejsou nainstalovány žádné torrent aplikace.</string>
     <string name="select_list_to_filter">Vyberte seznam pro filtrování kanálu</string>
     <string name="temporary_account">Odhlásit se na zámek zařízení</string>
+
+    <string name="reset_translated_languages">Obnovit přeložené jazyky</string>
+    <string name="reset_translated_languages_description">Tím se obnoví dříve vybrané jazyky \'Nikdy nepřekládat z\' a všechny jazyky budou znovu přeloženy.</string>
+
 </resources>

@@ -875,4 +875,8 @@
     <string name="torrent_no_apps">Nenhum aplicativo torrent instalado para abrir e baixar o arquivo.</string>
     <string name="select_list_to_filter">Selecione uma lista para filtrar o feed</string>
     <string name="temporary_account">Terminar sessão no bloqueio do dispositivo</string>
+
+    <string name="reset_translated_languages">Redefinir idiomas traduzidos</string>
+    <string name="reset_translated_languages_description">Isso redefinirá os idiomas selecionados anteriormente em \'Nunca traduzir de\' e todos os idiomas serão traduzidos novamente.</string>
+
 </resources>
