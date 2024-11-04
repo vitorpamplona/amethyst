@@ -623,6 +623,9 @@
     <string name="ui_style">UI Mode</string>
     <string name="ui_style_description">Choose the post style</string>
 
+    <string name="reset_translated_languages">Reset translated languages</string>
+    <string name="reset_translated_languages_description">This will reset the previously selected \'Never translate from\' languages and all languages will be translated again.</string>
+
     <string name="load_image">Load Image</string>
 
     <string name="spamming_users">Spammers</string>

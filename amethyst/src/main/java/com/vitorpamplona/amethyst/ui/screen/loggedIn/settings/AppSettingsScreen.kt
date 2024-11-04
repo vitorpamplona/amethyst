@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.mockSharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
@@ -302,8 +303,7 @@ fun SettingsScreen(
         ) {
             sharedPreferencesViewModel.updateFeatureSetType(parseFeatureSetType(it))
         }
-        Spacer(modifier = HalfVertSpacer)
-
+        Spacer(modifier = DoubleVertSpacer)
         Button(
             onClick = {
                 accountViewModel.resetDontTranslateFrom()
@@ -314,8 +314,15 @@ fun SettingsScreen(
                 ),
             modifier = Modifier.align(Alignment.CenterHorizontally),
         ) {
-            Text("Reset translations configuration", color = Color.White)
+            Text(stringRes(R.string.reset_translated_languages), color = Color.White)
         }
+        Text(
+            text = stringRes(R.string.reset_translated_languages_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.Gray,
+            maxLines = 4,
+            overflow = TextOverflow.Ellipsis,
+        )
         Spacer(modifier = HalfVertSpacer)
 
         PushNotificationSettingsRow(sharedPreferencesViewModel)
