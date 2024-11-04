@@ -29,7 +29,6 @@ import android.widget.FrameLayout
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
@@ -67,7 +66,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
-import androidx.core.view.ViewCompat
 import coil3.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -104,8 +102,6 @@ fun ZoomableImageDialog(
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    val orientation = LocalConfiguration.current.orientation
-
     Dialog(
         onDismissRequest = onDismiss,
         properties =
@@ -115,7 +111,6 @@ fun ZoomableImageDialog(
             ),
     ) {
         val view = LocalView.current
-        val insets = ViewCompat.getRootWindowInsets(view)
 
         val orientation = LocalConfiguration.current.orientation
         println("This Log only exists to force orientation listener $orientation")
@@ -151,7 +146,7 @@ fun ZoomableImageDialog(
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class, ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalPermissionsApi::class)
 private fun DialogContent(
     allImages: ImmutableList<BaseMediaContent>,
     imageUrl: BaseMediaContent,
@@ -296,7 +291,7 @@ private fun saveMediaToGallery(
     localContext: Context,
     accountViewModel: AccountViewModel,
 ) {
-    val isImage = content is MediaUrlImage && content is MediaLocalImage
+    val isImage = content is MediaUrlImage || content is MediaLocalImage
 
     val success = if (isImage) R.string.image_saved_to_the_gallery else R.string.video_saved_to_the_gallery
     val failure = if (isImage) R.string.failed_to_save_the_image else R.string.failed_to_save_the_video
@@ -329,8 +324,8 @@ private fun saveMediaToGallery(
                 onSuccess = {
                     accountViewModel.toast(success, success)
                 },
-                onError = {
-                    accountViewModel.toast(failure, null, it)
+                onError = { innerIt ->
+                    accountViewModel.toast(failure, null, innerIt)
                 },
             )
         }
@@ -338,7 +333,6 @@ private fun saveMediaToGallery(
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 fun InlineCarrousel(
     allImages: ImmutableList<String>,
     imageUrl: String,
@@ -385,7 +379,7 @@ private fun RenderImageOrVideo(
     onToggleControllerVisibility: (() -> Unit)? = null,
     accountViewModel: AccountViewModel,
 ) {
-    val automaticallyStartPlayback = remember { mutableStateOf<Boolean>(true) }
+    val automaticallyStartPlayback = remember { mutableStateOf(true) }
     val contentScale =
         if (isFiniteHeight) {
             ContentScale.Fit
@@ -394,81 +388,41 @@ private fun RenderImageOrVideo(
         }
 
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-        if (content is MediaUrlImage) {
-            val mainModifier =
-                Modifier
-                    .fillMaxWidth()
-                    .zoomable(
-                        rememberZoomState(),
-                        onTap = {
-                            if (onToggleControllerVisibility != null) {
-                                onToggleControllerVisibility()
-                            }
-                        },
-                    )
+        when (content) {
+            is MediaUrlImage -> {
+                val mainModifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .zoomable(
+                            rememberZoomState(),
+                            onTap = {
+                                if (onToggleControllerVisibility != null) {
+                                    onToggleControllerVisibility()
+                                }
+                            },
+                        )
 
-            UrlImageView(
-                content = content,
-                contentScale = contentScale,
-                mainImageModifier = mainModifier,
-                loadedImageModifier = Modifier.fillMaxWidth(),
-                controllerVisible = controllerVisible,
-                accountViewModel = accountViewModel,
-                alwayShowImage = true,
-            )
-        } else if (content is MediaUrlVideo) {
-            val borderModifier =
-                if (roundedCorner) {
-                    MaterialTheme.colorScheme.imageModifier
-                } else {
-                    Modifier.fillMaxWidth()
-                }
+                UrlImageView(
+                    content = content,
+                    contentScale = contentScale,
+                    mainImageModifier = mainModifier,
+                    loadedImageModifier = Modifier.fillMaxWidth(),
+                    controllerVisible = controllerVisible,
+                    accountViewModel = accountViewModel,
+                    alwayShowImage = true,
+                )
+            }
 
-            VideoViewInner(
-                videoUri = content.url,
-                mimeType = content.mimeType,
-                title = content.description,
-                artworkUri = content.artworkUri,
-                authorName = content.authorName,
-                borderModifier = borderModifier,
-                isFiniteHeight = isFiniteHeight,
-                automaticallyStartPlayback = automaticallyStartPlayback,
-                onControllerVisibilityChanged = onControllerVisibilityChanged,
-                accountViewModel = accountViewModel,
-            )
-        } else if (content is MediaLocalImage) {
-            val mainModifier =
-                Modifier
-                    .fillMaxWidth()
-                    .zoomable(
-                        rememberZoomState(),
-                        onTap = {
-                            if (onToggleControllerVisibility != null) {
-                                onToggleControllerVisibility()
-                            }
-                        },
-                    )
+            is MediaUrlVideo -> {
+                val borderModifier =
+                    if (roundedCorner) {
+                        MaterialTheme.colorScheme.imageModifier
+                    } else {
+                        Modifier.fillMaxWidth()
+                    }
 
-            LocalImageView(
-                content = content,
-                contentScale = contentScale,
-                mainImageModifier = mainModifier,
-                loadedImageModifier = Modifier.fillMaxWidth(),
-                controllerVisible = controllerVisible,
-                accountViewModel = accountViewModel,
-                alwayShowImage = true,
-            )
-        } else if (content is MediaLocalVideo) {
-            val borderModifier =
-                if (roundedCorner) {
-                    MaterialTheme.colorScheme.imageModifier
-                } else {
-                    Modifier.fillMaxWidth()
-                }
-
-            content.localFile?.let {
                 VideoViewInner(
-                    videoUri = it.toUri().toString(),
+                    videoUri = content.url,
                     mimeType = content.mimeType,
                     title = content.description,
                     artworkUri = content.artworkUri,
@@ -479,6 +433,54 @@ private fun RenderImageOrVideo(
                     onControllerVisibilityChanged = onControllerVisibilityChanged,
                     accountViewModel = accountViewModel,
                 )
+            }
+
+            is MediaLocalImage -> {
+                val mainModifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .zoomable(
+                            rememberZoomState(),
+                            onTap = {
+                                if (onToggleControllerVisibility != null) {
+                                    onToggleControllerVisibility()
+                                }
+                            },
+                        )
+
+                LocalImageView(
+                    content = content,
+                    contentScale = contentScale,
+                    mainImageModifier = mainModifier,
+                    loadedImageModifier = Modifier.fillMaxWidth(),
+                    controllerVisible = controllerVisible,
+                    accountViewModel = accountViewModel,
+                    alwayShowImage = true,
+                )
+            }
+
+            is MediaLocalVideo -> {
+                val borderModifier =
+                    if (roundedCorner) {
+                        MaterialTheme.colorScheme.imageModifier
+                    } else {
+                        Modifier.fillMaxWidth()
+                    }
+
+                content.localFile?.let {
+                    VideoViewInner(
+                        videoUri = it.toUri().toString(),
+                        mimeType = content.mimeType,
+                        title = content.description,
+                        artworkUri = content.artworkUri,
+                        authorName = content.authorName,
+                        borderModifier = borderModifier,
+                        isFiniteHeight = isFiniteHeight,
+                        automaticallyStartPlayback = automaticallyStartPlayback,
+                        onControllerVisibilityChanged = onControllerVisibilityChanged,
+                        accountViewModel = accountViewModel,
+                    )
+                }
             }
         }
     }
