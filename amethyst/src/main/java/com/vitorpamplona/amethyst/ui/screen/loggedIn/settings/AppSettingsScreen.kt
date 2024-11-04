@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
@@ -168,14 +169,14 @@ fun SettingsScreen(
     sharedPreferencesViewModel: SharedPreferencesViewModel,
     accountViewModel: AccountViewModel,
 ) {
-    val selectedItens =
+    val selectedItems =
         persistentListOf(
             TitleExplainer(stringRes(ConnectivityType.ALWAYS.resourceId)),
             TitleExplainer(stringRes(ConnectivityType.WIFI_ONLY.resourceId)),
             TitleExplainer(stringRes(ConnectivityType.NEVER.resourceId)),
         )
 
-    val themeItens =
+    val themeItems =
         persistentListOf(
             TitleExplainer(stringRes(ThemeType.SYSTEM.resourceId)),
             TitleExplainer(stringRes(ThemeType.LIGHT.resourceId)),
@@ -234,7 +235,7 @@ fun SettingsScreen(
         SettingsRow(
             R.string.theme,
             R.string.theme_description,
-            themeItens,
+            themeItems,
             themeIndex,
         ) {
             sharedPreferencesViewModel.updateTheme(parseThemeType(it))
@@ -245,7 +246,7 @@ fun SettingsScreen(
         SettingsRow(
             R.string.automatically_load_images_gifs,
             R.string.automatically_load_images_gifs_description,
-            selectedItens,
+            selectedItems,
             showImagesIndex,
         ) {
             sharedPreferencesViewModel.updateAutomaticallyShowImages(parseConnectivityType(it))
@@ -256,7 +257,7 @@ fun SettingsScreen(
         SettingsRow(
             R.string.automatically_play_videos,
             R.string.automatically_play_videos_description,
-            selectedItens,
+            selectedItems,
             videoIndex,
         ) {
             sharedPreferencesViewModel.updateAutomaticallyStartPlayback(parseConnectivityType(it))
@@ -267,7 +268,7 @@ fun SettingsScreen(
         SettingsRow(
             R.string.automatically_show_url_preview,
             R.string.automatically_show_url_preview_description,
-            selectedItens,
+            selectedItems,
             linkIndex,
         ) {
             sharedPreferencesViewModel.updateAutomaticallyShowUrlPreview(parseConnectivityType(it))
@@ -276,7 +277,7 @@ fun SettingsScreen(
         SettingsRow(
             R.string.automatically_show_profile_picture,
             R.string.automatically_show_profile_picture_description,
-            selectedItens,
+            selectedItems,
             profilePictureIndex,
         ) {
             sharedPreferencesViewModel.updateAutomaticallyShowProfilePicture(parseConnectivityType(it))
@@ -303,26 +304,12 @@ fun SettingsScreen(
         ) {
             sharedPreferencesViewModel.updateFeatureSetType(parseFeatureSetType(it))
         }
-        Spacer(modifier = DoubleVertSpacer)
-        Button(
-            onClick = {
-                accountViewModel.resetDontTranslateFrom()
-            },
-            colors =
-                ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                ),
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-        ) {
-            Text(stringRes(R.string.reset_translated_languages), color = Color.White)
+
+        if (BuildConfig.FLAVOR == "play") {
+            Spacer(modifier = DoubleVertSpacer)
+            ResetTranslatedLanguagesButton(accountViewModel)
         }
-        Text(
-            text = stringRes(R.string.reset_translated_languages_description),
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray,
-            maxLines = 4,
-            overflow = TextOverflow.Ellipsis,
-        )
+
         Spacer(modifier = HalfVertSpacer)
 
         PushNotificationSettingsRow(sharedPreferencesViewModel)
@@ -333,15 +320,15 @@ fun SettingsScreen(
 fun SettingsRow(
     name: Int,
     description: Int,
-    selectedItens: ImmutableList<TitleExplainer>,
+    selectedItems: ImmutableList<TitleExplainer>,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
 ) {
     SettingsRow(name, description) {
         TextSpinner(
             label = "",
-            placeholder = selectedItens[selectedIndex].title,
-            options = selectedItens,
+            placeholder = selectedItems[selectedIndex].title,
+            options = selectedItems,
             onSelect = onSelect,
             modifier = Modifier.windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
         )
@@ -384,4 +371,26 @@ fun SettingsRow(
             content()
         }
     }
+}
+
+@Composable
+fun ResetTranslatedLanguagesButton(accountViewModel: AccountViewModel) {
+    Button(
+        onClick = {
+            accountViewModel.resetDontTranslateFrom()
+        },
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+            ),
+    ) {
+        Text(stringRes(R.string.reset_translated_languages), color = Color.White)
+    }
+    Text(
+        text = stringRes(R.string.reset_translated_languages_description),
+        style = MaterialTheme.typography.bodySmall,
+        color = Color.Gray,
+        maxLines = 4,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
