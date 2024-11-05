@@ -24,6 +24,8 @@ import android.content.Intent
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.scrollBy
@@ -51,10 +53,13 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Link
@@ -72,6 +77,7 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -99,6 +105,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -465,8 +472,13 @@ private fun RenderSurface(
                                                     Offset.Zero
                                                 } else {
                                                     // move to the max
-                                                    val newY = (borderLimit - scrollState.value).toFloat()
-                                                    coroutineScope.launch { scrollState.scrollBy(newY) }
+                                                    val newY =
+                                                        (borderLimit - scrollState.value).toFloat()
+                                                    coroutineScope.launch {
+                                                        scrollState.scrollBy(
+                                                            newY,
+                                                        )
+                                                    }
                                                     Offset(0f, -newY)
                                                 }
                                             }
@@ -898,6 +910,8 @@ private fun ProfileActions(
             DisplayFollowUnfollowButton(baseUser, accountViewModel)
         }
     }
+
+//    FollowSetsActionMenu()
 }
 
 @Composable
@@ -973,6 +987,74 @@ fun WatchIsHiddenUser(
             }.observeAsState(accountViewModel.account.isHidden(baseUser))
 
     content(isHidden)
+}
+
+@Composable
+fun FollowSetsActionMenu(modifier: Modifier = Modifier) {
+    val isMenuOpen = remember { mutableStateOf(false) }
+
+    Box {
+        Icon(
+            imageVector = if (isMenuOpen.value) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+            contentDescription = "",
+            modifier =
+                Modifier
+                    .background(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
+                    ).fillMaxHeight()
+                    .border(
+                        width = Dp.Hairline,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape =
+                            ButtonBorder
+                                .copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
+                    ).clickable(role = Role.DropdownList) {
+                        isMenuOpen.value = !isMenuOpen.value
+                    },
+        )
+
+        DropdownMenu(
+            expanded = isMenuOpen.value,
+            onDismissRequest = {
+                isMenuOpen.value = !isMenuOpen.value
+            },
+        ) {
+            DropDownMenuHeader(headerText = "Add to lists")
+            DropdownMenuItem(
+                text = {
+                    Text(text = "List 1")
+                },
+                onClick = {
+                },
+            )
+
+            DropdownMenuItem(
+                text = {
+                    Text(text = "List 2")
+                },
+                onClick = {
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun DropDownMenuHeader(
+    modifier: Modifier = Modifier,
+    headerText: String,
+) {
+    Column {
+        DropdownMenuItem(
+            text = {
+                Text(text = headerText, fontWeight = FontWeight.SemiBold)
+            },
+            onClick = {},
+            enabled = false,
+        )
+        HorizontalDivider()
+    }
 }
 
 fun getIdentityClaimIcon(identity: IdentityClaim): Int =
@@ -1937,7 +2019,7 @@ fun UnfollowButton(onClick: () -> Unit) {
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = onClick,
-        shape = ButtonBorder,
+        shape = ButtonBorder.copy(topEnd = CornerSize(0f), bottomEnd = CornerSize(0f)),
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -1946,6 +2028,8 @@ fun UnfollowButton(onClick: () -> Unit) {
     ) {
         Text(text = stringRes(R.string.unfollow), color = Color.White)
     }
+    VerticalDivider()
+    FollowSetsActionMenu()
 }
 
 @Composable
@@ -1956,7 +2040,7 @@ fun FollowButton(
     Button(
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
-        shape = ButtonBorder,
+        shape = ButtonBorder.copy(topEnd = CornerSize(0f), bottomEnd = CornerSize(0f)),
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -1965,6 +2049,8 @@ fun FollowButton(
     ) {
         Text(text = stringRes(text), color = Color.White, textAlign = TextAlign.Center)
     }
+    VerticalDivider()
+    FollowSetsActionMenu()
 }
 
 @Composable
