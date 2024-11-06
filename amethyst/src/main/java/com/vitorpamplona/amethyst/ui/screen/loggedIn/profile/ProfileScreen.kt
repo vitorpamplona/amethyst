@@ -77,7 +77,6 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -94,6 +93,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -174,6 +174,7 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.HalfCircleButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size100dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
@@ -911,7 +912,7 @@ private fun ProfileActions(
         }
     }
 
-//    FollowSetsActionMenu()
+    FollowSetsActionMenu()
 }
 
 @Composable
@@ -937,7 +938,9 @@ private fun DisplayFollowUnfollowButton(
             .observeAsState(initial = baseUser.isFollowing(accountViewModel.account.userProfile()))
 
     if (isLoggedInFollowingUser) {
-        UnfollowButton {
+        UnfollowButton(
+            shape = HalfCircleButtonBorder,
+        ) {
             if (!accountViewModel.isWriteable()) {
                 accountViewModel.toast(
                     R.string.read_only_user,
@@ -949,7 +952,10 @@ private fun DisplayFollowUnfollowButton(
         }
     } else {
         if (isUserFollowingLoggedIn) {
-            FollowButton(R.string.follow_back) {
+            FollowButton(
+                text = R.string.follow_back,
+                shape = HalfCircleButtonBorder,
+            ) {
                 if (!accountViewModel.isWriteable()) {
                     accountViewModel.toast(
                         R.string.read_only_user,
@@ -960,7 +966,10 @@ private fun DisplayFollowUnfollowButton(
                 }
             }
         } else {
-            FollowButton(R.string.follow) {
+            FollowButton(
+                text = R.string.follow,
+                shape = HalfCircleButtonBorder,
+            ) {
                 if (!accountViewModel.isWriteable()) {
                     accountViewModel.toast(
                         R.string.read_only_user,
@@ -972,6 +981,7 @@ private fun DisplayFollowUnfollowButton(
             }
         }
     }
+//    FollowSetsActionMenu()
 }
 
 @Composable
@@ -994,16 +1004,31 @@ fun FollowSetsActionMenu(modifier: Modifier = Modifier) {
     val isMenuOpen = remember { mutableStateOf(false) }
 
     Box {
+//        TextButton(
+//            onClick = {
+//                isMenuOpen.value = !isMenuOpen.value
+//            },
+//            shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
+//            colors =
+//                ButtonDefaults
+//                    .buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+//            contentPadding = ZeroPadding,
+//        ) {
+//            Icon(
+//                imageVector = if (isMenuOpen.value) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+//                contentDescription = "",
+//            )
+//        }
         Icon(
             imageVector = if (isMenuOpen.value) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
             contentDescription = "",
             modifier =
                 Modifier
+                    .fillMaxHeight()
                     .background(
                         color = MaterialTheme.colorScheme.primary,
-                        shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
-                    ).fillMaxHeight()
-                    .border(
+                        shape = HalfCircleButtonBorder,
+                    ).border(
                         width = Dp.Hairline,
                         color = MaterialTheme.colorScheme.primary,
                         shape =
@@ -2015,11 +2040,14 @@ private fun InnerEditButton(onClick: () -> Unit) {
 }
 
 @Composable
-fun UnfollowButton(onClick: () -> Unit) {
+fun UnfollowButton(
+    shape: Shape = ButtonBorder,
+    onClick: () -> Unit,
+) {
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = onClick,
-        shape = ButtonBorder.copy(topEnd = CornerSize(0f), bottomEnd = CornerSize(0f)),
+        shape = shape,
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -2028,19 +2056,18 @@ fun UnfollowButton(onClick: () -> Unit) {
     ) {
         Text(text = stringRes(R.string.unfollow), color = Color.White)
     }
-    VerticalDivider()
-    FollowSetsActionMenu()
 }
 
 @Composable
 fun FollowButton(
     text: Int = R.string.follow,
+    shape: Shape = ButtonBorder,
     onClick: () -> Unit,
 ) {
     Button(
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
-        shape = ButtonBorder.copy(topEnd = CornerSize(0f), bottomEnd = CornerSize(0f)),
+        shape = shape,
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -2049,8 +2076,6 @@ fun FollowButton(
     ) {
         Text(text = stringRes(text), color = Color.White, textAlign = TextAlign.Center)
     }
-    VerticalDivider()
-    FollowSetsActionMenu()
 }
 
 @Composable
