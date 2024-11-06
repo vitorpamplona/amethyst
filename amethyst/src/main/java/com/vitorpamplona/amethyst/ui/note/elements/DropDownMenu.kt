@@ -169,6 +169,16 @@ fun NoteDropDownMenu(
                 },
             )
             HorizontalDivider(thickness = DividerThickness)
+        } else {
+            DropdownMenuItem(
+                text = { Text(stringRes(R.string.unfollow)) },
+                onClick = {
+                    val author = note.author ?: return@DropdownMenuItem
+                    accountViewModel.unfollow(author)
+                    onDismiss()
+                },
+            )
+            HorizontalDivider(thickness = DividerThickness)
         }
         DropdownMenuItem(
             text = { Text(stringRes(R.string.copy_text)) },
