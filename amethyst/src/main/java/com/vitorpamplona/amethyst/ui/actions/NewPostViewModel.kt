@@ -222,7 +222,10 @@ open class NewPostViewModel : ViewModel() {
                 if (replyNote.event !is CommunityDefinitionEvent) {
                     replyNote.author?.let { replyUser ->
                         val currentMentions =
-                            (replyNote.event as? TextNoteEvent)?.mentions()?.map { LocalCache.getOrCreateUser(it) }
+                            (replyNote.event as? TextNoteEvent)
+                                ?.mentions()
+                                ?.filter { it.isNotEmpty() }
+                                ?.map { LocalCache.getOrCreateUser(it) }
                                 ?: emptyList()
 
                         if (currentMentions.contains(replyUser)) {
