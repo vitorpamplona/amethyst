@@ -62,7 +62,7 @@ val SmallishBorder = RoundedCornerShape(9.dp)
 val QuoteBorder = RoundedCornerShape(15.dp)
 
 val ButtonBorder = RoundedCornerShape(20.dp)
-val HalfCircleButtonBorder = ButtonBorder.copy(topEnd = CornerSize(0f), bottomEnd = CornerSize(0f))
+val LeftHalfCircleButtonBorder = ButtonBorder.copy(topEnd = CornerSize(0f), bottomEnd = CornerSize(0f))
 val EditFieldBorder = RoundedCornerShape(25.dp)
 
 val ChatBubbleShapeMe = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)

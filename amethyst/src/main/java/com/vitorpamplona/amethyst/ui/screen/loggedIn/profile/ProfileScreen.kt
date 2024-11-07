@@ -174,7 +174,7 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.HalfCircleButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.LeftHalfCircleButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size100dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
@@ -939,7 +939,7 @@ private fun DisplayFollowUnfollowButton(
 
     if (isLoggedInFollowingUser) {
         UnfollowButton(
-            shape = HalfCircleButtonBorder,
+            shape = LeftHalfCircleButtonBorder,
         ) {
             if (!accountViewModel.isWriteable()) {
                 accountViewModel.toast(
@@ -954,7 +954,7 @@ private fun DisplayFollowUnfollowButton(
         if (isUserFollowingLoggedIn) {
             FollowButton(
                 text = R.string.follow_back,
-                shape = HalfCircleButtonBorder,
+                shape = LeftHalfCircleButtonBorder,
             ) {
                 if (!accountViewModel.isWriteable()) {
                     accountViewModel.toast(
@@ -968,7 +968,7 @@ private fun DisplayFollowUnfollowButton(
         } else {
             FollowButton(
                 text = R.string.follow,
-                shape = HalfCircleButtonBorder,
+                shape = LeftHalfCircleButtonBorder,
             ) {
                 if (!accountViewModel.isWriteable()) {
                     accountViewModel.toast(
@@ -1027,7 +1027,7 @@ fun FollowSetsActionMenu(modifier: Modifier = Modifier) {
                     .fillMaxHeight()
                     .background(
                         color = MaterialTheme.colorScheme.primary,
-                        shape = HalfCircleButtonBorder,
+                        shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
                     ).border(
                         width = Dp.Hairline,
                         color = MaterialTheme.colorScheme.primary,
