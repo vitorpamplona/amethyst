@@ -55,6 +55,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -77,6 +78,7 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -105,15 +107,16 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.PopupProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -181,6 +184,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.userProfileBorderModifier
@@ -910,9 +914,8 @@ private fun ProfileActions(
         } else {
             DisplayFollowUnfollowButton(baseUser, accountViewModel)
         }
+        FollowSetsActionMenu(baseUser.pubkeyHex)
     }
-
-    FollowSetsActionMenu()
 }
 
 @Composable
@@ -1000,66 +1003,85 @@ fun WatchIsHiddenUser(
 }
 
 @Composable
-fun FollowSetsActionMenu(modifier: Modifier = Modifier) {
-    val isMenuOpen = remember { mutableStateOf(false) }
+fun FollowSetsActionMenu(
+    userHex: String,
+    modifier: Modifier = Modifier,
+) {
+    var isMenuOpen by remember { mutableStateOf(false) }
 
     Box {
-//        TextButton(
-//            onClick = {
-//                isMenuOpen.value = !isMenuOpen.value
-//            },
-//            shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
-//            colors =
-//                ButtonDefaults
-//                    .buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-//            contentPadding = ZeroPadding,
-//        ) {
-//            Icon(
-//                imageVector = if (isMenuOpen.value) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-//                contentDescription = "",
-//            )
-//        }
-        Icon(
-            imageVector = if (isMenuOpen.value) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-            contentDescription = "",
-            modifier =
-                Modifier
-                    .fillMaxHeight()
-                    .background(
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
-                    ).border(
-                        width = Dp.Hairline,
-                        color = MaterialTheme.colorScheme.primary,
-                        shape =
-                            ButtonBorder
-                                .copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
-                    ).clickable(role = Role.DropdownList) {
-                        isMenuOpen.value = !isMenuOpen.value
-                    },
-        )
+        TextButton(
+            onClick = {
+                isMenuOpen = !isMenuOpen
+            },
+            shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
+            colors =
+                ButtonDefaults
+                    .buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            contentPadding = ZeroPadding,
+        ) {
+            Icon(
+                imageVector = if (isMenuOpen) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                contentDescription = "",
+            )
+        }
+
+//        Icon(
+//            imageVector = if (isMenuOpen.value) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+//            contentDescription = "",
+//            modifier =
+//                Modifier
+//                    .fillMaxHeight()
+//                    .background(
+//                        color = MaterialTheme.colorScheme.primary,
+//                        shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
+//                    ).border(
+//                        width = Dp.Hairline,
+//                        color = MaterialTheme.colorScheme.primary,
+//                        shape =
+//                            ButtonBorder
+//                                .copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
+//                    ).clickable(role = Role.DropdownList) {
+//                        isMenuOpen.value = !isMenuOpen.value
+//                    },
+//        )
 
         DropdownMenu(
-            expanded = isMenuOpen.value,
+            expanded = isMenuOpen,
             onDismissRequest = {
-                isMenuOpen.value = !isMenuOpen.value
+                isMenuOpen = !isMenuOpen
             },
+            modifier = Modifier.fillMaxWidth(),
+            properties = PopupProperties(usePlatformDefaultWidth = true),
         ) {
             DropDownMenuHeader(headerText = "Add to lists")
             DropdownMenuItem(
                 text = {
-                    Text(text = "List 1")
+                    FollowSetItem(
+                        modifier = Modifier.fillMaxWidth(),
+                        listHeader = "LOLZ List",
+                        listIsPublic = true,
+                        isUserInList = false,
+                    ) {
+                    }
                 },
-                onClick = {
-                },
+                onClick = {},
+                modifier = Modifier.fillMaxWidth(),
             )
+            Spacer(StdVertSpacer)
 
             DropdownMenuItem(
                 text = {
-                    Text(text = "List 2")
+                    FollowSetItem(
+                        modifier = Modifier.fillMaxWidth(),
+                        listHeader = "Private List",
+                        listIsPublic = false,
+                        isUserInList = true,
+                    ) {
+                    }
                 },
-                onClick = {
-                },
+                onClick = {},
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
@@ -1079,6 +1101,69 @@ private fun DropDownMenuHeader(
             enabled = false,
         )
         HorizontalDivider()
+    }
+}
+
+@Composable
+fun FollowSetItem(
+    modifier: Modifier = Modifier,
+    listHeader: String,
+    listIsPublic: Boolean,
+    isUserInList: Boolean,
+    onAddUser: () -> Unit,
+) {
+    Row(
+        modifier =
+            modifier
+                .border(
+                    width = Dp.Hairline,
+                    color = Color.Gray,
+                    shape = RoundedCornerShape(percent = 20),
+                ).padding(all = 10.dp)
+                .clickable(onClick = onAddUser),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = modifier.weight(1f),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(listHeader, fontWeight = FontWeight.Bold)
+            Spacer(modifier = StdVertSpacer)
+            Text(
+                if (isUserInList) "Present in List" else "Not present",
+                overflow = TextOverflow.Ellipsis,
+                fontWeight = if (isUserInList) FontWeight.Bold else FontWeight.Normal,
+                maxLines = 3,
+                modifier =
+                    Modifier
+                        .background(
+                            color =
+                                if (isUserInList) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.background
+                                },
+                            shape = ButtonBorder,
+                        ),
+            )
+        }
+
+        listIsPublic.let {
+            val text by derivedStateOf { if (!it) "Private" else "Public" }
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    painter =
+                        painterResource(
+                            if (!it) R.drawable.incognito else R.drawable.ic_public,
+                        ),
+                    contentDescription = "Icon for $text List",
+                )
+                Text(text, color = Color.Gray)
+            }
+        }
     }
 }
 
