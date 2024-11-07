@@ -200,7 +200,7 @@ fun CustomListItem(
                 Icon(
                     painter =
                         painterResource(
-                            if (followSet.isPrivate) R.drawable.incognito else R.drawable.ic_globe,
+                            if (followSet.isPrivate) R.drawable.incognito else R.drawable.ic_public,
                         ),
                     contentDescription = "Icon for $text List",
                 )
