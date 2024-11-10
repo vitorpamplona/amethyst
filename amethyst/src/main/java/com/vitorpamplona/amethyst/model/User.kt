@@ -399,6 +399,10 @@ class User(
             return true
         }
 
+        if (info?.nip05?.containsAny(hiddenWordsCase) == true) {
+            return true
+        }
+
         return false
     }
 
