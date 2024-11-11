@@ -467,7 +467,7 @@ fun PasswordField(
         onValueChange = onValueChange,
         keyboardOptions =
             KeyboardOptions(
-                autoCorrect = false,
+                autoCorrectEnabled = false,
                 keyboardType = KeyboardType.Password,
                 imeAction = ImeAction.Go,
             ),
