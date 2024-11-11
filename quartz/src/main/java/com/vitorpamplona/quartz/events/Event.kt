@@ -280,7 +280,13 @@ open class Event(
         return PoWRank.getCommited(id, commitedPoW)
     }
 
-    override fun getGeoHash(): String? = tags.firstOrNull { it.size > 1 && it[0] == "g" }?.get(1)?.ifBlank { null }
+    override fun getGeoHash(): String? =
+        tags
+            .filter { it.size > 1 && it[0] == "g" }
+            .maxByOrNull {
+                it[1].length
+            }?.get(1)
+            ?.ifBlank { null }
 
     override fun getReward(): BigDecimal? =
         try {

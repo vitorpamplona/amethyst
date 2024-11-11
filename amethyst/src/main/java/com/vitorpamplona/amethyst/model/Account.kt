@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.location.Location
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
@@ -29,10 +28,10 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.switchMap
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.FileHeader
+import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.tryAndWait
@@ -170,7 +169,7 @@ class Account(
         val listName: String,
         val peopleList: StateFlow<NoteState> = MutableStateFlow(NoteState(Note(" "))),
         val kind3: StateFlow<Account.LiveFollowList?> = MutableStateFlow(null),
-        val location: StateFlow<Location?> = MutableStateFlow(null),
+        val location: StateFlow<LocationState.LocationResult?> = MutableStateFlow(null),
     )
 
     val connectToRelaysFlow =
@@ -541,7 +540,7 @@ class Account(
             AROUND_ME ->
                 FeedsBaseFlows(
                     listName,
-                    location = Amethyst.instance.locationManager.locationStateFlow,
+                    location = Amethyst.instance.locationManager.geohashStateFlow,
                 )
             else -> {
                 val note = LocalCache.checkGetOrCreateAddressableNote(listName)
@@ -563,19 +562,19 @@ class Account(
         listName: String,
         kind3: LiveFollowList?,
         noteState: NoteState,
-        location: Location?,
+        location: LocationState.LocationResult?,
     ): LiveFollowList? =
         if (listName == GLOBAL_FOLLOWS) {
             null
         } else if (listName == KIND3_FOLLOWS) {
             kind3
         } else if (listName == AROUND_ME) {
-            val hash = location?.toGeoHash(com.vitorpamplona.amethyst.ui.actions.GeohashPrecision.KM_5_X_5.digits)
-            if (hash != null) {
+            val geohashResult = location ?: Amethyst.instance.locationManager.geohashStateFlow.value
+            if (geohashResult is LocationState.LocationResult.Success) {
                 // 2 neighbors deep = 25x25km
                 val hashes =
-                    listOf(hash.toString()) +
-                        hash.adjacent
+                    listOf(geohashResult.geoHash.toString()) +
+                        geohashResult.geoHash.adjacent
                             .map { listOf(it.toString()) + it.adjacent.map { it.toString() } }
                             .flatten()
                             .distinct()

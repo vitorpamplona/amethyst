@@ -105,7 +105,7 @@ class FollowListState(
             unpackList = listOf(MuteListEvent.blockListFor(account.userProfile().pubkeyHex)),
         )
 
-    val defaultLists = persistentListOf(kind3Follow, globalFollow, aroundMe, muteListFollow)
+    val defaultLists = persistentListOf(kind3Follow, aroundMe, globalFollow, muteListFollow)
 
     fun getPeopleLists(): List<FeedDefinition> =
         account

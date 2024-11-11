@@ -34,7 +34,6 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
@@ -44,6 +43,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.FileHeader
+import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
@@ -75,13 +75,8 @@ import com.vitorpamplona.quartz.events.ZapSplitSetup
 import com.vitorpamplona.quartz.events.findURLs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.mapLatest
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -166,7 +161,7 @@ open class NewPostViewModel : ViewModel() {
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
-    var location: StateFlow<String?>? = null
+    var location: StateFlow<LocationState.LocationResult>? = null
 
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
@@ -535,7 +530,7 @@ open class NewPostViewModel : ViewModel() {
                 null
             }
 
-        val geoHash = location?.value
+        val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount else null
 
         nip95attachments.forEach {
@@ -1259,13 +1254,9 @@ open class NewPostViewModel : ViewModel() {
         contentToAddUrl = uri
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    fun locationFlow(): Flow<String?> {
+    fun locationFlow(): StateFlow<LocationState.LocationResult> {
         if (location == null) {
-            location =
-                Amethyst.instance.locationManager.locationStateFlow
-                    .mapLatest { it.toGeoHash(GeohashPrecision.KM_5_X_5.digits).toString() }
-                    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+            location = Amethyst.instance.locationManager.geohashStateFlow
         }
 
         return location!!

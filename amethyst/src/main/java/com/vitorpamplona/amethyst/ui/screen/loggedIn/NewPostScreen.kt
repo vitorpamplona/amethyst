@@ -128,10 +128,12 @@ import coil3.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
@@ -1285,6 +1287,10 @@ fun LocationAsHash(postViewModel: NewPostViewModel) {
             Manifest.permission.ACCESS_COARSE_LOCATION,
         )
 
+    LaunchedEffect(locationPermissionState.status.isGranted) {
+        Amethyst.instance.locationManager.setLocationPermission(locationPermissionState.status.isGranted)
+    }
+
     if (locationPermissionState.status.isGranted) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -1334,9 +1340,28 @@ fun LocationAsHash(postViewModel: NewPostViewModel) {
 
 @Composable
 fun DisplayLocationObserver(postViewModel: NewPostViewModel) {
-    val location by postViewModel.locationFlow().collectAsStateWithLifecycle(null)
+    val location by postViewModel.locationFlow().collectAsStateWithLifecycle()
 
-    location?.let { DisplayLocationInTitle(geohash = it) }
+    when (val myLocation = location) {
+        is LocationState.LocationResult.Success -> {
+            DisplayLocationInTitle(geohash = myLocation.geoHash.toString())
+        }
+
+        LocationState.LocationResult.LackPermission -> {
+            Text(
+                text = stringRes(R.string.lack_location_permissions),
+                fontSize = 12.sp,
+                lineHeight = 12.sp,
+            )
+        }
+        LocationState.LocationResult.Loading -> {
+            Text(
+                text = stringRes(R.string.loading_location),
+                fontSize = 12.sp,
+                lineHeight = 12.sp,
+            )
+        }
+    }
 }
 
 @Composable
