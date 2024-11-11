@@ -371,6 +371,7 @@
     <string name="no">नहीं</string>
     <string name="follow_list_selection">अनुचरण सूची</string>
     <string name="follow_list_kind3follows">सभी अनुचरित</string>
+    <string name="follow_list_aroundme">मेरे आसपास</string>
     <string name="follow_list_global">वैश्विक</string>
     <string name="follow_list_mute_list">मौन सूची</string>
     <string name="connect_through_your_orbot_setup_short">मूलविकल्प द्वार ९०५० है</string>
@@ -540,6 +541,7 @@
     <string name="nip05_checking">नोस्ट्र पता का जाँच चल रहा है</string>
     <string name="select_deselect_all">सब का चयन / अचयन करें</string>
     <string name="default_relays">मूलविकल्प</string>
+    <string name="default_relays_longer">मूलविकल्प पुनःस्थापित करें</string>
     <string name="select_a_relay_to_continue">पुनःप्रसारक चुनें आगे बढने के लिए</string>
     <string name="zap_forward_title">ज्साप आगे भेजें इनको :</string>
     <string name="zap_forward_explainer">अवलम्बन करनेवाले ग्राहक ज्सापों को आगे भेजेंगे लै॰जाल पता को अथवा नीचे के उपयोगकर्ता परिचय को तथा आपके तक नहीं</string>
@@ -769,6 +771,7 @@
     <string name="dm_relays_not_found">आपके निजी आगतपेटिका पुनःप्रसारकों की स्थापना करें</string>
     <string name="dm_relays_not_found_description">यह स्थापना विकल्प सब को सूचित करता है आपको सन्देश भेजने के लिए कौनसे पुनःप्रसारकों का प्रयोग करना चाहिए। इनके बिना आप कुछ सन्देश प्राप्त नहीं कर पाएँगे।</string>
     <string name="dm_relays_not_found_examples">ये अच्छे विकल्प हैं :\n - inbox.nostr.wine (सशुल्क)\n - auth.nostr1.com (शुल्करहित)\n - you.nostr1.com (निजी पुनःप्रसारक - सशुल्क)</string>
+    <string name="dm_relays_not_found_examples2">ये अच्छे विकल्प हैं :\n - auth.nostr1.com (शुल्करहित)\n - inbox.nostr.wine (सशुल्क)\n - relay.0xchat.com (शुल्करहित)</string>
     <string name="dm_relays_not_found_editing">निजी आगतपेटिका के रूप में १ - ३ पुनःप्रसारकों को जोडें। सी॰सं॰ आगतपेटिका पुनःप्रसारकों को सब से सन्देश स्वीकारना चाहिए पर उनका अवरोहण करने की अनुमति केवल आपको देना चाहिए।</string>
     <string name="dm_relays_not_found_create_now">अभी स्थापना करें</string>
     <string name="search_relays_title">खोज पुनःप्रसारक</string>

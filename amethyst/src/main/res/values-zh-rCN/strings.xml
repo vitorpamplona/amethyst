@@ -371,6 +371,7 @@
     <string name="no">否</string>
     <string name="follow_list_selection">关注列表</string>
     <string name="follow_list_kind3follows">所有关注</string>
+    <string name="follow_list_aroundme">周围的人</string>
     <string name="follow_list_global">全球</string>
     <string name="follow_list_mute_list">静音列表</string>
     <string name="connect_through_your_orbot_setup_short">默认端口为 9050</string>
@@ -540,6 +541,7 @@
     <string name="nip05_checking">正在检查 Nostr 地址</string>
     <string name="select_deselect_all">全部选择/取消选择</string>
     <string name="default_relays">默认</string>
+    <string name="default_relays_longer">重设为默认值</string>
     <string name="select_a_relay_to_continue">选择中继器以继续</string>
     <string name="zap_forward_title">将打闪转发到：</string>
     <string name="zap_forward_explainer">支持的客户端会将打闪转发到以下的闪电地址或用户个人档案，而不是你的</string>
@@ -769,6 +771,7 @@
     <string name="dm_relays_not_found">设置你的私人收件箱中继</string>
     <string name="dm_relays_not_found_description">该设置可以让所有人知道向您发送消息时应该使用的中继。如果没有的话，您可能会错过一些消息。</string>
     <string name="dm_relays_not_found_examples">示例：\n - inbox.nostr.wine （付费）\n - you.nostr1.com （个人专用中继 - 付费）</string>
+    <string name="dm_relays_not_found_examples2">示例：\n - auth.nostr1.com (免费)\n - inbox.nostr.wine (付费)\n - revisy.0xchat.com (免费)</string>
     <string name="dm_relays_not_found_editing">设置 1 ~ 3 个私人收件箱中继。需要确保这些收件箱中继能够接受来自任何人的任何私信消息，但只允许您读取这些消息。</string>
     <string name="dm_relays_not_found_create_now">立即设置</string>
     <string name="search_relays_title">搜索中继</string>

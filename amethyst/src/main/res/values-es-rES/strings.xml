@@ -371,6 +371,7 @@
     <string name="no">No</string>
     <string name="follow_list_selection">Lista de seguidos</string>
     <string name="follow_list_kind3follows">Todos los seguidos</string>
+    <string name="follow_list_aroundme">A mi alrededor</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Lista de silenciados</string>
     <string name="connect_through_your_orbot_setup_short">El puerto predeterminado es 9050</string>
@@ -540,6 +541,7 @@
     <string name="nip05_checking">Verificando dirección de Nostr</string>
     <string name="select_deselect_all">Seleccionar o deseleccionar todo</string>
     <string name="default_relays">Predeterminados</string>
+    <string name="default_relays_longer">Restablecer valores predeterminados</string>
     <string name="select_a_relay_to_continue">Seleccionar un relé para continuar</string>
     <string name="zap_forward_title">Reenviar zaps a:</string>
     <string name="zap_forward_explainer">Los clientes compatibles reenviarán los zaps a la dirección de Lightning o al perfil de usuario indicados a continuación en lugar de a los tuyos.</string>
@@ -769,6 +771,7 @@
     <string name="dm_relays_not_found">Configura tus relés de buzón de entrada privados</string>
     <string name="dm_relays_not_found_description">Esta configuración permite que todo el mundo sepa qué relés usar cuando te envíen mensajes. Sin ellos, es posible que no recibas algunos mensajes.</string>
     <string name="dm_relays_not_found_examples">Algunas buenas opciones son:\n - inbox.nostr.wine (de pago)\n - you.nostr1.com (relés personales; de pago)</string>
+    <string name="dm_relays_not_found_examples2">Algunas buenas opciones son:\n - auth.nostr1.com (free)\n - inbox.nostr.wine (paid)\n - relay.0xchat.com (free)</string>
     <string name="dm_relays_not_found_editing">Inserta entre 1 y 3 relés para que te sirvan de buzón de entrada privado. Los relés del buzón de entrada para mensajes directos deberían aceptar cualquier mensaje de cualquier persona, pero solo te permiten descargarlos.</string>
     <string name="dm_relays_not_found_create_now">Configurar ahora</string>
     <string name="search_relays_title">Relés de búsqueda</string>

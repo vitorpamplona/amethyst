@@ -371,6 +371,7 @@
     <string name="no">Nee</string>
     <string name="follow_list_selection">Volgerslijst</string>
     <string name="follow_list_kind3follows">Iedereen</string>
+    <string name="follow_list_aroundme">In de buurt</string>
     <string name="follow_list_global">Globaal</string>
     <string name="follow_list_mute_list">Mute-lijst</string>
     <string name="connect_through_your_orbot_setup_short">Standaard poort is 9050</string>
@@ -540,6 +541,7 @@
     <string name="nip05_checking">Nostr-adres checken</string>
     <string name="select_deselect_all">Alles selecteren/deselecteren</string>
     <string name="default_relays">Standaard</string>
+    <string name="default_relays_longer">Standaardinstellingen herstellen</string>
     <string name="select_a_relay_to_continue">Selecteer een relay om verder te gaan</string>
     <string name="zap_forward_title">Stuur Zaps door naar:</string>
     <string name="zap_forward_explainer">Ondersteunende clients sturen zaps door naar het onderstaande LN-adres of gebruikersprofiel in plaats van naar het jouwe</string>
@@ -769,6 +771,7 @@
     <string name="dm_relays_not_found">Stel uw Privé Postvak relays in</string>
     <string name="dm_relays_not_found_description">Deze instelling geeft iedereen informatie over de relays die gebruikt worden bij het verzenden van berichten. Zonder hen mis je mogelijk een bericht.</string>
     <string name="dm_relays_not_found_examples">Goede opties zijn:\n - inbox.nostr.wine (betaald)\n - you.nostr1.com (persoonlijke relays - betaald)</string>
+    <string name="dm_relays_not_found_examples2">Goede opties zijn:\n - auth.nostr1.com (gratis)\n - inbox.nostr.wine (betaald)\n - relay.0xchat.com (gratis)</string>
     <string name="dm_relays_not_found_editing">Voeg tussen de 1 en 3 relays toe om als privéinbox te dienen. DM inbox relays moeten een bericht van iedereen accepteren, maar alleen om berichten te downloaden.</string>
     <string name="dm_relays_not_found_create_now">Nu instellen</string>
     <string name="search_relays_title">Zoek relays</string>
