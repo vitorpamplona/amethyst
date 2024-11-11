@@ -915,7 +915,7 @@ class Account(
     }
 
     suspend fun decryptPeopleList(event: PeopleListEvent?): PeopleListEvent.UsersAndWords {
-        if (event == null) return PeopleListEvent.UsersAndWords()
+        if (event == null || !isWriteable()) return PeopleListEvent.UsersAndWords()
 
         return tryAndWait { continuation ->
             event.publicAndPrivateUsersAndWords(signer) {
@@ -925,7 +925,7 @@ class Account(
     }
 
     suspend fun decryptMuteList(event: MuteListEvent?): PeopleListEvent.UsersAndWords {
-        if (event == null) return PeopleListEvent.UsersAndWords()
+        if (event == null || !isWriteable()) return PeopleListEvent.UsersAndWords()
 
         return tryAndWait { continuation ->
             event.publicAndPrivateUsersAndWords(signer) {

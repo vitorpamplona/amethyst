@@ -434,6 +434,7 @@ object LocalPreferences {
                     }.apply()
             }
         }
+        Log.d("LocalPreferences", "Saved to encrypted storage")
     }
 
     suspend fun loadCurrentAccountFromEncryptedStorage(): AccountSettings? = currentAccount()?.let { loadCurrentAccountFromEncryptedStorage(it) }
