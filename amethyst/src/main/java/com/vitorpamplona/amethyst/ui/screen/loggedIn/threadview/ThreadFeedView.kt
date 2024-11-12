@@ -198,7 +198,6 @@ import com.vitorpamplona.quartz.events.VideoEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -218,7 +217,7 @@ fun ThreadFeedView(
             nav = nav,
             routeForLastRead = null,
             onLoaded = {
-                RenderThreadFeed(noteId, it, viewModel.llState, viewModel::levelFlowForItem, accountViewModel, nav)
+                RenderThreadFeed(noteId, it, viewModel.llState, viewModel, accountViewModel, nav)
             },
         )
     }
@@ -229,13 +228,15 @@ fun RenderThreadFeed(
     noteId: String,
     loaded: FeedState.Loaded,
     listState: LazyListState,
-    createLevelFlow: (Note) -> Flow<Int>,
+    viewModel: LevelFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
-    LaunchedEffect(noteId, items.list) {
+    val position = items.list.indexOfFirst { it.idHex == noteId }
+
+    LaunchedEffect(noteId, position) {
         // hack to allow multiple scrolls to Item while posts on the screen load.
         // This is important when clicking on a reply of an older thread in Notifications
         // In that case, this screen will open with 0-1 items, and the scrollToItem below
@@ -249,16 +250,16 @@ fun RenderThreadFeed(
         // records before setting up the position on the feed.
         //
         // It jumps around, but it is the best we can do.
-        if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 && items.list.size > 3) {
-            val position = items.list.indexOfFirst { it.idHex == noteId }
 
-            if (position >= 0) {
+        if (position >= 0 && !viewModel.hasDragged.value) {
+            val offset =
                 if (position > items.list.size - 3) {
-                    listState.scrollToItem(position, 0)
+                    0
                 } else {
-                    listState.scrollToItem(position, -200)
+                    -200
                 }
-            }
+
+            listState.scrollToItem(position, offset)
         }
     }
 
@@ -268,7 +269,7 @@ fun RenderThreadFeed(
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { index, item ->
-            val level = createLevelFlow(item).collectAsStateWithLifecycle(0)
+            val level = viewModel.levelFlowForItem(item).collectAsStateWithLifecycle(0)
 
             val modifier =
                 Modifier

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import android.util.Log
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -67,6 +68,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
@@ -274,7 +276,19 @@ abstract class LevelFeedViewModel(
 ) : FeedViewModel(localFilter) {
     var llState: LazyListState by mutableStateOf(LazyListState(0, 0))
 
-    // val cachedLevels = mutableMapOf<Note, MutableStateFlow<Int>>()
+    val hasDragged = mutableStateOf(false)
+
+    val selectedIDHex =
+        llState.interactionSource.interactions
+            .onEach {
+                if (it is DragInteraction.Start) {
+                    hasDragged.value = true
+                }
+            }.stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                null,
+            )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val levelCacheFlow: StateFlow<Map<Note, Int>> =
