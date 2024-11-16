@@ -274,7 +274,6 @@ fun RenderThreadFeed(
             val modifier =
                 Modifier
                     .drawReplyLevel(
-                        note = item,
                         level = level,
                         color = MaterialTheme.colorScheme.placeholderText,
                         selected =
@@ -322,7 +321,6 @@ fun RenderThreadFeed(
 
 // Creates a Zebra pattern where each bar is a reply level.
 fun Modifier.drawReplyLevel(
-    note: Note,
     level: State<Int>,
     color: Color,
     selected: Color,
@@ -662,9 +660,8 @@ private fun FullBleedNoteCompose(
             }
         }
 
-        val noteEvent = baseNote.event
-        val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
-        if (zapSplits && noteEvent != null) {
+        val zapSplits = remember(noteEvent) { noteEvent.hasZapSplitSetup() }
+        if (zapSplits) {
             Spacer(modifier = DoubleVertSpacer)
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp),
