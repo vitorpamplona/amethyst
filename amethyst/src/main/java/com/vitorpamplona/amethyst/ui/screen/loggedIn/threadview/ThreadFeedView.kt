@@ -483,21 +483,10 @@ private fun FullBleedNoteCompose(
         Spacer(modifier = Modifier.height(10.dp))
 
         when (noteEvent) {
-            is BadgeDefinitionEvent -> {
-                BadgeDisplay(baseNote = baseNote)
-            }
-
-            is LongTextNoteEvent -> {
-                RenderLongFormHeaderForThread(noteEvent)
-            }
-
-            is WikiNoteEvent -> {
-                RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
-            }
-
-            is ClassifiedsEvent -> {
-                RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)
-            }
+            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
+            is LongTextNoteEvent -> RenderLongFormHeaderForThread(noteEvent)
+            is WikiNoteEvent -> RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
+            is ClassifiedsEvent -> RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)
         }
 
         Row(
