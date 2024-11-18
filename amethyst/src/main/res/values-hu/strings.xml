@@ -546,6 +546,8 @@
     <string name="zap_forward_explainer">A funkciót támogató kliensek a Zap-eket az Ön tárcája helyett, az alábbi LN-címre vagy felhasználói profilra továbbítják</string>
     <string name="geohash_title">A Hely megjelenítése mint </string>
     <string name="geohash_explainer">A bejegyzéshez az Ön tartózkodási helyének Geohash-ét hozzáadja. A közönség tudni fogja, hogy az aktuális helytől 5 km-en (3 mérföldön) belül van</string>
+    <string name="loading_location">Hely betöltése</string>
+    <string name="lack_location_permissions">Helymeghatározás nincs engedélyezve</string>
     <string name="add_sensitive_content_explainer">A kényes tartalom miatt, azon megjelenítése előtt figyelmeztetést ad. Ez ideális minden Felnőtt tartalomhoz vagy olyan tartalomhoz, amelyet egyesek sértőnek vagy zavarónak találhatnak</string>
     <string name="new_feature_nip17_might_not_be_available_title">Új funkció</string>
     <string name="new_feature_nip17_might_not_be_available_description">Az Amethystnek ennek a módnak az aktiválásához NIP-17 üzenetet kell küldenie (GiftWrapped, Zárolt direkt és csoportos üzeneteket). A NIP-17 új, és a legtöbb kliens még nem implementálta. Győződj meg arról, hogy a fogadó fél kompatibilis klienst használ.</string>
