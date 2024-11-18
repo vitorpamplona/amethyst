@@ -35,18 +35,17 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
 @Composable
 fun NewNoteButton(
-    accountViewModel: AccountViewModel,
     nav: INav,
+    enableGeolocation: Boolean = false,
 ) {
     FloatingActionButton(
         onClick = {
-            val route = buildNewPostRoute()
+            val route = buildNewPostRoute(enableGeolocation = enableGeolocation)
             nav.nav(route)
         },
         modifier = Size55Modifier,

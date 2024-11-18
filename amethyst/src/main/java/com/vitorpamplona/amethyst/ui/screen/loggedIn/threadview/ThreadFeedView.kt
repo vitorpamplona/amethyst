@@ -169,6 +169,7 @@ import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.DraftEvent
@@ -572,6 +573,18 @@ private fun FullBleedNoteCompose(
                     RenderDraft(baseNote, 3, true, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is HighlightEvent) {
                     RenderHighlight(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is CommentEvent) {
+                    RenderTextEvent(
+                        baseNote,
+                        false,
+                        canPreview,
+                        quotesLeft = 3,
+                        unPackReply = false,
+                        backgroundColor,
+                        editState,
+                        accountViewModel,
+                        nav,
+                    )
                 } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
                     RenderRepost(baseNote, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is TextNoteModificationEvent) {

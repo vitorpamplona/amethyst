@@ -27,8 +27,8 @@ import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
@@ -57,12 +57,12 @@ object NostrGeohashDataSource : AmethystNostrDataSource("SingleGeoHashFeed") {
                             ChannelMessageEvent.KIND,
                             LongTextNoteEvent.KIND,
                             PollNoteEvent.KIND,
-                            LiveActivitiesChatMessageEvent.KIND,
                             ClassifiedsEvent.KIND,
                             HighlightEvent.KIND,
                             AudioTrackEvent.KIND,
                             AudioHeaderEvent.KIND,
                             WikiNoteEvent.KIND,
+                            CommentEvent.KIND,
                         ),
                     limit = 200,
                 ),

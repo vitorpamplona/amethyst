@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
@@ -66,6 +67,7 @@ object NostrHashtagDataSource : AmethystNostrDataSource("SingleHashtagFeed") {
                             AudioTrackEvent.KIND,
                             AudioHeaderEvent.KIND,
                             WikiNoteEvent.KIND,
+                            CommentEvent.KIND,
                         ),
                     limit = 200,
                 ),

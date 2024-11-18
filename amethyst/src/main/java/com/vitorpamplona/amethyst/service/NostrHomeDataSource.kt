@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.AudioHeaderEvent
 import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
@@ -165,7 +166,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                             HighlightEvent.KIND,
                             AudioHeaderEvent.KIND,
                             AudioTrackEvent.KIND,
-                            PinListEvent.KIND,
+                            CommentEvent.KIND,
                             WikiNoteEvent.KIND,
                         ),
                     tags =
@@ -204,8 +205,8 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                             HighlightEvent.KIND,
                             AudioHeaderEvent.KIND,
                             AudioTrackEvent.KIND,
-                            PinListEvent.KIND,
                             WikiNoteEvent.KIND,
+                            CommentEvent.KIND,
                         ),
                     tags =
                         mapOf(
@@ -244,6 +245,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                             PinListEvent.KIND,
                             WikiNoteEvent.KIND,
                             CommunityPostApprovalEvent.KIND,
+                            CommentEvent.KIND,
                         ),
                     tags =
                         mapOf(

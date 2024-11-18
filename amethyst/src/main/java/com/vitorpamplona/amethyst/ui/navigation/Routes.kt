@@ -225,7 +225,7 @@ sealed class Route(
 
     object NewPost :
         Route(
-            route = "NewPost?message={message}&attachment={attachment}&baseReplyTo={baseReplyTo}&quote={quote}&fork={fork}&version={version}&draft={draft}&enableMessageInterface={enableMessageInterface}",
+            route = "NewPost?message={message}&attachment={attachment}&baseReplyTo={baseReplyTo}&quote={quote}&fork={fork}&version={version}&draft={draft}&enableGeolocation={enableGeolocation}&enableMessageInterface={enableMessageInterface}",
             icon = R.drawable.ic_moments,
             arguments =
                 listOf(
@@ -236,6 +236,7 @@ sealed class Route(
                     navArgument("fork") { type = NavType.StringType },
                     navArgument("version") { type = NavType.StringType },
                     navArgument("draft") { type = NavType.StringType },
+                    navArgument("enableGeolocation") { type = NavType.BoolType },
                     navArgument("enableMessageInterface") { type = NavType.BoolType },
                 ).toImmutableList(),
         )
@@ -307,6 +308,7 @@ fun buildNewPostRoute(
     fork: String? = null,
     version: String? = null,
     draft: String? = null,
+    enableGeolocation: Boolean = false,
     enableMessageInterface: Boolean = false,
 ): String =
     "NewPost?" +
@@ -317,4 +319,5 @@ fun buildNewPostRoute(
         "fork=${fork ?: ""}&" +
         "version=${version ?: ""}&" +
         "draft=${draft ?: ""}&" +
+        "enableGeolocation=$enableGeolocation&" +
         "enableMessageInterface=$enableMessageInterface"

@@ -190,6 +190,18 @@ class DraftEvent(
 
         fun create(
             dTag: String,
+            originalNote: CommentEvent,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (DraftEvent) -> Unit,
+        ) {
+            val tagsWithMarkers = originalNote.getRootScopes() + originalNote.getDirectReplies()
+
+            create(dTag, originalNote, tagsWithMarkers, signer, createdAt, onReady)
+        }
+
+        fun create(
+            dTag: String,
             originalNote: TextNoteEvent,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),

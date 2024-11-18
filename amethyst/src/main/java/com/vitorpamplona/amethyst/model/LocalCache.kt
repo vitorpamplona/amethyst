@@ -62,6 +62,7 @@ import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.CommunityListEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
@@ -818,6 +819,8 @@ object LocalCache {
             is LongTextNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             is GitReplyEvent -> event.tagsWithoutCitations().filter { it != event.repository()?.toTag() }.mapNotNull { checkGetOrCreateNote(it) }
             is TextNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            is CommentEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+
             is ChatMessageEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
             is LnZapEvent ->
                 event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
@@ -1625,6 +1628,35 @@ object LocalCache {
 
         // Log.d("CM", "New Chat Note (${note.author?.toBestDisplayName()} ${note.event?.content()}
         // ${formattedDateTime(event.createdAt)}")
+
+        // Counts the replies
+        replyTo.forEach { it.addReply(note) }
+
+        refreshObservers(note)
+    }
+
+    fun consume(
+        event: CommentEvent,
+        relay: Relay?,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        if (antiSpam.isSpam(event, relay)) {
+            return
+        }
+
+        val replyTo = computeReplyTo(event)
+
+        note.loadEvent(event, author, replyTo)
 
         // Counts the replies
         replyTo.forEach { it.addReply(note) }
@@ -2698,6 +2730,7 @@ object LocalCache {
                 is ChatMessageEvent -> consume(event, relay)
                 is ChatMessageRelayListEvent -> consume(event, relay)
                 is ClassifiedsEvent -> consume(event, relay)
+                is CommentEvent -> consume(event, relay)
                 is CommunityDefinitionEvent -> consume(event, relay)
                 is CommunityListEvent -> consume(event, relay)
                 is CommunityPostApprovalEvent -> {

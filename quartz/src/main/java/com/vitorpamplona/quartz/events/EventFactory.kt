@@ -75,6 +75,7 @@ class EventFactory {
             }
             ChatMessageRelayListEvent.KIND -> ChatMessageRelayListEvent(id, pubKey, createdAt, tags, content, sig)
             ClassifiedsEvent.KIND -> ClassifiedsEvent(id, pubKey, createdAt, tags, content, sig)
+            CommentEvent.KIND -> CommentEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityDefinitionEvent.KIND -> CommunityDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityListEvent.KIND -> CommunityListEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityPostApprovalEvent.KIND -> CommunityPostApprovalEvent(id, pubKey, createdAt, tags, content, sig)

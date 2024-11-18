@@ -270,6 +270,10 @@ object Nip19Bech32 {
             }.build()
             .toNEvent()
 
+    fun createNote(eventId: HexKey): String = eventId.hexToByteArray().toNote()
+
+    fun createNPub(authorPubKeyHex: HexKey): String = authorPubKeyHex.hexToByteArray().toNpub()
+
     fun createNProfile(
         authorPubKeyHex: String,
         relay: List<String>,

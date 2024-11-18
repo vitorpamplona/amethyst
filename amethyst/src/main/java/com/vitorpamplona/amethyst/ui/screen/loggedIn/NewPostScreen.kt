@@ -164,6 +164,7 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapSplitIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.MyTextField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -206,12 +207,14 @@ fun NewPostScreen(
     fork: Note? = null,
     version: Note? = null,
     draft: Note? = null,
+    enableGeolocation: Boolean = false,
     enableMessageInterface: Boolean = false,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
     val postViewModel: NewPostViewModel = viewModel()
     postViewModel.wantsDirectMessage = enableMessageInterface
+    postViewModel.wantsToAddGeoHash = enableGeolocation
 
     val context = LocalContext.current
     val activity = context.getActivity()
@@ -693,27 +696,24 @@ fun TakePictureButton(onPictureTaken: (Uri) -> Unit) {
             },
         )
 
-    Box {
-        IconButton(
-            modifier = Modifier.align(Alignment.Center),
-            onClick = {
-                if (cameraPermissionState.status.isGranted) {
-                    scope.launch(Dispatchers.IO) {
-                        imageUri = getPhotoUri(context)
-                        imageUri?.let { uri -> launcher.launch(uri) }
-                    }
-                } else {
-                    cameraPermissionState.launchPermissionRequest()
+    IconButton(
+        onClick = {
+            if (cameraPermissionState.status.isGranted) {
+                scope.launch(Dispatchers.IO) {
+                    imageUri = getPhotoUri(context)
+                    imageUri?.let { uri -> launcher.launch(uri) }
                 }
-            },
-        ) {
-            Icon(
-                imageVector = Icons.Default.CameraAlt,
-                contentDescription = stringRes(id = R.string.upload_image),
-                modifier = Modifier.height(25.dp),
-                tint = MaterialTheme.colorScheme.onBackground,
-            )
-        }
+            } else {
+                cameraPermissionState.launchPermissionRequest()
+            }
+        },
+    ) {
+        Icon(
+            imageVector = Icons.Default.CameraAlt,
+            contentDescription = stringRes(id = R.string.upload_image),
+            modifier = Modifier.height(25.dp),
+            tint = MaterialTheme.colorScheme.onBackground,
+        )
     }
 }
 
@@ -1332,6 +1332,13 @@ fun LocationAsHash(postViewModel: NewPostViewModel) {
                 color = MaterialTheme.colorScheme.placeholderText,
                 modifier = Modifier.padding(vertical = 10.dp),
             )
+
+            SettingsRow(
+                R.string.geohash_exclusive,
+                R.string.geohash_exclusive_explainer,
+            ) {
+                Switch(postViewModel.wantsExclusiveGeoPost, onCheckedChange = { postViewModel.wantsExclusiveGeoPost = it })
+            }
         }
     } else {
         LaunchedEffect(locationPermissionState) { locationPermissionState.launchPermissionRequest() }

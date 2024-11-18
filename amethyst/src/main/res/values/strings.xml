@@ -645,6 +645,9 @@
     <string name="geohash_title">Expose Location as </string>
     <string name="geohash_explainer">Adds a Geohash of your location to the post. The public will know you are within 5km (3mi) of the current location</string>
 
+    <string name="geohash_exclusive">Location-exclusive Post</string>
+    <string name="geohash_exclusive_explainer">Only followers of the location will see it. Your general followers won\'t see it.</string>
+
     <string name="loading_location">Loading location</string>
     <string name="lack_location_permissions">No Location Permissions</string>
 

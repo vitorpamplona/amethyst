@@ -47,8 +47,11 @@ import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.ETag
+import com.vitorpamplona.quartz.encoders.EventHint
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
+import com.vitorpamplona.quartz.encoders.PTag
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
@@ -60,6 +63,7 @@ import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.Contact
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
@@ -2142,6 +2146,182 @@ class Account(
                 }
             }
             delete(note)
+        }
+    }
+
+    suspend fun sendReplyComment(
+        message: String,
+        replyingTo: Note,
+        directMentionsUsers: Set<User> = emptySet(),
+        directMentionsNotes: Set<Note> = emptySet(),
+        nip94attachments: List<FileHeaderEvent>? = null,
+        geohash: String? = null,
+        zapReceiver: List<ZapSplitSetup>? = null,
+        wantsToMarkAsSensitive: Boolean = false,
+        zapRaiserAmount: Long? = null,
+        relayList: List<RelaySetupInfo>,
+        draftTag: String? = null,
+    ) {
+        if (!isWriteable()) return
+
+        val usersMentioned =
+            directMentionsUsers
+                .mapTo(HashSet(directMentionsUsers.size)) {
+                    PTag(it.pubkeyHex, it.latestMetadataRelay)
+                }
+
+        val addressesMentioned =
+            directMentionsNotes
+                .mapNotNullTo(HashSet(directMentionsNotes.size)) { note ->
+                    if (note is AddressableNote) {
+                        note.address
+                    } else {
+                        null
+                    }
+                }
+
+        val eventsMentioned =
+            directMentionsNotes
+                .mapNotNullTo(HashSet(directMentionsNotes.size)) { note ->
+                    if (note !is AddressableNote) {
+                        ETag(note.idHex, note.author?.pubkeyHex, note.relayHintUrl())
+                    } else {
+                        null
+                    }
+                }
+
+        CommentEvent.replyComment(
+            msg = message,
+            replyingTo = EventHint(replyingTo.event as CommentEvent, replyingTo.relayHintUrl()),
+            usersMentioned = usersMentioned,
+            addressesMentioned = addressesMentioned,
+            eventsMentioned = eventsMentioned,
+            nip94attachments = nip94attachments,
+            geohash = geohash,
+            zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
+            zapRaiserAmount = zapRaiserAmount,
+            isDraft = draftTag != null,
+            signer = signer,
+        ) {
+            if (draftTag != null) {
+                if (message.isBlank()) {
+                    deleteDraft(draftTag)
+                } else {
+                    DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                        sendDraftEvent(draftEvent)
+                    }
+                }
+            } else {
+                Client.send(it, relayList = relayList)
+                LocalCache.justConsume(it, null)
+
+                replyingTo.event?.let {
+                    Client.send(it, relayList = relayList)
+                }
+            }
+        }
+    }
+
+    suspend fun sendGeoComment(
+        message: String,
+        geohash: String,
+        replyingTo: Note? = null,
+        directMentionsUsers: Set<User> = emptySet(),
+        directMentionsNotes: Set<Note> = emptySet(),
+        nip94attachments: List<FileHeaderEvent>? = null,
+        zapReceiver: List<ZapSplitSetup>? = null,
+        wantsToMarkAsSensitive: Boolean = false,
+        zapRaiserAmount: Long? = null,
+        relayList: List<RelaySetupInfo>,
+        draftTag: String? = null,
+    ) {
+        if (!isWriteable()) return
+
+        val usersMentioned =
+            directMentionsUsers
+                .mapTo(HashSet(directMentionsUsers.size)) {
+                    PTag(it.pubkeyHex, it.latestMetadataRelay)
+                }
+
+        val addressesMentioned =
+            directMentionsNotes
+                .mapNotNullTo(HashSet(directMentionsNotes.size)) { note ->
+                    if (note is AddressableNote) {
+                        note.address
+                    } else {
+                        null
+                    }
+                }
+
+        val eventsMentioned =
+            directMentionsNotes
+                .mapNotNullTo(HashSet(directMentionsNotes.size)) { note ->
+                    if (note !is AddressableNote) {
+                        ETag(note.idHex, note.author?.pubkeyHex, note.relayHintUrl())
+                    } else {
+                        null
+                    }
+                }
+
+        if (replyingTo != null) {
+            CommentEvent.replyComment(
+                msg = message,
+                replyingTo = EventHint<CommentEvent>(replyingTo.event as CommentEvent, replyingTo.relayHintUrl()),
+                usersMentioned = usersMentioned,
+                addressesMentioned = addressesMentioned,
+                eventsMentioned = eventsMentioned,
+                nip94attachments = nip94attachments,
+                zapReceiver = zapReceiver,
+                markAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = zapRaiserAmount,
+                isDraft = draftTag != null,
+                signer = signer,
+            ) {
+                if (draftTag != null) {
+                    if (message.isBlank()) {
+                        deleteDraft(draftTag)
+                    } else {
+                        DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                            sendDraftEvent(draftEvent)
+                        }
+                    }
+                } else {
+                    Client.send(it, relayList = relayList)
+                    LocalCache.justConsume(it, null)
+
+                    replyingTo.event?.let {
+                        Client.send(it, relayList = relayList)
+                    }
+                }
+            }
+        } else {
+            CommentEvent.createGeoComment(
+                msg = message,
+                geohash = geohash,
+                usersMentioned = usersMentioned,
+                addressesMentioned = addressesMentioned,
+                eventsMentioned = eventsMentioned,
+                nip94attachments = nip94attachments,
+                zapReceiver = zapReceiver,
+                markAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = zapRaiserAmount,
+                isDraft = draftTag != null,
+                signer = signer,
+            ) {
+                if (draftTag != null) {
+                    if (message.isBlank()) {
+                        deleteDraft(draftTag)
+                    } else {
+                        DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                            sendDraftEvent(draftEvent)
+                        }
+                    }
+                } else {
+                    Client.send(it, relayList = relayList)
+                    LocalCache.justConsume(it, null)
+                }
+            }
         }
     }
 

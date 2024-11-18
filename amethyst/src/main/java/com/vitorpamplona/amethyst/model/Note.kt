@@ -97,7 +97,7 @@ class AddressableNote(
         return minOf(publishedAt, lastCreatedAt)
     }
 
-    fun dTag(): String? = (event as? AddressableEvent)?.dTag()
+    fun dTag(): String = address.dTag
 
     override fun wasOrShouldBeDeletedBy(
         deletionEvents: Set<HexKey>,
@@ -157,13 +157,27 @@ open class Note(
                     host.id,
                     host.pubKey,
                     host.kind,
-                    relays.firstOrNull()?.url,
+                    relayHintUrl(),
                 )
             } else {
-                Nip19Bech32.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull()?.url)
+                Nip19Bech32.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relayHintUrl())
             }
         } else {
-            Nip19Bech32.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull()?.url)
+            Nip19Bech32.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relayHintUrl())
+        }
+    }
+
+    fun relayHintUrl(): String? {
+        val authorRelay = author?.latestMetadataRelay
+
+        return if (relays.isNotEmpty()) {
+            if (authorRelay != null && relays.any { it.url == authorRelay }) {
+                authorRelay
+            } else {
+                relays.firstOrNull()?.url
+            }
+        } else {
+            null
         }
     }
 

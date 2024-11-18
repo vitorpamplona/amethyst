@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.events.CalendarRSVPEvent
 import com.vitorpamplona.quartz.events.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
@@ -237,6 +238,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                             GitIssueEvent.KIND,
                             GitPatchEvent.KIND,
                             HighlightEvent.KIND,
+                            CommentEvent.KIND,
                             CalendarDateSlotEvent.KIND,
                             CalendarTimeSlotEvent.KIND,
                             CalendarRSVPEvent.KIND,

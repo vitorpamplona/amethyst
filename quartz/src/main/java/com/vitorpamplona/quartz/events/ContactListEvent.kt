@@ -141,21 +141,11 @@ class ContactListEvent(
             val tags =
                 listOf(arrayOf("alt", ALT)) +
                     followUsers.map {
-                        if (it.relayUri != null) {
-                            arrayOf("p", it.pubKeyHex, it.relayUri)
-                        } else {
-                            arrayOf("p", it.pubKeyHex)
-                        }
+                        listOfNotNull("a", it.pubKeyHex, it.relayUri).toTypedArray()
                     } +
                     followTags.map { arrayOf("t", it) } +
                     followEvents.map { arrayOf("e", it) } +
-                    followCommunities.map {
-                        if (it.relay != null) {
-                            arrayOf("a", it.toTag(), it.relay)
-                        } else {
-                            arrayOf("a", it.toTag())
-                        }
-                    } +
+                    followCommunities.map { it.toATagArray() } +
                     followGeohashes.map { arrayOf("g", it) }
 
             return signer.sign(createdAt, KIND, tags.toTypedArray(), content)
@@ -189,13 +179,7 @@ class ContactListEvent(
                 } +
                     followTags.map { arrayOf("t", it) } +
                     followEvents.map { arrayOf("e", it) } +
-                    followCommunities.map {
-                        if (it.relay != null) {
-                            arrayOf("a", it.toTag(), it.relay)
-                        } else {
-                            arrayOf("a", it.toTag())
-                        }
-                    } +
+                    followCommunities.map { it.toATagArray() } +
                     followGeohashes.map { arrayOf("g", it) }
 
             return create(

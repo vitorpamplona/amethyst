@@ -59,6 +59,7 @@ import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.Event
@@ -162,6 +163,7 @@ open class NewPostViewModel : ViewModel() {
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
     var location: StateFlow<LocationState.LocationResult>? = null
+    var wantsExclusiveGeoPost by mutableStateOf(false)
 
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
@@ -336,7 +338,13 @@ open class NewPostViewModel : ViewModel() {
         wantsForwardZapTo = localfowardZapTo.isNotEmpty()
 
         wantsToMarkAsSensitive = draftEvent.tags().any { it.size > 1 && it[0] == "content-warning" }
-        wantsToAddGeoHash = draftEvent.tags().any { it.size > 1 && it[0] == "g" }
+
+        val geohash = draftEvent.getGeoHash()
+        wantsToAddGeoHash = geohash != null
+        if (geohash != null) {
+            wantsExclusiveGeoPost = draftEvent.kind() == CommentEvent.KIND
+        }
+
         val zapraiser = draftEvent.tags().filter { it.size > 1 && it[0] == "zapraiser" }
         wantsZapraiser = zapraiser.isNotEmpty()
         zapRaiserAmount = null
@@ -544,7 +552,37 @@ open class NewPostViewModel : ViewModel() {
         // Doesn't send as nip94 yet because we don't know if it makes sense.
         // usedAttachments.forEach { account?.sendHeader(it, relayList, {}) }
 
-        if (originalNote?.channelHex() != null) {
+        val replyingTo = originalNote
+
+        if (replyingTo?.event is CommentEvent) {
+            account?.sendReplyComment(
+                message = tagger.message,
+                replyingTo = replyingTo,
+                directMentionsUsers = tagger.directMentionsUsers,
+                directMentionsNotes = tagger.directMentionsNotes,
+                nip94attachments = usedAttachments,
+                geohash = geoHash,
+                zapReceiver = zapReceiver,
+                wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = localZapRaiserAmount,
+                relayList = relayList,
+                draftTag = localDraft,
+            )
+        } else if (wantsExclusiveGeoPost && geoHash != null && (originalNote == null || originalNote?.event is CommentEvent)) {
+            account?.sendGeoComment(
+                message = tagger.message,
+                geohash = geoHash,
+                replyingTo = originalNote,
+                directMentionsUsers = tagger.directMentionsUsers,
+                directMentionsNotes = tagger.directMentionsNotes,
+                nip94attachments = usedAttachments,
+                zapReceiver = zapReceiver,
+                wantsToMarkAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = localZapRaiserAmount,
+                relayList = relayList,
+                draftTag = localDraft,
+            )
+        } else if (originalNote?.channelHex() != null) {
             if (originalNote is AddressableEvent && originalNote?.address() != null) {
                 account?.sendLiveMessage(
                     message = tagger.message,
@@ -946,6 +984,7 @@ open class NewPostViewModel : ViewModel() {
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
         wantsToAddGeoHash = false
+        wantsExclusiveGeoPost = false
         forwardZapTo = Split()
         forwardZapToEditting = TextFieldValue("")
 

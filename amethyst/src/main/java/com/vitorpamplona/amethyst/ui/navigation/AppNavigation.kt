@@ -304,6 +304,7 @@ fun AppNavigation(
                 val version = it.arguments?.getString("version")
                 val draft = it.arguments?.getString("draft")
                 val enableMessageInterface = it.arguments?.getBoolean("enableMessageInterface") ?: false
+                val enableGeolocation = it.arguments?.getBoolean("enableGeolocation") ?: false
 
                 NewPostScreen(
                     message = draftMessage,
@@ -314,6 +315,7 @@ fun AppNavigation(
                     version = version?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     draft = draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     enableMessageInterface = enableMessageInterface,
+                    enableGeolocation = enableGeolocation,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

@@ -157,6 +157,7 @@ import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.DraftEvent
@@ -679,6 +680,19 @@ private fun RenderNoteRow(
                 canPreview,
                 quotesLeft,
                 backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+        is CommentEvent -> {
+            RenderTextEvent(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                unPackReply,
+                backgroundColor,
+                editState,
                 accountViewModel,
                 nav,
             )

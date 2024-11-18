@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
@@ -177,6 +178,7 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                                     PollNoteEvent.KIND,
                                     NNSEvent.KIND,
                                     WikiNoteEvent.KIND,
+                                    CommentEvent.KIND,
                                 ),
                             search = mySearchString,
                             limit = 100,
