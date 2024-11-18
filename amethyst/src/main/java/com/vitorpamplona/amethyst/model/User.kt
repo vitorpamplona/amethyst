@@ -339,19 +339,9 @@ class User(
 
     fun isFollowing(user: User): Boolean = latestContactList?.isTaggedUser(user.pubkeyHex) ?: false
 
-    fun isFollowingHashtag(tag: String): Boolean {
-        return latestContactList?.unverifiedFollowTagSet()?.map { it.lowercase() }?.toSet()?.let {
-            return tag.lowercase() in it
-        }
-            ?: false
-    }
+    fun isFollowingHashtag(tag: String) = latestContactList?.isTaggedHash(tag) ?: false
 
-    fun isFollowingGeohash(geoTag: String): Boolean {
-        return latestContactList?.unverifiedFollowAddressSet()?.toSet()?.let {
-            return geoTag.lowercase() in it
-        }
-            ?: false
-    }
+    fun isFollowingGeohash(geoTag: String) = latestContactList?.isTaggedGeoHash(geoTag) ?: false
 
     fun transientFollowCount(): Int? = latestContactList?.unverifiedFollowKeySet()?.size
 
