@@ -243,9 +243,9 @@ fun RenderThreadFeed(
         // In that case, this screen will open with 0-1 items, and the scrollToItem below
         // will not change the state of the screen (too few items, scroll is not available)
         // as the app loads the reaming of the thread the position of the reply changes
-        // and becuase there wasn't a possibility to scroll before and now there is one,
+        // and because there wasn't a possibility to scroll before and now there is one,
         // the screen stays at the top. Once the thread has enough replies, the lazy column
-        // updates with new items correctly. It just needs a few items to start the scrool.
+        // updates with new items correctly. It just needs a few items to start the scroll.
         //
         // This hack allows the list 1 second to fill up with more
         // records before setting up the position on the feed.
@@ -275,7 +275,6 @@ fun RenderThreadFeed(
             val modifier =
                 Modifier
                     .drawReplyLevel(
-                        note = item,
                         level = level,
                         color = MaterialTheme.colorScheme.placeholderText,
                         selected =
@@ -323,7 +322,6 @@ fun RenderThreadFeed(
 
 // Creates a Zebra pattern where each bar is a reply level.
 fun Modifier.drawReplyLevel(
-    note: Note,
     level: State<Int>,
     color: Color,
     selected: Color,
@@ -485,14 +483,11 @@ private fun FullBleedNoteCompose(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        if (noteEvent is BadgeDefinitionEvent) {
-            BadgeDisplay(baseNote = baseNote)
-        } else if (noteEvent is LongTextNoteEvent) {
-            RenderLongFormHeaderForThread(noteEvent)
-        } else if (noteEvent is WikiNoteEvent) {
-            RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
-        } else if (noteEvent is ClassifiedsEvent) {
-            RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)
+        when (noteEvent) {
+            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
+            is LongTextNoteEvent -> RenderLongFormHeaderForThread(noteEvent)
+            is WikiNoteEvent -> RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
+            is ClassifiedsEvent -> RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)
         }
 
         Row(
@@ -513,11 +508,11 @@ private fun FullBleedNoteCompose(
                         nav = nav,
                     )
                 } else if (noteEvent is VideoEvent) {
-                    VideoDisplay(baseNote, false, true, backgroundColor, false, accountViewModel, nav)
+                    VideoDisplay(baseNote, makeItShort = false, canPreview = true, backgroundColor = backgroundColor, isFiniteHeight = false, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is FileHeaderEvent) {
-                    FileHeaderDisplay(baseNote, true, false, accountViewModel)
+                    FileHeaderDisplay(baseNote, roundedCorner = true, isFiniteHeight = false, accountViewModel = accountViewModel)
                 } else if (noteEvent is FileStorageHeaderEvent) {
-                    FileStorageHeaderDisplay(baseNote, true, false, accountViewModel)
+                    FileStorageHeaderDisplay(baseNote, roundedCorner = true, isFiniteHeight = false, accountViewModel = accountViewModel)
                 } else if (noteEvent is PeopleListEvent) {
                     DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is AudioTrackEvent) {
@@ -564,9 +559,9 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is GitRepositoryEvent) {
                     RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
                 } else if (noteEvent is GitPatchEvent) {
-                    RenderGitPatchEvent(baseNote, false, true, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                    RenderGitPatchEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is GitIssueEvent) {
-                    RenderGitIssueEvent(baseNote, false, true, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                    RenderGitIssueEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is AppDefinitionEvent) {
                     RenderAppDefinition(baseNote, accountViewModel, nav)
                 } else if (noteEvent is DraftEvent) {
@@ -675,9 +670,8 @@ private fun FullBleedNoteCompose(
             }
         }
 
-        val noteEvent = baseNote.event
-        val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
-        if (zapSplits && noteEvent != null) {
+        val zapSplits = remember(noteEvent) { noteEvent.hasZapSplitSetup() }
+        if (zapSplits) {
             Spacer(modifier = DoubleVertSpacer)
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp),
@@ -686,7 +680,7 @@ private fun FullBleedNoteCompose(
             }
         }
 
-        ReactionsRow(baseNote, true, true, editState, accountViewModel, nav)
+        ReactionsRow(baseNote, showReactionDetail = true, addPadding = true, editState = editState, accountViewModel = accountViewModel, nav = nav)
     }
 }
 
@@ -938,14 +932,14 @@ private fun RenderWikiHeaderForThreadPreview() {
                 RenderWikiHeaderForThread(noteEvent = event, accountViewModel = accountViewModel, nav)
                 RenderTextEvent(
                     baseNote!!,
-                    false,
-                    true,
+                    makeItShort = false,
+                    canPreview = true,
                     quotesLeft = 3,
                     unPackReply = false,
-                    backgroundColor,
-                    editState,
-                    accountViewModel,
-                    nav,
+                    backgroundColor = backgroundColor,
+                    editState = editState,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
             }
         }
