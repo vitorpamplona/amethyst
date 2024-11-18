@@ -547,6 +547,8 @@
     <string name="zap_forward_explainer">Ondersteunende clients sturen zaps door naar het onderstaande LN-adres of gebruikersprofiel in plaats van naar het jouwe</string>
     <string name="geohash_title">Locatie weergeven als</string>
     <string name="geohash_explainer">Voegt een Geohash van je locatie toe aan het bericht. Het publiek weet dat je binnen 5 km (3mi) van de huidige locatie bent.</string>
+    <string name="loading_location">Locatie laden</string>
+    <string name="lack_location_permissions">Geen locatiemachtigingen</string>
     <string name="add_sensitive_content_explainer">Voegt een waarschuwing voor gevoelige inhoud toe voordat je inhoud wordt weergegeven. Dit is ideaal voor NSFW-inhoud of inhoud die sommige mensen beledigend of verontrustend vinden.</string>
     <string name="new_feature_nip17_might_not_be_available_title">Nieuwe functie</string>
     <string name="new_feature_nip17_might_not_be_available_description">Voor het activeren van deze modus is Amethyst nodig om een NIP-17 bericht te versturen. NIP-17 is nieuw en de meeste clients hebben deze nog niet geïmplementeerd. Zorg ervoor dat de ontvanger een compatibele client gebruikt.</string>
