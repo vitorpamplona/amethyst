@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
@@ -50,6 +51,11 @@ class FilterByListParams(
         return if (noteEvent is LiveActivitiesEvent) {
             noteEvent.participantsIntersect(followLists.authors) ||
                 noteEvent.isTaggedHashes(followLists.hashtags) ||
+                noteEvent.isTaggedGeoHashes(followLists.geotags) ||
+                noteEvent.isTaggedAddressableNotes(followLists.addresses)
+        } else if (noteEvent is CommentEvent) {
+            // ignore follows and checks only the root scope
+            noteEvent.isTaggedHashes(followLists.hashtags) ||
                 noteEvent.isTaggedGeoHashes(followLists.geotags) ||
                 noteEvent.isTaggedAddressableNotes(followLists.addresses)
         } else {

@@ -85,8 +85,6 @@ class ContactListEvent(
 
     fun unverifiedFollowGeohashSet() = tags.filter { it.size > 1 && it[0] == "g" }.mapNotNull { it.getOrNull(1) }
 
-    fun unverifiedFollowAddressSet() = tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull { it.getOrNull(1) }
-
     fun follows() =
         tags.mapNotNull {
             try {
