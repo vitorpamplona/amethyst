@@ -38,8 +38,6 @@ class ProfileGalleryEntryEvent(
 
     fun urls() = tags.filter { it.size > 1 && it[0] == URL }.map { it[1] }
 
-    fun encryptionKey() = tags.firstOrNull { it.size > 2 && it[0] == ENCRYPTION_KEY }?.let { AESGCM(it[1], it[2]) }
-
     fun mimeType() = tags.firstOrNull { it.size > 1 && it[0] == MIME_TYPE }?.get(1)
 
     fun hash() = tags.firstOrNull { it.size > 1 && it[0] == HASH }?.get(1)
@@ -94,7 +92,6 @@ class ProfileGalleryEntryEvent(
             originalHash: String? = null,
             magnetURI: String? = null,
             torrentInfoHash: String? = null,
-            encryptionKey: AESGCM? = null,
             sensitiveContent: Boolean? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
@@ -117,7 +114,6 @@ class ProfileGalleryEntryEvent(
                     originalHash?.let { arrayOf(ORIGINAL_HASH, it) },
                     magnetURI?.let { arrayOf(MAGNET_URI, it) },
                     torrentInfoHash?.let { arrayOf(TORRENT_INFOHASH, it) },
-                    encryptionKey?.let { arrayOf(ENCRYPTION_KEY, it.key, it.nonce) },
                     sensitiveContent?.let {
                         if (it) {
                             arrayOf("content-warning", "")

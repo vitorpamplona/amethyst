@@ -99,7 +99,6 @@ abstract class VideoEvent(
             originalHash: String? = null,
             magnetURI: String? = null,
             torrentInfoHash: String? = null,
-            encryptionKey: AESGCM? = null,
             sensitiveContent: Boolean? = null,
             altDescription: String,
             signer: NostrSigner,
@@ -119,7 +118,6 @@ abstract class VideoEvent(
                     originalHash?.let { arrayOf(ORIGINAL_HASH, it) },
                     magnetURI?.let { arrayOf(MAGNET_URI, it) },
                     torrentInfoHash?.let { arrayOf(TORRENT_INFOHASH, it) },
-                    encryptionKey?.let { arrayOf(ENCRYPTION_KEY, it.key, it.nonce) },
                     sensitiveContent?.let {
                         if (it) {
                             arrayOf("content-warning", "")
