@@ -58,7 +58,7 @@ object ThreadLevelCalculator {
 
         // estimates the min date by replies if it doesn't exist.
         val createdAt =
-            min(
+            note.createdAt() ?: min(
                 note.replies.minOfOrNull { it.createdAt() ?: now } ?: now,
                 note.reactions.values.minOfOrNull { it.minOfOrNull { it.createdAt() ?: now } ?: now } ?: now,
             )
