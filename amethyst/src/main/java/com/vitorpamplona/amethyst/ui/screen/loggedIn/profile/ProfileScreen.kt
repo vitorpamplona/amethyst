@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile
 
 import android.content.Intent
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -59,16 +59,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PlaylistAddCheck
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -90,6 +95,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -110,7 +116,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
@@ -203,6 +208,7 @@ import com.vitorpamplona.quartz.events.TwitterIdentity
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
@@ -901,6 +907,8 @@ private fun ProfileActions(
     baseUser: User,
     accountViewModel: AccountViewModel,
 ) {
+    val tempFollowLists = remember { generateFollowLists().toMutableStateList() }
+
     val isMe by
         remember(accountViewModel) { derivedStateOf { accountViewModel.userProfile() == baseUser } }
 
@@ -914,7 +922,13 @@ private fun ProfileActions(
         } else {
             DisplayFollowUnfollowButton(baseUser, accountViewModel)
         }
-        FollowSetsActionMenu(baseUser.pubkeyHex)
+        FollowSetsActionMenu(
+            userHex = baseUser.pubkeyHex,
+            followLists = tempFollowLists,
+            addUser = { index, list ->
+                list.members = list.members.plus(baseUser.pubkeyHex)
+            },
+        )
     }
 }
 
@@ -1005,15 +1019,16 @@ fun WatchIsHiddenUser(
 @Composable
 fun FollowSetsActionMenu(
     userHex: String,
+    followLists: List<FollowInfo>,
     modifier: Modifier = Modifier,
+    addUser: (listIndex: Int, list: FollowInfo) -> Unit,
 ) {
-    var isMenuOpen by remember { mutableStateOf(false) }
+    val (isMenuOpen, setMenuValue) = remember { mutableStateOf(false) }
+    val uiScope = rememberCoroutineScope()
 
-    Box {
+    Column {
         TextButton(
-            onClick = {
-                isMenuOpen = !isMenuOpen
-            },
+            onClick = { setMenuValue(true) },
             shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
             colors =
                 ButtonDefaults
@@ -1049,40 +1064,35 @@ fun FollowSetsActionMenu(
         DropdownMenu(
             expanded = isMenuOpen,
             onDismissRequest = {
-                isMenuOpen = !isMenuOpen
+                uiScope.launch {
+                    delay(100L)
+                    setMenuValue(false)
+                }
             },
             modifier = Modifier.fillMaxWidth(),
             properties = PopupProperties(usePlatformDefaultWidth = true),
         ) {
             DropDownMenuHeader(headerText = "Add to lists")
-            DropdownMenuItem(
-                text = {
-                    FollowSetItem(
-                        modifier = Modifier.fillMaxWidth(),
-                        listHeader = "LOLZ List",
-                        listIsPublic = true,
-                        isUserInList = false,
-                    ) {
-                    }
-                },
-                onClick = {},
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(StdVertSpacer)
-
-            DropdownMenuItem(
-                text = {
-                    FollowSetItem(
-                        modifier = Modifier.fillMaxWidth(),
-                        listHeader = "Private List",
-                        listIsPublic = false,
-                        isUserInList = true,
-                    ) {
-                    }
-                },
-                onClick = {},
-                modifier = Modifier.fillMaxWidth(),
-            )
+            followLists.forEachIndexed { index, list ->
+                Spacer(StdVertSpacer)
+                DropdownMenuItem(
+                    text = {
+                        FollowSetItem(
+                            modifier = Modifier.fillMaxWidth(),
+                            listHeader = list.name,
+                            listIsPublic = !list.isPrivate,
+                            isUserInList = list.members.contains(userHex),
+                        ) {
+                            println("List contains user -> ${list.members.contains(userHex)}")
+                            println("Adding user to List -> ${list.name}")
+                            addUser(index, list)
+                            println("List contains user -> ${list.members.contains(userHex)}")
+                        }
+                    },
+                    onClick = {},
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
 }
@@ -1104,6 +1114,22 @@ private fun DropDownMenuHeader(
     }
 }
 
+class FollowInfo(
+    val name: String,
+    val isPrivate: Boolean,
+    memberList: List<String> = mutableListOf(),
+) {
+    var members by mutableStateOf(memberList)
+}
+
+fun generateFollowLists(): List<FollowInfo> =
+    (1..10).map { index: Int ->
+        FollowInfo(
+            name = "List No $index",
+            isPrivate = index % 2 == 0,
+        )
+    }
+
 @Composable
 fun FollowSetItem(
     modifier: Modifier = Modifier,
@@ -1123,28 +1149,43 @@ fun FollowSetItem(
                 .clickable(onClick = onAddUser),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (isUserInList) {
+            Column(
+                modifier = Modifier.animateContentSize(),
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Done,
+                    contentDescription = "Done icon",
+                    modifier = Modifier.size(FilterChipDefaults.IconSize),
+                )
+            }
+        }
         Column(
             modifier = modifier.weight(1f),
             verticalArrangement = Arrangement.Center,
         ) {
             Text(listHeader, fontWeight = FontWeight.Bold)
             Spacer(modifier = StdVertSpacer)
-            Text(
-                if (isUserInList) "Present in List" else "Not present",
-                overflow = TextOverflow.Ellipsis,
-                fontWeight = if (isUserInList) FontWeight.Bold else FontWeight.Normal,
-                maxLines = 3,
-                modifier =
-                    Modifier
-                        .background(
-                            color =
-                                if (isUserInList) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.background
-                                },
-                            shape = ButtonBorder,
-                        ),
+            FilterChip(
+                selected = isUserInList,
+                enabled = isUserInList,
+                onClick = {},
+                label = {
+                    Text(text = if (isUserInList) "In List" else "Not in List")
+                },
+                leadingIcon =
+                    if (isUserInList) {
+                        {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.PlaylistAddCheck,
+                                contentDescription = null,
+                            )
+                        }
+                    } else {
+                        null
+                    },
+                shape = ButtonBorder,
             )
         }
 
