@@ -544,6 +544,10 @@
     <string name="zap_forward_explainer">Stödjande klienter kommer att vidarebefordra Zaps till LNAddress eller användarprofilen nedan istället för din egen</string>
     <string name="geohash_title">Exponera plats som </string>
     <string name="geohash_explainer">Lägger till en Geohash av din plats i inlägget. Allmänheten kommer att veta att du befinner dig inom 5 km från nuvarande plats</string>
+    <string name="geohash_exclusive">Plats-exklusivt inlägg</string>
+    <string name="geohash_exclusive_explainer">Endast anhängare av platsen kommer att se den. Dina allmänna anhängare kommer inte att se den.</string>
+    <string name="loading_location">Laddar position</string>
+    <string name="lack_location_permissions">Inga platsbehörigheter</string>
     <string name="add_sensitive_content_explainer">Lägger till en varning för känsligt innehåll innan ditt innehåll visas. Detta är idealiskt för NSFW-innehåll (inte säkert för arbete) eller innehåll som vissa personer kan uppleva som stötande eller störande</string>
     <string name="new_feature_nip17_might_not_be_available_title">Ny Funktion</string>
     <string name="new_feature_nip17_might_not_be_available_description">För att aktivera denna funktion kräver det att Amethyst skickar ett NIP-17 meddelande (GiftWrapped, Förseglade Direkta och Gruppmeddelanden). NIP-17 är nytt och de flesta klienter har ännu inte implementerat det. Se till att mottagaren använder en kompatibel klient.</string>

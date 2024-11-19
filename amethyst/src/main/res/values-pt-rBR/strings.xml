@@ -545,6 +545,10 @@
     <string name="zap_forward_explainer">Os clientes que suportam encaminharão zaps para o endereço lightning ou perfil de usuário abaixo, em vez do seu</string>
     <string name="geohash_title">Expor localização como </string>
     <string name="geohash_explainer">Adicione um geohash da sua localização à postagem. O público saberá que você está a 5 km (3 milhas) do local atual</string>
+    <string name="geohash_exclusive">Postagem exclusiva de localização</string>
+    <string name="geohash_exclusive_explainer">Somente seguidores da localização verão isso. Seus seguidores gerais não verão isso.</string>
+    <string name="loading_location">Carregando localização</string>
+    <string name="lack_location_permissions">Sem permissões para localização</string>
     <string name="add_sensitive_content_explainer">Adiciona aviso de conteúdo sensível antes de mostrar seu conteúdo. Isso é ideal para qualquer conteúdo NSFW ou conteúdo que algumas pessoas possam considerar ofensivo ou perturbador</string>
     <string name="new_feature_nip17_might_not_be_available_title">Novo recurso</string>
     <string name="new_feature_nip17_might_not_be_available_description">Ativando este modo requer o Amethyst para enviar uma mensagem de NIP-17 (GiftWrapped, Sealed Direct and Group Messages). NIP-17 é novo e a maioria dos clientes ainda não o implementaram. Certifique-se de que o destinatário está usando um cliente compatível.</string>
