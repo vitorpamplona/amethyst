@@ -56,11 +56,11 @@ data class ATag(
 
     fun toQTagArray() = removeTrailingNullsAndEmptyOthers("q", toTag(), relay)
 
-    fun toNAddr(): String =
+    fun toNAddr(overrideRelay: String? = relay): String =
         TlvBuilder()
             .apply {
                 addString(Nip19Bech32.TlvTypes.SPECIAL, dTag)
-                addStringIfNotNull(Nip19Bech32.TlvTypes.RELAY, relay)
+                addStringIfNotNull(Nip19Bech32.TlvTypes.RELAY, overrideRelay)
                 addHex(Nip19Bech32.TlvTypes.AUTHOR, pubKeyHex)
                 addInt(Nip19Bech32.TlvTypes.KIND, kind)
             }.build()

@@ -42,7 +42,6 @@ import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
-import com.vitorpamplona.quartz.encoders.toNote
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
@@ -80,9 +79,9 @@ import kotlin.coroutines.resume
 class AddressableNote(
     val address: ATag,
 ) : Note(address.toTag()) {
-    override fun idNote() = address.toNAddr()
+    override fun idNote() = address.toNAddr(relayHintUrl())
 
-    override fun toNEvent() = address.toNAddr()
+    override fun toNEvent() = address.toNAddr(relayHintUrl())
 
     override fun idDisplayNote() = idNote().toShortenHex()
 
@@ -146,7 +145,7 @@ open class Note(
 
     fun id() = Hex.decode(idHex)
 
-    open fun idNote() = id().toNote()
+    open fun idNote() = toNEvent()
 
     open fun toNEvent(): String {
         val myEvent = event

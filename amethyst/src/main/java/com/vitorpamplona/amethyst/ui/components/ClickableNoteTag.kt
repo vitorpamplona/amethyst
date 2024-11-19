@@ -37,11 +37,9 @@ fun ClickableNoteTag(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val route = routeFor(baseNote, accountViewModel.userProfile())
-
     ClickableText(
         text = AnnotatedString("@${baseNote.idNote().toShortenHex()}"),
-        onClick = { nav.nav("Note/${baseNote.idHex}") },
+        onClick = { routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) } },
         style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
     )
 }

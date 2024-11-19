@@ -45,8 +45,6 @@ data class ETag(
 
     fun toNEvent(): String = Nip19Bech32.createNEvent(eventId, authorPubKeyHex, null, relay)
 
-    fun toNote(): String = Nip19Bech32.createNote(eventId)
-
     fun toETagArray() = removeTrailingNullsAndEmptyOthers("e", eventId, relay, authorPubKeyHex)
 
     fun toQTagArray() = removeTrailingNullsAndEmptyOthers("q", eventId, relay, authorPubKeyHex)
