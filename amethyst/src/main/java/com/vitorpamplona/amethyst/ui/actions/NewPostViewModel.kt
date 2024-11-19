@@ -70,6 +70,7 @@ import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GitIssueEvent
 import com.vitorpamplona.quartz.events.Price
 import com.vitorpamplona.quartz.events.PrivateDmEvent
+import com.vitorpamplona.quartz.events.RootScope
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.TorrentCommentEvent
 import com.vitorpamplona.quartz.events.TorrentEvent
@@ -555,7 +556,7 @@ open class NewPostViewModel : ViewModel() {
 
         val replyingTo = originalNote
 
-        if (replyingTo?.event is CommentEvent || replyingTo?.event is Event) {
+        if (replyingTo?.event is CommentEvent || (replyingTo?.event is Event && replyingTo.event is RootScope)) {
             account?.sendReplyComment(
                 message = tagger.message,
                 replyingTo = replyingTo,

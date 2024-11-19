@@ -34,7 +34,8 @@ abstract class VideoEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig),
+    RootScope {
     fun url() = tags.firstOrNull { it.size > 1 && it[0] == URL }?.get(1)
 
     fun urls() = tags.filter { it.size > 1 && it[0] == URL }.map { it[1] }

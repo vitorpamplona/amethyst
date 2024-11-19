@@ -38,7 +38,8 @@ class PictureEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    RootScope {
     fun mimeTypes() = tags.filter { it.size > 1 && it[0] == MIME_TYPE }
 
     fun hashes() = tags.filter { it.size > 1 && it[0] == HASH }

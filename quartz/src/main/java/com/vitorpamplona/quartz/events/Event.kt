@@ -588,3 +588,5 @@ data class ZapSplitSetup(
     val weight: Double,
     val isLnAddress: Boolean,
 )
+
+interface RootScope

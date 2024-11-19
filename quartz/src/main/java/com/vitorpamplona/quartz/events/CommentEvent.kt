@@ -39,7 +39,8 @@ class CommentEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    RootScope {
     fun root() = tags.firstOrNull { it.size > 3 && it[3] == "root" }?.get(1)
 
     fun getRootScopes() = tags.filter { it.size > 1 && it[0] == "I" || it[0] == "A" || it[0] == "E" }
