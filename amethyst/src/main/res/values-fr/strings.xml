@@ -547,6 +547,10 @@
     <string name="zap_forward_explainer">Les clients compatibles transmettront des zaps sur l\'adresse LN ou le profil Utilisateur ci-dessous au lieu du vôtre.</string>
     <string name="geohash_title">Révéler la localisation comme </string>
     <string name="geohash_explainer">Ajoute un Geohash de votre emplacement au message. Le public saura que vous êtes à moins de 5km de l\'emplacement actuel</string>
+    <string name="geohash_exclusive">Post exclusif à la localisation</string>
+    <string name="geohash_exclusive_explainer">Seuls les abonnés à cette localisation le verront. Vos abonnés généraux ne le verront pas.</string>
+    <string name="loading_location">Chargement de la localisation</string>
+    <string name="lack_location_permissions">Pas d\'autorisations de localisation</string>
     <string name="add_sensitive_content_explainer">Ajoute un avertissement de contenu sensible avant de montrer votre contenu. C\'est idéal pour tout contenu NSFW ou contenu que certaines personnes peuvent trouver offensant ou dérangeant</string>
     <string name="new_feature_nip17_might_not_be_available_title">Nouvelle Fonctionnalité</string>
     <string name="new_feature_nip17_might_not_be_available_description">Pour activer ce mode, Amethyst doit envoyer un message NIP-17 (GiftWrapped, Sealed Direct et Group Messages). Le protocole NIP-17 est nouveau et la plupart des clients ne l\'ont pas encore mis en oeuvre. Assurez-vous que le destinataire utilise un client compatible.</string>

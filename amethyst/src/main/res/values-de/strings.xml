@@ -550,6 +550,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="zap_forward_explainer">Unterstützende Clients leiten Zaps an die LNAddress oder das Benutzerprofil unten weiter, anstatt an Ihre eigene Adresse</string>
     <string name="geohash_title">Ort preisgeben als </string>
     <string name="geohash_explainer">Fügt dem Beitrag einen Geohash Ihres Standorts hinzu. Die Öffentlichkeit wird wissen, dass Sie sich innerhalb von 5 km (3 mi) vom aktuellen Standort befinden</string>
+    <string name="geohash_exclusive">Standort-exklusiver Beitrag</string>
+    <string name="geohash_exclusive_explainer">Nur Anhänger des Ortes werden es sehen. Deine allgemeinen Anhänger werden es nicht sehen.</string>
+    <string name="loading_location">Standort wird geladen</string>
+    <string name="lack_location_permissions">Keine Standortberechtigungen</string>
     <string name="add_sensitive_content_explainer">Fügt eine Warnung für sensiblen Inhalt hinzu, bevor Ihr Inhalt angezeigt wird. Dies ist ideal für NSFW-Inhalte (nicht sicher für die Arbeit) oder Inhalte, die manche Menschen als anstößig oder verstörend empfinden könnten</string>
     <string name="new_feature_nip17_might_not_be_available_title">Neues Feature</string>
     <string name="new_feature_nip17_might_not_be_available_description">Um diesen Modus zu aktivieren, muss Amethyst eine NIP-17-Nachricht senden (GiftWrapped, Versiegelte Direkt- und Gruppennachrichten). NIP-17 ist neu und die meisten Clients haben es noch nicht implementiert. Stellen Sie sicher, dass der Empfänger einen kompatiblen Client verwendet.</string>
