@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.note.types.EmptyState
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.JustVideoDisplay
+import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack
@@ -176,6 +177,7 @@ import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.NIP90StatusEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PictureEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
@@ -730,6 +732,8 @@ private fun RenderNoteRow(
         is FileHeaderEvent -> FileHeaderDisplay(baseNote, true, false, accountViewModel)
         is VideoHorizontalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, false, accountViewModel, nav)
         is VideoVerticalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, false, accountViewModel, nav)
+        is PictureEvent -> PictureDisplay(baseNote, true, false, backgroundColor, accountViewModel, nav)
+
         is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, true, false, accountViewModel)
         is CommunityPostApprovalEvent -> {
             RenderPostApproval(

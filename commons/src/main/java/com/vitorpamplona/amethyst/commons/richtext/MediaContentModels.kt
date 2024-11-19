@@ -21,12 +21,13 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.events.Dimension
 import java.io.File
 
 @Immutable
 abstract class BaseMediaContent(
     val description: String? = null,
-    val dim: String? = null,
+    val dim: Dimension? = null,
     val blurhash: String? = null,
 )
 
@@ -35,7 +36,7 @@ abstract class MediaUrlContent(
     val url: String,
     description: String? = null,
     val hash: String? = null,
-    dim: String? = null,
+    dim: Dimension? = null,
     blurhash: String? = null,
     val uri: String? = null,
     val mimeType: String? = null,
@@ -47,7 +48,7 @@ class MediaUrlImage(
     description: String? = null,
     hash: String? = null,
     blurhash: String? = null,
-    dim: String? = null,
+    dim: Dimension? = null,
     uri: String? = null,
     val contentWarning: String? = null,
     mimeType: String? = null,
@@ -58,7 +59,7 @@ class MediaUrlVideo(
     url: String,
     description: String? = null,
     hash: String? = null,
-    dim: String? = null,
+    dim: Dimension? = null,
     uri: String? = null,
     val artworkUri: String? = null,
     val authorName: String? = null,
@@ -73,7 +74,7 @@ abstract class MediaPreloadedContent(
     description: String? = null,
     val mimeType: String? = null,
     val isVerified: Boolean? = null,
-    dim: String? = null,
+    dim: Dimension? = null,
     blurhash: String? = null,
     val uri: String,
     val id: String? = null,
@@ -86,7 +87,7 @@ class MediaLocalImage(
     localFile: File?,
     mimeType: String? = null,
     description: String? = null,
-    dim: String? = null,
+    dim: Dimension? = null,
     blurhash: String? = null,
     isVerified: Boolean? = null,
     uri: String,
@@ -97,7 +98,7 @@ class MediaLocalVideo(
     localFile: File?,
     mimeType: String? = null,
     description: String? = null,
-    dim: String? = null,
+    dim: Dimension? = null,
     blurhash: String? = null,
     isVerified: Boolean? = null,
     uri: String,

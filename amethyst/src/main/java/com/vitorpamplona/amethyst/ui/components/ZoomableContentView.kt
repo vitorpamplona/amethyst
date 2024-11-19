@@ -98,9 +98,9 @@ import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.events.Dimension
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -389,7 +389,7 @@ fun UrlImageView(
     accountViewModel: AccountViewModel,
     alwayShowImage: Boolean = false,
 ) {
-    val ratio = remember(content) { aspectRatio(content.dim) }
+    val ratio = content.dim?.aspectRatio()
 
     val showImage =
         remember {
@@ -552,26 +552,10 @@ fun ShowHash(content: MediaUrlContent) {
     verifiedHash?.let { HashVerificationSymbol(it) }
 }
 
-fun aspectRatio(dim: String?): Float? {
+fun aspectRatio(dim: Dimension?): Float? {
     if (dim == null) return null
-    if (dim == "0x0") return null
 
-    val parts = dim.split("x")
-    if (parts.size != 2) return null
-
-    return try {
-        val width = parts[0].toFloat()
-        val height = parts[1].toFloat()
-
-        if (width < 0.1 || height < 0.1) {
-            null
-        } else {
-            width / height
-        }
-    } catch (e: Exception) {
-        if (e is CancellationException) throw e
-        null
-    }
+    return dim.width.toFloat() / dim.height.toFloat()
 }
 
 @Composable
@@ -719,7 +703,7 @@ fun ShareImageAction(
     videoUri: String?,
     postNostrUri: String?,
     blurhash: String?,
-    dim: String?,
+    dim: Dimension?,
     hash: String?,
     mimeType: String?,
     onDismiss: () -> Unit,

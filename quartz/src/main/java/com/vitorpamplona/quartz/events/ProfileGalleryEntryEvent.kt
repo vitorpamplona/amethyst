@@ -46,7 +46,7 @@ class ProfileGalleryEntryEvent(
 
     fun alt() = tags.firstOrNull { it.size > 1 && it[0] == ALT }?.get(1)
 
-    fun dimensions() = tags.firstOrNull { it.size > 1 && it[0] == DIMENSION }?.get(1)
+    fun dimensions() = tags.firstOrNull { it.size > 1 && it[0] == DIMENSION }?.get(1)?.let { Dimension.parse(it) }
 
     fun magnetURI() = tags.firstOrNull { it.size > 1 && it[0] == MAGNET_URI }?.get(1)
 
@@ -87,7 +87,7 @@ class ProfileGalleryEntryEvent(
             alt: String? = null,
             hash: String? = null,
             size: String? = null,
-            dimensions: String? = null,
+            dimensions: Dimension? = null,
             blurhash: String? = null,
             originalHash: String? = null,
             magnetURI: String? = null,
@@ -109,7 +109,7 @@ class ProfileGalleryEntryEvent(
                     alt?.ifBlank { null }?.let { arrayOf(ALT, it) } ?: arrayOf("alt", ALT_DESCRIPTION),
                     hash?.let { arrayOf(HASH, it) },
                     size?.let { arrayOf(FILE_SIZE, it) },
-                    dimensions?.let { arrayOf(DIMENSION, it) },
+                    dimensions?.let { arrayOf(DIMENSION, it.toString()) },
                     blurhash?.let { arrayOf(BLUR_HASH, it) },
                     originalHash?.let { arrayOf(ORIGINAL_HASH, it) },
                     magnetURI?.let { arrayOf(MAGNET_URI, it) },

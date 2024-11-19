@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.events.FileHeaderEvent
 
 class Nip92MediaAttachments {
     companion object {
-        private const val IMETA = "imeta"
+        const val IMETA = "imeta"
     }
 
     fun convertFromFileHeader(header: FileHeaderEvent): Array<String>? {
@@ -63,13 +63,22 @@ class Nip92MediaAttachments {
             .firstOrNull {
                 it.size > 1 && it[0] == IMETA && it[1] == "url $imageUrl"
             }?.let { tagList ->
-                tagList.associate { tag ->
-                    val parts = tag.split(" ", limit = 2)
-                    when (parts.size) {
-                        2 -> parts[0] to parts[1]
-                        1 -> parts[0] to ""
-                        else -> "" to ""
-                    }
-                }
+                parseIMeta(tagList)
             } ?: emptyMap()
+
+    fun parse(tags: Array<Array<String>>): Map<String, Map<String, String>> =
+        tags.filter { it.size > 1 && it[0] == IMETA }.associate {
+            val allTags = parseIMeta(it)
+            (allTags.get("url") ?: "") to allTags
+        }
+
+    fun parseIMeta(tags: Array<String>): Map<String, String> =
+        tags.associate { tag ->
+            val parts = tag.split(" ", limit = 2)
+            when (parts.size) {
+                2 -> parts[0] to parts[1]
+                1 -> parts[0] to ""
+                else -> "" to ""
+            }
+        }
 }

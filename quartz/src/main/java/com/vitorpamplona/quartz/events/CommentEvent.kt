@@ -87,6 +87,33 @@ class CommentEvent(
                 .reversed()
                 .toTypedArray()
 
+        fun firstReplyToEvent(
+            msg: String,
+            replyingTo: EventHint<Event>,
+            usersMentioned: Set<PTag> = emptySet(),
+            addressesMentioned: Set<ATag> = emptySet(),
+            eventsMentioned: Set<ETag> = emptySet(),
+            nip94attachments: List<FileHeaderEvent>? = null,
+            geohash: String? = null,
+            zapReceiver: List<ZapSplitSetup>? = null,
+            markAsSensitive: Boolean = false,
+            zapRaiserAmount: Long? = null,
+            isDraft: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (CommentEvent) -> Unit,
+        ) {
+            val tags = mutableListOf<Array<String>>()
+
+            tags.add(removeTrailingNullsAndEmptyOthers("E", replyingTo.event.id, replyingTo.relay, replyingTo.event.pubKey))
+            tags.add(arrayOf("K", "${replyingTo.event.kind}"))
+
+            tags.add(removeTrailingNullsAndEmptyOthers("e", replyingTo.event.id, replyingTo.relay, replyingTo.event.pubKey))
+            tags.add(arrayOf("k", "${replyingTo.event.kind}"))
+
+            create(msg, tags, usersMentioned, addressesMentioned, eventsMentioned, nip94attachments, geohash, zapReceiver, markAsSensitive, zapRaiserAmount, isDraft, signer, createdAt, onReady)
+        }
+
         fun replyComment(
             msg: String,
             replyingTo: EventHint<CommentEvent>,

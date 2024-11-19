@@ -44,7 +44,7 @@ class FileStorageHeaderEvent(
 
     fun alt() = tags.firstOrNull { it.size > 1 && it[0] == ALT }?.get(1)
 
-    fun dimensions() = tags.firstOrNull { it.size > 1 && it[0] == DIMENSION }?.get(1)
+    fun dimensions() = tags.firstOrNull { it.size > 1 && it[0] == DIMENSION }?.get(1)?.let { Dimension.parse(it) }
 
     fun magnetURI() = tags.firstOrNull { it.size > 1 && it[0] == MAGNET_URI }?.get(1)
 

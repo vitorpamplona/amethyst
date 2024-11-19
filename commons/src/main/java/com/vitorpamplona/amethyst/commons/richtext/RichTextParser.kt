@@ -27,6 +27,7 @@ import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import com.vitorpamplona.quartz.encoders.Nip54InlineMetadata
 import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
+import com.vitorpamplona.quartz.events.Dimension
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
@@ -56,7 +57,7 @@ class RichTextParser {
             description = description ?: frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
             hash = frags[FileHeaderEvent.HASH] ?: tags[FileHeaderEvent.HASH],
             blurhash = frags[FileHeaderEvent.BLUR_HASH] ?: tags[FileHeaderEvent.BLUR_HASH],
-            dim = frags[FileHeaderEvent.DIMENSION] ?: tags[FileHeaderEvent.DIMENSION],
+            dim = frags[FileHeaderEvent.DIMENSION]?.let { Dimension.parse(it) } ?: tags[FileHeaderEvent.DIMENSION]?.let { Dimension.parse(it) },
             contentWarning = frags["content-warning"] ?: tags["content-warning"],
             uri = callbackUri,
             mimeType = frags[FileHeaderEvent.MIME_TYPE] ?: tags[FileHeaderEvent.MIME_TYPE],
@@ -76,7 +77,7 @@ class RichTextParser {
             description = description ?: frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
             hash = frags[FileHeaderEvent.HASH] ?: tags[FileHeaderEvent.HASH],
             blurhash = frags[FileHeaderEvent.BLUR_HASH] ?: tags[FileHeaderEvent.BLUR_HASH],
-            dim = frags[FileHeaderEvent.DIMENSION] ?: tags[FileHeaderEvent.DIMENSION],
+            dim = frags[FileHeaderEvent.DIMENSION]?.let { Dimension.parse(it) } ?: tags[FileHeaderEvent.DIMENSION]?.let { Dimension.parse(it) },
             contentWarning = frags["content-warning"] ?: tags["content-warning"],
             uri = callbackUri,
             mimeType = frags[FileHeaderEvent.MIME_TYPE] ?: tags[FileHeaderEvent.MIME_TYPE],

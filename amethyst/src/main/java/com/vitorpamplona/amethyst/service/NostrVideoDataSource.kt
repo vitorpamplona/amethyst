@@ -29,6 +29,7 @@ import com.vitorpamplona.ammolite.relays.filters.SinceAuthorPerRelayFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.events.PictureEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import kotlinx.coroutines.Dispatchers
@@ -64,85 +65,139 @@ object NostrVideoDataSource : AmethystNostrDataSource("VideoFeed") {
         job?.cancel()
     }
 
-    fun createContextualFilter(): TypedFilter {
+    fun createContextualFilter(): List<TypedFilter> {
         val follows = account.liveStoriesListAuthorsPerRelay.value
 
-        return TypedFilter(
-            types = if (follows == null) setOf(FeedType.GLOBAL) else setOf(FeedType.FOLLOWS),
-            filter =
-                SinceAuthorPerRelayFilter(
-                    authors = follows,
-                    kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
-                    limit = 200,
-                    tags = mapOf("m" to SUPPORTED_VIDEO_FEED_MIME_TYPES),
-                    since =
-                        latestEOSEs.users[account.userProfile()]
-                            ?.followList
-                            ?.get(account.settings.defaultStoriesFollowList.value)
-                            ?.relayList,
-                ),
+        val types = if (follows == null) setOf(FeedType.GLOBAL) else setOf(FeedType.FOLLOWS)
+
+        return listOf(
+            TypedFilter(
+                types = types,
+                filter =
+                    SinceAuthorPerRelayFilter(
+                        authors = follows,
+                        kinds = listOf(PictureEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
+                        limit = 200,
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(account.settings.defaultStoriesFollowList.value)
+                                ?.relayList,
+                    ),
+            ),
+            TypedFilter(
+                types = types,
+                filter =
+                    SinceAuthorPerRelayFilter(
+                        authors = follows,
+                        kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND),
+                        limit = 200,
+                        tags = mapOf("m" to SUPPORTED_VIDEO_FEED_MIME_TYPES),
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(account.settings.defaultStoriesFollowList.value)
+                                ?.relayList,
+                    ),
+            ),
         )
     }
 
-    fun createFollowTagsFilter(): TypedFilter? {
+    fun createFollowTagsFilter(): List<TypedFilter> {
         val hashToLoad =
             account.liveStoriesFollowLists.value
                 ?.hashtags
-                ?.toList() ?: return null
+                ?.toList() ?: return emptyList()
 
-        if (hashToLoad.isEmpty()) return null
+        if (hashToLoad.isEmpty()) return emptyList()
 
-        return TypedFilter(
-            types = setOf(FeedType.GLOBAL),
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
-                    tags =
-                        mapOf(
-                            "t" to
-                                hashToLoad
-                                    .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
-                                    .flatten(),
-                            "m" to SUPPORTED_VIDEO_FEED_MIME_TYPES,
-                        ),
-                    limit = 100,
-                    since =
-                        latestEOSEs.users[account.userProfile()]
-                            ?.followList
-                            ?.get(account.settings.defaultStoriesFollowList.value)
-                            ?.relayList,
-                ),
+        val hashtags =
+            hashToLoad
+                .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
+                .flatten()
+
+        return listOf(
+            TypedFilter(
+                types = setOf(FeedType.GLOBAL),
+                filter =
+                    SincePerRelayFilter(
+                        kinds = listOf(PictureEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
+                        tags = mapOf("t" to hashtags),
+                        limit = 100,
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(account.settings.defaultStoriesFollowList.value)
+                                ?.relayList,
+                    ),
+            ),
+            TypedFilter(
+                types = setOf(FeedType.GLOBAL),
+                filter =
+                    SincePerRelayFilter(
+                        kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND),
+                        tags =
+                            mapOf(
+                                "t" to hashtags,
+                                "m" to SUPPORTED_VIDEO_FEED_MIME_TYPES,
+                            ),
+                        limit = 100,
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(account.settings.defaultStoriesFollowList.value)
+                                ?.relayList,
+                    ),
+            ),
         )
     }
 
-    fun createFollowGeohashesFilter(): TypedFilter? {
+    fun createFollowGeohashesFilter(): List<TypedFilter> {
         val hashToLoad =
             account.liveStoriesFollowLists.value
                 ?.geotags
-                ?.toList() ?: return null
+                ?.toList() ?: return emptyList()
 
-        if (hashToLoad.isEmpty()) return null
+        if (hashToLoad.isEmpty()) return emptyList()
 
-        return TypedFilter(
-            types = setOf(FeedType.GLOBAL),
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
-                    tags =
-                        mapOf(
-                            "g" to
-                                hashToLoad
-                                    .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
-                                    .flatten(),
-                            "m" to SUPPORTED_VIDEO_FEED_MIME_TYPES,
-                        ),
-                    limit = 100,
-                    since =
-                        latestEOSEs.users[account.userProfile()]
-                            ?.followList
-                            ?.get(account.settings.defaultStoriesFollowList.value)
-                            ?.relayList,
-                ),
+        val geoHashes =
+            hashToLoad
+                .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
+                .flatten()
+
+        return listOf(
+            TypedFilter(
+                types = setOf(FeedType.GLOBAL),
+                filter =
+                    SincePerRelayFilter(
+                        kinds = listOf(PictureEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND),
+                        tags = mapOf("g" to geoHashes),
+                        limit = 100,
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(account.settings.defaultStoriesFollowList.value)
+                                ?.relayList,
+                    ),
+            ),
+            TypedFilter(
+                types = setOf(FeedType.GLOBAL),
+                filter =
+                    SincePerRelayFilter(
+                        kinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND),
+                        tags =
+                            mapOf(
+                                "g" to geoHashes,
+                                "m" to SUPPORTED_VIDEO_FEED_MIME_TYPES,
+                            ),
+                        limit = 100,
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(account.settings.defaultStoriesFollowList.value)
+                                ?.relayList,
+                    ),
+            ),
         )
     }
 
@@ -162,6 +217,6 @@ object NostrVideoDataSource : AmethystNostrDataSource("VideoFeed") {
                 createContextualFilter(),
                 createFollowTagsFilter(),
                 createFollowGeohashesFilter(),
-            ).ifEmpty { null }
+            ).flatten().ifEmpty { null }
     }
 }

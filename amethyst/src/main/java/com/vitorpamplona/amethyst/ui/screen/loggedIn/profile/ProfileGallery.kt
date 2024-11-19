@@ -338,6 +338,8 @@ fun InnerRenderGalleryThumb(
     note: Note,
     accountViewModel: AccountViewModel,
 ) {
+    val noteEvent = note.event as? ProfileGalleryEntryEvent ?: return
+
     Box(
         Modifier
             .fillMaxWidth()
@@ -345,11 +347,11 @@ fun InnerRenderGalleryThumb(
         contentAlignment = BottomStart,
     ) {
         card.image?.let {
-            var blurHash = (note.event as ProfileGalleryEntryEvent).blurhash()
-            var description = (note.event as ProfileGalleryEntryEvent).content
+            val blurHash = noteEvent.blurhash()
+            val description = noteEvent.content
             // var hash = (note.event as ProfileGalleryEntryEvent).hash()
-            var dimensions = (note.event as ProfileGalleryEntryEvent).dimensions()
-            var mimeType = (note.event as ProfileGalleryEntryEvent).mimeType()
+            val dimensions = noteEvent.dimensions()
+            val mimeType = noteEvent.mimeType()
             var content: BaseMediaContent? = null
 
             if (isVideoUrl(it)) {

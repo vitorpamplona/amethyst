@@ -120,6 +120,7 @@ import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
 import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.vitorpamplona.quartz.events.Dimension
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -211,7 +212,7 @@ fun VideoView(
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
-    dimensions: String? = null,
+    dimensions: Dimension? = null,
     blurhash: String? = null,
     nostrUriCallback: String? = null,
     onDialog: ((Boolean) -> Unit)? = null,
@@ -242,7 +243,7 @@ fun VideoView(
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
-    dimensions: String? = null,
+    dimensions: Dimension? = null,
     blurhash: String? = null,
     nostrUriCallback: String? = null,
     onDialog: ((Boolean) -> Unit)? = null,
@@ -260,7 +261,7 @@ fun VideoView(
         }
 
     if (blurhash == null) {
-        val ratio = aspectRatio(dimensions)
+        val ratio = dimensions?.aspectRatio()
         val modifier =
             if (ratio != null && automaticallyStartPlayback.value) {
                 Modifier.aspectRatio(ratio)
@@ -294,7 +295,7 @@ fun VideoView(
             }
         }
     } else {
-        val ratio = aspectRatio(dimensions)
+        val ratio = dimensions?.aspectRatio()
 
         val modifier =
             if (ratio != null) {

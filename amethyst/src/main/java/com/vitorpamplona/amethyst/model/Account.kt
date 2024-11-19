@@ -67,6 +67,7 @@ import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.Contact
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
+import com.vitorpamplona.quartz.events.Dimension
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
@@ -2190,34 +2191,68 @@ class Account(
                     }
                 }
 
-        CommentEvent.replyComment(
-            msg = message,
-            replyingTo = EventHint(replyingTo.event as CommentEvent, replyingTo.relayHintUrl()),
-            usersMentioned = usersMentioned,
-            addressesMentioned = addressesMentioned,
-            eventsMentioned = eventsMentioned,
-            nip94attachments = nip94attachments,
-            geohash = geohash,
-            zapReceiver = zapReceiver,
-            markAsSensitive = wantsToMarkAsSensitive,
-            zapRaiserAmount = zapRaiserAmount,
-            isDraft = draftTag != null,
-            signer = signer,
-        ) {
-            if (draftTag != null) {
-                if (message.isBlank()) {
-                    deleteDraft(draftTag)
+        if (replyingTo.event is CommentEvent) {
+            CommentEvent.replyComment(
+                msg = message,
+                replyingTo = EventHint(replyingTo.event as CommentEvent, replyingTo.relayHintUrl()),
+                usersMentioned = usersMentioned,
+                addressesMentioned = addressesMentioned,
+                eventsMentioned = eventsMentioned,
+                nip94attachments = nip94attachments,
+                geohash = geohash,
+                zapReceiver = zapReceiver,
+                markAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = zapRaiserAmount,
+                isDraft = draftTag != null,
+                signer = signer,
+            ) {
+                if (draftTag != null) {
+                    if (message.isBlank()) {
+                        deleteDraft(draftTag)
+                    } else {
+                        DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                            sendDraftEvent(draftEvent)
+                        }
+                    }
                 } else {
-                    DraftEvent.create(draftTag, it, signer) { draftEvent ->
-                        sendDraftEvent(draftEvent)
+                    Client.send(it, relayList = relayList)
+                    LocalCache.justConsume(it, null)
+
+                    replyingTo.event?.let {
+                        Client.send(it, relayList = relayList)
                     }
                 }
-            } else {
-                Client.send(it, relayList = relayList)
-                LocalCache.justConsume(it, null)
-
-                replyingTo.event?.let {
+            }
+        } else {
+            CommentEvent.firstReplyToEvent(
+                msg = message,
+                replyingTo = EventHint(replyingTo.event as Event, replyingTo.relayHintUrl()),
+                usersMentioned = usersMentioned,
+                addressesMentioned = addressesMentioned,
+                eventsMentioned = eventsMentioned,
+                nip94attachments = nip94attachments,
+                geohash = geohash,
+                zapReceiver = zapReceiver,
+                markAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = zapRaiserAmount,
+                isDraft = draftTag != null,
+                signer = signer,
+            ) {
+                if (draftTag != null) {
+                    if (message.isBlank()) {
+                        deleteDraft(draftTag)
+                    } else {
+                        DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                            sendDraftEvent(draftEvent)
+                        }
+                    }
+                } else {
                     Client.send(it, relayList = relayList)
+                    LocalCache.justConsume(it, null)
+
+                    replyingTo.event?.let {
+                        Client.send(it, relayList = relayList)
+                    }
                 }
             }
         }
@@ -2882,7 +2917,7 @@ class Account(
         url: String,
         relay: String?,
         blurhash: String?,
-        dim: String?,
+        dim: Dimension?,
         hash: String?,
         mimeType: String?,
     ) {

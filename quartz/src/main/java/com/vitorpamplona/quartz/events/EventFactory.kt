@@ -118,6 +118,7 @@ class EventFactory {
             NIP90UserDiscoveryResponseEvent.KIND -> NIP90UserDiscoveryResponseEvent(id, pubKey, createdAt, tags, content, sig)
             OtsEvent.KIND -> OtsEvent(id, pubKey, createdAt, tags, content, sig)
             PeopleListEvent.KIND -> PeopleListEvent(id, pubKey, createdAt, tags, content, sig)
+            PictureEvent.KIND -> PictureEvent(id, pubKey, createdAt, tags, content, sig)
             PinListEvent.KIND -> PinListEvent(id, pubKey, createdAt, tags, content, sig)
             PollNoteEvent.KIND -> PollNoteEvent(id, pubKey, createdAt, tags, content, sig)
             PrivateDmEvent.KIND -> PrivateDmEvent(id, pubKey, createdAt, tags, content, sig)

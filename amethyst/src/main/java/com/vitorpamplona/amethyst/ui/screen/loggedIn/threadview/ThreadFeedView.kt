@@ -123,6 +123,7 @@ import com.vitorpamplona.amethyst.ui.note.types.DisplaySearchRelayList
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
+import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
@@ -186,6 +187,7 @@ import com.vitorpamplona.quartz.events.HighlightEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PictureEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
@@ -509,6 +511,8 @@ private fun FullBleedNoteCompose(
                     )
                 } else if (noteEvent is VideoEvent) {
                     VideoDisplay(baseNote, makeItShort = false, canPreview = true, backgroundColor = backgroundColor, isFiniteHeight = false, accountViewModel = accountViewModel, nav = nav)
+                } else if (noteEvent is PictureEvent) {
+                    PictureDisplay(baseNote, roundedCorner = true, isFiniteHeight = false, backgroundColor, accountViewModel = accountViewModel, nav)
                 } else if (noteEvent is FileHeaderEvent) {
                     FileHeaderDisplay(baseNote, roundedCorner = true, isFiniteHeight = false, accountViewModel = accountViewModel)
                 } else if (noteEvent is FileStorageHeaderEvent) {

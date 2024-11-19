@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isImageOrVideoUrl
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -28,6 +29,7 @@ import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PictureEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
 
@@ -66,10 +68,11 @@ class VideoFeedFilter(
         val noteEvent = it.event
 
         return (
-            (noteEvent is FileHeaderEvent && noteEvent.hasUrl() && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET)) ||
-                (noteEvent is VideoVerticalEvent && noteEvent.hasUrl() && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET)) ||
-                (noteEvent is VideoHorizontalEvent && noteEvent.hasUrl() && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET)) ||
-                (noteEvent is FileStorageHeaderEvent && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET))
+            (noteEvent is FileHeaderEvent && noteEvent.hasUrl() && (noteEvent.urls().any { isImageOrVideoUrl(it) } || noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET))) ||
+                (noteEvent is VideoVerticalEvent && noteEvent.hasUrl() && (noteEvent.urls().any { isImageOrVideoUrl(it) } || noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET))) ||
+                (noteEvent is VideoHorizontalEvent && noteEvent.hasUrl() && (noteEvent.urls().any { isImageOrVideoUrl(it) } || noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET))) ||
+                (noteEvent is FileStorageHeaderEvent && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET)) ||
+                noteEvent is PictureEvent
         ) &&
             params.match(noteEvent) &&
             (params.isHiddenList || account.isAcceptable(it))

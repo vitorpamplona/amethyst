@@ -83,6 +83,7 @@ import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
+import com.vitorpamplona.quartz.events.Dimension
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
@@ -754,7 +755,7 @@ class AccountViewModel(
         url: String,
         relay: String?,
         blurhash: String?,
-        dim: String?,
+        dim: Dimension?,
         hash: String?,
         mimeType: String?,
     ) {

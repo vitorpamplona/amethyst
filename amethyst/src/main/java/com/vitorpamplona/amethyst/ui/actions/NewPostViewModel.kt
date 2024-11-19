@@ -554,7 +554,7 @@ open class NewPostViewModel : ViewModel() {
 
         val replyingTo = originalNote
 
-        if (replyingTo?.event is CommentEvent) {
+        if (replyingTo?.event is CommentEvent || replyingTo?.event is Event) {
             account?.sendReplyComment(
                 message = tagger.message,
                 replyingTo = replyingTo,
