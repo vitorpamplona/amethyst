@@ -30,6 +30,7 @@ import androidx.lifecycle.switchMap
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
@@ -94,6 +95,7 @@ import com.vitorpamplona.quartz.events.NIP17Factory
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PictureEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.Price
 import com.vitorpamplona.quartz.events.PrivateDmEvent
@@ -110,6 +112,8 @@ import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteModificationEvent
 import com.vitorpamplona.quartz.events.TorrentCommentEvent
+import com.vitorpamplona.quartz.events.VideoHorizontalEvent
+import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import com.vitorpamplona.quartz.events.WrappedEvent
 import com.vitorpamplona.quartz.events.ZapSplitSetup
 import com.vitorpamplona.quartz.signers.NostrSigner
@@ -1855,12 +1859,12 @@ class Account(
     }
 
     fun sendHeader(
-        signedEvent: FileHeaderEvent,
+        signedEvent: Event,
         relayList: List<RelaySetupInfo>,
         onReady: (Note) -> Unit,
     ) {
         Client.send(signedEvent, relayList = relayList)
-        LocalCache.consume(signedEvent, null)
+        LocalCache.justConsume(signedEvent, null)
 
         LocalCache.getNoteIfExists(signedEvent.id)?.let { onReady(it) }
     }
@@ -1894,7 +1898,7 @@ class Account(
     }
 
     fun sendHeader(
-        imageUrl: String,
+        url: String,
         magnetUri: String?,
         headerInfo: FileHeader,
         alt: String?,
@@ -1905,20 +1909,72 @@ class Account(
     ) {
         if (!isWriteable()) return
 
-        FileHeaderEvent.create(
-            url = imageUrl,
-            magnetUri = magnetUri,
-            mimeType = headerInfo.mimeType,
-            hash = headerInfo.hash,
-            size = headerInfo.size.toString(),
-            dimensions = headerInfo.dim,
-            blurhash = headerInfo.blurHash,
-            alt = alt,
-            originalHash = originalHash,
-            sensitiveContent = sensitiveContent,
-            signer = signer,
-        ) { event ->
-            sendHeader(event, relayList = relayList, onReady)
+        val isImage = headerInfo.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(url)
+        val isVideo = headerInfo.mimeType?.startsWith("video/") == true || RichTextParser.isVideoUrl(url)
+
+        if (isImage) {
+            PictureEvent.create(
+                url = url,
+                mimeType = headerInfo.mimeType,
+                hash = headerInfo.hash,
+                size = headerInfo.size.toLong(),
+                dimensions = headerInfo.dim,
+                blurhash = headerInfo.blurHash,
+                alt = alt,
+                signer = signer,
+            ) { event ->
+                sendHeader(event, relayList = relayList, onReady)
+            }
+        } else if (isVideo && headerInfo.dim != null) {
+            if (headerInfo.dim.height > headerInfo.dim.width) {
+                VideoVerticalEvent.create(
+                    url = url,
+                    magnetUri = magnetUri,
+                    mimeType = headerInfo.mimeType,
+                    hash = headerInfo.hash,
+                    size = headerInfo.size.toString(),
+                    dimensions = headerInfo.dim,
+                    blurhash = headerInfo.blurHash,
+                    alt = alt,
+                    originalHash = originalHash,
+                    sensitiveContent = sensitiveContent,
+                    signer = signer,
+                ) { event ->
+                    sendHeader(event, relayList = relayList, onReady)
+                }
+            } else {
+                VideoHorizontalEvent.create(
+                    url = url,
+                    magnetUri = magnetUri,
+                    mimeType = headerInfo.mimeType,
+                    hash = headerInfo.hash,
+                    size = headerInfo.size.toString(),
+                    dimensions = headerInfo.dim,
+                    blurhash = headerInfo.blurHash,
+                    alt = alt,
+                    originalHash = originalHash,
+                    sensitiveContent = sensitiveContent,
+                    signer = signer,
+                ) { event ->
+                    sendHeader(event, relayList = relayList, onReady)
+                }
+            }
+        } else {
+            FileHeaderEvent.create(
+                url = url,
+                magnetUri = magnetUri,
+                mimeType = headerInfo.mimeType,
+                hash = headerInfo.hash,
+                size = headerInfo.size.toString(),
+                dimensions = headerInfo.dim,
+                blurhash = headerInfo.blurHash,
+                alt = alt,
+                originalHash = originalHash,
+                sensitiveContent = sensitiveContent,
+                signer = signer,
+            ) { event ->
+                sendHeader(event, relayList = relayList, onReady)
+            }
         }
     }
 

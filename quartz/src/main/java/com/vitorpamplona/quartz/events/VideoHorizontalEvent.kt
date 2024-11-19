@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import java.util.UUID
 
 @Immutable
 class VideoHorizontalEvent(
@@ -45,18 +46,20 @@ class VideoHorizontalEvent(
             alt: String? = null,
             hash: String? = null,
             size: String? = null,
-            dimensions: String? = null,
+            dimensions: Dimension? = null,
             blurhash: String? = null,
             originalHash: String? = null,
             magnetURI: String? = null,
             torrentInfoHash: String? = null,
             sensitiveContent: Boolean? = null,
+            dTag: String = UUID.randomUUID().toString(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (VideoHorizontalEvent) -> Unit,
         ) {
             create(
                 KIND,
+                dTag,
                 url,
                 magnetUri,
                 mimeType,

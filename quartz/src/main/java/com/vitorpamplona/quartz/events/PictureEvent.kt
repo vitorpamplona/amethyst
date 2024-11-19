@@ -24,16 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.ETag
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
 import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments.Companion.IMETA
 import com.vitorpamplona.quartz.encoders.PTag
-import com.vitorpamplona.quartz.events.FileHeaderEvent.Companion.ALT
-import com.vitorpamplona.quartz.events.FileHeaderEvent.Companion.BLUR_HASH
-import com.vitorpamplona.quartz.events.FileHeaderEvent.Companion.DIMENSION
-import com.vitorpamplona.quartz.events.FileHeaderEvent.Companion.FILE_SIZE
-import com.vitorpamplona.quartz.events.FileHeaderEvent.Companion.MAGNET_URI
-import com.vitorpamplona.quartz.events.FileHeaderEvent.Companion.TORRENT_INFOHASH
-import com.vitorpamplona.quartz.events.FileHeaderEvent.Companion.URL
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.coroutines.cancellation.CancellationException
@@ -53,27 +45,23 @@ class PictureEvent(
 
     fun title() = tags.firstOrNull { it.size > 1 && it[0] == TITLE }?.get(1)
 
-    fun url() = tags.firstOrNull { it.size > 1 && it[0] == URL }?.get(1)
+    fun url() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.URL }?.get(1)
 
-    fun urls() = tags.filter { it.size > 1 && it[0] == URL }.map { it[1] }
+    fun urls() = tags.filter { it.size > 1 && it[0] == PictureMeta.URL }.map { it[1] }
 
-    fun mimeType() = tags.firstOrNull { it.size > 1 && it[0] == FileHeaderEvent.MIME_TYPE }?.get(1)
+    fun mimeType() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.MIME_TYPE }?.get(1)
 
-    fun hash() = tags.firstOrNull { it.size > 1 && it[0] == FileHeaderEvent.HASH }?.get(1)
+    fun hash() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.HASH }?.get(1)
 
-    fun size() = tags.firstOrNull { it.size > 1 && it[0] == FILE_SIZE }?.get(1)
+    fun size() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.FILE_SIZE }?.get(1)
 
-    fun alt() = tags.firstOrNull { it.size > 1 && it[0] == ALT }?.get(1)
+    fun alt() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.ALT }?.get(1)
 
-    fun dimensions() = tags.firstOrNull { it.size > 1 && it[0] == DIMENSION }?.get(1)?.let { Dimension.parse(it) }
+    fun dimensions() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.DIMENSION }?.get(1)?.let { Dimension.parse(it) }
 
-    fun magnetURI() = tags.firstOrNull { it.size > 1 && it[0] == MAGNET_URI }?.get(1)
+    fun blurhash() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.BLUR_HASH }?.get(1)
 
-    fun torrentInfoHash() = tags.firstOrNull { it.size > 1 && it[0] == TORRENT_INFOHASH }?.get(1)
-
-    fun blurhash() = tags.firstOrNull { it.size > 1 && it[0] == BLUR_HASH }?.get(1)
-
-    fun hasUrl() = tags.any { it.size > 1 && it[0] == URL }
+    fun hasUrl() = tags.any { it.size > 1 && it[0] == PictureMeta.URL }
 
     // hack to fix pablo's bug
     fun rootImage() =
@@ -104,41 +92,99 @@ class PictureEvent(
 
     companion object {
         const val KIND = 20
-        const val ALT_DESCRIPTION = "Picture"
+        const val ALT_DESCRIPTION = "List of pictures"
 
         private const val MIME_TYPE = "m"
         private const val HASH = "x"
         private const val TITLE = "title"
 
-        private fun create(
-            msg: String,
-            tags: MutableList<Array<String>>,
+        fun create(
+            url: String,
+            msg: String? = null,
+            title: String? = null,
+            mimeType: String? = null,
+            alt: String? = null,
+            hash: String? = null,
+            size: Long? = null,
+            dimensions: Dimension? = null,
+            blurhash: String? = null,
             usersMentioned: Set<PTag> = emptySet(),
             addressesMentioned: Set<ATag> = emptySet(),
             eventsMentioned: Set<ETag> = emptySet(),
-            nip94attachments: List<FileHeaderEvent>? = null,
             geohash: String? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
             markAsSensitive: Boolean = false,
             zapRaiserAmount: Long? = null,
-            isDraft: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (PictureEvent) -> Unit,
         ) {
+            val image =
+                PictureMeta(
+                    url,
+                    mimeType,
+                    blurhash,
+                    dimensions,
+                    alt,
+                    hash,
+                    size,
+                    emptyList(),
+                    emptyList(),
+                )
+
+            create(listOf(image), msg, title, usersMentioned, addressesMentioned, eventsMentioned, geohash, zapReceiver, markAsSensitive, zapRaiserAmount, signer, createdAt, onReady)
+        }
+
+        fun create(
+            images: List<PictureMeta>,
+            msg: String? = null,
+            title: String? = null,
+            usersMentioned: Set<PTag> = emptySet(),
+            addressesMentioned: Set<ATag> = emptySet(),
+            eventsMentioned: Set<ETag> = emptySet(),
+            geohash: String? = null,
+            zapReceiver: List<ZapSplitSetup>? = null,
+            markAsSensitive: Boolean = false,
+            zapRaiserAmount: Long? = null,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (PictureEvent) -> Unit,
+        ) {
+            val tags = mutableListOf(arrayOf<String>("alt", ALT_DESCRIPTION))
+
+            images.forEach {
+                tags.add(it.toIMetaArray())
+            }
+
+            title?.let { tags.add(arrayOf("title", it)) }
+
+            images.distinctBy { it.hash }.forEach {
+                if (it.hash != null) {
+                    tags.add(arrayOf("x", it.hash))
+                }
+            }
+
+            images.distinctBy { it.mimeType }.forEach {
+                if (it.mimeType != null) {
+                    tags.add(arrayOf("m", it.mimeType))
+                }
+            }
+
             usersMentioned.forEach { tags.add(it.toPTagArray()) }
             addressesMentioned.forEach { tags.add(it.toQTagArray()) }
             eventsMentioned.forEach { tags.add(it.toQTagArray()) }
 
-            findHashtags(msg).forEach {
-                val lowercaseTag = it.lowercase()
-                tags.add(arrayOf("t", it))
-                if (it != lowercaseTag) {
-                    tags.add(arrayOf("t", it.lowercase()))
+            if (msg != null) {
+                findHashtags(msg).forEach {
+                    val lowercaseTag = it.lowercase()
+                    tags.add(arrayOf("t", it))
+                    if (it != lowercaseTag) {
+                        tags.add(arrayOf("t", it.lowercase()))
+                    }
                 }
-            }
 
-            findURLs(msg).forEach { tags.add(arrayOf("r", it)) }
+                findURLs(msg).forEach { tags.add(arrayOf("r", it)) }
+            }
 
             zapReceiver?.forEach {
                 tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
@@ -148,19 +194,8 @@ class PictureEvent(
             }
             zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
             geohash?.let { tags.addAll(geohashMipMap(it)) }
-            nip94attachments?.let {
-                it.forEach {
-                    Nip92MediaAttachments().convertFromFileHeader(it)?.let {
-                        tags.add(it)
-                    }
-                }
-            }
 
-            if (isDraft) {
-                signer.assembleRumor(createdAt, KIND, tags.toTypedArray(), msg, onReady)
-            } else {
-                signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
-            }
+            signer.sign(createdAt, KIND, tags.toTypedArray(), msg ?: "", onReady)
         }
     }
 }
@@ -176,7 +211,33 @@ class PictureMeta(
     val fallback: List<String>,
     val annotations: List<UserAnnotation>,
 ) {
+    fun toIMetaArray(): Array<String> =
+        (
+            listOfNotNull(
+                "imeta",
+                "$URL $url",
+                mimeType?.let { "$MIME_TYPE $it" },
+                alt?.let { "$ALT $it" },
+                hash?.let { "$HASH $it" },
+                size?.let { "$FILE_SIZE $it" },
+                dimension?.let { "$DIMENSION $it" },
+                blurhash?.let { "$BLUR_HASH $it" },
+            ) +
+                fallback.map { "$FALLBACK $it" } +
+                annotations.map { "$ANNOTATIONS $it" }
+        ).toTypedArray()
+
     companion object {
+        const val URL = "url"
+        const val MIME_TYPE = "m"
+        const val FILE_SIZE = "size"
+        const val DIMENSION = "dim"
+        const val HASH = "x"
+        const val BLUR_HASH = "blurhash"
+        const val ALT = "alt"
+        const val FALLBACK = "fallback"
+        const val ANNOTATIONS = "annotate-user"
+
         fun parse(tagArray: Array<String>): PictureMeta? {
             var url: String? = null
             var mimeType: String? = null
@@ -188,9 +249,9 @@ class PictureMeta(
             val fallback = mutableListOf<String>()
             val annotations = mutableListOf<UserAnnotation>()
 
-            if (tagArray.size == 2 && tagArray[1].contains("url") && (tagArray[1].contains("blurhash") || tagArray[1].contains("size"))) {
+            if (tagArray.size == 2 && tagArray[1].contains(URL) && (tagArray[1].contains(BLUR_HASH) || tagArray[1].contains(FILE_SIZE))) {
                 // hack to fix pablo's bug
-                val keys = setOf("url", "m", "blurhash", "dim", "alt", "x", "size", "fallback", "annotate-user")
+                val keys = setOf(URL, MIME_TYPE, BLUR_HASH, DIMENSION, ALT, HASH, FILE_SIZE, FALLBACK, ANNOTATIONS)
                 var keyNextValue: String? = null
                 val values = mutableListOf<String>()
 
@@ -198,15 +259,15 @@ class PictureMeta(
                     if (it in keys) {
                         if (keyNextValue != null && values.isNotEmpty()) {
                             when (keyNextValue) {
-                                "url" -> url = values.joinToString(" ")
-                                "m" -> mimeType = values.joinToString(" ")
-                                "blurhash" -> blurhash = values.joinToString(" ")
-                                "dim" -> dim = Dimension.parse(values.joinToString(" "))
-                                "alt" -> alt = values.joinToString(" ")
-                                "x" -> hash = values.joinToString(" ")
-                                "size" -> size = values.joinToString(" ").toLongOrNull()
-                                "fallback" -> fallback.add(values.joinToString(" "))
-                                "annotate-user" -> {
+                                URL -> url = values.joinToString(" ")
+                                MIME_TYPE -> mimeType = values.joinToString(" ")
+                                BLUR_HASH -> blurhash = values.joinToString(" ")
+                                DIMENSION -> dim = Dimension.parse(values.joinToString(" "))
+                                ALT -> alt = values.joinToString(" ")
+                                HASH -> hash = values.joinToString(" ")
+                                FILE_SIZE -> size = values.joinToString(" ").toLongOrNull()
+                                FALLBACK -> fallback.add(values.joinToString(" "))
+                                ANNOTATIONS -> {
                                     UserAnnotation.parse(values.joinToString(" "))?.let {
                                         annotations.add(it)
                                     }
@@ -222,15 +283,15 @@ class PictureMeta(
 
                 if (keyNextValue != null && values.isNotEmpty()) {
                     when (keyNextValue) {
-                        "url" -> url = values.joinToString(" ")
-                        "m" -> mimeType = values.joinToString(" ")
-                        "blurhash" -> blurhash = values.joinToString(" ")
-                        "dim" -> dim = Dimension.parse(values.joinToString(" "))
-                        "alt" -> alt = values.joinToString(" ")
-                        "x" -> hash = values.joinToString(" ")
-                        "size" -> size = values.joinToString(" ").toLongOrNull()
-                        "fallback" -> fallback.add(values.joinToString(" "))
-                        "annotate-user" -> {
+                        URL -> url = values.joinToString(" ")
+                        MIME_TYPE -> mimeType = values.joinToString(" ")
+                        BLUR_HASH -> blurhash = values.joinToString(" ")
+                        DIMENSION -> dim = Dimension.parse(values.joinToString(" "))
+                        ALT -> alt = values.joinToString(" ")
+                        HASH -> hash = values.joinToString(" ")
+                        FILE_SIZE -> size = values.joinToString(" ").toLongOrNull()
+                        FALLBACK -> fallback.add(values.joinToString(" "))
+                        ANNOTATIONS -> {
                             UserAnnotation.parse(values.joinToString(" "))?.let {
                                 annotations.add(it)
                             }
@@ -247,15 +308,15 @@ class PictureMeta(
 
                     if (value.isNotBlank()) {
                         when (key) {
-                            "url" -> url = value
-                            "m" -> mimeType = value
-                            "blurhash" -> blurhash = value
-                            "dim" -> dim = Dimension.parse(value)
-                            "alt" -> alt = value
-                            "x" -> hash = value
-                            "size" -> size = value.toLongOrNull()
-                            "fallback" -> fallback.add(value)
-                            "annotate-user" -> {
+                            URL -> url = value
+                            MIME_TYPE -> mimeType = value
+                            BLUR_HASH -> blurhash = value
+                            DIMENSION -> dim = Dimension.parse(value)
+                            ALT -> alt = value
+                            HASH -> hash = value
+                            FILE_SIZE -> size = value.toLongOrNull()
+                            FALLBACK -> fallback.add(value)
+                            ANNOTATIONS -> {
                                 UserAnnotation.parse(value)?.let {
                                     annotations.add(it)
                                 }
@@ -277,6 +338,8 @@ class Dimension(
     val height: Int,
 ) {
     fun aspectRatio() = width.toFloat() / height.toFloat()
+
+    fun hasSize() = width > 0 && height > 0
 
     override fun toString() = "${width}x$height"
 
@@ -305,6 +368,8 @@ class UserAnnotation(
     val x: Int,
     val y: Int,
 ) {
+    override fun toString() = "$pubkey:$x:$y"
+
     companion object {
         fun parse(value: String): UserAnnotation? {
             val ann = value.split(":")

@@ -88,13 +88,14 @@ abstract class VideoEvent(
 
         fun <T : VideoEvent> create(
             kind: Int,
+            dTag: String,
             url: String,
             magnetUri: String? = null,
             mimeType: String? = null,
             alt: String? = null,
             hash: String? = null,
             size: String? = null,
-            dimensions: String? = null,
+            dimensions: Dimension? = null,
             blurhash: String? = null,
             originalHash: String? = null,
             magnetURI: String? = null,
@@ -107,13 +108,14 @@ abstract class VideoEvent(
         ) {
             val tags =
                 listOfNotNull(
+                    arrayOf("d", dTag),
                     arrayOf(URL, url),
                     magnetUri?.let { arrayOf(MAGNET_URI, it) },
                     mimeType?.let { arrayOf(MIME_TYPE, it) },
                     alt?.ifBlank { null }?.let { arrayOf(ALT, it) } ?: arrayOf("alt", altDescription),
                     hash?.let { arrayOf(HASH, it) },
                     size?.let { arrayOf(FILE_SIZE, it) },
-                    dimensions?.let { arrayOf(DIMENSION, it) },
+                    dimensions?.let { arrayOf(DIMENSION, it.toString()) },
                     blurhash?.let { arrayOf(BLUR_HASH, it) },
                     originalHash?.let { arrayOf(ORIGINAL_HASH, it) },
                     magnetURI?.let { arrayOf(MAGNET_URI, it) },

@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
+import com.vitorpamplona.quartz.events.Dimension
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -217,6 +218,7 @@ open class NewMediaModel : ViewModel() {
                 ?.firstOrNull { it.size > 1 && it[0] == "dim" }
                 ?.get(1)
                 ?.ifBlank { null }
+                ?.let { Dimension.parse(it) }
         val magnet =
             uploadingResult.tags
                 ?.firstOrNull { it.size > 1 && it[0] == "magnet" }

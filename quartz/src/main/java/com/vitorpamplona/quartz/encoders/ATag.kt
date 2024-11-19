@@ -60,7 +60,7 @@ data class ATag(
         TlvBuilder()
             .apply {
                 addString(Nip19Bech32.TlvTypes.SPECIAL, dTag)
-                addStringIfNotNull(Nip19Bech32.TlvTypes.RELAY, overrideRelay)
+                addStringIfNotNull(Nip19Bech32.TlvTypes.RELAY, overrideRelay ?: relay)
                 addHex(Nip19Bech32.TlvTypes.AUTHOR, pubKeyHex)
                 addInt(Nip19Bech32.TlvTypes.KIND, kind)
             }.build()

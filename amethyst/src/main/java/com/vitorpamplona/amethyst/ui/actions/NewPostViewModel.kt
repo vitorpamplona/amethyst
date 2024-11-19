@@ -61,6 +61,7 @@ import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.events.Dimension
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FileHeaderEvent
@@ -1205,6 +1206,7 @@ open class NewPostViewModel : ViewModel() {
                 ?.firstOrNull { it.size > 1 && it[0] == "dim" }
                 ?.get(1)
                 ?.ifBlank { null }
+                ?.let { Dimension.parse(it) }
         val magnet =
             uploadingResult.tags
                 ?.firstOrNull { it.size > 1 && it[0] == "magnet" }

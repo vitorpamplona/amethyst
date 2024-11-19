@@ -31,6 +31,7 @@ import android.util.Log
 import com.vitorpamplona.amethyst.ui.actions.ImageDownloader
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.events.Dimension
 import io.trbl.blurhash.BlurHash
 import kotlinx.coroutines.CancellationException
 import java.io.IOException
@@ -40,14 +41,14 @@ class FileHeader(
     val mimeType: String?,
     val hash: String,
     val size: Int,
-    val dim: String?,
+    val dim: Dimension?,
     val blurHash: String?,
 ) {
     companion object {
         suspend fun prepare(
             fileUrl: String,
             mimeType: String?,
-            dimPrecomputed: String?,
+            dimPrecomputed: Dimension?,
             forceProxy: Boolean,
             onReady: (FileHeader) -> Unit,
             onError: (String) -> Unit,
@@ -70,7 +71,7 @@ class FileHeader(
         fun prepare(
             data: ByteArray,
             mimeType: String?,
-            dimPrecomputed: String?,
+            dimPrecomputed: Dimension?,
             onReady: (FileHeader) -> Unit,
             onError: (String) -> Unit,
         ) {
@@ -95,7 +96,7 @@ class FileHeader(
                             mBitmap.height,
                         )
 
-                        val dim = "${mBitmap.width}x${mBitmap.height}"
+                        val dim = Dimension(mBitmap.width, mBitmap.height)
 
                         val aspectRatio = (mBitmap.width).toFloat() / (mBitmap.height).toFloat()
 
@@ -166,7 +167,7 @@ class FileHeader(
                                 }
                             }
 
-                        if (newDim != "0x0") {
+                        if (newDim?.hasSize() == true) {
                             Pair(blurhash, newDim)
                         } else {
                             Pair(blurhash, null)
@@ -212,11 +213,15 @@ fun MediaMetadataRetriever.getThumbnail(): Bitmap? {
     }
 }
 
-fun MediaMetadataRetriever.prepareDimFromVideo(): String? {
+fun MediaMetadataRetriever.prepareDimFromVideo(): Dimension? {
     val width = prepareVideoWidth() ?: return null
     val height = prepareVideoHeight() ?: return null
 
-    return "${width}x$height"
+    return if (width > 0 && height > 0) {
+        Dimension(width, height)
+    } else {
+        null
+    }
 }
 
 fun MediaMetadataRetriever.prepareVideoWidth(): Int? {

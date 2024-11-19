@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
+import com.vitorpamplona.quartz.events.Dimension
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
@@ -341,6 +342,7 @@ open class EditPostViewModel : ViewModel() {
                 ?.firstOrNull { it.size > 1 && it[0] == "dim" }
                 ?.get(1)
                 ?.ifBlank { null }
+                ?.let { Dimension.parse(it) }
         val magnet =
             uploadingResult.tags
                 ?.firstOrNull { it.size > 1 && it[0] == "magnet" }
