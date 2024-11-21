@@ -29,7 +29,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.BlossomUploader
 import com.vitorpamplona.amethyst.service.Nip96Uploader
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.components.CompressorQuality
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -181,25 +183,38 @@ class NewUserMetadataViewModel : ViewModel() {
                     viewModelScope.launch(Dispatchers.IO) {
                         try {
                             val result =
-                                Nip96Uploader(account)
-                                    .uploadImage(
-                                        uri = fileUri,
-                                        contentType = contentType,
-                                        size = size,
-                                        alt = null,
-                                        sensitiveContent = null,
-                                        server = account.settings.defaultFileServer,
-                                        contentResolver = contentResolver,
-                                        forceProxy = account::shouldUseTorForNIP96,
-                                        onProgress = {},
-                                        context = context,
-                                    )
+                                if (account.settings.defaultFileServer.type == ServerType.NIP96) {
+                                    Nip96Uploader(account)
+                                        .uploadImage(
+                                            uri = fileUri,
+                                            contentType = contentType,
+                                            size = size,
+                                            alt = null,
+                                            sensitiveContent = null,
+                                            server = account.settings.defaultFileServer,
+                                            contentResolver = contentResolver,
+                                            forceProxy = account::shouldUseTorForNIP96,
+                                            onProgress = {},
+                                            context = context,
+                                        )
+                                } else {
+                                    BlossomUploader(account)
+                                        .uploadImage(
+                                            uri = fileUri,
+                                            contentType = contentType,
+                                            size = size,
+                                            alt = null,
+                                            sensitiveContent = null,
+                                            server = account.settings.defaultFileServer,
+                                            contentResolver = contentResolver,
+                                            forceProxy = account::shouldUseTorForNIP96,
+                                            context = context,
+                                        )
+                                }
 
-                            val url = result.tags?.firstOrNull { it.size > 1 && it[0] == "url" }?.get(1)
-
-                            if (url != null) {
+                            if (result.url != null) {
                                 onUploading(false)
-                                onUploaded(url)
+                                onUploaded(result.url)
                             } else {
                                 onUploading(false)
                                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))

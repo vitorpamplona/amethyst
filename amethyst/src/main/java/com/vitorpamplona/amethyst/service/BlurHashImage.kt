@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import android.content.Context
-import android.net.Uri
 import androidx.compose.runtime.Stable
 import coil3.ImageLoader
 import coil3.asImage
@@ -29,23 +27,25 @@ import coil3.decode.DataSource
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
-import coil3.request.ImageRequest
+import coil3.key.Keyer
 import coil3.request.Options
 import com.vitorpamplona.amethyst.commons.preview.BlurHashDecoder
-import java.net.URLDecoder
-import java.net.URLEncoder
+
+class Blurhash(
+    val blurhash: String,
+)
 
 @Stable
 class BlurHashFetcher(
     private val options: Options,
-    private val data: Uri,
+    private val data: Blurhash,
 ) : Fetcher {
     override suspend fun fetch(): FetchResult {
         checkNotInMainThread()
 
-        val hash = URLDecoder.decode(data.toString().removePrefix("bluehash:"), "utf-8")
+        val hash = data.blurhash
 
-        val bitmap = BlurHashDecoder.decodeKeepAspectRatio(hash, 25) ?: throw Exception("Unable to convert Bluehash $data")
+        val bitmap = BlurHashDecoder.decodeKeepAspectRatio(hash, 25) ?: throw Exception("Unable to convert Blurhash $data")
 
         return ImageFetchResult(
             image = bitmap.asImage(true),
@@ -54,26 +54,18 @@ class BlurHashFetcher(
         )
     }
 
-    object Factory : Fetcher.Factory<Uri> {
+    object Factory : Fetcher.Factory<Blurhash> {
         override fun create(
-            data: Uri,
+            data: Blurhash,
             options: Options,
             imageLoader: ImageLoader,
         ): Fetcher = BlurHashFetcher(options, data)
     }
-}
 
-object BlurHashRequester {
-    fun imageRequest(
-        context: Context,
-        message: String,
-    ): ImageRequest {
-        val encodedMessage = URLEncoder.encode(message, "utf-8")
-
-        return ImageRequest
-            .Builder(context)
-            .data("bluehash:$encodedMessage")
-            .fetcherFactory(BlurHashFetcher.Factory)
-            .build()
+    object BKeyer : Keyer<Blurhash> {
+        override fun key(
+            data: Blurhash,
+            options: Options,
+        ): String = data.blurhash
     }
 }

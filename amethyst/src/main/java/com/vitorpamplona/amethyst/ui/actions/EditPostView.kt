@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.components.BechLink
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
@@ -336,8 +337,8 @@ fun EditPostView(
                                             accountViewModel.account.settings.defaultFileServer,
                                             onAdd = { alt, server, sensitiveContent, mediaQuality ->
                                                 postViewModel.upload(url, alt, sensitiveContent, mediaQuality, false, server, accountViewModel::toast, context)
-                                                if (!server.isNip95) {
-                                                    accountViewModel.account.settings.changeDefaultFileServer(server.server)
+                                                if (server.type != ServerType.NIP95) {
+                                                    accountViewModel.account.settings.changeDefaultFileServer(server)
                                                 }
                                             },
                                             onCancel = { postViewModel.contentToAddUrl = null },

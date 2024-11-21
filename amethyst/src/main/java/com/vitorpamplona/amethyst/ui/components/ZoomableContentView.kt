@@ -58,9 +58,9 @@ import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.core.net.toUri
-import coil3.annotation.ExperimentalCoilApi
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
@@ -75,7 +75,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaPreloadedContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
-import com.vitorpamplona.amethyst.service.BlurHashRequester
+import com.vitorpamplona.amethyst.service.Blurhash
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
@@ -103,7 +103,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.seconds
 
@@ -513,6 +512,8 @@ fun ImageUrlWithDownloadButton(
         text = annotatedTermsString,
         modifier = pressIndicator,
         inlineContent = inlineContent,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
     )
 }
 
@@ -560,20 +561,6 @@ fun aspectRatio(dim: Dimension?): Float? {
 
 @Composable
 private fun DisplayUrlWithLoadingSymbol(content: BaseMediaContent) {
-    var cnt by remember { mutableStateOf<BaseMediaContent?>(null) }
-
-    LaunchedEffect(Unit) {
-        launch(Dispatchers.IO) {
-            delay(200)
-            cnt = content
-        }
-    }
-
-    cnt?.let { DisplayUrlWithLoadingSymbolWait(it) }
-}
-
-@Composable
-private fun DisplayUrlWithLoadingSymbolWait(content: BaseMediaContent) {
     val uri = LocalUriHandler.current
 
     val primary = MaterialTheme.colorScheme.primary
@@ -620,6 +607,8 @@ private fun DisplayUrlWithLoadingSymbolWait(content: BaseMediaContent) {
         text = annotatedTermsString,
         modifier = pressIndicator,
         inlineContent = inlineContent,
+        overflow = TextOverflow.Ellipsis,
+        maxLines = 1,
     )
 }
 
@@ -644,17 +633,8 @@ fun DisplayBlurHash(
 ) {
     if (blurhash == null) return
 
-    val context = LocalContext.current
-    val model =
-        remember {
-            BlurHashRequester.imageRequest(
-                context,
-                blurhash,
-            )
-        }
-
     AsyncImage(
-        model = model,
+        model = Blurhash(blurhash),
         contentDescription = description,
         contentScale = contentScale,
         modifier = modifier,
@@ -753,7 +733,6 @@ fun ShareImageAction(
     }
 }
 
-@OptIn(ExperimentalCoilApi::class)
 private suspend fun verifyHash(content: MediaUrlContent): Boolean? {
     if (content.hash == null) return null
 

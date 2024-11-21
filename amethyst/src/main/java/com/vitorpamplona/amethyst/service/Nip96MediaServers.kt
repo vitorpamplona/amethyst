@@ -31,20 +31,6 @@ import java.net.URI
 import java.net.URL
 
 object Nip96MediaServers {
-    val DEFAULT =
-        listOf(
-            ServerName("Nostr.Build", "https://nostr.build"),
-            ServerName("NostrCheck.me", "https://nostrcheck.me"),
-            ServerName("NostPic", "https://nostpic.com"),
-            ServerName("Sovbit", "https://files.sovbit.host"),
-            ServerName("Void.cat", "https://void.cat"),
-        )
-
-    data class ServerName(
-        val name: String,
-        val baseUrl: String,
-    )
-
     val cache: MutableMap<String, Nip96Retriever.ServerInfo> = mutableMapOf()
 
     suspend fun load(
@@ -136,23 +122,23 @@ class Nip96Retriever {
             }
         }
     }
+
+    fun makeAbsoluteIfRelativeUrl(
+        baseUrl: String,
+        potentialyRelativeUrl: String,
+    ): String =
+        try {
+            val apiUrl = URI(potentialyRelativeUrl)
+            if (apiUrl.isAbsolute) {
+                potentialyRelativeUrl
+            } else {
+                URL(URL(baseUrl), potentialyRelativeUrl).toString()
+            }
+        } catch (e: Exception) {
+            potentialyRelativeUrl
+        }
 }
 
 typealias PlanName = String
 
 typealias MimeType = String
-
-fun makeAbsoluteIfRelativeUrl(
-    baseUrl: String,
-    potentialyRelativeUrl: String,
-): String =
-    try {
-        val apiUrl = URI(potentialyRelativeUrl)
-        if (apiUrl.isAbsolute) {
-            potentialyRelativeUrl
-        } else {
-            URL(URL(baseUrl), potentialyRelativeUrl).toString()
-        }
-    } catch (e: Exception) {
-        potentialyRelativeUrl
-    }

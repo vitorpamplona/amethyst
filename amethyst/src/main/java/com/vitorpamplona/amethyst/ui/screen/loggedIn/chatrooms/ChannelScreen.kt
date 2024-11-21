@@ -113,7 +113,6 @@ import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
-import com.vitorpamplona.amethyst.ui.actions.ServerOption
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.components.CompressorQuality
@@ -518,7 +517,7 @@ fun EditFieldRow(
                         sensitiveContent = false,
                         // Use MEDIUM quality
                         mediaQuality = MediaCompressor().compressorQualityToInt(CompressorQuality.MEDIUM),
-                        server = ServerOption(accountViewModel.account.settings.defaultFileServer, false),
+                        server = accountViewModel.account.settings.defaultFileServer,
                         onError = accountViewModel::toast,
                         context = context,
                     )

@@ -26,12 +26,17 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.service.BlossomUploader
 import com.vitorpamplona.amethyst.service.FileHeader
-import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.Nip96Retriever
 import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.ImageDownloader
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.encoders.toHexKey
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.fail
 import kotlinx.coroutines.CoroutineScope
@@ -47,7 +52,69 @@ import kotlin.random.Random
 
 @RunWith(AndroidJUnit4::class)
 class ImageUploadTesting {
-    private suspend fun testBase(server: Nip96MediaServers.ServerName) {
+    val account =
+        Account(
+            AccountSettings(KeyPair()),
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+        )
+
+    private suspend fun getBitmap(): ByteArray {
+        val bitmap = Bitmap.createBitmap(200, 300, Bitmap.Config.ARGB_8888)
+        for (x in 0 until bitmap.width) {
+            for (y in 0 until bitmap.height) {
+                bitmap.setPixel(x, y, Color.rgb(Random.nextInt(), Random.nextInt(), Random.nextInt()))
+            }
+        }
+
+        val baos = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
+        return baos.toByteArray()
+    }
+
+    private suspend fun testBase(server: ServerName) {
+        if (server.type == ServerType.NIP96) {
+            testNip96(server)
+        } else {
+            testBlossom(server)
+        }
+    }
+
+    private suspend fun testBlossom(server: ServerName) {
+        val paylod = getBitmap()
+        val initialHash = CryptoUtils.sha256(paylod).toHexKey()
+        val inputStream = paylod.inputStream()
+        val result =
+            BlossomUploader(account)
+                .uploadImage(
+                    inputStream,
+                    initialHash,
+                    paylod.size,
+                    "filename.png",
+                    "image/png",
+                    alt = null,
+                    sensitiveContent = null,
+                    server,
+                    forceProxy = { false },
+                    context = InstrumentationRegistry.getInstrumentation().targetContext,
+                )
+
+        assertEquals("image/png", result.type)
+        assertEquals(paylod.size.toLong(), result.size)
+        assertEquals(initialHash, result.sha256)
+        assertEquals("${server.baseUrl}/$initialHash", result.url)
+
+        val imageData: ByteArray =
+            ImageDownloader().waitAndGetImage(result.url!!, false)
+                ?: run {
+                    fail("${server.name}: Should not be null")
+                    return
+                }
+
+        val downloadedHash = CryptoUtils.sha256(imageData).toHexKey()
+        assertEquals(initialHash, downloadedHash)
+    }
+
+    private suspend fun testNip96(server: ServerName) {
         val serverInfo =
             Nip96Retriever()
                 .loadInfo(
@@ -55,28 +122,13 @@ class ImageUploadTesting {
                     false,
                 )
 
-        val bitmap = Bitmap.createBitmap(200, 300, Bitmap.Config.ARGB_8888)
-        for (x in 0 until bitmap.width) {
-            for (y in 0 until bitmap.height) {
-                bitmap.setPixel(x, y, Color.rgb(Random.nextInt(), Random.nextInt(), Random.nextInt()))
-            }
-        }
-        val baos = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
-        val bytes = baos.toByteArray()
-        val inputStream = bytes.inputStream()
-
-        val account =
-            Account(
-                AccountSettings(KeyPair()),
-                scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-            )
-
+        val paylod = getBitmap()
+        val inputStream = paylod.inputStream()
         val result =
             Nip96Uploader(account)
                 .uploadImage(
                     inputStream,
-                    bytes.size.toLong(),
+                    paylod.size.toLong(),
                     "image/png",
                     alt = null,
                     sensitiveContent = null,
@@ -140,7 +192,7 @@ class ImageUploadTesting {
     @Test
     fun runTestOnDefaultServers() =
         runBlocking {
-            Nip96MediaServers.DEFAULT.forEach {
+            DEFAULT_MEDIA_SERVERS.forEach {
                 testBase(it)
             }
         }
@@ -148,58 +200,76 @@ class ImageUploadTesting {
     @Test()
     fun testNostrCheck() =
         runBlocking {
-            testBase(Nip96MediaServers.ServerName("nostrcheck.me", "https://nostrcheck.me"))
+            testBase(ServerName("nostrcheck.me", "https://nostrcheck.me", ServerType.NIP96))
         }
 
     @Test()
     @Ignore("Not Working anymore")
     fun testNostrage() =
         runBlocking {
-            testBase(Nip96MediaServers.ServerName("nostrage", "https://nostrage.com"))
+            testBase(ServerName("nostrage", "https://nostrage.com", ServerType.NIP96))
         }
 
     @Test()
     @Ignore("Not Working anymore")
     fun testSove() =
         runBlocking {
-            testBase(Nip96MediaServers.ServerName("sove", "https://sove.rent"))
+            testBase(ServerName("sove", "https://sove.rent", ServerType.NIP96))
         }
 
     @Test()
     fun testNostrBuild() =
         runBlocking {
-            testBase(Nip96MediaServers.ServerName("nostr.build", "https://nostr.build"))
+            testBase(ServerName("nostr.build", "https://nostr.build", ServerType.NIP96))
         }
 
     @Test()
     @Ignore("Not Working anymore")
     fun testSovbit() =
         runBlocking {
-            testBase(Nip96MediaServers.ServerName("sovbit", "https://files.sovbit.host"))
+            testBase(ServerName("sovbit", "https://files.sovbit.host", ServerType.NIP96))
         }
 
     @Test()
     fun testVoidCat() =
         runBlocking {
-            testBase(Nip96MediaServers.ServerName("void.cat", "https://void.cat"))
+            testBase(ServerName("void.cat", "https://void.cat", ServerType.NIP96))
         }
 
     @Test()
     fun testNostrPic() =
         runBlocking {
-            testBase(Nip96MediaServers.ServerName("nostpic.com", "https://nostpic.com"))
+            testBase(ServerName("nostpic.com", "https://nostpic.com", ServerType.NIP96))
         }
 
     @Test(expected = RuntimeException::class)
     fun testSprovoostNl() =
         runBlocking {
-            testBase(Nip96MediaServers.ServerName("sprovoost.nl", "https://img.sprovoost.nl/"))
+            testBase(ServerName("sprovoost.nl", "https://img.sprovoost.nl/", ServerType.NIP96))
         }
 
     @Test()
     @Ignore("Not Working anymore")
     fun testNostrOnch() =
         runBlocking {
-            testBase(Nip96MediaServers.ServerName("nostr.onch.services", "https://nostr.onch.services"))
+            testBase(ServerName("nostr.onch.services", "https://nostr.onch.services", ServerType.NIP96))
+        }
+
+    @Ignore("Changes sha256")
+    fun testPrimalBlossom() =
+        runBlocking {
+            testBase(ServerName("primal.net", "https://blossom.primal.net", ServerType.Blossom))
+        }
+
+    @Test()
+    fun testNostrCheckBlossom() =
+        runBlocking {
+            testBase(ServerName("nostrcheck", "https://cdn.nostrcheck.me", ServerType.Blossom))
+        }
+
+    @Ignore("Requires Payment")
+    fun testSatelliteBlossom() =
+        runBlocking {
+            testBase(ServerName("satellite", "https://cdn.satellite.earth", ServerType.Blossom))
         }
 }

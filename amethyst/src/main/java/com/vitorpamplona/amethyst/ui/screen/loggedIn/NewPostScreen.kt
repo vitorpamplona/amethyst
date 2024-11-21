@@ -91,6 +91,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
@@ -134,17 +135,17 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.LocationState
-import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.NewPollOption
 import com.vitorpamplona.amethyst.ui.actions.NewPollVoteValueRange
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.RelaySelectionDialog
-import com.vitorpamplona.amethyst.ui.actions.ServerOption
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.getPhotoUri
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.components.BechLink
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
@@ -184,7 +185,6 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
-import com.vitorpamplona.quartz.events.FileServersEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
@@ -520,8 +520,8 @@ fun NewPostScreen(
                                     accountViewModel.account.settings.defaultFileServer,
                                     onAdd = { alt, server, sensitiveContent, mediaQuality ->
                                         postViewModel.upload(url, alt, sensitiveContent, mediaQuality, false, server, accountViewModel::toast, context)
-                                        if (!server.isNip95) {
-                                            accountViewModel.account.settings.changeDefaultFileServer(server.server)
+                                        if (server.type != ServerType.NIP95) {
+                                            accountViewModel.account.settings.changeDefaultFileServer(server)
                                         }
                                     },
                                     onCancel = { postViewModel.contentToAddUrl = null },
@@ -1720,8 +1720,8 @@ fun CreateButton(
 @Composable
 fun ImageVideoDescription(
     uri: Uri,
-    defaultServer: Nip96MediaServers.ServerName,
-    onAdd: (String, ServerOption, Boolean, Int) -> Unit,
+    defaultServer: ServerName,
+    onAdd: (String, ServerName, Boolean, Int) -> Unit,
     onCancel: () -> Unit,
     onError: (Int) -> Unit,
     accountViewModel: AccountViewModel,
@@ -1732,49 +1732,25 @@ fun ImageVideoDescription(
     val isImage = mediaType.startsWith("image")
     val isVideo = mediaType.startsWith("video")
 
-    val listOfNip96ServersNote =
-        accountViewModel.account
-            .getFileServersNote()
-            .live()
-            .metadata
-            .observeAsState()
+    val nip95description = stringRes(id = R.string.upload_server_relays_nip95)
 
-    val fileServers =
-        (
-            (listOfNip96ServersNote.value?.note?.event as? FileServersEvent)?.servers()?.map {
-                ServerOption(
-                    Nip96MediaServers.ServerName(
-                        it,
-                        it,
-                    ),
-                    false,
-                )
-            } ?: Nip96MediaServers.DEFAULT.map { ServerOption(it, false) }
-        ) +
-            listOf(
-                ServerOption(
-                    Nip96MediaServers.ServerName(
-                        "NIP95",
-                        stringRes(id = R.string.upload_server_relays_nip95),
-                    ),
-                    true,
-                ),
-            )
+    val fileServers by accountViewModel.account.liveServerList.collectAsState()
 
     val fileServerOptions =
-        remember {
-            fileServers.map { TitleExplainer(it.server.name, it.server.baseUrl) }.toImmutableList()
+        remember(fileServers) {
+            fileServers
+                .map {
+                    if (it.type == ServerType.NIP95) {
+                        TitleExplainer(it.name, nip95description)
+                    } else {
+                        TitleExplainer(it.name, it.baseUrl)
+                    }
+                }.toImmutableList()
         }
 
     var selectedServer by remember {
         mutableStateOf(
-            ServerOption(
-                fileServers
-                    .firstOrNull { it.server == defaultServer }
-                    ?.server
-                    ?: fileServers[0].server,
-                false,
-            ),
+            fileServers.firstOrNull { it == defaultServer } ?: fileServers[0],
         )
     }
     var message by remember { mutableStateOf("") }
@@ -1903,10 +1879,9 @@ fun ImageVideoDescription(
                     label = stringRes(id = R.string.file_server),
                     placeholder =
                         fileServers
-                            .firstOrNull { it.server == defaultServer }
-                            ?.server
+                            .firstOrNull { it == defaultServer }
                             ?.name
-                            ?: fileServers[0].server.name,
+                            ?: fileServers[0].name,
                     options = fileServerOptions,
                     onSelect = { selectedServer = fileServers[it] },
                     modifier =

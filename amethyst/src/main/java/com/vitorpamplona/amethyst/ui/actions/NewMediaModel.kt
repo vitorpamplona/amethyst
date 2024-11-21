@@ -31,21 +31,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.BlossomUploader
 import com.vitorpamplona.amethyst.service.FileHeader
-import com.vitorpamplona.amethyst.service.Nip96MediaServers
+import com.vitorpamplona.amethyst.service.MediaUploadResult
 import com.vitorpamplona.amethyst.service.Nip96Uploader
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
-import com.vitorpamplona.quartz.events.Dimension
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
-data class ServerOption(
-    val server: Nip96MediaServers.ServerName,
-    val isNip95: Boolean,
-)
 
 @Stable
 open class NewMediaModel : ViewModel() {
@@ -54,7 +52,7 @@ open class NewMediaModel : ViewModel() {
     var isUploadingImage by mutableStateOf(false)
     var mediaType by mutableStateOf<String?>(null)
 
-    var selectedServer by mutableStateOf<ServerOption?>(null)
+    var selectedServer by mutableStateOf<ServerName?>(null)
     var alt by mutableStateOf("")
     var sensitiveContent by mutableStateOf(false)
 
@@ -74,7 +72,7 @@ open class NewMediaModel : ViewModel() {
         this.account = account
         this.galleryUri = uri
         this.mediaType = contentType
-        this.selectedServer = ServerOption(defaultServer(), false)
+        this.selectedServer = defaultServer()
     }
 
     fun upload(
@@ -100,7 +98,7 @@ open class NewMediaModel : ViewModel() {
                     contentType,
                     context.applicationContext,
                     onReady = { fileUri, contentType, size ->
-                        if (serverToUse.isNip95) {
+                        if (serverToUse.type == ServerType.NIP95) {
                             uploadingPercentage.value = 0.2f
                             uploadingDescription.value = "Loading"
                             contentResolver.openInputStream(fileUri)?.use {
@@ -122,7 +120,7 @@ open class NewMediaModel : ViewModel() {
                                         uploadingDescription.value = null
                                     }
                                 }
-                        } else {
+                        } else if (serverToUse.type == ServerType.NIP96) {
                             uploadingPercentage.value = 0.2f
                             uploadingDescription.value = "Uploading"
                             viewModelScope.launch(Dispatchers.IO) {
@@ -135,12 +133,49 @@ open class NewMediaModel : ViewModel() {
                                                 size = size,
                                                 alt = alt,
                                                 sensitiveContent = if (sensitiveContent) "" else null,
-                                                server = serverToUse.server,
+                                                server = serverToUse,
                                                 contentResolver = contentResolver,
                                                 forceProxy = account?.let { it::shouldUseTorForNIP96 } ?: { false },
                                                 onProgress = { percent: Float ->
                                                     uploadingPercentage.value = 0.2f + (0.2f * percent)
                                                 },
+                                                context = context,
+                                            )
+
+                                    createNIP94Record(
+                                        uploadingResult = result,
+                                        localContentType = contentType,
+                                        alt = alt,
+                                        sensitiveContent = sensitiveContent,
+                                        relayList = relayList,
+                                        forceProxy = account?.let { it::shouldUseTorForNIP96 } ?: { false },
+                                        onError = onError,
+                                        context,
+                                    )
+                                } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
+                                    isUploadingImage = false
+                                    uploadingPercentage.value = 0.00f
+                                    uploadingDescription.value = null
+                                    onError(stringRes(context, R.string.failed_to_upload_media, e.message))
+                                }
+                            }
+                        } else if (serverToUse.type == ServerType.Blossom) {
+                            uploadingPercentage.value = 0.2f
+                            uploadingDescription.value = "Uploading"
+                            viewModelScope.launch(Dispatchers.IO) {
+                                try {
+                                    val result =
+                                        BlossomUploader(account)
+                                            .uploadImage(
+                                                uri = fileUri,
+                                                contentType = contentType,
+                                                size = size,
+                                                alt = alt,
+                                                sensitiveContent = if (sensitiveContent) "" else null,
+                                                server = serverToUse,
+                                                contentResolver = contentResolver,
+                                                forceProxy = account?.let { it::shouldUseTorForNIP96 } ?: { false },
                                                 context = context,
                                             )
 
@@ -183,13 +218,13 @@ open class NewMediaModel : ViewModel() {
         uploadingPercentage.value = 0.0f
 
         alt = ""
-        selectedServer = ServerOption(defaultServer(), false)
+        selectedServer = defaultServer()
     }
 
     fun canPost(): Boolean = !isUploadingImage && galleryUri != null && selectedServer != null
 
     suspend fun createNIP94Record(
-        uploadingResult: Nip96Uploader.PartialEvent,
+        uploadingResult: MediaUploadResult,
         localContentType: String?,
         alt: String,
         sensitiveContent: Boolean,
@@ -202,30 +237,7 @@ open class NewMediaModel : ViewModel() {
         uploadingDescription.value = "Server Processing"
         // Images don't seem to be ready immediately after upload
 
-        val imageUrl = uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "url" }?.get(1)
-        val remoteMimeType =
-            uploadingResult.tags
-                ?.firstOrNull { it.size > 1 && it[0] == "m" }
-                ?.get(1)
-                ?.ifBlank { null }
-        val originalHash =
-            uploadingResult.tags
-                ?.firstOrNull { it.size > 1 && it[0] == "ox" }
-                ?.get(1)
-                ?.ifBlank { null }
-        val dim =
-            uploadingResult.tags
-                ?.firstOrNull { it.size > 1 && it[0] == "dim" }
-                ?.get(1)
-                ?.ifBlank { null }
-                ?.let { Dimension.parse(it) }
-        val magnet =
-            uploadingResult.tags
-                ?.firstOrNull { it.size > 1 && it[0] == "magnet" }
-                ?.get(1)
-                ?.ifBlank { null }
-
-        if (imageUrl.isNullOrBlank()) {
+        if (uploadingResult.url.isNullOrBlank()) {
             Log.e("ImageDownload", "Couldn't download image from server")
             cancel()
             uploadingPercentage.value = 0.00f
@@ -238,7 +250,7 @@ open class NewMediaModel : ViewModel() {
         uploadingDescription.value = "Downloading"
         uploadingPercentage.value = 0.60f
 
-        val imageData: ByteArray? = ImageDownloader().waitAndGetImage(imageUrl, forceProxy(imageUrl))
+        val imageData: ByteArray? = ImageDownloader().waitAndGetImage(uploadingResult.url, forceProxy(uploadingResult.url))
 
         if (imageData != null) {
             uploadingPercentage.value = 0.80f
@@ -246,18 +258,18 @@ open class NewMediaModel : ViewModel() {
 
             FileHeader.prepare(
                 data = imageData,
-                mimeType = remoteMimeType ?: localContentType,
-                dimPrecomputed = dim,
+                mimeType = uploadingResult.type ?: localContentType,
+                dimPrecomputed = uploadingResult.dimension,
                 onReady = {
                     uploadingPercentage.value = 0.90f
                     uploadingDescription.value = "Sending"
                     account?.sendHeader(
-                        imageUrl,
-                        magnet,
+                        uploadingResult.url,
+                        uploadingResult.magnet,
                         it,
                         alt,
                         sensitiveContent,
-                        originalHash,
+                        uploadingResult.sha256,
                         relayList,
                     ) {
                         uploadingPercentage.value = 1.00f
@@ -340,7 +352,7 @@ open class NewMediaModel : ViewModel() {
 
     fun isVideo() = mediaType?.startsWith("video")
 
-    fun defaultServer() = account?.settings?.defaultFileServer ?: Nip96MediaServers.DEFAULT[0]
+    fun defaultServer() = account?.settings?.defaultFileServer ?: DEFAULT_MEDIA_SERVERS[0]
 
     fun onceUploaded(onceUploaded: () -> Unit) {
         this.onceUploaded = onceUploaded

@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
 import com.vitorpamplona.quartz.events.BaseAddressableEvent
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
+import com.vitorpamplona.quartz.events.BlossomServersEvent
 import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.events.CalendarEvent
@@ -708,6 +709,13 @@ object LocalCache {
 
     fun consume(
         event: ChannelListEvent,
+        relay: Relay?,
+    ) {
+        consumeBaseReplaceable(event, relay)
+    }
+
+    fun consume(
+        event: BlossomServersEvent,
         relay: Relay?,
     ) {
         consumeBaseReplaceable(event, relay)
@@ -2342,6 +2350,7 @@ object LocalCache {
                 is BadgeAwardEvent -> consume(event, relay)
                 is BadgeDefinitionEvent -> consume(event, relay)
                 is BadgeProfilesEvent -> consume(event)
+                is BlossomServersEvent -> consume(event, relay)
                 is BookmarkListEvent -> consume(event)
                 is CalendarEvent -> consume(event, relay)
                 is CalendarDateSlotEvent -> consume(event, relay)

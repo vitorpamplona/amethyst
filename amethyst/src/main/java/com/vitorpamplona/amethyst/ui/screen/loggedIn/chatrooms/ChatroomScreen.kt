@@ -87,7 +87,6 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
-import com.vitorpamplona.amethyst.ui.actions.ServerOption
 import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.components.CompressorQuality
@@ -589,7 +588,7 @@ fun PrivateMessageEditFieldRow(
                             // use MEDIUM quality
                             mediaQuality = MediaCompressor().compressorQualityToInt(CompressorQuality.MEDIUM),
                             isPrivate = isPrivate,
-                            server = ServerOption(accountViewModel.account.settings.defaultFileServer, false),
+                            server = accountViewModel.account.settings.defaultFileServer,
                             onError = accountViewModel::toast,
                             context = context,
                         )

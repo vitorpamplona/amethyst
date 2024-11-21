@@ -54,13 +54,14 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.Nip96MediaServers
+import com.vitorpamplona.amethyst.ui.actions.relays.SettingsCategory
 import com.vitorpamplona.amethyst.ui.actions.relays.SettingsCategoryWithButton
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertPadding
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -73,11 +74,15 @@ fun MediaServersListView(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val mediaServersViewModel: MediaServersViewModel = viewModel()
-    val mediaServersState by mediaServersViewModel.fileServers.collectAsStateWithLifecycle()
+    val nip96ServersViewModel: NIP96ServersViewModel = viewModel()
+    val nip96ServersState by nip96ServersViewModel.fileServers.collectAsStateWithLifecycle()
+
+    val blossomServersViewModel: BlossomServersViewModel = viewModel()
+    val blossomServersState by blossomServersViewModel.fileServers.collectAsStateWithLifecycle()
 
     LaunchedEffect(key1 = Unit) {
-        mediaServersViewModel.load(accountViewModel.account)
+        nip96ServersViewModel.load(accountViewModel.account)
+        blossomServersViewModel.load(accountViewModel.account)
     }
 
     Dialog(
@@ -102,7 +107,8 @@ fun MediaServersListView(
                     navigationIcon = {
                         CloseButton(
                             onPress = {
-                                mediaServersViewModel.refresh()
+                                nip96ServersViewModel.refresh()
+                                blossomServersViewModel.refresh()
                                 onClose()
                             },
                         )
@@ -110,7 +116,8 @@ fun MediaServersListView(
                     actions = {
                         SaveButton(
                             onPost = {
-                                mediaServersViewModel.saveFileServers()
+                                nip96ServersViewModel.saveFileServers()
+                                blossomServersViewModel.saveFileServers()
                                 onClose()
                             },
                             isActive = true,
@@ -148,17 +155,46 @@ fun MediaServersListView(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     contentPadding = FeedPadding,
                 ) {
+                    item {
+                        SettingsCategory(
+                            stringRes(R.string.media_servers_nip96_section),
+                            stringRes(R.string.media_servers_nip96_explainer),
+                            Modifier.padding(bottom = 8.dp),
+                        )
+                    }
+
                     renderMediaServerList(
-                        mediaServersState = mediaServersState,
+                        mediaServersState = nip96ServersState,
+                        editLabel = R.string.add_a_nip96_server,
+                        emptyLabel = R.string.no_nip96_server_message,
                         onAddServer = { server ->
-                            mediaServersViewModel.addServer(server)
+                            nip96ServersViewModel.addServer(server)
                         },
                         onDeleteServer = {
-                            mediaServersViewModel.removeServer(serverUrl = it)
+                            nip96ServersViewModel.removeServer(serverUrl = it)
                         },
                     )
 
-                    Nip96MediaServers.DEFAULT.let {
+                    item {
+                        SettingsCategory(
+                            stringRes(R.string.media_servers_blossom_section),
+                            stringRes(R.string.media_servers_blossom_explainer),
+                        )
+                    }
+
+                    renderMediaServerList(
+                        mediaServersState = blossomServersState,
+                        editLabel = R.string.add_a_blossom_server,
+                        emptyLabel = R.string.no_blossom_server_message,
+                        onAddServer = { server ->
+                            blossomServersViewModel.addServer(server)
+                        },
+                        onDeleteServer = {
+                            blossomServersViewModel.removeServer(serverUrl = it)
+                        },
+                    )
+
+                    DEFAULT_MEDIA_SERVERS.let {
                         item {
                             SettingsCategoryWithButton(
                                 title = stringRes(id = R.string.built_in_media_servers_title),
@@ -166,7 +202,13 @@ fun MediaServersListView(
                                 action = {
                                     OutlinedButton(
                                         onClick = {
-                                            mediaServersViewModel.addServerList(it.map { s -> s.baseUrl })
+                                            nip96ServersViewModel.addServerList(
+                                                it.mapNotNull { s -> if (s.type == ServerType.NIP96) s.baseUrl else null },
+                                            )
+
+                                            blossomServersViewModel.addServerList(
+                                                it.mapNotNull { s -> if (s.type == ServerType.Blossom) s.baseUrl else null },
+                                            )
                                         },
                                     ) {
                                         Text(text = stringRes(id = R.string.use_default_servers))
@@ -176,7 +218,7 @@ fun MediaServersListView(
                         }
                         itemsIndexed(
                             it,
-                            key = { index: Int, server: Nip96MediaServers.ServerName ->
+                            key = { index: Int, server: ServerName ->
                                 server.baseUrl
                             },
                         ) { index, server ->
@@ -184,10 +226,18 @@ fun MediaServersListView(
                                 serverEntry = server,
                                 isAmethystDefault = true,
                                 onAddOrDelete = { serverUrl ->
-                                    mediaServersViewModel.addServer(serverUrl)
+                                    if (server.type == ServerType.NIP96) {
+                                        nip96ServersViewModel.addServer(serverUrl)
+                                    } else if (server.type == ServerType.Blossom) {
+                                        blossomServersViewModel.addServer(serverUrl)
+                                    }
                                 },
                             )
                         }
+                    }
+
+                    item {
+                        Spacer(DoubleHorzSpacer)
                     }
                 }
             }
@@ -196,21 +246,23 @@ fun MediaServersListView(
 }
 
 fun LazyListScope.renderMediaServerList(
-    mediaServersState: List<Nip96MediaServers.ServerName>,
+    mediaServersState: List<ServerName>,
+    editLabel: Int,
+    emptyLabel: Int,
     onAddServer: (String) -> Unit,
     onDeleteServer: (String) -> Unit,
 ) {
     if (mediaServersState.isEmpty()) {
         item {
             Text(
-                text = stringRes(id = R.string.no_media_server_message),
+                text = stringRes(id = emptyLabel),
                 modifier = DoubleVertPadding,
             )
         }
     } else {
         itemsIndexed(
             mediaServersState,
-            key = { index: Int, server: Nip96MediaServers.ServerName ->
+            key = { index: Int, server: ServerName ->
                 server.baseUrl
             },
         ) { index, entry ->
@@ -225,7 +277,7 @@ fun LazyListScope.renderMediaServerList(
 
     item {
         Spacer(modifier = StdVertSpacer)
-        MediaServerEditField {
+        MediaServerEditField(editLabel) {
             onAddServer(it)
         }
     }
@@ -234,7 +286,7 @@ fun LazyListScope.renderMediaServerList(
 @Composable
 fun MediaServerEntry(
     modifier: Modifier = Modifier,
-    serverEntry: Nip96MediaServers.ServerName,
+    serverEntry: ServerName,
     isAmethystDefault: Boolean = false,
     onAddOrDelete: (serverUrl: String) -> Unit,
 ) {

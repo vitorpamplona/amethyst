@@ -391,7 +391,10 @@
 
     <string name="media_servers">Media Servers</string>
     <string name="set_preferred_media_servers">Set your preferred media upload servers.</string>
-    <string name="no_media_server_message">You have no custom media servers set. You can use Amethyst\'s list, or add one below ↓</string>
+
+    <string name="no_nip96_server_message">You have no NIP-96 servers set. You can use Amethyst\'s list, or add one below ↓</string>
+    <string name="no_blossom_server_message">You have no Blossom servers set. You can use Amethyst\'s list, or add one below ↓</string>
+
     <string name="built_in_media_servers_title">Built-in Media Servers</string>
     <string name="built_in_servers_description">Amethyst\'s default list. You can add them individually or add the list.</string>
     <string name="use_default_servers">Use Default List</string>
@@ -1046,7 +1049,14 @@
     <string name="http_status_508">Loop Detected - The server detects an infinite loop while processing the request</string>
     <string name="http_status_511">Network Authentication Required - The client must be authenticated to access the network</string>
 
+    <string name="media_servers_nip96_section">NIP-96 Servers</string>
+    <string name="media_servers_nip96_explainer">Add as many servers as you want. You can choose which one to use later when uploading your picture</string>
+
+    <string name="media_servers_blossom_section">Blossom Servers</string>
+    <string name="media_servers_blossom_explainer">Add as many servers as you want. You can choose which one to use later when uploading your picture</string>
+
     <string name="add_a_nip96_server">Add a NIP-96 Server</string>
+    <string name="add_a_blossom_server">Add a Blossom Server</string>
     <string name="delete_all">Delete all</string>
     <string name="delete_all_drafts_confirmation">Are you sure you want to delete all drafts?</string>
     <string name="and_more" translatable="false">" +%1$s"</string>

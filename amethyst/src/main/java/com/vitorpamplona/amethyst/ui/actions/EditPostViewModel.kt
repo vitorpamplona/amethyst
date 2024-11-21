@@ -38,14 +38,17 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.BlossomUploader
 import com.vitorpamplona.amethyst.service.FileHeader
+import com.vitorpamplona.amethyst.service.MediaUploadResult
 import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
-import com.vitorpamplona.quartz.events.Dimension
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
@@ -151,7 +154,7 @@ open class EditPostViewModel : ViewModel() {
         sensitiveContent: Boolean,
         mediaQuality: Int,
         isPrivate: Boolean = false,
-        server: ServerOption,
+        server: ServerName,
         onError: (String, String) -> Unit,
         context: Context,
     ) {
@@ -168,7 +171,7 @@ open class EditPostViewModel : ViewModel() {
                     contentType,
                     context.applicationContext,
                     onReady = { fileUri, contentType, size ->
-                        if (server.isNip95) {
+                        if (server.type == ServerType.NIP95) {
                             contentResolver.openInputStream(fileUri)?.use {
                                 createNIP95Record(
                                     it.readBytes(),
@@ -181,7 +184,7 @@ open class EditPostViewModel : ViewModel() {
                                     context,
                                 )
                             }
-                        } else {
+                        } else if (server.type == ServerType.NIP96) {
                             viewModelScope.launch(Dispatchers.IO) {
                                 try {
                                     val result =
@@ -192,10 +195,49 @@ open class EditPostViewModel : ViewModel() {
                                                 size = size,
                                                 alt = alt,
                                                 sensitiveContent = if (sensitiveContent) "" else null,
-                                                server = server.server,
+                                                server = server,
                                                 contentResolver = contentResolver,
                                                 forceProxy = account?.let { it::shouldUseTorForNIP96 } ?: { false },
                                                 onProgress = {},
+                                                context = context,
+                                            )
+
+                                    createNIP94Record(
+                                        uploadingResult = result,
+                                        localContentType = contentType,
+                                        alt = alt,
+                                        sensitiveContent = sensitiveContent,
+                                        forceProxy = account?.let { it::shouldUseTorForNIP96 } ?: { false },
+                                        onError = {
+                                            onError(stringRes(context, R.string.failed_to_upload_media_no_details), it)
+                                        },
+                                        context = context,
+                                    )
+                                } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
+                                    Log.e(
+                                        "ImageUploader",
+                                        "Failed to upload ${e.message}",
+                                        e,
+                                    )
+                                    isUploadingImage = false
+                                    onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
+                                }
+                            }
+                        } else {
+                            viewModelScope.launch(Dispatchers.IO) {
+                                try {
+                                    val result =
+                                        BlossomUploader(account)
+                                            .uploadImage(
+                                                uri = fileUri,
+                                                contentType = contentType,
+                                                size = size,
+                                                alt = alt,
+                                                sensitiveContent = if (sensitiveContent) "" else null,
+                                                server = server,
+                                                contentResolver = contentResolver,
+                                                forceProxy = account?.let { it::shouldUseTorForNIP96 } ?: { false },
                                                 context = context,
                                             )
 
@@ -317,7 +359,7 @@ open class EditPostViewModel : ViewModel() {
             contentToAddUrl == null
 
     suspend fun createNIP94Record(
-        uploadingResult: Nip96Uploader.PartialEvent,
+        uploadingResult: MediaUploadResult,
         localContentType: String?,
         alt: String?,
         sensitiveContent: Boolean,
@@ -325,31 +367,7 @@ open class EditPostViewModel : ViewModel() {
         onError: (String) -> Unit = {},
         context: Context,
     ) {
-        // Images don't seem to be ready immediately after upload
-        val imageUrl = uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "url" }?.get(1)
-        val remoteMimeType =
-            uploadingResult.tags
-                ?.firstOrNull { it.size > 1 && it[0] == "m" }
-                ?.get(1)
-                ?.ifBlank { null }
-        val originalHash =
-            uploadingResult.tags
-                ?.firstOrNull { it.size > 1 && it[0] == "ox" }
-                ?.get(1)
-                ?.ifBlank { null }
-        val dim =
-            uploadingResult.tags
-                ?.firstOrNull { it.size > 1 && it[0] == "dim" }
-                ?.get(1)
-                ?.ifBlank { null }
-                ?.let { Dimension.parse(it) }
-        val magnet =
-            uploadingResult.tags
-                ?.firstOrNull { it.size > 1 && it[0] == "magnet" }
-                ?.get(1)
-                ?.ifBlank { null }
-
-        if (imageUrl.isNullOrBlank()) {
+        if (uploadingResult.url.isNullOrBlank()) {
             Log.e("ImageDownload", "Couldn't download image from server")
             cancel()
             isUploadingImage = false
@@ -358,16 +376,16 @@ open class EditPostViewModel : ViewModel() {
         }
 
         FileHeader.prepare(
-            fileUrl = imageUrl,
-            mimeType = remoteMimeType ?: localContentType,
-            dimPrecomputed = dim,
-            forceProxy = forceProxy(imageUrl),
+            fileUrl = uploadingResult.url,
+            mimeType = uploadingResult.type ?: localContentType,
+            dimPrecomputed = uploadingResult.dimension,
+            forceProxy = forceProxy(uploadingResult.url),
             onReady = { header: FileHeader ->
-                account?.createHeader(imageUrl, magnet, header, alt, sensitiveContent, originalHash) { event ->
+                account?.createHeader(uploadingResult.url, uploadingResult.magnet, header, alt, sensitiveContent, uploadingResult.sha256) { event ->
                     isUploadingImage = false
                     nip94attachments = nip94attachments + event
 
-                    message = message.insertUrlAtCursor(imageUrl)
+                    message = message.insertUrlAtCursor(uploadingResult.url)
                     urlPreview = findUrlInMessage()
                 }
             },

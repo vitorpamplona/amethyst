@@ -55,8 +55,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,7 +75,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.Nip96MediaServers
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -89,7 +89,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.FileServersEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -163,8 +162,8 @@ fun NewMediaView(
                                         accountViewModel.toast(stringRes(context, R.string.failed_to_upload_media_no_details), it)
                                     }
                                     postViewModel.selectedServer?.let {
-                                        if (!it.isNip95) {
-                                            account.settings.changeDefaultFileServer(it.server)
+                                        if (it.type != ServerType.NIP95) {
+                                            account.settings.changeDefaultFileServer(it)
                                         }
                                     }
                                 },
@@ -282,39 +281,21 @@ fun ImageVideoPost(
     postViewModel: NewMediaModel,
     accountViewModel: AccountViewModel,
 ) {
-    val listOfNip96ServersNote =
-        accountViewModel.account
-            .getFileServersNote()
-            .live()
-            .metadata
-            .observeAsState()
-
-    val fileServers =
-        (
-            (listOfNip96ServersNote.value?.note?.event as? FileServersEvent)?.servers()?.map {
-                ServerOption(
-                    Nip96MediaServers.ServerName(
-                        it,
-                        it,
-                    ),
-                    false,
-                )
-            } ?: Nip96MediaServers.DEFAULT.map { ServerOption(it, false) }
-        ) +
-            listOf(
-                ServerOption(
-                    Nip96MediaServers.ServerName(
-                        "NIP95",
-                        stringRes(id = R.string.upload_server_relays_nip95),
-                    ),
-                    true,
-                ),
-            )
+    val nip95description = stringRes(id = R.string.upload_server_relays_nip95)
+    val fileServers by accountViewModel.account.liveServerList.collectAsState()
 
     val fileServerOptions =
-        remember {
-            fileServers.map { TitleExplainer(it.server.name, it.server.baseUrl) }.toImmutableList()
+        remember(fileServers) {
+            fileServers
+                .map {
+                    if (it.type == ServerType.NIP95) {
+                        TitleExplainer(it.name, nip95description)
+                    } else {
+                        TitleExplainer(it.name, it.baseUrl)
+                    }
+                }.toImmutableList()
         }
+
     val resolver = LocalContext.current.contentResolver
 
     Row(
@@ -381,10 +362,9 @@ fun ImageVideoPost(
             label = stringRes(id = R.string.file_server),
             placeholder =
                 fileServers
-                    .firstOrNull { it.server == accountViewModel.account.settings.defaultFileServer }
-                    ?.server
+                    .firstOrNull { it == accountViewModel.account.settings.defaultFileServer }
                     ?.name
-                    ?: fileServers[0].server.name,
+                    ?: fileServers[0].name,
             options = fileServerOptions,
             onSelect = { postViewModel.selectedServer = fileServers[it] },
             modifier = Modifier.windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)).weight(1f),

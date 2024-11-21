@@ -33,8 +33,10 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.tryAndWait
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.vitorpamplona.quartz.events.Dimension
 import kotlinx.coroutines.delay
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -59,12 +61,12 @@ class Nip96Uploader(
         size: Long?,
         alt: String?,
         sensitiveContent: String?,
-        server: Nip96MediaServers.ServerName,
+        server: ServerName,
         contentResolver: ContentResolver,
         forceProxy: (String) -> Boolean,
         onProgress: (percentage: Float) -> Unit,
         context: Context,
-    ): PartialEvent {
+    ): MediaUploadResult {
         val serverInfo =
             Nip96Retriever()
                 .loadInfo(
@@ -97,7 +99,7 @@ class Nip96Uploader(
         forceProxy: (String) -> Boolean,
         onProgress: (percentage: Float) -> Unit,
         context: Context,
-    ): PartialEvent {
+    ): MediaUploadResult {
         checkNotInMainThread()
 
         val myContentType = contentType ?: contentResolver.getType(uri)
@@ -137,7 +139,7 @@ class Nip96Uploader(
         forceProxy: (String) -> Boolean,
         onProgress: (percentage: Float) -> Unit,
         context: Context,
-    ): PartialEvent {
+    ): MediaUploadResult {
         checkNotInMainThread()
 
         val fileName = randomChars()
@@ -189,7 +191,7 @@ class Nip96Uploader(
                     if (!result.processingUrl.isNullOrBlank()) {
                         return waitProcessing(result, server, forceProxy, onProgress)
                     } else if (result.status == "success" && result.nip94Event != null) {
-                        return result.nip94Event
+                        return convertToMediaResult(result.nip94Event)
                     } else {
                         throw RuntimeException(stringRes(context, R.string.failed_to_upload_with_message, result.message))
                     }
@@ -221,6 +223,40 @@ class Nip96Uploader(
                 }
             }
         }
+    }
+
+    fun convertToMediaResult(nip96: PartialEvent): MediaUploadResult {
+        // Images don't seem to be ready immediately after upload
+        val imageUrl = nip96.tags?.firstOrNull { it.size > 1 && it[0] == "url" }?.get(1)
+        val remoteMimeType =
+            nip96.tags
+                ?.firstOrNull { it.size > 1 && it[0] == "m" }
+                ?.get(1)
+                ?.ifBlank { null }
+        val originalHash =
+            nip96.tags
+                ?.firstOrNull { it.size > 1 && it[0] == "ox" }
+                ?.get(1)
+                ?.ifBlank { null }
+        val dim =
+            nip96.tags
+                ?.firstOrNull { it.size > 1 && it[0] == "dim" }
+                ?.get(1)
+                ?.ifBlank { null }
+                ?.let { Dimension.parse(it) }
+        val magnet =
+            nip96.tags
+                ?.firstOrNull { it.size > 1 && it[0] == "magnet" }
+                ?.get(1)
+                ?.ifBlank { null }
+
+        return MediaUploadResult(
+            url = imageUrl,
+            type = remoteMimeType,
+            sha256 = originalHash,
+            dimension = dim,
+            magnet = magnet,
+        )
     }
 
     suspend fun delete(
@@ -269,7 +305,7 @@ class Nip96Uploader(
         server: Nip96Retriever.ServerInfo,
         forceProxy: (String) -> Boolean,
         onProgress: (percentage: Float) -> Unit,
-    ): PartialEvent {
+    ): MediaUploadResult {
         var currentResult = result
 
         while (!result.processingUrl.isNullOrBlank() && (currentResult.percentage ?: 100) < 100) {
@@ -296,7 +332,7 @@ class Nip96Uploader(
         val nip94 = currentResult.nip94Event
 
         if (nip94 != null) {
-            return nip94
+            return convertToMediaResult(nip94)
         } else {
             throw RuntimeException("Error waiting for processing. Final result is unavailable")
         }

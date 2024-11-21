@@ -36,6 +36,9 @@ import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.tryAndWait
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.Constants
@@ -57,6 +60,8 @@ import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.AppSpecificDataEvent
+import com.vitorpamplona.quartz.events.BlossomAuthorizationEvent
+import com.vitorpamplona.quartz.events.BlossomServersEvent
 import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
@@ -138,6 +143,7 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.czeal.rfc3986.URIReference
 import java.math.BigDecimal
 import java.util.Locale
 import java.util.UUID
@@ -624,6 +630,19 @@ class Account(
                 SharingStarted.Eagerly,
                 runBlocking {
                     loadAndCombineFlows(settings.defaultHomeFollowList.value)
+                },
+            )
+    }
+
+    val liveServerList: StateFlow<List<ServerName>> by lazy {
+        combine(getFileServersListFlow(), getBlossomServersListFlow()) { nip96, blossom ->
+            mergeServerList(nip96.note.event as? FileServersEvent, blossom.note.event as? BlossomServersEvent)
+        }.flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                runBlocking {
+                    mergeServerList(getFileServersList(), getBlossomServersList())
                 },
             )
     }
@@ -1480,6 +1499,26 @@ class Account(
         if (!isWriteable()) return
 
         HTTPAuthorizationEvent.create(url, method, body, signer, onReady = onReady)
+    }
+
+    fun createBlossomUploadAuth(
+        hash: HexKey,
+        alt: String,
+        onReady: (BlossomAuthorizationEvent) -> Unit,
+    ) {
+        if (!isWriteable()) return
+
+        BlossomAuthorizationEvent.createUploadAuth(hash, alt, signer, onReady = onReady)
+    }
+
+    fun createBlossomDeleteAuth(
+        hash: HexKey,
+        alt: String,
+        onReady: (BlossomAuthorizationEvent) -> Unit,
+    ) {
+        if (!isWriteable()) return
+
+        BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer, onReady = onReady)
     }
 
     suspend fun boost(note: Note) {
@@ -3663,6 +3702,31 @@ class Account(
 
     fun getFileServersNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(FileServersEvent.createAddressATag(userProfile().pubkeyHex))
 
+    fun getBlossomServersList(): BlossomServersEvent? = getBlossomServersNote().event as? BlossomServersEvent
+
+    fun getBlossomServersListFlow(): StateFlow<NoteState> = getBlossomServersNote().flow().metadata.stateFlow
+
+    fun getBlossomServersNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(BlossomServersEvent.createAddressATag(userProfile().pubkeyHex))
+
+    fun host(url: String): String =
+        try {
+            URIReference.parse(url).host.value
+        } catch (e: Exception) {
+            url
+        }
+
+    fun mergeServerList(
+        nip96: FileServersEvent?,
+        blossom: BlossomServersEvent?,
+    ): List<ServerName> {
+        val nip96servers = nip96?.servers()?.map { ServerName(host(it), it, ServerType.NIP96) } ?: emptyList()
+        val blossomServers = blossom?.servers()?.map { ServerName(host(it), it, ServerType.Blossom) } ?: emptyList()
+
+        val result = (nip96servers + blossomServers).ifEmpty { DEFAULT_MEDIA_SERVERS }
+
+        return result + ServerName("NIP95", "", ServerType.NIP95)
+    }
+
     fun sendFileServersList(servers: List<String>) {
         if (!isWriteable()) return
 
@@ -3679,6 +3743,31 @@ class Account(
             }
         } else {
             FileServersEvent.createFromScratch(
+                relays = servers,
+                signer = signer,
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
+            }
+        }
+    }
+
+    fun sendBlossomServersList(servers: List<String>) {
+        if (!isWriteable()) return
+
+        val serverList = getBlossomServersList()
+
+        if (serverList != null && serverList.tags.isNotEmpty()) {
+            BlossomServersEvent.updateRelayList(
+                earlierVersion = serverList,
+                relays = servers,
+                signer = signer,
+            ) {
+                Client.send(it)
+                LocalCache.justConsume(it, null)
+            }
+        } else {
+            BlossomServersEvent.createFromScratch(
                 relays = servers,
                 signer = signer,
             ) {

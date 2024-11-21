@@ -24,7 +24,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,10 +31,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.czeal.rfc3986.URIReference
 
-class MediaServersViewModel : ViewModel() {
+class NIP96ServersViewModel : ViewModel() {
     lateinit var account: Account
 
-    private val _fileServers = MutableStateFlow<List<Nip96MediaServers.ServerName>>(emptyList())
+    private val _fileServers = MutableStateFlow<List<ServerName>>(emptyList())
     val fileServers = _fileServers.asStateFlow()
     private var isModified = false
 
@@ -50,11 +49,11 @@ class MediaServersViewModel : ViewModel() {
             val obtainedFileServers = obtainFileServers() ?: emptyList()
             obtainedFileServers.mapNotNull { serverUrl ->
                 try {
-                    Nip96MediaServers
-                        .ServerName(
-                            URIReference.parse(serverUrl).host.value,
-                            serverUrl,
-                        )
+                    ServerName(
+                        URIReference.parse(serverUrl).host.value,
+                        serverUrl,
+                        ServerType.NIP96,
+                    )
                 } catch (e: Exception) {
                     Log.d("MediaServersViewModel", "Invalid URL in NIP-96 server list")
                     null
@@ -82,7 +81,7 @@ class MediaServersViewModel : ViewModel() {
             } catch (e: Exception) {
                 normalizedUrl
             }
-        val serverRef = Nip96MediaServers.ServerName(serverNameReference, normalizedUrl)
+        val serverRef = ServerName(serverNameReference, normalizedUrl, ServerType.NIP96)
         if (_fileServers.value.contains(serverRef)) {
             return
         } else {
@@ -101,7 +100,7 @@ class MediaServersViewModel : ViewModel() {
             val serverName = if (name.isNotBlank()) name else URIReference.parse(serverUrl).host.value
             _fileServers.update {
                 it.minus(
-                    Nip96MediaServers.ServerName(serverName, serverUrl),
+                    ServerName(serverName, serverUrl, ServerType.NIP96),
                 )
             }
             isModified = true

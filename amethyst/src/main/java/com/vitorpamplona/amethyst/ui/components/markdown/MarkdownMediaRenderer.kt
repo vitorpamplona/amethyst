@@ -85,7 +85,7 @@ class MarkdownMediaRenderer(
     ) {
         if (canPreview) {
             val content =
-                parser.parseMediaUrl(
+                parser.createMediaContent(
                     fullUrl = uri,
                     eventTags = tags ?: EmptyTagList,
                     description = title?.ifEmpty { null } ?: startOfText,
@@ -109,7 +109,7 @@ class MarkdownMediaRenderer(
         uri: String,
         richTextStringBuilder: RichTextString.Builder,
     ) {
-        val content = parser.parseMediaUrl(uri, eventTags = tags ?: EmptyTagList, startOfText, callbackUri)
+        val content = parser.createMediaContent(uri, eventTags = tags ?: EmptyTagList, startOfText, callbackUri)
 
         if (canPreview) {
             if (content != null) {

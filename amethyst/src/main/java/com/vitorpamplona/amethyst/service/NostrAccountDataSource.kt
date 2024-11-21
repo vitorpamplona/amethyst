@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.AppSpecificDataEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
+import com.vitorpamplona.quartz.events.BlossomServersEvent
 import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.events.CalendarRSVPEvent
@@ -94,10 +95,11 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                             ChatMessageRelayListEvent.KIND,
                             SearchRelayListEvent.KIND,
                             FileServersEvent.KIND,
+                            BlossomServersEvent.KIND,
                             PrivateOutboxRelayListEvent.KIND,
                         ),
                     authors = listOf(account.userProfile().pubkeyHex),
-                    limit = 10,
+                    limit = 20,
                 ),
         )
 
@@ -116,11 +118,12 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                             ChatMessageRelayListEvent.KIND,
                             SearchRelayListEvent.KIND,
                             FileServersEvent.KIND,
+                            BlossomServersEvent.KIND,
                             MuteListEvent.KIND,
                             PeopleListEvent.KIND,
                         ),
                     authors = otherAuthors,
-                    limit = otherAuthors.size * 10,
+                    limit = otherAuthors.size * 20,
                 ),
         )
     }

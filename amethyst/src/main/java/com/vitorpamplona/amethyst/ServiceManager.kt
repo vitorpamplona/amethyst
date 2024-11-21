@@ -33,6 +33,7 @@ import coil3.util.DebugLogger
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.Base64Fetcher
+import com.vitorpamplona.amethyst.service.BlurHashFetcher
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -134,6 +135,9 @@ class ServiceManager(
                     }
                     add(SvgDecoder.Factory())
                     add(Base64Fetcher.Factory)
+                    add(BlurHashFetcher.Factory)
+                    add(Base64Fetcher.BKeyer)
+                    add(BlurHashFetcher.BKeyer)
                     add(
                         OkHttpNetworkFetcherFactory(
                             callFactory = {
