@@ -107,7 +107,7 @@ fun NoteDropDownMenu(
     var reportDialogShowing by remember { mutableStateOf(false) }
 
     var state by remember {
-        mutableStateOf<DropDownParams>(
+        mutableStateOf(
             DropDownParams(
                 isFollowingAuthor = false,
                 isPrivateBookmarkNote = false,
@@ -165,6 +165,16 @@ fun NoteDropDownMenu(
                 onClick = {
                     val author = note.author ?: return@DropdownMenuItem
                     accountViewModel.follow(author)
+                    onDismiss()
+                },
+            )
+            HorizontalDivider(thickness = DividerThickness)
+        } else {
+            DropdownMenuItem(
+                text = { Text(stringRes(R.string.unfollow)) },
+                onClick = {
+                    val author = note.author ?: return@DropdownMenuItem
+                    accountViewModel.unfollow(author)
                     onDismiss()
                 },
             )
