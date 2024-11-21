@@ -107,7 +107,7 @@ fun NoteDropDownMenu(
     var reportDialogShowing by remember { mutableStateOf(false) }
 
     var state by remember {
-        mutableStateOf<DropDownParams>(
+        mutableStateOf(
             DropDownParams(
                 isFollowingAuthor = false,
                 isPrivateBookmarkNote = false,
