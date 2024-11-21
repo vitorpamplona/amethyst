@@ -27,6 +27,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.CancellationException
 
 @RunWith(AndroidJUnit4::class)
 class TranslationsTest {
@@ -124,7 +125,10 @@ class TranslationsTest {
             "Have you seen this: lnbc12u1p3lvjeupp5a5ecgp45k6pa8tu7rnkgzfuwdy3l5ylv3k5tdzrg4cr8rj2f364sdq5g9kxy7fqd9h8vmmfvdjscqzpgxqyz5vqsp5zuzyetf33aphetf0e80w7tztw6dfsjs4lmvya4cyk8umfsx00qts9qyyssqke9hphcr36zvcav8wr502g0mhfhxpy8m9tt36zttg8vldm2qxw039ulccr8nwy3hjg2sw5vk65e99lwuhrhw0nuya2u57qszltvx7egp74jydn I think I have to pay",
             "pt",
         )
+    }
 
+    @Test(expected = CancellationException::class)
+    fun testTranslationLnInvoice2() {
         assertTranslateContains(
             "lnbc10u1p3l0wg0pp5y5y3vxt3429m28uuq56uqhwxadftn67yaarq06h3y9nqapz72n6sdqqxqyjw5q9q7sqqqqqqqqqqqqqqqqqqqqqqqqq9qsqsp5y2tazp42xde3c0tdsz30zqcekrt0lzrneszdtagy2qn7vs0d3p5qrzjqwryaup9lh50kkranzgcdnn2fgvx390wgj5jd07rwr3vxeje0glcll7jdvcln4lhw5qqqqlgqqqqqeqqjqdau9jzseecmvmh03h88xyf5f980xx45fmn0cej654v5jr79ye36pww90jwdda38damlmgt54v8rn6q9kywtw057rh4v3wwrmn8fajagqnssr7v",
             "Test lnbc10u1p3l0wg0pp5y5y3vxt3429m28uuq56uqhwxadftn67yaarq06h3y9nqapz72n6sdqqxqyjw5q9q7sqqqqqqqqqqqqqqqqqqqqqqqqq9qsqsp5y2tazp42xde3c0tdsz30zqcekrt0lzrneszdtagy2qn7vs0d3p5qrzjqwryaup9lh50kkranzgcdnn2fgvx390wgj5jd07rwr3vxeje0glcll7jdvcln4lhw5qqqqlgqqqqqeqqjqdau9jzseecmvmh03h88xyf5f980xx45fmn0cej654v5jr79ye36pww90jwdda38damlmgt54v8rn6q9kywtw057rh4v3wwrmn8fajagqnssr7v",
@@ -132,7 +136,7 @@ class TranslationsTest {
         )
     }
 
-    @Test
+    @Test(expected = CancellationException::class)
     fun testNostrEvents() {
         assertTranslateContains(
             "nostr:nevent1qqs0tsw8hjacs4fppgdg7f5yhgwwfkyua4xcs3re9wwkpkk2qeu6mhql22rcy",
@@ -159,6 +163,17 @@ class TranslationsTest {
         assertTranslateContains(
             "https://cdn.nostr.build/i/df3783dcdf7dd289ba02ba538dc039c8fe1d4db055e580b81604ed88c6af4ee0.jpg",
             "\uD83E\uDD23 https://cdn.nostr.build/i/df3783dcdf7dd289ba02ba538dc039c8fe1d4db055e580b81604ed88c6af4ee0.jpg ",
+            "pt",
+        )
+    }
+
+    @Test
+    fun testHttp() {
+        val text = "https://m.primal.net/MdDd.png \nRunning... \uD83D\uDE01   nostr:npub126ntw5mnermmj0znhjhgdk8lh2af72sm8qfzq48umdlnhaj9kuns3le9ll  nostr:npub1getal6ykt05fsz5nqu4uld09nfj3y3qxmv8crys4aeut53unfvlqr80nfm"
+
+        assertTranslateContains(
+            "https://m.primal.net/MdDd.png",
+            text,
             "pt",
         )
     }
