@@ -352,7 +352,6 @@
     <string name="zap_forward_lnAddress">LnAdres lub @Użytkownik</string>
     <string name="media_servers">Serwery Multimediów</string>
     <string name="set_preferred_media_servers">Ustaw swoje preferowane serwery przesyłania multimediów.</string>
-    <string name="no_media_server_message">Nie masz ustawionych własnych serwerów multimediów. Możesz użyć listy Amethyst\'a lub dodać jeden poniżej ↓</string>
     <string name="built_in_media_servers_title">Wbudowane serwery multimediów</string>
     <string name="built_in_servers_description">Domyślna lista Amethyst-a. Możesz dodawać je pojedynczo lub dodać pełną listę.</string>
     <string name="use_default_servers">Użyj domyślnej listy</string>

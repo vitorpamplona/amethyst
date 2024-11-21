@@ -352,7 +352,6 @@
     <string name="zap_forward_lnAddress">LnAddress of @User</string>
     <string name="media_servers">Mediaservers</string>
     <string name="set_preferred_media_servers">Stel uw gewenste media upload servers in.</string>
-    <string name="no_media_server_message">Je hebt geen aangepaste mediaservers ingesteld. Je kunt de lijst van Amethyst gebruiken of er hieronder een toevoegen ↓</string>
     <string name="built_in_media_servers_title">Ingebouwde mediaservers</string>
     <string name="built_in_servers_description">Amethyst\'s standaardlijst. U kunt ze individueel toevoegen of de lijst toevoegen.</string>
     <string name="use_default_servers">Gebruik standaard lijst</string>

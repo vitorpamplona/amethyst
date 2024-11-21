@@ -352,7 +352,6 @@
     <string name="zap_forward_lnAddress">闪电地址或 @User</string>
     <string name="media_servers">媒体服务器</string>
     <string name="set_preferred_media_servers">设置首选媒体上传服务器。</string>
-    <string name="no_media_server_message">尚未设置自定义媒体服务器。可以使用默认的内置服务器列表或自行添加 ↓</string>
     <string name="built_in_media_servers_title">内置媒体服务器</string>
     <string name="built_in_servers_description">Amethyst 的默认列表。可单独添加或添加整个列表。</string>
     <string name="use_default_servers">使用默认列表</string>

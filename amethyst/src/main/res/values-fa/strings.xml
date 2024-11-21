@@ -351,7 +351,6 @@
     <string name="zap_forward_lnAddress">آدرس لایتنینگ یا @User</string>
     <string name="media_servers">سرورهای رسانه</string>
     <string name="set_preferred_media_servers">سرورهای مورد علاقه خود برای بارگزاری رسانه را انتخاب کنید.</string>
-    <string name="no_media_server_message">هیچ مجموعه سرور سفارشی ندارید. می توانید از لیست امتیست استفاده کنید، یا از لیست زیر اضافه کنید↓</string>
     <string name="built_in_media_servers_title">سرورهای داخلی رسانه</string>
     <string name="built_in_servers_description">لیست پیش فرض امتیست. می توانید تک به تک یا تمام لیست را اضافه کنید.</string>
     <string name="use_default_servers">استفاده از لیست پیش فرض</string>

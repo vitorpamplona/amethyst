@@ -116,6 +116,7 @@
     <string name="avatar_url">Avatar-URL</string>
     <string name="banner_url">Banner-URL</string>
     <string name="website_url">Website-URL</string>
+    <string name="pronouns">Pronomen</string>
     <string name="ln_address">LN-Adresse</string>
     <string name="ln_url_outdated">LN-URL (veraltet)</string>
     <string name="save_to_gallery">In die Galerie abspeichern</string>
@@ -356,7 +357,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="zap_forward_lnAddress">LnAddress oder @Benutzer</string>
     <string name="media_servers">Medienserver</string>
     <string name="set_preferred_media_servers">Legen Sie Ihre bevorzugten Medienupload Server fest.</string>
-    <string name="no_media_server_message">Sie haben keine benutzerdefinierten Medienserver gesetzt. Sie können die Liste von Amethyst verwenden oder unten einen hinzufügen</string>
     <string name="built_in_media_servers_title">Integrierte Medienserver</string>
     <string name="built_in_servers_description">Amethysts Standardliste. Sie können sie einzeln hinzufügen oder die Liste hinzufügen.</string>
     <string name="use_default_servers">Standardliste verwenden</string>

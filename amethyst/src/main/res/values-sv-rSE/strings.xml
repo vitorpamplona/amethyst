@@ -116,6 +116,7 @@
     <string name="avatar_url">Profilbild URL</string>
     <string name="banner_url">Banner URL</string>
     <string name="website_url">Websida URL</string>
+    <string name="pronouns">Pronomen</string>
     <string name="ln_address">LN Adress</string>
     <string name="ln_url_outdated">LN URL (Utdaterad)</string>
     <string name="save_to_gallery">Spara i Galleri</string>
@@ -350,7 +351,6 @@
     <string name="zap_forward_lnAddress">LnAdress eller @Användare</string>
     <string name="media_servers">Mediaservrar</string>
     <string name="set_preferred_media_servers">Ställ in dina önskade mediauppladdningsservrar.</string>
-    <string name="no_media_server_message">Du har inga anpassade mediaservrar. Du kan använda Amethysts lista, eller lägga till en under ↓</string>
     <string name="built_in_media_servers_title">Inbyggda mediaservrar</string>
     <string name="built_in_servers_description">Amethysts standardlista. Du kan lägga till dem individuellt eller lägga till listan.</string>
     <string name="use_default_servers">Använd standardlistan</string>

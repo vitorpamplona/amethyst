@@ -352,7 +352,6 @@
     <string name="zap_forward_lnAddress">Dirección o @usuario de Lightning</string>
     <string name="media_servers">Servidores multimedia</string>
     <string name="set_preferred_media_servers">Configura tus servidores preferidos para subir contenido multimedia.</string>
-    <string name="no_media_server_message">No tienes ningún servidor multimedia personalizado. Puedes utilizar la lista de Amethyst, o agregar uno de la lista a continuación ↓</string>
     <string name="built_in_media_servers_title">Servidores multimedia integrados</string>
     <string name="built_in_servers_description">Lista predeterminada de Amethyst. Puedes agregarlos individualmente o añadir la lista.</string>
     <string name="use_default_servers">Usar lista predeterminada</string>
