@@ -352,7 +352,6 @@
     <string name="zap_forward_lnAddress">Adresse LN ou @Utilisateur</string>
     <string name="media_servers">Serveurs média</string>
     <string name="set_preferred_media_servers">Définissez vos serveurs de téléversement de média préférés.</string>
-    <string name="no_media_server_message">Vous n\'avez pas de serveur média personnalisé. Vous pouvez utiliser la liste d\'Amethyst, ou en ajouter un ci-dessous</string>
     <string name="built_in_media_servers_title">Serveurs média intégrés</string>
     <string name="built_in_servers_description">Liste par défaut d\'Amethyst. Vous pouvez les ajouter individuellement ou ajouter la liste.</string>
     <string name="use_default_servers">Utiliser la liste par défaut</string>

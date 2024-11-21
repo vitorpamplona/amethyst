@@ -116,6 +116,7 @@
     <string name="avatar_url">URL da foto de perfil</string>
     <string name="banner_url">URL do Banner</string>
     <string name="website_url">URL do Site</string>
+    <string name="pronouns">Pronomes</string>
     <string name="ln_address">Endereço LN</string>
     <string name="ln_url_outdated">LN URL (desatualizado)</string>
     <string name="save_to_gallery">Salvar na Galeria</string>
@@ -350,7 +351,6 @@
     <string name="zap_forward_lnAddress">LnAddress ou @Usuário</string>
     <string name="media_servers">Servidores de Mídia</string>
     <string name="set_preferred_media_servers">Defina seus servidores de upload de mídia preferidos.</string>
-    <string name="no_media_server_message">Não há nenhum servidor de mídia personalizado. Você pode usar a lista do Amethyst, ou adicionar um abaixo</string>
     <string name="built_in_media_servers_title">Servidores de Mídia Integrados</string>
     <string name="built_in_servers_description">Lista padrão do Ametite. Você pode adicioná-los individualmente ou adicionar a lista.</string>
     <string name="use_default_servers">Usar Lista Padrão</string>

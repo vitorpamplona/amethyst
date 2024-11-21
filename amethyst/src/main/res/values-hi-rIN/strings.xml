@@ -352,7 +352,6 @@
     <string name="zap_forward_lnAddress">लै॰जाल पता अथवा @उपयोगकर्ता</string>
     <string name="media_servers">प्रसारसंगणक</string>
     <string name="set_preferred_media_servers">आपके प्रसारसंगणक आद्यताएँ स्थापित करें।</string>
-    <string name="no_media_server_message">आपका कोई विशिष्ट प्रसारसंगणक स्थापित नहीं। आप अमेथिस्ट की सूची का प्रयोग कर सकते हैं अथवा प्रसारसंगणक नीचे जोड सकते हैं ↓</string>
     <string name="built_in_media_servers_title">अन्तर्निहित प्रसारसंगणक</string>
     <string name="built_in_servers_description">अमेथिस्त की मूलविकल्प सूची। आप एक एक करके जोड सकते हैं अथवा सूची जोड सकते हैं।</string>
     <string name="use_default_servers">मूलविकल्प सूची का प्रयोग करें</string>

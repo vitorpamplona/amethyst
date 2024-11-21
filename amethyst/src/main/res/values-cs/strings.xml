@@ -116,6 +116,7 @@
     <string name="avatar_url">URL avatara</string>
     <string name="banner_url">URL banneru</string>
     <string name="website_url">URL webové stránky</string>
+    <string name="pronouns">Zájmena</string>
     <string name="ln_address">LN adresa</string>
     <string name="ln_url_outdated">LN URL (zastaralé)</string>
     <string name="save_to_gallery">Uložit do galerie</string>
@@ -350,7 +351,6 @@
     <string name="zap_forward_lnAddress">LnAddress nebo @Uživatel</string>
     <string name="media_servers">Media Servery</string>
     <string name="set_preferred_media_servers">Nastavte preferované servery pro nahrávání médií.</string>
-    <string name="no_media_server_message">Nemáte nastaveny žádné vlastní mediální servery. Můžete použít Amethystův seznam nebo přidat jeden níže</string>
     <string name="built_in_media_servers_title">Integrované mediální servery</string>
     <string name="built_in_servers_description">Výchozí seznam Amethysty. Můžete je přidat jednotlivě nebo přidat seznam.</string>
     <string name="use_default_servers">Použít výchozí seznam</string>
