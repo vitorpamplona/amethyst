@@ -434,6 +434,7 @@ class UserMetadata {
     var website: String? = null
     var about: String? = null
     var bot: Boolean? = null
+    var pronouns: String? = null
 
     var nip05: String? = null
     var nip05Verified: Boolean = false
@@ -471,6 +472,7 @@ class UserMetadata {
         if (username?.isNotEmpty() == true) username = username?.trim()
         if (lud06?.isNotEmpty() == true) lud06 = lud06?.trim()
         if (lud16?.isNotEmpty() == true) lud16 = lud16?.trim()
+        if (pronouns?.isNotEmpty() == true) pronouns = pronouns?.trim()
 
         if (banner?.isNotEmpty() == true) banner = banner?.trim()
         if (website?.isNotEmpty() == true) website = website?.trim()
@@ -487,6 +489,7 @@ class UserMetadata {
         if (banner?.isBlank() == true) banner = null
         if (website?.isBlank() == true) website = null
         if (domain?.isBlank() == true) domain = null
+        if (pronouns?.isBlank() == true) pronouns = null
     }
 }
 

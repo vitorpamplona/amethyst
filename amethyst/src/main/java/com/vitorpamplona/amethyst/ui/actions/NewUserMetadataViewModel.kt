@@ -51,6 +51,7 @@ class NewUserMetadataViewModel : ViewModel() {
     val banner = mutableStateOf("")
 
     val website = mutableStateOf("")
+    val pronouns = mutableStateOf("")
     val nip05 = mutableStateOf("")
     val lnAddress = mutableStateOf("")
     val lnURL = mutableStateOf("")
@@ -72,6 +73,7 @@ class NewUserMetadataViewModel : ViewModel() {
             picture.value = it.info?.picture ?: ""
             banner.value = it.info?.banner ?: ""
             website.value = it.info?.website ?: ""
+            pronouns.value = it.info?.pronouns ?: ""
             nip05.value = it.info?.nip05 ?: ""
             lnAddress.value = it.info?.lud16 ?: ""
             lnURL.value = it.info?.lud06 ?: ""
@@ -99,6 +101,7 @@ class NewUserMetadataViewModel : ViewModel() {
                 picture = picture.value,
                 banner = banner.value,
                 website = website.value,
+                pronouns = pronouns.value,
                 about = about.value,
                 nip05 = nip05.value,
                 lnAddress = lnAddress.value,

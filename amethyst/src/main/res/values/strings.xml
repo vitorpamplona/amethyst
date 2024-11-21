@@ -121,6 +121,7 @@
     <string name="avatar_url">Avatar URL</string>
     <string name="banner_url">Banner URL</string>
     <string name="website_url">Website URL</string>
+    <string name="pronouns">Pronouns</string>
     <string name="ln_address">LN Address</string>
     <string name="ln_url_outdated">LN URL (outdated)</string>
     <string name="save_to_gallery">Save to Gallery</string>

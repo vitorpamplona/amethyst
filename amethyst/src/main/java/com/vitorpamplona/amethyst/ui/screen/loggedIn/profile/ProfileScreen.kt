@@ -1016,6 +1016,14 @@ private fun DrawAdditionalInfo(
                 fontSize = 25.sp,
             )
             Spacer(StdHorzSpacer)
+            user.info?.pronouns.let {
+                Text(
+                    text = "($it)",
+                    modifier = Modifier,
+                )
+                Spacer(StdHorzSpacer)
+            }
+
             DrawPlayName(it)
         }
     }

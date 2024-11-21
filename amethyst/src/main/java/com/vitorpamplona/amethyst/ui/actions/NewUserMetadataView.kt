@@ -190,6 +190,22 @@ fun NewUserMetadataView(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     OutlinedTextField(
+                        label = { Text(text = stringRes(R.string.pronouns)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.pronouns.value,
+                        onValueChange = { postViewModel.pronouns.value = it },
+                        placeholder = {
+                            Text(
+                                text = "they/them, ...",
+                                color = MaterialTheme.colorScheme.placeholderText,
+                            )
+                        },
+                        singleLine = true,
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
                         label = { Text(text = stringRes(R.string.website_url)) },
                         modifier = Modifier.fillMaxWidth(),
                         value = postViewModel.website.value,
