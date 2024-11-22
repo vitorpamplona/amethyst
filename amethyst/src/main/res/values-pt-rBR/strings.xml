@@ -351,6 +351,8 @@
     <string name="zap_forward_lnAddress">LnAddress ou @Usuário</string>
     <string name="media_servers">Servidores de Mídia</string>
     <string name="set_preferred_media_servers">Defina seus servidores de upload de mídia preferidos.</string>
+    <string name="no_nip96_server_message">Você não tem nenhum servidor NIP-96. Você pode usar a lista de Amethyst, ou adicionar um abaixo ↓</string>
+    <string name="no_blossom_server_message">Você não tem nenhum servidor de Blossom configurado. Você pode usar a lista de Amethyst, ou adicionar um abaixo ↓</string>
     <string name="built_in_media_servers_title">Servidores de Mídia Integrados</string>
     <string name="built_in_servers_description">Lista padrão do Ametite. Você pode adicioná-los individualmente ou adicionar a lista.</string>
     <string name="use_default_servers">Usar Lista Padrão</string>
@@ -869,7 +871,12 @@
     <string name="http_status_507">Armazenamento insuficiente - O servidor não possui armazenamento suficiente para processar a requisição com sucesso</string>
     <string name="http_status_508">Loop detectado - O servidor detecta um loop infinito enquanto processa a requisição</string>
     <string name="http_status_511">Autenticação de rede necessária - O cliente deve ser autenticado para acessar a rede</string>
+    <string name="media_servers_nip96_section">Servidores NIP-96</string>
+    <string name="media_servers_nip96_explainer">Adicione quantos servidores você desejar. Você pode escolher qual usar mais tarde quando enviar sua foto</string>
+    <string name="media_servers_blossom_section">Servidores de Blossom</string>
+    <string name="media_servers_blossom_explainer">Adicione quantos servidores você desejar. Você pode escolher qual usar mais tarde quando enviar sua foto</string>
     <string name="add_a_nip96_server">Adicionar um servidor NIP-96</string>
+    <string name="add_a_blossom_server">Adicionar um Servidor de Blossom</string>
     <string name="delete_all">Apagar tudo</string>
     <string name="delete_all_drafts_confirmation">Você tem certeza de que deseja excluir todos os rascunhos?</string>
     <string name="stack">Pilha:</string>
