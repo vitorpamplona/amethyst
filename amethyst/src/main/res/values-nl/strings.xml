@@ -116,6 +116,7 @@
     <string name="avatar_url">Profielfoto URL</string>
     <string name="banner_url">Banner URL</string>
     <string name="website_url">Website URL</string>
+    <string name="pronouns">Voornaamwoorden</string>
     <string name="ln_address">LN Adress</string>
     <string name="ln_url_outdated">LN URL (verouderd)</string>
     <string name="save_to_gallery">Opslaan in galerij</string>
@@ -352,6 +353,8 @@
     <string name="zap_forward_lnAddress">LnAddress of @User</string>
     <string name="media_servers">Mediaservers</string>
     <string name="set_preferred_media_servers">Stel uw gewenste media upload servers in.</string>
+    <string name="no_nip96_server_message">Je hebt geen NIP-96 servers ingesteld. Je kunt de lijst van Amethyst gebruiken of er hieronder een toevoegen ↓</string>
+    <string name="no_blossom_server_message">Je hebt geen Blossom servers ingesteld. Je kunt de lijst van Amethyst gebruiken of er hieronder een toevoegen ↓</string>
     <string name="built_in_media_servers_title">Ingebouwde mediaservers</string>
     <string name="built_in_servers_description">Amethyst\'s standaardlijst. U kunt ze individueel toevoegen of de lijst toevoegen.</string>
     <string name="use_default_servers">Gebruik standaard lijst</string>
@@ -546,6 +549,8 @@
     <string name="zap_forward_explainer">Ondersteunende clients sturen zaps door naar het onderstaande LN-adres of gebruikersprofiel in plaats van naar het jouwe</string>
     <string name="geohash_title">Locatie weergeven als</string>
     <string name="geohash_explainer">Voegt een Geohash van je locatie toe aan het bericht. Het publiek weet dat je binnen 5 km (3mi) van de huidige locatie bent.</string>
+    <string name="geohash_exclusive">Locatie-exclusief bericht</string>
+    <string name="geohash_exclusive_explainer">Alleen volgers van de locatie zien het. Je volgers zien het niet.</string>
     <string name="loading_location">Locatie laden</string>
     <string name="lack_location_permissions">Geen locatiemachtigingen</string>
     <string name="add_sensitive_content_explainer">Voegt een waarschuwing voor gevoelige inhoud toe voordat je inhoud wordt weergegeven. Dit is ideaal voor NSFW-inhoud of inhoud die sommige mensen beledigend of verontrustend vinden.</string>
@@ -868,7 +873,12 @@
     <string name="http_status_507">Onvoldoende opslagruimte - De server heeft niet genoeg opslagruimte om het verzoek succesvol te verwerken</string>
     <string name="http_status_508">Loop gedetecteerd - De server detecteert een oneindige loop tijdens het verwerken van het verzoek</string>
     <string name="http_status_511">Netwerk authenticatie vereist - De client moet geauthenticeerd zijn om toegang te krijgen tot het netwerk</string>
+    <string name="media_servers_nip96_section">NIP-96 servers</string>
+    <string name="media_servers_nip96_explainer">Voeg zoveel servers toe als je wilt. Je kunt later kiezen welke zal worden gebruikt bij het uploaden van je afbeelding</string>
+    <string name="media_servers_blossom_section">Blossom servers</string>
+    <string name="media_servers_blossom_explainer">Voeg zoveel servers toe als je wilt. Je kunt later kiezen welke zal worden gebruikt bij het uploaden van je afbeelding</string>
     <string name="add_a_nip96_server">Voeg een NIP-96 Server toe</string>
+    <string name="add_a_blossom_server">Een Blossom server toevoegen</string>
     <string name="delete_all">Alles verwijderen</string>
     <string name="delete_all_drafts_confirmation">Weet u zeker dat u alle concepten wilt verwijderen?</string>
     <string name="stack">Stack:</string>
