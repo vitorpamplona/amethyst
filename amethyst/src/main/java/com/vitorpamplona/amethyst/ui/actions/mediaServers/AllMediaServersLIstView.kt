@@ -165,6 +165,7 @@ fun MediaServersListView(
 
                     renderMediaServerList(
                         mediaServersState = nip96ServersState,
+                        keyType = "nip96",
                         editLabel = R.string.add_a_nip96_server,
                         emptyLabel = R.string.no_nip96_server_message,
                         onAddServer = { server ->
@@ -184,6 +185,7 @@ fun MediaServersListView(
 
                     renderMediaServerList(
                         mediaServersState = blossomServersState,
+                        keyType = "blossom",
                         editLabel = R.string.add_a_blossom_server,
                         emptyLabel = R.string.no_blossom_server_message,
                         onAddServer = { server ->
@@ -219,7 +221,7 @@ fun MediaServersListView(
                         itemsIndexed(
                             it,
                             key = { index: Int, server: ServerName ->
-                                server.baseUrl
+                                "Proposed" + server.baseUrl
                             },
                         ) { index, server ->
                             MediaServerEntry(
@@ -247,6 +249,7 @@ fun MediaServersListView(
 
 fun LazyListScope.renderMediaServerList(
     mediaServersState: List<ServerName>,
+    keyType: String,
     editLabel: Int,
     emptyLabel: Int,
     onAddServer: (String) -> Unit,
@@ -263,7 +266,7 @@ fun LazyListScope.renderMediaServerList(
         itemsIndexed(
             mediaServersState,
             key = { index: Int, server: ServerName ->
-                server.baseUrl
+                keyType + server.baseUrl
             },
         ) { index, entry ->
             MediaServerEntry(
