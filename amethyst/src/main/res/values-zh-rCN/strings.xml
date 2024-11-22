@@ -116,6 +116,7 @@
     <string name="avatar_url">头像链接</string>
     <string name="banner_url">横幅链接</string>
     <string name="website_url">网站链接</string>
+    <string name="pronouns">称谓代词</string>
     <string name="ln_address">闪电地址</string>
     <string name="ln_url_outdated">LN链接（过期）</string>
     <string name="save_to_gallery">保存到相册</string>
@@ -352,6 +353,8 @@
     <string name="zap_forward_lnAddress">闪电地址或 @User</string>
     <string name="media_servers">媒体服务器</string>
     <string name="set_preferred_media_servers">设置首选媒体上传服务器。</string>
+    <string name="no_nip96_server_message">尚未设置 NIP-96 服务器。可以使用默认的内置服务器列表或自行添加 ↓</string>
+    <string name="no_blossom_server_message">尚未设置 Blossom 服务器。可以使用默认的内置服务器列表或自行添加 ↓</string>
     <string name="built_in_media_servers_title">内置媒体服务器</string>
     <string name="built_in_servers_description">Amethyst 的默认列表。可单独添加或添加整个列表。</string>
     <string name="use_default_servers">使用默认列表</string>
@@ -546,6 +549,10 @@
     <string name="zap_forward_explainer">支持的客户端会将打闪转发到以下的闪电地址或用户个人档案，而不是你的</string>
     <string name="geohash_title">将位置显示为 </string>
     <string name="geohash_explainer">将你所在位置的地理位置添加到帖子。公众会知道你在当前位置的5公里之内（3英里）</string>
+    <string name="geohash_exclusive">位置限定帖子</string>
+    <string name="geohash_exclusive_explainer">只有处于同一地理位置的追随者才能看到贴文。其他追随者无法看到。</string>
+    <string name="loading_location">加载位置中</string>
+    <string name="lack_location_permissions">没有位置信息权限</string>
     <string name="add_sensitive_content_explainer">在显示你的内容之前添加敏感的内容警告。针对任何 NSFW 内容或一些人可能觉得有冒犯性或令人不安的内容。</string>
     <string name="new_feature_nip17_might_not_be_available_title">新功能</string>
     <string name="new_feature_nip17_might_not_be_available_description">启用此模式需要 Amethyst 发送一条 NIP-17 消息（包装的、密封的私信和群聊消息）。因为 NIP-17 是新的，大多数客户端尚未执行。请确保接收方正在使用兼容的客户端。</string>
@@ -866,7 +873,12 @@
     <string name="http_status_507">Insufficient Storage - 服务器没有足够的存储空间用于处理该请求。</string>
     <string name="http_status_508">Loop Detected - 服务器处理该请求时检测到死循环。</string>
     <string name="http_status_511">Network Authentication Required - 客户端必须通过认证才能访问该网络。</string>
+    <string name="media_servers_nip96_section">NIP-96 服务器</string>
+    <string name="media_servers_nip96_explainer">添加上传图片时可以选择的服务器。</string>
+    <string name="media_servers_blossom_section">Blossom 服务器</string>
+    <string name="media_servers_blossom_explainer">添加上传图片时可以选择的服务器。</string>
     <string name="add_a_nip96_server">添加 NIP-96 服务器</string>
+    <string name="add_a_blossom_server">添加 Blossom 服务器</string>
     <string name="delete_all">删除所有</string>
     <string name="delete_all_drafts_confirmation">确定要删除所有草稿吗？</string>
     <string name="stack">堆叠：</string>
