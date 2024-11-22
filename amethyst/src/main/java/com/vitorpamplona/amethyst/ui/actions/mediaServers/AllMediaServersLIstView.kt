@@ -219,7 +219,7 @@ fun MediaServersListView(
                         itemsIndexed(
                             it,
                             key = { index: Int, server: ServerName ->
-                                server.baseUrl
+                                server.type.name + server.baseUrl
                             },
                         ) { index, server ->
                             MediaServerEntry(
@@ -263,7 +263,7 @@ fun LazyListScope.renderMediaServerList(
         itemsIndexed(
             mediaServersState,
             key = { index: Int, server: ServerName ->
-                server.baseUrl
+                server.type.name + server.baseUrl
             },
         ) { index, entry ->
             MediaServerEntry(
