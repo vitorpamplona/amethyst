@@ -139,7 +139,7 @@ class ContactListEvent(
             val tags =
                 listOf(arrayOf("alt", ALT)) +
                     followUsers.map {
-                        listOfNotNull("a", it.pubKeyHex, it.relayUri).toTypedArray()
+                        listOfNotNull("p", it.pubKeyHex, it.relayUri).toTypedArray()
                     } +
                     followTags.map { arrayOf("t", it) } +
                     followEvents.map { arrayOf("e", it) } +
