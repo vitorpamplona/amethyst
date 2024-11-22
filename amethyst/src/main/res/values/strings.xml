@@ -189,6 +189,7 @@
     <string name="loading_account">Loading account</string>
     <string name="error_loading_replies">"Error loading replies: "</string>
     <string name="try_again">Try again</string>
+    <string name="notification_feed_is_empty">No notifications yet.</string>
     <string name="feed_is_empty">Feed is empty.</string>
     <string name="refresh">Refresh</string>
     <string name="created">created</string>
