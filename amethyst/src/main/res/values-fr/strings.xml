@@ -116,6 +116,7 @@
     <string name="avatar_url">URL de l\'avatar</string>
     <string name="banner_url">URL de la bannière</string>
     <string name="website_url">URL de site</string>
+    <string name="pronouns">Pronoms</string>
     <string name="ln_address">Adresse LN</string>
     <string name="ln_url_outdated">URL LN (obsolete)</string>
     <string name="save_to_gallery">Enregistrer dans la Galerie</string>
@@ -352,6 +353,8 @@
     <string name="zap_forward_lnAddress">Adresse LN ou @Utilisateur</string>
     <string name="media_servers">Serveurs média</string>
     <string name="set_preferred_media_servers">Définissez vos serveurs de téléversement de média préférés.</string>
+    <string name="no_nip96_server_message">Vous n\'avez pas de serveur NIP-96 défini. Vous pouvez utiliser la liste d\'Amethyst, ou en ajouter un ci-dessous ↓</string>
+    <string name="no_blossom_server_message">Vous n\'avez pas de serveur Blossom défini. Vous pouvez utiliser la liste d\'Amethyst, ou en ajouter un ci-dessous ↓</string>
     <string name="built_in_media_servers_title">Serveurs média intégrés</string>
     <string name="built_in_servers_description">Liste par défaut d\'Amethyst. Vous pouvez les ajouter individuellement ou ajouter la liste.</string>
     <string name="use_default_servers">Utiliser la liste par défaut</string>
@@ -870,7 +873,12 @@
     <string name="http_status_507">Stockage insuffisant - Le serveur n\'a pas assez d\'espace pour traiter la demande avec succès</string>
     <string name="http_status_508">Boucle détectée - Le serveur détecte une boucle infinie lors du traitement de la requête</string>
     <string name="http_status_511">Authentification réseau requise - Le client doit être authentifié pour accéder au réseau</string>
+    <string name="media_servers_nip96_section">Serveurs NIP-96</string>
+    <string name="media_servers_nip96_explainer">Ajoutez autant de serveurs que vous le souhaitez. Vous pourrez choisir celui à utiliser plus tard lors du téléversement de votre image</string>
+    <string name="media_servers_blossom_section">Serveurs Blossom</string>
+    <string name="media_servers_blossom_explainer">Ajoutez autant de serveurs que vous le souhaitez. Vous pourrez choisir celui à utiliser plus tard lors du téléversement de votre image</string>
     <string name="add_a_nip96_server">Ajouter un serveur NIP-96</string>
+    <string name="add_a_blossom_server">Ajouter un serveur Blossom</string>
     <string name="delete_all">Tout supprimer</string>
     <string name="delete_all_drafts_confirmation">Êtes-vous sûr de vouloir supprimer tous les brouillons ?</string>
     <string name="stack">Pile :</string>
