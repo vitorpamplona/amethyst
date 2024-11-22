@@ -351,6 +351,8 @@
     <string name="zap_forward_lnAddress">LnAdress eller @Användare</string>
     <string name="media_servers">Mediaservrar</string>
     <string name="set_preferred_media_servers">Ställ in dina önskade mediauppladdningsservrar.</string>
+    <string name="no_nip96_server_message">Du har inga NIP-96 servrar. Du kan använda Amethyst\'s lista, eller lägga till en nedan ↓</string>
+    <string name="no_blossom_server_message">Du har inga Blossom servrar satta. Du kan använda Amethyst\'s lista, eller lägga till en nedan ↓</string>
     <string name="built_in_media_servers_title">Inbyggda mediaservrar</string>
     <string name="built_in_servers_description">Amethysts standardlista. Du kan lägga till dem individuellt eller lägga till listan.</string>
     <string name="use_default_servers">Använd standardlistan</string>
@@ -868,7 +870,12 @@
     <string name="http_status_507">Otillräckligt lagringsutrymme - Servern har inte tillräckligt med lagringsutrymme för att bearbeta begäran framgångsrikt</string>
     <string name="http_status_508">Loop upptäckt - Servern upptäcker en oändlig loop medan den bearbetar begäran</string>
     <string name="http_status_511">Nätverksautentisering krävs - Klienten måste autentiseras för att få tillgång till nätverket</string>
+    <string name="media_servers_nip96_section">NIP-96 Servar</string>
+    <string name="media_servers_nip96_explainer">Lägg till så många servrar som du vill. Du kan välja vilken som ska användas senare när du laddar upp din bild</string>
+    <string name="media_servers_blossom_section">Blossom Servrar</string>
+    <string name="media_servers_blossom_explainer">Lägg till så många servrar som du vill. Du kan välja vilken som ska användas senare när du laddar upp din bild</string>
     <string name="add_a_nip96_server">Lägg till en NIP-96 Server</string>
+    <string name="add_a_blossom_server">Lägg till en Blossom Server</string>
     <string name="delete_all">Radera alla</string>
     <string name="delete_all_drafts_confirmation">Är du säker på att du vill ta bort alla utkast?</string>
     <string name="stack">Stack:</string>

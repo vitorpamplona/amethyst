@@ -357,6 +357,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="zap_forward_lnAddress">LnAddress oder @Benutzer</string>
     <string name="media_servers">Medienserver</string>
     <string name="set_preferred_media_servers">Legen Sie Ihre bevorzugten Medienupload Server fest.</string>
+    <string name="no_nip96_server_message">Du hast keine NIP-96-Server gesetzt. Du kannst die Amethyst-Liste verwenden oder unten einen hinzufügen ↓</string>
+    <string name="no_blossom_server_message">Du hast keine Blossom Server gesetzt. Du kannst die Amethyst-Liste verwenden oder unten einen hinzufügen ↓</string>
     <string name="built_in_media_servers_title">Integrierte Medienserver</string>
     <string name="built_in_servers_description">Amethysts Standardliste. Sie können sie einzeln hinzufügen oder die Liste hinzufügen.</string>
     <string name="use_default_servers">Standardliste verwenden</string>
@@ -874,7 +876,12 @@ anz der Bedingungen ist erforderlich</string>
     <string name="http_status_507">Unzureichender Speicher - Der Server hat nicht genug Speicher, um die Anfrage erfolgreich zu verarbeiten</string>
     <string name="http_status_508">Schleife erkannt - Der Server erkennt eine Endlosschleife, während er die Anfrage bearbeitet</string>
     <string name="http_status_511">Netzwerk-Authentifizierung erforderlich - Der Client muss authentifiziert werden, um auf das Netzwerk zuzugreifen</string>
+    <string name="media_servers_nip96_section">NIP-96 Server</string>
+    <string name="media_servers_nip96_explainer">Fügen Sie beliebig viele Server hinzu. Sie können wählen, welche später beim Hochladen Ihres Bildes verwendet werden soll</string>
+    <string name="media_servers_blossom_section">Blossom Server</string>
+    <string name="media_servers_blossom_explainer">Fügen Sie beliebig viele Server hinzu. Sie können wählen, welche später beim Hochladen Ihres Bildes verwendet werden soll</string>
     <string name="add_a_nip96_server">NIP-96 Server hinzufügen</string>
+    <string name="add_a_blossom_server">Blossom Server hinzufügen</string>
     <string name="delete_all">Alles löschen</string>
     <string name="delete_all_drafts_confirmation">Möchten Sie wirklich alle Entwürfe löschen?</string>
     <string name="stack">Stapel:</string>

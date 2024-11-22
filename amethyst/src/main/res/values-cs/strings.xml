@@ -351,6 +351,8 @@
     <string name="zap_forward_lnAddress">LnAddress nebo @Uživatel</string>
     <string name="media_servers">Media Servery</string>
     <string name="set_preferred_media_servers">Nastavte preferované servery pro nahrávání médií.</string>
+    <string name="no_nip96_server_message">Nemáte nastaveny žádné servery NIP-96. Můžete použít Amethystův seznam nebo přidat některý níže ↓</string>
+    <string name="no_blossom_server_message">Nemáte nastaveny žádné Blossom servery. Můžete použít Amethystův seznam, nebo přidat některý níže ↓</string>
     <string name="built_in_media_servers_title">Integrované mediální servery</string>
     <string name="built_in_servers_description">Výchozí seznam Amethysty. Můžete je přidat jednotlivě nebo přidat seznam.</string>
     <string name="use_default_servers">Použít výchozí seznam</string>
@@ -869,7 +871,12 @@
     <string name="http_status_507">Nedostatečné úložiště - Server nemá dostatek úložiště, aby úspěšně zpracoval požadavek</string>
     <string name="http_status_508">Detekována smyčka - Server detekuje nekonečnou smyčku při zpracování požadavku</string>
     <string name="http_status_511">Vyžadováno ověření sítě - Klient musí být autentizován, aby získal přístup k síti</string>
+    <string name="media_servers_nip96_section">NIP-96 Servery</string>
+    <string name="media_servers_nip96_explainer">Přidejte tolik serverů, kolik chcete. Můžete si vybrat, které použít později při nahrávání obrázku</string>
+    <string name="media_servers_blossom_section">Blossom Servery</string>
+    <string name="media_servers_blossom_explainer">Přidejte tolik serverů, kolik chcete. Můžete si vybrat, které použít později při nahrávání obrázku</string>
     <string name="add_a_nip96_server">Přidat NIP-96 server</string>
+    <string name="add_a_blossom_server">Přidat Blossom Server</string>
     <string name="delete_all">Vymazat vše</string>
     <string name="delete_all_drafts_confirmation">Opravdu chcete odstranit všechny koncepty?</string>
     <string name="stack">Zásobník:</string>
