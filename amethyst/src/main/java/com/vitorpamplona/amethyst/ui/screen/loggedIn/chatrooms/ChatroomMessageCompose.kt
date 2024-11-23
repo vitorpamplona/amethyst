@@ -95,11 +95,11 @@ import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size5Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.chatAuthorBox
+import com.vitorpamplona.amethyst.ui.theme.chatBackground
 import com.vitorpamplona.amethyst.ui.theme.incognitoIconModifier
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.messageBubbleLimits
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
@@ -274,7 +274,7 @@ fun ChatBubbleLayout(
     inner: @Composable (MutableState<Color>) -> Unit,
 ) {
     val loggedInColors = MaterialTheme.colorScheme.mediumImportanceLink
-    val otherColors = MaterialTheme.colorScheme.subtleBorder
+    val otherColors = MaterialTheme.colorScheme.chatBackground
     val defaultBackground = MaterialTheme.colorScheme.background
 
     val backgroundBubbleColor =
