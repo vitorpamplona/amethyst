@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.video
 
 import android.Manifest
 import android.net.Uri
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -151,31 +150,18 @@ fun NewImageButton(
     }
 
     if (wantsToPostFromGallery) {
-        val cameraPermissionState =
-            rememberPermissionState(
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    Manifest.permission.READ_MEDIA_IMAGES
-                } else {
-                    Manifest.permission.READ_EXTERNAL_STORAGE
+        var showGallerySelect by remember { mutableStateOf(false) }
+        if (showGallerySelect) {
+            GallerySelect(
+                onImageUri = { uri ->
+                    wantsToPostFromGallery = false
+                    showGallerySelect = false
+                    pickedURI = uri
                 },
             )
-
-        if (cameraPermissionState.status.isGranted) {
-            var showGallerySelect by remember { mutableStateOf(false) }
-            if (showGallerySelect) {
-                GallerySelect(
-                    onImageUri = { uri ->
-                        wantsToPostFromGallery = false
-                        showGallerySelect = false
-                        pickedURI = uri
-                    },
-                )
-            }
-
-            showGallerySelect = true
-        } else {
-            LaunchedEffect(key1 = accountViewModel) { cameraPermissionState.launchPermissionRequest() }
         }
+
+        showGallerySelect = true
     }
 
     pickedURI?.let {

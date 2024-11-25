@@ -19,12 +19,8 @@
     <!-- To take pictures -->
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- To Upload media (newer devices) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
-
     <!-- To Upload media (old devices) -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
     <!-- To read QRs that contain nostr:<NIP19> -->
     <uses-permission android:name="android.permission.CAMERA" />

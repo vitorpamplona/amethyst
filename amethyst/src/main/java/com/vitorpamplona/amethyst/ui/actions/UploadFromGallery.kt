@@ -22,9 +22,10 @@ package com.vitorpamplona.amethyst.ui.actions
 
 import android.content.Context
 import android.net.Uri
-import android.os.Build
 import android.os.Environment
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -55,11 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.GetMediaActivityResultContract
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -69,7 +66,6 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun UploadFromGallery(
     isUploading: Boolean,
@@ -77,32 +73,19 @@ fun UploadFromGallery(
     modifier: Modifier,
     onImageChosen: (Uri) -> Unit,
 ) {
-    val cameraPermissionState =
-        rememberPermissionState(
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                android.Manifest.permission.READ_MEDIA_IMAGES
-            } else {
-                android.Manifest.permission.READ_EXTERNAL_STORAGE
+    var showGallerySelect by remember { mutableStateOf(false) }
+    if (showGallerySelect) {
+        GallerySelect(
+            onImageUri = { uri ->
+                showGallerySelect = false
+                if (uri != null) {
+                    onImageChosen(uri)
+                }
             },
         )
-
-    if (cameraPermissionState.status.isGranted) {
-        var showGallerySelect by remember { mutableStateOf(false) }
-        if (showGallerySelect) {
-            GallerySelect(
-                onImageUri = { uri ->
-                    showGallerySelect = false
-                    if (uri != null) {
-                        onImageChosen(uri)
-                    }
-                },
-            )
-        }
-
-        UploadBoxButton(isUploading, tint, modifier) { showGallerySelect = true }
-    } else {
-        UploadBoxButton(isUploading, tint, modifier) { cameraPermissionState.launchPermissionRequest() }
     }
+
+    UploadBoxButton(isUploading, tint, modifier) { showGallerySelect = true }
 }
 
 @Composable
@@ -183,6 +166,7 @@ fun LoadingAnimation(
                             easing = LinearEasing,
                         ),
                 ),
+            label = "UploadGalleryUploadingAnimation",
         )
 
     CircularProgressIndicator(
@@ -203,10 +187,10 @@ fun LoadingAnimation(
 
 @Composable
 fun GallerySelect(onImageUri: (Uri?) -> Unit = {}) {
-    var hasLaunched by remember { mutableStateOf(AtomicBoolean(false)) }
+    val hasLaunched by remember { mutableStateOf(AtomicBoolean(false)) }
     val launcher =
         rememberLauncherForActivityResult(
-            contract = GetMediaActivityResultContract(),
+            contract = ActivityResultContracts.PickVisualMedia(),
             onResult = { uri: Uri? ->
                 onImageUri(uri)
                 hasLaunched.set(false)
@@ -217,7 +201,7 @@ fun GallerySelect(onImageUri: (Uri?) -> Unit = {}) {
     fun LaunchGallery() {
         SideEffect {
             if (!hasLaunched.getAndSet(true)) {
-                launcher.launch("*/*")
+                launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
             }
         }
     }
