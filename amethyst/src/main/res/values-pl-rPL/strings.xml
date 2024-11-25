@@ -183,6 +183,7 @@
     <string name="loading_account">Ładowanie konta</string>
     <string name="error_loading_replies">"Błąd wczytywania odpowiedzi: "</string>
     <string name="try_again">Spróbuj ponownie</string>
+    <string name="notification_feed_is_empty">Brak powiadomień.</string>
     <string name="feed_is_empty">Brak zawartości.</string>
     <string name="refresh">Odśwież</string>
     <string name="created">stworzył (a)</string>
@@ -352,6 +353,8 @@
     <string name="zap_forward_lnAddress">LnAdres lub @Użytkownik</string>
     <string name="media_servers">Serwery Multimediów</string>
     <string name="set_preferred_media_servers">Ustaw swoje preferowane serwery przesyłania multimediów.</string>
+    <string name="no_nip96_server_message">Nie masz ustawionych własnych serwerów NIP-96. Możesz użyć listy Amethysta lub dodać jeden poniżej ↓</string>
+    <string name="no_blossom_server_message">Nie masz ustawionych własnych serwerów multimediów. Możesz użyć listy Amethysta lub dodać jeden poniżej ↓</string>
     <string name="built_in_media_servers_title">Wbudowane serwery multimediów</string>
     <string name="built_in_servers_description">Domyślna lista Amethyst-a. Możesz dodawać je pojedynczo lub dodać pełną listę.</string>
     <string name="use_default_servers">Użyj domyślnej listy</string>
@@ -546,6 +549,8 @@
     <string name="zap_forward_explainer">Wspierający klient podzieli i przekaże zapy na LNAdres lub profil użytkownika poniżej zamiast Ciebie</string>
     <string name="geohash_title">Wyświetl lokalizację jako </string>
     <string name="geohash_explainer">Dodaje Geohash twojej lokalizacji do wpisu. Użytkownicy będą wiedzieli, że jesteś mniej niż 5 km od bieżącej lokalizacji</string>
+    <string name="geohash_exclusive">Post ekskluzywny dla lokalizacji</string>
+    <string name="geohash_exclusive_explainer">Tylko obserwatorzy z twojej lokalizacji zobaczą to. Twoi ogólni obserwatorzy tego nie zobaczą.</string>
     <string name="loading_location">Pobieranie lokalizacji</string>
     <string name="lack_location_permissions">Brak dostępu do lokalizacji</string>
     <string name="add_sensitive_content_explainer">Dodaje ostrzeżenie o wrażliwych treściach przed wyświetleniem treści. Jest to idealne dla dowolnych treści NSFW lub treści, które niektóre osoby mogą uznać za obraźliwe lub przeszkadzające</string>
@@ -868,7 +873,12 @@
     <string name="http_status_507">Niewystarczająca pojemność - serwer nie ma wystarczającej pojemność, aby pomyślnie przetworzyć żądanie</string>
     <string name="http_status_508">Wykryta pętla - serwer wykrywa nieskończoną pętlę podczas przetwarzania żądania</string>
     <string name="http_status_511">Wymagane uwierzytelnienie sieciowe - Klient musi być uwierzytelniony aby uzyskać dostęp do sieci</string>
+    <string name="media_servers_nip96_section">Serwery NIP-96</string>
+    <string name="media_servers_nip96_explainer">Dodaj tyle serwerów, ile chcesz. Możesz wybrać, z którego chcesz skorzystać później podczas wgrywania zdjęcia</string>
+    <string name="media_servers_blossom_section">Serwery Blossom</string>
+    <string name="media_servers_blossom_explainer">Dodaj tyle serwerów, ile chcesz. Możesz wybrać, z którego chcesz skorzystać później podczas wgrywania zdjęcia</string>
     <string name="add_a_nip96_server">Dodaj serwer NIP-96</string>
+    <string name="add_a_blossom_server">Dodaj Blossom Serwer</string>
     <string name="delete_all">Usuń wszystko</string>
     <string name="delete_all_drafts_confirmation">Czy na pewno chcesz usunąć wszystkie wersje robocze?</string>
     <string name="stack">Stos:</string>
