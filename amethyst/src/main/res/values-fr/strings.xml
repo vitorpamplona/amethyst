@@ -184,6 +184,7 @@
     <string name="loading_account">Chargement du compte</string>
     <string name="error_loading_replies">"Erreur lors du chargement des réponses : "</string>
     <string name="try_again">Essayer à nouveau</string>
+    <string name="notification_feed_is_empty">Aucune notification pour le moment.</string>
     <string name="feed_is_empty">Le flux est vide.</string>
     <string name="refresh">Rafraîchir</string>
     <string name="created">créé</string>
