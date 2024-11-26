@@ -20,15 +20,13 @@
  */
 package com.vitorpamplona.quartz.events
 
+import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.nip46.NostrConnectEvent
 
 class EventFactory {
     companion object {
-        val additionalFactories =
-            mutableMapOf(
-                WikiNoteEvent.KIND to ::WikiNoteEvent,
-            )
+        val additionalFactories: MutableMap<Int, (HexKey, HexKey, Long, Array<Array<String>>, String, HexKey) -> Event> = mutableMapOf()
 
         fun create(
             id: String,
