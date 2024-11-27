@@ -46,8 +46,8 @@
     <string name="login_with_a_private_key_to_like_posts">Jelentkezzen be privát kulccsal a bejegyzések kedveléséhez</string>
     <string name="no_zap_amount_setup_long_press_to_change">Nincs Zap összeg beállítva. Nyomja meg hosszan a változtatáshoz</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Jelentkezzen be privát kulccsal, hogy Zaps-t küldhessen</string>
-    <string name="login_with_a_private_key_to_be_able_to_follow">Jelentkezz be a privát kulccsal, hogy követni tudd</string>
-    <string name="login_with_a_private_key_to_be_able_to_unfollow">Jelentkezz be a privát kulccsal, hogy őt kikövesd</string>
+    <string name="login_with_a_private_key_to_be_able_to_follow">Jelentkezzen be a privát kulccsal, hogy követni tudja</string>
+    <string name="login_with_a_private_key_to_be_able_to_unfollow">Jelentkezzen be a privát kulccsal, hogy megszüntethesse a követését</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Nyilvános kulcsot használsz, és a nyilvános kulcsok csak olvasásra adnak lehetőséget. Jelentkezz be a privát kulccsoddal egy szó vagy mondat elrejtéséhez</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Nyilvános kulcsot használsz, és a nyilvános kulcsok csak olvasásra adnak lehetőséget. Jelentkezz be a privát kulccsoddal egy szó vagy mondat megjelenítéséhez</string>
     <string name="zaps">Zap-ek</string>
@@ -153,7 +153,7 @@
     <string name="send_a_direct_message">Közvetlen üzenet küldése</string>
     <string name="edits_the_user_s_metadata">Felhasználó metaadatainak szerkesztése</string>
     <string name="follow">Követés</string>
-    <string name="follow_back">Visszakövetem</string>
+    <string name="follow_back">Követés</string>
     <string name="unblock">Tiltás feloldása</string>
     <string name="copy_user_id">Felhasználói azonosító másolása</string>
     <string name="unblock_user">Felhasználó tiltásának feloldása</string>
