@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.events.AudioTrackEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.RepostEvent
@@ -73,6 +74,7 @@ class UserProfileNewThreadFeedFilter(
                     it.event is WikiNoteEvent ||
                     it.event is PollNoteEvent ||
                     it.event is HighlightEvent ||
+                    it.event is InteractiveStoryPrologueEvent ||
                     it.event is AudioTrackEvent ||
                     it.event is AudioHeaderEvent ||
                     it.event is TorrentEvent

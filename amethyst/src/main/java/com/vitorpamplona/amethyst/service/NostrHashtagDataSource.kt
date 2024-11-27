@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
@@ -38,46 +39,59 @@ import com.vitorpamplona.quartz.events.WikiNoteEvent
 object NostrHashtagDataSource : AmethystNostrDataSource("SingleHashtagFeed") {
     private var hashtagToWatch: String? = null
 
-    fun createLoadHashtagFilter(): TypedFilter? {
-        val hashToLoad = hashtagToWatch ?: return null
+    fun createLoadHashtagFilter(): List<TypedFilter> {
+        val hashToLoad = hashtagToWatch ?: return emptyList()
 
-        return TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    tags =
-                        mapOf(
-                            "t" to
-                                listOf(
-                                    hashToLoad,
-                                    hashToLoad.lowercase(),
-                                    hashToLoad.uppercase(),
-                                    hashToLoad.capitalize(),
-                                ),
-                        ),
-                    kinds =
-                        listOf(
-                            TextNoteEvent.KIND,
-                            ChannelMessageEvent.KIND,
-                            LongTextNoteEvent.KIND,
-                            PollNoteEvent.KIND,
-                            LiveActivitiesChatMessageEvent.KIND,
-                            ClassifiedsEvent.KIND,
-                            HighlightEvent.KIND,
-                            AudioTrackEvent.KIND,
-                            AudioHeaderEvent.KIND,
-                            WikiNoteEvent.KIND,
-                            CommentEvent.KIND,
-                        ),
-                    limit = 200,
-                ),
+        val hashtagsToFollow =
+            listOf(
+                hashToLoad,
+                hashToLoad.lowercase(),
+                hashToLoad.uppercase(),
+                hashToLoad.capitalize(),
+            )
+
+        return listOf(
+            TypedFilter(
+                types = COMMON_FEED_TYPES,
+                filter =
+                    SincePerRelayFilter(
+                        tags = mapOf("t" to hashtagsToFollow),
+                        kinds =
+                            listOf(
+                                TextNoteEvent.KIND,
+                                ChannelMessageEvent.KIND,
+                                LongTextNoteEvent.KIND,
+                                PollNoteEvent.KIND,
+                                LiveActivitiesChatMessageEvent.KIND,
+                                ClassifiedsEvent.KIND,
+                                HighlightEvent.KIND,
+                                AudioTrackEvent.KIND,
+                                AudioHeaderEvent.KIND,
+                                WikiNoteEvent.KIND,
+                                CommentEvent.KIND,
+                            ),
+                        limit = 200,
+                    ),
+            ),
+            TypedFilter(
+                types = COMMON_FEED_TYPES,
+                filter =
+                    SincePerRelayFilter(
+                        tags = mapOf("t" to hashtagsToFollow),
+                        kinds =
+                            listOf(
+                                InteractiveStorySceneEvent.KIND,
+                            ),
+                        limit = 200,
+                    ),
+            ),
         )
     }
 
     val loadHashtagChannel = requestNewChannel()
 
     override fun updateChannelFilters() {
-        loadHashtagChannel.typedFilters = listOfNotNull(createLoadHashtagFilter()).ifEmpty { null }
+        loadHashtagChannel.typedFilters = createLoadHashtagFilter().ifEmpty { null }
     }
 
     fun loadHashtag(tag: String?) {

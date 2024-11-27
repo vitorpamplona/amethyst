@@ -86,6 +86,9 @@ import com.vitorpamplona.quartz.events.GitPatchEvent
 import com.vitorpamplona.quartz.events.GitReplyEvent
 import com.vitorpamplona.quartz.events.GitRepositoryEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryReadingStateEvent
+import com.vitorpamplona.quartz.events.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
@@ -448,6 +451,21 @@ object LocalCache {
         event: TorrentEvent,
         relay: Relay?,
     ) = consumeRegularEvent(event, relay)
+
+    fun consume(
+        event: InteractiveStoryPrologueEvent,
+        relay: Relay?,
+    ) = consumeBaseReplaceable(event, relay)
+
+    fun consume(
+        event: InteractiveStorySceneEvent,
+        relay: Relay?,
+    ) = consumeBaseReplaceable(event, relay)
+
+    fun consume(
+        event: InteractiveStoryReadingStateEvent,
+        relay: Relay?,
+    ) = consumeBaseReplaceable(event, relay)
 
     fun consumeRegularEvent(
         event: Event,
@@ -2393,6 +2411,9 @@ object LocalCache {
                 is GitPatchEvent -> consume(event, relay)
                 is GitRepositoryEvent -> consume(event, relay)
                 is HighlightEvent -> consume(event, relay)
+                is InteractiveStoryPrologueEvent -> consume(event, relay)
+                is InteractiveStorySceneEvent -> consume(event, relay)
+                is InteractiveStoryReadingStateEvent -> consume(event, relay)
                 is LiveActivitiesEvent -> consume(event, relay)
                 is LiveActivitiesChatMessageEvent -> consume(event, relay)
                 is LnZapEvent -> {

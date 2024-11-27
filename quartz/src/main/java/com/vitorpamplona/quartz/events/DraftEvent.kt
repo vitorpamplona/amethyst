@@ -134,6 +134,17 @@ class DraftEvent(
 
         fun create(
             dTag: String,
+            originalNote: InteractiveStoryBaseEvent,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (DraftEvent) -> Unit,
+        ) {
+            val tags = mutableListOf<Array<String>>()
+            create(dTag, originalNote, tags, signer, createdAt, onReady)
+        }
+
+        fun create(
+            dTag: String,
             originalNote: LiveActivitiesChatMessageEvent,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),

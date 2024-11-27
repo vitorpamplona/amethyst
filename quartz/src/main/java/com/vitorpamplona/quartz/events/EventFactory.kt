@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.events.nip46.NostrConnectEvent
 
 class EventFactory {
     companion object {
-        val additionalFactories: MutableMap<Int, (HexKey, HexKey, Long, Array<Array<String>>, String, HexKey) -> Event> = mutableMapOf()
+        val factories: MutableMap<Int, (HexKey, HexKey, Long, Array<Array<String>>, String, HexKey) -> Event> = mutableMapOf()
 
         fun create(
             id: String,
@@ -99,6 +99,9 @@ class EventFactory {
             GoalEvent.KIND -> GoalEvent(id, pubKey, createdAt, tags, content, sig)
             HighlightEvent.KIND -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
             HTTPAuthorizationEvent.KIND -> HTTPAuthorizationEvent(id, pubKey, createdAt, tags, content, sig)
+            InteractiveStoryPrologueEvent.KIND -> InteractiveStoryPrologueEvent(id, pubKey, createdAt, tags, content, sig)
+            InteractiveStorySceneEvent.KIND -> InteractiveStorySceneEvent(id, pubKey, createdAt, tags, content, sig)
+            InteractiveStoryReadingStateEvent.KIND -> InteractiveStoryReadingStateEvent(id, pubKey, createdAt, tags, content, sig)
             LiveActivitiesChatMessageEvent.KIND -> LiveActivitiesChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
             LiveActivitiesEvent.KIND -> LiveActivitiesEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapEvent.KIND -> LnZapEvent(id, pubKey, createdAt, tags, content, sig)
@@ -141,7 +144,7 @@ class EventFactory {
             VideoViewEvent.KIND -> VideoViewEvent(id, pubKey, createdAt, tags, content, sig)
             WikiNoteEvent.KIND -> WikiNoteEvent(id, pubKey, createdAt, tags, content, sig)
             else -> {
-                additionalFactories[kind]?.let {
+                factories[kind]?.let {
                     return it(id, pubKey, createdAt, tags, content, sig)
                 }
 

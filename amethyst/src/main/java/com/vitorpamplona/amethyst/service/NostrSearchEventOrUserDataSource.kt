@@ -42,6 +42,8 @@ import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.events.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
@@ -179,6 +181,19 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                                     NNSEvent.KIND,
                                     WikiNoteEvent.KIND,
                                     CommentEvent.KIND,
+                                ),
+                            search = mySearchString,
+                            limit = 100,
+                        ),
+                ),
+                TypedFilter(
+                    types = setOf(FeedType.SEARCH),
+                    filter =
+                        SincePerRelayFilter(
+                            kinds =
+                                listOf(
+                                    InteractiveStoryPrologueEvent.KIND,
+                                    InteractiveStorySceneEvent.KIND,
                                 ),
                             search = mySearchString,
                             limit = 100,

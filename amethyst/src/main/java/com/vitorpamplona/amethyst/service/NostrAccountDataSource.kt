@@ -56,6 +56,8 @@ import com.vitorpamplona.quartz.events.GitIssueEvent
 import com.vitorpamplona.quartz.events.GitPatchEvent
 import com.vitorpamplona.quartz.events.GitReplyEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.events.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
@@ -245,6 +247,8 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                             CalendarDateSlotEvent.KIND,
                             CalendarTimeSlotEvent.KIND,
                             CalendarRSVPEvent.KIND,
+                            InteractiveStoryPrologueEvent.KIND,
+                            InteractiveStorySceneEvent.KIND,
                         ),
                     tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
                     limit = 400,

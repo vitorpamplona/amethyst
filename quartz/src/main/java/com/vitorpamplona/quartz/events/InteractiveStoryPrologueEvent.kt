@@ -20,61 +20,59 @@
  */
 package com.vitorpamplona.quartz.events
 
-import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
-@Immutable
-class LongTextNoteEvent(
+class InteractiveStoryPrologueEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    AddressableEvent {
-    override fun dTag() = tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: ""
-
-    override fun address(relayHint: String?) = ATag(kind, pubKey, dTag(), relayHint)
-
-    override fun addressTag() = ATag.assembleATag(kind, pubKey, dTag())
-
-    fun topics() = hashtags()
-
-    fun title() = tags.firstOrNull { it.size > 1 && it[0] == "title" }?.get(1)
-
-    fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
-
-    fun summary() = tags.firstOrNull { it.size > 1 && it[0] == "summary" }?.get(1)
-
-    fun publishedAt() =
-        try {
-            tags.firstOrNull { it.size > 1 && it[0] == "published_at" }?.get(1)?.toLongOrNull()
-        } catch (_: Exception) {
-            null
-        }
-
+) : InteractiveStoryBaseEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
-        const val KIND = 30023
+        const val KIND = 30296
+        const val ALT = "The prologue of an interative story called "
+
+        fun createAddressATag(
+            pubKey: HexKey,
+            dtag: String,
+        ): ATag = ATag(KIND, pubKey, dtag, null)
+
+        fun createAddressTag(
+            pubKey: HexKey,
+            dtag: String,
+        ): String = ATag.assembleATag(KIND, pubKey, dtag)
 
         fun create(
-            msg: String,
-            title: String?,
-            replyTos: List<String>?,
-            mentions: List<String>?,
+            baseId: String,
+            title: String,
+            content: String,
+            options: List<StoryOption>,
+            summary: String? = null,
+            image: String? = null,
+            zapReceiver: List<ZapSplitSetup>? = null,
+            markAsSensitive: Boolean = false,
+            zapRaiserAmount: Long? = null,
+            geohash: String? = null,
+            nip94attachments: List<FileHeaderEvent>? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (LongTextNoteEvent) -> Unit,
+            isDraft: Boolean,
+            onReady: (InteractiveStoryPrologueEvent) -> Unit,
         ) {
-            val tags = mutableListOf<Array<String>>()
-            replyTos?.forEach { tags.add(arrayOf("e", it)) }
-            mentions?.forEach { tags.add(arrayOf("p", it)) }
-            title?.let { tags.add(arrayOf("title", it)) }
-            tags.add(arrayOf("alt", "Blog post: $title"))
-            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+            val tags =
+                makeTags(baseId, ALT + title, title, summary, image, options) +
+                    generalTags(content, zapReceiver, markAsSensitive, zapRaiserAmount, geohash, nip94attachments)
+
+            if (isDraft) {
+                signer.assembleRumor(createdAt, KIND, tags, content, onReady)
+            } else {
+                signer.sign(createdAt, KIND, tags, content, onReady)
+            }
         }
     }
 }

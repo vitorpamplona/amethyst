@@ -89,6 +89,10 @@ import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.GitReplyEvent
 import com.vitorpamplona.quartz.events.HTTPAuthorizationEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryBaseEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryReadingStateEvent
+import com.vitorpamplona.quartz.events.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapPaymentRequestEvent
@@ -114,6 +118,7 @@ import com.vitorpamplona.quartz.events.Response
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import com.vitorpamplona.quartz.events.StatusEvent
+import com.vitorpamplona.quartz.events.StoryOption
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteModificationEvent
 import com.vitorpamplona.quartz.events.TorrentCommentEvent
@@ -2457,6 +2462,142 @@ class Account(
         }
     }
 
+    suspend fun createInteractiveStoryReadingState(
+        root: InteractiveStoryBaseEvent,
+        rootRelay: String?,
+        readingScene: InteractiveStoryBaseEvent,
+        readingSceneRelay: String?,
+    ) {
+        if (!isWriteable()) return
+
+        val relayList = getPrivateOutBoxRelayList()
+
+        InteractiveStoryReadingStateEvent.create(
+            root = root,
+            rootRelay = rootRelay,
+            currentScene = readingScene,
+            currentSceneRelay = readingSceneRelay,
+            signer = signer,
+        ) {
+            if (relayList.isNotEmpty()) {
+                Client.sendPrivately(it, relayList = relayList)
+            } else {
+                Client.send(it)
+            }
+            LocalCache.justConsume(it, null)
+        }
+    }
+
+    suspend fun updateInteractiveStoryReadingState(
+        readingState: InteractiveStoryReadingStateEvent,
+        readingScene: InteractiveStoryBaseEvent,
+        readingSceneRelay: String?,
+    ) {
+        if (!isWriteable()) return
+
+        val relayList = getPrivateOutBoxRelayList()
+
+        InteractiveStoryReadingStateEvent.update(
+            base = readingState,
+            currentScene = readingScene,
+            currentSceneRelay = readingSceneRelay,
+            signer = signer,
+        ) {
+            if (relayList.isNotEmpty()) {
+                Client.sendPrivately(it, relayList = relayList)
+            } else {
+                Client.send(it)
+            }
+            LocalCache.justConsume(it, null)
+        }
+    }
+
+    suspend fun sendInteractiveStoryPrologue(
+        baseId: String,
+        title: String,
+        content: String,
+        options: List<StoryOption>,
+        summary: String? = null,
+        image: String? = null,
+        zapReceiver: List<ZapSplitSetup>? = null,
+        wantsToMarkAsSensitive: Boolean = false,
+        zapRaiserAmount: Long? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
+        draftTag: String? = null,
+        relayList: List<RelaySetupInfo>,
+    ) {
+        if (!isWriteable()) return
+
+        InteractiveStoryPrologueEvent.create(
+            baseId = baseId,
+            title = title,
+            content = content,
+            options = options,
+            summary = summary,
+            image = image,
+            zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
+            zapRaiserAmount = zapRaiserAmount,
+            nip94attachments = nip94attachments,
+            signer = signer,
+            isDraft = draftTag != null,
+        ) {
+            if (draftTag != null) {
+                if (content.isBlank()) {
+                    deleteDraft(draftTag)
+                } else {
+                    DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                        sendDraftEvent(draftEvent)
+                    }
+                }
+            } else {
+                Client.send(it, relayList = relayList)
+                LocalCache.justConsume(it, null)
+            }
+        }
+    }
+
+    suspend fun sendInteractiveStoryScene(
+        baseId: String,
+        title: String,
+        content: String,
+        options: List<StoryOption>,
+        zapReceiver: List<ZapSplitSetup>? = null,
+        wantsToMarkAsSensitive: Boolean = false,
+        zapRaiserAmount: Long? = null,
+        nip94attachments: List<FileHeaderEvent>? = null,
+        draftTag: String? = null,
+        relayList: List<RelaySetupInfo>,
+    ) {
+        if (!isWriteable()) return
+
+        InteractiveStorySceneEvent.create(
+            baseId = baseId,
+            title = title,
+            content = content,
+            options = options,
+            zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
+            zapRaiserAmount = zapRaiserAmount,
+            nip94attachments = nip94attachments,
+            signer = signer,
+            isDraft = draftTag != null,
+        ) {
+            if (draftTag != null) {
+                if (content.isBlank()) {
+                    deleteDraft(draftTag)
+                } else {
+                    DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                        sendDraftEvent(draftEvent)
+                    }
+                }
+            } else {
+                Client.send(it, relayList = relayList)
+                LocalCache.justConsume(it, null)
+            }
+        }
+    }
+
     suspend fun sendPost(
         message: String,
         replyTo: List<Note>?,
@@ -2823,18 +2964,19 @@ class Account(
         }
     }
 
-    fun sendDraftEvent(draftEvent: DraftEvent) {
-        val relayList =
-            normalizedPrivateOutBoxRelaySet.value.map {
-                RelaySetupInfoToConnect(
-                    it,
-                    shouldUseTorForClean(it),
-                    true,
-                    true,
-                    emptySet(),
-                )
-            }
+    fun getPrivateOutBoxRelayList(): List<RelaySetupInfoToConnect> =
+        normalizedPrivateOutBoxRelaySet.value.map {
+            RelaySetupInfoToConnect(
+                it,
+                shouldUseTorForClean(it),
+                true,
+                true,
+                emptySet(),
+            )
+        }
 
+    fun sendDraftEvent(draftEvent: DraftEvent) {
+        val relayList = getPrivateOutBoxRelayList()
         if (relayList.isNotEmpty()) {
             Client.sendPrivately(draftEvent, relayList)
         } else {

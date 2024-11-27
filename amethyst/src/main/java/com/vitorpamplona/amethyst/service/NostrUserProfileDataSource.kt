@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
@@ -101,6 +102,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
                             listOf(
                                 TorrentEvent.KIND,
                                 TorrentCommentEvent.KIND,
+                                InteractiveStoryPrologueEvent.KIND,
                             ),
                         authors = listOf(it.pubkeyHex),
                         limit = 20,

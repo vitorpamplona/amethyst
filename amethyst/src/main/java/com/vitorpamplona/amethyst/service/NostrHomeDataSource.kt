@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
@@ -86,38 +87,57 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
         job2?.cancel()
     }
 
-    fun createFollowAccountsFilter(): TypedFilter {
+    fun createFollowAccountsFilter(): List<TypedFilter> {
         val follows =
             account.liveHomeListAuthorsPerRelay.value
 
-        return TypedFilter(
-            types = setOf(if (follows == null) FeedType.GLOBAL else FeedType.FOLLOWS),
-            filter =
-                SinceAuthorPerRelayFilter(
-                    kinds =
-                        listOf(
-                            TextNoteEvent.KIND,
-                            RepostEvent.KIND,
-                            GenericRepostEvent.KIND,
-                            ClassifiedsEvent.KIND,
-                            LongTextNoteEvent.KIND,
-                            PollNoteEvent.KIND,
-                            HighlightEvent.KIND,
-                            AudioTrackEvent.KIND,
-                            AudioHeaderEvent.KIND,
-                            PinListEvent.KIND,
-                            LiveActivitiesChatMessageEvent.KIND,
-                            LiveActivitiesEvent.KIND,
-                            WikiNoteEvent.KIND,
-                        ),
-                    authors = follows,
-                    limit = 400,
-                    since =
-                        latestEOSEs.users[account.userProfile()]
-                            ?.followList
-                            ?.get(account.settings.defaultHomeFollowList.value)
-                            ?.relayList,
-                ),
+        return listOf(
+            TypedFilter(
+                types = setOf(if (follows == null) FeedType.GLOBAL else FeedType.FOLLOWS),
+                filter =
+                    SinceAuthorPerRelayFilter(
+                        kinds =
+                            listOf(
+                                TextNoteEvent.KIND,
+                                RepostEvent.KIND,
+                                GenericRepostEvent.KIND,
+                                ClassifiedsEvent.KIND,
+                                LongTextNoteEvent.KIND,
+                                PollNoteEvent.KIND,
+                                HighlightEvent.KIND,
+                                AudioTrackEvent.KIND,
+                                AudioHeaderEvent.KIND,
+                                PinListEvent.KIND,
+                            ),
+                        authors = follows,
+                        limit = 400,
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(account.settings.defaultHomeFollowList.value)
+                                ?.relayList,
+                    ),
+            ),
+            TypedFilter(
+                types = setOf(if (follows == null) FeedType.GLOBAL else FeedType.FOLLOWS),
+                filter =
+                    SinceAuthorPerRelayFilter(
+                        kinds =
+                            listOf(
+                                InteractiveStoryPrologueEvent.KIND,
+                                LiveActivitiesChatMessageEvent.KIND,
+                                LiveActivitiesEvent.KIND,
+                                WikiNoteEvent.KIND,
+                            ),
+                        authors = follows,
+                        limit = 400,
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(account.settings.defaultHomeFollowList.value)
+                                ?.relayList,
+                    ),
+            ),
         )
     }
 
@@ -165,7 +185,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                             ClassifiedsEvent.KIND,
                             HighlightEvent.KIND,
                             AudioHeaderEvent.KIND,
-                            AudioTrackEvent.KIND,
+                            InteractiveStoryPrologueEvent.KIND,
                             CommentEvent.KIND,
                             WikiNoteEvent.KIND,
                         ),
@@ -203,8 +223,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                             LongTextNoteEvent.KIND,
                             ClassifiedsEvent.KIND,
                             HighlightEvent.KIND,
-                            AudioHeaderEvent.KIND,
-                            AudioTrackEvent.KIND,
+                            InteractiveStoryPrologueEvent.KIND,
                             WikiNoteEvent.KIND,
                             CommentEvent.KIND,
                         ),
@@ -240,12 +259,10 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                             LongTextNoteEvent.KIND,
                             ClassifiedsEvent.KIND,
                             HighlightEvent.KIND,
-                            AudioHeaderEvent.KIND,
-                            AudioTrackEvent.KIND,
-                            PinListEvent.KIND,
                             WikiNoteEvent.KIND,
                             CommunityPostApprovalEvent.KIND,
                             CommentEvent.KIND,
+                            InteractiveStoryPrologueEvent.KIND,
                         ),
                     tags =
                         mapOf(
@@ -273,12 +290,14 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
 
     override fun updateChannelFilters() {
         followAccountChannel.typedFilters =
-            listOfNotNull(
-                createFollowAccountsFilter(),
-                createFollowMetadataAndReleaseFilter(),
-                createFollowCommunitiesFilter(),
-                createFollowTagsFilter(),
-                createFollowGeohashesFilter(),
+            (
+                createFollowAccountsFilter() +
+                    listOfNotNull(
+                        createFollowMetadataAndReleaseFilter(),
+                        createFollowCommunitiesFilter(),
+                        createFollowTagsFilter(),
+                        createFollowGeohashesFilter(),
+                    )
             ).ifEmpty { null }
     }
 }

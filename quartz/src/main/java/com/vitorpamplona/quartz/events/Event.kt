@@ -556,7 +556,7 @@ class HostStub(
 interface AddressableEvent {
     fun dTag(): String
 
-    fun address(): ATag
+    fun address(relayHint: String? = null): ATag
 
     fun addressTag(): String
 }
@@ -574,7 +574,7 @@ open class BaseAddressableEvent(
     AddressableEvent {
     override fun dTag() = tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: ""
 
-    override fun address() = ATag(kind, pubKey, dTag(), null)
+    override fun address(relayHint: String?) = ATag(kind, pubKey, dTag(), relayHint)
 
     /**
      * Creates the tag in a memory effecient way (without creating the ATag class

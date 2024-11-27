@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
@@ -99,6 +100,7 @@ class HomeNewThreadFeedFilter(
                 (noteEvent is WikiNoteEvent && noteEvent.content.isNotEmpty()) ||
                 noteEvent is PollNoteEvent ||
                 noteEvent is HighlightEvent ||
+                noteEvent is InteractiveStoryPrologueEvent ||
                 noteEvent is CommentEvent ||
                 noteEvent is AudioTrackEvent ||
                 noteEvent is AudioHeaderEvent

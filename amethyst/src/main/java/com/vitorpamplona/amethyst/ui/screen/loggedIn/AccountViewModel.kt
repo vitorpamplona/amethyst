@@ -89,6 +89,8 @@ import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryBaseEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
@@ -1102,7 +1104,7 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreateAddressableNote(key)) }
     }
 
-    suspend fun getOrCreateAddressableNote(key: ATag): AddressableNote? = LocalCache.getOrCreateAddressableNote(key)
+    suspend fun getOrCreateAddressableNote(key: ATag): AddressableNote = LocalCache.getOrCreateAddressableNote(key)
 
     fun getOrCreateAddressableNote(
         key: ATag,
@@ -1557,6 +1559,28 @@ class AccountViewModel(
         LocalCache.getAddressableNoteIfExists(
             AdvertisedRelayListEvent.createAddressTag(user.pubkeyHex),
         )
+
+    fun getInteractiveStoryReadingState(dATag: String): AddressableNote = LocalCache.getOrCreateAddressableNote(InteractiveStoryReadingStateEvent.createAddressATag(account.signer.pubKey, dATag))
+
+    fun updateInteractiveStoryReadingState(
+        root: InteractiveStoryBaseEvent,
+        readingScene: InteractiveStoryBaseEvent,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val sceneNoteRelayHint = LocalCache.getOrCreateAddressableNote(readingScene.address()).relayHintUrl()
+
+            val readingState = getInteractiveStoryReadingState(root.addressTag())
+            val readingStateEvent = readingState.event as? InteractiveStoryReadingStateEvent
+
+            if (readingStateEvent != null) {
+                account.updateInteractiveStoryReadingState(readingStateEvent, readingScene, sceneNoteRelayHint)
+            } else {
+                val rootNoteRelayHint = LocalCache.getOrCreateAddressableNote(root.address()).relayHintUrl()
+
+                account.createInteractiveStoryReadingState(root, rootNoteRelayHint, readingScene, sceneNoteRelayHint)
+            }
+        }
+    }
 
     fun sendSats(
         lnaddress: String,
