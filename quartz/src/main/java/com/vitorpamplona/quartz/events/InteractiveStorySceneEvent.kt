@@ -32,7 +32,8 @@ class InteractiveStorySceneEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : InteractiveStoryBaseEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : InteractiveStoryBaseEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    RootScope {
     companion object {
         const val KIND = 30297
         const val ALT = "A scene of an interative story called "

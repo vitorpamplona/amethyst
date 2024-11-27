@@ -106,6 +106,11 @@ class CommentEvent(
         ) {
             val tags = mutableListOf<Array<String>>()
 
+            if (replyingTo.event is AddressableEvent) {
+                tags.add(removeTrailingNullsAndEmptyOthers("A", replyingTo.event.addressTag(), replyingTo.relay))
+                tags.add(removeTrailingNullsAndEmptyOthers("a", replyingTo.event.addressTag(), replyingTo.relay))
+            }
+
             tags.add(removeTrailingNullsAndEmptyOthers("E", replyingTo.event.id, replyingTo.relay, replyingTo.event.pubKey))
             tags.add(arrayOf("K", "${replyingTo.event.kind}"))
 
