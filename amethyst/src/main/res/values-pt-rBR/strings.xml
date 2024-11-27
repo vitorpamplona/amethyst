@@ -184,6 +184,7 @@
     <string name="loading_account">Carregando conta</string>
     <string name="error_loading_replies">"Erro ao carregar respostas"</string>
     <string name="try_again">Tente novamente</string>
+    <string name="notification_feed_is_empty">Ainda não há notificações.</string>
     <string name="feed_is_empty">Feed está vazio</string>
     <string name="refresh">Atualizar</string>
     <string name="created">criado</string>

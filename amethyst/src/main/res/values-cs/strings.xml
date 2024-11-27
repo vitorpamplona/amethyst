@@ -184,6 +184,7 @@
     <string name="loading_account">Načítání účtu</string>
     <string name="error_loading_replies">"Chyba při načítání odpovědí: "</string>
     <string name="try_again">Zkusit znovu</string>
+    <string name="notification_feed_is_empty">Zatím žádná oznámení.</string>
     <string name="feed_is_empty">Zdroj je prázdný.</string>
     <string name="refresh">Obnovit</string>
     <string name="created">vytvořeno</string>
