@@ -184,6 +184,7 @@
     <string name="loading_account">Laddar kontot</string>
     <string name="error_loading_replies">"Det gick inte att läsa in svar: "</string>
     <string name="try_again">Försök igen</string>
+    <string name="notification_feed_is_empty">Inga aviseringar ännu.</string>
     <string name="feed_is_empty">Flöde är tomt.</string>
     <string name="refresh">Uppdatera</string>
     <string name="created">Skapad</string>

@@ -188,6 +188,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="loading_account">Konto wird geladen</string>
     <string name="error_loading_replies">"Fehler beim Laden der Antworten: "</string>
     <string name="try_again">Erneut versuchen</string>
+    <string name="notification_feed_is_empty">Noch keine Benachrichtigungen.</string>
     <string name="feed_is_empty">Feed ist leer.</string>
     <string name="refresh">Aktualisieren</string>
     <string name="created">erstellt</string>
