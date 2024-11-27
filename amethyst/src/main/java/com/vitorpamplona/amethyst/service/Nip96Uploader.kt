@@ -387,8 +387,7 @@ class Nip96Uploader(
     )
 
     private fun parseResults(body: String): Nip96Result {
-        val mapper =
-            jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         return mapper.readValue(body, Nip96Result::class.java)
     }
 }

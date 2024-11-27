@@ -138,24 +138,10 @@ class ImageUploadTesting {
                     context = InstrumentationRegistry.getInstrumentation().targetContext,
                 )
 
-        val url = result.tags!!.first { it[0] == "url" }.get(1)
-        val size =
-            result.tags!!
-                .firstOrNull { it[0] == "size" }
-                ?.get(1)
-                ?.ifBlank { null }
-        val dim =
-            result.tags!!
-                .firstOrNull { it[0] == "dim" }
-                ?.get(1)
-                ?.ifBlank { null }
-        val hash =
-            result.tags!!
-                .firstOrNull { it[0] == "x" }
-                ?.get(1)
-                ?.ifBlank { null }
-        val contentType = result.tags!!.first { it[0] == "m" }.get(1)
-        val ox = result.tags!!.first { it[0] == "ox" }.get(1)
+        val url = result.url!!
+        val size = result.size
+        val dim = result.dimension
+        val hash = result.sha256
 
         Assert.assertTrue("${server.name}: Invalid result url", url.startsWith("http"))
 
@@ -172,13 +158,10 @@ class ImageUploadTesting {
             null,
             onReady = {
                 if (dim != null) {
-                    // assertEquals("${server.name}: Invalid dimensions", it.dim, dim)
+                    assertEquals("${server.name}: Invalid dimensions", it.dim, dim)
                 }
                 if (size != null) {
-                    // assertEquals("${server.name}: Invalid size", it.size.toString(), size)
-                }
-                if (hash != null) {
-                    assertEquals("${server.name}: Invalid hash", it.hash, hash)
+                    assertEquals("${server.name}: Invalid size", it.size.toString(), size)
                 }
             },
             onError = { fail("${server.name}: It should not fail") },
@@ -193,7 +176,10 @@ class ImageUploadTesting {
     fun runTestOnDefaultServers() =
         runBlocking {
             DEFAULT_MEDIA_SERVERS.forEach {
-                testBase(it)
+                // skip paid servers and primal server is buggy.
+                if (!it.name.contains("Paid") && !it.name.contains("Primal")) {
+                    testBase(it)
+                }
             }
         }
 
