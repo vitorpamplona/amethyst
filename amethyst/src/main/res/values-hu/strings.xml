@@ -863,11 +863,11 @@
     <string name="http_status_415">Nem támogatott médiatípus – A kérés olyan médiaformátumot használ, amelyet a kiszolgáló nem támogat</string>
     <string name="http_status_416">Tartomány nem teljesíthető – A kiszolgáló nem tudja teljesíteni a kérés tartomány-fejlécében jelzett értéket. </string>
     <string name="http_status_417">Sikertelen elvárás – A kiszolgáló nem tudja teljesíteni az elváráskérés fejlécében jelzett követelményeket</string>
-    <string name="http_status_426">Frissítés szükséges – A szerver megtagadja a kérés feldolgozását az aktuális protokoll használatával, hacsak az ügyfél nem frissít egy másik protokollra.</string>
-    <string name="http_status_500">Belső szerverhiba – A szerver váratlan hibát észlelt, és nem tudja a kérést teljesíteni</string>
-    <string name="http_status_501">Nincs végrehajtva – A szerver nem tudja a kérést teljesíteni, vagy nem ismeri fel a kérés módszerét</string>
-    <string name="http_status_502">Rossz átjáró – A szerver átjáróként működik, és érvénytelen választ kapott a gazdagéptől</string>
-    <string name="http_status_503">A szolgáltatás nem elérhető – Ez gyakran akkor fordul elő, ha a kiszolgáló túlterhelt vagy karbantartás miatt leáll</string>
+    <string name="http_status_426">Frissítés szükséges – A kiszolgáló megtagadja a kérés feldolgozását a jelenlegi protokoll használatával, amíg az ügyfél nem frissít egy másik protokollra.</string>
+    <string name="http_status_500">Belső kiszolgálóhiba – A kiszolgáló váratlan hibát észlelt, és nem tudja a kérést teljesíteni</string>
+    <string name="http_status_501">Nincs megvalósítva – A kiszolgáló nem tudja a kérést teljesíteni, vagy nem ismeri fel a kérési módszert</string>
+    <string name="http_status_502">Hibás átjáró – A kiszolgáló átjáróként működik, és érvénytelen választ kapott a gazdagéptől</string>
+    <string name="http_status_503">Nem elérhető el a szolgáltatás – Ez gyakran akkor fordul elő, ha a kiszolgáló túlterhelt vagy karbantartás miatt leáll</string>
     <string name="http_status_504">Átjáró Időtúllépés – A szerver átjáróként vagy proxyként működött, és a válaszra várva időtúllépés történt</string>
     <string name="http_status_505">A HTTP-verzió nem támogatott – A szerver a kérésben szereplő HTTP-verziót nem támogatja</string>
     <string name="http_status_506">Váltózó porbléma – A kiszolgálón belső konfigurációs hiba lépett fel</string>
