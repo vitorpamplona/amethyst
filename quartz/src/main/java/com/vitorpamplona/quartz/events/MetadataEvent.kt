@@ -283,7 +283,7 @@ class MetadataEvent(
             key: String,
             value: String,
         ) {
-            if (value.isBlank()) {
+            if (value.isBlank() || value == "null") {
                 currentJson.remove(key)
             } else {
                 currentJson.put(key, value.trim())

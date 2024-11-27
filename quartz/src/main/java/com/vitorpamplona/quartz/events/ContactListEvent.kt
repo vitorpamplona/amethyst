@@ -465,6 +465,8 @@ class UserMetadata {
     fun profilePicture(): String? = picture
 
     fun cleanBlankNames() {
+        if (pronouns == "null") pronouns = null
+
         if (picture?.isNotEmpty() == true) picture = picture?.trim()
         if (nip05?.isNotEmpty() == true) nip05 = nip05?.trim()
         if (displayName?.isNotEmpty() == true) displayName = displayName?.trim()
