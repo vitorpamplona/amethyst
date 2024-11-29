@@ -249,7 +249,7 @@ fun SlidingCarousel(
 
     val pagerState =
         if (pagerStateKey != null) {
-            rememberForeverPagerState(pagerStateKey, items.list.size) { items.list.size }
+            rememberForeverPagerState(pagerStateKey) { items.list.size }
         } else {
             rememberPagerState(items.list.size) { items.list.size }
         }
