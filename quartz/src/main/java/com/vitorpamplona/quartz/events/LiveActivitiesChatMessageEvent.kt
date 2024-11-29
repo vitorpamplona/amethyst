@@ -54,7 +54,9 @@ class LiveActivitiesChatMessageEvent(
             }
         }
 
-    override fun replyTos() = taggedEvents().minus(activityHex() ?: "")
+    override fun markedReplyTos() = super.markedReplyTos().minus(activityHex() ?: "")
+
+    override fun unMarkedReplyTos() = super.markedReplyTos().minus(activityHex() ?: "")
 
     companion object {
         const val KIND = 1311

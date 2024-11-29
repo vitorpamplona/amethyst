@@ -57,19 +57,13 @@ open class BaseTextNoteEvent(
 
     fun isForkFromAddressWithPubkey(authorHex: HexKey) = tags.any { it.size > 3 && it[0] == "a" && it[3] == "fork" && it[1].contains(authorHex) }
 
-    open fun replyTos(): List<HexKey> {
-        val oldStylePositional = tags.filter { it.size > 1 && it.size <= 3 && it[0] == "e" }.map { it[1] }
+    open fun markedReplyTos(): List<HexKey> {
         val newStyleReply = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "reply" }?.get(1)
         val newStyleRoot = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
-
-        val newStyleReplyTos = listOfNotNull(newStyleReply, newStyleRoot)
-
-        return if (newStyleReplyTos.isNotEmpty()) {
-            newStyleReplyTos
-        } else {
-            oldStylePositional
-        }
+        return listOfNotNull(newStyleReply, newStyleRoot)
     }
+
+    open fun unMarkedReplyTos(): List<HexKey> = tags.filter { it.size > 1 && it.size <= 3 && it[0] == "e" }.map { it[1] }
 
     open fun replyingTo(): HexKey? {
         val oldStylePositional = tags.lastOrNull { it.size > 1 && it.size <= 3 && it[0] == "e" }?.get(1)
@@ -190,21 +184,51 @@ open class BaseTextNoteEvent(
     }
 
     fun tagsWithoutCitations(): List<String> {
-        val repliesTo = replyTos()
+        val certainRepliesTo = markedReplyTos()
+        val uncertainRepliesTo = unMarkedReplyTos()
+
         val tagAddresses =
             taggedAddresses()
                 .filter {
                     it.kind != CommunityDefinitionEvent.KIND && (kind != WikiNoteEvent.KIND || it.kind != WikiNoteEvent.KIND)
                     // removes forks from itself.
                 }.map { it.toTag() }
-        if (repliesTo.isEmpty() && tagAddresses.isEmpty()) return emptyList()
+
+        if (certainRepliesTo.isEmpty() && uncertainRepliesTo.isEmpty() && tagAddresses.isEmpty()) return emptyList()
 
         val citations = findCitations()
 
+        if (id == "d349431390b141e7ea010ebabc288abbfdf8a479cf248f7e1cb2cfa4497ad278") {
+            certainRepliesTo.forEach {
+                println("AABBCC Replies $it")
+            }
+
+            uncertainRepliesTo.forEach {
+                println("AABBCC Replies $it")
+            }
+
+            tagAddresses.forEach {
+                println("AABBCC Addresses $it")
+            }
+
+            citations.forEach {
+                println("AABBCC Citations $it")
+            }
+        }
+
         return if (citations.isEmpty()) {
-            repliesTo + tagAddresses
+            if (certainRepliesTo.isNotEmpty()) {
+                certainRepliesTo + tagAddresses
+            } else {
+                uncertainRepliesTo + tagAddresses
+            }
         } else {
-            repliesTo.filter { it !in citations }
+            if (certainRepliesTo.isNotEmpty()) {
+                certainRepliesTo + tagAddresses
+            } else {
+                // mix bag between `e` for replies and `e` for citations
+                uncertainRepliesTo.filter { it !in citations }
+            }
         }
     }
 }

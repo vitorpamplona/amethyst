@@ -65,7 +65,9 @@ class CommentEvent(
 
     override fun isTaggedGeoHashes(hashtags: Set<String>) = geohashes().any { it in hashtags }
 
-    override fun replyTos(): List<HexKey> = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] } + tags.filter { it.size > 1 && it[0] == "E" }.map { it[1] }
+    override fun markedReplyTos(): List<HexKey> = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] } + tags.filter { it.size > 1 && it[0] == "E" }.map { it[1] }
+
+    override fun unMarkedReplyTos() = emptyList<String>()
 
     override fun replyingTo(): HexKey? =
         tags.lastOrNull { it.size > 1 && it[0] == "e" }?.get(1)
