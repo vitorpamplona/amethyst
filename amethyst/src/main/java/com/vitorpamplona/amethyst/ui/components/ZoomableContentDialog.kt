@@ -54,7 +54,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -106,7 +105,7 @@ fun ZoomableImageDialog(
         onDismissRequest = onDismiss,
         properties =
             DialogProperties(
-                usePlatformDefaultWidth = true,
+                usePlatformDefaultWidth = false,
                 decorFitsSystemWindows = false,
             ),
     ) {
@@ -118,27 +117,26 @@ fun ZoomableImageDialog(
         val activityWindow = getActivityWindow()
         val dialogWindow = getDialogWindow()
         val parentView = LocalView.current.parent as View
-        SideEffect {
-            if (activityWindow != null && dialogWindow != null) {
-                val attributes = WindowManager.LayoutParams()
-                attributes.copyFrom(activityWindow.attributes)
-                attributes.type = dialogWindow.attributes.type
-                dialogWindow.attributes = attributes
-                parentView.layoutParams =
-                    FrameLayout.LayoutParams(
-                        activityWindow.decorView.width,
-                        activityWindow.decorView.height,
-                    )
-                view.layoutParams =
-                    FrameLayout.LayoutParams(
-                        activityWindow.decorView.width,
-                        activityWindow.decorView.height,
-                    )
-            }
+
+        if (activityWindow != null && dialogWindow != null) {
+            val attributes = WindowManager.LayoutParams()
+            attributes.copyFrom(activityWindow.attributes)
+            attributes.type = dialogWindow.attributes.type
+            dialogWindow.attributes = attributes
+            parentView.layoutParams =
+                FrameLayout.LayoutParams(
+                    activityWindow.decorView.width,
+                    activityWindow.decorView.height,
+                )
+            view.layoutParams =
+                FrameLayout.LayoutParams(
+                    activityWindow.decorView.width,
+                    activityWindow.decorView.height,
+                )
         }
 
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Surface(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize(), Alignment.TopCenter) {
                 DialogContent(allImages, imageUrl, onDismiss, accountViewModel)
             }
         }
