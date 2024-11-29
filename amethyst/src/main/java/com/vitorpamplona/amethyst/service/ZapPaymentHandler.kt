@@ -382,7 +382,6 @@ class ZapPaymentHandler(
     ) {
         if (zapType != LnZapEvent.ZapType.NONZAP) {
             account.createZapRequestFor(note, pollOption, message, zapType, overrideUser, additionalRelays) { zapRequest ->
-                println("Zap Request " + zapRequest.toJson())
                 onReady(zapRequest.toJson())
             }
         } else {
