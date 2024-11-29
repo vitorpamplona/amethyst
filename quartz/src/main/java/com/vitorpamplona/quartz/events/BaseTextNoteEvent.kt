@@ -198,24 +198,6 @@ open class BaseTextNoteEvent(
 
         val citations = findCitations()
 
-        if (id == "d349431390b141e7ea010ebabc288abbfdf8a479cf248f7e1cb2cfa4497ad278") {
-            certainRepliesTo.forEach {
-                println("AABBCC Replies $it")
-            }
-
-            uncertainRepliesTo.forEach {
-                println("AABBCC Replies $it")
-            }
-
-            tagAddresses.forEach {
-                println("AABBCC Addresses $it")
-            }
-
-            citations.forEach {
-                println("AABBCC Citations $it")
-            }
-        }
-
         return if (citations.isEmpty()) {
             if (certainRepliesTo.isNotEmpty()) {
                 certainRepliesTo + tagAddresses

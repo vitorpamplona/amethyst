@@ -183,8 +183,6 @@ fun NewDateSubject(
 
     val subject = remember(note) { note.event?.subject() }
 
-    println("AABBCC $prevDate $date")
-
     if (prevDate != date) {
         if (subject != null) {
             ChatDivisor("$date - $subject")
