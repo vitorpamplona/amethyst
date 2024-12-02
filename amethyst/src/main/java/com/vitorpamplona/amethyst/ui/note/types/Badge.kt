@@ -20,23 +20,16 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import android.graphics.Bitmap
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -45,81 +38,38 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.get
 import coil3.compose.AsyncImage
-import coil3.compose.AsyncImagePainter
-import coil3.request.SuccessResult
-import coil3.toBitmap
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
-import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun BadgeDisplay(baseNote: Note) {
     val observingNote by baseNote.live().metadata.observeAsState()
     val badgeData = observingNote?.note?.event as? BadgeDefinitionEvent ?: return
 
-    val image = badgeData.image()
-    val name = badgeData.name()
-    val description = badgeData.description()
-
-    val background = MaterialTheme.colorScheme.background
-    var backgroundFromImage by remember { mutableStateOf(Pair(background, background)) }
-    var imageResult by remember { mutableStateOf<SuccessResult?>(null) }
-
-    LaunchedEffect(key1 = imageResult) {
-        launch(Dispatchers.IO) {
-            imageResult?.let {
-                val backgroundColor =
-                    it.image
-                        .toBitmap(200, 200)
-                        .copy(Bitmap.Config.ARGB_8888, false)[0, 199]
-                val colorFromImage = Color(backgroundColor)
-                val textBackground =
-                    if (colorFromImage.luminance() > 0.5) {
-                        lightColorScheme().onBackground
-                    } else {
-                        darkColorScheme().onBackground
-                    }
-
-                launch(Dispatchers.Main) { backgroundFromImage = Pair(colorFromImage, textBackground) }
-            }
-        }
-    }
-
     RenderBadge(
-        image,
-        name,
-        backgroundFromImage.first,
-        backgroundFromImage.second,
-        description,
-    ) {
-        if (imageResult == null) {
-            imageResult = it.result
-        }
-    }
+        badgeData.image(),
+        badgeData.name(),
+        MaterialTheme.colorScheme.background,
+        MaterialTheme.colorScheme.onBackground,
+        badgeData.description(),
+    )
 }
 
 @Preview
@@ -132,10 +82,9 @@ private fun RenderBadgePreview() {
             image = "http://test.com",
             name = "Name",
             backgroundForRow = background,
-            backgroundFromImage = Color.LightGray,
+            textColor = Color.LightGray,
             description = "This badge is awarded to the dedicated individuals who actively contributed by writing events to the relay during the crucial testing phase leading up to the first beta release of Grain.",
-        ) {
-        }
+        )
     }
 }
 
@@ -144,21 +93,11 @@ private fun RenderBadge(
     image: String?,
     name: String?,
     backgroundForRow: Color,
-    backgroundFromImage: Color,
+    textColor: Color,
     description: String?,
-    onSuccess: (AsyncImagePainter.State.Success) -> Unit,
 ) {
     Row(
-        modifier =
-            Modifier
-                .padding(10.dp)
-                .clip(shape = CutCornerShape(20, 20, 20, 20))
-                .aspectRatio(0.8f)
-                .border(
-                    5.dp,
-                    MaterialTheme.colorScheme.mediumImportanceLink,
-                    CutCornerShape(20),
-                ).background(backgroundForRow),
+        modifier = Modifier.padding(vertical = 10.dp),
     ) {
         Column {
             image?.let {
@@ -169,9 +108,8 @@ private fun RenderBadge(
                             R.string.badge_award_image_for,
                             name ?: "",
                         ),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth().background(backgroundForRow),
                     contentScale = ContentScale.FillWidth,
-                    onSuccess = onSuccess,
                 )
             }
 
@@ -184,7 +122,7 @@ private fun RenderBadge(
                         Modifier
                             .fillMaxWidth()
                             .padding(start = 10.dp, end = 10.dp),
-                    color = backgroundFromImage,
+                    color = textColor,
                 )
             }
 
@@ -196,10 +134,8 @@ private fun RenderBadge(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(start = 20.dp, end = 20.dp, bottom = 10.dp),
-                    color = Color.Gray,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
+                            .padding(start = 20.dp, end = 20.dp),
+                    color = textColor,
                 )
             }
         }
@@ -225,19 +161,12 @@ fun RenderBadgeAward(
 
     FlowRow(modifier = Modifier.padding(top = 5.dp)) {
         awardees.take(100).forEach { user ->
-            Row(
-                modifier =
-                    Modifier
-                        .size(size = Size35dp)
-                        .clickable { nav.nav("User/${user.pubkeyHex}") },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                ClickableUserPicture(
-                    baseUser = user,
-                    accountViewModel = accountViewModel,
-                    size = Size35dp,
-                )
-            }
+            UserPicture(
+                user = user,
+                size = Size35dp,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
         }
 
         if (awardees.size > 100) {
