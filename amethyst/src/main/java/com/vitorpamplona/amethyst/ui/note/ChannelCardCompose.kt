@@ -42,7 +42,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -66,6 +65,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -86,18 +87,21 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.observeAppDefinition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
+import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
+import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
+import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.nip05
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
@@ -515,7 +519,7 @@ fun RenderLiveActivityThumb(
                         .align(BottomStart),
                 ) {
                     if (participantUsers.isNotEmpty()) {
-                        Gallery(participantUsers, accountViewModel)
+                        Gallery(participantUsers, Modifier, accountViewModel)
                     }
                 }
             }
@@ -629,24 +633,20 @@ fun RenderCommunitiesThumb(
             )
         },
         onDescription = {
-            card.description?.let {
-                Spacer(modifier = StdVertSpacer)
-                Row {
-                    Text(
-                        text = it,
-                        color = MaterialTheme.colorScheme.placeholderText,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis,
-                        fontSize = 14.sp,
-                    )
-                }
-            }
+            Text(
+                text = card.description ?: stringRes(R.string.community_about_topic, card.name),
+                color = MaterialTheme.colorScheme.grayText,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                modifier = HalfTopPadding,
+            )
         },
         onBottomRow = {
-            Spacer(modifier = StdVertSpacer)
             LoadModerators(card.moderators, baseNote, accountViewModel) { participantUsers ->
                 if (participantUsers.isNotEmpty()) {
-                    Gallery(participantUsers, accountViewModel)
+                    Gallery(participantUsers, HalfTopPadding, accountViewModel)
                 }
             }
         },
@@ -778,6 +778,7 @@ fun RenderContentDVMThumb(
     val card = observeAppDefinition(appDefinitionNote = baseNote)
 
     LeftPictureLayout(
+        imageFraction = 0.20f,
         onImage = {
             card.cover?.let {
                 Box(contentAlignment = BottomStart) {
@@ -810,11 +811,10 @@ fun RenderContentDVMThumb(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-
             Spacer(modifier = StdVertSpacer)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = RowColSpacing,
+                horizontalArrangement = RowColSpacing5dp,
             ) {
                 LikeReaction(
                     baseNote = baseNote,
@@ -833,16 +833,15 @@ fun RenderContentDVMThumb(
         },
         onDescription = {
             card.description?.let {
-                Spacer(modifier = StdVertSpacer)
-                Row {
-                    Text(
-                        text = it,
-                        color = MaterialTheme.colorScheme.placeholderText,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis,
-                        fontSize = 14.sp,
-                    )
-                }
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.grayText,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    fontSize = 14.sp,
+                    lineHeight = 16.sp,
+                    modifier = HalfTopPadding,
+                )
             }
         },
         onBottomRow = {
@@ -856,13 +855,12 @@ fun RenderContentDVMThumb(
                     color = MaterialTheme.colorScheme.primaryContainer
                     amount = "Flexible"
                 } else if (card.amount == "") {
-                    color = MaterialTheme.colorScheme.secondaryContainer
+                    color = MaterialTheme.colorScheme.grayText
                     amount = "Unknown"
                 } else {
                     color = MaterialTheme.colorScheme.primary
                     amount = card.amount + " Sats"
                 }
-                Spacer(modifier = StdVertSpacer)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Absolute.Right,
@@ -874,7 +872,6 @@ fun RenderContentDVMThumb(
                         maxLines = 3,
                         modifier =
                             Modifier
-                                .padding(start = 4.dp)
                                 .weight(1f, fill = false)
                                 .border(Dp(.1f), color, shape = RoundedCornerShape(20)),
                         fontSize = 12.sp,
@@ -938,10 +935,10 @@ fun RenderChannelThumb(
     val channelUpdates by channel.live.observeAsState()
 
     val name = remember(channelUpdates) { channelUpdates?.channel?.toBestDisplayName() ?: "" }
-    val description = remember(channelUpdates) { channelUpdates?.channel?.summary() }
-    val cover by
+    val description = remember(channelUpdates) { channelUpdates?.channel?.summary()?.ifBlank { null } }
+    var cover by
         remember(channelUpdates) {
-            derivedStateOf { channelUpdates?.channel?.profilePicture()?.ifBlank { null } }
+            mutableStateOf(channelUpdates?.channel?.profilePicture()?.ifBlank { null })
         }
 
     var participantUsers by
@@ -989,6 +986,11 @@ fun RenderChannelThumb(
                         Modifier
                             .fillMaxSize()
                             .clip(QuoteBorder),
+                    onState = {
+                        if (it is AsyncImagePainter.State.Error) {
+                            cover = null
+                        }
+                    },
                 )
             } ?: run { DisplayAuthorBanner(baseNote) }
         },
@@ -1021,20 +1023,19 @@ fun RenderChannelThumb(
             )
         },
         onDescription = {
-            description?.let {
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.placeholderText,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                    fontSize = 14.sp,
-                )
-            }
+            Text(
+                text = description ?: stringRes(R.string.chat_about_topic, name),
+                color = MaterialTheme.colorScheme.grayText,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                modifier = HalfTopPadding,
+            )
         },
         onBottomRow = {
             if (participantUsers.isNotEmpty()) {
-                Spacer(modifier = StdVertSpacer)
-                Gallery(participantUsers, accountViewModel)
+                Gallery(participantUsers, HalfTopPadding, accountViewModel)
             }
         },
     )
@@ -1044,17 +1045,18 @@ fun RenderChannelThumb(
 @Composable
 fun Gallery(
     users: ImmutableList<User>,
+    modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
-    FlowRow(verticalArrangement = Arrangement.Center) {
-        users.take(6).forEach { ClickableUserPicture(it, Size35dp, accountViewModel) }
+    FlowRow(modifier, verticalArrangement = Arrangement.Center) {
+        users.take(6).forEach { ClickableUserPicture(it, Size25dp, accountViewModel) }
 
         if (users.size > 6) {
             Text(
                 text = " + " + showCount(users.size - 6),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.align(CenterVertically),
+                modifier = Modifier.padding(start = 3.dp).align(CenterVertically),
             )
         }
     }

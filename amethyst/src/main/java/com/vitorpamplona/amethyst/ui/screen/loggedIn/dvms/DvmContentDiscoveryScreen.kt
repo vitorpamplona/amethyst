@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
+import com.vitorpamplona.quartz.events.AppMetadata
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.NIP90StatusEvent
 import com.vitorpamplona.quartz.events.PayInvoiceErrorResponse
@@ -627,6 +628,28 @@ fun FeedEmptyWithStatus(
     }
 }
 
+fun convertAppMetadataToCard(metadata: AppMetadata?): DVMCard {
+    if (metadata == null) {
+        return DVMCard(
+            name = "",
+            description = "",
+            cover = null,
+            amount = "",
+            personalized = false,
+        )
+    }
+
+    return with(metadata) {
+        DVMCard(
+            name = this.name ?: "",
+            description = this.about ?: "",
+            cover = this.profilePicture()?.ifBlank { null },
+            amount = this.amount ?: "",
+            personalized = this.personalized ?: false,
+        )
+    }
+}
+
 @Composable
 fun observeAppDefinition(appDefinitionNote: Note): DVMCard {
     val noteEvent =
@@ -643,24 +666,10 @@ fun observeAppDefinition(appDefinitionNote: Note): DVMCard {
             .live()
             .metadata
             .map {
-                val noteEvent = it.note.event as? AppDefinitionEvent
-
-                DVMCard(
-                    name = noteEvent?.appMetaData()?.name ?: "",
-                    description = noteEvent?.appMetaData()?.about ?: "",
-                    cover = noteEvent?.appMetaData()?.profilePicture()?.ifBlank { null },
-                    amount = noteEvent?.appMetaData()?.amount ?: "",
-                    personalized = noteEvent?.appMetaData()?.personalized ?: false,
-                )
+                convertAppMetadataToCard((it.note.event as? AppDefinitionEvent)?.appMetaData())
             }.distinctUntilChanged()
             .observeAsState(
-                DVMCard(
-                    name = noteEvent.appMetaData()?.name ?: "",
-                    description = noteEvent.appMetaData()?.about ?: "",
-                    cover = noteEvent.appMetaData()?.profilePicture()?.ifBlank { null },
-                    amount = noteEvent.appMetaData()?.amount ?: "",
-                    personalized = noteEvent.appMetaData()?.personalized ?: false,
-                ),
+                convertAppMetadataToCard(noteEvent.appMetaData()),
             )
 
     return card

@@ -109,10 +109,11 @@ fun LeftPictureLayout(
     onTitleRow: @Composable RowScope.() -> Unit,
     onDescription: @Composable () -> Unit,
     onBottomRow: @Composable RowScope.() -> Unit,
+    imageFraction: Float = 0.25f,
 ) {
-    Row(Modifier.aspectRatio(ratio = 4f)) {
+    Row(Modifier.aspectRatio(ratio = 1 / imageFraction)) {
         Column(
-            modifier = Modifier.fillMaxWidth(0.25f).aspectRatio(ratio = 1f),
+            modifier = Modifier.fillMaxWidth(imageFraction).aspectRatio(ratio = 1f),
         ) {
             onImage()
         }
