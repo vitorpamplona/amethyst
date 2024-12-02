@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isImageOrVideoUrl
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.SUPPORTED_VIDEO_FEED_MIME_TYPES_SET
+import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
@@ -48,7 +50,10 @@ class VideoFeedFilter(
         val notes =
             LocalCache.notes.filterIntoSet { _, it ->
                 acceptableEvent(it, params)
-            }
+            } +
+                LocalCache.addressables.filterIntoSet { _, it ->
+                    acceptableEvent(it, params)
+                }
 
         return sort(notes)
     }
@@ -62,10 +67,14 @@ class VideoFeedFilter(
     }
 
     fun acceptableEvent(
-        it: Note,
+        note: Note,
         params: FilterByListParams,
     ): Boolean {
-        val noteEvent = it.event
+        val noteEvent = note.event
+
+        if (noteEvent is AddressableEvent && note !is AddressableNote) {
+            return false
+        }
 
         return (
             (noteEvent is FileHeaderEvent && noteEvent.hasUrl() && (noteEvent.urls().any { isImageOrVideoUrl(it) } || noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET))) ||
@@ -75,7 +84,7 @@ class VideoFeedFilter(
                 noteEvent is PictureEvent
         ) &&
             params.match(noteEvent) &&
-            (params.isHiddenList || account.isAcceptable(it))
+            (params.isHiddenList || account.isAcceptable(note))
     }
 
     fun buildFilterParams(account: Account): FilterByListParams =
