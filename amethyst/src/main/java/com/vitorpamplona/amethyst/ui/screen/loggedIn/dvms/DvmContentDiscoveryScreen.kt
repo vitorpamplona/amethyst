@@ -646,14 +646,14 @@ fun observeAppDefinition(appDefinitionNote: Note): DVMCard {
                 DVMCard(
                     name = noteEvent?.appMetaData()?.name ?: "",
                     description = noteEvent?.appMetaData()?.about ?: "",
-                    cover = noteEvent?.appMetaData()?.image?.ifBlank { null },
+                    cover = noteEvent?.appMetaData()?.profilePicture()?.ifBlank { null },
                 )
             }.distinctUntilChanged()
             .observeAsState(
                 DVMCard(
                     name = noteEvent.appMetaData()?.name ?: "",
                     description = noteEvent.appMetaData()?.about ?: "",
-                    cover = noteEvent.appMetaData()?.image?.ifBlank { null },
+                    cover = noteEvent.appMetaData()?.profilePicture()?.ifBlank { null },
                 ),
             )
 
