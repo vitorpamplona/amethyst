@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -55,8 +57,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.distinctUntilChanged
@@ -91,6 +95,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
+import com.vitorpamplona.amethyst.ui.theme.nip05
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
@@ -542,6 +548,8 @@ data class DVMCard(
     val name: String,
     val description: String?,
     val cover: String?,
+    val amount: String?,
+    val personalized: Boolean?,
 )
 
 @Composable
@@ -838,6 +846,71 @@ fun RenderContentDVMThumb(
             }
         },
         onBottomRow = {
+            card.amount?.let {
+                var color = Color.DarkGray
+                var amount = it
+                if (card.amount == "free" || card.amount == "0") {
+                    color = MaterialTheme.colorScheme.secondary
+                    amount = "Free"
+                } else if (card.amount == "flexible") {
+                    color = MaterialTheme.colorScheme.primaryContainer
+                    amount = "Flexible"
+                } else if (card.amount == "") {
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                    amount = "Unknown"
+                } else {
+                    color = MaterialTheme.colorScheme.primary
+                    amount = card.amount + " Sats"
+                }
+                Spacer(modifier = StdVertSpacer)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Absolute.Right,
+                ) {
+                    Text(
+                        textAlign = TextAlign.End,
+                        text = " $amount ",
+                        color = color,
+                        maxLines = 3,
+                        modifier =
+                            Modifier
+                                .padding(start = 4.dp)
+                                .weight(1f, fill = false)
+                                .border(Dp(.1f), color, shape = RoundedCornerShape(20)),
+                        fontSize = 12.sp,
+                    )
+                }
+            }
+            Spacer(modifier = StdHorzSpacer)
+            card.personalized?.let {
+                var color = Color.DarkGray
+                var name = "generic"
+                if (card.personalized == true) {
+                    color = MaterialTheme.colorScheme.bitcoinColor
+                    name = "Personalized"
+                } else {
+                    color = MaterialTheme.colorScheme.nip05
+                    name = "Generic"
+                }
+                Spacer(modifier = StdVertSpacer)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Absolute.Right,
+                ) {
+                    Text(
+                        textAlign = TextAlign.End,
+                        text = " $name ",
+                        color = color,
+                        maxLines = 3,
+                        modifier =
+                            Modifier
+                                .padding(start = 4.dp)
+                                .weight(1f, fill = false)
+                                .border(Dp(.1f), color, shape = RoundedCornerShape(20)),
+                        fontSize = 12.sp,
+                    )
+                }
+            }
         },
     )
 }

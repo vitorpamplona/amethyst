@@ -634,6 +634,8 @@ fun observeAppDefinition(appDefinitionNote: Note): DVMCard {
             name = "",
             description = "",
             cover = null,
+            amount = "",
+            personalized = false,
         )
 
     val card by
@@ -647,6 +649,8 @@ fun observeAppDefinition(appDefinitionNote: Note): DVMCard {
                     name = noteEvent?.appMetaData()?.name ?: "",
                     description = noteEvent?.appMetaData()?.about ?: "",
                     cover = noteEvent?.appMetaData()?.profilePicture()?.ifBlank { null },
+                    amount = noteEvent?.appMetaData()?.amount ?: "",
+                    personalized = noteEvent?.appMetaData()?.personalized ?: false,
                 )
             }.distinctUntilChanged()
             .observeAsState(
@@ -654,6 +658,8 @@ fun observeAppDefinition(appDefinitionNote: Note): DVMCard {
                     name = noteEvent.appMetaData()?.name ?: "",
                     description = noteEvent.appMetaData()?.about ?: "",
                     cover = noteEvent.appMetaData()?.profilePicture()?.ifBlank { null },
+                    amount = noteEvent.appMetaData()?.amount ?: "",
+                    personalized = noteEvent.appMetaData()?.personalized ?: false,
                 ),
             )
 
