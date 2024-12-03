@@ -363,15 +363,15 @@ fun VideoViewInner(
     onDialog: ((Boolean) -> Unit)? = null,
     accountViewModel: AccountViewModel,
 ) {
-    VideoPlayerActiveMutex(videoUri) { videoModifier, activeOnScreen ->
-        GetMediaItem(videoUri, title, artworkUri, authorName) { mediaItem ->
-            GetVideoController(
-                mediaItem = mediaItem,
-                videoUri = videoUri,
-                defaultToStart = defaultToStart,
-                nostrUriCallback = nostrUriCallback,
-                proxyPort = HttpClientManager.getCurrentProxyPort(accountViewModel.account.shouldUseTorForVideoDownload(videoUri)),
-            ) { controller, keepPlaying ->
+    GetMediaItem(videoUri, title, artworkUri, authorName) { mediaItem ->
+        GetVideoController(
+            mediaItem = mediaItem,
+            videoUri = videoUri,
+            defaultToStart = defaultToStart,
+            nostrUriCallback = nostrUriCallback,
+            proxyPort = HttpClientManager.getCurrentProxyPort(accountViewModel.account.shouldUseTorForVideoDownload(videoUri)),
+        ) { controller, keepPlaying ->
+            VideoPlayerActiveMutex(controller) { videoModifier, activeOnScreen ->
                 RenderVideoPlayer(
                     videoUri = videoUri,
                     mimeType = mimeType,
@@ -670,22 +670,22 @@ class VisibilityData {
  */
 @Composable
 fun VideoPlayerActiveMutex(
-    videoUri: String,
+    controller: MediaController,
     inner: @Composable (Modifier, MutableState<Boolean>) -> Unit,
 ) {
-    val myCache = remember(videoUri) { VisibilityData() }
+    val myCache = remember(controller) { VisibilityData() }
 
     // Is the current video the closest to the center?
-    val active = remember(videoUri) { mutableStateOf<Boolean>(false) }
+    val active = remember(controller) { mutableStateOf<Boolean>(false) }
 
     // Keep track of all available videos.
-    DisposableEffect(key1 = videoUri) {
+    DisposableEffect(key1 = controller) {
         trackingVideos.add(myCache)
         onDispose { trackingVideos.remove(myCache) }
     }
 
     val videoModifier =
-        remember(videoUri) {
+        remember(controller) {
             Modifier.fillMaxWidth().heightIn(min = 100.dp).onVisiblePositionChanges { distanceToCenter ->
                 myCache.distanceToCenter = distanceToCenter
 

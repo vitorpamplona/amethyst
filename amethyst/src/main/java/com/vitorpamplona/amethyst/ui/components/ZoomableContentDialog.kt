@@ -23,9 +23,7 @@ package com.vitorpamplona.amethyst.ui.components
 import android.Manifest
 import android.content.Context
 import android.os.Build
-import android.view.View
 import android.view.WindowManager
-import android.widget.FrameLayout
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -61,7 +59,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
@@ -105,34 +102,21 @@ fun ZoomableImageDialog(
         onDismissRequest = onDismiss,
         properties =
             DialogProperties(
-                usePlatformDefaultWidth = false,
+                usePlatformDefaultWidth = true,
                 decorFitsSystemWindows = false,
             ),
     ) {
-        val view = LocalView.current
-
         val orientation = LocalConfiguration.current.orientation
         println("This Log only exists to force orientation listener $orientation")
 
         val activityWindow = getActivityWindow()
         val dialogWindow = getDialogWindow()
-        val parentView = LocalView.current.parent as View
 
         if (activityWindow != null && dialogWindow != null) {
             val attributes = WindowManager.LayoutParams()
             attributes.copyFrom(activityWindow.attributes)
             attributes.type = dialogWindow.attributes.type
             dialogWindow.attributes = attributes
-            parentView.layoutParams =
-                FrameLayout.LayoutParams(
-                    activityWindow.decorView.width,
-                    activityWindow.decorView.height,
-                )
-            view.layoutParams =
-                FrameLayout.LayoutParams(
-                    activityWindow.decorView.width,
-                    activityWindow.decorView.height,
-                )
         }
 
         Surface(Modifier.fillMaxSize()) {
