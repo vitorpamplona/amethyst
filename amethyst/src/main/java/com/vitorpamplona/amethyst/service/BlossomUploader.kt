@@ -123,7 +123,7 @@ class BlossomUploader(
     ): MediaUploadResult {
         checkNotInMainThread()
 
-        val fileName = randomChars()
+        val fileName = fileName ?: randomChars()
         val extension =
             contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
@@ -145,6 +145,7 @@ class BlossomUploader(
 
         authUploadHeader(
             hash,
+            length.toLong(),
             alt?.let { "Uploading $it" } ?: "Uploading $fileName",
         )?.let {
             requestBuilder.addHeader("Authorization", it)
@@ -226,11 +227,12 @@ class BlossomUploader(
 
     suspend fun authUploadHeader(
         hash: String,
+        size: Long,
         alt: String,
     ): String? {
         val myAccount = account ?: return null
         return tryAndWait { continuation ->
-            myAccount.createBlossomUploadAuth(hash, alt) {
+            myAccount.createBlossomUploadAuth(hash, size, alt) {
                 val encodedNIP98Event = Base64.getEncoder().encodeToString(it.toJson().toByteArray())
                 continuation.resume("Nostr $encodedNIP98Event")
             }

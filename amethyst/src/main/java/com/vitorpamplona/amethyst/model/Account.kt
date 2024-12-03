@@ -1508,12 +1508,13 @@ class Account(
 
     fun createBlossomUploadAuth(
         hash: HexKey,
+        size: Long,
         alt: String,
         onReady: (BlossomAuthorizationEvent) -> Unit,
     ) {
         if (!isWriteable()) return
 
-        BlossomAuthorizationEvent.createUploadAuth(hash, alt, signer, onReady = onReady)
+        BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, signer, onReady = onReady)
     }
 
     fun createBlossomDeleteAuth(

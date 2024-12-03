@@ -43,14 +43,14 @@ class BlossomAuthorizationEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (BlossomAuthorizationEvent) -> Unit,
-        ) = createAuth("get", hash, alt, signer, createdAt, onReady)
+        ) = createAuth("get", hash, null, alt, signer, createdAt, onReady)
 
         fun createListAuth(
             signer: NostrSigner,
             alt: String,
             createdAt: Long = TimeUtils.now(),
             onReady: (BlossomAuthorizationEvent) -> Unit,
-        ) = createAuth("list", null, alt, signer, createdAt, onReady)
+        ) = createAuth("list", null, null, alt, signer, createdAt, onReady)
 
         fun createDeleteAuth(
             hash: HexKey,
@@ -58,19 +58,21 @@ class BlossomAuthorizationEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (BlossomAuthorizationEvent) -> Unit,
-        ) = createAuth("delete", hash, alt, signer, createdAt, onReady)
+        ) = createAuth("delete", hash, null, alt, signer, createdAt, onReady)
 
         fun createUploadAuth(
             hash: HexKey,
+            size: Long,
             alt: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (BlossomAuthorizationEvent) -> Unit,
-        ) = createAuth("upload", hash, alt, signer, createdAt, onReady)
+        ) = createAuth("upload", hash, size, alt, signer, createdAt, onReady)
 
         private fun createAuth(
             type: String,
             hash: HexKey?,
+            fileSize: Long?,
             alt: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
@@ -80,6 +82,7 @@ class BlossomAuthorizationEvent(
                 listOfNotNull(
                     arrayOf("t", type),
                     arrayOf("expiration", TimeUtils.oneHourAhead().toString()),
+                    fileSize?.let { arrayOf("size", it.toString()) },
                     hash?.let { arrayOf("x", it) },
                 )
 
