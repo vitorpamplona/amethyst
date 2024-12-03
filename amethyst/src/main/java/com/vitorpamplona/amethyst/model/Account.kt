@@ -1960,7 +1960,7 @@ class Account(
         if (isImage) {
             PictureEvent.create(
                 url = url,
-                title = alt,
+                msg = alt,
                 mimeType = headerInfo.mimeType,
                 hash = headerInfo.hash,
                 size = headerInfo.size.toLong(),
