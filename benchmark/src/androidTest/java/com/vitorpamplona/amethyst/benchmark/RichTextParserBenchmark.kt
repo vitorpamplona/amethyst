@@ -46,7 +46,7 @@ class RichTextParserBenchmark {
     fun parseApkUrl() {
         benchmarkRule.measureRepeated {
             assertNull(
-                RichTextParser().parseMediaUrl(
+                RichTextParser().createMediaContent(
                     "https://github.com/vitorpamplona/amethyst/releases/download/v0.83.10/amethyst-googleplay-universal-v0.83.10.apk",
                     EmptyTagList,
                     null,

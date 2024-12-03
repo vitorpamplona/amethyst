@@ -24,7 +24,6 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.encoders.HexValidator
-import junit.framework.TestCase.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,58 +36,59 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class HexBenchmark {
-    @get:Rule val benchmarkRule = BenchmarkRule()
+    @get:Rule val r = BenchmarkRule()
 
-    val testHex = "48a72b485d38338627ec9d427583551f9af4f016c739b8ec0d6313540a8b12cf"
+    val hex = "48a72b485d38338627ec9d427583551f9af4f016c739b8ec0d6313540a8b12cf"
+    val bytes =
+        fr.acinq.secp256k1.Hex
+            .decode(hex)
 
     @Test
     fun hexDecodeOurs() {
-        benchmarkRule.measureRepeated {
+        r.measureRepeated {
             com.vitorpamplona.quartz.encoders.Hex
-                .decode(testHex)
+                .decode(hex)
         }
     }
 
     @Test
     fun hexEncodeOurs() {
-        val bytes =
+        r.measureRepeated {
             com.vitorpamplona.quartz.encoders.Hex
-                .decode(testHex)
-
-        benchmarkRule.measureRepeated {
-            assertEquals(
-                testHex,
-                com.vitorpamplona.quartz.encoders.Hex
-                    .encode(bytes),
-            )
+                .encode(bytes)
         }
     }
 
     @Test
     fun hexDecodeBaseSecp() {
-        benchmarkRule.measureRepeated {
+        r.measureRepeated {
             fr.acinq.secp256k1.Hex
-                .decode(testHex)
+                .decode(hex)
         }
     }
 
     @Test
     fun hexEncodeBaseSecp() {
-        val bytes =
+        r.measureRepeated {
             fr.acinq.secp256k1.Hex
-                .decode(testHex)
-
-        benchmarkRule.measureRepeated {
-            assertEquals(
-                testHex,
-                fr.acinq.secp256k1.Hex
-                    .encode(bytes),
-            )
+                .encode(bytes)
         }
+    }
+
+    @OptIn(ExperimentalStdlibApi::class)
+    @Test
+    fun hexDecodeKotlin() {
+        r.measureRepeated { hex.hexToByteArray(HexFormat.Default) }
+    }
+
+    @OptIn(ExperimentalStdlibApi::class)
+    @Test
+    fun hexEncodeKotlin() {
+        r.measureRepeated { bytes.toHexString(HexFormat.Default) }
     }
 
     @Test
     fun isHex() {
-        benchmarkRule.measureRepeated { HexValidator.isHex(testHex) }
+        r.measureRepeated { HexValidator.isHex(hex) }
     }
 }
