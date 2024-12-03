@@ -578,7 +578,6 @@
     <string name="share_or_save">Dela eller Spara</string>
     <string name="copy_url_to_clipboard">Kopiera URL till urklipp</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopiera anteckningens ID till urklipp</string>
-    <string name="add_media_to_gallery">Lägg till media i galleriet</string>
     <string name="created_at">Skapad den</string>
     <string name="rules">Regler</string>
     <string name="login_with_external_signer">Logga in med Amber</string>

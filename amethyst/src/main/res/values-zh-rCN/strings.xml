@@ -580,7 +580,6 @@
     <string name="share_or_save">分享或保存</string>
     <string name="copy_url_to_clipboard">复制链接到剪贴板</string>
     <string name="copy_the_note_id_to_the_clipboard">复制笔记 ID 到剪贴板</string>
-    <string name="add_media_to_gallery">添加媒体到图库</string>
     <string name="created_at">创建于</string>
     <string name="rules">规则</string>
     <string name="login_with_external_signer">使用 Amber 登录</string>

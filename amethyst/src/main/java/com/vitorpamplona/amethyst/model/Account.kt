@@ -73,7 +73,6 @@ import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.Contact
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
-import com.vitorpamplona.quartz.events.Dimension
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
@@ -109,7 +108,6 @@ import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.Price
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
-import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import com.vitorpamplona.quartz.events.ReportEvent
@@ -1962,6 +1960,7 @@ class Account(
         if (isImage) {
             PictureEvent.create(
                 url = url,
+                title = alt,
                 mimeType = headerInfo.mimeType,
                 hash = headerInfo.hash,
                 size = headerInfo.size.toLong(),
@@ -3149,36 +3148,6 @@ class Account(
                 Client.send(it)
                 LocalCache.justConsume(it, null)
             }
-        }
-    }
-
-    fun addToGallery(
-        idHex: String,
-        url: String,
-        relay: String?,
-        blurhash: String?,
-        dim: Dimension?,
-        hash: String?,
-        mimeType: String?,
-    ) {
-        if (!isWriteable()) return
-        ProfileGalleryEntryEvent.create(
-            url = url,
-            eventid = idHex,
-            relayhint = relay,
-            blurhash = blurhash,
-            hash = hash,
-            dimensions = dim,
-            mimeType = mimeType,
-            /*magnetUri = magnetUri,
-            size = headerInfo.size.toString(),
-            dimensions = headerInfo.dim,
-            alt = alt,
-            originalHash = originalHash, */
-            signer = signer,
-        ) { event ->
-            Client.send(event)
-            LocalCache.consume(event, null)
         }
     }
 

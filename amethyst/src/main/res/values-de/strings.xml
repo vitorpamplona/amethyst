@@ -584,7 +584,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="share_or_save">Teilen oder Speichern</string>
     <string name="copy_url_to_clipboard">URL in die Zwischenablage kopieren</string>
     <string name="copy_the_note_id_to_the_clipboard">Notiz-ID in die Zwischenablage kopieren</string>
-    <string name="add_media_to_gallery">Medien zur Galerie hinzufügen</string>
     <string name="created_at">Erstellt am</string>
     <string name="rules">Regeln</string>
     <string name="login_with_external_signer">Mit Amber anmelden</string>

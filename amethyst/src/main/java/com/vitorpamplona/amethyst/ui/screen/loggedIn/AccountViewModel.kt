@@ -83,7 +83,6 @@ import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ChatroomKeyable
-import com.vitorpamplona.quartz.events.Dimension
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
@@ -750,18 +749,6 @@ class AccountViewModel(
         emojiList: Note,
     ) {
         viewModelScope.launch(Dispatchers.IO) { account.addEmojiPack(usersEmojiList, emojiList) }
-    }
-
-    fun addMediaToGallery(
-        hex: String,
-        url: String,
-        relay: String?,
-        blurhash: String?,
-        dim: Dimension?,
-        hash: String?,
-        mimeType: String?,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) { account.addToGallery(hex, url, relay, blurhash, dim, hash, mimeType) }
     }
 
     fun removefromMediaGallery(note: Note) {

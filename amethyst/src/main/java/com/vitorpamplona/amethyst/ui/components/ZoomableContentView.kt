@@ -96,7 +96,6 @@ import com.vitorpamplona.amethyst.ui.theme.hashVerifierMark
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
 import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.Dimension
 import kotlinx.collections.immutable.ImmutableList
@@ -709,23 +708,6 @@ fun ShareImageAction(
                 text = { Text(stringRes(R.string.copy_the_note_id_to_the_clipboard)) },
                 onClick = {
                     clipboardManager.setText(AnnotatedString(it))
-                    onDismiss()
-                },
-            )
-        }
-
-        postNostrUri?.let {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.add_media_to_gallery)) },
-                onClick = {
-                    if (videoUri != null) {
-                        var n19 = Nip19Bech32.uriToRoute(postNostrUri)?.entity as? Nip19Bech32.NEvent
-                        if (n19 != null) {
-                            accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay[0], blurhash, dim, hash, mimeType) // TODO Whole list or first?
-                            accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
-                        }
-                    }
-
                     onDismiss()
                 },
             )

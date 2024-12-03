@@ -111,7 +111,6 @@ import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
-import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RecommendRelayEvent
 import com.vitorpamplona.quartz.events.RelaySetEvent
@@ -1510,11 +1509,6 @@ object LocalCache {
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
-        event: ProfileGalleryEntryEvent,
-        relay: Relay?,
-    ) = consumeRegularEvent(event, relay)
-
-    fun consume(
         event: FileStorageHeaderEvent,
         relay: Relay?,
     ) = consumeRegularEvent(event, relay)
@@ -2401,7 +2395,6 @@ object LocalCache {
                 }
                 is FhirResourceEvent -> consume(event, relay)
                 is FileHeaderEvent -> consume(event, relay)
-                is ProfileGalleryEntryEvent -> consume(event, relay)
                 is FileServersEvent -> consume(event, relay)
                 is FileStorageEvent -> consume(event, relay)
                 is FileStorageHeaderEvent -> consume(event, relay)

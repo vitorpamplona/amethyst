@@ -589,7 +589,6 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="share_or_save">Deli ali shrani</string>
     <string name="copy_url_to_clipboard">Kopiraj URL v odložišče</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopiraj ID zapiska v odložišče</string>
-    <string name="add_media_to_gallery">Dodaj medijsko vsebino v galerijo</string>
     <string name="created_at">Ustvarjeno ob</string>
     <string name="rules">Pravila</string>
     <string name="login_with_external_signer">Prijavi se z Amber</string>

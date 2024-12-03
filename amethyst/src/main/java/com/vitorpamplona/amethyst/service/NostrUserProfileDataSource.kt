@@ -38,9 +38,9 @@ import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PictureEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
-import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.TorrentCommentEvent
@@ -182,9 +182,9 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
                 filter =
                     SincePerRelayFilter(
                         kinds =
-                            listOf(ProfileGalleryEntryEvent.KIND),
+                            listOf(PictureEvent.KIND),
                         authors = listOf(it.pubkeyHex),
-                        limit = 1000,
+                        limit = 2000,
                     ),
             )
         }

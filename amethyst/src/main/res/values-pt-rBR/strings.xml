@@ -579,7 +579,6 @@
     <string name="share_or_save">Compartilhar ou Salvar</string>
     <string name="copy_url_to_clipboard">Copiar URL para a área de transferência</string>
     <string name="copy_the_note_id_to_the_clipboard">Copiar ID da nota para a área de transferência</string>
-    <string name="add_media_to_gallery">Adicionar Mídia à Galeria</string>
     <string name="created_at">Criado em</string>
     <string name="rules">Regras</string>
     <string name="login_with_external_signer">Login com Amber</string>

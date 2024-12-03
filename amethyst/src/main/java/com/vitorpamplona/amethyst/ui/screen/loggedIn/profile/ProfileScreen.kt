@@ -366,7 +366,7 @@ fun ProfileScreen(
         val observer =
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Profidle Start")
+                    println("Profile Start")
                     NostrUserProfileDataSource.loadUserProfile(baseUser)
                     NostrUserProfileDataSource.start()
                 }

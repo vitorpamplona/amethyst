@@ -77,7 +77,7 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
-import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.events.PictureEvent
 
 @Composable
 fun RenderGalleryFeed(
@@ -171,17 +171,14 @@ fun GalleryCardCompose(
             nav = nav,
         ) { canPreview ->
 
-            val galleryEvent = (baseNote.event as? ProfileGalleryEntryEvent) ?: return@CheckHiddenFeedWatchBlockAndReport
+            val galleryEvent = (baseNote.event as? PictureEvent) ?: return@CheckHiddenFeedWatchBlockAndReport
 
-            galleryEvent.url()?.let { image ->
-                val sourceEvent = galleryEvent.fromEvent()
-
-                if (sourceEvent != null) {
-                    LoadNote(baseNoteHex = sourceEvent, accountViewModel = accountViewModel) { sourceNote ->
+            galleryEvent.imetaTags()[0].url.let { image ->
+                if (galleryEvent != null) {
+                    LoadNote(baseNoteHex = galleryEvent.id(), accountViewModel = accountViewModel) { sourceNote ->
                         if (sourceNote != null) {
                             ClickableGalleryCard(
                                 galleryNote = baseNote,
-                                baseNote = sourceNote,
                                 image = image,
                                 modifier = modifier,
                                 parentBackgroundColor = parentBackgroundColor,
@@ -215,7 +212,6 @@ fun GalleryCardCompose(
 @Composable
 fun ClickableGalleryCard(
     galleryNote: Note,
-    baseNote: Note,
     image: String,
     modifier: Modifier = Modifier,
     parentBackgroundColor: MutableState<Color>? = null,
@@ -226,13 +222,13 @@ fun ClickableGalleryCard(
     LongPressToQuickActionGallery(baseNote = galleryNote, accountViewModel = accountViewModel) { showPopup ->
         val backgroundColor =
             calculateBackgroundColor(
-                createdAt = baseNote.createdAt(),
+                createdAt = galleryNote.createdAt(),
                 parentBackgroundColor = parentBackgroundColor,
                 accountViewModel = accountViewModel,
             )
 
         ClickableNote(
-            baseNote = baseNote,
+            baseNote = galleryNote,
             backgroundColor = backgroundColor,
             modifier = modifier,
             accountViewModel = accountViewModel,
@@ -338,7 +334,7 @@ fun InnerRenderGalleryThumb(
     note: Note,
     accountViewModel: AccountViewModel,
 ) {
-    val noteEvent = note.event as? ProfileGalleryEntryEvent ?: return
+    val noteEvent = note.event as? PictureEvent ?: return
 
     Box(
         Modifier
@@ -349,7 +345,6 @@ fun InnerRenderGalleryThumb(
         card.image?.let {
             val blurHash = noteEvent.blurhash()
             val description = noteEvent.content
-            // var hash = (note.event as ProfileGalleryEntryEvent).hash()
             val dimensions = noteEvent.dimensions()
             val mimeType = noteEvent.mimeType()
             var content: BaseMediaContent? = null
