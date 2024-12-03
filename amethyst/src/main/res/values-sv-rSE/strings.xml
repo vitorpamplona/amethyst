@@ -204,6 +204,8 @@
     <string name="translations_translated_from">översatt från</string>
     <string name="translations_to">till</string>
     <string name="translations_show_in_lang_first">Visa i %1$s first</string>
+    <string name="chat_about_topic">Offentlig chatt om %1$s</string>
+    <string name="community_about_topic">Offentligt forum om %1$s</string>
     <string name="translations_always_translate_to_lang">Översätt alltid till %1$s</string>
     <string name="translations_never_translate_from_lang">Översätt aldrig från %1$s</string>
     <string name="nip_05">Nostr-adress</string>
