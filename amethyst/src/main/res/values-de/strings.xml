@@ -208,6 +208,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="translations_translated_from">übersetzt von</string>
     <string name="translations_to">zu</string>
     <string name="translations_show_in_lang_first">Zuerst in %1$s anzeigen</string>
+    <string name="chat_about_topic">Öffentlicher Chat über %1$s</string>
+    <string name="community_about_topic">Öffentliche Gemeinschaft über %1$s</string>
     <string name="translations_always_translate_to_lang">Immer ins %1$s übersetzen</string>
     <string name="translations_never_translate_from_lang">Niemals aus dem %1$s übersetzen</string>
     <string name="nip_05">Nostr-Adresse</string>

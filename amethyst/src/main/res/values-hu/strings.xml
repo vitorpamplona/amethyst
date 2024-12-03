@@ -204,6 +204,8 @@
     <string name="translations_translated_from">lefordítva erről a nyelvről:</string>
     <string name="translations_to">erre</string>
     <string name="translations_show_in_lang_first">Megjelenítés először %1$s nyelven</string>
+    <string name="chat_about_topic">A(z) %1$s szóló nyilvános csevegés</string>
+    <string name="community_about_topic">A(z) %1$s beszélgető nyilvános közösség</string>
     <string name="translations_always_translate_to_lang">Mindig fordítsa le erre: %1$s</string>
     <string name="translations_never_translate_from_lang">Soha ne fordítsa le erről: %1$s</string>
     <string name="nip_05">Nostr-cím</string>

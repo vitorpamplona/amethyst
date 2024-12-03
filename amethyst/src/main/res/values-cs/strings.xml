@@ -204,6 +204,8 @@
     <string name="translations_translated_from">přeloženo z</string>
     <string name="translations_to">do</string>
     <string name="translations_show_in_lang_first">Zobrazit nejprve v %1$s</string>
+    <string name="chat_about_topic">Veřejný chat o %1$s</string>
+    <string name="community_about_topic">Veřejná komunita o %1$s</string>
     <string name="translations_always_translate_to_lang">Vždy překládat do %1$s</string>
     <string name="translations_never_translate_from_lang">Nikdy nepřekládat z %1$s</string>
     <string name="nip_05">Nostr Adresa</string>
