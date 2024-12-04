@@ -77,7 +77,9 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.quartz.events.Dimension
 import com.vitorpamplona.quartz.events.PictureEvent
+import com.vitorpamplona.quartz.events.VideoEvent
 
 @Composable
 fun RenderGalleryFeed(
@@ -170,10 +172,17 @@ fun GalleryCardCompose(
             accountViewModel = accountViewModel,
             nav = nav,
         ) { canPreview ->
+            var galleryEvent = baseNote.event
+            var url = ""
+            if (baseNote.event is PictureEvent) {
+                galleryEvent = (baseNote.event as? PictureEvent) ?: return@CheckHiddenFeedWatchBlockAndReport
+                url = (galleryEvent as PictureEvent).imetaTags()[0].url
+            } else if (baseNote.event is VideoEvent) {
+                galleryEvent = (baseNote.event as? VideoEvent) ?: return@CheckHiddenFeedWatchBlockAndReport
+                url = (galleryEvent as VideoEvent).url().toString()
+            }
 
-            val galleryEvent = (baseNote.event as? PictureEvent) ?: return@CheckHiddenFeedWatchBlockAndReport
-
-            galleryEvent.imetaTags()[0].url.let { image ->
+            url.let { image ->
                 if (galleryEvent != null) {
                     LoadNote(baseNoteHex = galleryEvent.id(), accountViewModel = accountViewModel) { sourceNote ->
                         if (sourceNote != null) {
@@ -334,8 +343,27 @@ fun InnerRenderGalleryThumb(
     note: Note,
     accountViewModel: AccountViewModel,
 ) {
-    val noteEvent = note.event as? PictureEvent ?: return
+    print(card.image)
+    var noteEvent = note.event
 
+    var blurHash = ""
+    var description = ""
+    var dimensions: Dimension? = null
+    var mimeType = ""
+
+    if (note.event is PictureEvent) {
+        noteEvent = note.event as PictureEvent
+        blurHash = noteEvent.blurhash().toString()
+        description = noteEvent.content
+        dimensions = noteEvent.dimensions()
+        mimeType = noteEvent.mimeType().toString()
+    } else if (note.event is VideoEvent) {
+        noteEvent = note.event as VideoEvent
+        blurHash = noteEvent.blurhash().toString()
+        description = noteEvent.content
+        dimensions = noteEvent.dimensions()
+        mimeType = noteEvent.mimeType().toString()
+    }
     Box(
         Modifier
             .fillMaxWidth()
@@ -343,10 +371,6 @@ fun InnerRenderGalleryThumb(
         contentAlignment = BottomStart,
     ) {
         card.image?.let {
-            val blurHash = noteEvent.blurhash()
-            val description = noteEvent.content
-            val dimensions = noteEvent.dimensions()
-            val mimeType = noteEvent.mimeType()
             var content: BaseMediaContent? = null
 
             if (isVideoUrl(it)) {

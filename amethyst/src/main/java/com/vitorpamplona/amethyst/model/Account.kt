@@ -1966,7 +1966,6 @@ class Account(
                 size = headerInfo.size.toLong(),
                 dimensions = headerInfo.dim,
                 blurhash = headerInfo.blurHash,
-                alt = alt,
                 signer = signer,
             ) { event ->
                 sendHeader(event, relayList = relayList, onReady)

@@ -27,6 +27,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.InlineTextContent
@@ -221,7 +222,7 @@ fun GalleryContentView(
             }
         is MediaUrlVideo ->
             SensitivityWarning(content.contentWarning != null, accountViewModel) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     VideoView(
                         videoUri = content.url,
                         mimeType = content.mimeType,
@@ -229,11 +230,12 @@ fun GalleryContentView(
                         artworkUri = content.artworkUri,
                         borderModifier = MaterialTheme.colorScheme.videoGalleryModifier,
                         authorName = content.authorName,
-                        dimensions = content.dim,
+                        dimensions = Dimension(1, 1), // fit video in 1:1 ratio
                         blurhash = content.blurhash,
                         isFiniteHeight = isFiniteHeight,
                         nostrUriCallback = content.uri,
                         accountViewModel = accountViewModel,
+                        alwaysShowVideo = true,
                     )
                 }
             }
