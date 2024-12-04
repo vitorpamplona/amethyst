@@ -236,6 +236,7 @@ fun GalleryContentView(
                         nostrUriCallback = content.uri,
                         accountViewModel = accountViewModel,
                         alwaysShowVideo = true,
+                        showControls = false,
                     )
                 }
             }
