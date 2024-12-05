@@ -42,39 +42,34 @@ fun JustVideoDisplay(
     accountViewModel: AccountViewModel,
 ) {
     val event = (note.event as? VideoEvent) ?: return
-    val fullUrl = event.url() ?: return
+    val imeta = event.imetaTags().getOrNull(0) ?: return
 
     val content by
         remember(note) {
-            val blurHash = event.blurhash()
-            val hash = event.hash()
-            val dimensions = event.dimensions()
-            val description = event.content.ifEmpty { null } ?: event.alt()
-            val isImage = event.mimeType()?.startsWith("image/") == true || RichTextParser.isImageUrl(fullUrl)
-            val uri = note.toNostrUri()
-            val mimeType = event.mimeType()
+            val description = event.content.ifEmpty { null } ?: imeta.alt ?: event.alt()
+            val isImage = imeta.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(imeta.url)
 
             mutableStateOf<BaseMediaContent>(
                 if (isImage) {
                     MediaUrlImage(
-                        url = fullUrl,
+                        url = imeta.url,
                         description = description,
-                        hash = hash,
-                        blurhash = blurHash,
-                        dim = dimensions,
-                        uri = uri,
-                        mimeType = mimeType,
+                        hash = imeta.hash,
+                        blurhash = imeta.blurhash,
+                        dim = imeta.dimension,
+                        uri = note.toNostrUri(),
+                        mimeType = imeta.mimeType,
                     )
                 } else {
                     MediaUrlVideo(
-                        url = fullUrl,
+                        url = imeta.url,
                         description = description,
-                        hash = hash,
-                        blurhash = blurHash,
-                        dim = dimensions,
-                        uri = uri,
+                        hash = imeta.hash,
+                        blurhash = imeta.blurhash,
+                        dim = imeta.dimension,
+                        uri = note.toNostrUri(),
                         authorName = note.author?.toBestDisplayName(),
-                        mimeType = mimeType,
+                        mimeType = imeta.mimeType,
                     )
                 },
             )

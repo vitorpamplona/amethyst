@@ -71,45 +71,41 @@ fun VideoDisplay(
     nav: INav,
 ) {
     val event = (note.event as? VideoEvent) ?: return
-    val fullUrl = event.url() ?: return
+    val imeta = event.imetaTags().firstOrNull() ?: return
 
     val title = event.title()
     val summary = event.content.ifBlank { null }?.takeIf { title != it }
-    val image = event.thumb() ?: event.image()
-    val isYouTube = fullUrl.contains("youtube.com") || fullUrl.contains("youtu.be")
+    val image = imeta.image.firstOrNull()
+    val isYouTube = imeta.url.contains("youtube.com") || imeta.url.contains("youtu.be")
     val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
 
     val content by
         remember(note) {
-            val blurHash = event.blurhash()
-            val hash = event.hash()
-            val dimensions = event.dimensions()
             val description = event.content.ifBlank { null } ?: event.alt()
-            val isImage = event.mimeType()?.startsWith("image/") == true || RichTextParser.isImageUrl(fullUrl)
+            val isImage = imeta.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(imeta.url)
             val uri = note.toNostrUri()
-            val mimeType = event.mimeType()
 
             mutableStateOf<BaseMediaContent>(
                 if (isImage) {
                     MediaUrlImage(
-                        url = fullUrl,
+                        url = imeta.url,
                         description = description,
-                        hash = hash,
-                        blurhash = blurHash,
-                        dim = dimensions,
+                        hash = imeta.hash,
+                        blurhash = imeta.blurhash,
+                        dim = imeta.dimension,
                         uri = uri,
-                        mimeType = mimeType,
+                        mimeType = imeta.mimeType,
                     )
                 } else {
                     MediaUrlVideo(
-                        url = fullUrl,
+                        url = imeta.url,
                         description = description,
-                        hash = hash,
-                        dim = dimensions,
+                        hash = imeta.hash,
+                        dim = imeta.dimension,
                         uri = uri,
                         authorName = note.author?.toBestDisplayName(),
-                        artworkUri = event.thumb() ?: event.image(),
-                        mimeType = mimeType,
+                        artworkUri = imeta.image.firstOrNull(),
+                        mimeType = imeta.mimeType,
                     )
                 },
             )
@@ -126,7 +122,7 @@ fun VideoDisplay(
             if (isYouTube) {
                 val uri = LocalUriHandler.current
                 Row(
-                    modifier = Modifier.clickable { runCatching { uri.openUri(fullUrl) } },
+                    modifier = Modifier.clickable { runCatching { uri.openUri(imeta.url) } },
                 ) {
                     image?.let {
                         AsyncImage(

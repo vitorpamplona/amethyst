@@ -1976,14 +1976,12 @@ class Account(
             if (headerInfo.dim.height > headerInfo.dim.width) {
                 VideoVerticalEvent.create(
                     url = url,
-                    magnetUri = magnetUri,
                     mimeType = headerInfo.mimeType,
                     hash = headerInfo.hash,
-                    size = headerInfo.size.toString(),
+                    size = headerInfo.size,
                     dimensions = headerInfo.dim,
                     blurhash = headerInfo.blurHash,
                     alt = alt,
-                    originalHash = originalHash,
                     sensitiveContent = sensitiveContent,
                     signer = signer,
                 ) { event ->
@@ -1992,14 +1990,12 @@ class Account(
             } else {
                 VideoHorizontalEvent.create(
                     url = url,
-                    magnetUri = magnetUri,
                     mimeType = headerInfo.mimeType,
                     hash = headerInfo.hash,
-                    size = headerInfo.size.toString(),
+                    size = headerInfo.size,
                     dimensions = headerInfo.dim,
                     blurhash = headerInfo.blurHash,
                     alt = alt,
-                    originalHash = originalHash,
                     sensitiveContent = sensitiveContent,
                     signer = signer,
                 ) { event ->

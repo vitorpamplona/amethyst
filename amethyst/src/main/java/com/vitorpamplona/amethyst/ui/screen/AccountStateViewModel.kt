@@ -67,7 +67,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.regex.Pattern
 
-val EMAIL_PATTERN = Pattern.compile(".+@.+\\.[a-z]+")
+val EMAIL_PATTERN: Pattern = Pattern.compile(".+@.+\\.[a-z]+")
 
 @Stable
 class AccountStateViewModel : ViewModel() {
