@@ -114,6 +114,7 @@ import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RecommendRelayEvent
+import com.vitorpamplona.quartz.events.RelationshipStatusEvent
 import com.vitorpamplona.quartz.events.RelaySetEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.RepostEvent
@@ -867,6 +868,13 @@ object LocalCache {
 
             refreshObservers(note)
         }
+    }
+
+    fun consume(
+        event: RelationshipStatusEvent,
+        relay: Relay?,
+    ) {
+        consumeBaseReplaceable(event, relay)
     }
 
     fun consume(
@@ -2444,6 +2452,7 @@ object LocalCache {
                 is PollNoteEvent -> consume(event, relay)
                 is ReactionEvent -> consume(event)
                 is RecommendRelayEvent -> consume(event)
+                is RelationshipStatusEvent -> consume(event, relay)
                 is RelaySetEvent -> consume(event, relay)
                 is ReportEvent -> consume(event, relay)
                 is RepostEvent -> {

@@ -128,6 +128,7 @@ class EventFactory {
             PrivateOutboxRelayListEvent.KIND -> PrivateOutboxRelayListEvent(id, pubKey, createdAt, tags, content, sig)
             ReactionEvent.KIND -> ReactionEvent(id, pubKey, createdAt, tags, content, sig)
             RecommendRelayEvent.KIND -> RecommendRelayEvent(id, pubKey, createdAt, tags, content, sig)
+            RelationshipStatusEvent.KIND -> RelationshipStatusEvent(id, pubKey, createdAt, tags, content, sig)
             RelayAuthEvent.KIND -> RelayAuthEvent(id, pubKey, createdAt, tags, content, sig)
             RelaySetEvent.KIND -> RelaySetEvent(id, pubKey, createdAt, tags, content, sig)
             ReportEvent.KIND -> ReportEvent(id, pubKey, createdAt, tags, content, sig)
