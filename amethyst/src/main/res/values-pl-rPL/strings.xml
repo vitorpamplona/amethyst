@@ -203,6 +203,7 @@
     <string name="translations_translated_from">przetłumaczono z</string>
     <string name="translations_to">do</string>
     <string name="translations_show_in_lang_first">Najpierw pokaż w %1$s</string>
+    <string name="chat_about_topic">Temat czatu: %1$s</string>
     <string name="translations_always_translate_to_lang">Zawsze tłumacz na %1$s</string>
     <string name="translations_never_translate_from_lang">Nigdy nie tłumacz z %1$s</string>
     <string name="nip_05">Adres Nostr</string>
