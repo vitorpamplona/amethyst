@@ -29,3 +29,22 @@ public fun removeTrailingNullsAndEmptyOthers(vararg elements: String?): Array<St
         elements[index] ?: ""
     }
 }
+
+fun Array<String>.startsWith(startsWith: Array<String>): Boolean {
+    if (startsWith.size > this.size) return false
+    for (tagIdx in startsWith.indices) {
+        if (startsWith[tagIdx] != this[tagIdx]) return false
+    }
+    return true
+}
+
+inline fun Array<Array<String>>.filterToArray(predicate: (Array<String>) -> Boolean): Array<Array<String>> = filterTo(ArrayList(), predicate).toTypedArray()
+
+inline fun Array<Array<String>>.remove(predicate: (Array<String>) -> Boolean): Array<Array<String>> = filterNotTo(ArrayList(this.size), predicate).toTypedArray()
+
+inline fun Array<Array<String>>.remove(startsWith: Array<String>): Array<Array<String>> = filterNotTo(ArrayList(this.size), { it.startsWith(startsWith) }).toTypedArray()
+
+inline fun Array<Array<String>>.replaceAll(
+    startsWith: Array<String>,
+    newElement: Array<String>,
+): Array<Array<String>> = filterNotTo(ArrayList(this.size), { it.startsWith(startsWith) }).plusElement(newElement).toTypedArray()

@@ -33,7 +33,6 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import com.fasterxml.jackson.module.kotlin.addDeserializer
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
@@ -50,6 +49,8 @@ import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
+import com.vitorpamplona.quartz.utils.remove
+import com.vitorpamplona.quartz.utils.startsWith
 import java.math.BigDecimal
 import java.security.MessageDigest
 
@@ -294,6 +295,8 @@ open class Event(
         } catch (e: Exception) {
             null
         }
+
+    fun filterTags(startsWith: Array<String>) = tags.remove(startsWith)
 
     open fun toNIP19(): String =
         if (this is AddressableEvent) {

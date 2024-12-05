@@ -20,14 +20,10 @@
  */
 package com.vitorpamplona.quartz.events
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableSet
 import java.util.HashSet
@@ -41,15 +37,7 @@ abstract class GeneralListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
-    @Transient private var privateTagsCache: Array<Array<String>>? = null
-
-    override fun countMemory(): Long =
-        super.countMemory() +
-            pointerSizeInBytes + (privateTagsCache?.sumOf { pointerSizeInBytes + it.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } } ?: 0)
-
-    override fun isContentEncoded() = true
-
+) : PrivateTagArrayEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     fun category() = dTag()
 
     fun bookmarkedPosts() = taggedEvents()
@@ -61,8 +49,6 @@ abstract class GeneralListEvent(
     fun title() = tags.firstOrNull { it.size > 1 && it[0] == "title" }?.get(1)
 
     fun nameOrTitle() = name()?.ifBlank { null } ?: title()?.ifBlank { null }
-
-    fun cachedPrivateTags(): Array<Array<String>>? = privateTagsCache
 
     fun filterTagList(
         key: String,
@@ -91,30 +77,6 @@ abstract class GeneralListEvent(
         }
     } else {
         onReady(isTagged(key, tag))
-    }
-
-    fun privateTags(
-        signer: NostrSigner,
-        onReady: (Array<Array<String>>) -> Unit,
-    ) {
-        if (content.isEmpty()) {
-            onReady(emptyArray())
-            return
-        }
-
-        privateTagsCache?.let {
-            onReady(it)
-            return
-        }
-
-        try {
-            signer.decrypt(content, pubKey) {
-                privateTagsCache = mapper.readValue<Array<Array<String>>>(it)
-                privateTagsCache?.let { onReady(it) }
-            }
-        } catch (e: Throwable) {
-            Log.w("GeneralList", "Error parsing the JSON ${e.message}")
-        }
     }
 
     fun privateTagsOrEmpty(
