@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments.Companion.IMETA
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.filter
 
 @Immutable
 abstract class VideoEvent(
