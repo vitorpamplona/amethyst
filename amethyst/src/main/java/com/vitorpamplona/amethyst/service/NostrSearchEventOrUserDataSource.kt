@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
+import com.vitorpamplona.ammolite.relays.ALL_FEED_TYPES
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
@@ -96,7 +96,7 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                     listOfNotNull(
                         ATag.parse(it, null)?.let { aTag ->
                             TypedFilter(
-                                types = COMMON_FEED_TYPES,
+                                types = ALL_FEED_TYPES,
                                 filter =
                                     SincePerRelayFilter(
                                         kinds = listOf(MetadataEvent.KIND, aTag.kind),
@@ -111,19 +111,19 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                     // event ids
                     listOf(
                         TypedFilter(
-                            types = COMMON_FEED_TYPES,
+                            types = ALL_FEED_TYPES,
                             filter =
                                 SincePerRelayFilter(
-                                    ids = listOfNotNull(hexToWatch),
+                                    ids = listOfNotNull(it),
                                 ),
                         ),
                         // authors
                         TypedFilter(
-                            types = COMMON_FEED_TYPES,
+                            types = ALL_FEED_TYPES,
                             filter =
                                 SincePerRelayFilter(
                                     kinds = listOf(MetadataEvent.KIND),
-                                    authors = listOfNotNull(hexToWatch),
+                                    authors = listOfNotNull(it),
                                     // just to be sure
                                     limit = 5,
                                 ),

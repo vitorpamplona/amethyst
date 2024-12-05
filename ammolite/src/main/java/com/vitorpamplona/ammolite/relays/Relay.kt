@@ -46,6 +46,9 @@ enum class FeedType {
     WALLET_CONNECT,
 }
 
+val ALL_FEED_TYPES =
+    setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS, FeedType.GLOBAL, FeedType.SEARCH)
+
 val COMMON_FEED_TYPES =
     setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS, FeedType.GLOBAL)
 
