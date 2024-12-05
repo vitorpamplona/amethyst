@@ -96,7 +96,7 @@
     <string name="cancel">Mégse</string>
     <string name="failed_to_upload_the_image">Nem sikerült feltölteni a képet</string>
     <string name="relay_address">Atjátszó címe</string>
-    <string name="posts">Hozzászólások</string>
+    <string name="posts">Bejegyzések</string>
     <string name="bytes">Bájt</string>
     <string name="errors">Hibák</string>
     <string name="errors_description">Ebben a munkamenetben lévő kapcsolati hibák száma</string>
@@ -180,7 +180,7 @@
     <string name="already_have_an_account">Már van Nostr-fiókja?</string>
     <string name="create_a_new_account">Új fiók létrehozása</string>
     <string name="generate_a_new_key">Új kulcs előállítása</string>
-    <string name="loading_feed">Hírfolyam betöltése</string>
+    <string name="loading_feed">Hírfolyam betöltése…</string>
     <string name="loading_account">Fiók betöltése…</string>
     <string name="error_loading_replies">"Hiba a válaszok betöltésekor: "</string>
     <string name="try_again">Próbálja újra</string>
@@ -554,7 +554,7 @@
     <string name="geohash_explainer">Hozzáadja a helyének geohash-jét a bejegyzéséhez. A nyilvánosság tudni fogja, hogy a jelenlegi helytől 5 km-en (3 mi) belül tertózkodik</string>
     <string name="geohash_exclusive">Helyszín-alapú bejegyzés</string>
     <string name="geohash_exclusive_explainer">Csak a helyszín követői láthatják. Az általános követők nem fogják látni.</string>
-    <string name="loading_location">Helyszín betöltése</string>
+    <string name="loading_location">Helyszín betöltése…</string>
     <string name="lack_location_permissions">A helyszín-meghatározás nincs engedélyezve</string>
     <string name="add_sensitive_content_explainer">Hozzáadja az érzékeny tartalomra vonatkozó figyelmeztetést a tartalom megjelenítése előtt. Ez ideális bármilyen NSFW tartalom vagy olyan tartalom esetén, amelyet egyesek sértőnek vagy zavarónak találhatnak</string>
     <string name="new_feature_nip17_might_not_be_available_title">Új funkció</string>
