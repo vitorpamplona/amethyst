@@ -899,9 +899,7 @@ class AccountViewModel(
         }
     }
 
-    fun markDonatedInThisVersion() {
-        account.markDonatedInThisVersion()
-    }
+    fun markDonatedInThisVersion() = account.markDonatedInThisVersion()
 
     fun dontTranslateFrom() = account.settings.syncedSettings.languages.dontTranslateFrom
 
