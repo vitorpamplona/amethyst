@@ -38,7 +38,6 @@ class RelationshipStatusEvent(
         const val KIND = 30382
         const val ALT = "Relationship Status"
 
-        const val EDITS_PREFERENCE = "edits-pref"
         const val PETNAME = "petname"
         const val SUMMARY = "summary"
 
