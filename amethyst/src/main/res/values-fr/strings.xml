@@ -204,6 +204,8 @@
     <string name="translations_translated_from">traduit de</string>
     <string name="translations_to">vers</string>
     <string name="translations_show_in_lang_first">Montre en %1$s en premier</string>
+    <string name="chat_about_topic">Discussion publique à propos d\' %1$s</string>
+    <string name="community_about_topic">Communauté publique à propos de %1$s</string>
     <string name="translations_always_translate_to_lang">Toujours traduire en %1$s</string>
     <string name="translations_never_translate_from_lang">Ne jamais traduire depuis %1$s</string>
     <string name="nip_05">Adresse Nostr</string>

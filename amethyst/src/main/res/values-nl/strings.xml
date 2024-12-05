@@ -184,6 +184,7 @@
     <string name="loading_account">Account wordt geladen</string>
     <string name="error_loading_replies">"Foutmelding bij het laden reacties: "</string>
     <string name="try_again">Opnieuw proberen</string>
+    <string name="notification_feed_is_empty">Nog geen meldingen.</string>
     <string name="feed_is_empty">Feed is leeg.</string>
     <string name="refresh">verversen</string>
     <string name="created">gecreëerd</string>
@@ -203,6 +204,8 @@
     <string name="translations_translated_from">vertaald van</string>
     <string name="translations_to">naar</string>
     <string name="translations_show_in_lang_first">Eerst laten zien in %1$s</string>
+    <string name="chat_about_topic">Openbare chat over %1$s</string>
+    <string name="community_about_topic">Openbare community over %1$s</string>
     <string name="translations_always_translate_to_lang">Altijd vertalen naar %1$s</string>
     <string name="translations_never_translate_from_lang">Nooit vertalen vanuit %1$s</string>
     <string name="nip_05">Nostr adres</string>
