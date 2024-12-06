@@ -250,6 +250,7 @@ fun VideoView(
     onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
     accountViewModel: AccountViewModel,
     alwaysShowVideo: Boolean = false,
+    showControls: Boolean = true,
 ) {
     val defaultToStart by remember(videoUri) { mutableStateOf(DEFAULT_MUTED_SETTING.value) }
 
@@ -337,6 +338,7 @@ fun VideoView(
                     onControllerVisibilityChanged = onControllerVisibilityChanged,
                     onDialog = onDialog,
                     accountViewModel = accountViewModel,
+                    showControls = showControls,
                 )
             }
         }

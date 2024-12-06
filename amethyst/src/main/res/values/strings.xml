@@ -285,7 +285,7 @@
     <string name="quick_action_unfollow">Unfollow</string>
     <string name="quick_action_follow">Follow</string>
     <string name="quick_action_request_deletion_gallery_title">Delete from Gallery</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Remove this media from your Gallery, you can readd it later</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">Remove this media from your Gallery.</string>
     <string name="quick_action_request_deletion_alert_title">Request Deletion</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst will request that your note be deleted from the relays you are currently connected to. There is no guarantee that your note will be permanently deleted from those relays, or from other relays where it may be stored.</string>
     <string name="quick_action_block_dialog_btn">Block</string>
