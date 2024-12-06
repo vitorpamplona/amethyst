@@ -135,7 +135,6 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
@@ -1565,17 +1564,13 @@ fun TabNotesNewThreads(
     nav: INav,
 ) {
     Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp),
-        ) {
-            RefresheableFeedView(
-                feedViewModel,
-                null,
-                enablePullRefresh = false,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
+        RefresheableFeedView(
+            feedViewModel,
+            null,
+            enablePullRefresh = false,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }
 
@@ -1586,21 +1581,16 @@ fun TabNotesConversations(
     nav: INav,
 ) {
     Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp),
-        ) {
-            RefresheableFeedView(
-                feedViewModel,
-                null,
-                enablePullRefresh = false,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
+        RefresheableFeedView(
+            feedViewModel,
+            null,
+            enablePullRefresh = false,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TabGallery(
     feedViewModel: NostrUserProfileGalleryFeedViewModel,
@@ -1609,9 +1599,7 @@ fun TabGallery(
 ) {
     LaunchedEffect(Unit) { feedViewModel.invalidateData() }
 
-    // Column(Modifier.fillMaxHeight()) {
-
-    RefresheableBox(feedViewModel, true) {
+    Column(Modifier.fillMaxHeight()) {
         SaveableGridFeedState(feedViewModel, scrollStateKey = ScrollStateKeys.PROFILE_GALLERY) { listState ->
             RenderGalleryFeed(
                 feedViewModel,
@@ -1622,8 +1610,6 @@ fun TabGallery(
             )
         }
     }
-
-    // }
 }
 
 /*@Composable
@@ -1736,9 +1722,7 @@ fun TabFollows(
     WatchFollowChanges(baseUser, feedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column {
-            RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
-        }
+        RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
     }
 }
 
@@ -1752,9 +1736,7 @@ fun TabFollowers(
     WatchFollowerChanges(baseUser, feedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column {
-            RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
-        }
+        RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
     }
 }
 
@@ -1788,7 +1770,7 @@ fun TabReceivedZaps(
     WatchZapsAndUpdateFeed(baseUser, zapFeedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column { LnZapFeedView(zapFeedViewModel, accountViewModel, nav) }
+        LnZapFeedView(zapFeedViewModel, accountViewModel, nav)
     }
 }
 
@@ -1870,11 +1852,7 @@ fun TabRelays(
     }
 
     Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp),
-        ) {
-            RelayFeedView(feedViewModel, accountViewModel, enablePullRefresh = false, nav = nav)
-        }
+        RelayFeedView(feedViewModel, accountViewModel, enablePullRefresh = false, nav = nav)
     }
 }
 
