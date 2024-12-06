@@ -752,6 +752,7 @@ private fun RenderVideoPlayer(
             modifier = videoModifier,
             factory = { context: Context ->
                 PlayerView(context).apply {
+                    clipToOutline = true
                     player = controller
                     layoutParams =
                         FrameLayout.LayoutParams(

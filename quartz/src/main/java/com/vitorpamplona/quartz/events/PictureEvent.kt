@@ -46,23 +46,23 @@ class PictureEvent(
 
     fun title() = tags.firstOrNull { it.size > 1 && it[0] == TITLE }?.get(1)
 
-    fun url() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.URL }?.get(1)
+    private fun url() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.URL }?.get(1)
 
-    fun urls() = tags.filter { it.size > 1 && it[0] == PictureMeta.URL }.map { it[1] }
+    private fun urls() = tags.filter { it.size > 1 && it[0] == PictureMeta.URL }.map { it[1] }
 
-    fun mimeType() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.MIME_TYPE }?.get(1)
+    private fun mimeType() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.MIME_TYPE }?.get(1)
 
-    fun hash() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.HASH }?.get(1)
+    private fun hash() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.HASH }?.get(1)
 
-    fun size() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.FILE_SIZE }?.get(1)
+    private fun size() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.FILE_SIZE }?.get(1)
 
-    fun alt() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.ALT }?.get(1)
+    private fun alt() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.ALT }?.get(1)
 
-    fun dimensions() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.DIMENSION }?.get(1)?.let { Dimension.parse(it) }
+    private fun dimensions() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.DIMENSION }?.get(1)?.let { Dimension.parse(it) }
 
-    fun blurhash() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.BLUR_HASH }?.get(1)
+    private fun blurhash() = tags.firstOrNull { it.size > 1 && it[0] == PictureMeta.BLUR_HASH }?.get(1)
 
-    fun hasUrl() = tags.any { it.size > 1 && it[0] == PictureMeta.URL }
+    private fun hasUrl() = tags.any { it.size > 1 && it[0] == PictureMeta.URL }
 
     // hack to fix pablo's bug
     fun rootImage() =

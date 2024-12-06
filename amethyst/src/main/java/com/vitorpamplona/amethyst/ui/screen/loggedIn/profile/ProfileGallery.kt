@@ -33,7 +33,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -49,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
-import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVideoUrl
@@ -73,11 +71,9 @@ import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
-import com.vitorpamplona.quartz.events.Dimension
 import com.vitorpamplona.quartz.events.PictureEvent
 import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.events.VideoEvent
@@ -141,15 +137,11 @@ private fun GalleryFeedLoaded(
                 GalleryCardCompose(
                     baseNote = item,
                     routeForLastRead = routeForLastRead,
-                    modifier = Modifier,
+                    modifier = HalfPadding,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
             }
-
-            HorizontalDivider(
-                thickness = DividerThickness,
-            )
         }
     }
 }
@@ -173,30 +165,22 @@ fun GalleryCardCompose(
             accountViewModel = accountViewModel,
             nav = nav,
         ) { canPreview ->
+            val (url, sourceEvent) =
+                when (val galleryEvent = baseNote.event) {
+                    is ProfileGalleryEntryEvent -> Pair(galleryEvent.url(), galleryEvent.fromEvent())
+                    is PictureEvent -> Pair(galleryEvent.imetaTags().getOrNull(0)?.url, galleryEvent.id())
+                    is VideoEvent -> Pair(galleryEvent.imetaTags().getOrNull(0)?.url, galleryEvent.id())
+                    else -> Pair(null, null)
+                }
 
-            var galleryEvent = baseNote.event
-            var url = ""
-            var sourceEvent = galleryEvent?.id()
-
-            if (baseNote.event is ProfileGalleryEntryEvent) {
-                url = (baseNote.event as ProfileGalleryEntryEvent).url().toString()
-                sourceEvent = (baseNote.event as? ProfileGalleryEntryEvent)?.fromEvent()
-            } else if (baseNote.event is PictureEvent) {
-                url = (baseNote.event as PictureEvent).imetaTags()[0].url
-                sourceEvent = (baseNote.event as PictureEvent).id()
-            } else if (baseNote.event is VideoEvent) {
-                url = (baseNote.event as VideoEvent).url().toString()
-                sourceEvent = (baseNote.event as VideoEvent).id()
-            }
-
-            url.let { image ->
+            url?.let { imageUrl ->
                 if (sourceEvent != null) {
                     LoadNote(baseNoteHex = sourceEvent, accountViewModel = accountViewModel) { sourceNote ->
                         if (sourceNote != null) {
                             ClickableGalleryCard(
                                 galleryNote = baseNote,
                                 baseNote = sourceNote,
-                                image = image,
+                                image = imageUrl,
                                 modifier = modifier,
                                 parentBackgroundColor = parentBackgroundColor,
                                 accountViewModel = accountViewModel,
@@ -205,7 +189,7 @@ fun GalleryCardCompose(
                         } else {
                             GalleryCard(
                                 galleryNote = baseNote,
-                                image = image,
+                                image = imageUrl,
                                 modifier = modifier,
                                 accountViewModel = accountViewModel,
                                 nav = nav,
@@ -215,7 +199,7 @@ fun GalleryCardCompose(
                 } else {
                     GalleryCard(
                         galleryNote = baseNote,
-                        image = image,
+                        image = imageUrl,
                         modifier = modifier,
                         accountViewModel = accountViewModel,
                         nav = nav,
@@ -280,13 +264,11 @@ fun InnerGalleryCardBox(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    Column(HalfPadding) {
-        SensitivityWarning(
-            note = baseNote,
-            accountViewModel = accountViewModel,
-        ) {
-            RenderGalleryThumb(baseNote, image, accountViewModel, nav)
-        }
+    SensitivityWarning(
+        note = baseNote,
+        accountViewModel = accountViewModel,
+    ) {
+        RenderGalleryThumb(baseNote, image, accountViewModel, nav)
     }
 }
 
@@ -352,74 +334,69 @@ fun InnerRenderGalleryThumb(
     note: Note,
     accountViewModel: AccountViewModel,
 ) {
-    var noteEvent = note.event
-    var blurHash = ""
-    var description = ""
-    var dimensions: Dimension? = null
-    var mimeType = ""
-    if (note.event is ProfileGalleryEntryEvent) {
-        noteEvent = (note.event as ProfileGalleryEntryEvent)
-        blurHash = noteEvent.blurhash().toString()
-        description = noteEvent.content
-        // var hash = (note.event as ProfileGalleryEntryEvent).hash()
-        dimensions = noteEvent.dimensions()
-        mimeType = noteEvent.mimeType().toString()
-    } else if (note.event is PictureEvent) {
-        noteEvent = (note.event as PictureEvent)
-        blurHash = noteEvent.blurhash().toString()
-        description = noteEvent.content
-        dimensions = noteEvent.dimensions()
-        mimeType = noteEvent.mimeType().toString()
-    } else if (note.event is VideoEvent) {
-        noteEvent = (note.event as VideoEvent)
-        blurHash = noteEvent.blurhash().toString()
-        description = noteEvent.content
-        dimensions = noteEvent.dimensions()
-        mimeType = noteEvent.mimeType().toString()
-    }
-
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f),
-        contentAlignment = BottomStart,
-    ) {
-        card.image?.let {
-            var content: BaseMediaContent? = null
-
-            if (isVideoUrl(it)) {
-                content =
-                    MediaUrlVideo(
-                        url = it,
-                        description = description,
-                        hash = null,
-                        blurhash = blurHash,
-                        dim = dimensions,
-                        uri = null,
-                        mimeType = mimeType,
-                    )
+    val noteEvent = note.event
+    val content =
+        if (card.image == null) {
+            null
+        } else if (noteEvent is ProfileGalleryEntryEvent) {
+            if (isVideoUrl(card.image)) {
+                MediaUrlVideo(
+                    url = card.image,
+                    description = noteEvent.content,
+                    hash = null,
+                    blurhash = noteEvent.blurhash(),
+                    dim = noteEvent.dimensions(),
+                    uri = null,
+                    mimeType = noteEvent.mimeType(),
+                )
             } else {
-                content =
-                    MediaUrlImage(
-                        url = it,
-                        description = description,
-                        hash = null, // We don't want to show the hash banner here
-                        blurhash = blurHash,
-                        dim = dimensions,
-                        uri = null,
-                        mimeType = mimeType,
-                    )
+                MediaUrlImage(
+                    url = card.image,
+                    description = noteEvent.content,
+                    hash = null, // We don't want to show the hash banner here
+                    blurhash = noteEvent.blurhash(),
+                    dim = noteEvent.dimensions(),
+                    uri = null,
+                    mimeType = noteEvent.mimeType(),
+                )
             }
+        } else if (noteEvent is PictureEvent) {
+            val imeta = noteEvent.imetaTags().firstOrNull()
+            MediaUrlImage(
+                url = card.image,
+                description = noteEvent.content,
+                hash = null, // We don't want to show the hash banner here
+                blurhash = imeta?.blurhash,
+                dim = imeta?.dimension,
+                uri = null,
+                mimeType = imeta?.mimeType,
+            )
+        } else if (noteEvent is VideoEvent) {
+            val imeta = noteEvent.imetaTags().firstOrNull()
+            MediaUrlVideo(
+                url = card.image,
+                description = noteEvent.content,
+                hash = null, // We don't want to show the hash banner here
+                blurhash = imeta?.blurhash,
+                dim = imeta?.dimension,
+                uri = null,
+                mimeType = imeta?.mimeType,
+            )
+        } else {
+            null
+        }
 
+    Box(Modifier.fillMaxWidth().aspectRatio(1f), BottomStart) {
+        if (content != null) {
             GalleryContentView(
                 content = content,
                 roundedCorner = false,
                 isFiniteHeight = false,
                 accountViewModel = accountViewModel,
             )
+        } else {
+            DisplayGalleryAuthorBanner(note)
         }
-            // }
-            ?: run { DisplayGalleryAuthorBanner(note) }
     }
 }
 
