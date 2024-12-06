@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.preview
 
 import android.graphics.Bitmap
-import android.graphics.Color
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -60,6 +59,28 @@ object BlurHashDecoder {
         return numCompX.toFloat() / numCompY.toFloat()
     }
 
+    fun computeColors(
+        numCompX: Int,
+        numCompY: Int,
+        blurHash: String,
+    ): Array<FloatArray> {
+        val maxAc = (decode83At(blurHash, 1) + 1) / 166f
+        return Array(numCompX * numCompY) { i ->
+            if (i == 0) {
+                decodeDc(decode83(blurHash, 2, 6))
+            } else {
+                decodeAc(decode83Fixed2(blurHash, 4 + i * 2), maxAc)
+            }
+        }
+    }
+
+    fun computeNumComponets(blurHash: String): Pair<Int, Int> {
+        val numCompEnc = decode83At(blurHash, 0)
+        val numCompX = (numCompEnc % 9) + 1
+        val numCompY = (numCompEnc / 9) + 1
+        return Pair(numCompX, numCompY)
+    }
+
     /**
      * Decode a blur hash into a new bitmap.
      *
@@ -75,24 +96,14 @@ object BlurHashDecoder {
         if (blurHash == null || blurHash.length < 6) {
             return null
         }
-        val numCompEnc = decode83At(blurHash, 0)
-        val numCompX = (numCompEnc % 9) + 1
-        val numCompY = (numCompEnc / 9) + 1
+        val (numCompX, numCompY) = computeNumComponets(blurHash)
         if (blurHash.length != 4 + 2 * numCompX * numCompY) {
             return null
         }
-        val height = (100 * (1 / (numCompX.toFloat() / numCompY.toFloat()))).roundToInt()
-        val maxAc = (decode83At(blurHash, 1) + 1) / 166f
-
-        val colors =
-            Array(numCompX * numCompY) { i ->
-                if (i == 0) {
-                    decodeDc(decode83(blurHash, 2, 6))
-                } else {
-                    decodeAc(decode83Fixed2(blurHash, 4 + i * 2), maxAc)
-                }
-            }
-        return composeBitmap(width, height, numCompX, numCompY, colors, useCache)
+        val height = (width * (1 / (numCompX.toFloat() / numCompY.toFloat()))).roundToInt()
+        val colors = computeColors(numCompX, numCompY, blurHash)
+        val imageArray = composeImageArray(width, height, numCompX, numCompY, colors, useCache)
+        return Bitmap.createBitmap(imageArray, width, height, Bitmap.Config.ARGB_8888)
     }
 
     private fun decode83At(
@@ -149,14 +160,14 @@ object BlurHashDecoder {
 
     private fun signedPow2(value: Float) = value.pow(2f).withSign(value)
 
-    private fun composeBitmap(
+    private fun composeImageArray(
         width: Int,
         height: Int,
         numCompX: Int,
         numCompY: Int,
         colors: Array<FloatArray>,
         useCache: Boolean,
-    ): Bitmap {
+    ): IntArray {
         // use an array for better performance when writing pixel colors
         val imageArray = IntArray(width * height)
         val calculateCosX = !useCache || !cacheCosinesX.containsKey(width * numCompX)
@@ -185,11 +196,18 @@ object BlurHashDecoder {
                     }
                 }
 
-                imageArray[x + width * y] = Color.rgb(linearToSrgb(r), linearToSrgb(g), linearToSrgb(b))
+                imageArray[x + width * y] = rgb(linearToSrgb(r), linearToSrgb(g), linearToSrgb(b))
             }
         }
-        return Bitmap.createBitmap(imageArray, width, height, Bitmap.Config.ARGB_8888)
+
+        return imageArray
     }
+
+    fun rgb(
+        red: Int,
+        green: Int,
+        blue: Int,
+    ): Int = -0x1000000 or (red shl 16) or (green shl 8) or blue
 
     private fun getArrayForCosinesY(
         calculate: Boolean,

@@ -20,18 +20,20 @@
  */
 package com.vitorpamplona.amethyst.commons.preview
 
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import junit.framework.TestCase.assertTrue
 import org.junit.Assert
 import org.junit.Test
+import org.junit.runner.RunWith
 import kotlin.math.roundToInt
 
+@RunWith(AndroidJUnit4::class)
 class BlurhashTest {
     val warmHex = "[45#Y7_2^-xt%OSb%4S0-qt0xbotaRInV|M{RlD~M{M_IVIUNHM{M{M{M{RjNGRkoyj]o[t8tPt8"
     val testHex = "|NHL-]~pabocs+jDM{j?of4T9ZR+WBWZbdR-WCog04ITn\$t6t6t6t6oJoLZ}?bIUWBs:M{WCogRjs:s+o#R+WBoft7axWBx]IV%LogM{t5xaWBay%KRjxus.WCNGWWt7j[j]s+R-S5ofjYV@j[ofD%t8RPoJt7t7R*WCof"
 
     @Test
     fun testAspectRatioWarm() {
-        Assert.assertEquals(0.44444445f, BlurHashDecoderOld.aspectRatio(warmHex)!!, 0.001f)
         Assert.assertEquals(0.44444445f, BlurHashDecoder.aspectRatio(warmHex)!!, 0.001f)
     }
 
@@ -46,8 +48,17 @@ class BlurhashTest {
     }
 
     @Test
+    fun testDecoderWarm25Pixels() {
+        val aspectRatio = BlurHashDecoder.aspectRatio(warmHex) ?: 1.0f
+
+        val bmp1 = BlurHashDecoderOld.decode(warmHex, 25, (25 * (1 / aspectRatio)).roundToInt())
+        val bmp2 = BlurHashDecoder.decodeKeepAspectRatio(warmHex, 25)
+
+        assertTrue(bmp1!!.sameAs(bmp2!!))
+    }
+
+    @Test
     fun testAspectRatioTest() {
-        Assert.assertEquals(1.0f, BlurHashDecoderOld.aspectRatio(testHex)!!)
         Assert.assertEquals(1.0f, BlurHashDecoder.aspectRatio(testHex)!!)
     }
 

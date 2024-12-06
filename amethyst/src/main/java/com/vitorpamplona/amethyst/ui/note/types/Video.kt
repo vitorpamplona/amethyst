@@ -106,6 +106,7 @@ fun VideoDisplay(
                         authorName = note.author?.toBestDisplayName(),
                         artworkUri = imeta.image.firstOrNull(),
                         mimeType = imeta.mimeType,
+                        blurhash = imeta.blurhash,
                     )
                 },
             )
