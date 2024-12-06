@@ -27,7 +27,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.InlineTextContent
@@ -95,7 +94,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.hashVerifierMark
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
-import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
@@ -135,7 +133,10 @@ fun ZoomableContentView(
         is MediaUrlImage ->
             SensitivityWarning(content.contentWarning != null, accountViewModel) {
                 TwoSecondController(content) { controllerVisible ->
-                    val mainImageModifier = Modifier.fillMaxWidth().clickable { dialogOpen = true }
+                    val mainImageModifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { dialogOpen = true }
                     val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
 
                     UrlImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
@@ -167,7 +168,10 @@ fun ZoomableContentView(
             }
         is MediaLocalImage ->
             TwoSecondController(content) { controllerVisible ->
-                val mainImageModifier = Modifier.fillMaxWidth().clickable { dialogOpen = true }
+                val mainImageModifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { dialogOpen = true }
                 val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
 
                 LocalImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
@@ -201,61 +205,6 @@ fun ZoomableContentView(
             },
             accountViewModel,
         )
-    }
-}
-
-@Composable
-fun GalleryContentView(
-    content: BaseMediaContent,
-    accountViewModel: AccountViewModel,
-) {
-    when (content) {
-        is MediaUrlImage ->
-            SensitivityWarning(content.contentWarning != null, accountViewModel) {
-                TwoSecondController(content) { controllerVisible ->
-                    UrlImageView(content, ContentScale.Crop, Modifier.fillMaxSize(), Modifier.fillMaxSize(), controllerVisible, accountViewModel = accountViewModel)
-                }
-            }
-        is MediaUrlVideo ->
-            SensitivityWarning(content.contentWarning != null, accountViewModel) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    VideoView(
-                        videoUri = content.url,
-                        mimeType = content.mimeType,
-                        title = content.description,
-                        artworkUri = content.artworkUri,
-                        borderModifier = MaterialTheme.colorScheme.videoGalleryModifier,
-                        authorName = content.authorName,
-                        dimensions = Dimension(1, 1), // fit video in 1:1 ratio
-                        blurhash = content.blurhash,
-                        isFiniteHeight = false,
-                        nostrUriCallback = content.uri,
-                        accountViewModel = accountViewModel,
-                        alwaysShowVideo = true,
-                        showControls = false,
-                    )
-                }
-            }
-        is MediaLocalImage ->
-            TwoSecondController(content) { controllerVisible ->
-                LocalImageView(content, ContentScale.Crop, Modifier.fillMaxSize(), Modifier.fillMaxSize(), controllerVisible, accountViewModel = accountViewModel)
-            }
-        is MediaLocalVideo ->
-            content.localFile?.let {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    VideoView(
-                        videoUri = it.toUri().toString(),
-                        mimeType = content.mimeType,
-                        title = content.description,
-                        artworkUri = content.artworkUri,
-                        authorName = content.authorName,
-                        borderModifier = MaterialTheme.colorScheme.videoGalleryModifier,
-                        isFiniteHeight = false,
-                        nostrUriCallback = content.uri,
-                        accountViewModel = accountViewModel,
-                    )
-                }
-            }
     }
 }
 
@@ -501,7 +450,12 @@ fun ImageUrlWithDownloadButton(
 
     val inlineContent = mapOf("inlineContent" to InlineDownloadIcon(showImage))
 
-    val pressIndicator = remember { Modifier.fillMaxWidth().clickable { runCatching { uri.openUri(url) } } }
+    val pressIndicator =
+        remember {
+            Modifier
+                .fillMaxWidth()
+                .clickable { runCatching { uri.openUri(url) } }
+        }
 
     Text(
         text = annotatedTermsString,
@@ -555,7 +509,7 @@ fun aspectRatio(dim: Dimension?): Float? {
 }
 
 @Composable
-private fun DisplayUrlWithLoadingSymbol(content: BaseMediaContent) {
+fun DisplayUrlWithLoadingSymbol(content: BaseMediaContent) {
     val uri = LocalUriHandler.current
 
     val primary = MaterialTheme.colorScheme.primary

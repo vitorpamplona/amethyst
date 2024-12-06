@@ -161,40 +161,6 @@ fun LongPressToQuickAction(
 }
 
 @Composable
-fun LongPressToQuickActionGallery(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    content: @Composable (() -> Unit) -> Unit,
-) {
-    val popupExpanded = remember { mutableStateOf(false) }
-
-    content { popupExpanded.value = true }
-
-    if (popupExpanded.value) {
-        if (baseNote.author == accountViewModel.account.userProfile()) {
-            NoteQuickActionMenuGallery(
-                note = baseNote,
-                onDismiss = { popupExpanded.value = false },
-                accountViewModel = accountViewModel,
-                nav = EmptyNav,
-            )
-        }
-    }
-}
-
-@Composable
-fun NoteQuickActionMenuGallery(
-    note: Note,
-    onDismiss: () -> Unit,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    DeleteFromGalleryDialog(note, accountViewModel) {
-        onDismiss()
-    }
-}
-
-@Composable
 fun NoteQuickActionMenu(
     note: Note,
     onDismiss: () -> Unit,
@@ -655,25 +621,6 @@ fun NoteQuickActionItem(
         )
         Text(text = label, fontSize = 12.sp, color = Color.White, textAlign = TextAlign.Center)
     }
-}
-
-@Composable
-fun DeleteFromGalleryDialog(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    onDismiss: () -> Unit,
-) {
-    QuickActionAlertDialogOneButton(
-        title = stringRes(R.string.quick_action_request_deletion_gallery_title),
-        textContent = stringRes(R.string.quick_action_request_deletion_gallery_alert_body),
-        buttonIcon = Icons.Default.Delete,
-        buttonText = stringRes(R.string.quick_action_delete_dialog_btn),
-        onClickDoOnce = {
-            accountViewModel.removefromMediaGallery(note)
-            onDismiss()
-        },
-        onDismiss = onDismiss,
-    )
 }
 
 @Composable

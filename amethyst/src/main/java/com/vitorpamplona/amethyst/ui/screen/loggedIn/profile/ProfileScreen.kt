@@ -160,6 +160,7 @@ import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.RenderGalleryFeed
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -1603,7 +1604,6 @@ fun TabGallery(
         SaveableGridFeedState(feedViewModel, scrollStateKey = ScrollStateKeys.PROFILE_GALLERY) { listState ->
             RenderGalleryFeed(
                 feedViewModel,
-                null,
                 listState,
                 accountViewModel = accountViewModel,
                 nav = nav,
@@ -1611,50 +1611,6 @@ fun TabGallery(
         }
     }
 }
-
-/*@Composable
-fun Gallery(
-    baseUser: User,
-    feedViewModel: UserFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    WatchFollowChanges(baseUser, feedViewModel)
-
-    Column(Modifier.fillMaxHeight()) {
-        Column {
-            baseUser.latestGalleryList?.let {
-                // val note2 = getOrCreateAddressableNoteInternal(aTag)
-                val note = LocalCache.getOrCreateAddressableNote(it.address())
-                note.event = it
-                var notes = listOf<GalleryThumb>()
-                for (tag in note.event?.tags()!!) {
-                    if (tag.size > 2) {
-                        if (tag[0] == "g") {
-                            // TODO get the node by id on main thread. LoadNote does nothing.
-                            val thumb =
-                                GalleryThumb(
-                                    baseNote = note,
-                                    id = tag[2],
-                                    // TODO use the original note once it's loaded baseNote = basenote,
-                                    image = tag[1],
-                                    title = null,
-                                )
-                            notes = notes + thumb
-                            // }
-                        }
-                    }
-                    ProfileGallery(
-                        baseNotes = notes,
-                        modifier = Modifier,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
-            }
-        }
-    }
-} */
 
 @Composable
 fun TabFollowedTags(
