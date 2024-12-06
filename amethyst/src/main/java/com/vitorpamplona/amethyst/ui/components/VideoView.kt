@@ -28,8 +28,6 @@ import android.net.Uri
 import android.os.Build
 import android.util.Log
 import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
@@ -752,26 +750,23 @@ private fun RenderVideoPlayer(
             modifier = videoModifier,
             factory = { context: Context ->
                 PlayerView(context).apply {
-                    clipToOutline = true
                     player = controller
-                    layoutParams =
-                        FrameLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT,
-                        )
                     setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
                     setBackgroundColor(Color.Transparent.toArgb())
                     setShutterBackgroundColor(Color.Transparent.toArgb())
+
                     controllerAutoShow = false
                     useController = showControls
                     thumbData?.thumb?.let { defaultArtwork = it }
                     hideController()
+
                     resizeMode =
                         if (isFiniteHeight) {
                             AspectRatioFrameLayout.RESIZE_MODE_FIT
                         } else {
                             AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
                         }
+
                     if (showControls) {
                         onDialog?.let { innerOnDialog ->
                             setFullscreenButtonClickListener {

@@ -24,10 +24,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -72,8 +72,8 @@ import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.quartz.events.PictureEvent
 import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.events.VideoEvent
@@ -133,15 +133,13 @@ private fun GalleryFeedLoaded(
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
-            Row(Modifier.fillMaxWidth().animateItemPlacement()) {
-                GalleryCardCompose(
-                    baseNote = item,
-                    routeForLastRead = routeForLastRead,
-                    modifier = HalfPadding,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
+            GalleryCardCompose(
+                baseNote = item,
+                routeForLastRead = routeForLastRead,
+                modifier = Modifier.fillMaxSize().animateItem().padding(Size5dp),
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
         }
     }
 }
@@ -390,8 +388,6 @@ fun InnerRenderGalleryThumb(
         if (content != null) {
             GalleryContentView(
                 content = content,
-                roundedCorner = false,
-                isFiniteHeight = false,
                 accountViewModel = accountViewModel,
             )
         } else {

@@ -207,18 +207,13 @@ fun ZoomableContentView(
 @Composable
 fun GalleryContentView(
     content: BaseMediaContent,
-    roundedCorner: Boolean,
-    isFiniteHeight: Boolean,
     accountViewModel: AccountViewModel,
 ) {
     when (content) {
         is MediaUrlImage ->
             SensitivityWarning(content.contentWarning != null, accountViewModel) {
                 TwoSecondController(content) { controllerVisible ->
-                    val mainImageModifier = Modifier.fillMaxWidth()
-                    val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
-
-                    UrlImageView(content, ContentScale.Crop, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
+                    UrlImageView(content, ContentScale.Crop, Modifier.fillMaxSize(), Modifier.fillMaxSize(), controllerVisible, accountViewModel = accountViewModel)
                 }
             }
         is MediaUrlVideo ->
@@ -233,7 +228,7 @@ fun GalleryContentView(
                         authorName = content.authorName,
                         dimensions = Dimension(1, 1), // fit video in 1:1 ratio
                         blurhash = content.blurhash,
-                        isFiniteHeight = isFiniteHeight,
+                        isFiniteHeight = false,
                         nostrUriCallback = content.uri,
                         accountViewModel = accountViewModel,
                         alwaysShowVideo = true,
@@ -243,10 +238,7 @@ fun GalleryContentView(
             }
         is MediaLocalImage ->
             TwoSecondController(content) { controllerVisible ->
-                val mainImageModifier = Modifier.fillMaxWidth()
-                val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
-
-                LocalImageView(content, ContentScale.Crop, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
+                LocalImageView(content, ContentScale.Crop, Modifier.fillMaxSize(), Modifier.fillMaxSize(), controllerVisible, accountViewModel = accountViewModel)
             }
         is MediaLocalVideo ->
             content.localFile?.let {
@@ -258,7 +250,7 @@ fun GalleryContentView(
                         artworkUri = content.artworkUri,
                         authorName = content.authorName,
                         borderModifier = MaterialTheme.colorScheme.videoGalleryModifier,
-                        isFiniteHeight = isFiniteHeight,
+                        isFiniteHeight = false,
                         nostrUriCallback = content.uri,
                         accountViewModel = accountViewModel,
                     )
