@@ -26,13 +26,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
+import com.vitorpamplona.amethyst.ui.actions.relays.RelayToAdd
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -47,12 +46,6 @@ fun RelayFeedView(
 ) {
     val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
 
-    var wantsToAddRelay by remember { mutableStateOf("") }
-
-    if (wantsToAddRelay.isNotEmpty()) {
-        AllRelayListView({ wantsToAddRelay = "" }, wantsToAddRelay, accountViewModel, nav = nav)
-    }
-
     RefresheableBox(viewModel, enablePullRefresh) {
         val listState = rememberLazyListState()
 
@@ -64,8 +57,14 @@ fun RelayFeedView(
                 RelayCompose(
                     item,
                     accountViewModel = accountViewModel,
-                    onAddRelay = { wantsToAddRelay = item.url },
-                    onRemoveRelay = { wantsToAddRelay = item.url },
+                    onAddRelay = {
+                        RelayToAdd.relayToAdd = item.url
+                        nav.nav(Route.EditRelays.route)
+                    },
+                    onRemoveRelay = {
+                        RelayToAdd.relayToAdd = item.url
+                        nav.nav(Route.EditRelays.route)
+                    },
                 )
                 HorizontalDivider(
                     thickness = DividerThickness,
