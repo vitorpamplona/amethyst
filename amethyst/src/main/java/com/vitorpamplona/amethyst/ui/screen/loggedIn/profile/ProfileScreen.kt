@@ -1302,7 +1302,7 @@ private fun WatchApp(
     var appLogo by remember(baseApp) { mutableStateOf<String?>(null) }
     var appName by remember(baseApp) { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(appState) {
+    LaunchedEffect(key1 = appState) {
         withContext(Dispatchers.Default) {
             (appState?.note?.event as? AppDefinitionEvent)?.appMetaData()?.let { metaData ->
                 metaData.picture?.ifBlank { null }?.let { newLogo ->
