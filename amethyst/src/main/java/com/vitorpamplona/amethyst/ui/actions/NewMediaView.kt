@@ -148,7 +148,7 @@ fun NewMediaView(
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.relays),
-                                        contentDescription = null,
+                                        contentDescription = stringRes(id = R.string.relay_list_selector),
                                         modifier = Modifier.height(25.dp),
                                         tint = MaterialTheme.colorScheme.onBackground,
                                     )
