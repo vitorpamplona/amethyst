@@ -1302,18 +1302,15 @@ private fun WatchApp(
     var appLogo by remember(baseApp) { mutableStateOf<String?>(null) }
     var appName by remember(baseApp) { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(key1 = appState) {
+    LaunchedEffect(appState) {
         withContext(Dispatchers.Default) {
-            val newAppLogo =
-                (appState?.note?.event as? AppDefinitionEvent)?.appMetaData()?.picture?.ifBlank { null }
-            if (newAppLogo != appLogo) {
-                appLogo = newAppLogo
-            }
-
-            val newAppName =
-                (appState?.note?.event as? AppDefinitionEvent)?.appMetaData()?.name?.ifBlank { null }
-            if (newAppName != appName) {
-                appName = newAppName
+            (appState?.note?.event as? AppDefinitionEvent)?.appMetaData()?.let { metaData ->
+                metaData.picture?.ifBlank { null }?.let { newLogo ->
+                    if (newLogo != appLogo) appLogo = newLogo
+                }
+                metaData.name?.ifBlank { null }?.let { newName ->
+                    if (newName != appName) appName = newName
+                }
             }
         }
     }
