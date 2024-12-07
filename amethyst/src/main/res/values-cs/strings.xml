@@ -832,9 +832,9 @@
     <string name="accessibility_turn_off_sealed_message">Zapečetěná zpráva zapnuta. Klikněte pro vypnutí zapečetěné zprávy</string>
     <string name="accessibility_send">Odeslat</string>
     <string name="accessibility_play_username">Přehrát uživatelské jméno jako audio</string>
+    <string name="accessibility_pushpin">Připínáček</string>
     <string name="accessibility_scan_qr_code">Skenovat QR kód</string>
     <string name="accessibility_navigate_to_alby">Přejít na poskytovatele peněženky třetí strany Alby</string>
-    <string name="accessibility_pushpin">Připínáček</string>
     <string name="it_s_not_possible_to_reply_to_a_draft_note">Není možné odpovědět na koncept</string>
     <string name="it_s_not_possible_to_quote_to_a_draft_note">Není možné citovat koncept</string>
     <string name="it_s_not_possible_to_react_to_a_draft_note">Není možné reagovat na koncept</string>
