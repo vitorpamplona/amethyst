@@ -834,6 +834,7 @@
     <string name="accessibility_play_username">Reproduzir nome de usuário como áudio</string>
     <string name="accessibility_scan_qr_code">Escanear código QR</string>
     <string name="accessibility_navigate_to_alby">Navegar para o provedor de carteira de terceiros Alby</string>
+    <string name="accessibility_pushpin">Piones</string>
     <string name="it_s_not_possible_to_reply_to_a_draft_note">Não é possível responder uma nota em rascunho</string>
     <string name="it_s_not_possible_to_quote_to_a_draft_note">Não é possível citar uma nota em rascunho</string>
     <string name="it_s_not_possible_to_react_to_a_draft_note">Não é possível reagir uma nota em rascunho</string>

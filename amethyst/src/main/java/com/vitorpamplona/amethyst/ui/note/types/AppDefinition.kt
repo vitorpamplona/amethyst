@@ -147,10 +147,10 @@ fun RenderAppDefinition(
                     var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
                     Box(Modifier.size(100.dp)) {
-                        it.picture?.let {
+                        it.picture?.let { picture ->
                             AsyncImage(
-                                model = it,
-                                contentDescription = null,
+                                model = picture,
+                                contentDescription = it.name,
                                 contentScale = ContentScale.FillWidth,
                                 modifier =
                                     Modifier
@@ -163,7 +163,7 @@ fun RenderAppDefinition(
                                         .background(MaterialTheme.colorScheme.background)
                                         .combinedClickable(
                                             onClick = { zoomImageDialogOpen = true },
-                                            onLongClick = { clipboardManager.setText(AnnotatedString(it)) },
+                                            onLongClick = { clipboardManager.setText(AnnotatedString(picture)) },
                                         ),
                             )
                         }

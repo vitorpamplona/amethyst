@@ -1005,6 +1005,7 @@
     <string name="accessibility_turn_off_sealed_message">Sealed message on. Click to turn off sealed message</string>
     <string name="accessibility_send">Send</string>
     <string name="accessibility_play_username">Play username as audio</string>
+    <string name="accessibility_pushpin">Pushpin</string>
     <string name="accessibility_scan_qr_code">Scan QR code</string>
     <string name="accessibility_navigate_to_alby">Navigate to the third-party wallet provider Alby</string>
     <string name="it_s_not_possible_to_reply_to_a_draft_note">It\'s not possible to reply a draft note</string>

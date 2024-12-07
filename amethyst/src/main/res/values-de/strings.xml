@@ -839,6 +839,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="accessibility_play_username">Benutzernamen als Audio abspielen</string>
     <string name="accessibility_scan_qr_code">QR-Code scannen</string>
     <string name="accessibility_navigate_to_alby">Navigieren Sie zum Drittanbieter-Wallet-Anbieter Alby</string>
+    <string name="accessibility_pushpin">Reißzwecke</string>
     <string name="it_s_not_possible_to_reply_to_a_draft_note">Es ist nicht möglich, auf einen Entwurf zu antworten</string>
     <string name="it_s_not_possible_to_quote_to_a_draft_note">Es ist nicht möglich, einen Entwurf zu zitieren</string>
     <string name="it_s_not_possible_to_react_to_a_draft_note">Es ist nicht möglich, auf einen Entwurf zu reagieren</string>
