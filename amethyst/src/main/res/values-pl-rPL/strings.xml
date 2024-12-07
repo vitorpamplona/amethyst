@@ -116,6 +116,7 @@
     <string name="avatar_url">URL awatara</string>
     <string name="banner_url">URL banera</string>
     <string name="website_url">Adres URL strony</string>
+    <string name="pronouns">Zaimki</string>
     <string name="ln_address">LN Adres</string>
     <string name="ln_url_outdated">Adres URL LN (nieaktualny)</string>
     <string name="save_to_gallery">Zapisz w galerii</string>
@@ -204,6 +205,7 @@
     <string name="translations_to">do</string>
     <string name="translations_show_in_lang_first">Najpierw pokaż w %1$s</string>
     <string name="chat_about_topic">Temat czatu: %1$s</string>
+    <string name="community_about_topic">Temat dyskusji %1$s</string>
     <string name="translations_always_translate_to_lang">Zawsze tłumacz na %1$s</string>
     <string name="translations_never_translate_from_lang">Nigdy nie tłumacz z %1$s</string>
     <string name="nip_05">Adres Nostr</string>
