@@ -1300,6 +1300,7 @@ private fun WatchApp(
     val appState by baseApp.live().metadata.observeAsState()
 
     var appLogo by remember(baseApp) { mutableStateOf<String?>(null) }
+    var appName by remember(baseApp) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = appState) {
         withContext(Dispatchers.Default) {
@@ -1307,6 +1308,12 @@ private fun WatchApp(
                 (appState?.note?.event as? AppDefinitionEvent)?.appMetaData()?.picture?.ifBlank { null }
             if (newAppLogo != appLogo) {
                 appLogo = newAppLogo
+            }
+
+            val newAppName =
+                (appState?.note?.event as? AppDefinitionEvent)?.appMetaData()?.name?.ifBlank { null }
+            if (newAppName != appName) {
+                appName = newAppName
             }
         }
     }
@@ -1321,7 +1328,7 @@ private fun WatchApp(
         ) {
             AsyncImage(
                 model = appLogo,
-                contentDescription = null,
+                contentDescription = appName,
                 modifier =
                     remember {
                         Modifier
