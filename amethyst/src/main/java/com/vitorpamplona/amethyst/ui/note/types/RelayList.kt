@@ -45,9 +45,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
+import com.vitorpamplona.amethyst.ui.actions.relays.RelayToAdd
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.AddRelayButton
 import com.vitorpamplona.amethyst.ui.note.RemoveRelayButton
 import com.vitorpamplona.amethyst.ui.note.getGradient
@@ -289,15 +290,15 @@ private fun RelayOptionsAction(
             }
         }
 
-    var wantsToAddRelay by remember { mutableStateOf("") }
-
-    if (wantsToAddRelay.isNotEmpty()) {
-        AllRelayListView({ wantsToAddRelay = "" }, wantsToAddRelay, accountViewModel, nav = nav)
-    }
-
     if (isCurrentlyOnTheUsersList) {
-        AddRelayButton { wantsToAddRelay = relay }
+        AddRelayButton {
+            RelayToAdd.relayToAdd = relay
+            nav.nav(Route.EditRelays.route)
+        }
     } else {
-        RemoveRelayButton { wantsToAddRelay = relay }
+        RemoveRelayButton {
+            RelayToAdd.relayToAdd = relay
+            nav.nav(Route.EditRelays.route)
+        }
     }
 }

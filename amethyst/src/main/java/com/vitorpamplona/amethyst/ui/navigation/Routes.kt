@@ -68,6 +68,13 @@ sealed class Route(
             contentDescriptor = R.string.route_global,
         )
 
+    object EditRelays :
+        Route(
+            route = "EditRelays",
+            icon = R.drawable.ic_globe,
+            contentDescriptor = R.string.relays,
+        )
+
     object Search :
         Route(
             route = "Search",

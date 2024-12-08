@@ -49,6 +49,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
 import com.vitorpamplona.amethyst.ui.components.DisplayErrorMessages
 import com.vitorpamplona.amethyst.ui.components.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
@@ -320,6 +321,16 @@ fun AppNavigation(
                     nav = nav,
                 )
             }
+
+            composable(
+                Route.EditRelays.route,
+                content = {
+                    AllRelayListView(
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                },
+            )
         }
     }
 
