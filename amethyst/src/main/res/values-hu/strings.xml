@@ -226,11 +226,11 @@
     <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Kulcs- és biztonsági mentési tippek
         \n\nFiókját egy titkos kulcs védi. A kulcs egy hosszú véletlenszerű karakterlánc, amely **nsec1**-el kezdődik. Bárki, aki az Ön titkos kulcsához hozzáfér, az Ön személyazonosságának használatával bármilyen tartalmat közzétehet.
         \n\n- **Ne** helyezze el a titkos kulcsát olyan webhelyen vagy szoftverben, amelyben nem bízik.
-        \n- Az Amethyst-fejlesztők a titkos kulcsát **soha** nem fogják Öntől elkérni.
+        \n- Az Amethyst fejlesztői az Ön titkos kulcsát **soha** nem fogják Öntől elkérni.
         \n- A fiók-helyreállításának érdekében, a titkos kulcsáról **mindig** készítsen biztonsági másolatot. Javasoljuk egy jelszókezelő használatát.
     </string>
     <string name="account_backup_tips3_md" tools:ignore="Typos">        A nagyobb biztonság érdekében a kulcsot jelszóval titkosíthatja. Ez a kulcs **ncryptsec1**-val kezdődik, és a jelszava nélkül nem használható.
-         \n\nHa elveszíti a jelszavát, nem tudja a kulcsátt visszaállítani.
+         \n\nHa elveszíti a jelszavát, nem tudja visszaállítani a kulcsát.
     </string>
     <string name="failed_to_encrypt_key">Nem sikerült a privát kulcsot titkosítani</string>
     <string name="secret_key_copied_to_clipboard">A titkos kulcs (nsec) a vágólapra másolva</string>
@@ -380,13 +380,13 @@
     <string name="follow_list_global">Globális</string>
     <string name="follow_list_mute_list">Némítottak bejegyzései</string>
     <string name="connect_through_your_orbot_setup_short">Alapértelmezett port: 9050</string>
-    <string name="connect_through_your_orbot_setup_markdown">        ## Kapcsolódás a TOR-on keresztül az Orbot segítségével
-        \n\n1. Telepítse az [Orbot-ot](https://play.google.com/store/apps/details?id=org.torproject.android)
-        \n2. Indítsa el az Orbot-ot
-        \n3. Ellenőrizze az Orbot-ban a Socks-portokat. Az alapbeállítás: 9050
-        \n4. Ha szükséges az Orbot-ban változtassa meg a portot
+    <string name="connect_through_your_orbot_setup_markdown">        ## Kapcsolódás a TORon keresztül az Orbot segítségével
+        \n\n1. Telepítse az [Orbotot](https://play.google.com/store/apps/details?id=org.torproject.android)
+        \n2. Indítsa el az Orbotot
+        \n3. Ellenőrizze az Orbotban a Socks-portokat. Az alapbeállítás: 9050
+        \n4. Ha szükséges az Orbotban változtassa meg a portot
         \n5. Ezen a felületen állítsa be a Socks-portot
-        \n6. Kattintson az „Aktiválás” gombra, hogy az Orbot-ot proxyként használja
+        \n6. Kattintson az „Aktiválás” gombra, hogy az Orbotot proxyként használja
     </string>
     <string name="orbot_socks_port">Orbot Socks-portja</string>
     <string name="use_internal_tor">Aktív Tor-motor</string>
@@ -434,7 +434,7 @@
     <string name="app_notification_dms_channel_name">Privát üzenetek</string>
     <string name="app_notification_dms_channel_description">Értesítés, ha privát üzenet érkezik</string>
     <string name="app_notification_zaps_channel_name">Zap-et kapott</string>
-    <string name="app_notification_zaps_channel_description">Értesítés, amikor valaki zap-et küld Önnek</string>
+    <string name="app_notification_zaps_channel_description">Értesítés, amikor valaki Zap-et küld Önnek</string>
     <string name="app_notification_zaps_channel_message">%1$s satoshi</string>
     <string name="app_notification_zaps_channel_message_from">Tőle: %1$s</string>
     <string name="app_notification_zaps_channel_message_for">neki: %1$s</string>
@@ -551,7 +551,7 @@
     <string name="zap_forward_title">Zap-ek továbbítása neki:</string>
     <string name="zap_forward_explainer">A funkciót támogató kliensek a Zap-eket az alábbi LN-címre vagy felhasználói profilra továbbítják az Öné helyett</string>
     <string name="geohash_title">A helyszín megjelenítése mint </string>
-    <string name="geohash_explainer">Hozzáadja a helyének geohash-jét a bejegyzéséhez. A nyilvánosság tudni fogja, hogy a jelenlegi helytől 5 km-en (3 mi) belül tertózkodik</string>
+    <string name="geohash_explainer">Hozzáadja a helyének geohash-sét a bejegyzéséhez. A nyilvánosság tudni fogja, hogy a jelenlegi helytől 5 km-en (3 mi) belül tertózkodik</string>
     <string name="geohash_exclusive">Helyszín-alapú bejegyzés</string>
     <string name="geohash_exclusive_explainer">Csak a helyszín követői láthatják. Az általános követők nem fogják látni.</string>
     <string name="loading_location">Helyszín betöltése…</string>
@@ -624,7 +624,7 @@
     <string name="error_opening_external_signer_description">Az aláíró alkalmazás nem található. Ellenőrizze, hogy az alkalmazás nincs-e eltávolítva</string>
     <string name="sign_request_rejected">Aláíró-alkalmazás elutasítva</string>
     <string name="sign_request_rejected_description">Győződjön meg arról, hogy ezt a tranzakciót az aláíró-alkalmazás hitelesítette-e</string>
-    <string name="no_wallet_found_with_error">Nem található pénztárca a Lighning-számla kifizetéséhez (Hiba: %1$s). A zap-ek használatához telepítsen egy Lightning-pénztárcát</string>
+    <string name="no_wallet_found_with_error">Nem található pénztárca a Lighning-számla kifizetéséhez (Hiba: %1$s). A Zap-ek használatához telepítsen egy Lightning-pénztárcát</string>
     <string name="no_wallet_found">Nem található pénztárca a Lighning-számla kifizetéséhez. A Zap-ek használatához telepítsen egy Lightning-pénztárcát</string>
     <string name="hidden_words">Rejtett szavak</string>
     <string name="hide_new_word_label">Új szó vagy mondat elrejtése</string>
@@ -834,6 +834,7 @@
     <string name="accessibility_turn_off_sealed_message">Lezárt üzenetek bekapcsolva. Koppintson a lezárt üzenetek kikapcsolásához</string>
     <string name="accessibility_send">Küldés</string>
     <string name="accessibility_play_username">Felhasználónév lejátszása hangként</string>
+    <string name="accessibility_pushpin">Kapcsolatrögzítő (Pushpin)</string>
     <string name="accessibility_scan_qr_code">QR-kód beolvasása</string>
     <string name="accessibility_navigate_to_alby">Harmadik féltől származó pénztárca-szolgáltató felkeresése: Alby</string>
     <string name="it_s_not_possible_to_reply_to_a_draft_note">A piszkozatokra nem lehet válaszolni</string>
@@ -888,7 +889,7 @@
     <string name="torrent_file">Torrentfájl</string>
     <string name="torrent_download">Letöltés</string>
     <string name="torrent_failure">Nem sikerült megnyitni a fájlt</string>
-    <string name="torrent_no_apps">A fájl megnyitásához és letöltéséhez nincsenek torrentalkalmazások telepítve.</string>
+    <string name="torrent_no_apps">A fájl megnyitásához és letöltéséhez nincsenek torrent-alkalmazások telepítve.</string>
     <string name="select_list_to_filter">Lista kiválasztása a hírfolyam szűréséhez</string>
     <string name="temporary_account">Kijelentkeztetés az eszköz zárolása esetén</string>
 </resources>
