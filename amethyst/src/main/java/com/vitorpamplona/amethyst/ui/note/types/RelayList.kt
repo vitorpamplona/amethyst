@@ -45,7 +45,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.actions.relays.RelayToAdd
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -62,6 +61,8 @@ import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Composable
 fun DisplayRelaySet(
@@ -292,13 +293,11 @@ private fun RelayOptionsAction(
 
     if (isCurrentlyOnTheUsersList) {
         AddRelayButton {
-            RelayToAdd.relayToAdd = relay
-            nav.nav(Route.EditRelays.route)
+            nav.nav(Route.EditRelays.base + "?toAdd=" + URLEncoder.encode(relay, StandardCharsets.UTF_8.toString()))
         }
     } else {
         RemoveRelayButton {
-            RelayToAdd.relayToAdd = relay
-            nav.nav(Route.EditRelays.route)
+            nav.nav(Route.EditRelays.base + "?toAdd=" + URLEncoder.encode(relay, StandardCharsets.UTF_8.toString()))
         }
     }
 }

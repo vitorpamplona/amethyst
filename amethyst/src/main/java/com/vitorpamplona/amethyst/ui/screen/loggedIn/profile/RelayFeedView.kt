@@ -28,7 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.ui.actions.relays.RelayToAdd
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -36,6 +35,8 @@ import com.vitorpamplona.amethyst.ui.note.RelayCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Composable
 fun RelayFeedView(
@@ -58,12 +59,10 @@ fun RelayFeedView(
                     item,
                     accountViewModel = accountViewModel,
                     onAddRelay = {
-                        RelayToAdd.relayToAdd = item.url
-                        nav.nav(Route.EditRelays.route)
+                        nav.nav(Route.EditRelays.base + "?toAdd=" + URLEncoder.encode(item.url, StandardCharsets.UTF_8.toString()))
                     },
                     onRemoveRelay = {
-                        RelayToAdd.relayToAdd = item.url
-                        nav.nav(Route.EditRelays.route)
+                        nav.nav(Route.EditRelays.base + "?toAdd=" + URLEncoder.encode(item.url, StandardCharsets.UTF_8.toString()))
                     },
                 )
                 HorizontalDivider(

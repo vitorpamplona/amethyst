@@ -473,7 +473,7 @@ fun ListContent(
             accountViewModel = accountViewModel,
             onClick = {
                 nav.closeDrawer()
-                nav.nav(Route.EditRelays.route)
+                nav.nav(Route.EditRelays.base)
             },
         )
 

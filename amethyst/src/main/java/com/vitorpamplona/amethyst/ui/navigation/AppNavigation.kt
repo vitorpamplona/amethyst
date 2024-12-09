@@ -287,6 +287,19 @@ fun AppNavigation(
             }
 
             composable(
+                Route.EditRelays.route,
+                content = {
+                    val relayToAdd = it.arguments?.getString("toAdd")
+
+                    AllRelayListView(
+                        relayToAdd = relayToAdd,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                },
+            )
+
+            composable(
                 Route.NewPost.route,
                 Route.NewPost.arguments,
                 enterTransition = { slideInVerticallyFromBottom },
@@ -321,16 +334,6 @@ fun AppNavigation(
                     nav = nav,
                 )
             }
-
-            composable(
-                Route.EditRelays.route,
-                content = {
-                    AllRelayListView(
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                },
-            )
         }
     }
 

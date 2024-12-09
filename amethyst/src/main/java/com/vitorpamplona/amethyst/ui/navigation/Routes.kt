@@ -68,13 +68,6 @@ sealed class Route(
             contentDescriptor = R.string.route_global,
         )
 
-    object EditRelays :
-        Route(
-            route = "EditRelays",
-            icon = R.drawable.ic_globe,
-            contentDescriptor = R.string.relays,
-        )
-
     object Search :
         Route(
             route = "Search",
@@ -214,6 +207,21 @@ sealed class Route(
         Route(
             route = "Settings",
             icon = R.drawable.ic_settings,
+        )
+
+    object EditRelays :
+        Route(
+            route = "EditRelays?toAdd={toAdd}",
+            icon = R.drawable.ic_globe,
+            contentDescriptor = R.string.relays,
+            arguments =
+                listOf(
+                    navArgument("toAdd") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ).toImmutableList(),
         )
 
     object NIP47Setup :

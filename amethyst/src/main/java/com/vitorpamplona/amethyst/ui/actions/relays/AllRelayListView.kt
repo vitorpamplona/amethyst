@@ -37,7 +37,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -52,7 +51,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
@@ -65,20 +63,13 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.relays.RelayStat
 
-object RelayToAdd {
-    var relayToAdd: String = ""
-}
-
 @Composable
 fun AllRelayListView(
+    relayToAdd: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    DisposableEffect(Unit) {
-        onDispose { RelayToAdd.relayToAdd = "" }
-    }
-
-    MappedAllRelayListView(RelayToAdd.relayToAdd, accountViewModel, rememberExtendedNav(nav, {}))
+    MappedAllRelayListView(relayToAdd ?: "", accountViewModel, nav)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
