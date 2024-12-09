@@ -89,7 +89,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.MediaServersListView
-import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
 import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -437,7 +436,6 @@ fun ListContent(
 ) {
     val route = remember(accountViewModel) { "User/${accountViewModel.userProfile().pubkeyHex}" }
 
-    var wantsToEditRelays by remember { mutableStateOf(false) }
     var editMediaServers by remember { mutableStateOf(false) }
 
     var backupDialogOpen by remember { mutableStateOf(false) }
@@ -475,7 +473,7 @@ fun ListContent(
             accountViewModel = accountViewModel,
             onClick = {
                 nav.closeDrawer()
-                wantsToEditRelays = true
+                nav.nav(Route.EditRelays.route)
             },
         )
 
@@ -537,9 +535,6 @@ fun ListContent(
         )
     }
 
-    if (wantsToEditRelays) {
-        AllRelayListView({ wantsToEditRelays = false }, accountViewModel = accountViewModel, nav = nav)
-    }
     if (editMediaServers) {
         MediaServersListView({ editMediaServers = false }, accountViewModel = accountViewModel, nav = nav)
     }
