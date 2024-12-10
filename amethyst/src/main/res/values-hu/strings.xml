@@ -90,7 +90,7 @@
     <string name="description">Leírás</string>
     <string name="about_us">"Névjegy… "</string>
     <string name="what_s_on_your_mind">Mi jár a fejében?</string>
-    <string name="post">Beküldés</string>
+    <string name="post">Közzététel</string>
     <string name="save">Mentés</string>
     <string name="create">Létrehozás</string>
     <string name="cancel">Mégse</string>
@@ -127,7 +127,7 @@
     <string name="upload_image">Kép feltöltése</string>
     <string name="uploading">Feltöltés…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">A felhasználó nem rendelkezik a satoshik fogadásához beállított lightning-címmel</string>
-    <string name="reply_here">"válaszoljon itt… "</string>
+    <string name="reply_here">"Válasz írása… "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">A bejegyzés azonosítóját a vágólapra másolja a Nostr-ban való megosztáshoz</string>
     <string name="copy_channel_id_note_to_the_clipboard">Csatorna-azonosító (bejegyzés) másolása a vágólapra</string>
     <string name="edits_the_channel_metadata">Szerkeszti a csatorna metaadatait</string>
@@ -224,12 +224,12 @@
     <string name="mark_all_as_read">Összes megjelölése olvasottként</string>
     <string name="backup_keys">Biztonsági mentési kulcsok</string>
     <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Kulcs- és biztonsági mentési tippek
-        \n\nFiókját egy titkos kulcs védi. A kulcs egy hosszú véletlenszerű karakterlánc, amely **nsec1**-el kezdődik. Bárki, aki az Ön titkos kulcsához hozzáfér, az Ön személyazonosságának használatával bármilyen tartalmat közzétehet.
+        \n\nFiókját egy titkos kulcs védi. A kulcs egy hosszú véletlenszerű karakterlánc, amely **nsec1**-vel kezdődik. Bárki, aki az Ön titkos kulcsához hozzáfér, az Ön személyazonosságának használatával bármilyen tartalmat közzétehet.
         \n\n- **Ne** helyezze el a titkos kulcsát olyan webhelyen vagy szoftverben, amelyben nem bízik.
         \n- Az Amethyst fejlesztői az Ön titkos kulcsát **soha** nem fogják Öntől elkérni.
         \n- A fiók-helyreállításának érdekében, a titkos kulcsáról **mindig** készítsen biztonsági másolatot. Javasoljuk egy jelszókezelő használatát.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        A nagyobb biztonság érdekében a kulcsot jelszóval titkosíthatja. Ez a kulcs **ncryptsec1**-val kezdődik, és a jelszava nélkül nem használható.
+    <string name="account_backup_tips3_md" tools:ignore="Typos">        A nagyobb biztonság érdekében a kulcsot jelszóval titkosíthatja. Ez a kulcs **ncryptsec1**-vel kezdődik, és a jelszava nélkül nem használható.
          \n\nHa elveszíti a jelszavát, nem tudja visszaállítani a kulcsát.
     </string>
     <string name="failed_to_encrypt_key">Nem sikerült a privát kulcsot titkosítani</string>
@@ -290,7 +290,7 @@
     <string name="report_dialog_additional_reason_label">További részletek</string>
     <string name="report_dialog_select_reason_label">Indoklás</string>
     <string name="report_dialog_select_reason_placeholder">Válasszon egy indoklást…</string>
-    <string name="report_dialog_post_report_btn">Bejelentés elküldése</string>
+    <string name="report_dialog_post_report_btn">Bejelentés közzététele</string>
     <string name="report_dialog_title">Letiltás és bejelentés</string>
     <string name="block_only">Letiltás</string>
     <string name="bookmarks">Könyvjelző</string>
@@ -309,7 +309,7 @@
     <string name="wallet_connect_service_show_secret">Titkos kulcs megjelenítése</string>
     <string name="wallet_connect_service_secret_placeholder">nsec / hex privát kulcs</string>
     <string name="pledge_amount_in_sats">Hozzájárulás összege satoshiban</string>
-    <string name="post_poll">Szavazás létrehozása</string>
+    <string name="post_poll">Szavazás közzététele</string>
     <string name="poll_heading_required">Kötelező mezők:</string>
     <string name="poll_zap_recipients">Zap-kedvezményezettek</string>
     <string name="poll_primary_description">Szavazás elsődleges leírása…</string>
@@ -334,7 +334,7 @@
     <string name="lightning_create_and_add_invoice">Létrehozás és hozzáadás</string>
     <string name="poll_author_no_vote">A szavazások szerzői nem szavazhatnak a saját szavazásaikon.</string>
     <string name="hash_verification_info_title">Mit jelent ez?</string>
-    <string name="hash_verification_passed">Ez a tartalom nem változott a beküldés óta</string>
+    <string name="hash_verification_passed">Ez a tartalom nem változott a közzététel óta</string>
     <string name="hash_verification_failed">Ez a tartalom megváltozott. Lehet, hogy a szerző nem látta vagy nem hagyta jóvá a változtatást</string>
     <string name="content_description_add_image">Kép hozzáadása</string>
     <string name="content_description_add_video">Videó hozzáadása</string>
@@ -475,7 +475,7 @@
     <string name="countries">Országok</string>
     <string name="languages">Nyelvek</string>
     <string name="tags">Címkék</string>
-    <string name="posting_policy">Hozzászólási szabályzat</string>
+    <string name="posting_policy">Közzétételi szabályzat</string>
     <string name="relay_error_messages">Hibák és megjegyzések ettől az átjátszótól</string>
     <string name="message_length">Üzenethossz</string>
     <string name="subscriptions">Előfizetések</string>
@@ -794,7 +794,7 @@
     <string name="public_notif_section">Nyilvános bejövő átjátszók</string>
     <string name="public_notif_section_explainer">Ez az átjátszótípus fogadja az összes választ, hozzászólást, kedvelést és Zap-et az Ön bejegyzéseire. Ezek lehetnek fizetős vagy ingyenes átjátszók. Az átjátszó üzemeltetője által beállított korlátok korlátozhatják a jó és a rossz értesítések számát. Ha például a hozzászólásokban kéretlen üzenet-támadások érik, a fizetős átjátszók kiszűrhetik a kéretlen tartalmakat. Vegyen fel 1–3 átjátszót.</string>
     <string name="private_inbox_section">Bejövő közvetlen üzenet-átjátszók</string>
-    <string name="private_inbox_section_explainer">Adjon hozzá 1–3 átjátszót, hogy privát postafiókként szolgáljon. Mások ezeket a csomópontokat használják, hogy Önnek privát üzeneteket küldjenek. A bejövő provát üzenetek átjátszóinak bárkitől fogadniuk kell bármely üzenetet, de azok letöltését csak Ön engedélyezheti. Jó választási lehetőségek:\n - inbox.nostr.wine (fizetős)\n - auth.nostr1.com (ingyenes)\n - you.nostr1.com (személyes átjátszók - fizetős)</string>
+    <string name="private_inbox_section_explainer">Adjon hozzá 1–3 átjátszót, hogy privát postafiókként szolgáljon. Mások ezeket az átjátszókat használják, hogy Önnek privát üzeneteket küldjenek. A bejövő privát üzenetek átjátszóinak bárkitől el kell fogadniuk minden üzenetet, de azok letöltését csak Ön engedélyezheti. Jó választási lehetőségek:\n - inbox.nostr.wine (fizetős)\n - auth.nostr1.com (ingyenes)\n - you.nostr1.com (személyes átjátszók - fizetős)</string>
     <string name="private_outbox_section">Privát saját átjátszók</string>
     <string name="private_outbox_section_explainer">Adjon hozzá 1–3 átjátszót, hogy olyan eseményeket tároljanak, amelyeket senki más nem láthat, például a piszkozatait és/vagy az alkalmazásbeállításait. Ideális esetben ezek az átjátszók vagy helyi szintűek, vagy hitelesítést igényelnek az egyes felhasználói tartalmak letöltése előtt.</string>
     <string name="kind_3_section">Általános átjátszók</string>
