@@ -829,6 +829,12 @@
     <string name="git_clone_address">نسخه برداری:</string>
     <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">اثبات مهر زمان</string>
+    <string name="ots_info_description">مدرکی وجود دارد که ثابت کند این پست پیش از %1$s امضا شده است. این مدرک در بلاکچین بیتکوین در آن تاریخ و زمان ثبت شده است.</string>
+    <string name="edit_post">ویرایش نوشته</string>
+    <string name="proposal_to_edit">پیشنهاد برای بهبود یک نوشته</string>
+    <string name="message_to_author">خلاصه تغییرات</string>
+    <string name="message_to_author_placeholder">اصلاحات سریع…</string>
+    <string name="accept_the_suggestion">پذیرش پیشنهاد</string>
     <string name="accessibility_lyrics_off">متن خاموش</string>
     <string name="accessibility_send">ارسال</string>
     <string name="draft_note">پیش نویس یادداشت</string>
