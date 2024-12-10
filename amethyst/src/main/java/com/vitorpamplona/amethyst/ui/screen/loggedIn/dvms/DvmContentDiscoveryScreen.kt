@@ -204,11 +204,13 @@ fun ObserverContentDiscoveryResponse(
         }
 
     val latestResponse by resultFlow.collectAsStateWithLifecycle()
+    val myResponse = latestResponse
 
-    if (latestResponse != null) {
+    if (myResponse != null) {
         PrepareViewContentDiscoveryModels(
             noteAuthor,
             dvmRequestId.idHex,
+            myResponse,
             onRefresh,
             accountViewModel,
             nav,
@@ -236,6 +238,7 @@ fun ObserverDvmStatusResponse(
         }
 
     val latestStatus by statusFlow.collectAsStateWithLifecycle()
+
     // TODO: Make a good splash screen with loading animation for this DVM.
     if (latestStatus != null) {
         // TODO: Make a good splash screen with loading animation for this DVM.
@@ -252,6 +255,7 @@ fun ObserverDvmStatusResponse(
 fun PrepareViewContentDiscoveryModels(
     dvm: User,
     dvmRequestId: String,
+    latestResponse: NIP90ContentDiscoveryResponseEvent,
     onRefresh: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -262,7 +266,7 @@ fun PrepareViewContentDiscoveryModels(
             factory = NostrNIP90ContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmkey = dvm.pubkeyHex, requestid = dvmRequestId),
         )
 
-    LaunchedEffect(key1 = dvmRequestId) {
+    LaunchedEffect(key1 = dvmRequestId, latestResponse.id) {
         resultFeedViewModel.invalidateData()
     }
 

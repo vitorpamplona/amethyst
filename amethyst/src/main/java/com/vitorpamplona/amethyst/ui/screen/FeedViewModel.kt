@@ -236,8 +236,8 @@ class NostrBookmarkPrivateFeedViewModel(
 @Stable
 class NostrNIP90ContentDiscoveryFeedViewModel(
     val account: Account,
-    val dvmkey: String,
-    val requestid: String,
+    dvmkey: String,
+    requestid: String,
 ) : FeedViewModel(NIP90ContentDiscoveryResponseFilter(account, dvmkey, requestid)) {
     class Factory(
         val account: Account,
