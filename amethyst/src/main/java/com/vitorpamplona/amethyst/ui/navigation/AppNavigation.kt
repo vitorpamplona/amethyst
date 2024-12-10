@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.net.URI
 import java.net.URLDecoder
 
 fun NavBackStackEntry.id(): String? = arguments?.getString("id")
@@ -349,6 +350,14 @@ private fun NavigateIfIntentRequested(
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel,
 ) {
+    accountViewModel.firstRoute?.let {
+        accountViewModel.firstRoute = null
+        val currentRoute = getRouteWithArguments(nav.controller)
+        if (!isSameRoute(currentRoute, it)) {
+            nav.newStack(it)
+        }
+    }
+
     val activity = LocalContext.current.getActivity()
 
     if (activity.intent.action == Intent.ACTION_SEND) {
@@ -394,12 +403,17 @@ private fun NavigateIfIntentRequested(
 
             LaunchedEffect(intentNextPage) {
                 if (actionableNextPage != null) {
-                    actionableNextPage?.let {
-                        val currentRoute = getRouteWithArguments(nav.controller)
-                        if (!isSameRoute(currentRoute, it)) {
-                            nav.newStack(it)
+                    actionableNextPage?.let { nextRoute ->
+                        val npub = runCatching { URI(intentNextPage.removePrefix("nostr:")).findParameterValue("account") }.getOrNull()
+                        if (npub != null && accountStateViewModel.currentAccount() != npub) {
+                            accountStateViewModel.switchUserSync(npub, nextRoute)
+                        } else {
+                            val currentRoute = getRouteWithArguments(nav.controller)
+                            if (!isSameRoute(currentRoute, nextRoute)) {
+                                nav.newStack(nextRoute)
+                            }
+                            actionableNextPage = null
                         }
-                        actionableNextPage = null
                     }
                 } else if (intentNextPage.contains("ncryptsec1")) {
                     // login functions
@@ -439,14 +453,22 @@ private fun NavigateIfIntentRequested(
                         }
                     } else {
                         val uri = intent.data?.toString()
+
                         if (!uri.isNullOrBlank()) {
                             // navigation functions
                             val newPage = uriToRoute(uri)
 
                             if (newPage != null) {
-                                val currentRoute = getRouteWithArguments(nav.controller)
-                                if (!isSameRoute(currentRoute, newPage)) {
-                                    nav.newStack(newPage)
+                                scope.launch {
+                                    val npub = runCatching { URI(uri.removePrefix("nostr:")).findParameterValue("account") }.getOrNull()
+                                    if (npub != null && accountStateViewModel.currentAccount() != npub) {
+                                        accountStateViewModel.switchUserSync(npub, newPage)
+                                    } else {
+                                        val currentRoute = getRouteWithArguments(nav.controller)
+                                        if (!isSameRoute(currentRoute, newPage)) {
+                                            nav.newStack(newPage)
+                                        }
+                                    }
                                 }
                             } else if (uri.contains("ncryptsec")) {
                                 // login functions
@@ -508,3 +530,14 @@ val slideOutHorizontallyToEnd = slideOutHorizontally(animationSpec = tween(), ta
 
 val scaleIn = scaleIn(animationSpec = tween(), initialScale = 0.9f)
 val scaleOut = scaleOut(animationSpec = tween(), targetScale = 0.9f)
+
+fun URI.findParameterValue(parameterName: String): String? =
+    rawQuery
+        ?.split('&')
+        ?.map {
+            val parts = it.split('=')
+            val name = parts.firstOrNull() ?: ""
+            val value = parts.drop(1).firstOrNull() ?: ""
+            Pair(name, value)
+        }?.firstOrNull { it.first == parameterName }
+        ?.second

@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDM
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.Event
@@ -176,7 +177,7 @@ class EventNotificationConsumer(
                 val content = chatNote.event?.content() ?: ""
                 val user = chatNote.author?.toBestDisplayName() ?: ""
                 val userPicture = chatNote.author?.profilePicture()
-                val noteUri = chatNote.toNEvent()
+                val noteUri = chatNote.toNEvent() + "?account=" + acc.keyPair.pubKey.toNpub()
                 notificationManager()
                     .sendDMNotification(
                         event.id,
@@ -216,7 +217,7 @@ class EventNotificationConsumer(
                     decryptContent(note, signer) { content ->
                         val user = note.author?.toBestDisplayName() ?: ""
                         val userPicture = note.author?.profilePicture()
-                        val noteUri = note.toNEvent()
+                        val noteUri = note.toNEvent() + "?account=" + acc.keyPair.pubKey.toNpub()
                         notificationManager()
                             .sendDMNotification(event.id, content, user, event.createdAt, userPicture, noteUri, applicationContext)
                     }
@@ -322,7 +323,7 @@ class EventNotificationConsumer(
                                     )
                             }
                             val userPicture = senderInfo.first.profilePicture()
-                            val noteUri = "nostr:Notifications"
+                            val noteUri = "notifications?account=" + acc.keyPair.pubKey.toNpub()
 
                             Log.d(TAG, "Notify ${event.id} $content $title $noteUri")
 
@@ -353,9 +354,9 @@ class EventNotificationConsumer(
                             )
 
                         val userPicture = senderInfo.first.profilePicture()
-                        val noteUri = "nostr:Notifications"
+                        val noteUri = "notifications?account=" + acc.keyPair.pubKey.toNpub()
 
-                        Log.d(TAG, "Notify ${event.id} $content $title $noteUri")
+                        Log.d(TAG, "Notify ${event.id} $title $noteUri")
 
                         notificationManager()
                             .sendZapNotification(

@@ -256,11 +256,11 @@ class MainActivity : AppCompatActivity() {
 }
 
 fun uriToRoute(uri: String?): String? =
-    if (uri.equals("nostr:Notifications", true)) {
+    if (uri?.startsWith("notifications", true) == true || uri?.startsWith("nostr:notifications", true) == true) {
         Route.Notification.route.replace("{scrollToTop}", "true")
     } else {
-        if (uri?.startsWith("nostr:Hashtag?id=") == true) {
-            Route.Hashtag.route.replace("{id}", uri.removePrefix("nostr:Hashtag?id="))
+        if (uri?.startsWith("hashtag?id=") == true || uri?.startsWith("nostr:hashtag?id=") == true) {
+            Route.Hashtag.route.replace("{id}", uri.removePrefix("nostr:").removePrefix("hashtag?id="))
         } else {
             val nip19 = Nip19Bech32.uriToRoute(uri)?.entity
             when (nip19) {
@@ -280,6 +280,7 @@ fun uriToRoute(uri: String?): String? =
                         "Event/${nip19.hex}"
                     }
                 }
+
                 is Nip19Bech32.NAddress -> {
                     if (nip19.kind == CommunityDefinitionEvent.KIND) {
                         "Community/${nip19.atag}"
@@ -289,12 +290,14 @@ fun uriToRoute(uri: String?): String? =
                         "Event/${nip19.atag}"
                     }
                 }
+
                 is Nip19Bech32.NEmbed -> {
                     if (LocalCache.getNoteIfExists(nip19.event.id) == null) {
                         LocalCache.verifyAndConsume(nip19.event, null)
                     }
                     "Event/${nip19.event.id}"
                 }
+
                 else -> null
             }
         }

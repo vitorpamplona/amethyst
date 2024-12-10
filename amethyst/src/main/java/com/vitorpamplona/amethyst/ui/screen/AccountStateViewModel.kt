@@ -27,7 +27,6 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.LocalPreferences.currentAccount
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.DefaultChannels
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
@@ -81,10 +80,10 @@ class AccountStateViewModel : ViewModel() {
         viewModelScope.launch { tryLoginExistingAccount() }
     }
 
-    private suspend fun tryLoginExistingAccount() =
+    private suspend fun tryLoginExistingAccount(route: String? = null) =
         withContext(Dispatchers.IO) {
             LocalPreferences.loadCurrentAccountFromEncryptedStorage()
-        }?.let { startUI(it) } ?: run { requestLoginUI() }
+        }?.let { startUI(it, route) } ?: run { requestLoginUI() }
 
     private suspend fun requestLoginUI() {
         _accountContent.update { AccountState.LoggedOff }
@@ -162,31 +161,24 @@ class AccountStateViewModel : ViewModel() {
     }
 
     @OptIn(FlowPreview::class)
-    suspend fun startUI(accountSettings: AccountSettings) =
-        withContext(Dispatchers.Main) {
-            if (accountSettings.isWriteable()) {
-                _accountContent.update { AccountState.LoggedIn(accountSettings) }
-            } else {
-                _accountContent.update { AccountState.LoggedInViewOnly(accountSettings) }
-            }
+    suspend fun startUI(
+        accountSettings: AccountSettings,
+        route: String? = null,
+    ) = withContext(Dispatchers.Main) {
+        _accountContent.update { AccountState.LoggedIn(accountSettings, route) }
 
-            collectorJob?.cancel()
-            collectorJob =
-                viewModelScope.launch(Dispatchers.IO) {
-                    accountSettings.saveable.debounce(1000).collect {
-                        LocalPreferences.saveToEncryptedStorage(it.accountSettings)
-                    }
+        collectorJob?.cancel()
+        collectorJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                accountSettings.saveable.debounce(1000).collect {
+                    LocalPreferences.saveToEncryptedStorage(it.accountSettings)
                 }
-        }
+            }
+    }
 
     private fun prepareLogoutOrSwitch() =
         when (val state = _accountContent.value) {
             is AccountState.LoggedIn -> {
-                collectorJob?.cancel()
-                state.currentViewModelStore.viewModelStore.clear()
-            }
-
-            is AccountState.LoggedInViewOnly -> {
                 collectorJob?.cancel()
                 state.currentViewModelStore.viewModelStore.clear()
             }
@@ -316,19 +308,36 @@ class AccountStateViewModel : ViewModel() {
 
     fun switchUser(accountInfo: AccountInfo) {
         viewModelScope.launch(Dispatchers.IO) {
-            prepareLogoutOrSwitch()
-            LocalPreferences.switchToAccount(accountInfo)
-            tryLoginExistingAccount()
+            switchUserSync(accountInfo)
         }
+    }
+
+    suspend fun switchUserSync(
+        npub: String,
+        route: String,
+    ): Boolean {
+        if (npub != LocalPreferences.currentAccount()) {
+            val account = LocalPreferences.allSavedAccounts().firstOrNull { it.npub == npub }
+            if (account != null) {
+                switchUserSync(account, route)
+                return true
+            }
+        }
+        return false
+    }
+
+    suspend fun switchUserSync(
+        accountInfo: AccountInfo,
+        route: String? = null,
+    ) {
+        prepareLogoutOrSwitch()
+        LocalPreferences.switchToAccount(accountInfo)
+        tryLoginExistingAccount(route)
     }
 
     fun currentAccount() =
         when (val state = _accountContent.value) {
             is AccountState.LoggedIn ->
-                state.accountSettings.keyPair.pubKey
-                    .toNpub()
-
-            is AccountState.LoggedInViewOnly ->
                 state.accountSettings.keyPair.pubKey
                     .toNpub()
 

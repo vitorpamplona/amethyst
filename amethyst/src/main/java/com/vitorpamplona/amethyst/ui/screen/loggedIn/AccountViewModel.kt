@@ -153,6 +153,8 @@ class AccountViewModel(
     Dao {
     val account = Account(accountSettings, accountSettings.createSigner(), viewModelScope)
 
+    var firstRoute: String? = null
+
     // TODO: contact lists are not notes yet
     // val kind3Relays: StateFlow<ContactListEvent?> = observeByAuthor(ContactListEvent.KIND, account.signer.pubKey)
 
