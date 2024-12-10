@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -31,7 +28,6 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.LaunchedEffect
@@ -257,24 +253,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-}
-
-class GetMediaActivityResultContract : ActivityResultContracts.GetContent() {
-    @SuppressLint("MissingSuperCall")
-    override fun createIntent(
-        context: Context,
-        input: String,
-    ): Intent {
-        // Force only images and videos to be selectable
-        // Force OPEN Document because of the resulting URI must be passed to the
-        // Playback service and the picker's permissions only allow the activity to read the URI
-        return Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            // Force only images and videos to be selectable
-            type = "*/*"
-            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*"))
-        }
-    }
 }
 
 fun uriToRoute(uri: String?): String? =
