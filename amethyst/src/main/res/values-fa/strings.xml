@@ -835,6 +835,8 @@
     <string name="message_to_author">خلاصه تغییرات</string>
     <string name="message_to_author_placeholder">اصلاحات سریع…</string>
     <string name="accept_the_suggestion">پذیرش پیشنهاد</string>
+    <string name="accessibility_download_for_offline">بارگيری</string>
+    <string name="accessibility_lyrics_on">روشن کردن متن</string>
     <string name="accessibility_lyrics_off">متن خاموش</string>
     <string name="accessibility_send">ارسال</string>
     <string name="draft_note">پیش نویس یادداشت</string>
