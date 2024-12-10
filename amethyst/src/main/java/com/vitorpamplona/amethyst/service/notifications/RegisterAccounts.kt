@@ -166,8 +166,6 @@ class RegisterAccounts(
         if (notificationToken.isNotEmpty()) {
             withContext(Dispatchers.IO) {
                 signEventsToProveControlOfAccounts(accounts, notificationToken) { postRegistrationEvent(it) }
-
-                PushNotificationUtils.hasInit = true
             }
         }
     }
