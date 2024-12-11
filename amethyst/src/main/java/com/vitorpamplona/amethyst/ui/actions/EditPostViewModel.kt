@@ -315,11 +315,7 @@ open class EditPostViewModel : ViewModel() {
             if (lastWord.startsWith("@") && lastWord.length > 2) {
                 NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
                 viewModelScope.launch(Dispatchers.IO) {
-                    userSuggestions =
-                        LocalCache
-                            .findUsersStartingWith(lastWord.removePrefix("@"), account)
-                            .sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() }, { it.pubkeyHex }))
-                            .reversed()
+                    userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@"), account)
                 }
             } else {
                 NostrSearchEventOrUserDataSource.clear()

@@ -1751,14 +1751,24 @@ object LocalCache {
             }
         }
 
-        return users.filter { _, user: User ->
-            (
-                (user.anyNameStartsWith(username)) ||
-                    user.pubkeyHex.startsWith(username, true) ||
-                    user.pubkeyNpub().startsWith(username, true)
-            ) &&
-                (forAccount == null || (!forAccount.isHidden(user) && !user.containsAny(forAccount.flowHiddenUsers.value.hiddenWordsCase)))
-        }
+        val finds =
+            users.filter { _, user: User ->
+                (
+                    (user.anyNameStartsWith(username)) ||
+                        user.pubkeyHex.startsWith(username, true) ||
+                        user.pubkeyNpub().startsWith(username, true)
+                ) &&
+                    (forAccount == null || (!forAccount.isHidden(user) && !user.containsAny(forAccount.flowHiddenUsers.value.hiddenWordsCase)))
+            }
+
+        return finds.sortedWith(
+            compareBy(
+                { forAccount?.isFollowing(it) == false },
+                { !it.toBestDisplayName().startsWith(username, ignoreCase = true) },
+                { it.toBestDisplayName().lowercase() },
+                { it.pubkeyHex },
+            ),
+        )
     }
 
     fun findNotesStartingWith(

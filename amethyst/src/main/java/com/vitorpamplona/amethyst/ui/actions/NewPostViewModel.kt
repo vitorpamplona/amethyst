@@ -1074,13 +1074,10 @@ open class NewPostViewModel : ViewModel() {
             userSuggestionAnchor = it.selection
             userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
             if (lastWord.startsWith("@") && lastWord.length > 2) {
-                NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
+                val prefix = lastWord.removePrefix("@")
+                NostrSearchEventOrUserDataSource.search(prefix)
                 viewModelScope.launch(Dispatchers.IO) {
-                    userSuggestions =
-                        LocalCache
-                            .findUsersStartingWith(lastWord.removePrefix("@"), account)
-                            .sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() }, { it.pubkeyHex }))
-                            .reversed()
+                    userSuggestions = LocalCache.findUsersStartingWith(prefix, account)
                 }
             } else {
                 NostrSearchEventOrUserDataSource.clear()
@@ -1103,13 +1100,12 @@ open class NewPostViewModel : ViewModel() {
             userSuggestionAnchor = it.selection
             userSuggestionsMainMessage = UserSuggestionAnchor.TO_USERS
             if (lastWord.startsWith("@") && lastWord.length > 2) {
-                NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
+                val prefix = lastWord.removePrefix("@")
+                NostrSearchEventOrUserDataSource.search(prefix)
                 viewModelScope.launch(Dispatchers.IO) {
                     userSuggestions =
                         LocalCache
-                            .findUsersStartingWith(lastWord.removePrefix("@"), account)
-                            .sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() }, { it.pubkeyHex }))
-                            .reversed()
+                            .findUsersStartingWith(prefix, account)
                 }
             } else {
                 NostrSearchEventOrUserDataSource.clear()
@@ -1131,18 +1127,11 @@ open class NewPostViewModel : ViewModel() {
             userSuggestionAnchor = it.selection
             userSuggestionsMainMessage = UserSuggestionAnchor.FORWARD_ZAPS
             if (lastWord.length > 2) {
-                NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
+                val prefix = lastWord.removePrefix("@")
+                NostrSearchEventOrUserDataSource.search(prefix)
                 viewModelScope.launch(Dispatchers.IO) {
                     userSuggestions =
-                        LocalCache
-                            .findUsersStartingWith(lastWord.removePrefix("@"), account)
-                            .sortedWith(
-                                compareBy(
-                                    { account?.isFollowing(it) },
-                                    { it.toBestDisplayName() },
-                                    { it.pubkeyHex },
-                                ),
-                            ).reversed()
+                        LocalCache.findUsersStartingWith(prefix, account)
                 }
             } else {
                 NostrSearchEventOrUserDataSource.clear()
