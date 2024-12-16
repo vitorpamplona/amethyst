@@ -229,7 +229,7 @@
         \n- Az Amethyst fejlesztői az Ön titkos kulcsát **soha** nem fogják Öntől elkérni.
         \n- A fiók-helyreállításának érdekében, a titkos kulcsáról **mindig** készítsen biztonsági másolatot. Javasoljuk egy jelszókezelő használatát.
     </string>
-    <string name="account_backup_tips3_md" tools:ignore="Typos">        A nagyobb biztonság érdekében a kulcsot jelszóval titkosíthatja. Ez a kulcs **ncryptsec1**-vel kezdődik, és a jelszava nélkül nem használható.
+    <string name="account_backup_tips3_md" tools:ignore="Typos">        A nagyobb biztonság érdekében titkosítsa egy jelszóval. A jelszóval védett kulcs **ncryptsec1**-vel kezdődik, és a jelszava nélkül nem használható.
          \n\nHa elveszíti a jelszavát, nem tudja visszaállítani a kulcsát.
     </string>
     <string name="failed_to_encrypt_key">Nem sikerült a privát kulcsot titkosítani</string>

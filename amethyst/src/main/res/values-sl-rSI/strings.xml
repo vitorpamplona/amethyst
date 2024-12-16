@@ -17,7 +17,7 @@
     <string name="explicit_content">Eksplicitna vsebina</string>
     <string name="spam">Nezaželjena vsebina</string>
     <string name="spam_description">Iz tega releja izvira številna nezaželjena vsebina</string>
-    <string name="impersonation">Imitacija</string>
+    <string name="impersonation">Oponašanje</string>
     <string name="illegal_behavior">Nedovoljeno obnašanje</string>
     <string name="other">Drugo</string>
     <string name="unknown">Neznano</string>
@@ -34,17 +34,17 @@
     <string name="block_report">Blokiraj / Prijavi</string>
     <string name="block_hide_user"><![CDATA[Blokiraj in skrij uporabnika]]></string>
     <string name="report_spam_scam">Prijavi nazaželjeno vsebino / prevaro</string>
-    <string name="report_impersonation">Prijavi imitacijo</string>
+    <string name="report_impersonation">Prijavi oponašalca</string>
     <string name="report_explicit_content">Prijavi eksplicitno vsebino</string>
     <string name="report_illegal_behaviour">Prijavi nedovoljeno obnašanje</string>
-    <string name="report_malware">Prijavi zlonamerno programsko opremo</string>
+    <string name="report_malware">Zlonamerna programska vsebina</string>
     <string name="report_mod">Prijavi moderatorja</string>
-    <string name="malware">Zlonamerna programska oprema</string>
+    <string name="malware">Zlonamerna programska vsebina</string>
     <string name="mod">Administrator</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Uporabljaš javni ključ in javni ključi omogočajo le branje.
 Prijavi se s privatnim ključem, da omogočiš tudi pisanje</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Uporabljaš javni ključ in javni ključi omogočajo le branje.
-Prijavi se s privatnim ključem za potisk sporočila</string>
+Prijavi se s privatnim ključem za posredovanje sporočila</string>
     <string name="login_with_a_private_key_to_like_posts">Uporabljaš javni ključ in javni ključi omogočajo le branje.
 Prijavi se s privatnim ključem za všečkanje sporočila</string>
     <string name="no_zap_amount_setup_long_press_to_change">Nimaš nastavljene Zap vsote. Za spremembo uporabi daljši pritisk</string>
@@ -60,13 +60,13 @@ Prijavi se s privatnim ključem, za cenzuro besed ali stavkov</string>
 Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="zaps">Zapi</string>
     <string name="view_count">Števec vpogledov</string>
-    <string name="boost">Potisk</string>
-    <string name="boosted">potisnjeno</string>
-    <string name="edited">urejeno</string>
+    <string name="boost">Posreduj</string>
+    <string name="boosted">posredovano</string>
+    <string name="edited">posodobljeno</string>
     <string name="edited_number">uredi #%1$s</string>
     <string name="original">original</string>
-    <string name="quote">Citat</string>
-    <string name="fork">Razcep</string>
+    <string name="quote">Citiraj</string>
+    <string name="fork">Razcepi</string>
     <string name="propose_an_edit">Prošnja za urejanje</string>
     <string name="new_amount_in_sats">Nova vrednost v Sat</string>
     <string name="add">Dodaj</string>
@@ -76,8 +76,8 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="profile_banner">Profilna pasica</string>
     <string name="payment_successful">Plačilo uspešno</string>
     <string name="error_parsing_error_message">Napaka pri razčlembi sporočila o napaki</string>
-    <string name="following">" Sledenje"</string>
-    <string name="followers">" Sledilci"</string>
+    <string name="following">" Sledim"</string>
+    <string name="followers">" Sledilcev"</string>
     <string name="profile">Profil</string>
     <string name="security_filters">Varnostni filtri</string>
     <string name="log_out">Odjavi se</string>
@@ -143,12 +143,12 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="known">Znano</string>
     <string name="new_requests">Nova prošnja</string>
     <string name="blocked_users">Blokirani uporabniki</string>
-    <string name="new_threads">Nova nit</string>
+    <string name="new_threads">Nove objave</string>
     <string name="conversations">Pogovori</string>
     <string name="notes">Zapiski</string>
-    <string name="replies">Odgovori</string>
+    <string name="replies">Pogovori</string>
     <string name="gallery">Galerija</string>
-    <string name="follows">"Sledilci"</string>
+    <string name="follows">"Sledim"</string>
     <string name="reports">"Reportaže"</string>
     <string name="more_options">Več možnosti</string>
     <string name="relays">" Releji"</string>
@@ -160,7 +160,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="copy_public_key_npub_to_the_clipboard">Kopiraj javni ključ (NPub) v odložišče</string>
     <string name="send_a_direct_message">Pošlji direktno sporočilo</string>
     <string name="edits_the_user_s_metadata">Uredi uporabnikove metapodatke</string>
-    <string name="follow">Slediti</string>
+    <string name="follow">Sledi</string>
     <string name="follow_back">Sledi nazaj</string>
     <string name="unblock">Odblokiraj</string>
     <string name="copy_user_id">Kopiraj uporabnikov ID</string>
@@ -212,9 +212,11 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="translations_translated_from">prevedeno iz</string>
     <string name="translations_to">v</string>
     <string name="translations_show_in_lang_first">Prikaži najprej v %1$s</string>
+    <string name="chat_about_topic">Javni pogovor o %1$s</string>
+    <string name="community_about_topic">Javna skupnost o %1$s</string>
     <string name="translations_always_translate_to_lang">Vedno prevedi v %1$s</string>
     <string name="translations_never_translate_from_lang">Nikoli ne prevedi iz %1$s</string>
-    <string name="nip_05">Nostr naslov</string>
+    <string name="nip_05">Nostr naslov t. i. Nip-05</string>
     <string name="never">nikoli</string>
     <string name="now">zdaj</string>
     <string name="h">h</string>
@@ -381,7 +383,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="yes">Da</string>
     <string name="no">Ne</string>
     <string name="follow_list_selection">Spisek komu sledimo</string>
-    <string name="follow_list_kind3follows">Vsi katerim sledimo</string>
+    <string name="follow_list_kind3follows">Vse, čemur sledimo</string>
     <string name="follow_list_aroundme">V moji okolici</string>
     <string name="follow_list_global">Globalno</string>
     <string name="follow_list_mute_list">Spisek utišanih</string>
@@ -507,12 +509,12 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="live_stream_is_offline">Prenos v živo je odklopljen</string>
     <string name="live_stream_has_ended">Prenos v živo je končan</string>
     <string name="are_you_sure_you_want_to_log_out">Odjava bo izbrisala vse vaše lokalne informacije. Poskrbite, da imate varnostno kopijo svojih zasebnih ključev, da se izognete izgubi računa. Ali želite nadaljevati?</string>
-    <string name="followed_tags">Oznake katerim sledimo</string>
+    <string name="followed_tags">Spremljana vsebina</string>
     <string name="relay_setup">Releji</string>
     <string name="discover_content">Odkrivanje zapiskov</string>
     <string name="discover_marketplace">Tržnica</string>
     <string name="discover_live">V živo</string>
-    <string name="discover_community">Skupnost</string>
+    <string name="discover_community">Skupnosti</string>
     <string name="discover_chat">Pogovori</string>
     <string name="community_approved_posts">Odobrene objave</string>
     <string name="groups_no_descriptor">Ta skupina nima opisa ali pravil. Obrnite se na lastnika, da jih doda</string>
@@ -523,14 +525,14 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="settings">Nastavitve</string>
     <string name="connectivity_type_always">Vedno</string>
     <string name="connectivity_type_wifi_only">Samo Wifi</string>
-    <string name="connectivity_type_unmetered_wifi_only">Wi-Fi brez omejitev</string>
+    <string name="connectivity_type_unmetered_wifi_only">Samo z WiFi</string>
     <string name="connectivity_type_never">Nikoli</string>
-    <string name="ui_feature_set_type_complete">Končaj</string>
-    <string name="ui_feature_set_type_simplified">Poenostavljeno</string>
-    <string name="ui_feature_set_type_performance">Zmogljivost</string>
-    <string name="system">Sistem</string>
-    <string name="light">Svetlo</string>
-    <string name="dark">Temno</string>
+    <string name="ui_feature_set_type_complete">Celovit</string>
+    <string name="ui_feature_set_type_simplified">Poenostavljen</string>
+    <string name="ui_feature_set_type_performance">Optimiziran</string>
+    <string name="system">Sistemska</string>
+    <string name="light">Svetla</string>
+    <string name="dark">Temna</string>
     <string name="application_preferences">Nastavitve aplikacije</string>
     <string name="wallet_connect">Wallet Connect</string>
     <string name="language">Jezik</string>
@@ -642,10 +644,10 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="error_parsing_nip47_title">Ni bilo mogoče nastaviti \"Wallet Connect\"</string>
     <string name="error_parsing_nip47">Napaka pri razčlenjevanju NIP-47 connection string. Preverite pri vašem ponudniku denarnice, ali je to pravilno: %1$s. Napaka: %2$s</string>
     <string name="error_parsing_nip47_no_error">Napaka pri razčlenjevanju NIP-47 connection string. Preverite pri vašem ponudniku denarnice, ali je to pravilno: %1$s.</string>
-    <string name="cashu_failed_redemption">Cashu ni bilo mogoče unovčiti</string>
+    <string name="cashu_failed_redemption">Cashu žetona ni bilo mogoče unovčiti</string>
     <string name="cashu_failed_redemption_explainer_error_msg">Kovnica je posredovala naslednje sporočilo o napaki: %1$s</string>
     <string name="cashu_failed_redemption_explainer_already_spent">Cashu žeton je že zapravljen.</string>
-    <string name="cashu_successful_redemption">Cashu prejet</string>
+    <string name="cashu_successful_redemption">Prejeli ste Cashu žeton</string>
     <string name="cashu_successful_redemption_explainer">V vašo denarnico je bilo poslanih %1$s satoshi-jev. (Provizija: %2$s sat)</string>
     <string name="cashu_no_wallet_found">Na sistemu ni najdene združljive Cashu denarnice</string>
     <string name="error_unable_to_fetch_invoice">Ni mogoče pridobiti fakture s strežnikov prejemnika</string>
@@ -755,7 +757,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="open_all_reactions_to_this_post">Odpri vse odzive na to objavo</string>
     <string name="close_all_reactions_to_this_post">Zapri vse odzive na to objavo</string>
     <string name="reply_description">Odgovori</string>
-    <string name="boost_or_quote_description">Potisni ali citiraj</string>
+    <string name="boost_or_quote_description">Posreduj ali citiraj</string>
     <string name="like_description">Všečkaj</string>
     <string name="zap_description">Zap</string>
     <string name="change_reaction">Spremeni hitre odzivne ikone</string>
@@ -841,6 +843,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="accessibility_turn_off_sealed_message">Zapečateno sporočilo je vklopljeno. Kliknite, da izklopite zapečateno sporočilo.</string>
     <string name="accessibility_send">Pošlji</string>
     <string name="accessibility_play_username">Predvajaj uporabniško ime</string>
+    <string name="accessibility_pushpin">Pushpin</string>
     <string name="accessibility_scan_qr_code">Skeniraj QR kodo</string>
     <string name="accessibility_navigate_to_alby">Pojdite na stran tretjega ponudnika denarnice Alby.</string>
     <string name="it_s_not_possible_to_reply_to_a_draft_note">Ni mogoče odgovoriti na osnutek zapiska.</string>
@@ -848,9 +851,9 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="it_s_not_possible_to_react_to_a_draft_note">Ni mogoče reagirati na osnutek zapiska.</string>
     <string name="it_s_not_possible_to_zap_to_a_draft_note">Osnutke zapisa ni mogoče Zap-niti</string>
     <string name="draft_note">Osnutek zapiska</string>
-    <string name="load_from_text">Iz zapisa</string>
+    <string name="load_from_text">Iz zapiska</string>
     <string name="dvm_looking_for_app">Iščem aplikacijo</string>
-    <string name="dvm_waiting_status">Delo zahtevano, čakam na odgovor</string>
+    <string name="dvm_waiting_status">Zahteva poslana, čakam na odgovor</string>
     <string name="dvm_requesting_job">Zahtevam delo od DVM</string>
     <string name="nwc_payment_request">Zahteva za plačilo poslana, čakam na potrditev iz vaše denarnice.</string>
     <string name="dvm_waiting_to_confirm_payment">Čakam, da DVM potrdi plačilo ali pošlje rezultate.</string>
