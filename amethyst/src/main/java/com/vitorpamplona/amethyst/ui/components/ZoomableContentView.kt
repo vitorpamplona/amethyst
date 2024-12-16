@@ -25,12 +25,14 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.InlineTextContent
-import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
@@ -54,12 +56,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
@@ -87,7 +88,6 @@ import com.vitorpamplona.amethyst.ui.note.HashCheckFailedIcon
 import com.vitorpamplona.amethyst.ui.note.HashCheckIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
@@ -440,15 +440,12 @@ fun ImageUrlWithDownloadButton(
 
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("routeToImage", "")
-                    appendInlineContent("inlineContent", "[icon]")
                     pop()
                 }
 
                 withStyle(regularText) { append(" ") }
             }
         }
-
-    val inlineContent = mapOf("inlineContent" to InlineDownloadIcon(showImage))
 
     val pressIndicator =
         remember {
@@ -457,30 +454,31 @@ fun ImageUrlWithDownloadButton(
                 .clickable { runCatching { uri.openUri(url) } }
         }
 
-    Text(
-        text = annotatedTermsString,
-        modifier = pressIndicator,
-        inlineContent = inlineContent,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
+    Row(
+        modifier =
+            Modifier
+                .width(IntrinsicSize.Max),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = annotatedTermsString,
+            modifier =
+                pressIndicator
+                    .weight(1f, fill = false),
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 1,
+        )
+        InlineDownloadIcon(showImage)
+    }
 }
 
 @Composable
 private fun InlineDownloadIcon(showImage: MutableState<Boolean>) =
-    InlineTextContent(
-        Placeholder(
-            width = Font17SP,
-            height = Font17SP,
-            placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
-        ),
+    IconButton(
+        modifier = Modifier.size(Size20dp),
+        onClick = { showImage.value = true },
     ) {
-        IconButton(
-            modifier = Modifier.size(Size20dp),
-            onClick = { showImage.value = true },
-        ) {
-            DownloadForOfflineIcon(Size24dp)
-        }
+        DownloadForOfflineIcon(Size24dp)
     }
 
 @Composable
@@ -533,15 +531,12 @@ fun DisplayUrlWithLoadingSymbol(content: BaseMediaContent) {
 
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("routeToImage", "")
-                    appendInlineContent("inlineContent", "[icon]")
                     pop()
                 }
 
                 withStyle(regularText) { append(" ") }
             }
         }
-
-    val inlineContent = mapOf("inlineContent" to InlineLoadingIcon())
 
     val pressIndicator =
         remember {
@@ -552,26 +547,26 @@ fun DisplayUrlWithLoadingSymbol(content: BaseMediaContent) {
             }
         }
 
-    Text(
-        text = annotatedTermsString,
-        modifier = pressIndicator,
-        inlineContent = inlineContent,
-        overflow = TextOverflow.Ellipsis,
-        maxLines = 1,
-    )
+    Row(
+        modifier =
+            Modifier
+                .width(IntrinsicSize.Max),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = annotatedTermsString,
+            modifier =
+                pressIndicator
+                    .weight(1f, fill = false),
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 1,
+        )
+        InlineLoadingIcon()
+    }
 }
 
 @Composable
-private fun InlineLoadingIcon() =
-    InlineTextContent(
-        Placeholder(
-            width = Font17SP,
-            height = Font17SP,
-            placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
-        ),
-    ) {
-        LoadingAnimation()
-    }
+private fun InlineLoadingIcon() = LoadingAnimation()
 
 @Composable
 fun DisplayBlurHash(
