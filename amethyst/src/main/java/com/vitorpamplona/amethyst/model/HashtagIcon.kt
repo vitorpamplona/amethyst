@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.Coffee
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Footstr
+import com.vitorpamplona.amethyst.commons.hashtags.Gamestr
 import com.vitorpamplona.amethyst.commons.hashtags.Grownostr
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
 import com.vitorpamplona.amethyst.commons.hashtags.Mate
@@ -56,7 +57,7 @@ import com.vitorpamplona.quartz.events.EmptyTagList
 fun RenderHashTagIconsPreview() {
     ThemeComparisonColumn {
         RenderRegular(
-            "Testing rendering of hashtags: #Bitcoin, #nostr, #lightning, #zap, #amethyst, #cashu, #plebs, #coffee, #skullofsatoshi, #grownostr, #footstr, #tunestr, #weed, #mate",
+            "Testing rendering of hashtags: #Bitcoin, #nostr, #lightning, #zap, #amethyst, #cashu, #plebs, #coffee, #skullofsatoshi, #grownostr, #footstr, #tunestr, #weed, #mate, #gamestr, #gamechain",
             EmptyTagList,
         ) { word, state ->
             when (word) {
@@ -83,6 +84,7 @@ fun checkForHashtagWithIcon(tag: String): HashtagIcon? =
         "tunestr", "music", "nowplaying" -> tunestr
         "mate", "matechain", "matestr" -> matestr
         "weed", "weedstr", "420", "cannabis", "marijuana" -> weed
+        "gamestr", "gaming", "gamechain" -> gamestr
         else -> null
     }
 
@@ -100,6 +102,7 @@ val footstr = HashtagIcon(CustomHashTagIcons.Footstr, "Footstr", Modifier.paddin
 val tunestr = HashtagIcon(CustomHashTagIcons.Tunestr, "Tunestr", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
 val weed = HashtagIcon(CustomHashTagIcons.Weed, "Weed", Modifier.padding(start = 1.dp, bottom = 0.dp, top = 0.dp))
 val matestr = HashtagIcon(CustomHashTagIcons.Mate, "Mate", Modifier.padding(start = 1.dp, bottom = 0.dp, top = 0.dp))
+val gamestr = HashtagIcon(CustomHashTagIcons.Gamestr, "GameStr", Modifier.padding(start = 1.dp, bottom = 0.dp, top = 0.dp))
 
 @Immutable
 class HashtagIcon(

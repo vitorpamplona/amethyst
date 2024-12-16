@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.hashtags
 
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType.Companion.NonZero
 import androidx.compose.ui.graphics.SolidColor
@@ -28,9 +30,23 @@ import androidx.compose.ui.graphics.StrokeJoin.Companion.Miter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.ImageVector.Builder
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
-public val CustomHashTagIcons.Skull: ImageVector
+@Preview
+@Composable
+fun CustomHashTagIconsSkullPreview() {
+    Image(
+        painter =
+            rememberVectorPainter(
+                CustomHashTagIcons.Skull,
+            ),
+        contentDescription = "",
+    )
+}
+
+val CustomHashTagIcons.Skull: ImageVector
     get() {
         if (customHashTagIconsSkull != null) {
             return customHashTagIconsSkull!!
