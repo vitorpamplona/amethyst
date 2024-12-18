@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.ETag
 import com.vitorpamplona.quartz.encoders.EventHint
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.IMetaTag
 import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
 import com.vitorpamplona.quartz.encoders.PTag
 import com.vitorpamplona.quartz.signers.NostrSigner
@@ -96,7 +97,7 @@ class CommentEvent(
             usersMentioned: Set<PTag> = emptySet(),
             addressesMentioned: Set<ATag> = emptySet(),
             eventsMentioned: Set<ETag> = emptySet(),
-            nip94attachments: List<FileHeaderEvent>? = null,
+            imetas: List<IMetaTag>? = null,
             geohash: String? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
             markAsSensitive: Boolean = false,
@@ -119,7 +120,7 @@ class CommentEvent(
             tags.add(removeTrailingNullsAndEmptyOthers("e", replyingTo.event.id, replyingTo.relay, replyingTo.event.pubKey))
             tags.add(arrayOf("k", "${replyingTo.event.kind}"))
 
-            create(msg, tags, usersMentioned, addressesMentioned, eventsMentioned, nip94attachments, geohash, zapReceiver, markAsSensitive, zapRaiserAmount, isDraft, signer, createdAt, onReady)
+            create(msg, tags, usersMentioned, addressesMentioned, eventsMentioned, imetas, geohash, zapReceiver, markAsSensitive, zapRaiserAmount, isDraft, signer, createdAt, onReady)
         }
 
         fun replyComment(
@@ -128,7 +129,7 @@ class CommentEvent(
             usersMentioned: Set<PTag> = emptySet(),
             addressesMentioned: Set<ATag> = emptySet(),
             eventsMentioned: Set<ETag> = emptySet(),
-            nip94attachments: List<FileHeaderEvent>? = null,
+            imetas: List<IMetaTag>? = null,
             geohash: String? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
             markAsSensitive: Boolean = false,
@@ -146,7 +147,7 @@ class CommentEvent(
             tags.add(removeTrailingNullsAndEmptyOthers("e", replyingTo.event.id, replyingTo.relay, replyingTo.event.pubKey))
             tags.add(arrayOf("k", "${replyingTo.event.kind}"))
 
-            create(msg, tags, usersMentioned, addressesMentioned, eventsMentioned, nip94attachments, geohash, zapReceiver, markAsSensitive, zapRaiserAmount, isDraft, signer, createdAt, onReady)
+            create(msg, tags, usersMentioned, addressesMentioned, eventsMentioned, imetas, geohash, zapReceiver, markAsSensitive, zapRaiserAmount, isDraft, signer, createdAt, onReady)
         }
 
         fun createGeoComment(
@@ -155,7 +156,7 @@ class CommentEvent(
             usersMentioned: Set<PTag> = emptySet(),
             addressesMentioned: Set<ATag> = emptySet(),
             eventsMentioned: Set<ETag> = emptySet(),
-            nip94attachments: List<FileHeaderEvent>? = null,
+            imetas: List<IMetaTag>? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
             markAsSensitive: Boolean = false,
             zapRaiserAmount: Long? = null,
@@ -168,7 +169,7 @@ class CommentEvent(
             geohash?.let { tags.addAll(rootGeohashMipMap(it)) }
             tags.add(arrayOf("K", "geo"))
 
-            create(msg, tags, usersMentioned, addressesMentioned, eventsMentioned, nip94attachments, null, zapReceiver, markAsSensitive, zapRaiserAmount, isDraft, signer, createdAt, onReady)
+            create(msg, tags, usersMentioned, addressesMentioned, eventsMentioned, imetas, null, zapReceiver, markAsSensitive, zapRaiserAmount, isDraft, signer, createdAt, onReady)
         }
 
         private fun create(
@@ -177,7 +178,7 @@ class CommentEvent(
             usersMentioned: Set<PTag> = emptySet(),
             addressesMentioned: Set<ATag> = emptySet(),
             eventsMentioned: Set<ETag> = emptySet(),
-            nip94attachments: List<FileHeaderEvent>? = null,
+            imetas: List<IMetaTag>? = null,
             geohash: String? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
             markAsSensitive: Boolean = false,
@@ -209,12 +210,8 @@ class CommentEvent(
             }
             zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
             geohash?.let { tags.addAll(geohashMipMap(it)) }
-            nip94attachments?.let {
-                it.forEach {
-                    Nip92MediaAttachments().convertFromFileHeader(it)?.let {
-                        tags.add(it)
-                    }
-                }
+            imetas?.forEach {
+                tags.add(Nip92MediaAttachments.createTag(it))
             }
 
             if (isDraft) {

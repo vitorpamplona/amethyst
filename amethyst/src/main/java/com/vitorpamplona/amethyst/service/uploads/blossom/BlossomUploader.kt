@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.service.uploads.blossom
 
 import android.content.ContentResolver
 import android.content.Context
@@ -29,15 +29,16 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.tryAndWait
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.service.HttpStatusMessages
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
+import com.vitorpamplona.amethyst.service.uploads.nip96.randomChars
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.events.Dimension
+import com.vitorpamplona.quartz.events.BlossomAuthorizationEvent
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -46,11 +47,8 @@ import okio.source
 import java.io.File
 import java.io.InputStream
 import java.util.Base64
-import kotlin.coroutines.resume
 
-class BlossomUploader(
-    val account: Account?,
-) {
+class BlossomUploader {
     fun Context.getFileName(uri: Uri): String? =
         when (uri.scheme) {
             ContentResolver.SCHEME_CONTENT -> getContentFileName(uri)
@@ -71,13 +69,14 @@ class BlossomUploader(
         size: Long?,
         alt: String?,
         sensitiveContent: String?,
-        server: ServerName,
-        contentResolver: ContentResolver,
+        serverBaseUrl: String,
         forceProxy: (String) -> Boolean,
+        httpAuth: suspend (hash: HexKey, size: Long, alt: String) -> BlossomAuthorizationEvent?,
         context: Context,
     ): MediaUploadResult {
         checkNotInMainThread()
 
+        val contentResolver = context.contentResolver
         val myContentType = contentType ?: contentResolver.getType(uri)
         val fileName = context.getFileName(uri)
 
@@ -103,31 +102,38 @@ class BlossomUploader(
             myContentType,
             alt,
             sensitiveContent,
-            server,
+            serverBaseUrl,
             forceProxy,
+            httpAuth,
             context,
         )
+    }
+
+    fun encodeAuth(event: BlossomAuthorizationEvent): String {
+        val encodedNIP98Event = Base64.getEncoder().encodeToString(event.toJson().toByteArray())
+        return "Nostr $encodedNIP98Event"
     }
 
     suspend fun uploadImage(
         inputStream: InputStream,
         hash: HexKey,
         length: Int,
-        fileName: String?,
+        baseFileName: String?,
         contentType: String?,
         alt: String?,
         sensitiveContent: String?,
-        server: ServerName,
+        serverBaseUrl: String,
         forceProxy: (String) -> Boolean,
+        httpAuth: suspend (hash: HexKey, size: Long, alt: String) -> BlossomAuthorizationEvent?,
         context: Context,
     ): MediaUploadResult {
         checkNotInMainThread()
 
-        val fileName = fileName ?: randomChars()
+        val fileName = baseFileName ?: randomChars()
         val extension =
             contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
-        val apiUrl = server.baseUrl.removeSuffix("/") + "/upload"
+        val apiUrl = serverBaseUrl.removeSuffix("/") + "/upload"
 
         val client = HttpClientManager.getHttpClient(forceProxy(apiUrl))
         val requestBuilder = Request.Builder()
@@ -143,12 +149,8 @@ class BlossomUploader(
                 }
             }
 
-        authUploadHeader(
-            hash,
-            length.toLong(),
-            alt?.let { "Uploading $it" } ?: "Uploading $fileName",
-        )?.let {
-            requestBuilder.addHeader("Authorization", it)
+        httpAuth(hash, length.toLong(), alt?.let { "Uploading $it" } ?: "Uploading $fileName")?.let {
+            requestBuilder.addHeader("Authorization", encodeAuth(it))
         }
 
         contentType?.let { requestBuilder.addHeader("Content-Type", it) }
@@ -186,23 +188,21 @@ class BlossomUploader(
     suspend fun delete(
         hash: String,
         contentType: String?,
-        server: ServerName,
+        serverBaseUrl: String,
         forceProxy: (String) -> Boolean,
+        httpAuth: (hash: HexKey, alt: String) -> BlossomAuthorizationEvent?,
         context: Context,
     ): Boolean {
         val extension =
             contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
-        val apiUrl = server.baseUrl
-
-        val client = HttpClientManager.getHttpClient(forceProxy(apiUrl))
+        val apiUrl = serverBaseUrl
 
         val requestBuilder = Request.Builder()
 
-        authDeleteHeader(
-            hash,
-            "Deleting $hash",
-        )?.let { requestBuilder.addHeader("Authorization", it) }
+        httpAuth(hash, "Deleting $hash")?.let {
+            requestBuilder.addHeader("Authorization", encodeAuth(it))
+        }
 
         val request =
             requestBuilder
@@ -211,7 +211,7 @@ class BlossomUploader(
                 .delete()
                 .build()
 
-        client.newCall(request).execute().use { response ->
+        HttpClientManager.getHttpClient(forceProxy(apiUrl)).newCall(request).execute().use { response ->
             if (response.isSuccessful) {
                 return true
             } else {
@@ -225,56 +225,8 @@ class BlossomUploader(
         }
     }
 
-    suspend fun authUploadHeader(
-        hash: String,
-        size: Long,
-        alt: String,
-    ): String? {
-        val myAccount = account ?: return null
-        return tryAndWait { continuation ->
-            myAccount.createBlossomUploadAuth(hash, size, alt) {
-                val encodedNIP98Event = Base64.getEncoder().encodeToString(it.toJson().toByteArray())
-                continuation.resume("Nostr $encodedNIP98Event")
-            }
-        }
-    }
-
-    suspend fun authDeleteHeader(
-        hash: String,
-        alt: String,
-    ): String? {
-        val myAccount = account ?: return null
-        return tryAndWait { continuation ->
-            myAccount.createBlossomDeleteAuth(hash, alt) {
-                val encodedNIP98Event = Base64.getEncoder().encodeToString(it.toJson().toByteArray())
-                continuation.resume("Nostr $encodedNIP98Event")
-            }
-        }
-    }
-
     private fun parseResults(body: String): MediaUploadResult {
-        val mapper =
-            jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         return mapper.readValue(body, MediaUploadResult::class.java)
     }
 }
-
-data class MediaUploadResult(
-    // A publicly accessible URL to the BUD-01 GET /<sha256> endpoint (optionally with a file extension)
-    val url: String?,
-    // The sha256 hash of the blob
-    val sha256: HexKey? = null,
-    // The size of the blob in bytes
-    val size: Long? = null,
-    // (optional) The MIME type of the blob
-    val type: String? = null,
-    // upload time
-    val uploaded: Long? = null,
-    // dimensions
-    val dimension: Dimension? = null,
-    // magnet link
-    val magnet: String? = null,
-    val infohash: String? = null,
-    // ipfs link
-    val ipfs: String? = null,
-)

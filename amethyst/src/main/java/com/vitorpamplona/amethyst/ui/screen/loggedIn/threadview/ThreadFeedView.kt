@@ -25,6 +25,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -156,6 +157,7 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
@@ -512,19 +514,19 @@ private fun FullBleedNoteCompose(
                         nav = nav,
                     )
                 } else if (noteEvent is VideoEvent) {
-                    VideoDisplay(baseNote, makeItShort = false, canPreview = true, backgroundColor = backgroundColor, isFiniteHeight = false, accountViewModel = accountViewModel, nav = nav)
+                    VideoDisplay(baseNote, makeItShort = false, canPreview = true, backgroundColor = backgroundColor, ContentScale.FillWidth, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is PictureEvent) {
-                    PictureDisplay(baseNote, roundedCorner = true, isFiniteHeight = false, backgroundColor, accountViewModel = accountViewModel, nav)
+                    PictureDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, PaddingValues(vertical = Size5dp), backgroundColor, accountViewModel = accountViewModel, nav)
                 } else if (noteEvent is FileHeaderEvent) {
-                    FileHeaderDisplay(baseNote, roundedCorner = true, isFiniteHeight = false, accountViewModel = accountViewModel)
+                    FileHeaderDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, accountViewModel = accountViewModel)
                 } else if (noteEvent is FileStorageHeaderEvent) {
-                    FileStorageHeaderDisplay(baseNote, roundedCorner = true, isFiniteHeight = false, accountViewModel = accountViewModel)
+                    FileStorageHeaderDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, accountViewModel = accountViewModel)
                 } else if (noteEvent is PeopleListEvent) {
                     DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is AudioTrackEvent) {
-                    AudioTrackHeader(noteEvent, baseNote, false, accountViewModel, nav)
+                    AudioTrackHeader(noteEvent, baseNote, ContentScale.FillWidth, accountViewModel, nav)
                 } else if (noteEvent is AudioHeaderEvent) {
-                    AudioHeader(noteEvent, baseNote, false, accountViewModel, nav)
+                    AudioHeader(noteEvent, baseNote, ContentScale.FillWidth, accountViewModel, nav)
                 } else if (noteEvent is CommunityPostApprovalEvent) {
                     RenderPostApproval(
                         baseNote,

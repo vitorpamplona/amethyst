@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.events
 
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.IMetaTag
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -57,7 +58,7 @@ class InteractiveStorySceneEvent(
             markAsSensitive: Boolean = false,
             zapRaiserAmount: Long? = null,
             geohash: String? = null,
-            nip94attachments: List<FileHeaderEvent>? = null,
+            imetas: List<IMetaTag>? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             isDraft: Boolean,
@@ -65,7 +66,7 @@ class InteractiveStorySceneEvent(
         ) {
             val tags =
                 makeTags(baseId, ALT + title, title, options = options) +
-                    generalTags(content, zapReceiver, markAsSensitive, zapRaiserAmount, geohash, nip94attachments)
+                    generalTags(content, zapReceiver, markAsSensitive, zapRaiserAmount, geohash, imetas)
 
             if (isDraft) {
                 signer.assembleRumor(createdAt, KIND, tags, content, onReady)

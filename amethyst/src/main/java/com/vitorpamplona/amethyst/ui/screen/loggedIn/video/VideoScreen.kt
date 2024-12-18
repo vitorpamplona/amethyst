@@ -24,6 +24,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -46,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -295,13 +297,13 @@ private fun RenderVideoOrPictureNote(
             if (noteEvent is PictureEvent) {
                 val backgroundColor = remember { mutableStateOf(Color.Transparent) }
 
-                PictureDisplay(note, false, true, backgroundColor, accountViewModel, nav)
+                PictureDisplay(note, false, ContentScale.Fit, PaddingValues(5.dp), backgroundColor, accountViewModel, nav)
             } else if (noteEvent is FileHeaderEvent) {
-                FileHeaderDisplay(note, false, true, accountViewModel)
+                FileHeaderDisplay(note, false, ContentScale.Fit, accountViewModel)
             } else if (noteEvent is FileStorageHeaderEvent) {
-                FileStorageHeaderDisplay(note, false, true, accountViewModel)
+                FileStorageHeaderDisplay(note, false, ContentScale.Fit, accountViewModel)
             } else if (noteEvent is VideoEvent) {
-                JustVideoDisplay(note, false, true, accountViewModel)
+                JustVideoDisplay(note, false, ContentScale.Fit, accountViewModel)
             }
         }
     }

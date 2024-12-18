@@ -87,8 +87,8 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
-import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.CompressorQuality
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -482,7 +482,7 @@ fun ChatroomScreen(
         }
 
         // LAST ROW
-        PrivateMessageEditFieldRow(newPostModel, isPrivate = true, accountViewModel) {
+        PrivateMessageEditFieldRow(newPostModel, accountViewModel) {
             scope.launch(Dispatchers.IO) {
                 innerSendPost(newPostModel, room, replyTo, accountViewModel, null)
 
@@ -505,7 +505,7 @@ private fun innerSendPost(
     dTag: String?,
 ) {
     val urls = findURLs(newPostModel.message.text)
-    val usedAttachments = newPostModel.nip94attachments.filter { it.urls().intersect(urls.toSet()).isNotEmpty() }
+    val usedAttachments = newPostModel.iMetaAttachments.filter { it.url !in urls.toSet() }
 
     if (newPostModel.nip17 || room.users.size > 1 || replyTo.value?.event is ChatMessageEvent) {
         accountViewModel.account.sendNIP17PrivateMessage(
@@ -514,7 +514,7 @@ private fun innerSendPost(
             replyingTo = replyTo.value,
             mentions = null,
             wantsToMarkAsSensitive = false,
-            nip94attachments = usedAttachments,
+            imetas = usedAttachments,
             draftTag = dTag,
         )
     } else {
@@ -524,7 +524,7 @@ private fun innerSendPost(
             replyingTo = replyTo.value,
             mentions = null,
             wantsToMarkAsSensitive = false,
-            nip94attachments = usedAttachments,
+            imetas = usedAttachments,
             draftTag = dTag,
         )
     }
@@ -533,7 +533,6 @@ private fun innerSendPost(
 @Composable
 fun PrivateMessageEditFieldRow(
     channelScreenModel: NewPostViewModel,
-    isPrivate: Boolean,
     accountViewModel: AccountViewModel,
     onSendNewMessage: () -> Unit,
 ) {
@@ -573,7 +572,7 @@ fun PrivateMessageEditFieldRow(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(horizontal = 6.dp),
                 ) {
-                    UploadFromGallery(
+                    SelectFromGallery(
                         isUploading = channelScreenModel.isUploadingImage,
                         tint = MaterialTheme.colorScheme.placeholderText,
                         modifier =
@@ -581,13 +580,13 @@ fun PrivateMessageEditFieldRow(
                                 .size(30.dp)
                                 .padding(start = 2.dp),
                     ) {
+                        channelScreenModel.selectImage(it)
                         channelScreenModel.upload(
-                            galleryUri = it,
                             alt = null,
                             sensitiveContent = false,
                             // use MEDIUM quality
-                            mediaQuality = MediaCompressor().compressorQualityToInt(CompressorQuality.MEDIUM),
-                            isPrivate = isPrivate,
+                            mediaQuality = MediaCompressor.compressorQualityToInt(CompressorQuality.MEDIUM),
+                            isPrivate = true,
                             server = accountViewModel.account.settings.defaultFileServer,
                             onError = accountViewModel::toast,
                             context = context,

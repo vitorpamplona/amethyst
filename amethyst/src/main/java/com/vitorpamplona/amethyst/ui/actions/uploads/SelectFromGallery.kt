@@ -18,78 +18,93 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions
+package com.vitorpamplona.amethyst.ui.actions.uploads
 
-import android.content.Context
 import android.net.Uri
-import android.os.Environment
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
+@Stable
+class SelectedMedia(
+    val uri: Uri,
+    val mimeType: String?,
+) {
+    fun isImage() = mimeType?.startsWith("image")
+
+    fun isVideo() = mimeType?.startsWith("video")
+}
+
 @Composable
-fun UploadFromGallery(
+fun SelectFromGallery(
     isUploading: Boolean,
     tint: Color,
     modifier: Modifier,
-    onImageChosen: (Uri) -> Unit,
+    onImageChosen: (ImmutableList<SelectedMedia>) -> Unit,
 ) {
     var showGallerySelect by remember { mutableStateOf(false) }
     if (showGallerySelect) {
         GallerySelect(
             onImageUri = { uri ->
                 showGallerySelect = false
-                if (uri != null) {
+                if (uri.isNotEmpty()) {
                     onImageChosen(uri)
                 }
             },
         )
     }
 
-    UploadBoxButton(isUploading, tint, modifier) { showGallerySelect = true }
+    GallerySelectButton(isUploading, tint, modifier) { showGallerySelect = true }
 }
 
 @Composable
-private fun UploadBoxButton(
+fun SelectSingleFromGallery(
+    isUploading: Boolean,
+    tint: Color,
+    modifier: Modifier,
+    onImageChosen: (SelectedMedia) -> Unit,
+) {
+    var showGallerySelect by remember { mutableStateOf(false) }
+    if (showGallerySelect) {
+        GallerySelectSingle(
+            onImageUri = { media ->
+                showGallerySelect = false
+                if (media != null) {
+                    onImageChosen(media)
+                }
+            },
+        )
+    }
+
+    GallerySelectButton(isUploading, tint, modifier) { showGallerySelect = true }
+}
+
+@Composable
+private fun GallerySelectButton(
     isUploading: Boolean,
     tint: Color,
     modifier: Modifier,
@@ -115,84 +130,52 @@ private fun UploadBoxButton(
     }
 }
 
-fun getPhotoUri(context: Context): Uri {
-    val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-    val storageDir: File? = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-    return File
-        .createTempFile(
-            "JPEG_${timeStamp}_",
-            ".jpg",
-            storageDir,
-        ).let {
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.provider",
-                it,
-            )
-        }
-}
-
-val DefaultAnimationColors =
-    listOf(
-        Color(0xFF5851D8),
-        Color(0xFF833AB4),
-        Color(0xFFC13584),
-        Color(0xFFE1306C),
-        Color(0xFFFD1D1D),
-        Color(0xFFF56040),
-        Color(0xFFF77737),
-        Color(0xFFFCAF45),
-        Color(0xFFFFDC80),
-        Color(0xFF5851D8),
-    ).toImmutableList()
-
 @Composable
-fun LoadingAnimation(
-    indicatorSize: Dp = 20.dp,
-    circleColors: ImmutableList<Color> = DefaultAnimationColors,
-    animationDuration: Int = 1000,
-) {
-    val infiniteTransition = rememberInfiniteTransition()
+fun GallerySelect(onImageUri: (ImmutableList<SelectedMedia>) -> Unit = {}) {
+    val hasLaunched by remember { mutableStateOf(AtomicBoolean(false)) }
+    val resolver = LocalContext.current.contentResolver
 
-    val rotateAnimation by
-        infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec =
-                infiniteRepeatable(
-                    animation =
-                        tween(
-                            durationMillis = animationDuration,
-                            easing = LinearEasing,
-                        ),
-                ),
-            label = "UploadGalleryUploadingAnimation",
+    val launcher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.PickMultipleVisualMedia(10),
+            onResult = { uris: List<Uri> ->
+                onImageUri(
+                    uris
+                        .map {
+                            SelectedMedia(it, resolver.getType(it))
+                        }.toImmutableList(),
+                )
+                hasLaunched.set(false)
+            },
         )
 
-    CircularProgressIndicator(
-        modifier =
-            Modifier
-                .size(size = indicatorSize)
-                .rotate(degrees = rotateAnimation)
-                .border(
-                    width = 4.dp,
-                    brush = Brush.sweepGradient(circleColors),
-                    shape = CircleShape,
-                ),
-        progress = 1f,
-        strokeWidth = 1.dp,
-        color = MaterialTheme.colorScheme.background,
-    )
+    @Composable
+    fun LaunchGallery() {
+        SideEffect {
+            if (!hasLaunched.getAndSet(true)) {
+                launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+            }
+        }
+    }
+
+    LaunchGallery()
 }
 
 @Composable
-fun GallerySelect(onImageUri: (Uri?) -> Unit = {}) {
+fun GallerySelectSingle(onImageUri: (SelectedMedia?) -> Unit = {}) {
     val hasLaunched by remember { mutableStateOf(AtomicBoolean(false)) }
+    val resolver = LocalContext.current.contentResolver
+
     val launcher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.PickVisualMedia(),
             onResult = { uri: Uri? ->
-                onImageUri(uri)
+                if (uri != null) {
+                    onImageUri(SelectedMedia(uri, resolver.getType(uri)))
+                } else {
+                    onImageUri(null)
+                }
+
                 hasLaunched.set(false)
             },
         )

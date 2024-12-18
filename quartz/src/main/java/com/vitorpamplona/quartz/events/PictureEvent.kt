@@ -22,13 +22,13 @@ package com.vitorpamplona.quartz.events
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.Dimension
 import com.vitorpamplona.quartz.encoders.ETag
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments.Companion.IMETA
 import com.vitorpamplona.quartz.encoders.PTag
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.coroutines.cancellation.CancellationException
 
 @Immutable
 class PictureEvent(
@@ -329,36 +329,6 @@ class PictureMeta(
 
             return url?.let {
                 PictureMeta(it, mimeType, blurhash, dim, alt, hash, size, fallback, annotations)
-            }
-        }
-    }
-}
-
-class Dimension(
-    val width: Int,
-    val height: Int,
-) {
-    fun aspectRatio() = width.toFloat() / height.toFloat()
-
-    fun hasSize() = width > 0 && height > 0
-
-    override fun toString() = "${width}x$height"
-
-    companion object {
-        fun parse(dim: String): Dimension? {
-            if (dim == "0x0") return null
-
-            val parts = dim.split("x")
-            if (parts.size != 2) return null
-
-            return try {
-                val width = parts[0].toInt()
-                val height = parts[1].toInt()
-
-                Dimension(width, height)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                null
             }
         }
     }

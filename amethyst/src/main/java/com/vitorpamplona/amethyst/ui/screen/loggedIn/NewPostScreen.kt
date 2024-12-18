@@ -22,15 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.Manifest
 import android.content.Intent
-import android.graphics.Bitmap
 import android.net.Uri
-import android.os.Build
 import android.os.Parcelable
-import android.util.Log
-import android.util.Size
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -60,7 +54,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.LocationOn
@@ -107,7 +100,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -136,20 +128,23 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
-import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.actions.NewPollOption
 import com.vitorpamplona.amethyst.ui.actions.NewPollVoteValueRange
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.RelaySelectionDialog
-import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
-import com.vitorpamplona.amethyst.ui.actions.getPhotoUri
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
+import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
+import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.components.BechLink
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
+import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.navigation.Nav
@@ -186,8 +181,8 @@ import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
@@ -246,7 +241,8 @@ fun NewPostScreen(
                 postViewModel.updateMessage(TextFieldValue(it))
             }
             attachment?.let {
-                postViewModel.selectImage(it)
+                val mediaType = context.contentResolver.getType(it)
+                postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
             }
         }
     }
@@ -271,7 +267,8 @@ fun NewPostScreen(
                     }
 
                     (intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)?.let {
-                        postViewModel.selectImage(it)
+                        val mediaType = context.contentResolver.getType(it)
+                        postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
                     }
                 }
             }
@@ -458,7 +455,7 @@ fun NewPostScreen(
                                             myUrlPreview,
                                             mimeType = null,
                                             roundedCorner = true,
-                                            isFiniteHeight = false,
+                                            contentScale = ContentScale.FillWidth,
                                             accountViewModel = accountViewModel,
                                         )
                                     } else {
@@ -509,22 +506,22 @@ fun NewPostScreen(
                             }
                         }
 
-                        val url = postViewModel.contentToAddUrl
-                        if (url != null) {
+                        if (postViewModel.mediaToUpload.isNotEmpty()) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
                             ) {
                                 ImageVideoDescription(
-                                    url,
+                                    postViewModel.mediaToUpload,
                                     accountViewModel.account.settings.defaultFileServer,
                                     onAdd = { alt, server, sensitiveContent, mediaQuality ->
-                                        postViewModel.upload(url, alt, sensitiveContent, mediaQuality, false, server, accountViewModel::toast, context)
+                                        postViewModel.upload(alt, sensitiveContent, mediaQuality, false, server, accountViewModel::toast, context)
                                         if (server.type != ServerType.NIP95) {
                                             accountViewModel.account.settings.changeDefaultFileServer(server)
                                         }
                                     },
-                                    onCancel = { postViewModel.contentToAddUrl = null },
+                                    onDelete = postViewModel::deleteMediaToUpload,
+                                    onCancel = { postViewModel.mediaToUpload = persistentListOf() },
                                     onError = { scope.launch { Toast.makeText(context, context.resources.getText(it), Toast.LENGTH_SHORT).show() } },
                                     accountViewModel = accountViewModel,
                                 )
@@ -608,7 +605,7 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
                 .height(50.dp),
         verticalAlignment = CenterVertically,
     ) {
-        UploadFromGallery(
+        SelectFromGallery(
             isUploading = postViewModel.isUploadingImage,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
@@ -664,56 +661,6 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
         ForwardZapTo(postViewModel) {
             postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
         }
-    }
-}
-
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-fun TakePictureButton(onPictureTaken: (Uri) -> Unit) {
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
-    val scope = rememberCoroutineScope()
-    val launcher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.TakePicture(),
-        ) { success ->
-            if (success) {
-                imageUri?.let {
-                    onPictureTaken(it)
-                }
-            }
-        }
-    val context = LocalContext.current
-    val cameraPermissionState =
-        rememberPermissionState(
-            Manifest.permission.CAMERA,
-            onPermissionResult = {
-                if (it) {
-                    scope.launch(Dispatchers.IO) {
-                        imageUri = getPhotoUri(context)
-                        imageUri?.let { uri -> launcher.launch(uri) }
-                    }
-                }
-            },
-        )
-
-    IconButton(
-        onClick = {
-            if (cameraPermissionState.status.isGranted) {
-                scope.launch(Dispatchers.IO) {
-                    imageUri = getPhotoUri(context)
-                    imageUri?.let { uri -> launcher.launch(uri) }
-                }
-            } else {
-                cameraPermissionState.launchPermissionRequest()
-            }
-        },
-    ) {
-        Icon(
-            imageVector = Icons.Default.CameraAlt,
-            contentDescription = stringRes(id = R.string.upload_image),
-            modifier = Modifier.height(25.dp),
-            tint = MaterialTheme.colorScheme.onBackground,
-        )
     }
 }
 
@@ -1719,19 +1666,14 @@ fun CreateButton(
 
 @Composable
 fun ImageVideoDescription(
-    uri: Uri,
+    uris: ImmutableList<SelectedMediaProcessing>,
     defaultServer: ServerName,
     onAdd: (String, ServerName, Boolean, Int) -> Unit,
+    onDelete: (SelectedMediaProcessing) -> Unit,
     onCancel: () -> Unit,
     onError: (Int) -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    val resolver = LocalContext.current.contentResolver
-    val mediaType = resolver.getType(uri) ?: ""
-
-    val isImage = mediaType.startsWith("image")
-    val isVideo = mediaType.startsWith("video")
-
     val nip95description = stringRes(id = R.string.upload_server_relays_nip95)
 
     val fileServers by accountViewModel.account.liveServerList.collectAsState()
@@ -1784,19 +1726,23 @@ fun ImageVideoDescription(
                         .fillMaxWidth()
                         .padding(bottom = 10.dp),
             ) {
-                Text(
-                    text =
-                        stringRes(
-                            if (isImage) {
-                                R.string.content_description_add_image
+                val text =
+                    if (uris.size == 1) {
+                        if (uris.first().media.isImage() == true) {
+                            R.string.content_description_add_image
+                        } else {
+                            if (uris.first().media.isVideo() == true) {
+                                R.string.content_description_add_video
                             } else {
-                                if (isVideo) {
-                                    R.string.content_description_add_video
-                                } else {
-                                    R.string.content_description_add_document
-                                }
-                            },
-                        ),
+                                R.string.content_description_add_document
+                            }
+                        }
+                    } else {
+                        R.string.content_description_add_media
+                    }
+
+                Text(
+                    text = stringRes(text),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.W500,
                     modifier =
@@ -1827,48 +1773,7 @@ fun ImageVideoDescription(
                         .padding(bottom = 10.dp)
                         .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
             ) {
-                if (mediaType.startsWith("image")) {
-                    AsyncImage(
-                        model = uri.toString(),
-                        contentDescription = uri.toString(),
-                        contentScale = ContentScale.FillWidth,
-                        modifier =
-                            Modifier
-                                .padding(top = 4.dp)
-                                .fillMaxWidth()
-                                .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
-                    )
-                } else if (
-                    mediaType.startsWith("video") && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
-                ) {
-                    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
-
-                    LaunchedEffect(key1 = uri) {
-                        launch(Dispatchers.IO) {
-                            try {
-                                bitmap = resolver.loadThumbnail(uri, Size(1200, 1000), null)
-                            } catch (e: Exception) {
-                                if (e is CancellationException) throw e
-                                onError(R.string.unable_to_load_thumbnail)
-                                Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
-                            }
-                        }
-                    }
-
-                    bitmap?.let {
-                        Image(
-                            bitmap = it.asImageBitmap(),
-                            contentDescription = "some useful description",
-                            contentScale = ContentScale.FillWidth,
-                            modifier =
-                                Modifier
-                                    .padding(top = 4.dp)
-                                    .fillMaxWidth(),
-                        )
-                    }
-                } else {
-                    VideoView(uri.toString(), roundedCorner = true, isFiniteHeight = false, mimeType = mediaType, accountViewModel = accountViewModel)
-                }
+                ShowImageUploadGallery(uris, onDelete, accountViewModel)
             }
 
             Row(
@@ -2030,10 +1935,11 @@ fun SettingSwitchItem(
                     onValueChange = onCheckedChange,
                 ),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         Column(
-            modifier = Modifier.weight(1.0f),
-            verticalArrangement = Arrangement.spacedBy(Size5dp),
+            modifier = Modifier.weight(2.0f),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             Text(
                 text = stringRes(id = title),
@@ -2049,10 +1955,12 @@ fun SettingSwitchItem(
             )
         }
 
-        Switch(
-            checked = checked,
-            onCheckedChange = null,
-            enabled = enabled,
-        )
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+            Switch(
+                checked = checked,
+                onCheckedChange = null,
+                enabled = enabled,
+            )
+        }
     }
 }

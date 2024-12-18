@@ -29,7 +29,7 @@ import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
 import coil3.key.Keyer
 import coil3.request.Options
-import com.vitorpamplona.amethyst.commons.preview.BlurHashDecoder
+import com.vitorpamplona.amethyst.commons.blurhash.BlurHashDecoder
 
 class Blurhash(
     val blurhash: String,

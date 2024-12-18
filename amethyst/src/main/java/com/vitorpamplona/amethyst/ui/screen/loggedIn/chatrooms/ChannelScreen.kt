@@ -113,8 +113,8 @@ import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
-import com.vitorpamplona.amethyst.ui.actions.UploadFromGallery
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.CompressorQuality
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
@@ -341,7 +341,7 @@ fun ChannelScreen(
         }
 
         // LAST ROW
-        EditFieldRow(newPostModel, isPrivate = false, accountViewModel = accountViewModel) {
+        EditFieldRow(newPostModel, accountViewModel = accountViewModel) {
             scope.launch(Dispatchers.IO) {
                 innerSendPost(replyTo, channel, newPostModel, accountViewModel, null)
                 newPostModel.message = TextFieldValue("")
@@ -395,7 +395,7 @@ private suspend fun innerSendPost(
     tagger.run()
 
     val urls = findURLs(tagger.message)
-    val usedAttachments = newPostModel.nip94attachments.filter { it.urls().intersect(urls.toSet()).isNotEmpty() }
+    val usedAttachments = newPostModel.iMetaAttachments.filter { it.url !in urls.toSet() }
 
     if (channel is PublicChatChannel) {
         accountViewModel.account.sendChannelMessage(
@@ -404,7 +404,7 @@ private suspend fun innerSendPost(
             replyTo = tagger.eTags,
             mentions = tagger.pTags,
             wantsToMarkAsSensitive = false,
-            nip94attachments = usedAttachments,
+            imetas = usedAttachments,
             draftTag = draftTag,
         )
     } else if (channel is LiveActivitiesChannel) {
@@ -414,7 +414,7 @@ private suspend fun innerSendPost(
             replyTo = tagger.eTags,
             mentions = tagger.pTags,
             wantsToMarkAsSensitive = false,
-            nip94attachments = usedAttachments,
+            imetas = usedAttachments,
             draftTag = draftTag,
         )
     }
@@ -469,7 +469,6 @@ fun DisplayReplyingToNote(
 @Composable
 fun EditFieldRow(
     channelScreenModel: NewPostViewModel,
-    isPrivate: Boolean,
     accountViewModel: AccountViewModel,
     onSendNewMessage: () -> Unit,
 ) {
@@ -506,17 +505,17 @@ fun EditFieldRow(
                 }
             },
             leadingIcon = {
-                UploadFromGallery(
+                SelectFromGallery(
                     isUploading = channelScreenModel.isUploadingImage,
                     tint = MaterialTheme.colorScheme.placeholderText,
                     modifier = EditFieldLeadingIconModifier,
                 ) {
+                    channelScreenModel.selectImage(it)
                     channelScreenModel.upload(
-                        galleryUri = it,
                         alt = null,
                         sensitiveContent = false,
                         // Use MEDIUM quality
-                        mediaQuality = MediaCompressor().compressorQualityToInt(CompressorQuality.MEDIUM),
+                        mediaQuality = MediaCompressor.compressorQualityToInt(CompressorQuality.MEDIUM),
                         server = accountViewModel.account.settings.defaultFileServer,
                         onError = accountViewModel::toast,
                         context = context,
@@ -793,7 +792,7 @@ fun ShowVideoStreaming(
                             ZoomableContentView(
                                 content = zoomableUrlVideo,
                                 roundedCorner = false,
-                                isFiniteHeight = false,
+                                contentScale = ContentScale.FillWidth,
                                 accountViewModel = accountViewModel,
                             )
                         }

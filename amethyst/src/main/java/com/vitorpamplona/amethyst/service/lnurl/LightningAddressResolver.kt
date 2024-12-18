@@ -154,7 +154,7 @@ class LightningAddressResolver {
             } else {
                 onError(
                     stringRes(context, R.string.error_unable_to_fetch_invoice),
-                    stringRes(context, R.string.could_not_fetch_invoice_from, lnCallback),
+                    stringRes(context, R.string.could_not_fetch_invoice_from, urlBinder),
                 )
             }
         }

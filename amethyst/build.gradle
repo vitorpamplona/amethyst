@@ -233,9 +233,6 @@ dependencies {
     // enables network for coil
     implementation libs.coil.okhttp
 
-    // create blurhash
-    implementation libs.trbl.blurhash
-
     // Permission to upload pictures:
     implementation libs.accompanist.permissions
 

@@ -364,11 +364,15 @@
     <string name="hash_verification_passed">This content is the same since the post</string>
     <string name="hash_verification_failed">This content has changed. The author might not have seen or approved the change</string>
 
+    <string name="content_description_add_media">Add Media</string>
     <string name="content_description_add_image">Add Image</string>
     <string name="content_description_add_video">Add Video</string>
     <string name="content_description_add_document">Add Document</string>
 
     <string name="add_content">Add to Message</string>
+    <string name="add_caption">Add a Caption</string>
+    <string name="add_caption_example">My lovely friend</string>
+
     <string name="content_description">Description of the contents</string>
     <string name="content_description_example">A blue boat in a white sandy beach at sunset</string>
 
@@ -389,6 +393,8 @@
 
 
     <string name="file_server">File Server</string>
+    <string name="file_server_description">Choose a server to upload this file to</string>
+
     <string name="zap_forward_lnAddress">LnAddress or @User</string>
 
 
@@ -404,6 +410,14 @@
     <string name="add_media_server">Add media server</string>
     <string name="delete_media_server">Delete media server</string>
 
+    <string name="uploading_state_ready">Not Started</string>
+    <string name="uploading_state_compressing">Compressing</string>
+    <string name="uploading_state_uploading">Uploading</string>
+    <string name="uploading_state_server_processing">Processing</string>
+    <string name="uploading_state_downloading">Downloading</string>
+    <string name="uploading_state_hashing">Hashing</string>
+    <string name="uploading_state_finished">Done</string>
+    <string name="uploading_state_error">Error</string>
 
     <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Files are hosted by your relays. New NIP: check if they support</string>
@@ -866,6 +880,7 @@
     <string name="failed_to_upload_media">Uploading error: %1$s</string>
     <string name="server_did_not_provide_a_url_after_uploading">Server did not provide a URL after uploading</string>
     <string name="could_not_download_from_the_server">Could not download uploaded media from the server</string>
+    <string name="could_not_check_downloaded_file">Could not check downloaded file after upload: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Could not prepare local file to upload: %1$s</string>
     <string name="failed_to_upload_with_message">Failed to upload: %1$s</string>
     <string name="failed_to_delete_with_message">Failed to delete: %1$s</string>

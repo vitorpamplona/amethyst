@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.events
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.IMetaTag
+import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -112,7 +114,7 @@ class ClassifiedsEvent(
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
             geohash: String? = null,
-            nip94attachments: List<Event>? = null,
+            imetas: List<IMetaTag>? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             isDraft: Boolean,
@@ -188,10 +190,8 @@ class ClassifiedsEvent(
             }
             zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
             geohash?.let { tags.addAll(geohashMipMap(it)) }
-            nip94attachments?.let {
-                it.forEach {
-                    // tags.add(arrayOf("nip94", it.toJson()))
-                }
+            imetas?.forEach {
+                tags.add(Nip92MediaAttachments.createTag(it))
             }
             tags.add(arrayOf("alt", ALT))
 

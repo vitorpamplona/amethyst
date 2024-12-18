@@ -26,14 +26,14 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.service.BlossomUploader
-import com.vitorpamplona.amethyst.service.FileHeader
-import com.vitorpamplona.amethyst.service.Nip96Retriever
-import com.vitorpamplona.amethyst.service.Nip96Uploader
-import com.vitorpamplona.amethyst.ui.actions.ImageDownloader
+import com.vitorpamplona.amethyst.service.uploads.FileHeader
+import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
+import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
+import com.vitorpamplona.amethyst.service.uploads.nip96.ServerInfoRetriever
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.actions.uploads.ImageDownloader
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.toHexKey
@@ -84,7 +84,7 @@ class ImageUploadTesting {
         val initialHash = CryptoUtils.sha256(paylod).toHexKey()
         val inputStream = paylod.inputStream()
         val result =
-            BlossomUploader(account)
+            BlossomUploader()
                 .uploadImage(
                     inputStream,
                     initialHash,
@@ -95,6 +95,7 @@ class ImageUploadTesting {
                     sensitiveContent = null,
                     server,
                     forceProxy = { false },
+                    createBlossomUploadAuth = account::createBlossomUploadAuth,
                     context = InstrumentationRegistry.getInstrumentation().targetContext,
                 )
 
@@ -116,7 +117,7 @@ class ImageUploadTesting {
 
     private suspend fun testNip96(server: ServerName) {
         val serverInfo =
-            Nip96Retriever()
+            ServerInfoRetriever()
                 .loadInfo(
                     server.baseUrl,
                     false,
@@ -125,7 +126,7 @@ class ImageUploadTesting {
         val paylod = getBitmap()
         val inputStream = paylod.inputStream()
         val result =
-            Nip96Uploader(account)
+            Nip96Uploader()
                 .uploadImage(
                     inputStream,
                     paylod.size.toLong(),
@@ -135,6 +136,7 @@ class ImageUploadTesting {
                     serverInfo,
                     forceProxy = { false },
                     onProgress = {},
+                    createHTTPAuthorization = account::createHTTPAuthorization,
                     context = InstrumentationRegistry.getInstrumentation().targetContext,
                 )
 

@@ -20,25 +20,17 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
-import android.graphics.Bitmap
-import android.net.Uri
-import android.os.Build
-import android.util.Log
-import android.util.Size
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -57,15 +49,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -73,11 +62,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
-import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
@@ -85,40 +74,34 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.PostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SettingSwitchItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewMediaView(
-    uri: Uri,
+    uris: ImmutableList<SelectedMedia>,
     onClose: () -> Unit,
     postViewModel: NewMediaModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val account = accountViewModel.account
-    val resolver = LocalContext.current.contentResolver
     val context = LocalContext.current
 
     val scrollState = rememberScrollState()
 
-    LaunchedEffect(uri) {
-        val mediaType = resolver.getType(uri) ?: ""
-        postViewModel.load(account, uri, mediaType)
+    LaunchedEffect(uris) {
+        postViewModel.load(account, uris)
     }
 
     var showRelaysDialog by remember { mutableStateOf(false) }
     var relayList = remember { accountViewModel.account.activeWriteRelays().toImmutableList() }
-
-    // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
-    var mediaQualitySlider by remember { mutableIntStateOf(1) }
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -158,9 +141,8 @@ fun NewMediaView(
                             PostButton(
                                 onPost = {
                                     onClose()
-                                    postViewModel.upload(context, relayList, mediaQualitySlider) {
-                                        accountViewModel.toast(stringRes(context, R.string.failed_to_upload_media_no_details), it)
-                                    }
+                                    postViewModel.upload(context, relayList)
+                                    // accountViewModel.toast(stringRes(context, R.string.failed_to_upload_media_no_details), it)
                                     postViewModel.selectedServer?.let {
                                         if (it.type != ServerType.NIP95) {
                                             account.settings.changeDefaultFileServer(it)
@@ -176,7 +158,7 @@ fun NewMediaView(
                             Spacer(modifier = StdHorzSpacer)
                             CloseButton(
                                 onPress = {
-                                    postViewModel.cancel()
+                                    postViewModel.cancelModel()
                                     onClose()
                                 },
                             )
@@ -206,69 +188,9 @@ fun NewMediaView(
                         .consumeWindowInsets(pad)
                         .imePadding(),
             ) {
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(scrollState),
-                    ) {
+                Column(Modifier.fillMaxSize().padding(start = 10.dp, end = 10.dp, bottom = 10.dp)) {
+                    Column(Modifier.fillMaxWidth().verticalScroll(scrollState)) {
                         ImageVideoPost(postViewModel, accountViewModel)
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
-                        ) {
-                            Column(
-                                modifier = Modifier.weight(1.0f),
-                                verticalArrangement = Arrangement.spacedBy(Size5dp),
-                            ) {
-                                Text(
-                                    text = stringRes(context, R.string.media_compression_quality_label),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    text = stringRes(context, R.string.media_compression_quality_explainer),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.Gray,
-                                    maxLines = 5,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Box(modifier = Modifier.fillMaxWidth()) {
-                                    Text(
-                                        text =
-                                            when (mediaQualitySlider) {
-                                                0 -> stringRes(R.string.media_compression_quality_low)
-                                                1 -> stringRes(R.string.media_compression_quality_medium)
-                                                2 -> stringRes(R.string.media_compression_quality_high)
-                                                3 -> stringRes(R.string.media_compression_quality_uncompressed)
-                                                else -> stringRes(R.string.media_compression_quality_medium)
-                                            },
-                                        modifier = Modifier.align(Alignment.Center),
-                                    )
-                                }
-
-                                Slider(
-                                    value = mediaQualitySlider.toFloat(),
-                                    onValueChange = { mediaQualitySlider = it.toInt() },
-                                    valueRange = 0f..3f,
-                                    steps = 2,
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -296,70 +218,41 @@ fun ImageVideoPost(
                 }.toImmutableList()
         }
 
-    val resolver = LocalContext.current.contentResolver
+    ShowImageUploadGallery(
+        postViewModel.mediaToUpload,
+        postViewModel::deleteMediaToUpload,
+        accountViewModel,
+    )
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(bottom = 10.dp)
-                .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
-    ) {
-        if (postViewModel.isImage() == true) {
-            AsyncImage(
-                model = postViewModel.galleryUri.toString(),
-                contentDescription = postViewModel.galleryUri.toString(),
-                contentScale = ContentScale.FillWidth,
-                modifier =
-                    Modifier
-                        .padding(top = 4.dp)
-                        .fillMaxWidth()
-                        .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
+    OutlinedTextField(
+        label = { Text(text = stringRes(R.string.add_caption)) },
+        modifier = Modifier.fillMaxWidth().padding(top = 3.dp).height(150.dp),
+        maxLines = 10,
+        value = postViewModel.caption,
+        onValueChange = { postViewModel.caption = it },
+        placeholder = {
+            Text(
+                text = stringRes(R.string.add_caption_example),
+                color = MaterialTheme.colorScheme.placeholderText,
             )
-        } else if (postViewModel.isVideo() == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+        },
+        keyboardOptions =
+            KeyboardOptions.Default.copy(
+                capitalization = KeyboardCapitalization.Sentences,
+            ),
+    )
 
-            LaunchedEffect(key1 = postViewModel.galleryUri) {
-                launch(Dispatchers.IO) {
-                    postViewModel.galleryUri?.let {
-                        try {
-                            bitmap = resolver.loadThumbnail(it, Size(1200, 1000), null)
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
-                            Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
-                        }
-                    }
-                }
-            }
+    SettingSwitchItem(
+        title = R.string.add_sensitive_content_label,
+        description = R.string.add_sensitive_content_description,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        checked = postViewModel.sensitiveContent,
+        onCheckedChange = { postViewModel.sensitiveContent = it },
+    )
 
-            bitmap?.let {
-                Image(
-                    bitmap = it.asImageBitmap(),
-                    contentDescription = "some useful description",
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
-                )
-            }
-        } else {
-            postViewModel.galleryUri?.let {
-                VideoView(
-                    videoUri = it.toString(),
-                    mimeType = postViewModel.mediaType,
-                    roundedCorner = false,
-                    isFiniteHeight = false,
-                    accountViewModel = accountViewModel,
-                )
-            }
-        }
-    }
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
+    SettingsRow(R.string.file_server, R.string.file_server_description) {
         TextSpinner(
-            label = stringRes(id = R.string.file_server),
+            label = "",
             placeholder =
                 fileServers
                     .firstOrNull { it == accountViewModel.account.settings.defaultFileServer }
@@ -367,42 +260,47 @@ fun ImageVideoPost(
                     ?: fileServers[0].name,
             options = fileServerOptions,
             onSelect = { postViewModel.selectedServer = fileServers[it] },
-            modifier = Modifier.windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)).weight(1f),
         )
     }
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(Size5dp),
     ) {
-        SettingSwitchItem(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
-            checked = postViewModel.sensitiveContent,
-            onCheckedChange = { postViewModel.sensitiveContent = it },
-            title = R.string.add_sensitive_content_label,
-            description = R.string.add_sensitive_content_description,
+        Text(
+            text = stringRes(R.string.media_compression_quality_label),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = stringRes(R.string.media_compression_quality_explainer),
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.Gray,
+            maxLines = 5,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
-    ) {
-        OutlinedTextField(
-            label = { Text(text = stringRes(R.string.content_description)) },
-            modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
-            value = postViewModel.alt,
-            onValueChange = { postViewModel.alt = it },
-            placeholder = {
-                Text(
-                    text = stringRes(R.string.content_description_example),
-                    color = MaterialTheme.colorScheme.placeholderText,
-                )
-            },
-            keyboardOptions =
-                KeyboardOptions.Default.copy(
-                    capitalization = KeyboardCapitalization.Sentences,
-                ),
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text =
+                    when (postViewModel.mediaQualitySlider) {
+                        0 -> stringRes(R.string.media_compression_quality_low)
+                        1 -> stringRes(R.string.media_compression_quality_medium)
+                        2 -> stringRes(R.string.media_compression_quality_high)
+                        3 -> stringRes(R.string.media_compression_quality_uncompressed)
+                        else -> stringRes(R.string.media_compression_quality_medium)
+                    },
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
+
+        Slider(
+            value = postViewModel.mediaQualitySlider.toFloat(),
+            onValueChange = { postViewModel.mediaQualitySlider = it.toInt() },
+            valueRange = 0f..3f,
+            steps = 2,
         )
     }
 }

@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.content.Context
-import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -29,9 +28,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.BlossomUploader
-import com.vitorpamplona.amethyst.service.Nip96Uploader
+import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
+import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.components.CompressorQuality
 import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -132,7 +132,7 @@ class NewUserMetadataViewModel : ViewModel() {
     }
 
     fun uploadForPicture(
-        uri: Uri,
+        uri: SelectedMedia,
         context: Context,
         onError: (String, String) -> Unit,
     ) {
@@ -148,7 +148,7 @@ class NewUserMetadataViewModel : ViewModel() {
     }
 
     fun uploadForBanner(
-        uri: Uri,
+        uri: SelectedMedia,
         context: Context,
         onError: (String, String) -> Unit,
     ) {
@@ -164,7 +164,7 @@ class NewUserMetadataViewModel : ViewModel() {
     }
 
     private suspend fun upload(
-        galleryUri: Uri,
+        galleryUri: SelectedMedia,
         context: Context,
         onUploading: (Boolean) -> Unit,
         onUploaded: (String) -> Unit,
@@ -172,67 +172,48 @@ class NewUserMetadataViewModel : ViewModel() {
     ) {
         onUploading(true)
 
-        val contentResolver = context.contentResolver
+        val compResult = MediaCompressor().compress(galleryUri.uri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
 
-        MediaCompressor()
-            .compress(
-                galleryUri,
-                contentResolver.getType(galleryUri),
-                context.applicationContext,
-                onReady = { fileUri, contentType, size ->
-                    viewModelScope.launch(Dispatchers.IO) {
-                        try {
-                            val result =
-                                if (account.settings.defaultFileServer.type == ServerType.NIP96) {
-                                    Nip96Uploader(account)
-                                        .uploadImage(
-                                            uri = fileUri,
-                                            contentType = contentType,
-                                            size = size,
-                                            alt = null,
-                                            sensitiveContent = null,
-                                            server = account.settings.defaultFileServer,
-                                            contentResolver = contentResolver,
-                                            forceProxy = account::shouldUseTorForNIP96,
-                                            onProgress = {},
-                                            context = context,
-                                        )
-                                } else {
-                                    BlossomUploader(account)
-                                        .uploadImage(
-                                            uri = fileUri,
-                                            contentType = contentType,
-                                            size = size,
-                                            alt = null,
-                                            sensitiveContent = null,
-                                            server = account.settings.defaultFileServer,
-                                            contentResolver = contentResolver,
-                                            forceProxy = account::shouldUseTorForNIP96,
-                                            context = context,
-                                        )
-                                }
+        try {
+            val result =
+                if (account.settings.defaultFileServer.type == ServerType.NIP96) {
+                    Nip96Uploader().uploadImage(
+                        uri = compResult.uri,
+                        contentType = compResult.contentType,
+                        size = compResult.size,
+                        alt = null,
+                        sensitiveContent = null,
+                        serverBaseUrl = account.settings.defaultFileServer.baseUrl,
+                        forceProxy = account::shouldUseTorForNIP96,
+                        onProgress = {},
+                        httpAuth = account::createHTTPAuthorization,
+                        context = context,
+                    )
+                } else {
+                    BlossomUploader().uploadImage(
+                        uri = compResult.uri,
+                        contentType = compResult.contentType,
+                        size = compResult.size,
+                        alt = null,
+                        sensitiveContent = null,
+                        serverBaseUrl = account.settings.defaultFileServer.baseUrl,
+                        forceProxy = account::shouldUseTorForNIP96,
+                        httpAuth = account::createBlossomUploadAuth,
+                        context = context,
+                    )
+                }
 
-                            if (result.url != null) {
-                                onUploading(false)
-                                onUploaded(result.url)
-                            } else {
-                                onUploading(false)
-                                onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))
-                            }
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
-                            onUploading(false)
-                            onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
-                        }
-                    }
-                },
-                onError = {
-                    onUploading(false)
-
-                    onError(stringRes(context, R.string.error_when_compressing_media), stringRes(context, it))
-                },
-                // Use MEDIUM quality as default
-                mediaQuality = CompressorQuality.MEDIUM,
-            )
+            if (result.url != null) {
+                onUploading(false)
+                onUploaded(result.url)
+            } else {
+                onUploading(false)
+                onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            onUploading(false)
+            onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
+        }
     }
 }

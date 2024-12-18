@@ -78,7 +78,6 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.service.Blurhash
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
-import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.components.util.DeviceUtils
 import com.vitorpamplona.amethyst.ui.navigation.getActivity
 import com.vitorpamplona.amethyst.ui.note.BlankNote
@@ -95,9 +94,9 @@ import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.hashVerifierMark
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.encoders.Dimension
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.events.Dimension
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -110,7 +109,7 @@ fun ZoomableContentView(
     content: BaseMediaContent,
     images: ImmutableList<BaseMediaContent> = remember(content) { persistentListOf(content) },
     roundedCorner: Boolean,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     accountViewModel: AccountViewModel,
 ) {
     var dialogOpen by remember(content) { mutableStateOf(false) }
@@ -121,13 +120,6 @@ fun ZoomableContentView(
     val isLandscapeMode = DeviceUtils.isLandscapeMetric(LocalContext.current)
     val isFoldableOrLarge = DeviceUtils.windowIsLarge(windowSize = currentWindowSize, isInLandscapeMode = isLandscapeMode)
     val isOrientationLocked = DeviceUtils.screenOrientationIsLocked(LocalContext.current)
-
-    val contentScale =
-        if (isFiniteHeight) {
-            ContentScale.Fit
-        } else {
-            ContentScale.FillWidth
-        }
 
     when (content) {
         is MediaUrlImage ->
@@ -154,7 +146,7 @@ fun ZoomableContentView(
                         dimensions = content.dim,
                         blurhash = content.blurhash,
                         roundedCorner = roundedCorner,
-                        isFiniteHeight = isFiniteHeight,
+                        contentScale = contentScale,
                         nostrUriCallback = content.uri,
                         onDialog = {
                             dialogOpen = true
@@ -186,7 +178,7 @@ fun ZoomableContentView(
                         artworkUri = content.artworkUri,
                         authorName = content.authorName,
                         roundedCorner = roundedCorner,
-                        isFiniteHeight = isFiniteHeight,
+                        contentScale = contentScale,
                         nostrUriCallback = content.uri,
                         onDialog = { dialogOpen = true },
                         accountViewModel = accountViewModel,
@@ -355,11 +347,18 @@ fun UrlImageView(
                     -> {
                         if (content.blurhash != null) {
                             if (ratio != null) {
+                                val modifier =
+                                    if (contentScale == ContentScale.Crop) {
+                                        loadedImageModifier.clickable { showImage.value = true }
+                                    } else {
+                                        loadedImageModifier.aspectRatio(ratio).clickable { showImage.value = true }
+                                    }
+
                                 DisplayBlurHash(
                                     content.blurhash,
                                     content.description,
                                     ContentScale.Crop,
-                                    loadedImageModifier.aspectRatio(ratio),
+                                    modifier,
                                 )
                             } else {
                                 DisplayBlurHash(
@@ -395,13 +394,18 @@ fun UrlImageView(
             }
         } else {
             if (content.blurhash != null && ratio != null) {
+                val modifier =
+                    if (contentScale == ContentScale.Crop) {
+                        loadedImageModifier.clickable { showImage.value = true }
+                    } else {
+                        loadedImageModifier.aspectRatio(ratio).clickable { showImage.value = true }
+                    }
+
                 DisplayBlurHash(
                     content.blurhash,
                     content.description,
-                    ContentScale.Crop,
-                    loadedImageModifier
-                        .aspectRatio(ratio)
-                        .clickable { showImage.value = true },
+                    contentScale,
+                    modifier,
                 )
                 IconButton(
                     modifier = Modifier.size(Size75dp),

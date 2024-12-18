@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.service.uploads.nip96.ServerInfoRetriever
 import junit.framework.TestCase.assertEquals
 import org.junit.Test
 
@@ -136,7 +137,7 @@ class Nip96Test {
 
     @Test()
     fun parseNostrBuild() {
-        val info = Nip96Retriever().parse("https://nostr.build", json)
+        val info = ServerInfoRetriever().parse("https://nostr.build", json)
 
         assertEquals("https://nostr.build/api/v2/nip96/upload", info.apiUrl)
         assertEquals("https://media.nostr.build", info.downloadUrl)
@@ -165,7 +166,7 @@ class Nip96Test {
 
     @Test()
     fun parseRelativeUrls() {
-        val info = Nip96Retriever().parse("https://test.com", relativeUrlTest)
+        val info = ServerInfoRetriever().parse("https://test.com", relativeUrlTest)
 
         assertEquals("https://test.com/n96", info.apiUrl)
         assertEquals("https://test.com/", info.downloadUrl)

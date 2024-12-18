@@ -118,7 +118,7 @@ import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
 import com.vitorpamplona.ammolite.service.HttpClientManager
-import com.vitorpamplona.quartz.events.Dimension
+import com.vitorpamplona.quartz.encoders.Dimension
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -141,7 +141,7 @@ fun LoadThumbAndThenVideoView(
     thumbUri: String,
     authorName: String? = null,
     roundedCorner: Boolean,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     nostrUriCallback: String? = null,
     accountViewModel: AccountViewModel,
     onDialog: ((Boolean) -> Unit)? = null,
@@ -173,7 +173,7 @@ fun LoadThumbAndThenVideoView(
                 title = title,
                 thumb = VideoThumb(loadingFinished.second),
                 roundedCorner = roundedCorner,
-                isFiniteHeight = isFiniteHeight,
+                contentScale = contentScale,
                 artworkUri = thumbUri,
                 authorName = authorName,
                 nostrUriCallback = nostrUriCallback,
@@ -187,7 +187,7 @@ fun LoadThumbAndThenVideoView(
                 title = title,
                 thumb = null,
                 roundedCorner = roundedCorner,
-                isFiniteHeight = isFiniteHeight,
+                contentScale = contentScale,
                 artworkUri = thumbUri,
                 authorName = authorName,
                 nostrUriCallback = nostrUriCallback,
@@ -206,7 +206,7 @@ fun VideoView(
     thumb: VideoThumb? = null,
     roundedCorner: Boolean,
     gallery: Boolean = false,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
@@ -227,7 +227,7 @@ fun VideoView(
             Modifier
         }
 
-    VideoView(videoUri, mimeType, title, thumb, borderModifier, isFiniteHeight, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, onControllerVisibilityChanged, accountViewModel, alwaysShowVideo)
+    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, onControllerVisibilityChanged, accountViewModel, alwaysShowVideo)
 }
 
 @Composable
@@ -237,7 +237,7 @@ fun VideoView(
     title: String? = null,
     thumb: VideoThumb? = null,
     borderModifier: Modifier,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
@@ -281,7 +281,7 @@ fun VideoView(
                     title = title,
                     thumb = thumb,
                     borderModifier = borderModifier,
-                    isFiniteHeight = isFiniteHeight,
+                    contentScale = contentScale,
                     waveform = waveform,
                     artworkUri = artworkUri,
                     authorName = authorName,
@@ -308,7 +308,7 @@ fun VideoView(
             DisplayBlurHash(
                 blurhash,
                 null,
-                if (isFiniteHeight) ContentScale.FillWidth else ContentScale.FillWidth,
+                contentScale,
                 if (ratio != null) borderModifier.aspectRatio(ratio) else borderModifier,
             )
 
@@ -327,7 +327,7 @@ fun VideoView(
                     title = title,
                     thumb = thumb,
                     borderModifier = borderModifier,
-                    isFiniteHeight = isFiniteHeight,
+                    contentScale = contentScale,
                     waveform = waveform,
                     artworkUri = artworkUri,
                     authorName = authorName,
@@ -352,7 +352,7 @@ fun VideoViewInner(
     title: String? = null,
     thumb: VideoThumb? = null,
     showControls: Boolean = true,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     borderModifier: Modifier,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
@@ -378,7 +378,7 @@ fun VideoViewInner(
                     controller = controller,
                     thumbData = thumb,
                     showControls = showControls,
-                    isFiniteHeight = isFiniteHeight,
+                    contentScale = contentScale,
                     nostrUriCallback = nostrUriCallback,
                     waveform = waveform,
                     keepPlaying = keepPlaying,
@@ -729,7 +729,7 @@ private fun RenderVideoPlayer(
     controller: MediaController,
     thumbData: VideoThumb?,
     showControls: Boolean = true,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     nostrUriCallback: String?,
     waveform: ImmutableList<Int>? = null,
     keepPlaying: MutableState<Boolean>,
@@ -761,10 +761,13 @@ private fun RenderVideoPlayer(
                     hideController()
 
                     resizeMode =
-                        if (isFiniteHeight) {
-                            AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        } else {
-                            AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
+                        when (contentScale) {
+                            ContentScale.Fit -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                            ContentScale.FillWidth -> AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
+                            ContentScale.Crop -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+                            ContentScale.FillHeight -> AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT
+                            ContentScale.Inside -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                            else -> AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
                         }
 
                     if (showControls) {

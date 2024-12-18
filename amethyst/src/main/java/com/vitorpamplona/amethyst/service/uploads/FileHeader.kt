@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.service.uploads
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -28,53 +28,52 @@ import android.media.MediaMetadataRetriever
 import android.media.MediaMetadataRetriever.BitmapParams
 import android.os.Build
 import android.util.Log
-import com.vitorpamplona.amethyst.ui.actions.ImageDownloader
+import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
+import com.vitorpamplona.amethyst.service.Blurhash
+import com.vitorpamplona.amethyst.ui.actions.uploads.ImageDownloader
 import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.encoders.Dimension
 import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.events.Dimension
-import io.trbl.blurhash.BlurHash
 import kotlinx.coroutines.CancellationException
 import java.io.IOException
-import kotlin.math.roundToInt
 
 class FileHeader(
     val mimeType: String?,
     val hash: String,
     val size: Int,
     val dim: Dimension?,
-    val blurHash: String?,
+    val blurHash: Blurhash?,
 ) {
+    class UnableToDownload(
+        val fileUrl: String,
+    ) : Exception()
+
     companion object {
         suspend fun prepare(
             fileUrl: String,
             mimeType: String?,
             dimPrecomputed: Dimension?,
             forceProxy: Boolean,
-            onReady: (FileHeader) -> Unit,
-            onError: (String) -> Unit,
-        ) {
+        ): Result<FileHeader> =
             try {
                 val imageData: ByteArray? = ImageDownloader().waitAndGetImage(fileUrl, forceProxy)
 
                 if (imageData != null) {
-                    prepare(imageData, mimeType, dimPrecomputed, onReady, onError)
+                    prepare(imageData, mimeType, dimPrecomputed)
                 } else {
-                    onError("Unable to download image from $fileUrl")
+                    Result.failure(UnableToDownload(fileUrl))
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e("ImageDownload", "Couldn't download image from server: ${e.message}")
-                onError(e.message ?: e.javaClass.simpleName)
+                Result.failure(e)
             }
-        }
 
         fun prepare(
             data: ByteArray,
             mimeType: String?,
             dimPrecomputed: Dimension?,
-            onReady: (FileHeader) -> Unit,
-            onError: (String) -> Unit,
-        ) {
+        ): Result<FileHeader> =
             try {
                 val hash = CryptoUtils.sha256(data).toHexKey()
                 val size = data.size
@@ -84,88 +83,13 @@ class FileHeader(
                         val opt = BitmapFactory.Options()
                         opt.inPreferredConfig = Bitmap.Config.ARGB_8888
                         val mBitmap = BitmapFactory.decodeByteArray(data, 0, data.size, opt)
-
-                        val intArray = IntArray(mBitmap.width * mBitmap.height)
-                        mBitmap.getPixels(
-                            intArray,
-                            0,
-                            mBitmap.width,
-                            0,
-                            0,
-                            mBitmap.width,
-                            mBitmap.height,
-                        )
-
-                        val dim = Dimension(mBitmap.width, mBitmap.height)
-
-                        val aspectRatio = (mBitmap.width).toFloat() / (mBitmap.height).toFloat()
-
-                        if (aspectRatio > 1) {
-                            Pair(
-                                BlurHash.encode(
-                                    intArray,
-                                    mBitmap.width,
-                                    mBitmap.height,
-                                    9,
-                                    (9 * (1 / aspectRatio)).roundToInt(),
-                                ),
-                                dim,
-                            )
-                        } else if (aspectRatio < 1) {
-                            Pair(
-                                BlurHash.encode(
-                                    intArray,
-                                    mBitmap.width,
-                                    mBitmap.height,
-                                    (9 * aspectRatio).roundToInt(),
-                                    9,
-                                ),
-                                dim,
-                            )
-                        } else {
-                            Pair(BlurHash.encode(intArray, mBitmap.width, mBitmap.height, 4, 4), dim)
-                        }
+                        Pair(Blurhash(mBitmap.toBlurhash()), Dimension(mBitmap.width, mBitmap.height))
                     } else if (mimeType?.startsWith("video/") == true) {
                         val mediaMetadataRetriever = MediaMetadataRetriever()
                         mediaMetadataRetriever.setDataSource(ByteArrayMediaDataSource(data))
 
                         val newDim = mediaMetadataRetriever.prepareDimFromVideo() ?: dimPrecomputed
-
-                        val blurhash =
-                            mediaMetadataRetriever.getThumbnail()?.let { thumbnail ->
-                                val aspectRatio = (thumbnail.width).toFloat() / (thumbnail.height).toFloat()
-
-                                val intArray = IntArray(thumbnail.width * thumbnail.height)
-                                thumbnail.getPixels(
-                                    intArray,
-                                    0,
-                                    thumbnail.width,
-                                    0,
-                                    0,
-                                    thumbnail.width,
-                                    thumbnail.height,
-                                )
-
-                                if (aspectRatio > 1) {
-                                    BlurHash.encode(
-                                        intArray,
-                                        thumbnail.width,
-                                        thumbnail.height,
-                                        9,
-                                        (9 * (1 / aspectRatio)).roundToInt(),
-                                    )
-                                } else if (aspectRatio < 1) {
-                                    BlurHash.encode(
-                                        intArray,
-                                        thumbnail.width,
-                                        thumbnail.height,
-                                        (9 * aspectRatio).roundToInt(),
-                                        9,
-                                    )
-                                } else {
-                                    BlurHash.encode(intArray, thumbnail.width, thumbnail.height, 4, 4)
-                                }
-                            }
+                        val blurhash = mediaMetadataRetriever.getThumbnail()?.toBlurhash()?.let { Blurhash(it) }
 
                         if (newDim?.hasSize() == true) {
                             Pair(blurhash, newDim)
@@ -176,13 +100,12 @@ class FileHeader(
                         Pair(null, null)
                     }
 
-                onReady(FileHeader(mimeType, hash, size, dim, blurHash))
+                Result.success(FileHeader(mimeType, hash, size, dim, blurHash))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e("ImageDownload", "Couldn't convert image in to File Header: ${e.message}")
-                onError(e.message ?: e.javaClass.simpleName)
+                Result.failure(e)
             }
-        }
     }
 }
 

@@ -24,10 +24,10 @@ import android.util.Log
 import android.util.Patterns
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
+import com.vitorpamplona.quartz.encoders.Dimension
 import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import com.vitorpamplona.quartz.encoders.Nip54InlineMetadata
 import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
-import com.vitorpamplona.quartz.events.Dimension
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
@@ -50,7 +50,7 @@ class RichTextParser {
         callbackUri: String? = null,
     ): MediaUrlContent? {
         val frags = Nip54InlineMetadata().parse(fullUrl)
-        val tags = Nip92MediaAttachments().parse(fullUrl, eventTags.lists)
+        val tags = Nip92MediaAttachments.parse(fullUrl, eventTags.lists)
 
         val contentType = frags[FileHeaderEvent.MIME_TYPE] ?: tags[FileHeaderEvent.MIME_TYPE]
 

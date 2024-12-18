@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.service.uploads.nip96
 
 import android.content.ContentResolver
 import android.content.Context
@@ -26,17 +26,17 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import androidx.core.net.toFile
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.tryAndWait
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.service.HttpStatusMessages
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.service.HttpClientManager
-import com.vitorpamplona.quartz.events.Dimension
+import com.vitorpamplona.quartz.encoders.Dimension
+import com.vitorpamplona.quartz.events.HTTPAuthorizationEvent
 import kotlinx.coroutines.delay
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -46,47 +46,44 @@ import okio.BufferedSink
 import okio.source
 import java.io.InputStream
 import java.util.Base64
-import kotlin.coroutines.resume
 
 val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 
 fun randomChars() = List(16) { charPool.random() }.joinToString("")
 
-class Nip96Uploader(
-    val account: Account?,
-) {
+class Nip96Uploader {
     suspend fun uploadImage(
         uri: Uri,
         contentType: String?,
         size: Long?,
         alt: String?,
         sensitiveContent: String?,
-        server: ServerName,
-        contentResolver: ContentResolver,
+        serverBaseUrl: String,
         forceProxy: (String) -> Boolean,
         onProgress: (percentage: Float) -> Unit,
+        httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
         context: Context,
-    ): MediaUploadResult {
-        val serverInfo =
-            Nip96Retriever()
-                .loadInfo(
-                    server.baseUrl,
-                    forceProxy(server.baseUrl),
-                )
+    ) = uploadImage(
+        uri,
+        contentType,
+        size,
+        alt,
+        sensitiveContent,
+        ServerInfoRetriever().loadInfo(serverBaseUrl, forceProxy(serverBaseUrl)),
+        forceProxy,
+        onProgress,
+        httpAuth,
+        context,
+    )
 
-        return uploadImage(
-            uri,
-            contentType,
-            size,
-            alt,
-            sensitiveContent,
-            serverInfo,
-            contentResolver,
-            forceProxy,
-            onProgress,
-            context,
-        )
-    }
+    fun ContentResolver.querySize(uri: Uri) =
+        query(uri, null, null, null, null)?.use {
+            it.moveToFirst()
+            val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
+            it.getLong(sizeIndex)
+        }
+
+    fun fileSize(uri: Uri) = runCatching { uri.toFile().length() }.getOrNull()
 
     suspend fun uploadImage(
         uri: Uri,
@@ -94,25 +91,19 @@ class Nip96Uploader(
         size: Long?,
         alt: String?,
         sensitiveContent: String?,
-        server: Nip96Retriever.ServerInfo,
-        contentResolver: ContentResolver,
+        server: ServerInfo,
         forceProxy: (String) -> Boolean,
         onProgress: (percentage: Float) -> Unit,
+        httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
         context: Context,
     ): MediaUploadResult {
         checkNotInMainThread()
 
+        val contentResolver = context.contentResolver
         val myContentType = contentType ?: contentResolver.getType(uri)
-        val imageInputStream = contentResolver.openInputStream(uri)
+        val length = size ?: contentResolver.querySize(uri) ?: fileSize(uri) ?: 0
 
-        val length =
-            size
-                ?: contentResolver.query(uri, null, null, null, null)?.use {
-                    it.moveToFirst()
-                    val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
-                    it.getLong(sizeIndex)
-                }
-                ?: kotlin.runCatching { uri.toFile().length() }.getOrNull() ?: 0
+        val imageInputStream = contentResolver.openInputStream(uri)
 
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
@@ -125,6 +116,7 @@ class Nip96Uploader(
             server,
             forceProxy,
             onProgress,
+            httpAuth,
             context,
         )
     }
@@ -135,16 +127,16 @@ class Nip96Uploader(
         contentType: String?,
         alt: String?,
         sensitiveContent: String?,
-        server: Nip96Retriever.ServerInfo,
+        server: ServerInfo,
         forceProxy: (String) -> Boolean,
         onProgress: (percentage: Float) -> Unit,
+        httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
         context: Context,
     ): MediaUploadResult {
         checkNotInMainThread()
 
         val fileName = randomChars()
-        val extension =
-            contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
+        val extension = contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
         val client = HttpClientManager.getHttpClient(forceProxy(server.apiUrl))
         val requestBuilder = Request.Builder()
@@ -173,7 +165,7 @@ class Nip96Uploader(
                     },
                 ).build()
 
-        nip98Header(server.apiUrl)?.let { requestBuilder.addHeader("Authorization", it) }
+        httpAuth(server.apiUrl, "POST", null)?.let { requestBuilder.addHeader("Authorization", encodeAuth(it)) }
 
         requestBuilder
             .addHeader("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
@@ -259,11 +251,17 @@ class Nip96Uploader(
         )
     }
 
+    fun encodeAuth(event: HTTPAuthorizationEvent): String {
+        val encodedNIP98Event = Base64.getEncoder().encodeToString(event.toJson().toByteArray())
+        return "Nostr $encodedNIP98Event"
+    }
+
     suspend fun delete(
         hash: String,
         contentType: String?,
-        server: Nip96Retriever.ServerInfo,
+        server: ServerInfo,
         forceProxy: (String) -> Boolean,
+        httpAuth: (String, String, ByteArray?) -> HTTPAuthorizationEvent,
         context: Context,
     ): Boolean {
         val extension =
@@ -273,7 +271,7 @@ class Nip96Uploader(
 
         val requestBuilder = Request.Builder()
 
-        nip98Header(server.apiUrl)?.let { requestBuilder.addHeader("Authorization", it) }
+        httpAuth(server.apiUrl, "DELETE", null)?.let { requestBuilder.addHeader("Authorization", encodeAuth(it)) }
 
         val request =
             requestBuilder
@@ -302,7 +300,7 @@ class Nip96Uploader(
 
     private suspend fun waitProcessing(
         result: Nip96Result,
-        server: Nip96Retriever.ServerInfo,
+        server: ServerInfo,
         forceProxy: (String) -> Boolean,
         onProgress: (percentage: Float) -> Unit,
     ): MediaUploadResult {
@@ -338,53 +336,10 @@ class Nip96Uploader(
         }
     }
 
-    suspend fun nip98Header(url: String): String? =
-        tryAndWait { continuation ->
-            nip98Header(url, "POST") { authorizationToken -> continuation.resume(authorizationToken) }
-        }
-
-    fun nip98Header(
-        url: String,
-        method: String,
-        file: ByteArray? = null,
-        onReady: (String?) -> Unit,
-    ) {
-        val myAccount = account
-
-        if (myAccount == null) {
-            onReady(null)
-            return
-        }
-
-        myAccount.createHTTPAuthorization(url, method, file) {
-            val encodedNIP98Event = Base64.getEncoder().encodeToString(it.toJson().toByteArray())
-            onReady("Nostr $encodedNIP98Event")
-        }
-    }
-
-    data class DeleteResult(
-        val status: String?,
-        val message: String?,
-    )
-
     private fun parseDeleteResults(body: String): DeleteResult {
-        val mapper =
-            jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         return mapper.readValue(body, DeleteResult::class.java)
     }
-
-    data class Nip96Result(
-        val status: String? = null,
-        val message: String? = null,
-        @JsonProperty("processing_url") val processingUrl: String? = null,
-        val percentage: Int? = null,
-        @JsonProperty("nip94_event") val nip94Event: PartialEvent? = null,
-    )
-
-    class PartialEvent(
-        val tags: Array<Array<String>>? = null,
-        val content: String? = null,
-    )
 
     private fun parseResults(body: String): Nip96Result {
         val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)

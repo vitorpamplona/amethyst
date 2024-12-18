@@ -66,13 +66,13 @@ import com.vitorpamplona.quartz.events.WrappedEvent
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.containsAny
-import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import java.math.BigDecimal
+import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 
 @Stable
@@ -618,7 +618,7 @@ open class Note(
     private fun processZapAmountFromResponse(
         paymentRequest: Note,
         paymentResponse: Note?,
-        continuation: CancellableContinuation<InvoiceAmount?>,
+        continuation: Continuation<InvoiceAmount?>,
         signer: NostrSigner,
     ) {
         val nwcRequest = paymentRequest.event as? LnZapPaymentRequestEvent
@@ -644,7 +644,7 @@ open class Note(
     private fun processZapAmountFromResponse(
         nwcRequest: LnZapPaymentRequestEvent,
         nwcResponse: LnZapPaymentResponseEvent,
-        continuation: CancellableContinuation<InvoiceAmount?>,
+        continuation: Continuation<InvoiceAmount?>,
         signer: NostrSigner,
     ) {
         // if we can decrypt the reply

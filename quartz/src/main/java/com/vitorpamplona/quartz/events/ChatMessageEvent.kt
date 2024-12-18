@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.events
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.IMetaTag
 import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -79,7 +80,7 @@ class ChatMessageEvent(
             geohash: String? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            nip94attachments: List<FileHeaderEvent>? = null,
+            imetas: List<IMetaTag>? = null,
             isDraft: Boolean,
             onReady: (ChatMessageEvent) -> Unit,
         ) {
@@ -96,12 +97,8 @@ class ChatMessageEvent(
             zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
             geohash?.let { tags.addAll(geohashMipMap(it)) }
             subject?.let { tags.add(arrayOf("subject", it)) }
-            nip94attachments?.let {
-                it.forEach {
-                    Nip92MediaAttachments().convertFromFileHeader(it)?.let {
-                        tags.add(it)
-                    }
-                }
+            imetas?.forEach {
+                tags.add(Nip92MediaAttachments.createTag(it))
             }
             // tags.add(arrayOf("alt", alt))
 

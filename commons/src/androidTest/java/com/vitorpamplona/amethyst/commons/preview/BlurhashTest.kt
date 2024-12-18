@@ -20,7 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.preview
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.amethyst.commons.blurhash.BlurHashDecoder
+import com.vitorpamplona.amethyst.commons.blurhash.BlurHashDecoderOld
+import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
+import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
 import org.junit.Assert
 import org.junit.Test
@@ -71,4 +77,30 @@ class BlurhashTest {
 
         assertTrue(bmp1!!.sameAs(bmp2!!))
     }
+
+    @Test
+    fun testBlack() {
+        assertEquals("U00000fQfQfQfQfQfQfQfQfQfQfQfQfQfQfQ", load("/black.png").toBlurhash())
+    }
+
+    @Test
+    fun test1x1() {
+        assertEquals("U~TSUA~q~q~q~q~q~q~q~q~q~q~q~q~q~q~q", load("/1x1.png").toBlurhash())
+    }
+
+    @Test
+    fun testWhite() {
+        assertEquals("U2TSUA~qfQ~q~qj[fQj[fQfQfQfQ~qj[fQj[", load("/white.png").toBlurhash())
+    }
+
+    @Test
+    fun testLorikeet() {
+        println("${load("/lorikeet.jpg").toBlurhash()}")
+        assertEquals("rFDcT@_LNs#p%Mt*nNM}E2VrIVX6VuV@WUo{xtjv9]RRw[OXS}rrWFX9w{OZxaxWNHX4n\$M}NGaK%0RkM}w{xto|jFs,Sh-Tj]bcwJnjXSxZs.NI", load("/lorikeet.jpg").toBlurhash())
+    }
+
+    private fun load(filename: String): Bitmap =
+        javaClass.getResourceAsStream(filename).use { inputStream ->
+            BitmapFactory.decodeStream(inputStream)
+        }
 }

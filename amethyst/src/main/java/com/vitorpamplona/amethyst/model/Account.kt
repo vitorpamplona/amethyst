@@ -31,10 +31,10 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.service.FileHeader
 import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.tryAndWait
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -51,9 +51,11 @@ import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.Dimension
 import com.vitorpamplona.quartz.encoders.ETag
 import com.vitorpamplona.quartz.encoders.EventHint
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.IMetaTag
 import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
 import com.vitorpamplona.quartz.encoders.PTag
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
@@ -73,7 +75,6 @@ import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.Contact
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
-import com.vitorpamplona.quartz.events.Dimension
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
@@ -105,6 +106,7 @@ import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import com.vitorpamplona.quartz.events.PictureEvent
+import com.vitorpamplona.quartz.events.PictureMeta
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.Price
 import com.vitorpamplona.quartz.events.PrivateDmEvent
@@ -1495,36 +1497,45 @@ class Account(
         }
     }
 
-    fun createHTTPAuthorization(
+    suspend fun createHTTPAuthorization(
         url: String,
         method: String,
         body: ByteArray? = null,
-        onReady: (HTTPAuthorizationEvent) -> Unit,
-    ) {
-        if (!isWriteable()) return
+    ): HTTPAuthorizationEvent? {
+        if (!isWriteable()) return null
 
-        HTTPAuthorizationEvent.create(url, method, body, signer, onReady = onReady)
+        return tryAndWait { continuation ->
+            HTTPAuthorizationEvent.create(url, method, body, signer) {
+                continuation.resume(it)
+            }
+        }
     }
 
-    fun createBlossomUploadAuth(
+    suspend fun createBlossomUploadAuth(
         hash: HexKey,
         size: Long,
         alt: String,
-        onReady: (BlossomAuthorizationEvent) -> Unit,
-    ) {
-        if (!isWriteable()) return
+    ): BlossomAuthorizationEvent? {
+        if (!isWriteable()) return null
 
-        BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, signer, onReady = onReady)
+        return tryAndWait { continuation ->
+            BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, signer) {
+                continuation.resume(it)
+            }
+        }
     }
 
-    fun createBlossomDeleteAuth(
+    suspend fun createBlossomDeleteAuth(
         hash: HexKey,
         alt: String,
-        onReady: (BlossomAuthorizationEvent) -> Unit,
-    ) {
-        if (!isWriteable()) return
+    ): BlossomAuthorizationEvent? {
+        if (!isWriteable()) return null
 
-        BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer, onReady = onReady)
+        return tryAndWait { continuation ->
+            BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer) {
+                continuation.resume(it)
+            }
+        }
     }
 
     suspend fun boost(note: Note) {
@@ -1858,7 +1869,7 @@ class Account(
                 hash = headerInfo.hash,
                 size = headerInfo.size.toString(),
                 dimensions = headerInfo.dim,
-                blurhash = headerInfo.blurHash,
+                blurhash = headerInfo.blurHash?.blurhash,
                 alt = alt,
                 sensitiveContent = sensitiveContent,
                 signer = signer,
@@ -1934,13 +1945,45 @@ class Account(
             hash = headerInfo.hash,
             size = headerInfo.size.toString(),
             dimensions = headerInfo.dim,
-            blurhash = headerInfo.blurHash,
+            blurhash = headerInfo.blurHash?.blurhash,
             alt = alt,
             originalHash = originalHash,
             sensitiveContent = sensitiveContent,
             signer = signer,
         ) { event ->
             onReady(event)
+        }
+    }
+
+    fun sendAllAsOnePictureEvent(
+        urlHeaderInfo: Map<String, FileHeader>,
+        caption: String?,
+        sensitiveContent: Boolean,
+        relayList: List<RelaySetupInfo>,
+        onReady: (Note) -> Unit,
+    ) {
+        val iMetas =
+            urlHeaderInfo.map {
+                PictureMeta(
+                    it.key,
+                    it.value.mimeType,
+                    it.value.blurHash?.blurhash,
+                    it.value.dim,
+                    caption,
+                    it.value.hash,
+                    it.value.size.toLong(),
+                    emptyList(),
+                    emptyList(),
+                )
+            }
+
+        PictureEvent.create(
+            images = iMetas,
+            msg = caption,
+            markAsSensitive = sensitiveContent,
+            signer = signer,
+        ) { event ->
+            sendHeader(event, relayList = relayList, onReady)
         }
     }
 
@@ -1967,7 +2010,8 @@ class Account(
                 hash = headerInfo.hash,
                 size = headerInfo.size.toLong(),
                 dimensions = headerInfo.dim,
-                blurhash = headerInfo.blurHash,
+                blurhash = headerInfo.blurHash?.blurhash,
+                markAsSensitive = sensitiveContent,
                 alt = alt,
                 signer = signer,
             ) { event ->
@@ -1981,7 +2025,7 @@ class Account(
                     hash = headerInfo.hash,
                     size = headerInfo.size,
                     dimensions = headerInfo.dim,
-                    blurhash = headerInfo.blurHash,
+                    blurhash = headerInfo.blurHash?.blurhash,
                     alt = alt,
                     sensitiveContent = sensitiveContent,
                     signer = signer,
@@ -1995,7 +2039,7 @@ class Account(
                     hash = headerInfo.hash,
                     size = headerInfo.size,
                     dimensions = headerInfo.dim,
-                    blurhash = headerInfo.blurHash,
+                    blurhash = headerInfo.blurHash?.blurhash,
                     alt = alt,
                     sensitiveContent = sensitiveContent,
                     signer = signer,
@@ -2011,7 +2055,7 @@ class Account(
                 hash = headerInfo.hash,
                 size = headerInfo.size.toString(),
                 dimensions = headerInfo.dim,
-                blurhash = headerInfo.blurHash,
+                blurhash = headerInfo.blurHash?.blurhash,
                 alt = alt,
                 originalHash = originalHash,
                 sensitiveContent = sensitiveContent,
@@ -2037,7 +2081,7 @@ class Account(
         zapRaiserAmount: Long? = null,
         relayList: List<RelaySetupInfo>,
         geohash: String? = null,
-        nip94attachments: List<Event>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2064,7 +2108,7 @@ class Account(
             zapRaiserAmount = zapRaiserAmount,
             directMentions = directMentions,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             signer = signer,
             isDraft = draftTag != null,
         ) {
@@ -2104,7 +2148,7 @@ class Account(
         forkedFrom: Event?,
         relayList: List<RelaySetupInfo>,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2126,7 +2170,7 @@ class Account(
             root = root,
             directMentions = directMentions,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             forkedFrom = forkedFrom,
             signer = signer,
             isDraft = draftTag != null,
@@ -2172,7 +2216,7 @@ class Account(
         forkedFrom: Event?,
         relayList: List<RelaySetupInfo>,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2192,7 +2236,7 @@ class Account(
             torrent = root,
             directMentions = directMentions,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             forkedFrom = forkedFrom,
             signer = signer,
             isDraft = draftTag != null,
@@ -2255,7 +2299,7 @@ class Account(
         replyingTo: Note,
         directMentionsUsers: Set<User> = emptySet(),
         directMentionsNotes: Set<Note> = emptySet(),
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         geohash: String? = null,
         zapReceiver: List<ZapSplitSetup>? = null,
         wantsToMarkAsSensitive: Boolean = false,
@@ -2298,7 +2342,7 @@ class Account(
                 usersMentioned = usersMentioned,
                 addressesMentioned = addressesMentioned,
                 eventsMentioned = eventsMentioned,
-                nip94attachments = nip94attachments,
+                imetas = imetas,
                 geohash = geohash,
                 zapReceiver = zapReceiver,
                 markAsSensitive = wantsToMarkAsSensitive,
@@ -2330,7 +2374,7 @@ class Account(
                 usersMentioned = usersMentioned,
                 addressesMentioned = addressesMentioned,
                 eventsMentioned = eventsMentioned,
-                nip94attachments = nip94attachments,
+                imetas = imetas,
                 geohash = geohash,
                 zapReceiver = zapReceiver,
                 markAsSensitive = wantsToMarkAsSensitive,
@@ -2364,7 +2408,7 @@ class Account(
         replyingTo: Note? = null,
         directMentionsUsers: Set<User> = emptySet(),
         directMentionsNotes: Set<Note> = emptySet(),
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         zapReceiver: List<ZapSplitSetup>? = null,
         wantsToMarkAsSensitive: Boolean = false,
         zapRaiserAmount: Long? = null,
@@ -2406,7 +2450,7 @@ class Account(
                 usersMentioned = usersMentioned,
                 addressesMentioned = addressesMentioned,
                 eventsMentioned = eventsMentioned,
-                nip94attachments = nip94attachments,
+                imetas = imetas,
                 zapReceiver = zapReceiver,
                 markAsSensitive = wantsToMarkAsSensitive,
                 zapRaiserAmount = zapRaiserAmount,
@@ -2437,7 +2481,7 @@ class Account(
                 usersMentioned = usersMentioned,
                 addressesMentioned = addressesMentioned,
                 eventsMentioned = eventsMentioned,
-                nip94attachments = nip94attachments,
+                imetas = imetas,
                 zapReceiver = zapReceiver,
                 markAsSensitive = wantsToMarkAsSensitive,
                 zapRaiserAmount = zapRaiserAmount,
@@ -2520,7 +2564,7 @@ class Account(
         zapReceiver: List<ZapSplitSetup>? = null,
         wantsToMarkAsSensitive: Boolean = false,
         zapRaiserAmount: Long? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String? = null,
         relayList: List<RelaySetupInfo>,
     ) {
@@ -2536,7 +2580,7 @@ class Account(
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             signer = signer,
             isDraft = draftTag != null,
         ) {
@@ -2563,7 +2607,7 @@ class Account(
         zapReceiver: List<ZapSplitSetup>? = null,
         wantsToMarkAsSensitive: Boolean = false,
         zapRaiserAmount: Long? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String? = null,
         relayList: List<RelaySetupInfo>,
     ) {
@@ -2577,7 +2621,7 @@ class Account(
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             signer = signer,
             isDraft = draftTag != null,
         ) {
@@ -2610,7 +2654,7 @@ class Account(
         forkedFrom: Event?,
         relayList: List<RelaySetupInfo>,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2632,7 +2676,7 @@ class Account(
             root = root,
             directMentions = directMentions,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             forkedFrom = forkedFrom,
             signer = signer,
             isDraft = draftTag != null,
@@ -2702,7 +2746,7 @@ class Account(
         zapRaiserAmount: Long? = null,
         relayList: List<RelaySetupInfo>,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2726,7 +2770,7 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             isDraft = draftTag != null,
         ) {
             if (draftTag != null) {
@@ -2761,7 +2805,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2778,7 +2822,7 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             signer = signer,
             isDraft = draftTag != null,
         ) {
@@ -2806,7 +2850,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2824,7 +2868,7 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             signer = signer,
             isDraft = draftTag != null,
         ) {
@@ -2852,7 +2896,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         sendPrivateMessage(
@@ -2864,7 +2908,7 @@ class Account(
             wantsToMarkAsSensitive,
             zapRaiserAmount,
             geohash,
-            nip94attachments,
+            imetas,
             draftTag,
         )
     }
@@ -2878,7 +2922,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2896,7 +2940,7 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             signer = signer,
             advertiseNip18 = false,
             isDraft = draftTag != null,
@@ -2926,7 +2970,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String? = null,
     ) {
         if (!isWriteable()) return
@@ -2944,7 +2988,7 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             draftTag = draftTag,
             signer = signer,
         ) {

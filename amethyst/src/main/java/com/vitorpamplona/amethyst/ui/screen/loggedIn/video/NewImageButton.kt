@@ -20,18 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video
 
-import android.Manifest
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -41,64 +34,50 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ProgressIndicatorDefaults
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.actions.GallerySelect
 import com.vitorpamplona.amethyst.ui.actions.NewMediaModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaView
-import com.vitorpamplona.amethyst.ui.actions.getPhotoUri
+import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.ui.actions.uploads.TakePicture
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun NewImageButton(
     accountViewModel: AccountViewModel,
     nav: INav,
     navScrollToTop: () -> Unit,
 ) {
-    val context = LocalContext.current
-
     var isOpen by remember { mutableStateOf(false) }
 
     var wantsToPostFromGallery by remember { mutableStateOf(false) }
 
     var wantsToPostFromCamera by remember { mutableStateOf(false) }
 
-    var cameraUri by remember { mutableStateOf<Uri?>(null) }
-
-    var pickedURI by remember { mutableStateOf<Uri?>(null) }
+    var pickedURIs by remember { mutableStateOf<ImmutableList<SelectedMedia>>(persistentListOf()) }
 
     val scope = rememberCoroutineScope()
 
@@ -111,180 +90,111 @@ fun NewImageButton(
     }
 
     if (wantsToPostFromCamera) {
-        val launcher =
-            rememberLauncherForActivityResult(
-                contract = ActivityResultContracts.TakePicture(),
-            ) { success ->
-                if (success) {
-                    cameraUri?.let {
-                        pickedURI = it
-                    }
-                }
-                cameraUri = null
-                wantsToPostFromCamera = false
-            }
-
-        val cameraPermissionState =
-            rememberPermissionState(
-                Manifest.permission.CAMERA,
-                onPermissionResult = {
-                    if (it) {
-                        scope.launch(Dispatchers.IO) {
-                            cameraUri = getPhotoUri(context)
-                            cameraUri?.let { launcher.launch(it) }
-                        }
-                    }
-                },
-            )
-
-        if (cameraPermissionState.status.isGranted) {
-            LaunchedEffect(key1 = accountViewModel) {
-                launch(Dispatchers.IO) {
-                    cameraUri = getPhotoUri(context)
-                    cameraUri?.let { launcher.launch(it) }
-                }
-            }
-        } else {
-            LaunchedEffect(key1 = accountViewModel) { cameraPermissionState.launchPermissionRequest() }
+        TakePicture { uri ->
+            wantsToPostFromCamera = false
+            pickedURIs = uri
         }
     }
 
     if (wantsToPostFromGallery) {
-        var showGallerySelect by remember { mutableStateOf(false) }
-        if (showGallerySelect) {
-            GallerySelect(
-                onImageUri = { uri ->
-                    wantsToPostFromGallery = false
-                    showGallerySelect = false
-                    pickedURI = uri
-                },
-            )
-        }
-
-        showGallerySelect = true
+        GallerySelect(
+            onImageUri = { uri ->
+                wantsToPostFromGallery = false
+                pickedURIs = uri
+            },
+        )
     }
 
-    pickedURI?.let {
+    if (pickedURIs.isNotEmpty()) {
         NewMediaView(
-            uri = it,
-            onClose = { pickedURI = null },
+            uris = pickedURIs,
+            onClose = { pickedURIs = persistentListOf() },
             postViewModel = postViewModel,
             accountViewModel = accountViewModel,
             nav = nav,
         )
     }
 
-    if (postViewModel.isUploadingImage) {
-        ShowProgress(postViewModel)
-    } else {
-        Column {
-//            if (isOpen) {
-            AnimatedVisibility(
-                visible = isOpen,
-                enter = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(),
-                exit = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut(),
-            ) {
-                Column {
-                    FloatingActionButton(
-                        onClick = {
-                            wantsToPostFromCamera = true
-                            isOpen = false
-                        },
-                        modifier = Size55Modifier,
-                        shape = CircleShape,
-                        containerColor = MaterialTheme.colorScheme.primary,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CameraAlt,
-                            contentDescription = stringRes(id = R.string.upload_image),
-                            modifier = Modifier.size(26.dp),
-                            tint = Color.White,
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    FloatingActionButton(
-                        onClick = {
-                            wantsToPostFromGallery = true
-                            isOpen = false
-                        },
-                        modifier = Size55Modifier,
-                        shape = CircleShape,
-                        containerColor = MaterialTheme.colorScheme.primary,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AddPhotoAlternate,
-                            contentDescription = stringRes(id = R.string.upload_image),
-                            modifier = Modifier.size(26.dp),
-                            tint = Color.White,
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-                }
-            }
-
-            FloatingActionButton(
-                onClick = {
-                    isOpen = !isOpen
-                },
-                modifier = Size55Modifier,
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-            ) {
-                AnimatedVisibility(
-                    visible = isOpen,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
+    Column {
+        AnimatedVisibility(
+            visible = isOpen,
+            enter = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut(),
+        ) {
+            Column {
+                FloatingActionButton(
+                    onClick = {
+                        wantsToPostFromCamera = true
+                        isOpen = false
+                    },
+                    modifier = Size55Modifier,
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.primary,
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Close,
-                        contentDescription = stringRes(id = R.string.new_short),
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = stringRes(id = R.string.upload_image),
                         modifier = Modifier.size(26.dp),
                         tint = Color.White,
                     )
                 }
 
-                AnimatedVisibility(
-                    visible = !isOpen,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
+                Spacer(modifier = Modifier.height(20.dp))
+
+                FloatingActionButton(
+                    onClick = {
+                        wantsToPostFromGallery = true
+                        isOpen = false
+                    },
+                    modifier = Size55Modifier,
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.primary,
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_compose),
-                        contentDescription = stringRes(id = R.string.new_short),
+                        imageVector = Icons.Default.AddPhotoAlternate,
+                        contentDescription = stringRes(id = R.string.upload_image),
                         modifier = Modifier.size(26.dp),
                         tint = Color.White,
                     )
                 }
+
+                Spacer(modifier = Modifier.height(20.dp))
             }
         }
-    }
-}
 
-@Composable
-private fun ShowProgress(postViewModel: NewMediaModel) {
-    Box(Modifier.size(55.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(
-            progress =
-                animateFloatAsState(
-                    targetValue = postViewModel.uploadingPercentage.value,
-                    animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
-                ).value,
-            modifier =
-                Size55Modifier
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.background),
-            strokeWidth = 5.dp,
-        )
-        postViewModel.uploadingDescription.value?.let {
-            Text(
-                it,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 10.sp,
-                textAlign = TextAlign.Center,
-            )
+        FloatingActionButton(
+            onClick = {
+                isOpen = !isOpen
+            },
+            modifier = Size55Modifier,
+            shape = CircleShape,
+            containerColor = MaterialTheme.colorScheme.primary,
+        ) {
+            AnimatedVisibility(
+                visible = isOpen,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Close,
+                    contentDescription = stringRes(id = R.string.new_short),
+                    modifier = Modifier.size(26.dp),
+                    tint = Color.White,
+                )
+            }
+
+            AnimatedVisibility(
+                visible = !isOpen,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_compose),
+                    contentDescription = stringRes(id = R.string.new_short),
+                    modifier = Modifier.size(26.dp),
+                    tint = Color.White,
+                )
+            }
         }
     }
 }

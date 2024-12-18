@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.events
 
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.IMetaTag
 import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
 
 open class InteractiveStoryBaseEvent(
@@ -51,7 +52,7 @@ open class InteractiveStoryBaseEvent(
             markAsSensitive: Boolean = false,
             zapRaiserAmount: Long? = null,
             geohash: String? = null,
-            nip94attachments: List<FileHeaderEvent>? = null,
+            imetas: List<IMetaTag>? = null,
         ): Array<Array<String>> {
             val tags = mutableListOf<Array<String>>()
             findHashtags(content).forEach {
@@ -71,12 +72,8 @@ open class InteractiveStoryBaseEvent(
             }
             zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
             geohash?.let { tags.addAll(geohashMipMap(it)) }
-            nip94attachments?.let {
-                it.forEach {
-                    Nip92MediaAttachments().convertFromFileHeader(it)?.let {
-                        tags.add(it)
-                    }
-                }
+            imetas?.forEach {
+                tags.add(Nip92MediaAttachments.createTag(it))
             }
             return tags.toTypedArray()
         }

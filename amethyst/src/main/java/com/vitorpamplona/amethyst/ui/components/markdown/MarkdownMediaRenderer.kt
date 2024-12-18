@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -95,7 +96,7 @@ class MarkdownMediaRenderer(
                 ZoomableContentView(
                     content = content,
                     roundedCorner = true,
-                    isFiniteHeight = false,
+                    contentScale = ContentScale.FillWidth,
                     accountViewModel = accountViewModel,
                 )
             }
@@ -117,7 +118,7 @@ class MarkdownMediaRenderer(
                     ZoomableContentView(
                         content = content,
                         roundedCorner = true,
-                        isFiniteHeight = false,
+                        contentScale = ContentScale.FillWidth,
                         accountViewModel = accountViewModel,
                     )
                 }

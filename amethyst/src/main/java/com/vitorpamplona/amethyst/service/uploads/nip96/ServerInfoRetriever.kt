@@ -18,55 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.service.uploads.nip96
 
 import android.util.Log
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import kotlinx.coroutines.CancellationException
 import okhttp3.Request
 import java.net.URI
 import java.net.URL
 
-object Nip96MediaServers {
-    val cache: MutableMap<String, Nip96Retriever.ServerInfo> = mutableMapOf()
-
-    suspend fun load(
-        url: String,
-        forceProxy: Boolean,
-    ): Nip96Retriever.ServerInfo {
-        val cached = cache[url]
-        if (cached != null) return cached
-
-        val fetched = Nip96Retriever().loadInfo(url, forceProxy)
-        cache[url] = fetched
-        return fetched
-    }
-}
-
-class Nip96Retriever {
-    data class ServerInfo(
-        @JsonProperty("api_url") val apiUrl: String,
-        @JsonProperty("download_url") val downloadUrl: String? = null,
-        @JsonProperty("delegated_to_url") val delegatedToUrl: String? = null,
-        @JsonProperty("supported_nips") val supportedNips: ArrayList<Int> = arrayListOf(),
-        @JsonProperty("tos_url") val tosUrl: String? = null,
-        @JsonProperty("content_types") val contentTypes: ArrayList<MimeType> = arrayListOf(),
-        @JsonProperty("plans") val plans: Map<PlanName, Plan> = mapOf(),
-    )
-
-    data class Plan(
-        @JsonProperty("name") val name: String? = null,
-        @JsonProperty("is_nip98_required") val isNip98Required: Boolean? = null,
-        @JsonProperty("url") val url: String? = null,
-        @JsonProperty("max_byte_size") val maxByteSize: Long? = null,
-        @JsonProperty("file_expiration") val fileExpiration: ArrayList<Int> = arrayListOf(),
-        @JsonProperty("media_transformations")
-        val mediaTransformations: Map<MimeType, Array<String>> = emptyMap(),
-    )
-
+class ServerInfoRetriever {
     fun parse(
         baseUrl: String,
         body: String,
@@ -138,7 +102,3 @@ class Nip96Retriever {
             potentialyRelativeUrl
         }
 }
-
-typealias PlanName = String
-
-typealias MimeType = String

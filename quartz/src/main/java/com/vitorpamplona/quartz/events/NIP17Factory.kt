@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.events
 
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.IMetaTag
 import com.vitorpamplona.quartz.signers.NostrSigner
 
 class NIP17Factory {
@@ -79,7 +80,7 @@ class NIP17Factory {
         markAsSensitive: Boolean = false,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String? = null,
         onReady: (Result) -> Unit,
     ) {
@@ -97,7 +98,7 @@ class NIP17Factory {
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
             isDraft = draftTag != null,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
         ) { senderMessage ->
             if (draftTag != null) {
                 onReady(
