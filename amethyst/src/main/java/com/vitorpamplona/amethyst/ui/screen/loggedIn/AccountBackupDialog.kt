@@ -101,7 +101,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.crypto.CryptoUtils
@@ -493,27 +492,30 @@ private fun ShowKeyQRDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Surface {
-            Column {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(10.dp),
+            ) {
+                // Back button at the top
                 Row(
-                    modifier = Modifier.padding(10.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     BackButton(onPress = onClose)
                 }
 
+                // QR Code content
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
-                    verticalArrangement = Arrangement.SpaceAround,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(vertical = 10.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Column {
-                        Row(
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = Size10dp),
-                        ) {
-                            QrCodeDrawer(qrCode ?: "error")
-                        }
-                    }
+                    QrCodeDrawer(qrCode ?: "error")
                 }
             }
         }
