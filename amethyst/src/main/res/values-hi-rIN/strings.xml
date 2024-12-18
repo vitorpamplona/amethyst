@@ -204,6 +204,8 @@
     <string name="translations_translated_from">इससे अनुवादित</string>
     <string name="translations_to">इस तक</string>
     <string name="translations_show_in_lang_first">प्रथम %1$s में दिखाएँ</string>
+    <string name="chat_about_topic">सार्वजनिक चर्चा %1$s के विषय पर</string>
+    <string name="community_about_topic">सार्वजनिक समूह %1$s विषय पर</string>
     <string name="translations_always_translate_to_lang">सर्वदा अनुवाद करें %1$s में</string>
     <string name="translations_never_translate_from_lang">कभी भी अनुवाद ना करें %1$s से</string>
     <string name="nip_05">नोस्ट्र पता</string>
@@ -832,6 +834,7 @@
     <string name="accessibility_turn_off_sealed_message">समावृत संदेश सक्रिय। समावृत संदेश निष्क्रिय करने के लिए टाँकें</string>
     <string name="accessibility_send">भेजें</string>
     <string name="accessibility_play_username">उपयोगकर्ता नाम को ध्वनि के रूप में चलाएँ</string>
+    <string name="accessibility_pushpin">घुण्डी</string>
     <string name="accessibility_scan_qr_code">क्यूआर॰ क्रमचित्र परखें</string>
     <string name="accessibility_navigate_to_alby">तृतीय पक्ष धनकोष प्रदाता आल्बी तक जाएँ</string>
     <string name="it_s_not_possible_to_reply_to_a_draft_note">एक टीका पाण्डुलिपि को उत्तर नहीं दे सकते</string>
