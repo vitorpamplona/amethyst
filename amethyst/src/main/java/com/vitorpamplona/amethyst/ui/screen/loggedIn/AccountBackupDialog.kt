@@ -100,6 +100,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
@@ -470,51 +471,10 @@ private fun encryptCopyNSec(
 }
 
 @Composable
-private fun QrCodeButton(accountViewModel: AccountViewModel) {
-    val context = LocalContext.current
-
-    // store the dialog open or close state
-    var dialogOpen by remember { mutableStateOf(false) }
-
-    val keyguardLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                dialogOpen = true
-            }
-        }
-
-    IconButton(
-        onClick = {
-            authenticate(
-                title = stringRes(context, R.string.copy_my_secret_key),
-                context = context,
-                keyguardLauncher = keyguardLauncher,
-                onApproved = { dialogOpen = true },
-                onError = { title, message -> accountViewModel.toast(title, message) },
-            )
-        },
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_qrcode),
-            contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
-            modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-    }
-
-    if (dialogOpen) {
-        ShowKeyQRDialog(
-            accountViewModel.account.settings.keyPair.privKey
-                ?.toNsec(),
-            onClose = { dialogOpen = false },
-        )
-    }
-}
-
-@Composable
-private fun QrCodeButtonEncrypted(
+private fun QrCodeButtonBase(
     accountViewModel: AccountViewModel,
-    password: MutableState<TextFieldValue>,
+    isEnabled: Boolean = true,
+    onDialogShow: () -> String?,
 ) {
     val context = LocalContext.current
 
@@ -529,7 +489,7 @@ private fun QrCodeButtonEncrypted(
         }
 
     IconButton(
-        enabled = password.value.text.isNotBlank(),
+        enabled = isEnabled,
         onClick = {
             authenticate(
                 title = stringRes(context, R.string.copy_my_secret_key),
@@ -544,19 +504,43 @@ private fun QrCodeButtonEncrypted(
             painter = painterResource(R.drawable.ic_qrcode),
             contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
             modifier = Modifier.size(24.dp),
+            tint = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.grayText,
         )
     }
 
     if (dialogOpen) {
-        val key =
-            accountViewModel.account.settings.keyPair.privKey
-                ?.toHexKey()
-                ?.let { CryptoUtils.encryptNIP49(it, password.value.text) }
         ShowKeyQRDialog(
-            key,
+            onDialogShow(),
             onClose = { dialogOpen = false },
         )
     }
+}
+
+@Composable
+private fun QrCodeButton(accountViewModel: AccountViewModel) {
+    QrCodeButtonBase(
+        accountViewModel = accountViewModel,
+        onDialogShow = {
+            accountViewModel.account.settings.keyPair.privKey
+                ?.toNsec()
+        },
+    )
+}
+
+@Composable
+private fun QrCodeButtonEncrypted(
+    accountViewModel: AccountViewModel,
+    password: MutableState<TextFieldValue>,
+) {
+    QrCodeButtonBase(
+        accountViewModel = accountViewModel,
+        isEnabled = password.value.text.isNotBlank(),
+        onDialogShow = {
+            accountViewModel.account.settings.keyPair.privKey
+                ?.toHexKey()
+                ?.let { CryptoUtils.encryptNIP49(it, password.value.text) }
+        },
+    )
 }
 
 @Composable
