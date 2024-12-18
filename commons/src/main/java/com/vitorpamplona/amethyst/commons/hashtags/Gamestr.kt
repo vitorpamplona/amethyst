@@ -89,16 +89,6 @@ val CustomHashTagIcons.Gamestr: ImageVector
                     close()
                 }
                 path(
-                    fill = SolidColor(Color(0xFFDA4453)),
-                ) {
-                    moveTo(263.53f, 259.12f)
-                    curveToRelative(4.17f, 4.16f, 4.17f, 10.92f, 0.0f, 15.09f)
-                    curveToRelative(-4.16f, 4.16f, -10.92f, 4.16f, -15.08f, 0.0f)
-                    curveToRelative(-4.17f, -4.17f, -4.17f, -10.93f, 0.0f, -15.09f)
-                    curveTo(252.61f, 254.96f, 259.37f, 254.96f, 263.53f, 259.12f)
-                    close()
-                }
-                path(
                     fill = SolidColor(Color(0xFFE6E9ED)),
                 ) {
                     moveTo(412.88f, 178.2f)
