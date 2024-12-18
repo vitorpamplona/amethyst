@@ -128,8 +128,7 @@ fun DialogContentsPreview() {
     ThemeComparisonRow {
         DialogContents(
             mockAccountViewModel(),
-            {},
-        )
+        ) {}
     }
 }
 
@@ -251,7 +250,7 @@ private fun DialogContents(
                     },
                     keyboardOptions =
                         KeyboardOptions(
-                            autoCorrect = false,
+                            autoCorrectEnabled = false,
                             keyboardType = KeyboardType.Password,
                             imeAction = ImeAction.Go,
                         ),
@@ -474,6 +473,7 @@ private fun encryptCopyNSec(
 private fun QrCodeButtonBase(
     accountViewModel: AccountViewModel,
     isEnabled: Boolean = true,
+    contentDescription: Int,
     onDialogShow: () -> String?,
 ) {
     val context = LocalContext.current
@@ -502,7 +502,7 @@ private fun QrCodeButtonBase(
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_qrcode),
-            contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
+            contentDescription = stringRes(id = contentDescription),
             modifier = Modifier.size(24.dp),
             tint = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.grayText,
         )
@@ -520,6 +520,7 @@ private fun QrCodeButtonBase(
 private fun QrCodeButton(accountViewModel: AccountViewModel) {
     QrCodeButtonBase(
         accountViewModel = accountViewModel,
+        contentDescription = R.string.show_private_key_qr_code,
         onDialogShow = {
             accountViewModel.account.settings.keyPair.privKey
                 ?.toNsec()
@@ -535,6 +536,7 @@ private fun QrCodeButtonEncrypted(
     QrCodeButtonBase(
         accountViewModel = accountViewModel,
         isEnabled = password.value.text.isNotBlank(),
+        contentDescription = R.string.show_encrypted_private_key_qr_code,
         onDialogShow = {
             accountViewModel.account.settings.keyPair.privKey
                 ?.toHexKey()
