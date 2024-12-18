@@ -380,6 +380,12 @@ object LocalPreferences {
                             remove(PrefKeys.LATEST_SEARCH_RELAY_LIST)
                         }
 
+                        if (settings.localRelayServers.isNotEmpty()) {
+                            putStringSet(PrefKeys.LOCAL_RELAY_SERVERS, settings.localRelayServers)
+                        } else {
+                            remove(PrefKeys.LOCAL_RELAY_SERVERS)
+                        }
+
                         if (settings.backupMuteList != null) {
                             putString(
                                 PrefKeys.LATEST_MUTE_LIST,
