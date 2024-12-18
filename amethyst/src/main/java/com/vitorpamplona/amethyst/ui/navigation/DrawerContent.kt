@@ -539,7 +539,7 @@ fun ListContent(
         MediaServersListView({ editMediaServers = false }, accountViewModel = accountViewModel, nav = nav)
     }
     if (backupDialogOpen) {
-        AccountBackupDialog(accountViewModel, nav, onClose = { backupDialogOpen = false })
+        AccountBackupDialog(accountViewModel, onClose = { backupDialogOpen = false })
     }
     if (conectOrbotDialogOpen) {
         ConnectTorDialog(

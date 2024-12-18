@@ -92,8 +92,6 @@ import com.halilibo.richtext.ui.material3.RichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.authenticate
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
@@ -113,14 +111,13 @@ import kotlinx.coroutines.launch
 @Composable
 fun AccountBackupDialog(
     accountViewModel: AccountViewModel,
-    nav: INav,
     onClose: () -> Unit,
 ) {
     Dialog(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        DialogContents(accountViewModel, nav, onClose)
+        DialogContents(accountViewModel, onClose)
     }
 }
 
@@ -130,7 +127,6 @@ fun DialogContentsPreview() {
     ThemeComparisonRow {
         DialogContents(
             mockAccountViewModel(),
-            EmptyNav,
             {},
         )
     }
@@ -140,7 +136,6 @@ fun DialogContentsPreview() {
 @Composable
 private fun DialogContents(
     accountViewModel: AccountViewModel,
-    nav: INav,
     onClose: () -> Unit,
 ) {
     Surface(
@@ -198,7 +193,7 @@ private fun DialogContents(
                     }
 
                     Column {
-                        QrCodeButton(nav, accountViewModel)
+                        QrCodeButton(accountViewModel)
                     }
                 }
 
@@ -306,17 +301,28 @@ private fun DialogContents(
 }
 
 @Composable
-private fun QrCodeButton(
-    nav: INav,
-    accountViewModel: AccountViewModel,
-) {
+private fun QrCodeButton(accountViewModel: AccountViewModel) {
+    val context = LocalContext.current
+
     // store the dialog open or close state
     var dialogOpen by remember { mutableStateOf(false) }
 
+    val keyguardLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                dialogOpen = true
+            }
+        }
+
     IconButton(
         onClick = {
-            dialogOpen = true
-            nav.closeDrawer()
+            authenticate(
+                title = stringRes(context, R.string.copy_my_secret_key),
+                context = context,
+                keyguardLauncher = keyguardLauncher,
+                onApproved = { dialogOpen = true },
+                onError = { title, message -> accountViewModel.toast(title, message) },
+            )
         },
     ) {
         Icon(
