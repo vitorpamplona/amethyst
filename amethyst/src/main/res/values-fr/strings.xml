@@ -834,6 +834,7 @@
     <string name="accessibility_turn_off_sealed_message">Message scellé activé. Cliquer pour désactiver le message scellé</string>
     <string name="accessibility_send">Envoyer</string>
     <string name="accessibility_play_username">Écouter le nom d\'utilisateur</string>
+    <string name="accessibility_pushpin">Punaise</string>
     <string name="accessibility_scan_qr_code">Scanner le QR code</string>
     <string name="accessibility_navigate_to_alby">Accéder au fournisseur de portefeuille tiers Alby</string>
     <string name="it_s_not_possible_to_reply_to_a_draft_note">Il n\'est pas possible de répondre à un brouillon</string>
