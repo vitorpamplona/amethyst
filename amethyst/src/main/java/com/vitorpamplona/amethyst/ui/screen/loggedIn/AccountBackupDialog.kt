@@ -343,6 +343,54 @@ private fun QrCodeButton(accountViewModel: AccountViewModel) {
 }
 
 @Composable
+private fun QrCodeButtonEncrypted(
+    accountViewModel: AccountViewModel,
+    password: MutableState<TextFieldValue>,
+) {
+    val context = LocalContext.current
+
+    // store the dialog open or close state
+    var dialogOpen by remember { mutableStateOf(false) }
+
+    val keyguardLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                dialogOpen = true
+            }
+        }
+
+    IconButton(
+        enabled = password.value.text.isNotBlank(),
+        onClick = {
+            authenticate(
+                title = stringRes(context, R.string.copy_my_secret_key),
+                context = context,
+                keyguardLauncher = keyguardLauncher,
+                onApproved = { dialogOpen = true },
+                onError = { title, message -> accountViewModel.toast(title, message) },
+            )
+        },
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_qrcode),
+            contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
+            modifier = Modifier.size(24.dp),
+        )
+    }
+
+    if (dialogOpen) {
+        val key =
+            accountViewModel.account.settings.keyPair.privKey
+                ?.toHexKey()
+                ?.let { CryptoUtils.encryptNIP49(it, password.value.text) }
+        ShowKeyQRDialog(
+            key,
+            onClose = { dialogOpen = false },
+        )
+    }
+}
+
+@Composable
 private fun NSecCopyButton(accountViewModel: AccountViewModel) {
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
@@ -403,30 +451,38 @@ private fun EncryptNSecCopyButton(
             }
         }
 
-    OutlinedButton(
-        modifier = Modifier.padding(horizontal = 3.dp),
-        onClick = {
-            authenticate(
-                title = stringRes(context, R.string.copy_my_secret_key),
-                context = context,
-                keyguardLauncher = keyguardLauncher,
-                onApproved = { encryptCopyNSec(password, context, scope, accountViewModel, clipboardManager) },
-                onError = { title, message -> accountViewModel.toast(title, message) },
-            )
-        },
-        shape = ButtonBorder,
-        contentPadding = ButtonPadding,
-        enabled = password.value.text.isNotBlank(),
-    ) {
-        Icon(
-            imageVector = Icons.Default.Key,
-            contentDescription =
-                stringRes(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
-            modifier = Modifier.padding(end = 5.dp),
-        )
-        Text(
-            stringRes(id = R.string.encrypt_and_copy_my_secret_key),
-        )
+    Row {
+        Column {
+            OutlinedButton(
+                modifier = Modifier.padding(horizontal = 3.dp),
+                onClick = {
+                    authenticate(
+                        title = stringRes(context, R.string.copy_my_secret_key),
+                        context = context,
+                        keyguardLauncher = keyguardLauncher,
+                        onApproved = { encryptCopyNSec(password, context, scope, accountViewModel, clipboardManager) },
+                        onError = { title, message -> accountViewModel.toast(title, message) },
+                    )
+                },
+                shape = ButtonBorder,
+                contentPadding = ButtonPadding,
+                enabled = password.value.text.isNotBlank(),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Key,
+                    contentDescription =
+                        stringRes(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
+                    modifier = Modifier.padding(end = 5.dp),
+                )
+                Text(
+                    stringRes(id = R.string.encrypt_and_copy_my_secret_key),
+                )
+            }
+        }
+
+        Column {
+            QrCodeButtonEncrypted(accountViewModel, password)
+        }
     }
 }
 
