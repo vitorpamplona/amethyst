@@ -153,6 +153,8 @@
     <string name="lightning_address">Lightning Address</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Copies the Nsec ID (your password) to the clipboard for backup</string>
     <string name="copy_private_key_to_the_clipboard">Copy Secret Key to the Clipboard</string>
+    <string name="show_private_key_qr_code">Show private key QR code</string>
+    <string name="show_encrypted_private_key_qr_code">Show encrypted private key QR code</string>
     <string name="copies_the_public_key_to_the_clipboard_for_sharing">Copies the public key to the clipboard for sharing</string>
     <string name="copy_public_key_npub_to_the_clipboard">Copy Public Key (NPub) to the Clipboard</string>
     <string name="send_a_direct_message">Send a Direct Message</string>
