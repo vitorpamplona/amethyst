@@ -192,30 +192,14 @@ private fun DialogContents(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                NSecCopyButton(accountViewModel)
+                Row {
+                    Column {
+                        NSecCopyButton(accountViewModel)
+                    }
 
-                // store the dialog open or close state
-                var dialogOpen by remember { mutableStateOf(false) }
-                IconButton(
-                    onClick = {
-                        dialogOpen = true
-                        nav.closeDrawer()
-                    },
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_qrcode),
-                        contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
-                        modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-
-                if (dialogOpen) {
-                    ShowKeyQRDialog(
-                        accountViewModel.account.settings.keyPair.privKey
-                            ?.toNsec(),
-                        onClose = { dialogOpen = false },
-                    )
+                    Column {
+                        QrCodeButton(nav, accountViewModel)
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(30.dp))
@@ -318,6 +302,37 @@ private fun DialogContents(
                 Spacer(modifier = Modifier.height(30.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun QrCodeButton(
+    nav: INav,
+    accountViewModel: AccountViewModel,
+) {
+    // store the dialog open or close state
+    var dialogOpen by remember { mutableStateOf(false) }
+
+    IconButton(
+        onClick = {
+            dialogOpen = true
+            nav.closeDrawer()
+        },
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_qrcode),
+            contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+    }
+
+    if (dialogOpen) {
+        ShowKeyQRDialog(
+            accountViewModel.account.settings.keyPair.privKey
+                ?.toNsec(),
+            onClose = { dialogOpen = false },
+        )
     }
 }
 
