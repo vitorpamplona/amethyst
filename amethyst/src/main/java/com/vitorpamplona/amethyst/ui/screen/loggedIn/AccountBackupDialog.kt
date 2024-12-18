@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -71,6 +72,7 @@ import androidx.compose.ui.platform.LocalAutofill
 import androidx.compose.ui.platform.LocalAutofillTree
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -90,11 +92,16 @@ import com.halilibo.richtext.ui.material3.RichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.authenticate
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.crypto.CryptoUtils
@@ -107,13 +114,14 @@ import kotlinx.coroutines.launch
 @Composable
 fun AccountBackupDialog(
     accountViewModel: AccountViewModel,
+    nav: INav,
     onClose: () -> Unit,
 ) {
     Dialog(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        DialogContents(accountViewModel, onClose)
+        DialogContents(accountViewModel, nav, onClose)
     }
 }
 
@@ -123,6 +131,7 @@ fun DialogContentsPreview() {
     ThemeComparisonRow {
         DialogContents(
             mockAccountViewModel(),
+            EmptyNav,
             {},
         )
     }
@@ -132,6 +141,7 @@ fun DialogContentsPreview() {
 @Composable
 private fun DialogContents(
     accountViewModel: AccountViewModel,
+    nav: INav,
     onClose: () -> Unit,
 ) {
     Surface(
@@ -184,6 +194,30 @@ private fun DialogContents(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 NSecCopyButton(accountViewModel)
+
+                // store the dialog open or close state
+                var dialogOpen by remember { mutableStateOf(false) }
+                IconButton(
+                    onClick = {
+                        dialogOpen = true
+                        nav.closeDrawer()
+                    },
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_qrcode),
+                        contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+
+                if (dialogOpen) {
+                    ShowKeyQRDialog(
+                        accountViewModel.account.settings.keyPair.privKey
+                            ?.toNsec(),
+                        onClose = { dialogOpen = false },
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(30.dp))
 
@@ -443,6 +477,43 @@ private fun encryptCopyNSec(
                             stringRes(context, R.string.failed_to_encrypt_key),
                             Toast.LENGTH_SHORT,
                         ).show()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShowKeyQRDialog(
+    qrCode: String?,
+    onClose: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface {
+            Column {
+                Row(
+                    modifier = Modifier.padding(10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    BackButton(onPress = onClose)
+                }
+
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
+                    verticalArrangement = Arrangement.SpaceAround,
+                ) {
+                    Column {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = Size10dp),
+                        ) {
+                            QrCodeDrawer(qrCode ?: "error")
+                        }
+                    }
                 }
             }
         }
