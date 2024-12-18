@@ -301,96 +301,6 @@ private fun DialogContents(
 }
 
 @Composable
-private fun QrCodeButton(accountViewModel: AccountViewModel) {
-    val context = LocalContext.current
-
-    // store the dialog open or close state
-    var dialogOpen by remember { mutableStateOf(false) }
-
-    val keyguardLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                dialogOpen = true
-            }
-        }
-
-    IconButton(
-        onClick = {
-            authenticate(
-                title = stringRes(context, R.string.copy_my_secret_key),
-                context = context,
-                keyguardLauncher = keyguardLauncher,
-                onApproved = { dialogOpen = true },
-                onError = { title, message -> accountViewModel.toast(title, message) },
-            )
-        },
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_qrcode),
-            contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
-            modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-    }
-
-    if (dialogOpen) {
-        ShowKeyQRDialog(
-            accountViewModel.account.settings.keyPair.privKey
-                ?.toNsec(),
-            onClose = { dialogOpen = false },
-        )
-    }
-}
-
-@Composable
-private fun QrCodeButtonEncrypted(
-    accountViewModel: AccountViewModel,
-    password: MutableState<TextFieldValue>,
-) {
-    val context = LocalContext.current
-
-    // store the dialog open or close state
-    var dialogOpen by remember { mutableStateOf(false) }
-
-    val keyguardLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                dialogOpen = true
-            }
-        }
-
-    IconButton(
-        enabled = password.value.text.isNotBlank(),
-        onClick = {
-            authenticate(
-                title = stringRes(context, R.string.copy_my_secret_key),
-                context = context,
-                keyguardLauncher = keyguardLauncher,
-                onApproved = { dialogOpen = true },
-                onError = { title, message -> accountViewModel.toast(title, message) },
-            )
-        },
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_qrcode),
-            contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
-            modifier = Modifier.size(24.dp),
-        )
-    }
-
-    if (dialogOpen) {
-        val key =
-            accountViewModel.account.settings.keyPair.privKey
-                ?.toHexKey()
-                ?.let { CryptoUtils.encryptNIP49(it, password.value.text) }
-        ShowKeyQRDialog(
-            key,
-            onClose = { dialogOpen = false },
-        )
-    }
-}
-
-@Composable
 private fun NSecCopyButton(accountViewModel: AccountViewModel) {
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
@@ -556,6 +466,96 @@ private fun encryptCopyNSec(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun QrCodeButton(accountViewModel: AccountViewModel) {
+    val context = LocalContext.current
+
+    // store the dialog open or close state
+    var dialogOpen by remember { mutableStateOf(false) }
+
+    val keyguardLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                dialogOpen = true
+            }
+        }
+
+    IconButton(
+        onClick = {
+            authenticate(
+                title = stringRes(context, R.string.copy_my_secret_key),
+                context = context,
+                keyguardLauncher = keyguardLauncher,
+                onApproved = { dialogOpen = true },
+                onError = { title, message -> accountViewModel.toast(title, message) },
+            )
+        },
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_qrcode),
+            contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+    }
+
+    if (dialogOpen) {
+        ShowKeyQRDialog(
+            accountViewModel.account.settings.keyPair.privKey
+                ?.toNsec(),
+            onClose = { dialogOpen = false },
+        )
+    }
+}
+
+@Composable
+private fun QrCodeButtonEncrypted(
+    accountViewModel: AccountViewModel,
+    password: MutableState<TextFieldValue>,
+) {
+    val context = LocalContext.current
+
+    // store the dialog open or close state
+    var dialogOpen by remember { mutableStateOf(false) }
+
+    val keyguardLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                dialogOpen = true
+            }
+        }
+
+    IconButton(
+        enabled = password.value.text.isNotBlank(),
+        onClick = {
+            authenticate(
+                title = stringRes(context, R.string.copy_my_secret_key),
+                context = context,
+                keyguardLauncher = keyguardLauncher,
+                onApproved = { dialogOpen = true },
+                onError = { title, message -> accountViewModel.toast(title, message) },
+            )
+        },
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_qrcode),
+            contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
+            modifier = Modifier.size(24.dp),
+        )
+    }
+
+    if (dialogOpen) {
+        val key =
+            accountViewModel.account.settings.keyPair.privKey
+                ?.toHexKey()
+                ?.let { CryptoUtils.encryptNIP49(it, password.value.text) }
+        ShowKeyQRDialog(
+            key,
+            onClose = { dialogOpen = false },
+        )
     }
 }
 
