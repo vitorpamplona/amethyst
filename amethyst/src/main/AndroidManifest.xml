@@ -144,6 +144,15 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <receiver
+            android:name=".service.notifications.PokeyReceiver"
+            android:exported="true"
+            >
+            <intent-filter>
+                <action android:name="com.shared.NOSTR" />
+            </intent-filter>
+        </receiver>
     </application>
+
 
 </manifest>

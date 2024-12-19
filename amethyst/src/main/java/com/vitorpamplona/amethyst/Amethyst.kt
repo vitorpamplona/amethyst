@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst
 import android.app.Application
 import android.content.ContentResolver
 import android.content.Context
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Looper
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
@@ -34,6 +36,7 @@ import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import com.vitorpamplona.amethyst.service.LocationState
+import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.playback.VideoCache
 import com.vitorpamplona.ammolite.service.HttpClientManager
 import kotlinx.coroutines.CoroutineScope
@@ -55,8 +58,11 @@ class Amethyst : Application() {
     val serviceManager = ServiceManager(applicationIOScope)
     val locationManager = LocationState(this, applicationIOScope)
 
+    val pokeyReceiver = PokeyReceiver()
+
     override fun onTerminate() {
         super.onTerminate()
+        unregisterReceiver(pokeyReceiver)
         applicationIOScope.cancel()
     }
 
@@ -124,6 +130,19 @@ class Amethyst : Application() {
                     videoCache
                 }
             Log.d("Rendering Metrics", "VideoCache initialized in $elapsed")
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(
+                pokeyReceiver,
+                IntentFilter(PokeyReceiver.POKEY_ACTION),
+                RECEIVER_EXPORTED,
+            )
+        } else {
+            registerReceiver(
+                pokeyReceiver,
+                IntentFilter(PokeyReceiver.POKEY_ACTION),
+            )
         }
     }
 

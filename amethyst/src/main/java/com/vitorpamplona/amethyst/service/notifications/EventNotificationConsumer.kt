@@ -59,7 +59,6 @@ class EventNotificationConsumer(
     suspend fun consume(event: GiftWrapEvent) {
         Log.d(TAG, "New Notification Arrived")
         if (!LocalCache.justVerify(event)) return
-        if (!notificationManager().areNotificationsEnabled()) return
 
         // PushNotification Wraps don't include a receiver.
         // Test with all logged in accounts
@@ -95,22 +94,68 @@ class EventNotificationConsumer(
         }
 
         pushWrappedEvent.unwrapThrowing(signer) { notificationEvent ->
-            val consumed = LocalCache.hasConsumed(notificationEvent)
-            val verified = LocalCache.justVerify(notificationEvent)
-            Log.d(TAG, "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${signer.pubKey} consumed= $consumed && verified= $verified")
-            if (!consumed && verified) {
-                Log.d(TAG, "New Notification was verified")
-                unwrapAndConsume(notificationEvent, signer) { innerEvent ->
-                    Log.d(TAG, "Unwrapped consume $consumed ${innerEvent.javaClass.simpleName}")
-                    if (innerEvent is PrivateDmEvent) {
-                        Log.d(TAG, "New Nip-04 DM to Notify")
-                        notify(innerEvent, signer, account)
-                    } else if (innerEvent is LnZapEvent) {
-                        Log.d(TAG, "New Zap to Notify")
-                        notify(innerEvent, signer, account)
-                    } else if (innerEvent is ChatMessageEvent) {
-                        Log.d(TAG, "New ChatMessage to Notify")
-                        notify(innerEvent, signer, account)
+            consumeNotificationEvent(notificationEvent, signer, account)
+        }
+    }
+
+    fun consumeNotificationEvent(
+        notificationEvent: Event,
+        signer: NostrSigner,
+        account: AccountSettings,
+    ) {
+        val consumed = LocalCache.hasConsumed(notificationEvent)
+        val verified = LocalCache.justVerify(notificationEvent)
+        Log.d(TAG, "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${signer.pubKey} consumed= $consumed && verified= $verified")
+        if (!consumed && verified) {
+            Log.d(TAG, "New Notification was verified")
+            unwrapAndConsume(notificationEvent, signer) { innerEvent ->
+                if (!notificationManager().areNotificationsEnabled()) return@unwrapAndConsume
+
+                Log.d(TAG, "Unwrapped consume $consumed ${innerEvent.javaClass.simpleName}")
+                if (innerEvent is PrivateDmEvent) {
+                    Log.d(TAG, "New Nip-04 DM to Notify")
+                    notify(innerEvent, signer, account)
+                } else if (innerEvent is LnZapEvent) {
+                    Log.d(TAG, "New Zap to Notify")
+                    notify(innerEvent, signer, account)
+                } else if (innerEvent is ChatMessageEvent) {
+                    Log.d(TAG, "New ChatMessage to Notify")
+                    notify(innerEvent, signer, account)
+                }
+            }
+        }
+    }
+
+    suspend fun findAccountAndConsume(event: Event) {
+        Log.d(TAG, "New Notification Arrived")
+        if (!LocalCache.justVerify(event)) return
+
+        val users = event.taggedUsers().map { LocalCache.getOrCreateUser(it) }
+        val npubs = users.map { it.pubkeyNpub() }.toSet()
+
+        // PushNotification Wraps don't include a receiver.
+        // Test with all logged in accounts
+        var matchAccount = false
+        LocalPreferences.allSavedAccounts().forEach {
+            if (!matchAccount && (it.hasPrivKey || it.loggedInWithExternalSigner) && it.npub in npubs) {
+                LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)?.let { acc ->
+                    Log.d(TAG, "New Notification Testing if for ${it.npub}")
+                    try {
+                        // TODO: Modify the external launcher to launch as different users.
+                        // Right now it only registers if Amber has already approved this signature
+                        val signer = acc.createSigner()
+                        if (signer is NostrSignerExternal) {
+                            signer.launcher.registerLauncher(
+                                launcher = { },
+                                contentResolver = Amethyst.instance::contentResolverFn,
+                            )
+                        }
+
+                        consumeNotificationEvent(event, signer, acc)
+                        matchAccount = true
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.d(TAG, "Message was not for user ${it.npub}: ${e.message}")
                     }
                 }
             }
