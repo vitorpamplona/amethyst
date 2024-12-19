@@ -31,7 +31,6 @@ import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.ImageLoader
 import coil3.disk.DiskCache
-import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import com.vitorpamplona.amethyst.service.LocationState

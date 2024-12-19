@@ -73,7 +73,6 @@ import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.flow.filter
 
 // TODO: Migrate this to a property of AccountVi
 object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
