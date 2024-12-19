@@ -148,6 +148,8 @@
     <string name="lightning_address">Lightning Adress</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopierar Nsec ID (ditt lösenord) till urklipp för säkerhetskopiering</string>
     <string name="copy_private_key_to_the_clipboard">Kopiera hemlig nyckel till urklipp</string>
+    <string name="show_private_key_qr_code">Visa QR-kod för privat nyckel</string>
+    <string name="show_encrypted_private_key_qr_code">Visa QR-kod för krypterad privat nyckel</string>
     <string name="copies_the_public_key_to_the_clipboard_for_sharing">Kopierar den publika nyckeln till urklipp för delning</string>
     <string name="copy_public_key_npub_to_the_clipboard">Kopiera Public Key (NPub) till Urklipp</string>
     <string name="send_a_direct_message">Skicka ett direkt meddelande</string>
@@ -334,10 +336,13 @@
     <string name="hash_verification_info_title">Vad betyder detta?</string>
     <string name="hash_verification_passed">Bilden är densamma sedan inlägget</string>
     <string name="hash_verification_failed">Bilden har ändrats. Användaren kanske inte har sett förändringen</string>
+    <string name="content_description_add_media">Lägg till media</string>
     <string name="content_description_add_image">Lägg till Bild</string>
     <string name="content_description_add_video">Lägg till Video</string>
     <string name="content_description_add_document">Lägg till Dokument</string>
     <string name="add_content">Lägg till Meddelande</string>
+    <string name="add_caption">Lägg till en rubrik</string>
+    <string name="add_caption_example">Min underbara vän</string>
     <string name="content_description">Beskrivning av innehållet</string>
     <string name="content_description_example">En blå båt på en vit sandstrand vid solnedgången</string>
     <string name="zap_type">Zap Typ</string>
@@ -351,6 +356,7 @@
     <string name="zap_type_nonzap">Ingen Zap</string>
     <string name="zap_type_nonzap_explainer">Inga spår i Nostr, bara i Lightning</string>
     <string name="file_server">Fil Server</string>
+    <string name="file_server_description">Välj en server att ladda upp denna fil till</string>
     <string name="zap_forward_lnAddress">LnAdress eller @Användare</string>
     <string name="media_servers">Mediaservrar</string>
     <string name="set_preferred_media_servers">Ställ in dina önskade mediauppladdningsservrar.</string>
@@ -361,6 +367,14 @@
     <string name="use_default_servers">Använd standardlistan</string>
     <string name="add_media_server">Lägg till mediaserver</string>
     <string name="delete_media_server">Radera mediaserver</string>
+    <string name="uploading_state_ready">Ej påbörjad</string>
+    <string name="uploading_state_compressing">Komprimerar</string>
+    <string name="uploading_state_uploading">Laddar upp</string>
+    <string name="uploading_state_server_processing">Behandlar</string>
+    <string name="uploading_state_downloading">Laddar ner</string>
+    <string name="uploading_state_hashing">Hashning</string>
+    <string name="uploading_state_finished">Klart</string>
+    <string name="uploading_state_error">Fel</string>
     <string name="upload_server_relays_nip95">Dina Reläer (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Filer är värd för dina reläer. Nytt NIP: kontrollera om de stöder</string>
     <string name="privacy_options">Sekretess Alternativ</string>
@@ -715,6 +729,7 @@
     <string name="failed_to_upload_media">Fel vid uppladdning: %1$s</string>
     <string name="server_did_not_provide_a_url_after_uploading">Servern gav inte en URL efter uppladdning</string>
     <string name="could_not_download_from_the_server">Kunde inte ladda ner uppladdade medier från servern</string>
+    <string name="could_not_check_downloaded_file">Kunde inte kontrollera nedladdad fil efter uppladdning: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Kunde inte förbereda lokal fil att ladda upp: %1$s</string>
     <string name="failed_to_upload_with_message">Uppladdning misslyckades: %1$s</string>
     <string name="failed_to_delete_with_message">Radering misslyckades: %1$s</string>

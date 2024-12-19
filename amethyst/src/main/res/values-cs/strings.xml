@@ -148,6 +148,8 @@
     <string name="lightning_address">Lightning adresa</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Zkopíruje Nsec ID (vaše heslo) do schránky pro zálohování</string>
     <string name="copy_private_key_to_the_clipboard">Zkopírovat tajný klíč do schránky</string>
+    <string name="show_private_key_qr_code">Zobrazit QR kód privátního klíče</string>
+    <string name="show_encrypted_private_key_qr_code">Zobrazit šifrovaný QR kód soukromého klíče</string>
     <string name="copies_the_public_key_to_the_clipboard_for_sharing">Zkopíruje veřejný klíč do schránky pro sdílení</string>
     <string name="copy_public_key_npub_to_the_clipboard">Zkopírovat veřejný klíč (NPub) do schránky</string>
     <string name="send_a_direct_message">Poslat přímou zprávu</string>
@@ -334,10 +336,13 @@
     <string name="hash_verification_info_title">Co to znamená?</string>
     <string name="hash_verification_passed">Obrázek je stejný jako v původním příspěvku</string>
     <string name="hash_verification_failed">Obrázek se změnil. Autor možná změnu nezaznamenal</string>
+    <string name="content_description_add_media">Přidat média</string>
     <string name="content_description_add_image">Přidat obrázek</string>
     <string name="content_description_add_video">Přidat video</string>
     <string name="content_description_add_document">Přidat dokument</string>
     <string name="add_content">Přidat do zprávy</string>
+    <string name="add_caption">Přidat titulek</string>
+    <string name="add_caption_example">Můj milý přítel</string>
     <string name="content_description">Popis obsahu</string>
     <string name="content_description_example">Modrá loď na bílé písčité pláži při západu slunce</string>
     <string name="zap_type">Typ zapsu</string>
@@ -351,6 +356,7 @@
     <string name="zap_type_nonzap">Né Zap</string>
     <string name="zap_type_nonzap_explainer">Žádná stopa v Nostr, pouze v Lightning</string>
     <string name="file_server">Souborový server</string>
+    <string name="file_server_description">Zvolte server pro nahrání tohoto souboru</string>
     <string name="zap_forward_lnAddress">LnAddress nebo @Uživatel</string>
     <string name="media_servers">Media Servery</string>
     <string name="set_preferred_media_servers">Nastavte preferované servery pro nahrávání médií.</string>
@@ -361,6 +367,14 @@
     <string name="use_default_servers">Použít výchozí seznam</string>
     <string name="add_media_server">Přidat server médií</string>
     <string name="delete_media_server">Odstranit server médií</string>
+    <string name="uploading_state_ready">Nezačaté</string>
+    <string name="uploading_state_compressing">Kompresuje</string>
+    <string name="uploading_state_uploading">Nahrávání</string>
+    <string name="uploading_state_server_processing">Zpracovává se</string>
+    <string name="uploading_state_downloading">Stahování</string>
+    <string name="uploading_state_hashing">Hashování</string>
+    <string name="uploading_state_finished">Hotovo</string>
+    <string name="uploading_state_error">Chyba</string>
     <string name="upload_server_relays_nip95">Vaše relé (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Soubory jsou hostovány vašimi relé. Nový NIP: zkontrolujte, zda je podporují</string>
     <string name="privacy_options">Nastavení ochrany soukromí</string>
@@ -716,6 +730,7 @@
     <string name="failed_to_upload_media">Chyba při nahrávání: %1$s</string>
     <string name="server_did_not_provide_a_url_after_uploading">Server po nahrání neposkytl URL</string>
     <string name="could_not_download_from_the_server">Nepodařilo se stáhnout nahraná média ze serveru</string>
+    <string name="could_not_check_downloaded_file">Nelze zkontrolovat stažený soubor po nahrání: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Nelze připravit místní soubor k nahrání: %1$s</string>
     <string name="failed_to_upload_with_message">Nahrání selhalo: %1$s</string>
     <string name="failed_to_delete_with_message">Smazání selhalo: %1$s</string>
