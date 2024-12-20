@@ -37,8 +37,10 @@ import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
+import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
+import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
 import com.vitorpamplona.amethyst.service.playback.VideoCache
-import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.vitorpamplona.ammolite.relays.NostrClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -54,8 +56,10 @@ import kotlin.time.measureTimedValue
 class Amethyst : Application() {
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    val client: NostrClient = NostrClient(OkHttpWebSocket.Builder())
+
     // Service Manager is only active when the activity is active.
-    val serviceManager = ServiceManager(applicationIOScope)
+    val serviceManager = ServiceManager(client, applicationIOScope)
     val locationManager = LocationState(this, applicationIOScope)
 
     val pokeyReceiver = PokeyReceiver()

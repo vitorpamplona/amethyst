@@ -43,11 +43,9 @@ import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
-import com.vitorpamplona.ammolite.relays.Client
-import com.vitorpamplona.ammolite.relays.RelayPool
 
 fun debugState(context: Context) {
-    Client
+    Amethyst.instance.client
         .allSubscriptions()
         .forEach { Log.d("STATE DUMP", "${it.key} ${it.value.joinToString { it.filter.toDebugJson() }}") }
 
@@ -89,7 +87,7 @@ fun debugState(context: Context) {
         Log.d("STATE DUMP", "Memory Class " + memClass + " MB (largeHeap $isLargeHeap)")
     }
 
-    Log.d("STATE DUMP", "Connected Relays: " + RelayPool.connectedRelays())
+    Log.d("STATE DUMP", "Connected Relays: " + Amethyst.instance.client.connectedRelays())
 
     Log.d(
         "STATE DUMP",

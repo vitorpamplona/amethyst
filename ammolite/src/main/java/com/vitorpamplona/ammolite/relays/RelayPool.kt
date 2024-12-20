@@ -24,7 +24,6 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow
@@ -37,7 +36,7 @@ import kotlinx.coroutines.launch
 /**
  * RelayPool manages the connection to multiple Relays and lets consumers deal with simple events.
  */
-object RelayPool : Relay.Listener {
+class RelayPool : Relay.Listener {
     private var relays = listOf<Relay>()
     private var listeners = setOf<Listener>()
 
@@ -57,57 +56,34 @@ object RelayPool : Relay.Listener {
 
     fun getAll() = relays
 
-    fun getOrCreateRelay(
-        relayTemplate: RelaySetupInfoToConnect,
+    fun runCreatingIfNeeded(
+        relay: Relay,
+        timeout: Long = 60000,
         onDone: (() -> Unit)? = null,
         whenConnected: (Relay) -> Unit,
     ) {
         synchronized(this) {
-            val matching = getRelays(relayTemplate.url)
+            val matching = getRelays(relay.url)
             if (matching.isNotEmpty()) {
                 matching.forEach { whenConnected(it) }
             } else {
-                /** temporary connection */
-                newSporadicRelay(
-                    relayTemplate.url,
-                    relayTemplate.read,
-                    relayTemplate.write,
-                    relayTemplate.forceProxy,
-                    relayTemplate.feedTypes,
-                    onConnected = whenConnected,
-                    onDone = onDone,
-                )
-            }
-        }
-    }
+                addRelay(relay)
 
-    @OptIn(DelicateCoroutinesApi::class)
-    fun newSporadicRelay(
-        url: String,
-        read: Boolean,
-        write: Boolean,
-        forceProxy: Boolean,
-        feedTypes: Set<FeedType>?,
-        onConnected: (Relay) -> Unit,
-        onDone: (() -> Unit)?,
-        timeout: Long = 60000,
-    ) {
-        val relay = Relay(url, read, write, forceProxy, feedTypes ?: emptySet())
-        addRelay(relay)
+                relay.connectAndRun {
+                    relay.renewFilters()
+                    relay.sendOutbox()
 
-        relay.connectAndRun {
-            relay.renewFilters()
-            relay.sendOutbox()
+                    whenConnected(relay)
 
-            onConnected(relay)
+                    GlobalScope.launch(Dispatchers.IO) {
+                        delay(timeout) // waits for a reply
+                        relay.disconnect()
+                        removeRelay(relay)
 
-            GlobalScope.launch(Dispatchers.IO) {
-                delay(timeout) // waits for a reply
-                relay.disconnect()
-                removeRelay(relay)
-
-                if (onDone != null) {
-                    onDone()
+                        if (onDone != null) {
+                            onDone()
+                        }
+                    }
                 }
             }
         }

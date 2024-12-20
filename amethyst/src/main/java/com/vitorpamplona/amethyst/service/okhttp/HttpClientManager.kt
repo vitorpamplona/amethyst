@@ -18,40 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.service
+package com.vitorpamplona.amethyst.service.okhttp
 
 import android.util.Log
-import com.vitorpamplona.ammolite.service.HttpClientManager.setDefaultProxy
+import com.vitorpamplona.quartz.crypto.nip17.NostrCipher
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.time.Duration
-
-class LoggingInterceptor : Interceptor {
-    @Throws(IOException::class)
-    override fun intercept(chain: Interceptor.Chain): Response {
-        val request: Request = chain.request()
-        val t1 = System.nanoTime()
-        val port =
-            (
-                chain
-                    .connection()
-                    ?.route()
-                    ?.proxy
-                    ?.address() as? InetSocketAddress
-            )?.port
-        val response: Response = chain.proceed(request)
-        val t2 = System.nanoTime()
-
-        Log.d("OkHttpLog", "Req $port ${request.url} in ${(t2 - t1) / 1e6}ms")
-
-        return response
-    }
-}
 
 object HttpClientManager {
     val rootClient =
@@ -74,32 +53,32 @@ object HttpClientManager {
     fun setDefaultProxy(proxy: Proxy?) {
         if (currentProxy != proxy) {
             Log.d("HttpClient", "Changing proxy to: ${proxy != null}")
-            this.currentProxy = proxy
+            currentProxy = proxy
 
             // recreates singleton
-            this.defaultHttpClient = buildHttpClient(currentProxy, defaultTimeout)
+            defaultHttpClient = buildHttpClient(currentProxy, defaultTimeout)
         }
     }
 
-    fun getCurrentProxy(): Proxy? = this.currentProxy
+    fun getCurrentProxy(): Proxy? = currentProxy
 
     fun setDefaultTimeout(timeout: Duration) {
         Log.d("HttpClient", "Changing timeout to: $timeout")
-        if (this.defaultTimeout.seconds != timeout.seconds) {
-            this.defaultTimeout = timeout
+        if (defaultTimeout.seconds != timeout.seconds) {
+            defaultTimeout = timeout
 
             // recreates singleton
-            this.defaultHttpClient = buildHttpClient(currentProxy, defaultTimeout)
-            this.defaultHttpClientWithoutProxy = buildHttpClient(null, defaultTimeout)
+            defaultHttpClient = buildHttpClient(currentProxy, defaultTimeout)
+            defaultHttpClientWithoutProxy = buildHttpClient(null, defaultTimeout)
         }
     }
 
     fun setDefaultUserAgent(userAgentHeader: String) {
         Log.d("HttpClient", "Changing userAgent")
         if (userAgent != userAgentHeader) {
-            this.userAgent = userAgentHeader
-            this.defaultHttpClient = buildHttpClient(currentProxy, defaultTimeout)
-            this.defaultHttpClientWithoutProxy = buildHttpClient(null, defaultTimeout)
+            userAgent = userAgentHeader
+            defaultHttpClient = buildHttpClient(currentProxy, defaultTimeout)
+            defaultHttpClientWithoutProxy = buildHttpClient(null, defaultTimeout)
         }
     }
 
@@ -117,6 +96,7 @@ object HttpClientManager {
             .writeTimeout(duration)
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
             .addNetworkInterceptor(LoggingInterceptor())
+            .addNetworkInterceptor(EncryptedBlobInterceptor())
             .build()
     }
 
@@ -135,6 +115,48 @@ object HttpClientManager {
         }
     }
 
+    class EncryptedBlobInterceptor : Interceptor {
+        override fun intercept(chain: Interceptor.Chain): Response {
+            val response = chain.proceed(chain.request())
+
+            if (response.isSuccessful) {
+                val cipher = chain.request().tag(NostrCipher::class)
+
+                println("AABBCC Cipher ${chain.request().tag(NostrCipher::class)}")
+
+                if (cipher != null) {
+                    val body = response.peekBody(Long.MAX_VALUE)
+                    val decryptedBytes = cipher.decrypt(body.bytes())
+                    val newBody = decryptedBytes.toResponseBody(body.contentType())
+                    return response.newBuilder().body(newBody).build()
+                }
+            }
+            return response
+        }
+    }
+
+    class LoggingInterceptor : Interceptor {
+        @Throws(IOException::class)
+        override fun intercept(chain: Interceptor.Chain): Response {
+            val request: Request = chain.request()
+            val t1 = System.nanoTime()
+            val port =
+                (
+                    chain
+                        .connection()
+                        ?.route()
+                        ?.proxy
+                        ?.address() as? InetSocketAddress
+                )?.port
+            val response: Response = chain.proceed(request)
+            val t2 = System.nanoTime()
+
+            Log.d("OkHttpLog", "Req $port ${request.url} in ${(t2 - t1) / 1e6}ms")
+
+            return response
+        }
+    }
+
     fun getCurrentProxyPort(useProxy: Boolean): Int? =
         if (useProxy) {
             (currentProxy?.address() as? InetSocketAddress)?.port
@@ -144,13 +166,13 @@ object HttpClientManager {
 
     fun getHttpClient(useProxy: Boolean): OkHttpClient =
         if (useProxy) {
-            if (this.defaultHttpClient == null) {
-                this.defaultHttpClient = buildHttpClient(currentProxy, defaultTimeout)
+            if (defaultHttpClient == null) {
+                defaultHttpClient = buildHttpClient(currentProxy, defaultTimeout)
             }
             defaultHttpClient!!
         } else {
-            if (this.defaultHttpClientWithoutProxy == null) {
-                this.defaultHttpClientWithoutProxy = buildHttpClient(null, defaultTimeout)
+            if (defaultHttpClientWithoutProxy == null) {
+                defaultHttpClientWithoutProxy = buildHttpClient(null, defaultTimeout)
             }
             defaultHttpClientWithoutProxy!!
         }

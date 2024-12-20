@@ -22,6 +22,7 @@ package com.vitorpamplona.ammolite.relays
 
 import android.util.Log
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
+import com.vitorpamplona.ammolite.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -37,10 +38,16 @@ import java.util.concurrent.TimeUnit
  * The Nostr Client manages multiple personae the user may switch between. Events are received and
  * published through multiple relays. Events are stored with their respective persona.
  */
-object Client : RelayPool.Listener {
+class NostrClient(
+    private val websocketBuilder: WebsocketBuilder,
+) : RelayPool.Listener {
+    private val relayPool: RelayPool = RelayPool()
+    private val subscriptions: MutableSubscriptionManager = MutableSubscriptionManager()
+
     private var listeners = setOf<Listener>()
     private var relays = emptyArray<Relay>()
-    private var subscriptions = mapOf<String, List<TypedFilter>>()
+
+    fun buildRelay(it: RelaySetupInfoToConnect): Relay = Relay(it.url, it.read, it.write, it.forceProxy, it.feedTypes, websocketBuilder, subscriptions)
 
     @Synchronized
     fun reconnect(
@@ -52,33 +59,33 @@ object Client : RelayPool.Listener {
 
         if (onlyIfChanged) {
             if (!isSameRelaySetConfig(relays)) {
-                if (Client.relays.isNotEmpty()) {
-                    RelayPool.disconnect()
-                    RelayPool.unregister(this)
-                    RelayPool.unloadRelays()
+                if (this.relays.isNotEmpty()) {
+                    relayPool.disconnect()
+                    relayPool.unregister(this)
+                    relayPool.unloadRelays()
                 }
 
                 if (relays != null) {
-                    val newRelays = relays.map { Relay(it.url, it.read, it.write, it.forceProxy, it.feedTypes) }
-                    RelayPool.register(this)
-                    RelayPool.loadRelays(newRelays)
-                    RelayPool.requestAndWatch()
-                    Client.relays = newRelays.toTypedArray()
+                    val newRelays = relays.map(::buildRelay)
+                    relayPool.register(this)
+                    relayPool.loadRelays(newRelays)
+                    relayPool.requestAndWatch()
+                    this.relays = newRelays.toTypedArray()
                 }
             }
         } else {
-            if (Client.relays.isNotEmpty()) {
-                RelayPool.disconnect()
-                RelayPool.unregister(this)
-                RelayPool.unloadRelays()
+            if (this.relays.isNotEmpty()) {
+                relayPool.disconnect()
+                relayPool.unregister(this)
+                relayPool.unloadRelays()
             }
 
             if (relays != null) {
-                val newRelays = relays.map { Relay(it.url, it.read, it.write, it.forceProxy, it.feedTypes) }
-                RelayPool.register(this)
-                RelayPool.loadRelays(newRelays)
-                RelayPool.requestAndWatch()
-                Client.relays = newRelays.toTypedArray()
+                val newRelays = relays.map(::buildRelay)
+                relayPool.register(this)
+                relayPool.loadRelays(newRelays)
+                relayPool.requestAndWatch()
+                this.relays = newRelays.toTypedArray()
             }
         }
     }
@@ -101,8 +108,8 @@ object Client : RelayPool.Listener {
     ) {
         checkNotInMainThread()
 
-        subscriptions = subscriptions + Pair(subscriptionId, filters)
-        RelayPool.sendFilter(subscriptionId, filters)
+        subscriptions.add(subscriptionId, filters)
+        relayPool.sendFilter(subscriptionId, filters)
     }
 
     fun sendFilterAndStopOnFirstResponse(
@@ -129,8 +136,8 @@ object Client : RelayPool.Listener {
             },
         )
 
-        subscriptions = subscriptions + Pair(subscriptionId, filters)
-        RelayPool.sendFilter(subscriptionId, filters)
+        subscriptions.add(subscriptionId, filters)
+        relayPool.sendFilter(subscriptionId, filters)
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -146,7 +153,7 @@ object Client : RelayPool.Listener {
     ): Boolean {
         checkNotInMainThread()
 
-        val size = if (relay != null) 1 else relayList?.size ?: RelayPool.availableRelays()
+        val size = if (relay != null) 1 else relayList?.size ?: relayPool.availableRelays()
         val latch = CountDownLatch(size)
         val relayErrors = mutableMapOf<String, String>()
         var result = false
@@ -227,8 +234,8 @@ object Client : RelayPool.Listener {
     ) {
         checkNotInMainThread()
 
-        subscriptions = subscriptions + Pair(subscriptionId, filters)
-        RelayPool.connectAndSendFiltersIfDisconnected()
+        subscriptions.add(subscriptionId, filters)
+        relayPool.connectAndSendFiltersIfDisconnected()
     }
 
     fun sendIfExists(
@@ -237,7 +244,7 @@ object Client : RelayPool.Listener {
     ) {
         checkNotInMainThread()
 
-        RelayPool.getRelays(connectedRelay.url).forEach {
+        relayPool.getRelays(connectedRelay.url).forEach {
             it.send(signedEvent)
         }
     }
@@ -249,14 +256,14 @@ object Client : RelayPool.Listener {
     ) {
         checkNotInMainThread()
 
-        RelayPool.getOrCreateRelay(relayTemplate, onDone) {
+        relayPool.runCreatingIfNeeded(buildRelay(relayTemplate), onDone = onDone) {
             it.send(signedEvent)
         }
     }
 
     fun send(signedEvent: EventInterface) {
         checkNotInMainThread()
-        RelayPool.send(signedEvent)
+        relayPool.send(signedEvent)
     }
 
     fun send(
@@ -265,7 +272,7 @@ object Client : RelayPool.Listener {
     ) {
         checkNotInMainThread()
 
-        RelayPool.sendToSelectedRelays(relayList, signedEvent)
+        relayPool.sendToSelectedRelays(relayList, signedEvent)
     }
 
     fun sendPrivately(
@@ -275,18 +282,18 @@ object Client : RelayPool.Listener {
         checkNotInMainThread()
 
         relayList.forEach { relayTemplate ->
-            RelayPool.getOrCreateRelay(relayTemplate, { }) {
+            relayPool.runCreatingIfNeeded(buildRelay(relayTemplate)) {
                 it.sendOverride(signedEvent)
             }
         }
     }
 
     fun close(subscriptionId: String) {
-        RelayPool.close(subscriptionId)
-        subscriptions = subscriptions.minus(subscriptionId)
+        relayPool.close(subscriptionId)
+        subscriptions.remove(subscriptionId)
     }
 
-    fun isActive(subscriptionId: String): Boolean = subscriptions.contains(subscriptionId)
+    fun isActive(subscriptionId: String): Boolean = subscriptions.isActive(subscriptionId)
 
     @OptIn(DelicateCoroutinesApi::class)
     override fun onEvent(
@@ -392,9 +399,13 @@ object Client : RelayPool.Listener {
         listeners = listeners.minus(listener)
     }
 
-    fun allSubscriptions(): Map<String, List<TypedFilter>> = subscriptions
+    fun allSubscriptions(): Map<String, List<TypedFilter>> = subscriptions.allSubscriptions()
 
-    fun getSubscriptionFilters(subId: String): List<TypedFilter> = subscriptions[subId] ?: emptyList()
+    fun getSubscriptionFilters(subId: String): List<TypedFilter> = subscriptions.getSubscriptionFilters(subId)
+
+    fun connectedRelays() = relayPool.connectedRelays()
+
+    fun relayStatusFlow() = relayPool.statusFlow
 
     interface Listener {
         /** A new message was received */

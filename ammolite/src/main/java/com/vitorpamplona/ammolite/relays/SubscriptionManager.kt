@@ -18,35 +18,33 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.ammolite.relays
 
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.ammolite.relays.NostrDataSource
-import com.vitorpamplona.ammolite.relays.Relay
-import com.vitorpamplona.quartz.events.AddressableEvent
-import com.vitorpamplona.quartz.events.Event
+class MutableSubscriptionManager : SubscriptionManager {
+    private var subscriptions = mapOf<String, List<TypedFilter>>()
 
-abstract class AmethystNostrDataSource(
-    debugName: String,
-) : NostrDataSource(Amethyst.instance.client, debugName) {
-    override fun consume(
-        event: Event,
-        relay: Relay,
+    fun add(
+        subscriptionId: String,
+        filters: List<TypedFilter> = listOf(),
     ) {
-        LocalCache.verifyAndConsume(event, relay)
+        subscriptions = subscriptions + Pair(subscriptionId, filters)
     }
 
-    override fun markAsSeenOnRelay(
-        eventId: String,
-        relay: Relay,
-    ) {
-        val note = LocalCache.getNoteIfExists(eventId)
-        val noteEvent = note?.event
-        if (noteEvent is AddressableEvent) {
-            LocalCache.getAddressableNoteIfExists(noteEvent.address().toTag())?.addRelay(relay)
-        } else {
-            note?.addRelay(relay)
-        }
+    fun remove(subscriptionId: String) {
+        subscriptions = subscriptions.minus(subscriptionId)
     }
+
+    override fun isActive(subscriptionId: String): Boolean = subscriptions.contains(subscriptionId)
+
+    override fun allSubscriptions(): Map<String, List<TypedFilter>> = subscriptions
+
+    override fun getSubscriptionFilters(subId: String): List<TypedFilter> = subscriptions[subId] ?: emptyList()
+}
+
+interface SubscriptionManager {
+    fun isActive(subscriptionId: String): Boolean
+
+    fun allSubscriptions(): Map<String, List<TypedFilter>>
+
+    fun getSubscriptionFilters(subId: String): List<TypedFilter>
 }

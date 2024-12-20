@@ -35,7 +35,6 @@ import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
-import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
@@ -297,11 +296,11 @@ class AccountStateViewModel : ViewModel() {
 
             GlobalScope.launch(Dispatchers.IO) {
                 delay(2000) // waits for the new user to connect to the new relays.
-                accountSettings.backupUserMetadata?.let { Client.send(it) }
-                accountSettings.backupContactList?.let { Client.send(it) }
-                accountSettings.backupNIP65RelayList?.let { Client.send(it) }
-                accountSettings.backupDMRelayList?.let { Client.send(it) }
-                accountSettings.backupSearchRelayList?.let { Client.send(it) }
+                accountSettings.backupUserMetadata?.let { Amethyst.instance.client.send(it) }
+                accountSettings.backupContactList?.let { Amethyst.instance.client.send(it) }
+                accountSettings.backupNIP65RelayList?.let { Amethyst.instance.client.send(it) }
+                accountSettings.backupDMRelayList?.let { Amethyst.instance.client.send(it) }
+                accountSettings.backupSearchRelayList?.let { Amethyst.instance.client.send(it) }
             }
         }
     }

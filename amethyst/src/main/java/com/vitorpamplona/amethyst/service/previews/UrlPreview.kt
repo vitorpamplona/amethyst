@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.previews
 
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

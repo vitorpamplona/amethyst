@@ -111,7 +111,6 @@ import com.vitorpamplona.amethyst.ui.theme.drawerSpacing
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.profileContentHeaderModifier
 import com.vitorpamplona.amethyst.ui.tor.ConnectTorDialog
-import com.vitorpamplona.ammolite.relays.RelayPool
 import com.vitorpamplona.ammolite.relays.RelayPoolStatus
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -563,7 +562,7 @@ fun ListContent(
 
 @Composable
 private fun RelayStatus(accountViewModel: AccountViewModel) {
-    val connectedRelaysText by RelayPool.statusFlow.collectAsStateWithLifecycle(RelayPoolStatus(0, 0))
+    val connectedRelaysText by accountViewModel.relayStatusFlow().collectAsStateWithLifecycle(RelayPoolStatus(0, 0))
 
     RenderRelayStatus(connectedRelaysText)
 }

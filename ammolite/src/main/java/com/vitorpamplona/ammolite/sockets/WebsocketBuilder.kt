@@ -18,35 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.ammolite.sockets
 
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.ammolite.relays.NostrDataSource
-import com.vitorpamplona.ammolite.relays.Relay
-import com.vitorpamplona.quartz.events.AddressableEvent
-import com.vitorpamplona.quartz.events.Event
-
-abstract class AmethystNostrDataSource(
-    debugName: String,
-) : NostrDataSource(Amethyst.instance.client, debugName) {
-    override fun consume(
-        event: Event,
-        relay: Relay,
-    ) {
-        LocalCache.verifyAndConsume(event, relay)
-    }
-
-    override fun markAsSeenOnRelay(
-        eventId: String,
-        relay: Relay,
-    ) {
-        val note = LocalCache.getNoteIfExists(eventId)
-        val noteEvent = note?.event
-        if (noteEvent is AddressableEvent) {
-            LocalCache.getAddressableNoteIfExists(noteEvent.address().toTag())?.addRelay(relay)
-        } else {
-            note?.addRelay(relay)
-        }
-    }
+interface WebsocketBuilder {
+    fun build(
+        url: String,
+        forceProxy: Boolean,
+        out: WebSocketListener,
+    ): WebSocket
 }

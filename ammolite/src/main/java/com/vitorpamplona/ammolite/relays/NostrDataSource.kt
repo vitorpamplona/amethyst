@@ -35,6 +35,7 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
 abstract class NostrDataSource(
+    val client: NostrClient,
     val debugName: String,
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -67,7 +68,7 @@ abstract class NostrDataSource(
     ): Int = 31 * str1.hashCode() + str2.hashCode()
 
     private val clientListener =
-        object : Client.Listener {
+        object : NostrClient.Listener {
             override fun onEvent(
                 event: Event,
                 subscriptionId: String,
@@ -139,14 +140,14 @@ abstract class NostrDataSource(
 
     init {
         Log.d("DataSource", "${this.javaClass.simpleName} Subscribe")
-        Client.subscribe(clientListener)
+        client.subscribe(clientListener)
     }
 
     fun destroy() {
         // makes sure to run
         Log.d("DataSource", "${this.javaClass.simpleName} Unsubscribe")
         stop()
-        Client.unsubscribe(clientListener)
+        client.unsubscribe(clientListener)
         scope.cancel()
         bundler.cancel()
     }
@@ -170,7 +171,7 @@ abstract class NostrDataSource(
 
         GlobalScope.launch(Dispatchers.IO) {
             subscriptions.values.forEach { subscription ->
-                Client.close(subscription.id)
+                client.close(subscription.id)
                 subscription.typedFilters = null
             }
         }
@@ -181,7 +182,7 @@ abstract class NostrDataSource(
         Log.d("DataSource", "${this.javaClass.simpleName} Stop")
 
         subscriptions.values.forEach { subscription ->
-            Client.close(subscription.id)
+            client.close(subscription.id)
             subscription.typedFilters = null
         }
     }
@@ -193,7 +194,7 @@ abstract class NostrDataSource(
     }
 
     fun dismissChannel(subscription: Subscription) {
-        Client.close(subscription.id)
+        client.close(subscription.id)
         subscriptions = subscriptions.minus(subscription.id)
     }
 
@@ -231,29 +232,29 @@ abstract class NostrDataSource(
         subscriptions.values.forEach { updatedSubscription ->
             val updatedSubscriptionNewFilters = updatedSubscription.typedFilters
 
-            val isActive = Client.isActive(updatedSubscription.id)
+            val isActive = client.isActive(updatedSubscription.id)
 
             if (!isActive && updatedSubscriptionNewFilters != null) {
                 // Filter was removed from the active list
                 if (active) {
-                    Client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
+                    client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
                 }
             } else {
                 if (currentFilters.containsKey(updatedSubscription.id)) {
                     if (updatedSubscriptionNewFilters == null) {
                         // was active and is not active anymore, just close.
-                        Client.close(updatedSubscription.id)
+                        client.close(updatedSubscription.id)
                     } else {
                         // was active and is still active, check if it has changed.
                         if (updatedSubscription.hasChangedFiltersFrom(currentFilters[updatedSubscription.id])) {
-                            Client.close(updatedSubscription.id)
+                            client.close(updatedSubscription.id)
                             if (active) {
-                                Client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
+                                client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
                             }
                         } else {
                             // hasn't changed, does nothing.
                             if (active) {
-                                Client.sendFilterOnlyIfDisconnected(
+                                client.sendFilterOnlyIfDisconnected(
                                     updatedSubscription.id,
                                     updatedSubscriptionNewFilters,
                                 )
@@ -269,9 +270,9 @@ abstract class NostrDataSource(
                             if (active) {
                                 Log.d(
                                     this@NostrDataSource.javaClass.simpleName,
-                                    "Update Filter 3 ${updatedSubscription.id} ${Client.isSubscribed(clientListener)}",
+                                    "Update Filter 3 ${updatedSubscription.id} ${client.isSubscribed(clientListener)}",
                                 )
-                                Client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
+                                client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
                             }
                         }
                     }

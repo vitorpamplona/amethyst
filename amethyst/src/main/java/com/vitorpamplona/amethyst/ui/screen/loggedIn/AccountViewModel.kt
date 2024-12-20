@@ -1626,6 +1626,8 @@ class AccountViewModel(
         }
     }
 
+    fun relayStatusFlow() = Amethyst.instance.client.relayStatusFlow()
+
     val draftNoteCache = CachedDraftNotes(this)
 
     class CachedDraftNotes(
