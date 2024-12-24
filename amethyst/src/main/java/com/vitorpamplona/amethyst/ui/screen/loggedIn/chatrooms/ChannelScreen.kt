@@ -403,6 +403,7 @@ private suspend fun innerSendPost(
             toChannel = channel.idHex,
             replyTo = tagger.eTags,
             mentions = tagger.pTags,
+            directMentions = tagger.directMentions,
             wantsToMarkAsSensitive = false,
             imetas = usedAttachments,
             draftTag = draftTag,

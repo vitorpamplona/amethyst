@@ -41,12 +41,9 @@ class ChannelMessageEvent(
         tags.firstOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
             ?: tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
 
-    override fun markedReplyTos() =
-        tags
-            .filter { it.firstOrNull() == "e" && it.getOrNull(1) != channel() }
-            .mapNotNull { it.getOrNull(1) }
+    override fun markedReplyTos() = super.markedReplyTos().filter { it != channel() }
 
-    override fun unMarkedReplyTos() = emptyList<String>()
+    override fun unMarkedReplyTos() = super.unMarkedReplyTos().filter { it != channel() }
 
     companion object {
         const val KIND = 42
@@ -62,6 +59,7 @@ class ChannelMessageEvent(
             createdAt: Long = TimeUtils.now(),
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
+            directMentions: Set<HexKey> = emptySet(),
             geohash: String? = null,
             imetas: List<IMetaTag>? = null,
             isDraft: Boolean,
@@ -71,8 +69,14 @@ class ChannelMessageEvent(
                 mutableListOf(
                     arrayOf("e", channel, "", "root"),
                 )
-            replyTos?.forEach { tags.add(arrayOf("e", it)) }
             mentions?.forEach { tags.add(arrayOf("p", it)) }
+            replyTos?.forEach {
+                if (it in directMentions) {
+                    tags.add(arrayOf("q", it))
+                } else {
+                    tags.add(arrayOf("e", it))
+                }
+            }
             zapReceiver?.forEach {
                 tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }

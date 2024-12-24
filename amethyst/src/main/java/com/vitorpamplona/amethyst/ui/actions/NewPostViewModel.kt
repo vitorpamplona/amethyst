@@ -609,6 +609,7 @@ open class NewPostViewModel : ViewModel() {
                     zapReceiver = zapReceiver,
                     wantsToMarkAsSensitive = wantsToMarkAsSensitive,
                     zapRaiserAmount = localZapRaiserAmount,
+                    directMentions = tagger.directMentions,
                     geohash = geoHash,
                     imetas = usedAttachments,
                     draftTag = localDraft,
