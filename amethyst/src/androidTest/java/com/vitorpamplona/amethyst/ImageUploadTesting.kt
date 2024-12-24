@@ -86,23 +86,23 @@ class ImageUploadTesting {
         val result =
             BlossomUploader()
                 .uploadImage(
-                    inputStream,
-                    initialHash,
-                    paylod.size,
-                    "filename.png",
-                    "image/png",
+                    inputStream = inputStream,
+                    hash = initialHash,
+                    length = paylod.size,
+                    baseFileName = "filename.png",
+                    contentType = "image/png",
                     alt = null,
                     sensitiveContent = null,
-                    server,
+                    serverBaseUrl = server.baseUrl,
                     forceProxy = { false },
-                    createBlossomUploadAuth = account::createBlossomUploadAuth,
+                    httpAuth = account::createBlossomUploadAuth,
                     context = InstrumentationRegistry.getInstrumentation().targetContext,
                 )
 
         assertEquals("image/png", result.type)
         assertEquals(paylod.size.toLong(), result.size)
         assertEquals(initialHash, result.sha256)
-        assertEquals("${server.baseUrl}/$initialHash", result.url)
+        assertEquals("${server.baseUrl}/$initialHash", result.url?.removeSuffix(".png"))
 
         val imageData: ByteArray =
             ImageDownloader().waitAndGetImage(result.url!!, false)
@@ -128,15 +128,15 @@ class ImageUploadTesting {
         val result =
             Nip96Uploader()
                 .uploadImage(
-                    inputStream,
-                    paylod.size.toLong(),
-                    "image/png",
+                    inputStream = inputStream,
+                    length = paylod.size.toLong(),
+                    contentType = "image/png",
                     alt = null,
                     sensitiveContent = null,
-                    serverInfo,
+                    server = serverInfo,
                     forceProxy = { false },
                     onProgress = {},
-                    createHTTPAuthorization = account::createHTTPAuthorization,
+                    httpAuth = account::createHTTPAuthorization,
                     context = InstrumentationRegistry.getInstrumentation().targetContext,
                 )
 
@@ -154,19 +154,23 @@ class ImageUploadTesting {
                     return
                 }
 
-        FileHeader.prepare(
-            imageData,
-            "image/png",
-            null,
-            onReady = {
+        val prepared =
+            FileHeader.prepare(
+                imageData,
+                "image/png",
+                null,
+            )
+
+        prepared.fold(
+            onSuccess = {
                 if (dim != null) {
-                    assertEquals("${server.name}: Invalid dimensions", it.dim, dim)
+                    assertEquals("${server.name}: Invalid dimensions", it.dim.toString(), dim.toString())
                 }
                 if (size != null) {
                     assertEquals("${server.name}: Invalid size", it.size.toString(), size)
                 }
             },
-            onError = { fail("${server.name}: It should not fail") },
+            onFailure = { fail("${server.name}: It should not fail") },
         )
 
         // delay(1000)
@@ -225,6 +229,7 @@ class ImageUploadTesting {
         }
 
     @Test()
+    @Ignore("Returns invalid image size")
     fun testNostrPic() =
         runBlocking {
             testBase(ServerName("nostpic.com", "https://nostpic.com", ServerType.NIP96))
