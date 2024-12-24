@@ -18,12 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.sockets
+package com.vitorpamplona.amethyst.service.okhttp
 
-interface WebSocket {
-    fun connect()
+import okhttp3.Interceptor
+import okhttp3.Request
+import okhttp3.Response
 
-    fun cancel()
-
-    fun send(msg: String): Boolean
+class DefaultContentTypeInterceptor(
+    private val userAgentHeader: String,
+) : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val originalRequest: Request = chain.request()
+        val requestWithUserAgent: Request =
+            originalRequest
+                .newBuilder()
+                .header("User-Agent", userAgentHeader)
+                .build()
+        return chain.proceed(requestWithUserAgent)
+    }
 }

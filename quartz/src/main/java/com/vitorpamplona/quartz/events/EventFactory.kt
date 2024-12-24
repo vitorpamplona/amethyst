@@ -59,6 +59,20 @@ class EventFactory {
             ChannelMessageEvent.KIND -> ChannelMessageEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMetadataEvent.KIND -> ChannelMetadataEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMuteUserEvent.KIND -> ChannelMuteUserEvent(id, pubKey, createdAt, tags, content, sig)
+            ChatMessageEncryptedFileHeaderEvent.KIND -> {
+                if (id.isBlank()) {
+                    ChatMessageEncryptedFileHeaderEvent(
+                        Event.generateId(pubKey, createdAt, kind, tags, content).toHexKey(),
+                        pubKey,
+                        createdAt,
+                        tags,
+                        content,
+                        sig,
+                    )
+                } else {
+                    ChatMessageEncryptedFileHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+                }
+            }
             ChatMessageEvent.KIND -> {
                 if (id.isBlank()) {
                     ChatMessageEvent(

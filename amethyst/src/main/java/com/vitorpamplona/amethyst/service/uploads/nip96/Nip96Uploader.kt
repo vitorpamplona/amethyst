@@ -185,7 +185,7 @@ class Nip96Uploader {
                     } else if (result.status == "success" && result.nip94Event != null) {
                         return convertToMediaResult(result.nip94Event)
                     } else {
-                        throw RuntimeException(stringRes(context, R.string.failed_to_upload_with_message, result.message))
+                        throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), result.message))
                     }
                 }
             } else {
@@ -207,15 +207,17 @@ class Nip96Uploader {
 
                 val explanation = HttpStatusMessages.resourceIdFor(response.code)
                 if (errorMessage != null) {
-                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_with_message, errorMessage))
+                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), errorMessage))
                 } else if (explanation != null) {
-                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_with_message, stringRes(context, explanation)))
+                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), stringRes(context, explanation)))
                 } else {
-                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_with_message, response.code))
+                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), response.code.toString()))
                 }
             }
         }
     }
+
+    fun String.displayUrl() = this.removeSuffix("/").removePrefix("https://")
 
     fun convertToMediaResult(nip96: PartialEvent): MediaUploadResult {
         // Images don't seem to be ready immediately after upload
@@ -225,9 +227,9 @@ class Nip96Uploader {
                 ?.firstOrNull { it.size > 1 && it[0] == "m" }
                 ?.get(1)
                 ?.ifBlank { null }
-        val originalHash =
+        val hash =
             nip96.tags
-                ?.firstOrNull { it.size > 1 && it[0] == "ox" }
+                ?.firstOrNull { it.size > 1 && it[0] == "x" }
                 ?.get(1)
                 ?.ifBlank { null }
         val dim =
@@ -245,7 +247,7 @@ class Nip96Uploader {
         return MediaUploadResult(
             url = imageUrl,
             type = remoteMimeType,
-            sha256 = originalHash,
+            sha256 = hash,
             dimension = dim,
             magnet = magnet,
         )

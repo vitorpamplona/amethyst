@@ -60,6 +60,7 @@ import com.vitorpamplona.quartz.events.ChannelListEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChannelMuteUserEvent
+import com.vitorpamplona.quartz.events.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
@@ -625,6 +626,8 @@ object LocalCache {
             is CommentEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
 
             is ChatMessageEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+            is ChatMessageEncryptedFileHeaderEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+
             is LnZapEvent ->
                 event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
@@ -1621,7 +1624,50 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        val recipientsHex = event.recipientsPubKey().plus(event.pubKey).toSet()
+        val recipientsHex = event.groupMembers()
+        val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
+
+        // Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
+
+        val repliesTo = computeReplyTo(event)
+
+        note.loadEvent(event, author, repliesTo)
+
+        if (recipients.isNotEmpty()) {
+            recipients.forEach {
+                val groupMinusRecipient = recipientsHex.minus(it.pubkeyHex)
+
+                val authorGroup =
+                    if (groupMinusRecipient.isEmpty()) {
+                        // note to self
+                        ChatroomKey(persistentSetOf(it.pubkeyHex))
+                    } else {
+                        ChatroomKey(groupMinusRecipient.toImmutableSet())
+                    }
+
+                it.addMessage(authorGroup, note)
+            }
+        }
+
+        refreshObservers(note)
+    }
+
+    private fun consume(
+        event: ChatMessageEncryptedFileHeaderEvent,
+        relay: Relay?,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        val recipientsHex = event.groupMembers()
         val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
 
         // Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
@@ -2264,7 +2310,27 @@ object LocalCache {
                 }
             }
             is ChatMessageEvent -> {
-                val recipientsHex = draft.recipientsPubKey().plus(draftWrap.pubKey).toSet()
+                val recipientsHex = draft.groupMembers()
+                val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
+
+                if (recipients.isNotEmpty()) {
+                    recipients.forEach {
+                        val groupMinusRecipient = recipientsHex.minus(it.pubkeyHex)
+
+                        val authorGroup =
+                            if (groupMinusRecipient.isEmpty()) {
+                                // note to self
+                                ChatroomKey(persistentSetOf(it.pubkeyHex))
+                            } else {
+                                ChatroomKey(groupMinusRecipient.toImmutableSet())
+                            }
+
+                        it.addMessage(authorGroup, note)
+                    }
+                }
+            }
+            is ChatMessageEncryptedFileHeaderEvent -> {
+                val recipientsHex = draft.groupMembers()
                 val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
 
                 if (recipients.isNotEmpty()) {
@@ -2314,6 +2380,26 @@ object LocalCache {
             }
             is ChatMessageEvent -> {
                 val recipientsHex = draft.recipientsPubKey().plus(author.pubkeyHex).toSet()
+                val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
+
+                if (recipients.isNotEmpty()) {
+                    recipients.forEach {
+                        val groupMinusRecipient = recipientsHex.minus(it.pubkeyHex)
+
+                        val authorGroup =
+                            if (groupMinusRecipient.isEmpty()) {
+                                // note to self
+                                ChatroomKey(persistentSetOf(it.pubkeyHex))
+                            } else {
+                                ChatroomKey(groupMinusRecipient.toImmutableSet())
+                            }
+
+                        it.removeMessage(authorGroup, draftWrap)
+                    }
+                }
+            }
+            is ChatMessageEncryptedFileHeaderEvent -> {
+                val recipientsHex = draft.groupMembers()
                 val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
 
                 if (recipients.isNotEmpty()) {
@@ -2398,6 +2484,7 @@ object LocalCache {
                 is ChannelMessageEvent -> consume(event, relay)
                 is ChannelMetadataEvent -> consume(event)
                 is ChannelMuteUserEvent -> consume(event)
+                is ChatMessageEncryptedFileHeaderEvent -> consume(event, relay)
                 is ChatMessageEvent -> consume(event, relay)
                 is ChatMessageRelayListEvent -> consume(event, relay)
                 is ClassifiedsEvent -> consume(event, relay)

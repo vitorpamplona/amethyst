@@ -110,14 +110,14 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
+import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.ui.actions.NewChannelView
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
-import com.vitorpamplona.amethyst.ui.components.CompressorQuality
 import com.vitorpamplona.amethyst.ui.components.LoadNote
-import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -395,7 +395,7 @@ private suspend fun innerSendPost(
     tagger.run()
 
     val urls = findURLs(tagger.message)
-    val usedAttachments = newPostModel.iMetaAttachments.filter { it.url !in urls.toSet() }
+    val usedAttachments = newPostModel.iMetaAttachments.filter { it.url in urls.toSet() }
 
     if (channel is PublicChatChannel) {
         accountViewModel.account.sendChannelMessage(

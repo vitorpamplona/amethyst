@@ -114,7 +114,6 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -328,13 +327,13 @@ fun EditPostView(
                                     }
                                 }
 
-                                if (postViewModel.mediaToUpload.isNotEmpty()) {
+                                postViewModel.multiOrchestrator?.let {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
                                     ) {
                                         ImageVideoDescription(
-                                            postViewModel.mediaToUpload,
+                                            it,
                                             accountViewModel.account.settings.defaultFileServer,
                                             onAdd = { alt, server, sensitiveContent, mediaQuality ->
                                                 postViewModel.upload(alt, sensitiveContent, mediaQuality, false, server, accountViewModel::toast, context)
@@ -343,7 +342,7 @@ fun EditPostView(
                                                 }
                                             },
                                             onDelete = postViewModel::deleteMediaToUpload,
-                                            onCancel = { postViewModel.mediaToUpload = persistentListOf() },
+                                            onCancel = { postViewModel.multiOrchestrator = null },
                                             onError = { scope.launch { Toast.makeText(context, context.resources.getText(it), Toast.LENGTH_SHORT).show() } },
                                             accountViewModel = accountViewModel,
                                         )

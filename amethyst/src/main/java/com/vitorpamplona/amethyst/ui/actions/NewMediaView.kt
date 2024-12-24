@@ -141,8 +141,7 @@ fun NewMediaView(
                             PostButton(
                                 onPost = {
                                     onClose()
-                                    postViewModel.upload(context, relayList)
-                                    // accountViewModel.toast(stringRes(context, R.string.failed_to_upload_media_no_details), it)
+                                    postViewModel.upload(context, relayList, onError = accountViewModel::toast)
                                     postViewModel.selectedServer?.let {
                                         if (it.type != ServerType.NIP95) {
                                             account.settings.changeDefaultFileServer(it)
@@ -218,11 +217,13 @@ fun ImageVideoPost(
                 }.toImmutableList()
         }
 
-    ShowImageUploadGallery(
-        postViewModel.mediaToUpload,
-        postViewModel::deleteMediaToUpload,
-        accountViewModel,
-    )
+    postViewModel.multiOrchestrator?.let {
+        ShowImageUploadGallery(
+            it,
+            postViewModel::deleteMediaToUpload,
+            accountViewModel,
+        )
+    }
 
     OutlinedTextField(
         label = { Text(text = stringRes(R.string.add_caption)) },

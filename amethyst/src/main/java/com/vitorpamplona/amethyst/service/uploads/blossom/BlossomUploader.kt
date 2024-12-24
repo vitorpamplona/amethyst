@@ -175,15 +175,17 @@ class BlossomUploader {
 
                 val explanation = HttpStatusMessages.resourceIdFor(response.code)
                 if (errorMessage != null) {
-                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_with_message, errorMessage))
+                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, serverBaseUrl.displayUrl(), errorMessage))
                 } else if (explanation != null) {
-                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_with_message, stringRes(context, explanation)))
+                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, serverBaseUrl.displayUrl(), stringRes(context, explanation)))
                 } else {
-                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_with_message, response.code))
+                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, serverBaseUrl.displayUrl(), response.code.toString()))
                 }
             }
         }
     }
+
+    fun String.displayUrl() = this.removeSuffix("/").removePrefix("https://")
 
     suspend fun delete(
         hash: String,

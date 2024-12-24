@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZa
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.encoders.toNpub
+import com.vitorpamplona.quartz.events.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.Event
@@ -121,6 +122,9 @@ class EventNotificationConsumer(
                 } else if (innerEvent is ChatMessageEvent) {
                     Log.d(TAG, "New ChatMessage to Notify")
                     notify(innerEvent, signer, account)
+                } else if (innerEvent is ChatMessageEncryptedFileHeaderEvent) {
+                    Log.d(TAG, "New ChatMessage File to Notify")
+                    notify(innerEvent, signer, account)
                 }
             }
         }
@@ -190,6 +194,51 @@ class EventNotificationConsumer(
             else -> {
                 LocalCache.justConsume(event, null)
                 onReady(event)
+            }
+        }
+    }
+
+    private fun notify(
+        event: ChatMessageEncryptedFileHeaderEvent,
+        signer: NostrSigner,
+        acc: AccountSettings,
+    ) {
+        if (
+            // old event being re-broadcasted
+            event.createdAt > TimeUtils.fifteenMinutesAgo() &&
+            // don't display if it comes from me.
+            event.pubKey != signer.pubKey
+        ) { // from the user
+            Log.d(TAG, "Notifying")
+            val myUser = LocalCache.getUserIfExists(signer.pubKey) ?: return
+            val chatNote = LocalCache.getNoteIfExists(event.id) ?: return
+            val chatRoom = event.chatroomKey(signer.pubKey)
+
+            val followingKeySet = acc.backupContactList?.unverifiedFollowKeySet()?.toSet() ?: return
+
+            val isKnownRoom =
+                (
+                    myUser.privateChatrooms[chatRoom]?.senderIntersects(followingKeySet) == true ||
+                        myUser.hasSentMessagesTo(chatRoom)
+                )
+
+            if (isKnownRoom) {
+                val content = chatNote.event?.content() ?: ""
+                val user = chatNote.author?.toBestDisplayName() ?: ""
+                val userPicture = chatNote.author?.profilePicture()
+                val noteUri = chatNote.toNEvent() + "?account=" + acc.keyPair.pubKey.toNpub()
+
+                // TODO: Show Image on notification
+                notificationManager()
+                    .sendDMNotification(
+                        event.id,
+                        content,
+                        user,
+                        event.createdAt,
+                        userPicture,
+                        noteUri,
+                        applicationContext,
+                    )
             }
         }
     }

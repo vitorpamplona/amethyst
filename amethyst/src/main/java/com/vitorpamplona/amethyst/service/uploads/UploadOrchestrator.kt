@@ -18,22 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.uploads
+package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
 import android.net.Uri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.uploads.FileHeader
-import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
+import com.vitorpamplona.amethyst.service.uploads.UploadingState.UploadingFinalState
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
-import com.vitorpamplona.amethyst.ui.actions.uploads.UploadingState.UploadingFinalState
-import com.vitorpamplona.amethyst.ui.components.CompressorQuality
-import com.vitorpamplona.amethyst.ui.components.MediaCompressor
-import com.vitorpamplona.amethyst.ui.components.MediaCompressorResult
+import com.vitorpamplona.quartz.crypto.nip17.NostrCipher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlin.coroutines.cancellation.CancellationException
@@ -64,8 +60,6 @@ sealed class UploadingState {
 }
 
 class UploadOrchestrator {
-    private val compressor = MediaCompressor()
-
     val progress = MutableStateFlow(0.0)
     val progressState = MutableStateFlow<UploadingState>(UploadingState.Ready)
 
@@ -79,7 +73,10 @@ class UploadOrchestrator {
         vararg params: String,
     ) = UploadingState.Error(resId, params).also { updateState(0.0, it) }
 
-    fun finish(result: OrchestratorResult) = UploadingState.Finished(result).also { updateState(1.0, it) }
+    fun finish(result: OrchestratorResult) =
+        UploadingState
+            .Finished(result)
+            .also { updateState(1.0, it) }
 
     fun updateState(
         newProgress: Double,
@@ -92,6 +89,8 @@ class UploadOrchestrator {
     private fun uploadNIP95(
         fileUri: Uri,
         contentType: String?,
+        originalContentType: String?,
+        originalHash: String?,
         context: Context,
     ): UploadingFinalState {
         updateState(0.4, UploadingState.Uploading)
@@ -117,7 +116,7 @@ class UploadOrchestrator {
 
             result.fold(
                 onSuccess = {
-                    return finish(OrchestratorResult.NIP95Result(it, bytes))
+                    return finish(OrchestratorResult.NIP95Result(it, bytes, originalContentType, originalHash))
                 },
                 onFailure = {
                     return error(R.string.could_not_check_downloaded_file, it.message ?: it.javaClass.simpleName)
@@ -135,6 +134,8 @@ class UploadOrchestrator {
         alt: String?,
         sensitiveContent: Boolean,
         serverBaseUrl: String,
+        contentTypeForResult: String?,
+        originalHash: String?,
         account: Account,
         context: Context,
     ): UploadingFinalState {
@@ -159,6 +160,8 @@ class UploadOrchestrator {
             verifyHeader(
                 uploadResult = result,
                 localContentType = contentType,
+                originalContentType = contentTypeForResult,
+                originalHash = originalHash,
                 forceProxy = account::shouldUseTorForNIP96,
             )
         } catch (e: Exception) {
@@ -174,6 +177,8 @@ class UploadOrchestrator {
         alt: String?,
         sensitiveContent: Boolean,
         serverBaseUrl: String,
+        contentTypeForResult: String?,
+        originalHash: String?,
         account: Account,
         context: Context,
     ): UploadingFinalState {
@@ -197,6 +202,8 @@ class UploadOrchestrator {
                 uploadResult = result,
                 localContentType = contentType,
                 forceProxy = account::shouldUseTorForNIP96,
+                originalHash = originalHash,
+                originalContentType = contentTypeForResult,
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -207,6 +214,8 @@ class UploadOrchestrator {
     private suspend fun verifyHeader(
         uploadResult: MediaUploadResult,
         localContentType: String?,
+        originalContentType: String?,
+        originalHash: String?,
         forceProxy: (String) -> Boolean,
     ): UploadingFinalState {
         if (uploadResult.url.isNullOrBlank()) {
@@ -229,7 +238,16 @@ class UploadOrchestrator {
 
             result.fold(
                 onSuccess = {
-                    return finish(OrchestratorResult.ServerResult(it, uploadResult.url, uploadResult.magnet, uploadResult.sha256))
+                    return finish(
+                        OrchestratorResult.ServerResult(
+                            it,
+                            uploadResult.url,
+                            uploadResult.magnet,
+                            uploadResult.sha256,
+                            originalContentType,
+                            originalHash,
+                        ),
+                    )
                 },
                 onFailure = {
                     return error(R.string.could_not_prepare_local_file_to_upload, it.message ?: it.javaClass.simpleName)
@@ -244,14 +262,30 @@ class UploadOrchestrator {
         class NIP95Result(
             val fileHeader: FileHeader,
             val bytes: ByteArray,
+            val mimeTypeBeforeEncryption: String?,
+            val hashBeforeEncryption: String?,
         ) : OrchestratorResult()
 
         class ServerResult(
             val fileHeader: FileHeader,
             val url: String,
             val magnet: String?,
-            val originalHash: String?,
+            val uploadedHash: String?,
+            val mimeTypeBeforeEncryption: String?,
+            val hashBeforeEncryption: String?,
         ) : OrchestratorResult()
+    }
+
+    suspend fun compressIfNeeded(
+        uri: Uri,
+        mimeType: String?,
+        compressionQuality: CompressorQuality,
+        context: Context,
+    ) = if (compressionQuality != CompressorQuality.UNCOMPRESSED) {
+        updateState(0.02, UploadingState.Compressing)
+        MediaCompressor().compress(uri, mimeType, compressionQuality, context.applicationContext)
+    } else {
+        MediaCompressorResult(uri, mimeType, null)
     }
 
     suspend fun upload(
@@ -264,18 +298,33 @@ class UploadOrchestrator {
         account: Account,
         context: Context,
     ): UploadingFinalState {
-        val result =
-            if (compressionQuality != CompressorQuality.UNCOMPRESSED) {
-                updateState(0.02, UploadingState.Compressing)
-                compressor.compress(uri, mimeType, compressionQuality, context.applicationContext)
-            } else {
-                MediaCompressorResult(uri, mimeType, null)
-            }
+        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context)
 
         return when (server.type) {
-            ServerType.NIP95 -> uploadNIP95(result.uri, result.contentType, context)
-            ServerType.NIP96 -> uploadNIP96(result.uri, result.contentType, result.size, alt, sensitiveContent, server.baseUrl, account, context)
-            ServerType.Blossom -> uploadBlossom(result.uri, result.contentType, result.size, alt, sensitiveContent, server.baseUrl, account, context)
+            ServerType.NIP95 -> uploadNIP95(compressed.uri, compressed.contentType, null, null, context)
+            ServerType.NIP96 -> uploadNIP96(compressed.uri, compressed.contentType, compressed.size, alt, sensitiveContent, server.baseUrl, null, null, account, context)
+            ServerType.Blossom -> uploadBlossom(compressed.uri, compressed.contentType, compressed.size, alt, sensitiveContent, server.baseUrl, null, null, account, context)
+        }
+    }
+
+    suspend fun uploadEncrypted(
+        uri: Uri,
+        mimeType: String?,
+        alt: String?,
+        sensitiveContent: Boolean,
+        compressionQuality: CompressorQuality,
+        encrypt: NostrCipher,
+        server: ServerName,
+        account: Account,
+        context: Context,
+    ): UploadingFinalState {
+        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context)
+        val encrypted = EncryptFiles().encryptFile(context, compressed.uri, encrypt)
+
+        return when (server.type) {
+            ServerType.NIP95 -> uploadNIP95(encrypted.uri, encrypted.contentType, compressed.contentType, encrypted.originalHash, context)
+            ServerType.NIP96 -> uploadNIP96(encrypted.uri, encrypted.contentType, encrypted.size, alt, sensitiveContent, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
+            ServerType.Blossom -> uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, sensitiveContent, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
         }
     }
 }

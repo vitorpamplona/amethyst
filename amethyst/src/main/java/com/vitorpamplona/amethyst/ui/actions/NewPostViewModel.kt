@@ -34,6 +34,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
@@ -42,15 +43,17 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
+import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
-import com.vitorpamplona.amethyst.ui.actions.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.ui.actions.uploads.UploadingState
-import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.Split
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
+import com.vitorpamplona.quartz.crypto.nip17.AESGCM
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.IMetaTag
@@ -59,7 +62,6 @@ import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
-import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
@@ -68,6 +70,7 @@ import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.GitIssueEvent
+import com.vitorpamplona.quartz.events.NIP17Group
 import com.vitorpamplona.quartz.events.Price
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.RootScope
@@ -77,13 +80,10 @@ import com.vitorpamplona.quartz.events.TorrentEvent
 import com.vitorpamplona.quartz.events.ZapSplitSetup
 import com.vitorpamplona.quartz.events.findURLs
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -127,7 +127,7 @@ open class NewPostViewModel : ViewModel() {
     var subject by mutableStateOf(TextFieldValue(""))
 
     // Images and Videos
-    var mediaToUpload by mutableStateOf<ImmutableList<SelectedMediaProcessing>>(persistentListOf())
+    var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
 
     // Polls
     var canUsePoll by mutableStateOf(false)
@@ -247,7 +247,7 @@ open class NewPostViewModel : ViewModel() {
             canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
             canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
             canUsePoll = originalNote?.event !is PrivateDmEvent && originalNote?.channelHex() == null
-            mediaToUpload = persistentListOf()
+            multiOrchestrator = null
 
             quote?.let {
                 message = TextFieldValue(message.text + "\nnostr:${it.toNEvent()}")
@@ -331,7 +331,7 @@ open class NewPostViewModel : ViewModel() {
 
         canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
         canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
-        mediaToUpload = persistentListOf()
+        multiOrchestrator = null
 
         val localfowardZapTo = draftEvent.tags().filter { it.size > 1 && it[0] == "zap" }
         forwardZapTo = Split()
@@ -364,7 +364,7 @@ open class NewPostViewModel : ViewModel() {
                 note
             }
 
-        if (draftEvent !is PrivateDmEvent && draftEvent !is ChatMessageEvent) {
+        if (draftEvent !is PrivateDmEvent && draftEvent !is NIP17Group) {
             pTags =
                 draftEvent.tags().filter { it.size > 1 && it[0] == "p" }.map {
                     LocalCache.getOrCreateUser(it[1])
@@ -459,7 +459,7 @@ open class NewPostViewModel : ViewModel() {
                     .firstOrNull()
         } ?: ClassifiedsEvent.CONDITION.USED_LIKE_NEW
 
-        wantsDirectMessage = draftEvent is PrivateDmEvent || draftEvent is ChatMessageEvent
+        wantsDirectMessage = draftEvent is PrivateDmEvent || draftEvent is NIP17Group
 
         draftEvent.subject()?.let {
             subject = TextFieldValue()
@@ -474,13 +474,13 @@ open class NewPostViewModel : ViewModel() {
                 TextFieldValue(draftEvent.content())
             }
 
-        requiresNIP17 = draftEvent is ChatMessageEvent
-        nip17 = draftEvent is ChatMessageEvent
+        requiresNIP17 = draftEvent is NIP17Group
+        nip17 = draftEvent is NIP17Group
 
-        if (draftEvent is ChatMessageEvent) {
+        if (draftEvent is NIP17Group) {
             toUsers =
                 TextFieldValue(
-                    draftEvent.recipientsPubKey().mapNotNull { runCatching { Hex.decode(it).toNpub() }.getOrNull() }.joinToString(", ") { "@$it" },
+                    draftEvent.groupMembers().mapNotNull { runCatching { Hex.decode(it).toNpub() }.getOrNull() }.joinToString(", ") { "@$it" },
                 )
         }
 
@@ -627,18 +627,10 @@ open class NewPostViewModel : ViewModel() {
                 imetas = usedAttachments,
                 draftTag = localDraft,
             )
-        } else if (originalNote?.event is ChatMessageEvent) {
-            val receivers =
-                (originalNote?.event as ChatMessageEvent)
-                    .recipientsPubKey()
-                    .plus(originalNote?.author?.pubkeyHex)
-                    .filterNotNull()
-                    .toSet()
-                    .toList()
-
+        } else if (originalNote?.event is NIP17Group) {
             account?.sendNIP17PrivateMessage(
                 message = tagger.message,
-                toUsers = receivers,
+                toUsers = (originalNote?.event as NIP17Group).groupMembers().toList(),
                 subject = subject.text.ifBlank { null },
                 replyingTo = originalNote!!,
                 mentions = tagger.pTags,
@@ -865,6 +857,70 @@ open class NewPostViewModel : ViewModel() {
         }
     }
 
+    fun uploadAsSeparatePrivateEvent(
+        toUsers: Set<HexKey>,
+        alt: String?,
+        sensitiveContent: Boolean,
+        mediaQuality: Int,
+        server: ServerName,
+        onError: (title: String, message: String) -> Unit,
+        context: Context,
+    ) {
+        val myAccount = account ?: return
+
+        viewModelScope.launch(Dispatchers.Default) {
+            isUploadingImage = true
+
+            val cipher = AESGCM()
+            val myMultiOrchestrator = multiOrchestrator ?: return@launch
+
+            val results =
+                myMultiOrchestrator.uploadEncrypted(
+                    viewModelScope,
+                    alt,
+                    sensitiveContent,
+                    MediaCompressor.intToCompressorQuality(mediaQuality),
+                    cipher,
+                    server,
+                    myAccount,
+                    context,
+                )
+
+            if (results.allGood) {
+                results.successful.forEach { state ->
+                    if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        account?.sendNIP17EncryptedFile(
+                            url = state.result.url,
+                            toUsers = toUsers.toList(),
+                            replyingTo = originalNote,
+                            contentType = state.result.mimeTypeBeforeEncryption,
+                            algo = cipher.name(),
+                            key = cipher.keyBytes,
+                            nonce = cipher.nonce,
+                            originalHash = state.result.hashBeforeEncryption,
+                            hash = state.result.fileHeader.hash,
+                            size = state.result.fileHeader.size,
+                            dimensions = state.result.fileHeader.dim,
+                            blurhash =
+                                state.result.fileHeader.blurHash
+                                    ?.blurhash,
+                            alt = alt,
+                            sensitiveContent = sensitiveContent,
+                        )
+                    }
+                }
+
+                multiOrchestrator = null
+            } else {
+                val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
+
+                onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+            }
+
+            isUploadingImage = false
+        }
+    }
+
     fun upload(
         alt: String?,
         sensitiveContent: Boolean,
@@ -874,36 +930,26 @@ open class NewPostViewModel : ViewModel() {
         onError: (title: String, message: String) -> Unit,
         context: Context,
     ) {
-        val myAccount = account ?: return
+        viewModelScope.launch(Dispatchers.Default) {
+            val myAccount = account ?: return@launch
 
-        viewModelScope.launch {
+            val myMultiOrchestrator = multiOrchestrator ?: return@launch
+
             isUploadingImage = true
 
-            val jobs =
-                mediaToUpload.map { myGalleryUri ->
-                    viewModelScope.launch(Dispatchers.IO) {
-                        myGalleryUri.orchestrator.upload(
-                            myGalleryUri.media.uri,
-                            myGalleryUri.media.mimeType,
-                            alt,
-                            sensitiveContent,
-                            MediaCompressor.intToCompressorQuality(mediaQuality),
-                            server,
-                            myAccount,
-                            context,
-                        )
-                    }
-                }
+            val results =
+                myMultiOrchestrator.upload(
+                    viewModelScope,
+                    alt,
+                    sensitiveContent,
+                    MediaCompressor.intToCompressorQuality(mediaQuality),
+                    server,
+                    myAccount,
+                    context,
+                )
 
-            jobs.joinAll()
-
-            val allGood =
-                mediaToUpload.mapNotNull {
-                    it.orchestrator.progressState.value as? UploadingState.Finished
-                }
-
-            if (allGood.size == mediaToUpload.size) {
-                allGood.forEach {
+            if (results.allGood) {
+                results.successful.forEach {
                     if (it.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
                         account?.createNip95(it.result.bytes, headerInfo = it.result.fileHeader, alt, sensitiveContent) { nip95 ->
                             nip95attachments = nip95attachments + nip95
@@ -928,7 +974,7 @@ open class NewPostViewModel : ViewModel() {
                                     it.result.fileHeader.blurHash
                                         ?.let { blurhash(it.blurhash) }
                                     it.result.magnet?.let { magnet(it) }
-                                    it.result.originalHash?.let { originalHash(it) }
+                                    it.result.uploadedHash?.let { originalHash(it) }
                                     alt?.let { alt(it) }
                                     // TODO: Support Reasons on images
                                     if (sensitiveContent) sensitiveContent("")
@@ -941,7 +987,11 @@ open class NewPostViewModel : ViewModel() {
                     }
                 }
 
-                mediaToUpload = persistentListOf()
+                multiOrchestrator = null
+            } else {
+                val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
+
+                onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
             isUploadingImage = false
@@ -955,7 +1005,7 @@ open class NewPostViewModel : ViewModel() {
 
         forkedFromNote = null
 
-        mediaToUpload = persistentListOf()
+        multiOrchestrator = null
         urlPreview = null
         isUploadingImage = false
         pTags = null
@@ -1004,7 +1054,7 @@ open class NewPostViewModel : ViewModel() {
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
-        this.mediaToUpload = mediaToUpload.filter { it != selected }.toImmutableList()
+        this.multiOrchestrator?.remove(selected)
     }
 
     open fun findUrlInMessage(): String? = RichTextParser().parseValidUrls(message.text).firstOrNull()
@@ -1170,14 +1220,14 @@ open class NewPostViewModel : ViewModel() {
                             !category.text.isNullOrBlank()
                     )
             ) &&
-            mediaToUpload.isEmpty()
+            multiOrchestrator == null
 
     fun insertAtCursor(newElement: String) {
         message = message.insertUrlAtCursor(newElement)
     }
 
     fun selectImage(uris: ImmutableList<SelectedMedia>) {
-        mediaToUpload = uris.map { SelectedMediaProcessing(it) }.toImmutableList()
+        multiOrchestrator = MultiOrchestrator(uris)
     }
 
     fun locationFlow(): StateFlow<LocationState.LocationResult> {

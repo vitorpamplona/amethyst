@@ -41,9 +41,9 @@ import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
-import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.events.NIP17Group
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RepostEvent
@@ -285,7 +285,7 @@ class CardFeedContentState(
                         it.event !is GenericRepostEvent &&
                         it.event !is LnZapEvent
                 }.map {
-                    if (it.event is PrivateDmEvent || it.event is ChatMessageEvent) {
+                    if (it.event is PrivateDmEvent || it.event is NIP17Group) {
                         MessageSetCard(it)
                     } else if (it.event is BadgeAwardEvent) {
                         BadgeCard(it)

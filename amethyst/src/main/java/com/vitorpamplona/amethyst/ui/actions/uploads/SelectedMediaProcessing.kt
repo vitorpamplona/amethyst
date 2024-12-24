@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.uploads
 
+import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
+
 class SelectedMediaProcessing(
     val media: SelectedMedia,
     val orchestrator: UploadOrchestrator = UploadOrchestrator(),

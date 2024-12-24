@@ -18,12 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.sockets
+package com.vitorpamplona.amethyst.service.okhttp
 
-interface WebSocket {
-    fun connect()
+import android.util.LruCache
+import com.vitorpamplona.quartz.crypto.nip17.NostrCipher
 
-    fun cancel()
+/**
+ * Neigther ExoPlayer, nor Coil support passing key and nonce to the Interceptor via
+ * Request.tag, which would be the right way to do this.
+ *
+ * This class serves as a key cache to decrypt the body of HTTP calls that need it.
+ */
+class EncryptionKeyCache {
+    val cache = LruCache<String, NostrCipher>(100)
 
-    fun send(msg: String): Boolean
+    fun add(
+        url: String?,
+        cipher: NostrCipher,
+    ) {
+        if (cache.get(url) == null) {
+            cache.put(url, cipher)
+        }
+    }
+
+    fun get(url: String): NostrCipher? = cache.get(url)
 }

@@ -133,6 +133,7 @@ class Relay(
             lastConnectTentative = TimeUtils.now()
 
             socket = socketBuilder.build(url, false, RelayListener(onConnected))
+            socket?.connect()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
 

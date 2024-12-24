@@ -22,18 +22,13 @@ package com.vitorpamplona.amethyst.service.okhttp
 
 import android.util.Log
 import com.vitorpamplona.quartz.crypto.nip17.NostrCipher
-import okhttp3.Interceptor
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
-import okhttp3.ResponseBody.Companion.toResponseBody
-import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.time.Duration
 
 object HttpClientManager {
-    val rootClient =
+    private val rootClient =
         OkHttpClient
             .Builder()
             .followRedirects(true)
@@ -49,6 +44,8 @@ object HttpClientManager {
     private var userAgent: String = "Amethyst"
 
     private var currentProxy: Proxy? = null
+
+    private val cache = EncryptionKeyCache()
 
     fun setDefaultProxy(proxy: Proxy?) {
         if (currentProxy != proxy) {
@@ -96,65 +93,8 @@ object HttpClientManager {
             .writeTimeout(duration)
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
             .addNetworkInterceptor(LoggingInterceptor())
-            .addNetworkInterceptor(EncryptedBlobInterceptor())
+            .addNetworkInterceptor(EncryptedBlobInterceptor(cache))
             .build()
-    }
-
-    class DefaultContentTypeInterceptor(
-        private val userAgentHeader: String,
-    ) : Interceptor {
-        @Throws(IOException::class)
-        override fun intercept(chain: Interceptor.Chain): Response {
-            val originalRequest: Request = chain.request()
-            val requestWithUserAgent: Request =
-                originalRequest
-                    .newBuilder()
-                    .header("User-Agent", userAgentHeader)
-                    .build()
-            return chain.proceed(requestWithUserAgent)
-        }
-    }
-
-    class EncryptedBlobInterceptor : Interceptor {
-        override fun intercept(chain: Interceptor.Chain): Response {
-            val response = chain.proceed(chain.request())
-
-            if (response.isSuccessful) {
-                val cipher = chain.request().tag(NostrCipher::class)
-
-                println("AABBCC Cipher ${chain.request().tag(NostrCipher::class)}")
-
-                if (cipher != null) {
-                    val body = response.peekBody(Long.MAX_VALUE)
-                    val decryptedBytes = cipher.decrypt(body.bytes())
-                    val newBody = decryptedBytes.toResponseBody(body.contentType())
-                    return response.newBuilder().body(newBody).build()
-                }
-            }
-            return response
-        }
-    }
-
-    class LoggingInterceptor : Interceptor {
-        @Throws(IOException::class)
-        override fun intercept(chain: Interceptor.Chain): Response {
-            val request: Request = chain.request()
-            val t1 = System.nanoTime()
-            val port =
-                (
-                    chain
-                        .connection()
-                        ?.route()
-                        ?.proxy
-                        ?.address() as? InetSocketAddress
-                )?.port
-            val response: Response = chain.proceed(request)
-            val t2 = System.nanoTime()
-
-            Log.d("OkHttpLog", "Req $port ${request.url} in ${(t2 - t1) / 1e6}ms")
-
-            return response
-        }
     }
 
     fun getCurrentProxyPort(useProxy: Boolean): Int? =
@@ -180,4 +120,9 @@ object HttpClientManager {
     fun setDefaultProxyOnPort(port: Int) {
         setDefaultProxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port)))
     }
+
+    fun addCipherToCache(
+        url: String,
+        cipher: NostrCipher,
+    ) = cache.add(url, cipher)
 }

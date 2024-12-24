@@ -884,6 +884,7 @@
     <string name="could_not_download_from_the_server">Could not download uploaded media from the server</string>
     <string name="could_not_check_downloaded_file">Could not check downloaded file after upload: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Could not prepare local file to upload: %1$s</string>
+    <string name="failed_to_upload_to_server_with_message">Failed to upload to %1$s: %2$s</string>
     <string name="failed_to_upload_with_message">Failed to upload: %1$s</string>
     <string name="failed_to_delete_with_message">Failed to delete: %1$s</string>
     <string name="media_too_big_for_nip95">Media is too big for NIP-95</string>

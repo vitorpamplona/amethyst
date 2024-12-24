@@ -18,6 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.uploads
+package com.vitorpamplona.amethyst.service.okhttp
 
-class CombinedUploader
+import android.util.Log
+import okhttp3.Interceptor
+import okhttp3.Request
+import okhttp3.Response
+import java.net.InetSocketAddress
+
+class LoggingInterceptor : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val request: Request = chain.request()
+        val t1 = System.nanoTime()
+        val port =
+            (
+                chain
+                    .connection()
+                    ?.route()
+                    ?.proxy
+                    ?.address() as? InetSocketAddress
+            )?.port
+        val response: Response = chain.proceed(request)
+        val t2 = System.nanoTime()
+
+        Log.d("OkHttpLog", "Req $port ${request.url} in ${(t2 - t1) / 1e6}ms")
+
+        return response
+    }
+}

@@ -30,7 +30,6 @@ import android.os.Build
 import android.util.Log
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
 import com.vitorpamplona.amethyst.service.Blurhash
-import com.vitorpamplona.amethyst.ui.actions.uploads.ImageDownloader
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.Dimension
 import com.vitorpamplona.quartz.encoders.toHexKey

@@ -85,12 +85,13 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
+import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
-import com.vitorpamplona.amethyst.ui.components.CompressorQuality
-import com.vitorpamplona.amethyst.ui.components.MediaCompressor
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -121,9 +122,10 @@ import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.events.NIP17Group
 import com.vitorpamplona.quartz.events.findURLs
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.Dispatchers
@@ -482,18 +484,34 @@ fun ChatroomScreen(
         }
 
         // LAST ROW
-        PrivateMessageEditFieldRow(newPostModel, accountViewModel) {
-            scope.launch(Dispatchers.IO) {
-                innerSendPost(newPostModel, room, replyTo, accountViewModel, null)
+        PrivateMessageEditFieldRow(
+            newPostModel,
+            accountViewModel,
+            onSendNewMessage = {
+                scope.launch(Dispatchers.IO) {
+                    innerSendPost(newPostModel, room, replyTo, accountViewModel, null)
 
-                accountViewModel.deleteDraft(newPostModel.draftTag)
+                    accountViewModel.deleteDraft(newPostModel.draftTag)
 
-                newPostModel.message = TextFieldValue("")
+                    newPostModel.message = TextFieldValue("")
 
-                replyTo.value = null
-                feedViewModel.sendToTop()
-            }
-        }
+                    replyTo.value = null
+                    feedViewModel.sendToTop()
+                }
+            },
+            onSendNewMedia = {
+                newPostModel.selectImage(it)
+                newPostModel.uploadAsSeparatePrivateEvent(
+                    toUsers = room.users,
+                    alt = null,
+                    sensitiveContent = false,
+                    mediaQuality = MediaCompressor.compressorQualityToInt(CompressorQuality.MEDIUM),
+                    server = accountViewModel.account.settings.defaultFileServer,
+                    onError = accountViewModel::toast,
+                    context = context,
+                )
+            },
+        )
     }
 }
 
@@ -507,7 +525,7 @@ private fun innerSendPost(
     val urls = findURLs(newPostModel.message.text)
     val usedAttachments = newPostModel.iMetaAttachments.filter { it.url !in urls.toSet() }
 
-    if (newPostModel.nip17 || room.users.size > 1 || replyTo.value?.event is ChatMessageEvent) {
+    if (newPostModel.nip17 || room.users.size > 1 || replyTo.value?.event is NIP17Group) {
         accountViewModel.account.sendNIP17PrivateMessage(
             message = newPostModel.message.text,
             toUsers = room.users.toList(),
@@ -535,6 +553,7 @@ fun PrivateMessageEditFieldRow(
     channelScreenModel: NewPostViewModel,
     accountViewModel: AccountViewModel,
     onSendNewMessage: () -> Unit,
+    onSendNewMedia: (ImmutableList<SelectedMedia>) -> Unit,
 ) {
     Column(
         modifier = EditFieldModifier,
@@ -579,19 +598,8 @@ fun PrivateMessageEditFieldRow(
                             Modifier
                                 .size(30.dp)
                                 .padding(start = 2.dp),
-                    ) {
-                        channelScreenModel.selectImage(it)
-                        channelScreenModel.upload(
-                            alt = null,
-                            sensitiveContent = false,
-                            // use MEDIUM quality
-                            mediaQuality = MediaCompressor.compressorQualityToInt(CompressorQuality.MEDIUM),
-                            isPrivate = true,
-                            server = accountViewModel.account.settings.defaultFileServer,
-                            onError = accountViewModel::toast,
-                            context = context,
-                        )
-                    }
+                        onImageChosen = onSendNewMedia,
+                    )
 
                     var wantsToActivateNIP17 by remember { mutableStateOf(false) }
 

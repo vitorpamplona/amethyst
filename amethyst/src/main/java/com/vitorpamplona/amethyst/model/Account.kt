@@ -67,7 +67,6 @@ import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
-import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommentEvent
@@ -101,6 +100,7 @@ import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.NIP17Factory
+import com.vitorpamplona.quartz.events.NIP17Group
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
@@ -1233,14 +1233,9 @@ class Account(
             return
         }
 
-        if (note.event is ChatMessageEvent) {
-            val event = note.event as ChatMessageEvent
-            val users =
-                event
-                    .recipientsPubKey()
-                    .plus(event.pubKey)
-                    .toSet()
-                    .toList()
+        val noteEvent = note.event
+        if (noteEvent is NIP17Group) {
+            val users = noteEvent.groupMembers().toList()
 
             if (reaction.startsWith(":")) {
                 val emojiUrl = EmojiUrl.decode(reaction)
@@ -2956,6 +2951,48 @@ class Account(
                 Amethyst.instance.client.send(it)
                 LocalCache.consume(it, null)
             }
+        }
+    }
+
+    fun sendNIP17EncryptedFile(
+        url: String,
+        toUsers: List<HexKey>,
+        replyingTo: Note? = null,
+        contentType: String?,
+        algo: String,
+        key: ByteArray,
+        nonce: ByteArray? = null,
+        originalHash: String? = null,
+        hash: String? = null,
+        size: Int? = null,
+        dimensions: Dimension? = null,
+        blurhash: String? = null,
+        sensitiveContent: Boolean? = null,
+        alt: String?,
+    ) {
+        if (!isWriteable()) return
+
+        val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
+
+        NIP17Factory().createEncryptedFileNIP17(
+            url = url,
+            to = toUsers,
+            repliesToHex = repliesToHex,
+            contentType = contentType,
+            algo = algo,
+            key = key,
+            nonce = nonce,
+            originalHash = originalHash,
+            hash = hash,
+            size = size,
+            dimensions = dimensions,
+            blurhash = blurhash,
+            sensitiveContent = sensitiveContent,
+            alt = alt,
+            draftTag = null,
+            signer = signer,
+        ) {
+            broadcastPrivately(it)
         }
     }
 

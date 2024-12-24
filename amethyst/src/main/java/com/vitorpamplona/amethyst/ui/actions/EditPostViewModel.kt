@@ -29,6 +29,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
@@ -36,23 +37,21 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
+import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
-import com.vitorpamplona.amethyst.ui.actions.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.ui.actions.uploads.UploadingState
-import com.vitorpamplona.amethyst.ui.components.MediaCompressor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.quartz.encoders.IMetaTag
 import com.vitorpamplona.quartz.encoders.IMetaTagBuilder
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 
 @Stable
@@ -77,7 +76,7 @@ open class EditPostViewModel : ViewModel() {
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
 
     // Images and Videos
-    var mediaToUpload by mutableStateOf<ImmutableList<SelectedMediaProcessing>>(persistentListOf())
+    var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
 
     // Invoices
     var canAddInvoice by mutableStateOf(false)
@@ -102,7 +101,7 @@ open class EditPostViewModel : ViewModel() {
         this.account = accountViewModel.account
 
         canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
-        mediaToUpload = persistentListOf()
+        multiOrchestrator = null
 
         message = TextFieldValue(versionLookingAt?.event?.content() ?: edit.event?.content() ?: "")
         urlPreview = findUrlInMessage()
@@ -156,38 +155,27 @@ open class EditPostViewModel : ViewModel() {
         onError: (String, String) -> Unit,
         context: Context,
     ) {
-        val myAccount = account ?: return
-
         viewModelScope.launch {
+            val myAccount = account ?: return@launch
+            val myMultiOrchestrator = multiOrchestrator ?: return@launch
+
             isUploadingImage = true
 
-            val jobs =
-                mediaToUpload.map { myGalleryUri ->
-                    viewModelScope.launch(Dispatchers.IO) {
-                        myGalleryUri.orchestrator.upload(
-                            myGalleryUri.media.uri,
-                            myGalleryUri.media.mimeType,
-                            alt,
-                            sensitiveContent,
-                            MediaCompressor.intToCompressorQuality(mediaQuality),
-                            server,
-                            myAccount,
-                            context,
-                        )
-                    }
-                }
+            val results =
+                myMultiOrchestrator.upload(
+                    viewModelScope,
+                    alt,
+                    sensitiveContent,
+                    MediaCompressor.intToCompressorQuality(mediaQuality),
+                    server,
+                    myAccount,
+                    context,
+                )
 
-            jobs.joinAll()
-
-            val allGood =
-                mediaToUpload.mapNotNull {
-                    it.orchestrator.progressState.value as? UploadingState.Finished
-                }
-
-            if (allGood.size == mediaToUpload.size) {
-                allGood.forEach {
-                    if (it.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                        account?.createNip95(it.result.bytes, headerInfo = it.result.fileHeader, alt, sensitiveContent) { nip95 ->
+            if (results.allGood) {
+                results.successful.forEach { state ->
+                    if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
+                        account?.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, sensitiveContent) { nip95 ->
                             nip95attachments = nip95attachments + nip95
                             val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
 
@@ -197,33 +185,36 @@ open class EditPostViewModel : ViewModel() {
 
                             urlPreview = findUrlInMessage()
                         }
-                    } else if (it.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                    } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         val iMeta =
-                            IMetaTagBuilder(it.result.url)
+                            IMetaTagBuilder(state.result.url)
                                 .apply {
-                                    hash(it.result.fileHeader.hash)
-                                    size(it.result.fileHeader.size)
-                                    it.result.fileHeader.mimeType
+                                    hash(state.result.fileHeader.hash)
+                                    size(state.result.fileHeader.size)
+                                    state.result.fileHeader.mimeType
                                         ?.let { mimeType(it) }
-                                    it.result.fileHeader.dim
+                                    state.result.fileHeader.dim
                                         ?.let { dims(it) }
-                                    it.result.fileHeader.blurHash
+                                    state.result.fileHeader.blurHash
                                         ?.let { blurhash(it.blurhash) }
-                                    it.result.magnet?.let { magnet(it) }
-                                    it.result.originalHash?.let { originalHash(it) }
+                                    state.result.magnet?.let { magnet(it) }
+                                    state.result.uploadedHash?.let { originalHash(it) }
                                     alt?.let { alt(it) }
-                                    // TODO: Support Reasons on images
                                     if (sensitiveContent) sensitiveContent("")
                                 }.build()
 
                         iMetaAttachments = iMetaAttachments.filter { it.url != iMeta.url } + iMeta
 
-                        message = message.insertUrlAtCursor(it.result.url)
+                        message = message.insertUrlAtCursor(state.result.url)
                         urlPreview = findUrlInMessage()
                     }
                 }
 
-                mediaToUpload = persistentListOf()
+                this@EditPostViewModel.multiOrchestrator = null
+            } else {
+                val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
+
+                onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
             isUploadingImage = false
@@ -236,7 +227,7 @@ open class EditPostViewModel : ViewModel() {
 
         editedFromNote = null
 
-        mediaToUpload = persistentListOf()
+        multiOrchestrator = null
         urlPreview = null
         isUploadingImage = false
 
@@ -304,13 +295,13 @@ open class EditPostViewModel : ViewModel() {
         }
     }
 
-    fun canPost() = message.text.isNotBlank() && !isUploadingImage && !wantsInvoice && mediaToUpload.isEmpty()
+    fun canPost() = message.text.isNotBlank() && !isUploadingImage && !wantsInvoice && multiOrchestrator == null
 
     fun selectImage(uris: ImmutableList<SelectedMedia>) {
-        mediaToUpload = uris.map { SelectedMediaProcessing(it) }.toImmutableList()
+        multiOrchestrator = MultiOrchestrator(uris)
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
-        this.mediaToUpload = mediaToUpload.filter { it != selected }.toImmutableList()
+        this.multiOrchestrator?.remove(selected)
     }
 }

@@ -128,6 +128,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewPollOption
 import com.vitorpamplona.amethyst.ui.actions.NewPollVoteValueRange
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
@@ -506,13 +507,13 @@ fun NewPostScreen(
                             }
                         }
 
-                        if (postViewModel.mediaToUpload.isNotEmpty()) {
+                        postViewModel.multiOrchestrator?.let {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
                             ) {
                                 ImageVideoDescription(
-                                    postViewModel.mediaToUpload,
+                                    it,
                                     accountViewModel.account.settings.defaultFileServer,
                                     onAdd = { alt, server, sensitiveContent, mediaQuality ->
                                         postViewModel.upload(alt, sensitiveContent, mediaQuality, false, server, accountViewModel::toast, context)
@@ -521,7 +522,7 @@ fun NewPostScreen(
                                         }
                                     },
                                     onDelete = postViewModel::deleteMediaToUpload,
-                                    onCancel = { postViewModel.mediaToUpload = persistentListOf() },
+                                    onCancel = { postViewModel.multiOrchestrator = null },
                                     onError = { scope.launch { Toast.makeText(context, context.resources.getText(it), Toast.LENGTH_SHORT).show() } },
                                     accountViewModel = accountViewModel,
                                 )
@@ -1666,7 +1667,7 @@ fun CreateButton(
 
 @Composable
 fun ImageVideoDescription(
-    uris: ImmutableList<SelectedMediaProcessing>,
+    uris: MultiOrchestrator,
     defaultServer: ServerName,
     onAdd: (String, ServerName, Boolean, Int) -> Unit,
     onDelete: (SelectedMediaProcessing) -> Unit,
@@ -1727,7 +1728,7 @@ fun ImageVideoDescription(
                         .padding(bottom = 10.dp),
             ) {
                 val text =
-                    if (uris.size == 1) {
+                    if (uris.size() == 1) {
                         if (uris.first().media.isImage() == true) {
                             R.string.content_description_add_image
                         } else {

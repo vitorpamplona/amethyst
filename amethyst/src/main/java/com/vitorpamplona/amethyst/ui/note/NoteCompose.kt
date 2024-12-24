@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderBadgeAward
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
 import com.vitorpamplona.amethyst.ui.note.types.RenderClassifieds
 import com.vitorpamplona.amethyst.ui.note.types.RenderCommunity
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
@@ -158,6 +159,7 @@ import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
+import com.vitorpamplona.quartz.events.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
@@ -661,6 +663,18 @@ private fun RenderNoteRow(
         }
         is ChatMessageEvent -> {
             RenderChatMessage(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                editState,
+                accountViewModel,
+                nav,
+            )
+        }
+        is ChatMessageEncryptedFileHeaderEvent -> {
+            RenderChatMessageEncryptedFile(
                 baseNote,
                 makeItShort,
                 canPreview,

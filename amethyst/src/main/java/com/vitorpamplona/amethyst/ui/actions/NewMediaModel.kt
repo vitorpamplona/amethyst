@@ -28,19 +28,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
+import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
-import com.vitorpamplona.amethyst.ui.actions.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.ui.actions.uploads.UploadingState
-import com.vitorpamplona.amethyst.ui.components.MediaCompressor
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -59,7 +59,7 @@ open class NewMediaModel : ViewModel() {
     var sensitiveContent by mutableStateOf(false)
 
     // Images and Videos
-    var mediaToUpload by mutableStateOf<ImmutableList<SelectedMediaProcessing>>(persistentListOf())
+    var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
     var onceUploaded: () -> Unit = {}
 
     // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
@@ -71,7 +71,7 @@ open class NewMediaModel : ViewModel() {
     ) {
         this.caption = ""
         this.account = account
-        this.mediaToUpload = uris.map { SelectedMediaProcessing(it) }.toImmutableList()
+        this.multiOrchestrator = MultiOrchestrator(uris)
         this.selectedServer = defaultServer()
     }
 
@@ -83,46 +83,37 @@ open class NewMediaModel : ViewModel() {
     fun upload(
         context: Context,
         relayList: List<RelaySetupInfo>,
+        onError: (String, String) -> Unit,
     ) {
-        val myAccount = account ?: return
-        if (relayList.isEmpty()) return
-        val serverToUse = selectedServer ?: return
-
         viewModelScope.launch {
+            val myAccount = account ?: return@launch
+            if (relayList.isEmpty()) return@launch
+            val serverToUse = selectedServer ?: return@launch
+
+            val myMultiOrchestrator = multiOrchestrator ?: return@launch
+
             isUploadingImage = true
 
-            val jobs =
-                mediaToUpload.map { myGalleryUri ->
-                    viewModelScope.launch(Dispatchers.IO) {
-                        myGalleryUri.orchestrator.upload(
-                            myGalleryUri.media.uri,
-                            myGalleryUri.media.mimeType,
-                            caption,
-                            sensitiveContent,
-                            MediaCompressor.intToCompressorQuality(mediaQualitySlider),
-                            serverToUse,
-                            myAccount,
-                            context,
-                        )
-                    }
-                }
+            val results =
+                myMultiOrchestrator.upload(
+                    viewModelScope,
+                    caption,
+                    sensitiveContent,
+                    MediaCompressor.intToCompressorQuality(mediaQualitySlider),
+                    serverToUse,
+                    myAccount,
+                    context,
+                )
 
-            jobs.joinAll()
-
-            val allGood =
-                mediaToUpload.mapNotNull {
-                    it.orchestrator.progressState.value as? UploadingState.Finished
-                }
-
-            if (allGood.size == mediaToUpload.size) {
+            if (results.allGood) {
                 // It all finished successfully
                 val nip95s =
-                    allGood.mapNotNull {
+                    results.successful.mapNotNull {
                         it.result as? UploadOrchestrator.OrchestratorResult.NIP95Result
                     }
 
                 val videosAndOthers =
-                    allGood.mapNotNull {
+                    results.successful.mapNotNull {
                         val map = it.result as? UploadOrchestrator.OrchestratorResult.ServerResult
                         if (map != null && !isImage(map.url, map.fileHeader.mimeType)) {
                             map
@@ -132,7 +123,7 @@ open class NewMediaModel : ViewModel() {
                     }
 
                 val imageUrls =
-                    allGood
+                    results.successful
                         .mapNotNull {
                             val map = it.result as? UploadOrchestrator.OrchestratorResult.ServerResult
                             if (map != null && isImage(map.url, map.fileHeader.mimeType)) {
@@ -169,7 +160,7 @@ open class NewMediaModel : ViewModel() {
                                         it.fileHeader,
                                         caption,
                                         sensitiveContent,
-                                        it.originalHash,
+                                        it.uploadedHash,
                                         relayList,
                                     ) {
                                         continuation.resume(true)
@@ -203,22 +194,26 @@ open class NewMediaModel : ViewModel() {
 
                 onceUploaded()
                 cancelModel()
+            } else {
+                val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
+
+                onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
         }
     }
 
     open fun cancelModel() {
-        mediaToUpload = persistentListOf()
+        multiOrchestrator = null
         isUploadingImage = false
         caption = ""
         selectedServer = defaultServer()
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
-        this.mediaToUpload = mediaToUpload.filter { it != selected }.toImmutableList()
+        multiOrchestrator?.remove(selected)
     }
 
-    fun canPost(): Boolean = !isUploadingImage && mediaToUpload.isNotEmpty() && selectedServer != null
+    fun canPost(): Boolean = !isUploadingImage && multiOrchestrator != null && selectedServer != null
 
     fun defaultServer() = account?.settings?.defaultFileServer ?: DEFAULT_MEDIA_SERVERS[0]
 

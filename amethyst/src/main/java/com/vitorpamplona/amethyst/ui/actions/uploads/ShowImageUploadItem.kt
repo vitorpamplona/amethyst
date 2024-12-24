@@ -59,6 +59,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
@@ -67,19 +70,18 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
 fun ShowImageUploadGallery(
-    list: ImmutableList<SelectedMediaProcessing>,
+    list: MultiOrchestrator,
     onDelete: (SelectedMediaProcessing) -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    AutoNonlazyGrid(list.size) {
-        ShowImageUploadItem(list[it], onDelete, accountViewModel)
+    AutoNonlazyGrid(list.size()) {
+        ShowImageUploadItem(list.get(it), onDelete, accountViewModel)
     }
 }
 

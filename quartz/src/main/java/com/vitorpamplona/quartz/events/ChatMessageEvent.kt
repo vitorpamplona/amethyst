@@ -38,7 +38,8 @@ class ChatMessageEvent(
     content: String,
     sig: HexKey,
 ) : WrappedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    ChatroomKeyable {
+    ChatroomKeyable,
+    NIP17Group {
     /** Recipients intended to receive this conversation */
     fun recipientsPubKey() = tags.mapNotNull { if (it.size > 1 && it[0] == "p") it[1] else null }
 
@@ -61,6 +62,8 @@ class ChatMessageEvent(
 
         return result
     }
+
+    override fun groupMembers() = recipientsPubKey().plus(pubKey).toSet()
 
     override fun chatroomKey(toRemove: String): ChatroomKey = ChatroomKey(talkingWith(toRemove).toImmutableSet())
 
@@ -109,6 +112,10 @@ class ChatMessageEvent(
             }
         }
     }
+}
+
+interface NIP17Group {
+    fun groupMembers(): Set<HexKey>
 }
 
 interface ChatroomKeyable {

@@ -27,13 +27,13 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
+import com.vitorpamplona.amethyst.service.uploads.ImageDownloader
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.ServerInfoRetriever
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
-import com.vitorpamplona.amethyst.ui.actions.uploads.ImageDownloader
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.toHexKey
