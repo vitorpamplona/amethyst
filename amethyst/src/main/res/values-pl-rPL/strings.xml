@@ -148,6 +148,8 @@
     <string name="lightning_address">Lightning Adres</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopiuje Nsec ID (hasło) do schowka w celu wykonania kopii zapasowej</string>
     <string name="copy_private_key_to_the_clipboard">Skopiuj tajny klucz do schowka</string>
+    <string name="show_private_key_qr_code">Pokaż kod QR klucza prywatnego</string>
+    <string name="show_encrypted_private_key_qr_code">Pokaż zaszyfrowany kod QR klucza prywatnego</string>
     <string name="copies_the_public_key_to_the_clipboard_for_sharing">Kopiuje klucz publiczny do schowka w celu udostępnienia</string>
     <string name="copy_public_key_npub_to_the_clipboard">Skopiuj klucz publiczny (NPub) do schowka</string>
     <string name="send_a_direct_message">Wyślij bezpośrednią wiadomość</string>
@@ -336,10 +338,13 @@
     <string name="hash_verification_info_title">Co to oznacza?</string>
     <string name="hash_verification_passed">Ta zawartość jest taka sama od początku</string>
     <string name="hash_verification_failed">Ta zawartość uległa zmianie. Autor mógł nie zobaczyć ani nie zatwierdzić zmiany</string>
+    <string name="content_description_add_media">Dodaj plik</string>
     <string name="content_description_add_image">Dodaj zdjęcie</string>
     <string name="content_description_add_video">Dodaj wideo</string>
     <string name="content_description_add_document">Dodaj dokument</string>
     <string name="add_content">Dodaj do wiadomości</string>
+    <string name="add_caption">Dodaj nagłówek</string>
+    <string name="add_caption_example">Mój przyjacielu</string>
     <string name="content_description">Opis zawartości</string>
     <string name="content_description_example">Błękitna łódź na białej piaszczystej plaży o zachodzie słońca</string>
     <string name="zap_type">Typ Zap-a</string>
@@ -353,6 +358,7 @@
     <string name="zap_type_nonzap">Bez Zapów</string>
     <string name="zap_type_nonzap_explainer">Brak śladu w Nostr, tylko w Lightning</string>
     <string name="file_server">Serwer Plików</string>
+    <string name="file_server_description">Wybierz serwer, aby przesłać ten plik</string>
     <string name="zap_forward_lnAddress">LnAdres lub @Użytkownik</string>
     <string name="media_servers">Serwery Multimediów</string>
     <string name="set_preferred_media_servers">Ustaw swoje preferowane serwery przesyłania multimediów.</string>
@@ -363,6 +369,14 @@
     <string name="use_default_servers">Użyj domyślnej listy</string>
     <string name="add_media_server">Dodaj serwer multimediów</string>
     <string name="delete_media_server">Usuń serwer multimediów</string>
+    <string name="uploading_state_ready">Nie rozpoczęte</string>
+    <string name="uploading_state_compressing">Kompresja</string>
+    <string name="uploading_state_uploading">Wgrywanie</string>
+    <string name="uploading_state_server_processing">Przetwarzanie</string>
+    <string name="uploading_state_downloading">Pobieranie</string>
+    <string name="uploading_state_hashing">Hashowanie</string>
+    <string name="uploading_state_finished">Gotowe</string>
+    <string name="uploading_state_error">Błąd</string>
     <string name="upload_server_relays_nip95">Twoje transmitery (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Pliki są przechowywane przez Twoje retransmitery. Nowy NIP: sprawdź, czy jest obsługiwany</string>
     <string name="privacy_options">Ustawienia prywatności</string>
@@ -718,6 +732,7 @@
     <string name="failed_to_upload_media">Błąd wysyłania: %1$s</string>
     <string name="server_did_not_provide_a_url_after_uploading">Serwer nie podał adresu URL po załadowaniu</string>
     <string name="could_not_download_from_the_server">Nie można pobrać przesłanych plików z serwera</string>
+    <string name="could_not_check_downloaded_file">Nie można sprawdzić pobranego pliku po wgraniu: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Nie można przygotować pliku lokalnego do przesłania: %1$s</string>
     <string name="failed_to_upload_with_message">Nie udało się przesłać: %1$s</string>
     <string name="failed_to_delete_with_message">Nie udało się usunąć: %1$s</string>
@@ -834,6 +849,7 @@
     <string name="accessibility_turn_off_sealed_message">Zapieczętowana wiadomość włączona. Kliknij, aby wyłączyć zapieczętowaną wiadomość</string>
     <string name="accessibility_send">Wyślij</string>
     <string name="accessibility_play_username">Odtwórz nazwę użytkownika jako dźwięk</string>
+    <string name="accessibility_pushpin">Pinezka</string>
     <string name="accessibility_scan_qr_code">Zeskanuj QR kod</string>
     <string name="accessibility_navigate_to_alby">Przejdź do Alby zewnętrznego dostawcy portfela</string>
     <string name="it_s_not_possible_to_reply_to_a_draft_note">Nie jest możliwa odpowiedź na szkic wpisu</string>

@@ -148,6 +148,8 @@
     <string name="lightning_address">Adresse Lightning</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Copie l\'ID Nsec (votre mot de passe) dans le presse-papiers pour le sauvegarder</string>
     <string name="copy_private_key_to_the_clipboard">Copier la clé secrète dans le presse-papiers</string>
+    <string name="show_private_key_qr_code">Afficher le QR code de la clé privée</string>
+    <string name="show_encrypted_private_key_qr_code">Afficher le QR code de la clé privée chiffrée</string>
     <string name="copies_the_public_key_to_the_clipboard_for_sharing">Copie la clé publique dans le presse-papiers pour la partager</string>
     <string name="copy_public_key_npub_to_the_clipboard">Copier la clé publique (NPub) dans le presse-papiers</string>
     <string name="send_a_direct_message">Envoyer un message direct</string>
@@ -336,10 +338,13 @@
     <string name="hash_verification_info_title">Qu\'est-ce que cela signifie ?</string>
     <string name="hash_verification_passed">Ce contenu est le même depuis le message</string>
     <string name="hash_verification_failed">Ce contenu a changé. L\'auteur n\'a peut-être pas vu ou approuvé le changement</string>
+    <string name="content_description_add_media">Ajouter un média</string>
     <string name="content_description_add_image">Ajouter une Image</string>
     <string name="content_description_add_video">Ajouter une Vidéo</string>
     <string name="content_description_add_document">Ajouter un Document</string>
     <string name="add_content">Ajouter au Message</string>
+    <string name="add_caption">Ajouter une légende</string>
+    <string name="add_caption_example">Mon adorable ami</string>
     <string name="content_description">Description des contenus</string>
     <string name="content_description_example">Un bateau bleu sur une plage de sable blanc au coucher du soleil</string>
     <string name="zap_type">Type de Zap</string>
@@ -353,6 +358,7 @@
     <string name="zap_type_nonzap">Non-Zap</string>
     <string name="zap_type_nonzap_explainer">Aucune trace sur Nostr, seulement sur le Lightning</string>
     <string name="file_server">Serveur fichier</string>
+    <string name="file_server_description">Choisissez un serveur vers lequel téléverser ce fichier</string>
     <string name="zap_forward_lnAddress">Adresse LN ou @Utilisateur</string>
     <string name="media_servers">Serveurs média</string>
     <string name="set_preferred_media_servers">Définissez vos serveurs de téléversement de média préférés.</string>
@@ -363,6 +369,14 @@
     <string name="use_default_servers">Utiliser la liste par défaut</string>
     <string name="add_media_server">Ajouter un serveur média</string>
     <string name="delete_media_server">Supprimer le serveur média</string>
+    <string name="uploading_state_ready">Non commencé</string>
+    <string name="uploading_state_compressing">Compression en cours</string>
+    <string name="uploading_state_uploading">Téléversement en cours</string>
+    <string name="uploading_state_server_processing">Traitement en cours</string>
+    <string name="uploading_state_downloading">Téléchargement en cours</string>
+    <string name="uploading_state_hashing">Hachage</string>
+    <string name="uploading_state_finished">Terminé</string>
+    <string name="uploading_state_error">Erreur</string>
     <string name="upload_server_relays_nip95">Vos relais (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Les fichiers sont hébergés par vos relais. Nouveau NIP: vérifiez s\'ils sont supportés</string>
     <string name="privacy_options">Options de confidentialité</string>
@@ -718,6 +732,7 @@
     <string name="failed_to_upload_media">Erreur de téléversement : %1$s</string>
     <string name="server_did_not_provide_a_url_after_uploading">Le serveur n\'a pas fourni d\'URL après le téléversement</string>
     <string name="could_not_download_from_the_server">Impossible de télécharger le média depuis le serveur</string>
+    <string name="could_not_check_downloaded_file">Impossible de vérifier le fichier téléchargé après le téléversement : %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Impossible de préparer le fichier local à téléverser: %1$s</string>
     <string name="failed_to_upload_with_message">Échec du téléversement: %1$s</string>
     <string name="failed_to_delete_with_message">Échec de la suppression : %1$s</string>
