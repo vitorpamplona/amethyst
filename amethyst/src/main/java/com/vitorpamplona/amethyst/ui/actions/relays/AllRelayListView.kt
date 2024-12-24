@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -174,7 +175,8 @@ fun MappedAllRelayListView(
                         end = 10.dp,
                         top = pad.calculateTopPadding(),
                         bottom = pad.calculateBottomPadding(),
-                    ).consumeWindowInsets(pad),
+                    ).consumeWindowInsets(pad)
+                    .imePadding(),
         ) {
             item {
                 SettingsCategory(
