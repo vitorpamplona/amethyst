@@ -734,6 +734,7 @@
     <string name="could_not_download_from_the_server">Impossible de télécharger le média depuis le serveur</string>
     <string name="could_not_check_downloaded_file">Impossible de vérifier le fichier téléchargé après le téléversement : %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Impossible de préparer le fichier local à téléverser: %1$s</string>
+    <string name="failed_to_upload_to_server_with_message">Impossible de téléverser vers %1$s: %2$s</string>
     <string name="failed_to_upload_with_message">Échec du téléversement: %1$s</string>
     <string name="failed_to_delete_with_message">Échec de la suppression : %1$s</string>
     <string name="media_too_big_for_nip95">Le média est trop volumineux pour NIP-95</string>

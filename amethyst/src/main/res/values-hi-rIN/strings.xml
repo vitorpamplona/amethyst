@@ -734,6 +734,7 @@
     <string name="could_not_download_from_the_server">सेवासंगणक से आरोहणकृत चित्र चलचित्र का अवरोहण नहीं कर पाए</string>
     <string name="could_not_check_downloaded_file">आरोहण पश्चात अवरोहित अभिलेख की जाँच नहीं हो सकी : %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">स्थानीय अभिलेख अनुकूल नहीं बना सके आरोहण के लिए : %1$s</string>
+    <string name="failed_to_upload_to_server_with_message">%1$s पर आरोहण असफल : %2$s</string>
     <string name="failed_to_upload_with_message">आरोहण असफल : %1$s</string>
     <string name="failed_to_delete_with_message">मिटाने में असफल : %1$s</string>
     <string name="media_too_big_for_nip95">अभिलेख निप॰-९५ के लिए बहुत बडा है</string>
