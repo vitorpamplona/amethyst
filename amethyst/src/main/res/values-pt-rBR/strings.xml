@@ -148,6 +148,8 @@
     <string name="lightning_address">Endereço Lightning</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Copiar a chave Nsec (sua senha) para backup</string>
     <string name="copy_private_key_to_the_clipboard">Copiar Chave Privada</string>
+    <string name="show_private_key_qr_code">Mostrar código QR de chave privada</string>
+    <string name="show_encrypted_private_key_qr_code">Mostrar o código QR da chave privada criptografado</string>
     <string name="copies_the_public_key_to_the_clipboard_for_sharing">Copia a chave public para ser compartilhada</string>
     <string name="copy_public_key_npub_to_the_clipboard">Copiar chave pública (NPub)</string>
     <string name="send_a_direct_message">Enviar uma mensagem direta</string>
@@ -334,10 +336,13 @@
     <string name="hash_verification_info_title">O que isso significa?</string>
     <string name="hash_verification_passed">A imagem é a mesma desde o post</string>
     <string name="hash_verification_failed">A imagem mudou. O autor pode não ter visto a mudança</string>
+    <string name="content_description_add_media">Adicionar Mídia</string>
     <string name="content_description_add_image">Adicionar Imagem</string>
     <string name="content_description_add_video">Adicionar Vídeo</string>
     <string name="content_description_add_document">Adicionar Documento</string>
     <string name="add_content">Adicionar à mensagem</string>
+    <string name="add_caption">Adicionar uma legenda</string>
+    <string name="add_caption_example">Meu amável amigo</string>
     <string name="content_description">Descrição do conteúdo</string>
     <string name="content_description_example">Um barco azul em uma praia de areia branca ao pôr do sol</string>
     <string name="zap_type">Tipo de Zap</string>
@@ -351,6 +356,7 @@
     <string name="zap_type_nonzap">Sem Zap</string>
     <string name="zap_type_nonzap_explainer">Nenhum traço no Nostr, apenas na Lightning</string>
     <string name="file_server">Servidor de arquivos</string>
+    <string name="file_server_description">Escolha um servidor para onde enviar este arquivo</string>
     <string name="zap_forward_lnAddress">LnAddress ou @Usuário</string>
     <string name="media_servers">Servidores de Mídia</string>
     <string name="set_preferred_media_servers">Defina seus servidores de upload de mídia preferidos.</string>
@@ -361,6 +367,14 @@
     <string name="use_default_servers">Usar Lista Padrão</string>
     <string name="add_media_server">Adicionar servidor de mídia</string>
     <string name="delete_media_server">Apagar servidor de mídia</string>
+    <string name="uploading_state_ready">Não iniciado</string>
+    <string name="uploading_state_compressing">Compactando</string>
+    <string name="uploading_state_uploading">Enviando</string>
+    <string name="uploading_state_server_processing">Processando</string>
+    <string name="uploading_state_downloading">Baixando</string>
+    <string name="uploading_state_hashing">Hashando</string>
+    <string name="uploading_state_finished">Concluído</string>
+    <string name="uploading_state_error">Erro</string>
     <string name="upload_server_relays_nip95">Seus relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Os arquivos são hospedados por seus relays. Novo NIP: verifique se eles suportam</string>
     <string name="privacy_options">Opções de Privacidade</string>
@@ -716,6 +730,7 @@
     <string name="failed_to_upload_media">Erro ao carregar: %1$s</string>
     <string name="server_did_not_provide_a_url_after_uploading">O servidor não forneceu uma URL após o upload</string>
     <string name="could_not_download_from_the_server">Não foi possível baixar o arquivo de mídia carregado do servidor</string>
+    <string name="could_not_check_downloaded_file">Não foi possível verificar o arquivo baixado após o upload: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Não foi possível preparar o arquivo local para enviar: %1$s</string>
     <string name="failed_to_upload_with_message">Falha ao enviar: %1$s</string>
     <string name="failed_to_delete_with_message">Falha ao excluir: %1$s</string>

@@ -148,6 +148,8 @@
     <string name="lightning_address">Lightning Adress</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopieert het NSEC ID (uw wachtwoord) naar klembord voor back-up.</string>
     <string name="copy_private_key_to_the_clipboard">Geheime sleutel kopiëren naar het klembord</string>
+    <string name="show_private_key_qr_code">Toon QR-code van privésleutel</string>
+    <string name="show_encrypted_private_key_qr_code">Toon versleutelde QR-code van privésleutel</string>
     <string name="copies_the_public_key_to_the_clipboard_for_sharing">Kopieert de publieke sleutel naar klembord om te delen</string>
     <string name="copy_public_key_npub_to_the_clipboard">Kopieer publieke sleutel (NPUB) naar klembord</string>
     <string name="send_a_direct_message">Stuur een privébericht</string>
@@ -336,10 +338,13 @@
     <string name="hash_verification_info_title">Wat betekent dit?</string>
     <string name="hash_verification_passed">De afbeelding is onveranderd sinds de post</string>
     <string name="hash_verification_failed">De afbeelding is veranderd. De auteur heeft de wijziging misschien niet gezien</string>
+    <string name="content_description_add_media">Voeg media toe</string>
     <string name="content_description_add_image">Afbeelding toevoegen</string>
     <string name="content_description_add_video">Video toevoegen</string>
     <string name="content_description_add_document">Document toevoegen</string>
     <string name="add_content">Voeg toe aan bericht</string>
+    <string name="add_caption">Onderschrift toevoegen</string>
+    <string name="add_caption_example">Mijn goede vriend</string>
     <string name="content_description">Beschrijving van de inhoud</string>
     <string name="content_description_example">Een blauwe boot in een wit zandstrand bij zonsondergang</string>
     <string name="zap_type">Zap type</string>
@@ -353,6 +358,7 @@
     <string name="zap_type_nonzap">Non-Zap</string>
     <string name="zap_type_nonzap_explainer">Geen spoor binnen Nostr, alleen in Lightning</string>
     <string name="file_server">File server</string>
+    <string name="file_server_description">Kies een server om dit bestand naar te uploaden</string>
     <string name="zap_forward_lnAddress">LnAddress of @User</string>
     <string name="media_servers">Mediaservers</string>
     <string name="set_preferred_media_servers">Stel uw gewenste media upload servers in.</string>
@@ -363,6 +369,14 @@
     <string name="use_default_servers">Gebruik standaard lijst</string>
     <string name="add_media_server">Mediaserver toevoegen</string>
     <string name="delete_media_server">Mediaserver verwijderen</string>
+    <string name="uploading_state_ready">Niet gestart</string>
+    <string name="uploading_state_compressing">Comprimeren</string>
+    <string name="uploading_state_uploading">Uploaden</string>
+    <string name="uploading_state_server_processing">Verwerken</string>
+    <string name="uploading_state_downloading">Downloaden</string>
+    <string name="uploading_state_hashing">Hashen</string>
+    <string name="uploading_state_finished">Klaar</string>
+    <string name="uploading_state_error">Fout</string>
     <string name="upload_server_relays_nip95">Uw relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Bestanden worden geüpload naar en gehost door relays. Ze zijn vrij van een vaste url (afhankelijkheid van derden). Zorg ervoor dat u een NIP-95 relay in uw lijst met relays hebt.</string>
     <string name="privacy_options">Privacyopties</string>
@@ -718,6 +732,7 @@
     <string name="failed_to_upload_media">Upload fout: %1$s</string>
     <string name="server_did_not_provide_a_url_after_uploading">Server heeft geen URL opgegeven na uploaden</string>
     <string name="could_not_download_from_the_server">Kan de geüploade media niet downloaden van de server</string>
+    <string name="could_not_check_downloaded_file">Kan het gedownloade bestand niet controleren na upload: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Kon lokaal bestand niet voorbereiden voor upload: %1$s</string>
     <string name="failed_to_upload_with_message">Uploaden van media mislukt: %1$s</string>
     <string name="failed_to_delete_with_message">Verwijderen van media mislukt: %1$s</string>
@@ -834,6 +849,7 @@
     <string name="accessibility_turn_off_sealed_message">Verzegeld bericht aan. Klik om Verzegeld bericht uit te zetten</string>
     <string name="accessibility_send">Verzenden</string>
     <string name="accessibility_play_username">Speel gebruikersnaam af als audio</string>
+    <string name="accessibility_pushpin">Pushpin</string>
     <string name="accessibility_scan_qr_code">Scan de QR-code</string>
     <string name="accessibility_navigate_to_alby">Navigeer naar de externe wallet provider Alby</string>
     <string name="it_s_not_possible_to_reply_to_a_draft_note">Het is niet mogelijk om een concept te beantwoorden</string>

@@ -230,7 +230,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="mark_all_known_as_read">Označi vse znane kot prebrane</string>
     <string name="mark_all_new_as_read">Označi vse nove kot prebrane</string>
     <string name="mark_all_as_read">Označi vse kot prebrane</string>
-    <string name="backup_keys">Naredi varnostno kopijo ključev</string>
+    <string name="backup_keys">Ustvari varnostno kopijo ključev</string>
     <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Varnostna kopija ključev in varnostni nasveti
         \n\nTvoj račun je zaščiten z privatnim ključem. Ta ključ ima dolgo sekvenco znakov kateri se začnejo z **nsec1**. Kdorkoli ima dostop, do tega privatnega ključa, lahko pošiljajo zapiske in spremenijo tvojo digitalno identiteto.
         \n\n- Nikoli in **Nikdar** ne vpisuj svojega privatnega ključa v spletne strani in aplikacije katerim ne zaupaš.
@@ -373,7 +373,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="delete_media_server">Odstrani medijski strežnik</string>
     <string name="upload_server_relays_nip95">Tvoji releji (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Datoteke so gostovane preko tvojih relejev. Nov NIP: Preveri če podpirajo</string>
-    <string name="privacy_options">Možnosti zasebnosti</string>
+    <string name="privacy_options">Zasebnostne nastavitve</string>
     <string name="connect_via_tor_short">Tor/Orbot nastavitve</string>
     <string name="connect_via_tor">Poveži se preko tvojih Orbot nastavitev</string>
     <string name="connect_via_tor1">Prilagodi</string>
@@ -399,7 +399,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="orbot_socks_port">Orbot socks vrata</string>
     <string name="use_internal_tor">Aktivni Tor stroj</string>
     <string name="use_internal_tor_explainer">Uporabi interno različico ali Orbot</string>
-    <string name="tor_preset">Prednastavitev Tor/zasebnosti</string>
+    <string name="tor_preset">Prednastavitve zasebnosti</string>
     <string name="tor_preset_explainer">Hitro spremeni vse spodnje nastavitve</string>
     <string name="tor_use_onion_address">Onion Url/Releji</string>
     <string name="tor_use_onion_address_explainer">Uporabi Tor za katerikoli .onion url</string>

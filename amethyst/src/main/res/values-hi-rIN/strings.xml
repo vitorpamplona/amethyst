@@ -148,6 +148,8 @@
     <string name="lightning_address">लैटनिंग पता</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">एनसेक॰ विभेदक (आपका गुप्त पारणशब्द) की अनुकृति करता है टाँकाफलक में सुरक्षित रखने के लिए</string>
     <string name="copy_private_key_to_the_clipboard">गुप्त कुंचिका की अनुकृति करें टाँकाफलक में</string>
+    <string name="show_private_key_qr_code">निजी कुंचिका क्यूआर॰ क्रमचित्र दिखाएँ।</string>
+    <string name="show_encrypted_private_key_qr_code">रहस्यीकृत निजी कुंचिका क्यूआर॰ क्रमचित्र दिखाएँ।</string>
     <string name="copies_the_public_key_to_the_clipboard_for_sharing">ख्याप्य कुंचिका की अनुकृति करता है टाँकाफलक में बाँटने के लिए</string>
     <string name="copy_public_key_npub_to_the_clipboard">ख्याप्य कुंचिका (एनपुब॰) की अनुकृति करें टाँकाफलक में</string>
     <string name="send_a_direct_message">सीधा संदेश भेजें</string>
@@ -336,10 +338,13 @@
     <string name="hash_verification_info_title">इसका अर्थ क्या है?</string>
     <string name="hash_verification_passed">यह विषयवस्तु वैसे ही है जैसे पत्र प्रकाशन पर</string>
     <string name="hash_verification_failed">यह विषयवस्तु परिवर्तित हुआ है। हो सकता है लेखक ने परिवर्तन देखा नहीं अथवा अनुमति दिया नहीं।</string>
+    <string name="content_description_add_media">चित्र चलचित्र जोडें</string>
     <string name="content_description_add_image">चित्र जोडें</string>
     <string name="content_description_add_video">चलचित्र जोडें</string>
     <string name="content_description_add_document">पत्र जोडें</string>
     <string name="add_content">संदेश में जोड दें</string>
+    <string name="add_caption">शीर्षक जोडें</string>
+    <string name="add_caption_example">मेरे प्रिय मित्र</string>
     <string name="content_description">विषयवस्तु का विवरण</string>
     <string name="content_description_example">एक नीला नाव श्वेत रेतीला तट पर सूर्यास्त पर</string>
     <string name="zap_type">ज्साप प्रकार</string>
@@ -353,6 +358,7 @@
     <string name="zap_type_nonzap">ज्साप अतिरिक्त</string>
     <string name="zap_type_nonzap_explainer">नोस्ट्र में कोई पदचिह्न नहीं, केवल लैटनिंग पर</string>
     <string name="file_server">अभिलेख सेवासंगणक</string>
+    <string name="file_server_description">इस अभिलेख का आरोहण करने के लिए सेवासंगणक का चयन करें</string>
     <string name="zap_forward_lnAddress">लै॰जाल पता अथवा @उपयोगकर्ता</string>
     <string name="media_servers">प्रसारसंगणक</string>
     <string name="set_preferred_media_servers">आपके प्रसारसंगणक आद्यताएँ स्थापित करें।</string>
@@ -363,6 +369,14 @@
     <string name="use_default_servers">मूलविकल्प सूची का प्रयोग करें</string>
     <string name="add_media_server">प्रसारसंगणक जोडें</string>
     <string name="delete_media_server">प्रसारसंगणक मिटाएँ</string>
+    <string name="uploading_state_ready">आरम्भ नहीं हुआ</string>
+    <string name="uploading_state_compressing">संक्षिप्तीकरण चल रहा है</string>
+    <string name="uploading_state_uploading">आरोहण चल रहा है</string>
+    <string name="uploading_state_server_processing">प्रक्रिया चल रही है</string>
+    <string name="uploading_state_downloading">अवरोहण चल रहा है</string>
+    <string name="uploading_state_hashing">विभेदकोत्पादन प्रक्रिया चल रही है</string>
+    <string name="uploading_state_finished">हो गया</string>
+    <string name="uploading_state_error">अपक्रम</string>
     <string name="upload_server_relays_nip95">आपके पुनःप्रसारक (निप॰-९५)</string>
     <string name="upload_server_relays_nip95_explainer">अभिलेख आपके पुनःप्रसारक द्वारा रखे जाते हैं। नया निप॰: जाँच करें यदि वे अवलम्बन करते हैं</string>
     <string name="privacy_options">गोपनीयता विकल्प</string>
@@ -718,6 +732,7 @@
     <string name="failed_to_upload_media">आरोहण अपक्रम : %1$s</string>
     <string name="server_did_not_provide_a_url_after_uploading">सेवासंगणक ने आरोहण पश्चात जालपता नहीं दिया</string>
     <string name="could_not_download_from_the_server">सेवासंगणक से आरोहणकृत चित्र चलचित्र का अवरोहण नहीं कर पाए</string>
+    <string name="could_not_check_downloaded_file">आरोहण पश्चात अवरोहित अभिलेख की जाँच नहीं हो सकी : %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">स्थानीय अभिलेख अनुकूल नहीं बना सके आरोहण के लिए : %1$s</string>
     <string name="failed_to_upload_with_message">आरोहण असफल : %1$s</string>
     <string name="failed_to_delete_with_message">मिटाने में असफल : %1$s</string>

@@ -326,6 +326,7 @@
     <string name="follow_list_kind3follows">جميع المتابعات</string>
     <string name="follow_list_global">العالمي</string>
     <string name="follow_list_mute_list">قائمة الحسابات المكتومة</string>
+    <string name="tor_when_needed">أساسي</string>
     <string name="app_notification_dms_channel_name">الرسائل الخاصة</string>
     <string name="app_notification_dms_channel_description">التنبيه عند وصول رسالة خاصة</string>
     <string name="app_notification_zaps_channel_message_from">من طرف %1$s</string>
