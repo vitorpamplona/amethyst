@@ -1402,10 +1402,6 @@ object LocalCache {
 
         val replyTo = computeReplyTo(event)
 
-        if (event.id == "e01875f2f4c31a7512a56e677e135d6d2d28cbd7b7b0d5610e4b28fc4869f181") {
-            println("AABBCC ${replyTo.joinToString(",") { it.idHex} }")
-        }
-
         note.loadEvent(event, author, replyTo)
 
         // Log.d("CM", "New Chat Note (${note.author?.toBestDisplayName()} ${note.event?.content()}

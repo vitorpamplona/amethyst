@@ -194,24 +194,9 @@ open class BaseTextNoteEvent(
                     // removes forks from itself.
                 }.map { it.toTag() }
 
-        if (id == "e01875f2f4c31a7512a56e677e135d6d2d28cbd7b7b0d5610e4b28fc4869f181") {
-            val newStyleReply = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "reply" }?.get(1)
-            val newStyleRoot = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
-
-            println("AABBCC 1 Root: $newStyleRoot")
-            println("AABBCC 1 Reply: $newStyleReply")
-
-            println("AABBCC 1 Certain: ${certainRepliesTo.joinToString(",")}")
-            println("AABBCC 1 Uncertain: ${uncertainRepliesTo.joinToString(",")}")
-        }
-
         if (certainRepliesTo.isEmpty() && uncertainRepliesTo.isEmpty() && tagAddresses.isEmpty()) return emptyList()
 
         val citations = findCitations()
-
-        if (id == "e01875f2f4c31a7512a56e677e135d6d2d28cbd7b7b0d5610e4b28fc4869f181") {
-            println("AABBCC 2 ${citations.joinToString(",") { it }}")
-        }
 
         return if (citations.isEmpty()) {
             if (certainRepliesTo.isNotEmpty()) {
