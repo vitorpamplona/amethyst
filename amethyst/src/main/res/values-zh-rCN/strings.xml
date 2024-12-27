@@ -148,6 +148,8 @@
     <string name="lightning_address">闪电地址</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">复制 Nsec ID（您的私人密钥）到剪贴板以备备份</string>
     <string name="copy_private_key_to_the_clipboard">复制私钥到剪贴板</string>
+    <string name="show_private_key_qr_code">显示私钥二维码</string>
+    <string name="show_encrypted_private_key_qr_code">显示加密私钥二维码</string>
     <string name="copies_the_public_key_to_the_clipboard_for_sharing">复制公钥到剪贴板以供共享</string>
     <string name="copy_public_key_npub_to_the_clipboard">复制公钥（NPub）到剪贴板</string>
     <string name="send_a_direct_message">发送直接消息</string>
@@ -184,6 +186,7 @@
     <string name="loading_account">正在载入帐户</string>
     <string name="error_loading_replies">"加载回复出错："</string>
     <string name="try_again">重试</string>
+    <string name="notification_feed_is_empty">暂无通知</string>
     <string name="feed_is_empty">信息流为空。</string>
     <string name="refresh">刷新</string>
     <string name="created">创建</string>
@@ -203,6 +206,8 @@
     <string name="translations_translated_from">从</string>
     <string name="translations_to">更改为</string>
     <string name="translations_show_in_lang_first">先显示 %1$s 在前</string>
+    <string name="chat_about_topic">有关 %1$s 的公共聊天</string>
+    <string name="community_about_topic">有关 %1$s 的公共社区</string>
     <string name="translations_always_translate_to_lang">总是翻译为 %1$s</string>
     <string name="translations_never_translate_from_lang">不再翻译 %1$s</string>
     <string name="nip_05">Nostr 地址</string>
@@ -333,10 +338,13 @@
     <string name="hash_verification_info_title">这是什么意思</string>
     <string name="hash_verification_passed">此内容与发布时相同</string>
     <string name="hash_verification_failed">此内容已更改。作者可能没有看到或批准更改</string>
+    <string name="content_description_add_media">添加媒体</string>
     <string name="content_description_add_image">添加图片</string>
     <string name="content_description_add_video">添加视频</string>
     <string name="content_description_add_document">添加文件</string>
     <string name="add_content">添加到消息</string>
+    <string name="add_caption">添加标题</string>
+    <string name="add_caption_example">我最爱的朋友</string>
     <string name="content_description">内容描述</string>
     <string name="content_description_example">日落时分，白色沙滩上的蓝色小船</string>
     <string name="zap_type">打闪类型</string>
@@ -350,6 +358,7 @@
     <string name="zap_type_nonzap">非打闪</string>
     <string name="zap_type_nonzap_explainer">Nostr 上没有痕迹，仅在闪电上</string>
     <string name="file_server">文件服务器</string>
+    <string name="file_server_description">选择上传文件时使用的服务器</string>
     <string name="zap_forward_lnAddress">闪电地址或 @User</string>
     <string name="media_servers">媒体服务器</string>
     <string name="set_preferred_media_servers">设置首选媒体上传服务器。</string>
@@ -360,6 +369,14 @@
     <string name="use_default_servers">使用默认列表</string>
     <string name="add_media_server">添加媒体服务器</string>
     <string name="delete_media_server">删除媒体服务器</string>
+    <string name="uploading_state_ready">尚未开始</string>
+    <string name="uploading_state_compressing">正在压缩</string>
+    <string name="uploading_state_uploading">正在上传</string>
+    <string name="uploading_state_server_processing">正在处理</string>
+    <string name="uploading_state_downloading">正在下载</string>
+    <string name="uploading_state_hashing">正在计算 Hash</string>
+    <string name="uploading_state_finished">完成</string>
+    <string name="uploading_state_error">错误</string>
     <string name="upload_server_relays_nip95">你的中继器 (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">文件由你的中继器托管。新的 NIP：检查它们是否支持</string>
     <string name="privacy_options">隐私选项</string>
@@ -715,7 +732,9 @@
     <string name="failed_to_upload_media">上传错误：%1$s</string>
     <string name="server_did_not_provide_a_url_after_uploading">上传后服务器没有提供 URL</string>
     <string name="could_not_download_from_the_server">无法从服务器下载上传的媒体</string>
+    <string name="could_not_check_downloaded_file">无法检查经过上传后再下载的文件：%1$s</string>
     <string name="could_not_prepare_local_file_to_upload">无法准备要上传的本地文件：%1$s</string>
+    <string name="failed_to_upload_to_server_with_message">无法上传到%1$s：%2$s</string>
     <string name="failed_to_upload_with_message">上传失败：%1$s</string>
     <string name="failed_to_delete_with_message">删除失败：%1$s</string>
     <string name="media_too_big_for_nip95">文件过大，无法使用 NIP-95</string>
@@ -831,6 +850,7 @@
     <string name="accessibility_turn_off_sealed_message">密封消息开启。点击关闭密封消息</string>
     <string name="accessibility_send">发送</string>
     <string name="accessibility_play_username">作为音频播放用户名</string>
+    <string name="accessibility_pushpin">图钉</string>
     <string name="accessibility_scan_qr_code">扫描二维码</string>
     <string name="accessibility_navigate_to_alby">导航到第三方钱包提供商 Alby</string>
     <string name="it_s_not_possible_to_reply_to_a_draft_note">无法回复笔记草稿</string>
