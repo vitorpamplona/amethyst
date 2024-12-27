@@ -84,7 +84,6 @@ fun SwipeToDeleteContainer(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DismissBackground(dismissState: SwipeToDismissBoxState) {
     val color by animateColorAsState(
