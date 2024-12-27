@@ -734,6 +734,7 @@
     <string name="could_not_download_from_the_server">Nie można pobrać przesłanych plików z serwera</string>
     <string name="could_not_check_downloaded_file">Nie można sprawdzić pobranego pliku po wgraniu: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Nie można przygotować pliku lokalnego do przesłania: %1$s</string>
+    <string name="failed_to_upload_to_server_with_message">Nie udało się wgrać pliku do %1$s: %2$s</string>
     <string name="failed_to_upload_with_message">Nie udało się przesłać: %1$s</string>
     <string name="failed_to_delete_with_message">Nie udało się usunąć: %1$s</string>
     <string name="media_too_big_for_nip95">Media są zbyt duże dla NIP-95</string>
