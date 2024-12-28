@@ -156,6 +156,8 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="lightning_address">Lightning naslov</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopira Nsec ID (tvoje geslo) v odložišče za varnostno kopiranje</string>
     <string name="copy_private_key_to_the_clipboard">Kopiraj privatni ključ v odložišče</string>
+    <string name="show_private_key_qr_code">Pokaži QR kodo zasebnega ključa</string>
+    <string name="show_encrypted_private_key_qr_code">Pokaži QR kodo šifriranega zasebnega ključa</string>
     <string name="copies_the_public_key_to_the_clipboard_for_sharing">Kopira javni ključ v odložišče za deljenje</string>
     <string name="copy_public_key_npub_to_the_clipboard">Kopiraj javni ključ (NPub) v odložišče</string>
     <string name="send_a_direct_message">Pošlji direktno sporočilo</string>
@@ -344,10 +346,13 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="hash_verification_info_title">Kaj to pomeni?</string>
     <string name="hash_verification_passed">Ta vsebina je ista od objave</string>
     <string name="hash_verification_failed">Ta vsebina je bila spremenjena. Avtor morda ni videl ali dovolil spremembe</string>
+    <string name="content_description_add_media">Dodaj medij</string>
     <string name="content_description_add_image">Dodaj sliko</string>
     <string name="content_description_add_video">Dodaj video</string>
     <string name="content_description_add_document">Dodaj dokument</string>
     <string name="add_content">Dodaj v sporočilo</string>
+    <string name="add_caption">Dodaj napis</string>
+    <string name="add_caption_example">Moja draga družba</string>
     <string name="content_description">Opis vsebine</string>
     <string name="content_description_example">Modra jadrnica pri beli peščeni plaži ob sončnem zahodu</string>
     <string name="zap_type">Vrsta Zap-a</string>
@@ -361,6 +366,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="zap_type_nonzap">Ni-Zap</string>
     <string name="zap_type_nonzap_explainer">Brez sledi v Nostr, samo v Lightning</string>
     <string name="file_server">Datotečni strežnik</string>
+    <string name="file_server_description">Izberi strežnik za nalaganje te datoteke</string>
     <string name="zap_forward_lnAddress">LnNaslov ali @Uporabnik</string>
     <string name="media_servers">Medijski strežniki</string>
     <string name="set_preferred_media_servers">Nastavi svoje prednostne medijske strežnike za nalaganje medijev.</string>
@@ -371,6 +377,14 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="use_default_servers">Uporabi privzeti seznam</string>
     <string name="add_media_server">Dodaj medijski strežnik</string>
     <string name="delete_media_server">Odstrani medijski strežnik</string>
+    <string name="uploading_state_ready">Čakam na začetek</string>
+    <string name="uploading_state_compressing">Zgoščujem</string>
+    <string name="uploading_state_uploading">Nalagam</string>
+    <string name="uploading_state_server_processing">Obdelujem</string>
+    <string name="uploading_state_downloading">Prenašam</string>
+    <string name="uploading_state_hashing">Razpršujem</string>
+    <string name="uploading_state_finished">Končano</string>
+    <string name="uploading_state_error">Napaka</string>
     <string name="upload_server_relays_nip95">Tvoji releji (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Datoteke so gostovane preko tvojih relejev. Nov NIP: Preveri če podpirajo</string>
     <string name="privacy_options">Zasebnostne nastavitve</string>
@@ -726,7 +740,9 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="failed_to_upload_media">Napaka pri nalaganju: %1$s</string>
     <string name="server_did_not_provide_a_url_after_uploading">Strežnik po nalaganju ni posredoval URL naslova</string>
     <string name="could_not_download_from_the_server">Prenos naloženega medija s strežnika ni uspel</string>
+    <string name="could_not_check_downloaded_file">Ni bilo mogoče preveriti prenesene datoteke po nalaganju: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Lokalne datoteke ni bilo mogoče pripraviti za nalaganje: %1$s</string>
+    <string name="failed_to_upload_to_server_with_message">Nalaganje na %1$s ni uspelo: %2$s</string>
     <string name="failed_to_upload_with_message">Nalaganje ni uspelo: %1$s</string>
     <string name="failed_to_delete_with_message">Izbris ni uspel: %1$s</string>
     <string name="media_too_big_for_nip95">Medij je prevelik za NIP-95</string>
