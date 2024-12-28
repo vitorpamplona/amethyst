@@ -154,7 +154,6 @@ class Amethyst : Application() {
             .Builder(this)
             .diskCache { coilCache }
             .memoryCache { memoryCache }
-    // .crossfade(true)
 
     fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences = EncryptedStorage.preferences(instance, npub)
 
