@@ -378,16 +378,7 @@ fun UrlImageView(
                     is AsyncImagePainter.State.Success -> {
                         SubcomposeAsyncImageContent(loadedImageModifier)
 
-                        AnimatedVisibility(
-                            visible = controllerVisible.value,
-                            modifier = Modifier.align(Alignment.TopEnd),
-                            enter = remember { fadeIn() },
-                            exit = remember { fadeOut() },
-                        ) {
-                            Box(Modifier.align(Alignment.TopEnd), contentAlignment = Alignment.TopEnd) {
-                                ShowHash(content)
-                            }
-                        }
+                        ShowHashAnimated(content, controllerVisible, Modifier.align(Alignment.TopEnd))
                     }
                     else -> {}
                 }
@@ -484,6 +475,24 @@ private fun InlineDownloadIcon(showImage: MutableState<Boolean>) =
     ) {
         DownloadForOfflineIcon(Size24dp)
     }
+
+@Composable
+fun ShowHashAnimated(
+    content: MediaUrlImage,
+    controllerVisible: MutableState<Boolean>,
+    modifier: Modifier,
+) {
+    AnimatedVisibility(
+        visible = controllerVisible.value,
+        modifier = modifier,
+        enter = remember { fadeIn() },
+        exit = remember { fadeOut() },
+    ) {
+        Box(modifier, contentAlignment = Alignment.TopEnd) {
+            ShowHash(content)
+        }
+    }
+}
 
 @Composable
 fun ShowHash(content: MediaUrlContent) {

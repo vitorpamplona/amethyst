@@ -34,7 +34,6 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
-import coil3.request.crossfade
 import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
@@ -155,7 +154,7 @@ class Amethyst : Application() {
             .Builder(this)
             .diskCache { coilCache }
             .memoryCache { memoryCache }
-            .crossfade(true)
+    // .crossfade(true)
 
     fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences = EncryptedStorage.preferences(instance, npub)
 
