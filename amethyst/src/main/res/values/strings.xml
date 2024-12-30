@@ -126,6 +126,8 @@
     <string name="ln_url_outdated">LN URL (outdated)</string>
     <string name="save_to_gallery">Save to Gallery</string>
     <string name="image_saved_to_the_gallery">Image saved to the phone\'s photo gallery</string>
+    <string name="video_download_has_started_toast">Video download has started…</string>
+    <string name="media_download_has_started_toast">Media download has started…</string>
     <string name="failed_to_save_the_image">Failed to save the image</string>
     <string name="video_saved_to_the_gallery">Video saved to the phone\'s video gallery</string>
     <string name="failed_to_save_the_video">Failed to save the video</string>

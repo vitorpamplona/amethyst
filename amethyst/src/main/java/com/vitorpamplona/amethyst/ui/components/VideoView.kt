@@ -1197,8 +1197,7 @@ fun SaveButton(onSaveClick: (localContext: Context) -> Unit) {
                     Toast
                         .makeText(
                             localContext,
-                            // stringRes(context, R.string.secret_key_copied_to_clipboard),
-                            "Video download has started...",
+                            stringRes(localContext, R.string.video_download_has_started_toast),
                             Toast.LENGTH_SHORT,
                         ).show()
                 }
