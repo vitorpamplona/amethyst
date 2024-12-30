@@ -123,6 +123,8 @@
     <string name="image_saved_to_the_gallery">Bild in der Gal
 
 erie gespeichert</string>
+    <string name="video_download_has_started_toast">Der Videodownload wurde gestartet…</string>
+    <string name="media_download_has_started_toast">Der Mediendownload wurde gestartet…</string>
     <string name="failed_to_save_the_image">Fehler beim Speichern des Bildes</string>
     <string name="video_saved_to_the_gallery">Video in der Videogalerie des Telefons gespeichert</string>
     <string name="failed_to_save_the_video">Video konnte nicht gespeichert werden</string>
@@ -601,6 +603,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="copy_url_to_clipboard">URL in die Zwischenablage kopieren</string>
     <string name="copy_the_note_id_to_the_clipboard">Notiz-ID in die Zwischenablage kopieren</string>
     <string name="add_media_to_gallery">Medien zur Galerie hinzufügen</string>
+    <string name="media_added">Medien hinzugefügt</string>
+    <string name="media_added_to_profile_gallery">Medien wurden zu Ihrer Profilgalerie hinzugefügt</string>
     <string name="created_at">Erstellt am</string>
     <string name="rules">Regeln</string>
     <string name="login_with_external_signer">Mit Amber anmelden</string>
@@ -737,6 +741,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="could_not_download_from_the_server">Hochgeladene Medien konnten nicht vom Server heruntergeladen werden</string>
     <string name="could_not_check_downloaded_file">Die heruntergeladene Datei konnte nach dem Hochladen nicht überprüft werden: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Lokale Datei konnte nicht zum Hochladen vorbereitet werden: %1$s</string>
+    <string name="failed_to_upload_to_server_with_message">Konnte %1$s nicht erreichen: %2$s</string>
     <string name="failed_to_upload_with_message">Upload fehlgeschlagen: %1$s</string>
     <string name="failed_to_delete_with_message">Löschen fehlgeschlagen: %1$s</string>
     <string name="media_too_big_for_nip95">Medien sind zu groß für NIP-95</string>
@@ -910,10 +915,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="torrent_no_apps">Keine Torrent-Apps installiert, um die Datei zu öffnen und herunterzuladen.</string>
     <string name="select_list_to_filter">Liste zum Filtern des Feeds auswählen</string>
     <string name="temporary_account">Beim Sperren des Geräts abmelden</string>
-
-    <string name="video_download_has_started_toast">Der Videodownload wurde gestartet…</string>
-    <string name="media_download_has_started_toast">Der Mediendownload wurde gestartet…</string>
-    <string name="media_added">Medien hinzugefügt</string>
-    <string name="media_added_to_profile_gallery">Medien wurden zu Ihrer Profilgalerie hinzugefügt</string>
-
 </resources>
