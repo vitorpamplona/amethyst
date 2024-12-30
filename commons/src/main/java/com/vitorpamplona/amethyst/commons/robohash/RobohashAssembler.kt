@@ -165,7 +165,7 @@ class RobohashAssembler {
         isLightTheme: Boolean,
     ): ImageVector {
         val hash =
-            if (HexValidator.isHex(msg)) {
+            if (HexValidator.isHex(msg) && msg.length > 10) {
                 Hex.decode(msg)
             } else {
                 Log.w("Robohash", "$msg is not a hex")
