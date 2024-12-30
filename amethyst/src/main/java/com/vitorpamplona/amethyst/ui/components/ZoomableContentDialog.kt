@@ -24,6 +24,7 @@ import android.Manifest
 import android.content.Context
 import android.os.Build
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -54,6 +55,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -235,10 +237,22 @@ private fun DialogContent(
                 if (myContent !is MediaUrlContent || !myContent.url.endsWith(".m3u8")) {
                     val localContext = LocalContext.current
 
+                    val scope = rememberCoroutineScope()
+                    val context = LocalContext.current
+
                     val writeStoragePermissionState =
                         rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
                             if (isGranted) {
                                 saveMediaToGallery(myContent, localContext, accountViewModel)
+                                scope.launch {
+                                    Toast
+                                        .makeText(
+                                            context,
+                                            // stringRes(context, R.string.secret_key_copied_to_clipboard),
+                                            "Media download has started...",
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                }
                             }
                         }
 
@@ -249,6 +263,15 @@ private fun DialogContent(
                                 writeStoragePermissionState.status.isGranted
                             ) {
                                 saveMediaToGallery(myContent, localContext, accountViewModel)
+                                scope.launch {
+                                    Toast
+                                        .makeText(
+                                            context,
+                                            // stringRes(context, R.string.secret_key_copied_to_clipboard),
+                                            "Media download has started...",
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                }
                             } else {
                                 writeStoragePermissionState.launchPermissionRequest()
                             }
