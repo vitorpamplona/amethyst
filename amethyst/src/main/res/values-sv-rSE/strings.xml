@@ -904,4 +904,10 @@
     <string name="torrent_no_apps">Inga torrent-appar installerade för att öppna och ladda ner filen.</string>
     <string name="select_list_to_filter">Välj en lista för att filtrera flödet</string>
     <string name="temporary_account">Logga ut när enheten låses</string>
+
+    <string name="video_download_has_started_toast">Nedladdning av video har startat…</string>
+    <string name="media_download_has_started_toast">Nedladdning av media har startat…</string>
+    <string name="media_added">Media tillagd</string>
+    <string name="media_added_to_profile_gallery">Media har lagts till i ditt profilgalleri</string>
+
 </resources>
