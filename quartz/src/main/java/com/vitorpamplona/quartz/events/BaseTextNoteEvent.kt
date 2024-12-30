@@ -206,7 +206,7 @@ open class BaseTextNoteEvent(
             }
         } else {
             if (certainRepliesTo.isNotEmpty()) {
-                certainRepliesTo + tagAddresses
+                certainRepliesTo + tagAddresses.filter { it !in citations }
             } else {
                 // mix bag between `e` for replies and `e` for citations
                 uncertainRepliesTo.filter { it !in citations }
