@@ -150,13 +150,13 @@ class Relay(
         val onConnected: (Relay) -> Unit,
     ) : WebSocketListener {
         override fun onOpen(
-            pingInMs: Long,
-            usingCompression: Boolean,
+            pingMillis: Long,
+            compression: Boolean,
         ) {
             checkNotInMainThread()
             Log.d("Relay", "Connect onOpen $url $socket")
 
-            markConnectionAsReady(pingInMs, usingCompression)
+            markConnectionAsReady(pingMillis, compression)
 
             // Log.w("Relay", "Relay OnOpen, Loading All subscriptions $url")
             onConnected(this@Relay)

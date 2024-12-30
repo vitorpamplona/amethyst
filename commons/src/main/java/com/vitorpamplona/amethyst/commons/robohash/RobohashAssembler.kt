@@ -85,9 +85,9 @@ import com.vitorpamplona.amethyst.commons.robohash.parts.mouth6Cell
 import com.vitorpamplona.amethyst.commons.robohash.parts.mouth7Happy
 import com.vitorpamplona.amethyst.commons.robohash.parts.mouth8Buttons
 import com.vitorpamplona.amethyst.commons.robohash.parts.mouth9Closed
+import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexValidator
-import java.security.MessageDigest
 
 val Black = SolidColor(Color.Black)
 val Gray = SolidColor(Color(0xFF6d6e70))
@@ -169,7 +169,7 @@ class RobohashAssembler {
                 Hex.decode(msg)
             } else {
                 Log.w("Robohash", "$msg is not a hex")
-                MessageDigest.getInstance("SHA-256").digest(msg.toByteArray())
+                CryptoUtils.sha256(msg.toByteArray())
             }
 
         val bgColor = SolidColor(bytesToColor(hash[0], hash[1], hash[2], isLightTheme))
