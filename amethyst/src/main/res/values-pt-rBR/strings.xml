@@ -121,6 +121,8 @@
     <string name="ln_url_outdated">LN URL (desatualizado)</string>
     <string name="save_to_gallery">Salvar na Galeria</string>
     <string name="image_saved_to_the_gallery">Imagem salva para a galeria</string>
+    <string name="video_download_has_started_toast">O download do vídeo foi iniciado…</string>
+    <string name="media_download_has_started_toast">O download da mídia foi iniciado…</string>
     <string name="failed_to_save_the_image">Falha ao salvar a imagem</string>
     <string name="video_saved_to_the_gallery">Vídeo salvo na galeria de vídeos do telefone</string>
     <string name="failed_to_save_the_video">Falha ao salvar o vídeo</string>
@@ -596,6 +598,8 @@
     <string name="copy_url_to_clipboard">Copiar URL para a área de transferência</string>
     <string name="copy_the_note_id_to_the_clipboard">Copiar ID da nota para a área de transferência</string>
     <string name="add_media_to_gallery">Adicionar Mídia à Galeria</string>
+    <string name="media_added">Mídia adicionada</string>
+    <string name="media_added_to_profile_gallery">Mídia adicionada à sua Galeria de Perfil</string>
     <string name="created_at">Criado em</string>
     <string name="rules">Regras</string>
     <string name="login_with_external_signer">Login com Amber</string>
@@ -732,6 +736,7 @@
     <string name="could_not_download_from_the_server">Não foi possível baixar o arquivo de mídia carregado do servidor</string>
     <string name="could_not_check_downloaded_file">Não foi possível verificar o arquivo baixado após o upload: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Não foi possível preparar o arquivo local para enviar: %1$s</string>
+    <string name="failed_to_upload_to_server_with_message">Falha ao acessar %1$s: %2$s</string>
     <string name="failed_to_upload_with_message">Falha ao enviar: %1$s</string>
     <string name="failed_to_delete_with_message">Falha ao excluir: %1$s</string>
     <string name="media_too_big_for_nip95">Mídia muito grande para NIP-95</string>
@@ -905,10 +910,4 @@
     <string name="torrent_no_apps">Nenhum aplicativo torrent instalado para abrir e baixar o arquivo.</string>
     <string name="select_list_to_filter">Selecione uma lista para filtrar o feed</string>
     <string name="temporary_account">Terminar sessão no bloqueio do dispositivo</string>
-
-    <string name="video_download_has_started_toast">O download do vídeo foi iniciado…</string>
-    <string name="media_download_has_started_toast">O download da mídia foi iniciado…</string>
-    <string name="media_added">Mídia adicionada</string>
-    <string name="media_added_to_profile_gallery">Mídia adicionada à sua Galeria de Perfil</string>
-
 </resources>

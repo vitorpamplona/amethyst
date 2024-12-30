@@ -121,6 +121,8 @@
     <string name="ln_url_outdated">LN URL (zastaralé)</string>
     <string name="save_to_gallery">Uložit do galerie</string>
     <string name="image_saved_to_the_gallery">Obrázek uložen do galerie</string>
+    <string name="video_download_has_started_toast">Stahování videa bylo zahájeno…</string>
+    <string name="media_download_has_started_toast">Stahování médií bylo zahájeno…</string>
     <string name="failed_to_save_the_image">Chyba při ukládání obrázku</string>
     <string name="video_saved_to_the_gallery">Video uloženo do video galerie telefonu</string>
     <string name="failed_to_save_the_video">Nepodařilo se uložit video</string>
@@ -596,6 +598,8 @@
     <string name="copy_url_to_clipboard">Kopírovat URL do schránky</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopírovat ID poznámky do schránky</string>
     <string name="add_media_to_gallery">Přidat média do galerie</string>
+    <string name="media_added">Média přidána</string>
+    <string name="media_added_to_profile_gallery">Média přidána do vaší profilové galerie</string>
     <string name="created_at">Vytvořeno</string>
     <string name="rules">Pravidla</string>
     <string name="login_with_external_signer">Přihlásit se pomocí Amber</string>
@@ -732,6 +736,7 @@
     <string name="could_not_download_from_the_server">Nepodařilo se stáhnout nahraná média ze serveru</string>
     <string name="could_not_check_downloaded_file">Nelze zkontrolovat stažený soubor po nahrání: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Nelze připravit místní soubor k nahrání: %1$s</string>
+    <string name="failed_to_upload_to_server_with_message">Nepodařilo se dosáhnout %1$s: %2$s</string>
     <string name="failed_to_upload_with_message">Nahrání selhalo: %1$s</string>
     <string name="failed_to_delete_with_message">Smazání selhalo: %1$s</string>
     <string name="media_too_big_for_nip95">Média je příliš velká pro NIP-95</string>
@@ -905,10 +910,4 @@
     <string name="torrent_no_apps">Pro otevření a stažení souboru nejsou nainstalovány žádné torrent aplikace.</string>
     <string name="select_list_to_filter">Vyberte seznam pro filtrování kanálu</string>
     <string name="temporary_account">Odhlásit se na zámek zařízení</string>
-
-    <string name="video_download_has_started_toast">Stahování videa bylo zahájeno…</string>
-    <string name="media_download_has_started_toast">Stahování médií bylo zahájeno…</string>
-    <string name="media_added">Média přidána</string>
-    <string name="media_added_to_profile_gallery">Média přidána do vaší profilové galerie</string>
-
 </resources>
