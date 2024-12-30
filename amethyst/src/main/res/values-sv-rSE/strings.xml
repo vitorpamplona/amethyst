@@ -121,6 +121,8 @@
     <string name="ln_url_outdated">LN URL (Utdaterad)</string>
     <string name="save_to_gallery">Spara i Galleri</string>
     <string name="image_saved_to_the_gallery">Bild sparad till galleriet</string>
+    <string name="video_download_has_started_toast">Nedladdning av video har startat…</string>
+    <string name="media_download_has_started_toast">Nedladdning av media har startat…</string>
     <string name="failed_to_save_the_image">Misslyckades att spara bilden</string>
     <string name="video_saved_to_the_gallery">Videon sparad i telefonens videogalleri</string>
     <string name="failed_to_save_the_video">Det gick inte att spara videon</string>
@@ -595,6 +597,8 @@
     <string name="copy_url_to_clipboard">Kopiera URL till urklipp</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopiera anteckningens ID till urklipp</string>
     <string name="add_media_to_gallery">Lägg till media i galleriet</string>
+    <string name="media_added">Media tillagd</string>
+    <string name="media_added_to_profile_gallery">Media har lagts till i ditt profilgalleri</string>
     <string name="created_at">Skapad den</string>
     <string name="rules">Regler</string>
     <string name="login_with_external_signer">Logga in med Amber</string>
@@ -731,6 +735,7 @@
     <string name="could_not_download_from_the_server">Kunde inte ladda ner uppladdade medier från servern</string>
     <string name="could_not_check_downloaded_file">Kunde inte kontrollera nedladdad fil efter uppladdning: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Kunde inte förbereda lokal fil att ladda upp: %1$s</string>
+    <string name="failed_to_upload_to_server_with_message">Det gick inte att nå %1$s: %2$s</string>
     <string name="failed_to_upload_with_message">Uppladdning misslyckades: %1$s</string>
     <string name="failed_to_delete_with_message">Radering misslyckades: %1$s</string>
     <string name="media_too_big_for_nip95">Media är för stort för NIP-95</string>
@@ -904,10 +909,4 @@
     <string name="torrent_no_apps">Inga torrent-appar installerade för att öppna och ladda ner filen.</string>
     <string name="select_list_to_filter">Välj en lista för att filtrera flödet</string>
     <string name="temporary_account">Logga ut när enheten låses</string>
-
-    <string name="video_download_has_started_toast">Nedladdning av video har startat…</string>
-    <string name="media_download_has_started_toast">Nedladdning av media har startat…</string>
-    <string name="media_added">Media tillagd</string>
-    <string name="media_added_to_profile_gallery">Media har lagts till i ditt profilgalleri</string>
-
 </resources>
