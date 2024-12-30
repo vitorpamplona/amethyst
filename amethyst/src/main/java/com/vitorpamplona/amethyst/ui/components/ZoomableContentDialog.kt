@@ -238,7 +238,6 @@ private fun DialogContent(
                     val localContext = LocalContext.current
 
                     val scope = rememberCoroutineScope()
-                    val context = LocalContext.current
 
                     val writeStoragePermissionState =
                         rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
@@ -247,7 +246,7 @@ private fun DialogContent(
                                 scope.launch {
                                     Toast
                                         .makeText(
-                                            context,
+                                            localContext,
                                             // stringRes(context, R.string.secret_key_copied_to_clipboard),
                                             "Media download has started...",
                                             Toast.LENGTH_SHORT,
@@ -266,7 +265,7 @@ private fun DialogContent(
                                 scope.launch {
                                     Toast
                                         .makeText(
-                                            context,
+                                            localContext,
                                             // stringRes(context, R.string.secret_key_copied_to_clipboard),
                                             "Media download has started...",
                                             Toast.LENGTH_SHORT,
