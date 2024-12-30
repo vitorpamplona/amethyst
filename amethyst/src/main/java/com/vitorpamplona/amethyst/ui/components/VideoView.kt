@@ -28,6 +28,7 @@ import android.net.Uri
 import android.os.Build
 import android.util.Log
 import android.view.View
+import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
@@ -1189,9 +1190,17 @@ fun SaveButton(onSaveClick: (localContext: Context) -> Unit) {
                     onSaveClick(localContext)
                 }
             }
-
+        val scope = rememberCoroutineScope()
         IconButton(
             onClick = {
+                scope.launch {
+                    Toast
+                        .makeText(
+                            localContext,
+                            stringRes(localContext, R.string.video_download_has_started_toast),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                }
                 if (
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
                     writeStoragePermissionState.status.isGranted

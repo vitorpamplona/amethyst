@@ -905,4 +905,10 @@
     <string name="torrent_no_apps">Nenhum aplicativo torrent instalado para abrir e baixar o arquivo.</string>
     <string name="select_list_to_filter">Selecione uma lista para filtrar o feed</string>
     <string name="temporary_account">Terminar sessão no bloqueio do dispositivo</string>
+
+    <string name="video_download_has_started_toast">O download do vídeo foi iniciado…</string>
+    <string name="media_download_has_started_toast">O download da mídia foi iniciado…</string>
+    <string name="media_added">Mídia adicionada</string>
+    <string name="media_added_to_profile_gallery">Mídia adicionada à sua Galeria de Perfil</string>
+
 </resources>

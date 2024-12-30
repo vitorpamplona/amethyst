@@ -910,4 +910,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="torrent_no_apps">Keine Torrent-Apps installiert, um die Datei zu öffnen und herunterzuladen.</string>
     <string name="select_list_to_filter">Liste zum Filtern des Feeds auswählen</string>
     <string name="temporary_account">Beim Sperren des Geräts abmelden</string>
+
+    <string name="video_download_has_started_toast">Der Videodownload wurde gestartet…</string>
+    <string name="media_download_has_started_toast">Der Mediendownload wurde gestartet…</string>
+    <string name="media_added">Medien hinzugefügt</string>
+    <string name="media_added_to_profile_gallery">Medien wurden zu Ihrer Profilgalerie hinzugefügt</string>
+
 </resources>

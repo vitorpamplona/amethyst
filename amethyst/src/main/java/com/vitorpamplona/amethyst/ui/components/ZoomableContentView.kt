@@ -676,10 +676,10 @@ fun ShareImageAction(
                 text = { Text(stringRes(R.string.add_media_to_gallery)) },
                 onClick = {
                     if (videoUri != null) {
-                        var n19 = Nip19Bech32.uriToRoute(postNostrUri)?.entity as? Nip19Bech32.NEvent
+                        val n19 = Nip19Bech32.uriToRoute(postNostrUri)?.entity as? Nip19Bech32.NEvent
                         if (n19 != null) {
                             accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay[0], blurhash, dim, hash, mimeType) // TODO Whole list or first?
-                            accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
+                            accountViewModel.toast(R.string.media_added, R.string.media_added_to_profile_gallery)
                         }
                     }
 
