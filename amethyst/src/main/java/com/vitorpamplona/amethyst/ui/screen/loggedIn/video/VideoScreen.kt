@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -308,7 +309,7 @@ private fun RenderVideoOrPictureNote(
         }
     }
 
-    Row(modifier = Modifier.fillMaxSize(1f), verticalAlignment = Alignment.Bottom) {
+    Row(modifier = Modifier.fillMaxSize(1f).navigationBarsPadding(), verticalAlignment = Alignment.Bottom) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
             RenderAuthorInformation(note, nav, accountViewModel)
         }
