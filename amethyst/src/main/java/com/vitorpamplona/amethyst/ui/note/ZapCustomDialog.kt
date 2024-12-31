@@ -366,7 +366,7 @@ fun PayViaIntentDialog(
 
                             PayButton(isActive = !paid.value) {
                                 payViaIntent(payable.invoice, context, { paid.value = true }) {
-                                    justShowError(UserBasedErrorMessage(it, payable.user))
+                                    justShowError(UserBasedErrorMessage(it, null))
                                 }
                             }
                         }
