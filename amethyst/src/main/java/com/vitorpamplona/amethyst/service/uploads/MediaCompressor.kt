@@ -35,11 +35,11 @@ import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import id.zelory.compressor.Compressor
 import id.zelory.compressor.constraint.default
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.util.UUID
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 class MediaCompressorResult(
     val uri: Uri,
@@ -94,7 +94,7 @@ class MediaCompressor {
 
         val result =
             withTimeoutOrNull(30000) {
-                suspendCoroutine { continuation ->
+                suspendCancellableCoroutine { continuation ->
                     VideoCompressor.start(
                         // => This is required
                         context = applicationContext,

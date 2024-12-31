@@ -23,10 +23,10 @@ package com.vitorpamplona.amethyst
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 /**
  * Launches an async coroutine for each item, runs the
@@ -59,7 +59,7 @@ suspend inline fun <T> tryAndWait(
     crossinline asyncFunc: (Continuation<T>) -> Unit,
 ): T? =
     withTimeoutOrNull(timeoutMillis) {
-        suspendCoroutine { continuation ->
+        suspendCancellableCoroutine { continuation ->
             asyncFunc(continuation)
         }
     }

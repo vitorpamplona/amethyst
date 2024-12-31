@@ -44,9 +44,9 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 @Stable
 open class NewMediaModel : ViewModel() {
@@ -138,7 +138,7 @@ open class NewMediaModel : ViewModel() {
                         // upload each file as an individual nip95 event.
                         viewModelScope.launch(Dispatchers.IO) {
                             withTimeoutOrNull(30000) {
-                                suspendCoroutine { continuation ->
+                                suspendCancellableCoroutine { continuation ->
                                     account?.createNip95(it.bytes, headerInfo = it.fileHeader, caption, sensitiveContent) { nip95 ->
                                         account?.consumeAndSendNip95(nip95.first, nip95.second, relayList)
                                         continuation.resume(true)
@@ -153,7 +153,7 @@ open class NewMediaModel : ViewModel() {
                         // upload each file as an individual nip95 event.
                         viewModelScope.launch(Dispatchers.IO) {
                             withTimeoutOrNull(30000) {
-                                suspendCoroutine { continuation ->
+                                suspendCancellableCoroutine { continuation ->
                                     account?.sendHeader(
                                         it.url,
                                         it.magnet,
@@ -174,7 +174,7 @@ open class NewMediaModel : ViewModel() {
                     listOf(
                         viewModelScope.launch(Dispatchers.IO) {
                             withTimeoutOrNull(30000) {
-                                suspendCoroutine { continuation ->
+                                suspendCancellableCoroutine { continuation ->
                                     account?.sendAllAsOnePictureEvent(
                                         imageUrls,
                                         caption,
