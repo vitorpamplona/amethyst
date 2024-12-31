@@ -99,8 +99,8 @@ fun MultiUserErrorMessageContentPreview() {
 
     val model: UserBasedErrorMessageViewModel = viewModel()
     model.add("Could not fetch invoice from https://minibits.cash/.well-known/lnurlp/victorieeman: There are too many unpaid invoices for this name.", user1)
-    model.add("Could not fetch invoice from https://minibits.cash/.well-known/lnurlp/victorieeman: There are too many unpaid invoices for this name.", user2)
-    model.add("Could not fetch invoice from https://minibits.cash/.well-known/lnurlp/victorieeman: There are too many unpaid invoices for this name.", user3)
+    model.add("No Wallets found to pay a lightning invoice. Please install a Lightning wallet to use zaps.", user2)
+    model.add("Could not fetch invoice", user3)
 
     ThemeComparisonColumn {
         MultiUserErrorMessageDialogInner(
@@ -199,14 +199,12 @@ fun ErrorRow(
     nav: INav,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(vertical = Size5dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
     ) {
         errorState.user?.let {
             val scope = rememberCoroutineScope()
             Column(Modifier.width(Size40dp), horizontalAlignment = Alignment.Start) {
-                // Box(Size30Modifier.background(Color.Red))
                 UserPicture(errorState.user, Size30dp, Modifier, accountViewModel, nav)
                 Spacer(StdVertSpacer)
                 IconButton(
@@ -232,7 +230,7 @@ fun ErrorRow(
             }
         }
 
-        Row(Modifier.padding(top = Size5dp).weight(1f)) {
+        Row(Modifier.weight(1f)) {
             SelectionContainer {
                 Text(errorState.error)
             }
