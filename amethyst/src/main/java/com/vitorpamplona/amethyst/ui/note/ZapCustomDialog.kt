@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
@@ -303,8 +304,10 @@ fun PayViaIntentDialog(
                 DialogProperties(
                     dismissOnClickOutside = false,
                     usePlatformDefaultWidth = false,
+                    decorFitsSystemWindows = false,
                 ),
         ) {
+            SetDialogToEdgeToEdge()
             Surface {
                 Column(modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState())) {
                     Row(
