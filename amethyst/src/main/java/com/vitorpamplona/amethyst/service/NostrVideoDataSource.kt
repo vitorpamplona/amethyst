@@ -160,10 +160,7 @@ object NostrVideoDataSource : AmethystNostrDataSource("VideoFeed") {
 
         if (hashToLoad.isEmpty()) return emptyList()
 
-        val geoHashes =
-            hashToLoad
-                .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
-                .flatten()
+        val geoHashes = hashToLoad
 
         return listOf(
             TypedFilter(

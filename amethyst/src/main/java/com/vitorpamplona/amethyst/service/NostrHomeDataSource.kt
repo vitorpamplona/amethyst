@@ -229,10 +229,7 @@ object NostrHomeDataSource : AmethystNostrDataSource("HomeFeed") {
                         ),
                     tags =
                         mapOf(
-                            "g" to
-                                hashToLoad
-                                    .map { listOf(it.lowercase()) }
-                                    .flatten(),
+                            "g" to hashToLoad.toList(),
                         ),
                     limit = 100,
                     since =

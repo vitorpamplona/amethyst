@@ -46,7 +46,7 @@ class FilterByListParams(
 
     fun isEventInList(noteEvent: Event): Boolean {
         if (followLists == null) return false
-        if (isAroundMe && followLists.geotags.isEmpty() == true) return false
+        if (isAroundMe && followLists.geotags.isEmpty()) return false
 
         return if (noteEvent is LiveActivitiesEvent) {
             noteEvent.participantsIntersect(followLists.authors) ||

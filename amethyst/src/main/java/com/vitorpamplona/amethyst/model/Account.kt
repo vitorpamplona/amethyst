@@ -28,6 +28,7 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.switchMap
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.fonfon.kgeohash.GeoHash
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -579,6 +580,46 @@ class Account(
             }
         }
 
+    fun compute50kmLine(geoHash: GeoHash): List<String> {
+        val hashes = mutableListOf<String>()
+
+        hashes.add(geoHash.toString())
+
+        var currentGeoHash = geoHash
+        repeat(5) {
+            currentGeoHash = currentGeoHash.westernNeighbour
+            hashes.add(currentGeoHash.toString())
+        }
+
+        currentGeoHash = geoHash
+        repeat(5) {
+            currentGeoHash = currentGeoHash.easternNeighbour
+            hashes.add(currentGeoHash.toString())
+        }
+
+        return hashes
+    }
+
+    fun compute50kmRange(geoHash: GeoHash): List<String> {
+        val hashes = mutableListOf<String>()
+
+        hashes.addAll(compute50kmLine(geoHash))
+
+        var currentGeoHash = geoHash
+        repeat(5) {
+            currentGeoHash = currentGeoHash.northernNeighbour
+            hashes.addAll(compute50kmLine(currentGeoHash))
+        }
+
+        currentGeoHash = geoHash
+        repeat(5) {
+            currentGeoHash = currentGeoHash.southernNeighbour
+            hashes.addAll(compute50kmLine(currentGeoHash))
+        }
+
+        return hashes
+    }
+
     suspend fun mapIntoFollowLists(
         listName: String,
         kind3: LiveFollowList?,
@@ -593,16 +634,9 @@ class Account(
             val geohashResult = location ?: Amethyst.instance.locationManager.geohashStateFlow.value
             if (geohashResult is LocationState.LocationResult.Success) {
                 // 2 neighbors deep = 25x25km
-                val hashes =
-                    listOf(geohashResult.geoHash.toString()) +
-                        geohashResult.geoHash.adjacent
-                            .map { listOf(it.toString()) + it.adjacent.map { it.toString() } }
-                            .flatten()
-                            .distinct()
-
                 LiveFollowList(
                     authorsPlusMe = setOf(signer.pubKey),
-                    geotags = hashes.toSet(),
+                    geotags = compute50kmRange(geohashResult.geoHash).toSet(),
                 )
             } else {
                 LiveFollowList(authorsPlusMe = setOf(signer.pubKey))

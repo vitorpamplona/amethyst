@@ -124,10 +124,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                             kinds = listOf(ClassifiedsEvent.KIND),
                             tags =
                                 mapOf(
-                                    "g" to
-                                        it
-                                            .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
-                                            .flatten(),
+                                    "g" to it,
                                 ),
                             limit = 300,
                             since =
@@ -304,13 +301,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
             filter =
                 SincePerRelayFilter(
                     kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND),
-                    tags =
-                        mapOf(
-                            "g" to
-                                hashToLoad
-                                    .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
-                                    .flatten(),
-                        ),
+                    tags = mapOf("g" to hashToLoad),
                     limit = 300,
                     since =
                         latestEOSEs.users[account.userProfile()]
@@ -367,12 +358,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                     kinds =
                         listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND, ChannelMessageEvent.KIND),
                     tags =
-                        mapOf(
-                            "g" to
-                                hashToLoad
-                                    .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
-                                    .flatten(),
-                        ),
+                        mapOf("g" to hashToLoad),
                     limit = 300,
                     since =
                         latestEOSEs.users[account.userProfile()]
@@ -426,13 +412,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
             filter =
                 SincePerRelayFilter(
                     kinds = listOf(CommunityDefinitionEvent.KIND, CommunityPostApprovalEvent.KIND),
-                    tags =
-                        mapOf(
-                            "g" to
-                                hashToLoad
-                                    .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
-                                    .flatten(),
-                        ),
+                    tags = mapOf("g" to hashToLoad),
                     limit = 300,
                     since =
                         latestEOSEs.users[account.userProfile()]
