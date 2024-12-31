@@ -24,12 +24,14 @@ import android.content.Context
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
 import com.vitorpamplona.quartz.encoders.Lud06
 import okhttp3.Request
+import okhttp3.Response
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.net.URLEncoder
@@ -95,7 +97,7 @@ class LightningAddressResolver {
                                 .the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct,
                             url,
                             lnaddress,
-                            it.code.toString(),
+                            errorMessage(it, context),
                         ),
                     )
                 }
@@ -154,10 +156,34 @@ class LightningAddressResolver {
             } else {
                 onError(
                     stringRes(context, R.string.error_unable_to_fetch_invoice),
-                    stringRes(context, R.string.could_not_fetch_invoice_from, urlBinder),
+                    stringRes(context, R.string.could_not_fetch_invoice_from_details, lnCallback, errorMessage(it, context)),
                 )
             }
         }
+    }
+
+    fun errorMessage(
+        response: Response,
+        context: Context,
+    ): String {
+        val errorMessage =
+            runCatching {
+                jacksonObjectMapper().readTree(response.body.string())
+            }.getOrNull()?.let { tree ->
+                val status = tree.get("status")?.asText()
+                val message = tree.get("message")?.asText()
+
+                if (status == "error" && message != null) {
+                    message
+                } else {
+                    tree.get("error")?.get("message")?.asText()
+                }
+            }
+
+        return errorMessage
+            ?: HttpStatusMessages.resourceIdFor(response.code)?.let { stringRes(context, it) }
+            ?: response.message.ifBlank { null }
+            ?: response.code.toString()
     }
 
     fun lnAddressInvoice(
@@ -195,7 +221,7 @@ class LightningAddressResolver {
                         null
                     }
 
-                val callback = lnurlp?.get("callback")?.asText()
+                val callback = lnurlp?.get("callback")?.asText()?.ifBlank { null }
 
                 if (callback == null) {
                     onError(

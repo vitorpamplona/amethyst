@@ -25,27 +25,19 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Done
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -72,6 +63,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
@@ -82,7 +74,6 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
@@ -112,7 +103,7 @@ class ZapOptionstViewModel : ViewModel() {
 @Composable
 fun ZapCustomDialog(
     onClose: () -> Unit,
-    onError: (title: String, text: String) -> Unit,
+    onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
     accountViewModel: AccountViewModel,
@@ -291,65 +282,20 @@ fun ZapButton(
 }
 
 @Composable
-fun ErrorMessageDialog(
-    title: String,
-    textContent: String,
-    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
-    onClickStartMessage: (() -> Unit)? = null,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { SelectionContainer { Text(textContent) } },
-        confirmButton = {
-            Row(
-                modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                onClickStartMessage?.let {
-                    TextButton(onClick = onClickStartMessage) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_dm),
-                            contentDescription = null,
-                        )
-                        Spacer(StdHorzSpacer)
-                        Text(stringRes(R.string.error_dialog_talk_to_user))
-                    }
-                }
-                Button(
-                    onClick = onDismiss,
-                    colors = buttonColors,
-                    contentPadding = PaddingValues(horizontal = Size16dp),
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Done,
-                            contentDescription = null,
-                        )
-                        Spacer(StdHorzSpacer)
-                        Text(stringRes(R.string.error_dialog_button_ok))
-                    }
-                }
-            }
-        },
-    )
-}
-
-@Composable
 fun PayViaIntentDialog(
     payingInvoices: ImmutableList<ZapPaymentHandler.Payable>,
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
-    onError: (String) -> Unit,
-    justShowError: (String) -> Unit,
+    onError: (UserBasedErrorMessage) -> Unit,
+    justShowError: (UserBasedErrorMessage) -> Unit,
 ) {
     val context = LocalContext.current
 
     if (payingInvoices.size == 1) {
-        payViaIntent(payingInvoices.first().invoice, context, onClose, onError)
+        val payable = payingInvoices.first()
+        payViaIntent(payable.invoice, context, onClose) {
+            onError(UserBasedErrorMessage(it, payable.user))
+        }
     } else {
         Dialog(
             onDismissRequest = onClose,
@@ -370,15 +316,15 @@ fun PayViaIntentDialog(
 
                     Spacer(modifier = DoubleVertSpacer)
 
-                    payingInvoices.forEachIndexed { index, it ->
+                    payingInvoices.forEachIndexed { index, payable ->
                         val paid = remember { mutableStateOf(false) }
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(vertical = Size10dp),
                         ) {
-                            if (it.user != null) {
-                                BaseUserPicture(it.user, Size55dp, accountViewModel = accountViewModel)
+                            if (payable.user != null) {
+                                BaseUserPicture(payable.user, Size55dp, accountViewModel = accountViewModel)
                             } else {
                                 DisplayBlankAuthor(size = Size55dp, accountViewModel = accountViewModel)
                             }
@@ -386,8 +332,8 @@ fun PayViaIntentDialog(
                             Spacer(modifier = DoubleHorzSpacer)
 
                             Column(modifier = Modifier.weight(1f)) {
-                                if (it.user != null) {
-                                    UsernameDisplay(it.user, accountViewModel = accountViewModel)
+                                if (payable.user != null) {
+                                    UsernameDisplay(payable.user, accountViewModel = accountViewModel)
                                 } else {
                                     Text(
                                         text = stringRes(id = R.string.wallet_number, index + 1),
@@ -399,7 +345,7 @@ fun PayViaIntentDialog(
                                 }
                                 Row {
                                     Text(
-                                        text = showAmount((it.amountMilliSats / 1000.0f).toBigDecimal()),
+                                        text = showAmount((payable.amountMilliSats / 1000.0f).toBigDecimal()),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         fontWeight = FontWeight.Bold,
@@ -419,7 +365,9 @@ fun PayViaIntentDialog(
                             Spacer(modifier = DoubleHorzSpacer)
 
                             PayButton(isActive = !paid.value) {
-                                payViaIntent(it.invoice, context, { paid.value = true }, justShowError)
+                                payViaIntent(payable.invoice, context, { paid.value = true }) {
+                                    justShowError(UserBasedErrorMessage(it, payable.user))
+                                }
                             }
                         }
                     }

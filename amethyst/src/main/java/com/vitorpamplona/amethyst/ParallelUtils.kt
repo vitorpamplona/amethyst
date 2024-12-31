@@ -72,8 +72,8 @@ suspend inline fun <T> tryAndWait(
 suspend fun <T, K> collectSuccessfulOperations(
     items: List<T>,
     runRequestFor: (T, (K) -> Unit) -> Unit,
-    output: MutableMap<T, K> = mutableMapOf(),
-    onReady: suspend (MutableMap<T, K>) -> Unit,
+    output: MutableList<K> = mutableListOf(),
+    onReady: suspend (List<K>) -> Unit,
 ) {
     if (items.isEmpty()) {
         onReady(output)
@@ -87,7 +87,7 @@ suspend fun <T, K> collectSuccessfulOperations(
             }
 
         if (result != null) {
-            output[it] = result
+            output.add(result)
         }
     }
 

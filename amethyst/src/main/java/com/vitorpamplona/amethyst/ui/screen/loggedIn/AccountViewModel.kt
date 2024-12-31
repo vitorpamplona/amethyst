@@ -506,6 +506,12 @@ class AccountViewModel(
         }
     }
 
+    class DecryptedInfo(
+        val zapRequest: Note,
+        val zapEvent: Note?,
+        val info: ZapAmountCommentNotification,
+    )
+
     fun decryptAmountMessageInGroup(
         zaps: ImmutableList<CombinedZap>,
         onNewState: (ImmutableList<ZapAmountCommentNotification>) -> Unit,
@@ -524,17 +530,19 @@ class AccountViewModel(
                             )
                     }.toMutableMap()
 
-            collectSuccessfulOperations<CombinedZap, ZapAmountCommentNotification>(
+            collectSuccessfulOperations<CombinedZap, DecryptedInfo>(
                 items = zaps.filter { (it.request.event as? LnZapRequestEvent)?.isPrivateZap() == true },
                 runRequestFor = { next, onReady ->
                     checkNotInMainThread()
 
-                    innerDecryptAmountMessage(next.request, next.response, onReady)
+                    innerDecryptAmountMessage(next.request, next.response) {
+                        onReady(DecryptedInfo(next.request, next.response, it))
+                    }
                 },
             ) {
                 checkNotInMainThread()
 
-                it.forEach { decrypted -> initialResults[decrypted.key.request] = decrypted.value }
+                it.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
 
                 onNewState(initialResults.values.toImmutableList())
             }
@@ -628,13 +636,15 @@ class AccountViewModel(
                             )
                     }.toMutableMap()
 
-            collectSuccessfulOperations<Pair<Note, Note?>, ZapAmountCommentNotification>(
+            collectSuccessfulOperations<Pair<Note, Note?>, DecryptedInfo>(
                 items = myList,
                 runRequestFor = { next, onReady ->
-                    innerDecryptAmountMessage(next.first, next.second, onReady)
+                    innerDecryptAmountMessage(next.first, next.second) {
+                        onReady(DecryptedInfo(next.first, next.second, it))
+                    }
                 },
             ) {
-                it.forEach { decrypted -> initialResults[decrypted.key.first] = decrypted.value }
+                it.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
 
                 onNewState(initialResults.values.toImmutableList())
             }
@@ -693,7 +703,7 @@ class AccountViewModel(
         message: String,
         context: Context,
         showErrorIfNoLnAddress: Boolean = true,
-        onError: (String, String) -> Unit,
+        onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
         zapType: LnZapEvent.ZapType? = null,

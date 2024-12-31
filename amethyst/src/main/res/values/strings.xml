@@ -726,6 +726,7 @@
 
     <string name="error_dialog_zap_error">Unable to send zap</string>
     <string name="error_dialog_talk_to_user">Message the User</string>
+    <string name="error_dialog_talk_to_user_name">Message %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
 
     <string name="relay_information_document_error_assemble_url">Failed to reach %1$s: %2$s</string>
@@ -801,6 +802,7 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Could not resolve %1$s. Check if you are connected, if the server is up and if the lightning address %2$s is correct</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Could not resolve %1$s. Check if you are connected, if the server is up and if the lightning address %2$s is correct.\n\nException was: %3$s</string>
     <string name="could_not_fetch_invoice_from">Could not fetch invoice from %1$s</string>
+    <string name="could_not_fetch_invoice_from_details">Could not fetch invoice from %1$s: %2$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Error Parsing JSON from Lightning Address. Check the user\'s lightning setup</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Error Parsing JSON from %1$s. Check the user\'s lightning setup</string>
 
